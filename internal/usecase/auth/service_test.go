@@ -399,8 +399,12 @@ func TestSignInAnonymouslyStoresNothing(t *testing.T) {
 	if !guest.Anonymous {
 		t.Error("guest is not marked anonymous")
 	}
-	if guest.DisplayName != GuestDisplayName {
-		t.Errorf("display name = %q, want %q", guest.DisplayName, GuestDisplayName)
+	// A guest gets a real name now, not the bare "Guest" constant: rosters
+	// are read by other people, and three seats all reading "Guest" name
+	// nobody. The constant survives only as the fallback for a token issued
+	// before names existed -- see TestGuestNameFallsBackForAnOlderToken.
+	if guest.DisplayName == "" || guest.DisplayName == GuestDisplayName {
+		t.Errorf("display name = %q, want a generated name", guest.DisplayName)
 	}
 	if len(guest.Credentials) != 0 {
 		t.Errorf("guest carries %d credentials, want none", len(guest.Credentials))
@@ -471,8 +475,9 @@ func TestSessionForAnonymousTokenNeedsNoAccount(t *testing.T) {
 	if !resolved.Anonymous {
 		t.Error("resolved session is not marked anonymous")
 	}
-	if resolved.DisplayName != GuestDisplayName {
-		t.Errorf("display name = %q, want %q", resolved.DisplayName, GuestDisplayName)
+	// The name rides in the token, because there is nothing to look it up in.
+	if resolved.DisplayName != guest.DisplayName {
+		t.Errorf("display name = %q, want %q", resolved.DisplayName, guest.DisplayName)
 	}
 
 	// Belt and braces: the repository never gained a row along the way.
@@ -514,5 +519,47 @@ func TestAnonymousFlagNotIDDecidesTheLookup(t *testing.T) {
 	}
 	if !resolved.Anonymous {
 		t.Error("resolved session lost the anonymous flag")
+	}
+}
+
+// A guest's name is a pure function of their id, so it needs no claim in the
+// token, no row, and no migration -- every cookie ever issued renders the same
+// way through it.
+func TestGuestNameComesFromTheID(t *testing.T) {
+	got := guestUser(domain.Session{
+		UserID:    user.ID(user.AnonymousIDPrefix + "abcdefgh"),
+		Anonymous: true,
+	})
+	if got.DisplayName != GuestDisplayName+" abcd" {
+		t.Errorf("display name = %q, want %q", got.DisplayName, GuestDisplayName+" abcd")
+	}
+
+	// Nothing to take a suffix from: better the bare word than "Guest ".
+	bare := guestUser(domain.Session{UserID: user.ID(user.AnonymousIDPrefix), Anonymous: true})
+	if bare.DisplayName != GuestDisplayName {
+		t.Errorf("display name = %q, want %q", bare.DisplayName, GuestDisplayName)
+	}
+}
+
+// TestGuestsAreNamedApart is the property a roster depends on: two guests in
+// one group must not read as the same person.
+//
+// The suffix is four base64url characters of a 16-byte id, so a collision
+// between twenty draws is vanishingly unlikely -- and what this guards against
+// is not a collision but a build where every guest is called the same thing,
+// which is exactly what this file asserted before groups existed.
+func TestGuestsAreNamedApart(t *testing.T) {
+	svc, _ := newService(t, &fakeCeremony{state: []byte("state")}, newFakeSigner())
+
+	seen := make(map[string]bool)
+	for range 20 {
+		guest, _, err := svc.SignInAnonymously(context.Background())
+		if err != nil {
+			t.Fatalf("SignInAnonymously: %v", err)
+		}
+		seen[guest.DisplayName] = true
+	}
+	if len(seen) != 20 {
+		t.Errorf("20 guests produced %d distinct names, want 20", len(seen))
 	}
 }

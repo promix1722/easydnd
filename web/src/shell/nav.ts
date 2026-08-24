@@ -21,4 +21,24 @@ export interface NavItem {
 // rather than inside the signed-in shell. See routes/index.tsx.
 export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/', label: 'Characters', shortLabel: 'Party' },
+  { to: '/groups', label: 'Groups' },
 ]
+
+/**
+ * Which section a path belongs to, or null.
+ *
+ * A nested route keeps its parent section highlighted -- exact matching alone
+ * blanks the navigation as soon as anybody opens a detail page. `/` is the
+ * special case: as a prefix it matches everything, so it only ever matches
+ * itself, and the last (most specific) match wins.
+ *
+ * It lives here rather than in a shell because both shells need it and they
+ * had drifted: the tab bar handled nesting and the desktop navbar did not.
+ */
+export function activeNavPath(pathname: string): string | null {
+  return (
+    NAV_ITEMS.filter((item) => (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to)))
+      .map((item) => item.to)
+      .at(-1) ?? null
+  )
+}

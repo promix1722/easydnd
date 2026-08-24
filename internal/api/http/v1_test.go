@@ -24,12 +24,14 @@ import (
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	domain "github.com/promix1722/easydnd/internal/domain/auth"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
 )
 
 // newFullRouter builds the whole route table over the real compendium, an
@@ -80,10 +82,15 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 
 	ceremony := &stubCeremony{}
 	federation := &stubFederation{identity: user.Identity{Subject: "google-1", Email: "g@example.test"}}
+	// One account store, shared by the auth service and the group service. A
+	// second instance would leave the group service writing guest rows into a
+	// store no roster ever reads, so every member would come back nameless.
+	users := memory.NewUserRepository()
+	signer := token.NewSigner(cfg.Auth.SessionSecret, cfg.Auth.SessionTTL)
 	authService := authuc.NewService(
-		memory.NewUserRepository(),
+		users,
 		ceremony,
-		token.NewSigner(cfg.Auth.SessionSecret, cfg.Auth.SessionTTL),
+		signer,
 		map[user.Provider]domain.Federation{user.ProviderGoogle: federation},
 		authuc.Config{
 			SessionTTL:      cfg.Auth.SessionTTL,
@@ -96,6 +103,9 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 
 	source := catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
 	characterService := charuc.NewService(memory.NewCharacterRepository(), source, hexsheet.NewImporter(), log)
+	// The same signer mints invite links; the kind claim is what keeps them
+	// from being interchangeable with the session cookie beside them.
+	groupService := groupuc.NewService(memory.NewGroupRepository(users), users, signer, log)
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		System:        system.New(testVersion),
@@ -103,6 +113,7 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 		Authenticator: authService,
 		Catalog:       catalogapi.New(source, log),
 		Character:     characterapi.New(characterService, log),
+		Group:         groupapi.New(groupService, log),
 	})
 	if err != nil {
 		t.Fatalf("NewRouter: %v", err)
@@ -822,6 +833,19 @@ func TestCharacterRoutesRequireASession(t *testing.T) {
 		{http.MethodDelete, "/v1/characters/" + id + "/events/1?expectedSeq=1"},
 		{http.MethodGet, "/v1/catalog"},
 		{http.MethodGet, "/v1/catalog/races"},
+		{http.MethodGet, "/v1/groups"},
+		{http.MethodPost, "/v1/groups"},
+		{http.MethodGet, "/v1/groups/grp_x"},
+		{http.MethodPatch, "/v1/groups/grp_x"},
+		{http.MethodDelete, "/v1/groups/grp_x"},
+		{http.MethodPost, "/v1/groups/grp_x/invites"},
+		{http.MethodPatch, "/v1/groups/grp_x/members?user=someone"},
+		{http.MethodDelete, "/v1/groups/grp_x/members?user=someone"},
+		// The invite routes are guarded too. Redeeming a link is something a
+		// person does, not something a link does by itself: you have to be
+		// signed in as somebody before there is anybody to seat.
+		{http.MethodPost, "/v1/invites/preview"},
+		{http.MethodPost, "/v1/invites/accept"},
 	} {
 		rec := send(t, r, nil, route.method, route.path, nil)
 		if rec.Code != http.StatusUnauthorized {

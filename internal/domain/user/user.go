@@ -27,11 +27,17 @@ type ID string
 
 // AnonymousIDPrefix marks an id that names a guest rather than an account.
 //
-// A guest is never written anywhere, so this prefix is not what makes one
-// anonymous -- the session token says so, and that is the authority. What the
-// prefix buys is a guarantee that the two id spaces cannot overlap: account
-// ids are base64url text, and ':' is not in that alphabet, so no account can
-// ever be issued an id that looks like a guest's.
+// This prefix is not what makes a session anonymous -- the session token says
+// so, and that is the authority. What the prefix buys is a guarantee that the
+// two id spaces cannot overlap: account ids are base64url text, and ':' is not
+// in that alphabet, so no account can ever be issued an id that looks like a
+// guest's.
+//
+// A guest used to be written nowhere at all. Groups ended that: somebody who
+// joins another person's table has to be nameable in a roster the rest of the
+// table reads, and there is exactly one place in this schema that says what a
+// person is called. EnsureGuest materialises a row at that moment and at no
+// other -- a guest who never joins a group is still stored nowhere.
 const AnonymousIDPrefix = "anon:"
 
 // User is an account -- or, when Anonymous, a guest that only looks like one.
@@ -141,6 +147,20 @@ type Repository interface {
 	// report a *types.ValidationError if the id or any credential id is
 	// already taken.
 	Create(ctx context.Context, u User) error
+
+	// EnsureGuest stores the bare minimum row a guest needs in order to be
+	// named somewhere another person can read -- today, a group roster.
+	//
+	// It is idempotent, and that is the whole difference from Create: a guest
+	// may join several groups, and every one of those joins reaches this
+	// method, so "already there" is the expected case and not an error. It
+	// writes no credentials and no identities, because a guest has neither and
+	// never will; the row it leaves behind is an account nobody can ever sign
+	// in to.
+	//
+	// It is only ever called with a guest id -- see AnonymousIDPrefix.
+	// Implementations must not use it to conjure an account.
+	EnsureGuest(ctx context.Context, u User) error
 
 	// ByID returns the account with the given id, or a *types.NotFoundError.
 	ByID(ctx context.Context, id ID) (User, error)

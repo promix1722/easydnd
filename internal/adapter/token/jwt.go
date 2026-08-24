@@ -16,6 +16,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	domain "github.com/promix1722/easydnd/internal/domain/auth"
+	"github.com/promix1722/easydnd/internal/domain/group"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
 )
@@ -28,6 +29,7 @@ import (
 const (
 	kindSession  = "session"
 	kindCeremony = "ceremony"
+	kindInvite   = "invite"
 )
 
 // signingMethod is pinned rather than read from the token header. Trusting the
@@ -45,6 +47,12 @@ type claims struct {
 	// Absent on every other token, which is what makes an account session
 	// unable to claim to be a guest one and vice versa.
 	Anon bool `json:"anon,omitempty"`
+
+	// GroupRole and Inviter carry an invite. The group itself is the
+	// Subject, because that is what a registered claim is for and one id in
+	// two places is one id that can disagree with itself.
+	GroupRole string `json:"rol,omitempty"`
+	Inviter   string `json:"inv,omitempty"`
 }
 
 // Signer implements auth.Signer over HMAC-SHA256.
@@ -168,5 +176,59 @@ func (s *Signer) parse(token, want string, now time.Time) (claims, error) {
 	return c, nil
 }
 
-// Compile-time proof that this adapter satisfies the port.
-var _ domain.Signer = (*Signer)(nil)
+// SignInvite renders an invite as a token.
+//
+// It shares a key, and therefore this type, with the two cookie kinds. That is
+// safe only because of the kind claim: without it a session cookie -- which
+// every signed-in visitor holds and can read -- would verify perfectly well as
+// an invitation to any group whose id they could guess.
+func (s *Signer) SignInvite(i group.Invite) (string, error) {
+	if i.Group == "" {
+		return "", types.NewServerError("sign invite: empty group id")
+	}
+	// RoleOwner is refused here as well as in the usecase. A link that seated
+	// its holder as owner would be a way to give a table away by accident, and
+	// this is the last place the value passes through before it becomes a
+	// string somebody can paste into a chat window.
+	if !i.Role.Valid() || i.Role == group.RoleOwner {
+		return "", types.NewServerError("sign invite: %q is not a role an invite may offer", i.Role)
+	}
+	return s.sign(claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   string(i.Group),
+			IssuedAt:  jwt.NewNumericDate(i.IssuedAt),
+			ExpiresAt: jwt.NewNumericDate(i.ExpiresAt),
+		},
+		Kind:      kindInvite,
+		GroupRole: string(i.Role),
+		Inviter:   string(i.InvitedBy),
+	})
+}
+
+// VerifyInvite checks a token and returns the invite it carries.
+func (s *Signer) VerifyInvite(token string, now time.Time) (group.Invite, error) {
+	parsed, err := s.parse(token, kindInvite, now)
+	if err != nil {
+		return group.Invite{}, err
+	}
+	role := group.Role(parsed.GroupRole)
+	if parsed.Subject == "" || parsed.ExpiresAt == nil || parsed.IssuedAt == nil ||
+		!role.Valid() || role == group.RoleOwner {
+		// Same silence as parse: a caller learns that the token is unusable
+		// and not which field gave it away.
+		return group.Invite{}, types.NewUnauthenticatedError("invite token is not valid")
+	}
+	return group.Invite{
+		Group:     group.ID(parsed.Subject),
+		Role:      role,
+		InvitedBy: user.ID(parsed.Inviter),
+		IssuedAt:  parsed.IssuedAt.Time,
+		ExpiresAt: parsed.ExpiresAt.Time,
+	}, nil
+}
+
+// Compile-time proof that this adapter satisfies the ports.
+var (
+	_ domain.Signer = (*Signer)(nil)
+	_ group.Inviter = (*Signer)(nil)
+)

@@ -35,9 +35,8 @@ const (
 // WebAuthn user handle limit.
 const userIDBytes = 16
 
-// GuestDisplayName is what a session with no account behind it is called on
-// screen. It is not a name anyone chose, and it is not stored anywhere; it
-// exists so the header has something to render.
+// GuestDisplayName is what a guest is called, before the part that tells two
+// of them apart. See guestName.
 const GuestDisplayName = "Guest"
 
 // PasskeyDisplayName is what an account created with a passkey is called.
@@ -338,7 +337,7 @@ func (s *Service) SignInAnonymously(_ context.Context) (user.User, string, error
 	now := s.now()
 	guest := user.User{
 		ID:          id,
-		DisplayName: GuestDisplayName,
+		DisplayName: guestName(id),
 		CreatedAt:   now,
 		Anonymous:   true,
 	}
@@ -365,10 +364,43 @@ func (s *Service) SignInAnonymously(_ context.Context) (user.User, string, error
 func guestUser(session domain.Session) user.User {
 	return user.User{
 		ID:          session.UserID,
-		DisplayName: GuestDisplayName,
+		DisplayName: guestName(session.UserID),
 		CreatedAt:   session.IssuedAt,
 		Anonymous:   true,
 	}
+}
+
+// guestNameTagLen is how much of a guest's id ends up on screen. Four
+// base64url characters is sixteen million values, which is far more than the
+// handful of guests who could ever share one roster.
+const guestNameTagLen = 4
+
+// guestName is what to call a guest.
+//
+// "Guest" alone was enough while a guest could only see their own things. It
+// stops being enough the moment three of them sit in the same group: the
+// roster reads "Guest, Guest, Guest" and the owner cannot tell which one to
+// remove.
+//
+// The suffix is taken from the id they already carry rather than invented,
+// which is the same judgement PasskeyDisplayName makes in the other direction
+// -- a name should answer the question actually being asked. Here that
+// question is "which of these people", and four characters of their id answer
+// it; a generated two-word name would answer "who are they", which a guest
+// session cannot honestly claim to know.
+//
+// Derived, not stored and not carried in the token: the id is in the session
+// already, so there is nothing to keep in sync, nothing to migrate, and every
+// cookie issued before this existed renders correctly.
+func guestName(id user.ID) string {
+	tag := strings.TrimPrefix(string(id), user.AnonymousIDPrefix)
+	if len(tag) > guestNameTagLen {
+		tag = tag[:guestNameTagLen]
+	}
+	if tag == "" {
+		return GuestDisplayName
+	}
+	return GuestDisplayName + " " + tag
 }
 
 // issue mints a session token for id.

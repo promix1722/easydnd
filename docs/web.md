@@ -80,7 +80,7 @@ web/src/
   ui/         the design system -- the only place Mantine is imported
   lib/        API client, data hooks, WebAuthn plumbing and the auth context; no UI
   shell/      the chrome: RootGate picks it, RootShell picks the viewport
-  features/   screens
+  features/   screens -- one directory per aggregate (characters/, groups/, ...)
   routes/     the route table, one tree for both viewports
   domain/     pure display helpers; the Go model in dnd.md owns the rules
 ```
@@ -286,6 +286,64 @@ re-encoding JSON that is already JSON buys nothing.
 of navigating away, which is the same rule `HomeRoute` follows: the URL never
 changes on account of who is looking, so a shared deep link to a character
 survives being opened by someone who has not signed in yet.
+
+### An invitation link is the deep link that arrives at a stranger
+
+Every other private route is followed by somebody who already has an account.
+An invitation is the opposite: it is *sent to people who do not*, which makes
+it the one link that must survive a whole sign-up before it can be used.
+
+The token rides in the **URL fragment** -- `/groups/join#<token>` -- because a
+fragment is never sent to any server, so it stays out of nginx's access log,
+out of `Referer`, and out of any link unfurler that fetches the URL. It is then
+posted in a request body, never in a query string. That is the safest place to
+carry it and the least durable one, and three things used to lose it:
+
+1. **`<Private>` branches, so the screen never mounts.** Whatever `JoinScreen`
+   did to save the token ran only for visitors who were already signed in --
+   precisely the ones who did not need it. `/groups/join` is therefore *not*
+   wrapped in `Private`: `routes/JoinRoute.tsx` captures the token first and
+   branches afterwards, the way `HomeRoute` does for `/`.
+2. **`/login` is a different URL.** Returning to `from.pathname` dropped the
+   search and the fragment, so an invitation link came back as a bare
+   `/groups/join`. `LoginScreen` now rebuilds `pathname + search + hash`, and
+   ignores a `from` that is not a path of ours -- history is attacker-reachable.
+3. **Google leaves the origin entirely.** Nothing in a URL survives that, and
+   it cannot: `currentPath()` sends `pathname + search`, and the server refuses
+   any `return_to` containing `#` outright (`SafeReturnTo`). So the token is
+   also copied into `sessionStorage` by `features/groups/inviteToken.ts` --
+   session, not local, because an invitation is one visit's business and one
+   left behind in a shared browser is somebody else's group.
+
+A signed-out visitor gets `InvitePrompt` rather than the bare landing page.
+That is a deliberate exception to "the landing page has no copy on it": they
+followed a link somebody sent them on purpose, and a dragon with no explanation
+does not tell them the thing they came for is one button away. It cannot name
+the group -- previewing needs a session, and opening that up so a stranger
+could read a group's name off a link is not a trade worth one sentence.
+
+### Copying the invite link
+
+A link nobody can copy is not a delivery mechanism, and the clipboard is the
+second thing after passkeys to disappear outside a secure context: served over
+plain HTTP on anything but localhost, `navigator.clipboard` is `undefined`.
+
+The first version used Mantine's `CopyButton`. Its `useClipboard` hook does
+notice -- it sets an `error` -- but `CopyButton`'s render prop passes only
+`{ copy, copied }` and drops it, so the button stayed on "Copy link", nothing
+reached the clipboard, and nothing said so. It worked on production and failed
+in dev, which is the worst arrangement of those two outcomes.
+
+`lib/clipboard.ts` replaces it and returns **whether it worked**: the modern
+API when there is one, `document.execCommand('copy')` over a throwaway
+selection when there is not -- deprecated, and the only thing that predates the
+secure-context rule -- and `false` when neither is possible. The sheet then
+says so and selects the link, so there is something the keyboard can still do.
+Never a control that quietly does nothing.
+
+Passkey and guest sign-in are `fetch` calls that never leave the page, so they
+would need none of the above; Google is the one that does. One mechanism
+covering all three is less to get wrong than two.
 
 ## Signed out and signed in, one build
 
@@ -503,6 +561,17 @@ Types and calls in `web/src/lib/api/`, screens in
 `web/src/features/<aggregate>/`, a route in `web/src/routes/index.tsx`. Shared
 visuals belong in `web/src/ui/`, never inline in a feature. The API's error
 envelope is decoded exactly once, into `ApiError`, by `lib/api/client.ts`.
+
+A **new top-level section** is one more entry in `shell/nav.ts`; both shells map
+over `NAV_ITEMS` and neither needs touching. Which entry is highlighted comes
+from `activeNavPath` in the same file -- shared, because the two shells had
+drifted and only the mobile one kept a section lit on its nested routes.
+
+Watch the names when a feature's API types meet the design system. `@/ui`
+already exports Mantine's `Group` layout primitive and every screen uses it, so
+`lib/api/groups.ts` exports `GroupDetail`, `GroupSummary` and `GroupMember` and
+deliberately nothing called `Group` -- a type of that name would shadow the
+component in exactly the files that need both.
 
 There are deliberately **two brand marks**, and they are served two different
 ways. The d20 in `web/public/favicon.svg` is the tab icon, the PWA icons

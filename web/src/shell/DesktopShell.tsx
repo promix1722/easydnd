@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '@/lib/auth'
 import { Anchor, AppShell, Burger, Button, Group, NavLink, useDisclosure } from '@/ui'
 
-import { NAV_ITEMS } from './nav'
+import { activeNavPath, NAV_ITEMS } from './nav'
 import { Wordmark } from './Wordmark'
 
 /**
@@ -55,7 +55,7 @@ export function DesktopShell() {
             component={Link}
             to={item.to}
             label={item.label}
-            active={pathname === item.to}
+            active={activeNavPath(pathname) === item.to}
           />
         ))}
       </AppShell.Navbar>

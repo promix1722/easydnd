@@ -130,6 +130,12 @@ Two consequences of reaching the app over plain HTTP on a name that is not
 - **`env: development` is doing real work.** It is what clears the cookie
   `Secure` flag and the `__Host-` prefix; a production-mode cookie would never
   be sent over such a connection. The generated config always sets it.
+- **`navigator.clipboard` is undefined**, for exactly the same reason as
+  `PublicKeyCredential`. The invite sheet falls back to a selection copy and,
+  if even that is refused, says so and selects the link -- see
+  [web.md](web.md#copying-the-invite-link). Worth knowing because the first
+  version used Mantine's `CopyButton`, which drops the error its own hook
+  reports, so the button silently did nothing here and worked on production.
 
 ## Layout
 
@@ -195,10 +201,36 @@ that.
 | `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
 | `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
 | `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
+| `GET` | `/v1/groups` | the groups you are in, with your role in each |
+| `POST` | `/v1/groups` | create; you become its owner |
+| `GET` | `/v1/groups/{id}` | the group and its whole roster |
+| `PATCH` | `/v1/groups/{id}` | rename |
+| `DELETE` | `/v1/groups/{id}` | owner only |
+| `POST` | `/v1/groups/{id}/invites` | mint a link: `{"role":"dm"\|"player"}` |
+| `PATCH` | `/v1/groups/{id}/members` | change a rank: `?user=U`, `{"role":...}`; `owner` hands the group over |
+| `DELETE` | `/v1/groups/{id}/members` | remove: `?user=U`; your own id is how you leave |
+| `POST` | `/v1/invites/preview` | read a link without acting on it |
+| `POST` | `/v1/invites/accept` | redeem a link |
 
-The last two address a *member* of the log by position, which is what `Seq`
-means. That is not a third level: `events` is the sub-resource, `{seq}` names
-one of them, and there is no route below it.
+The two `events/{seq}` routes address a *member* of the log by position, which
+is what `Seq` means. That is not a third level: `events` is the sub-resource,
+`{seq}` names one of them, and there is no route below it.
+
+A group's members are addressed the other way, by `?user=`. Either would have
+been consistent with the rule above; the query parameter is what
+`DELETE /v1/characters/{id}/events?after=N` already does, and a member is named
+by an opaque account id rather than by position.
+
+`PATCH` arrives with groups, as `PUT` does with the log entry routes above:
+everything older than both is `GET`, `POST` or `DELETE`.
+
+The invite routes are a separate tree rather than sitting under `/v1/groups`
+because somebody redeeming a link is **not in the group yet and cannot name
+it** -- the token carries the id, so there is no addressed parent to hang them
+off. Both take the token in the **body** and never in the URL: our own access
+log records the route pattern, but nginx in front of it logs the whole request
+line, and an invite token is usable for a day. The browser keeps it in a URL
+*fragment*, which is never sent to any server at all.
 
 ### Importing states, not histories
 
@@ -426,14 +458,16 @@ prompt asks for a feat at all. The projector still knows the type; "nothing can
 be answered before it is asked" simply now applies to it like everything else,
 and a prompt that wants one has to say so.
 
-### Ownership
+### Ownership, and membership
 
-A character belongs to the account that created it. The owner is resolved in
-exactly one function, `handler.owner` in
-`internal/api/http/v1/character/handler.go`, from the account
-`middleware.RequireSession` put on the request; a handler reached without that
-middleware gets the zero `OwnerID`, which owns nothing, so a mis-wiring shows
-up as an empty party rather than as somebody else's.
+There are two authorization models here, and the difference between them is
+the difference between a character and a group.
+
+**A character belongs to one account.** The owner is resolved in exactly one
+function, `handler.owner` in `internal/api/http/v1/character/handler.go`, from
+the account `middleware.RequireSession` put on the request; a handler reached
+without that middleware gets the zero `OwnerID`, which owns nothing, so a
+mis-wiring shows up as an empty party rather than as somebody else's.
 
 Enforcement lives in the usecase, not the handler: every read and write goes
 through `Service.owned`, which refuses a character to anyone but its owner --
@@ -441,7 +475,55 @@ and refuses it as a **404, not a 403**, because a 403 on somebody else's id
 confirms that the id exists and turns a guessable identifier into an
 enumeration oracle.
 
-There is no role, group or sharing model. Authorization is one predicate.
+**A group belongs to several people at three ranks.** `owner` > `dm` >
+`player`, and every rule is a comparison between two of them. The choke point
+is `Service.member` in `internal/usecase/group/service.go`, which is to a group
+what `owned` is to a character: the only way any read or write reaches one, and
+the only place a caller's rank is established.
+
+| | owner | dm | player | not a member |
+|---|---|---|---|---|
+| read the group and its roster | yes | yes | yes | **404** |
+| rename | yes | yes | 403 | **404** |
+| delete | yes | 403 | 403 | **404** |
+| invite (as `dm` or `player`) | yes | yes | 403 | **404** |
+| remove a player or a DM | yes | yes | 403 | **404** |
+| remove or demote the **owner** | **403** | 403 | 403 | **404** |
+| promote or demote between dm and player | yes | 403 | 403 | **404** |
+| hand the group over | yes | 403 | 403 | **404** |
+| leave | **403** | yes | yes | **404** |
+
+Two things in that table are worth saying in prose.
+
+**404 and 403 mean different things, and the split is deliberate.** A
+non-member gets 404 for the same enumeration reason a character does. A member
+who lacks a right gets **403**, because they are standing in the group with the
+roster on their screen -- hiding it from them would leak nothing and teach them
+nothing. The predicate that decides 404 (`member`) and the one that decides 403
+are different functions returning different error types, which is what stops
+the two from being confused.
+
+**Exactly one owner, always.** A group is created with one and only ever
+changes owner through a transfer, which demotes the outgoing owner to `dm` in
+the same step. That is why an owner may not leave: they must hand the group on
+first, or delete it -- both exist, so nobody is ever trapped. The invariant is
+enforced three times over, in the usecase, in the repository's statements, and
+in a partial unique index (`group_members_one_owner_idx`), because the last of
+those is the only one a second process racing the first obeys.
+
+Invitations are stateless. A link is a signed token naming a group and a rank,
+valid for 24 hours, **reusable and not revocable** -- there is no invites table
+and nothing to revoke against. The trade is written down beside the type in
+`internal/domain/group/invite.go`; the upgrade, if it ever stops being
+acceptable, is a stored invite whose id rides in the token.
+
+One trap worth naming, because it is invisible until somebody hits it: every
+token port reports failure as a `*types.UnauthenticatedError`, which renders as
+**401**, and a 401 is what tells the client its session is gone. A stale invite
+link must therefore *not* surface as one, or clicking yesterday's invitation
+would sign out the perfectly signed-in person who clicked it. `openInvite`
+translates it into a `*types.ValidationError` -- a 400 -- and there is a test
+for it.
 
 ### Dependency rule
 
@@ -703,10 +785,32 @@ agreeing with itself but not with the specification.
 ### Anonymous sessions
 
 A guest session is the same signed token in the same `HttpOnly` cookie as any
-other, carrying one extra private claim, `anon`. What it does not have is a
-row: the id is minted, sealed into the token and never written anywhere.
+other, carrying one extra private claim, `anon`. It rides in the token because
+there is nothing to look it up in.
 
-That claim is load-bearing in exactly one place. `Session()` -- the usecase
+A guest used to have no row anywhere at all. **Groups ended that, but only
+just**: a guest who joins somebody else's table has to be nameable in a roster
+other people read, and `group_members.user_id` is a real foreign key. So the
+group usecase writes a `users` row for a guest the first time they create or
+join a group -- `EnsureGuest`, idempotent, and called on those two paths and
+nowhere else. A guest who never touches a group is still stored nowhere.
+
+Which raised the question of what to call them. "Guest" was legible while a
+guest could only see their own things and useless the moment three shared a
+roster: nobody could tell which one to remove. A guest is now "Guest" plus four
+characters of the id they already carry -- `guestName`, a pure function of the
+session's subject.
+
+Derived rather than stored or claimed, which is the whole point: there is no
+extra claim to add, no row to keep in sync, no migration, and every cookie ever
+issued renders correctly through it. It is also the same judgement
+`PasskeyDisplayName` makes in the other direction -- a name should answer the
+question actually being asked. On a roster that question is "which of these
+people", and four characters answer it; an invented two-word name would answer
+"who are they", which a session with no account behind it cannot honestly claim
+to know.
+
+The `anon` claim is load-bearing in exactly one place. `Session()` -- the usecase
 behind `RequireSession`, and the only database read on the authenticated
 request path -- short-circuits on it and rebuilds the identity from the claims
 instead of calling `repo.ByID`. Without that, every guest request would answer
@@ -729,8 +833,18 @@ the process, which is honest for a session that cannot be signed back into.
 Two consequences worth stating plainly:
 
 - **A guest cannot become an account.** There is no conversion path, in either
-  direction: a guest session has no row to attach anything to. Every surface
-  that shows a guest session is obliged to say that nothing is being kept.
+  direction: the row `EnsureGuest` writes carries no credential and no identity,
+  and there is no method that would add one. It is an account nobody can ever
+  sign in to. Every surface that shows a guest session is obliged to say that
+  nothing is being kept.
+- **A guest can own a group, and that is a known hazard.** A guest id is minted
+  fresh per sign-in and expires with the session, so a guest who creates a group
+  owns it permanently and stops existing within a day. Nobody can then delete
+  that group or hand it on -- only an owner may, and the owner is unreachable.
+  The intended fix is a **scheduled job that reaps guest rows and everything
+  they own once their session lifetime has passed; it is not implemented**.
+  Until it is, orphaned groups accumulate and only a hand-written statement
+  removes one.
 - **`POST /v1/auth/anonymous` is unauthenticated and has no rate limit.**
   Signing is cheap and stateless, so the tokens are not the concern; the
   character store each one can then fill is bounded by nothing. There is no
@@ -777,6 +891,15 @@ primitive, for the same reason. Each envelope names its own kind and refuses
 the other's, so a value minted by one flow cannot be fed to the other's finish
 endpoint and land somewhere surprising.
 
+An **invite link is a fourth kind**, signed by the same key from the same
+adapter. That is safe only because of the kind claim, and this is the sharpest
+illustration of why it exists: without it, the session cookie every signed-in
+visitor already holds would verify perfectly well as an invitation to any group
+whose id they could guess -- and an invite link, which is meant to be forwarded
+to strangers, would verify as somebody's session. `internal/adapter/token` is
+still the only package that knows any of these are JWTs; the group usecase
+sees an `Inviter` port trading in strings and domain types.
+
 CSRF is covered three ways, in `middleware.SameOrigin`: `SameSite` on the
 cookie, an `Origin` check against `auth.rp_origins`, and a required
 `X-Request-Id` header -- which `web/src/lib/api/client.ts` already sends on
@@ -801,17 +924,45 @@ Development uses `localhost`, so a passkey made in development will never work
 in production, and vice versa. That is two disjoint identities, and it is
 correct.
 
-### Where accounts live
+### Where accounts and groups live
 
-Accounts, their passkeys and their linked external identities are stored in
-PostgreSQL -- AWS RDS in production -- by
-`internal/adapter/repository/postgres`. Three tables:
+Accounts, their passkeys, their linked external identities and the groups they
+play in are stored in PostgreSQL -- AWS RDS in production -- by
+`internal/adapter/repository/postgres`. Five tables:
 
 | Table | Holds |
 |---|---|
 | `users` | the account id, display name and creation time |
 | `user_credentials` | one row per registered passkey |
 | `user_identities` | one row per linked external account |
+| `groups` | a group's id, name and who made it |
+| `group_members` | one row per seat: who, in which group, at which rank |
+
+Characters are **not** among them. They still live in the in-memory store and
+die with the process, which is why nothing in `groups` refers to one: a
+character id is a process-local counter, so a foreign key to it would be
+dangling by the next restart, and a schema written against an unfinished
+feature is a migration nobody can revise later.
+
+`users` is the only place a display name is stored, and a roster is a join
+rather than a copy -- so a rename shows up in every group at once or in none.
+That is also why a guest gets a row there when they join something: see
+[Anonymous sessions](#anonymous-sessions).
+
+`group_members` keys on `(group_id, user_id)`, which makes "a person is in a
+group at most once" the database's rule and gives the roster read its index.
+`created_by` on `groups` is **history, not authority**: ownership lives in the
+member rows and moves when the group is handed on, so nothing may consult that
+column to decide what anybody is allowed to do.
+
+The one-owner rule is a **partial unique index**, `group_members_one_owner_idx`
+`ON group_members (group_id) WHERE role = 'owner'`. It forces the order of a
+transfer and this is easy to get wrong: a unique index is checked as each
+statement runs and cannot be deferred to commit, so a transfer must **demote
+the outgoing owner first and promote the incoming one second**. The
+intermediate state is then zero owners, which the index permits; the other
+order is two, which it rejects. The in-memory adapter writes them in the same
+order deliberately, so that it cannot pass a test the real one fails.
 
 The credential id is the **primary key** of `user_credentials` rather than a
 surrogate. That is what gives `ByCredentialID` -- the lookup every usernameless
@@ -1085,6 +1236,15 @@ lockstep.
 
 Errors travel as `internal/types` values and are rendered exactly once, by
 `helpers.FormatError`. Handlers never build an error body themselves.
+
+If the thing belongs to more than one person, add a sixth step: put the
+authorization in **one function in the usecase** that every read and write goes
+through, the way `character.owned` and `group.member` do, and decide
+deliberately which refusals are 404 and which are 403 -- see [Ownership, and
+membership](#ownership-and-membership). Two adapters means the shared contract
+suite in `internal/adapter/repository/repotest/` runs the identical assertions
+against both, which is the only thing that keeps them able to stand in for one
+another.
 
 The frontend side of the same feature is in
 [web.md](web.md#adding-a-feature).

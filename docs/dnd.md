@@ -26,6 +26,16 @@ than cosmetic — the wrong word usually hides a wrong shape.
 | max HP | **hit point maximum** | `hit point maximum` 56×; `max HP` **0×** |
 | spell casting | **spellcasting** | One word, 207× |
 | dark vision | **Darkvision** | One word — and it is a *racial trait*, not a *class feature* |
+| party (as an account-level thing) | **group** | See below — the two are not the same set of things |
+
+**A group is people; a party is characters.** A **group** is the account-level
+thing the app stores: the people at one table, with a rank each — owner, DM,
+player. A **party** is the in-fiction band of adventurers, which is characters,
+and the SRD uses it that way throughout ("the party", "party treasure"). They
+are deliberately not modelled as the same thing and today only one of them is
+modelled at all: a group holds no characters. The Characters tab is
+short-labelled "Party" on mobile for exactly the SRD sense, which is why the
+account-level feature could not also be called one.
 
 Two of those are more than renaming:
 

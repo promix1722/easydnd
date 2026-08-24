@@ -4,11 +4,13 @@ import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
 import { BuildScreen, CharacterLogScreen, CharacterSheetScreen } from '@/features/character'
 import { ImportCharacterScreen } from '@/features/characters'
+import { GroupListScreen, GroupScreen } from '@/features/groups'
 import { StatusScreen } from '@/features/status'
 import { LandingShell } from '@/shell/LandingShell'
 import { RootGate } from '@/shell/RootGate'
 
 import { HomeRoute } from './HomeRoute'
+import { JoinRoute } from './JoinRoute'
 import { NotFoundPage } from './NotFoundPage'
 import { Private } from './Private'
 
@@ -83,6 +85,36 @@ export const router = createBrowserRouter([
         element: (
           <Private>
             <CharacterLogScreen />
+          </Private>
+        ),
+      },
+
+      // Groups. A group is several people's, so like a character these
+      // branch to the landing page for a signed-out visitor rather than
+      // redirecting -- which is what makes an invitation link survive being
+      // opened by somebody who has not signed in yet.
+      {
+        path: 'groups',
+        element: (
+          <Private>
+            <GroupListScreen />
+          </Private>
+        ),
+      },
+      // Ahead of groups/:id so the literal wins over the parameter. The
+      // invitation token rides in the URL fragment, which the browser never
+      // sends to any server -- see features/groups/inviteToken.ts.
+      //
+      // Not wrapped in Private, and that is the point: this is the one deep
+      // link that routinely arrives at somebody with no account at all, so
+      // the token has to be saved before the branch rather than inside the
+      // screen that a signed-out visitor never reaches. JoinRoute does both.
+      { path: 'groups/join', element: <JoinRoute /> },
+      {
+        path: 'groups/:id',
+        element: (
+          <Private>
+            <GroupScreen />
           </Private>
         ),
       },

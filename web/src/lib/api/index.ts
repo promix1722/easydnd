@@ -81,3 +81,26 @@ export type {
   Summary,
   WriteResponse,
 } from './characters'
+
+// Groups.
+export {
+  acceptInvite,
+  createGroup,
+  createInvite,
+  deleteGroup,
+  getGroup,
+  listGroups,
+  previewInvite,
+  removeMember,
+  renameGroup,
+  setMemberRole,
+} from './groups'
+export type {
+  GroupDetail,
+  GroupMember,
+  GroupRole,
+  GroupSummary,
+  InvitableRole,
+  InviteLink,
+  InvitePreview,
+} from './groups'

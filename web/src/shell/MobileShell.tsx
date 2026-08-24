@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '@/lib/auth'
 import { Anchor, AppShell, Button, Group, Tabs } from '@/ui'
 
-import { NAV_ITEMS } from './nav'
+import { activeNavPath, NAV_ITEMS } from './nav'
 import { Wordmark } from './Wordmark'
 
 const TAB_BAR_HEIGHT = 56
@@ -19,12 +19,8 @@ export function MobileShell() {
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
 
-  // A nested route keeps the parent section highlighted; exact match alone
-  // would blank the tab bar as soon as anyone opened a detail page.
-  const active =
-    NAV_ITEMS.filter((item) => item.to === '/' ? pathname === '/' : pathname.startsWith(item.to))
-      .map((item) => item.to)
-      .at(-1) ?? null
+  // Shared with the desktop navbar: see activeNavPath in nav.ts.
+  const active = activeNavPath(pathname)
 
   return (
     <AppShell header={{ height: 52 }} footer={{ height: TAB_BAR_HEIGHT }} padding="sm">
