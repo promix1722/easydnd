@@ -12,11 +12,14 @@ import "github.com/promix1722/easydnd/internal/domain/rules"
 // event. Rather than special-casing that, any event may carry an answer to
 // any prompt.
 //
-// Last-write-wins has a second consequence worth stating: changing a pick is
-// a plain append. The player who wants Stealth instead of Acrobatics posts
-// the same prompt again with different picks; nothing has to be truncated,
-// and the history of what they changed is preserved, which is the point of
-// keeping a log at all.
+// Last-write-wins is what makes a *later* event able to answer an *earlier*
+// entry's prompt. It is not, and never was, a way to change a pick: a prompt
+// that has been answered is no longer open, and Prompts stops emitting it, so
+// posting it again is rejected as a prompt the character does not have. What
+// changes a pick is replacing the entry that carries it -- see Rebuild and
+// the usecase's Revise -- which is also what makes the fold's ordering
+// irrelevant, because after a replace there is still exactly one answer to
+// each prompt.
 type answers map[rules.Slug][]rules.Slug
 
 // foldAnswers collects the answers from a log in order.

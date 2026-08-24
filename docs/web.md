@@ -6,7 +6,8 @@ layout, layer rules, and how it ships. For the Go API it talks to, see
 
 Status: **real**. Sign-in (passkeys and Google), the party list, character
 creation, the build loop, the account screen and the sheet are all built and
-tested. The battle tracker is not.
+tested. **Level-up is not**, and this client does not offer it -- see [Level-up
+is not offered](#level-up-is-not-offered). Neither is the battle tracker.
 
 ## Quick start
 
@@ -110,22 +111,130 @@ Net new dependencies for the whole character feature: zero.
 
 ## The build screen is a loop, not a wizard
 
-`features/character/BuildScreen` reads `/prompts`, renders the first open one,
-posts the answer and reads again. It is a loop rather than an N-step wizard
-because prompts nest -- answering the "two skills" branch of a rogue's
-Expertise is what brings the two-skill prompt into existence -- so the total
-number of steps is not knowable until the last one is answered. Progress is
-shown by stage instead.
+`features/character/BuildScreen` reads `/prompts`, `/events` and `/sheet`, and
+draws five tabs. It is still a loop rather than an N-step wizard, and it has to
+be: prompts nest -- answering the "two skills" branch of a rogue's Expertise is
+what brings the two-skill prompt into existence -- so the total number of steps
+is not knowable until the last one is answered. The tabs are not steps. They
+are the fixed set of *categories* a question can belong to, which is the
+server's own `Prompt.Group` and not a taxonomy this client invented, in the
+order `domain/stages.ts` states: identity, class, race, background, abilities.
+Class first after the name, because it is the choice the most other choices
+hang off.
 
-Nothing in it decides what an answer *means*. The prompt says which event
-carries it and the screen copies that verbatim, so the browser never learns
-that a first level is a `class` event and a fourth is a `level` one. Option
-keys come from the server for the same reason: a bundle of a shortbow and
-twenty arrows has no slug of its own.
+Three requests, because they answer three different questions: `/prompts` says
+what is still open, `/events` says what was decided and in which entry, and
+`/sheet` says what all of it adds up to. The sheet cannot be folded from the
+log in the browser -- an ability score improvement's increments are derived at
+projection time -- so it is fetched rather than computed.
+
+**Nothing can be answered before it is asked.** Every tab is freely clickable,
+because a tab is a place to look as well as a place to answer, but what can be
+answered on one is exactly what `/prompts` returned for it.
+`features/character/OutstandingChoices` is that list, and it is one component
+with three callers -- each build tab filtered to its own category, the
+character sheet showing all of them, and the level-up page when there is one.
+There is deliberately no second notion of "outstanding" anywhere in this
+client, so there is no way for the sheet and the build screen to disagree
+about it.
+
+**The client routes nothing.** Every stored entry carries the group of the
+prompt it answered, written by the server, so a change that invalidates an
+answer makes the server re-emit that prompt under its own group -- and the
+group is the tab. A client that worked out for itself which category an
+orphaned answer belonged to would be a second, unverified copy of a decision
+the server has already made.
+
+Nothing in it decides what an answer *means* either. The prompt says which
+event carries it and the screen copies that verbatim, so the browser never
+learns that a first level is a `class` event and a fourth is a `level` one.
+Option keys come from the server for the same reason: a bundle of a shortbow
+and twenty arrows has no slug of its own.
 
 One `PromptCard` renders every kind of prompt rather than one component per
 kind, because the server synthesises "which race?" into the compendium's own
 grammar instead of a second vocabulary. What the kinds change is the wording.
+Two questions are genuinely not that shape and get a form each: a name
+(`NameForm`) and the six ability scores (`AbilityScoresForm`). `StagePanel`
+chooses between the three by the kind of the prompt, and that is the only place
+in the client mapping a prompt kind to a control -- which is what let
+`PromptCard` stay exactly as it was while two new kinds arrived.
+
+### Creating is answering the first question
+
+`/characters/new` renders `BuildScreen` with no `:id`. The identity tab holds
+the name, answering it creates the character with that name alone, and the URL
+is replaced with the build one. There is no separate create screen because
+there was never a second thing being done -- and creation used to carry the
+score method and all six numbers, which meant eight selections in one log entry
+and nothing a player could point at and change. The scores are an ordinary open
+choice now, answered on the abilities tab and written as their own entry.
+
+### Changing anything is one mechanism
+
+Every row under "already chosen" is exactly one log entry, and `[Change]`
+replaces that entry: pick the new value, `PUT …?dryRun=true`, read what would
+be dropped, commit the same `PUT` on confirmation. There is no
+append-a-correction path and no Back button. The dialog names every dropped
+entry and says the questions will be waiting outstanding in their own
+categories, because they will be -- and it confirms even when nothing is
+dropped, with a green affirmative rather than a red one, so that "this costs
+nothing" is a thing the screen says rather than a thing you infer from its
+silence.
+
+An answer to a *nested* prompt -- a rogue's Expertise, a half-elf's ability
+bonuses -- cannot be re-posed from here, because the options that made it up
+arrived with a prompt the server stopped emitting the moment it was answered.
+Those rows drop their entry instead, which reaches the same place from the
+other side: the question comes back outstanding, under its own tab.
+
+### A category's word appears exactly once
+
+In its tab. Panel headings use the question's own wording, the two sections are
+titled "already chosen" and "still to choose", and empty copy is "Nothing left
+here" rather than "nothing left in race". It is a small rule with a large
+payoff: `getByText('race')` means one thing on this page, and a test that
+breaks does so for the reason it says.
+
+### Level-up is not offered
+
+The server poses "gain a level in which class?" and everything that follows
+from it under the `advance` group, and this client filters that group out of
+everything it draws: no outstanding row, no answering surface, no control.
+Taking a level does not work -- the event the client would post is recorded as
+a no-op -- and a question that appears answerable and silently changes nothing
+is worse than a question that is not asked. It is the same judgement that took
+the "Level up" button off the sheet.
+
+Levels a character already *has* stay visible as settled rows on the class tab,
+and stay read-only. They are facts about the character -- an imported one may
+well have several -- rather than controls, and editing one would drive the same
+machinery that cannot take one. `domain/stages.ts` is the single line that
+reverses all of this on the day it works.
+
+## The sheet decides what order the abilities come in
+
+`features/character/CharacterSheetScreen` prints ability scores and saving
+throws as a sheet does -- STR, DEX, CON, INT, WIS, CHA -- and it has to impose
+that itself, because the API cannot say it. Both arrive as objects keyed by
+slug and a Go map serialises its keys sorted, so a screen that walks the
+response as it came prints CHA first. The order lives in `domain/format.ts` as
+`ABILITY_ORDER`, and anything drawing more than one ability in sequence walks
+it through `abilitiesInOrder` rather than walking the response -- the ability
+scores form's six inputs included. Walking a fixed list against a projection that
+may not match it decides two things: a slug the response omits draws nothing,
+since a blank card claiming a score that is not there is worse than a row of
+five; a slug the six do not cover is kept and drawn last rather than filtered
+out, since an unrecognised ability means the server and this client disagree
+about the game, which is a thing to see rather than a thing to hide. The skills
+beside them stay alphabetical on purpose: there are eighteen in no traditional
+order, so the alphabet is the only sequence a reader can search.
+
+The stat row above leads with hit points, then armor class, initiative and
+proficiency. Hit points are the one number that moves between one glance and
+the next and the one reached for mid-turn, where armor class is settled at the
+start of a fight; at two columns on a phone, first position is the only one
+visible without the eye travelling.
 
 ## The log has its own page, and it never asks for the sheet
 
@@ -145,8 +254,10 @@ fails whenever the thing it exists to diagnose fails is no use. The compendium
 lookup that turns `race:half-elf` into "Half-Elf" is held to the same rule: it
 is one request per collection, and a failure yields slugs rather than an error.
 
-Nothing on the page writes. Dropping a suffix of the log is the Back button on
-the build screen, where the thing being undone is in front of you.
+Nothing on the page writes. Changing a decision happens on the build screen,
+where the thing being changed is in front of you: one entry is replaced and
+everything after it revalidated. The log is where you come afterwards to see
+what that cost.
 
 ## Importing shows the report before the character
 
@@ -294,7 +405,9 @@ back.
 
 There is no "add a passkey" flow, on either side of the wire: an account's
 passkeys are the ones it was created with. `/account` therefore lists them and
-offers no button, and redundancy is a matter of connecting a provider -- see
+offers no button -- and, having no button, drops the section entirely for an
+account that has none, since a heading that can never fill is a heading over
+nothing. Redundancy is a matter of connecting a provider -- see
 [No recovery](backend.md#no-recovery).
 
 `lib/webauthn` is the browser half of the ceremony: base64url conversion, the
@@ -348,6 +461,15 @@ differs inside a `@/ui` primitive rather than at the call site:
 | `ModalSheet` | centred modal | bottom drawer |
 | `DataList` | table | labelled cards |
 | `Columns` | side-by-side panels | accordion |
+| `TabRow` | tab strip, actions right | the same, scrolled sideways |
+
+`TabRow` is the first of those whose two renderings are **identical markup**.
+The others genuinely swap components at the breakpoint; this one is a
+`ScrollArea type="never"` that is simply inert at a width the tabs fit in, so
+there is no second tree to keep working and a test at one width is a real test
+of the other. The active tab is brought into view by setting `scrollLeft`, not
+by `scrollIntoView`, which scrolls every scrollable ancestor -- it would drag
+the document as well as the strip, and jsdom does not implement it.
 
 ## One button size, in one place
 
@@ -401,10 +523,26 @@ a real accessible name rather than `aria-hidden`, because on a page with no
 text the mark is the only thing naming the app.
 
 `/account` is where both inventories live -- passkeys and connected providers --
-and where connecting and disconnecting happen. It is reached from the header,
+and where connecting and disconnecting happen. It shows each of them only when
+there is something to show or something to do: a Google-only account is not
+told it has no passkeys, and a deployment with no provider configured is not
+told so under a heading of its own. The exception is the account that most
+needs it -- a passkey-only account has nothing to list, and still gets the
+connect card, because connecting is the whole of its recovery. A guest gets
+neither, only the alert saying there is no account behind the session. It is
+reached from the header,
 not from `shell/nav.ts`: the navigation lists the parts of the app, and the
-account is who is looking at them, so both shells put an "Account" link in the
-top right beside the button that ends the session.
+account is who is looking at them, so both shells put the way in at the top
+right beside the button that ends the session.
+
+**The signed-in name is that link.** The header has to say whose session this
+is, and a button labelled "Account" next to the account's own name said the
+same thing twice -- so the name itself navigates to `/account`, drawn dimmed
+and small rather than as a button, because it is still a label first. A session
+whose name is empty falls back to the word "Account", since a link with no text
+is a link nobody can press, and a null user renders neither: the pair sits in
+its own right-pushed group so the header still ends in the sign-out control
+when there is no name to draw.
 
 `/` is the one page both sides of the sign-in boundary share: the landing pitch
 signed out, the party list signed in. It carries nothing else -- system status

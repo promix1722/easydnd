@@ -10,4 +10,14 @@ export {
   promptLabel,
 } from './event'
 export type { ChangeLike, ValueLike } from './event'
-export { abilityName, kindOf, signed, slugOf, titleCase } from './format'
+export { STAGES, STAGE_LABELS, answerable, stageOf } from './stages'
+export type { Stage } from './stages'
+export {
+  ABILITY_ORDER,
+  abilitiesInOrder,
+  abilityName,
+  kindOf,
+  signed,
+  slugOf,
+  titleCase,
+} from './format'

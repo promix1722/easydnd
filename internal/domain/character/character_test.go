@@ -1,6 +1,7 @@
 package character_test
 
 import (
+	"slices"
 	"testing"
 
 	domain "github.com/promix1722/easydnd/internal/domain/character"
@@ -74,6 +75,53 @@ func TestValidateRequiresInitFirst(t *testing.T) {
 	noInit := domain.Log{Events: []domain.Event{{Seq: 1, Type: domain.EventRace}}}
 	if err := noInit.Validate(); err == nil {
 		t.Error("Validate() accepted a log with no init event")
+	}
+}
+
+// Rebuild is what closes the log up again after a replacement drops entries
+// out of the middle of it, and renumbering is the whole of what it does.
+func TestRebuildRenumbers(t *testing.T) {
+	log := domain.RogueLog(t)
+	// Drop the fifth entry, exactly as a revision does.
+	kept := append(slices.Clone(log.Events[:4]), log.Events[5:]...)
+
+	out, err := domain.Rebuild(kept)
+	if err != nil {
+		t.Fatalf("Rebuild() error = %v", err)
+	}
+	if out.Len() != log.Len()-1 {
+		t.Fatalf("length = %d, want %d", out.Len(), log.Len()-1)
+	}
+	for i, e := range out.Events {
+		if e.Seq != i+1 {
+			t.Errorf("event %d has sequence %d, want %d", i, e.Seq, i+1)
+		}
+	}
+	if err := out.Validate(); err != nil {
+		t.Errorf("Validate() error = %v: a rebuilt log must be storable", err)
+	}
+	// The events themselves are untouched apart from their numbering.
+	if out.Events[4].Type != log.Events[5].Type {
+		t.Errorf("entry 5 = %s, want the one that followed the dropped entry", out.Events[4].Type)
+	}
+	// And the caller's slice was not renumbered under them.
+	if kept[4].Seq != log.Events[5].Seq {
+		t.Error("Rebuild() renumbered the caller's own events")
+	}
+}
+
+// The invariants Rebuild refuses to produce a log without.
+func TestRebuildRefusesAnUnreadableLog(t *testing.T) {
+	if _, err := domain.Rebuild([]domain.Event{{Type: domain.EventRace}}); err == nil {
+		t.Error("Rebuild() accepted a log that does not begin with an init event")
+	}
+	if _, err := domain.Rebuild([]domain.Event{
+		{Type: domain.EventInit}, {Type: domain.EventInit},
+	}); err == nil {
+		t.Error("Rebuild() accepted a second init event")
+	}
+	if _, err := domain.Rebuild(nil); err != nil {
+		t.Errorf("Rebuild(nil) error = %v, want an empty log", err)
 	}
 }
 

@@ -38,8 +38,18 @@ describe('collectionOfKind', () => {
     expect(collectionOfKind('feat')).toBe('feats')
   })
 
+  // The same table now answers the build screen's other question -- which
+  // collection a prompt's options come out of -- so the kinds a log never
+  // stores are in it too. It used to be two tables in two files, and the one
+  // missing an entry was whichever one you were not looking at.
+  it('covers the kinds only a prompt names', () => {
+    expect(collectionOfKind('language')).toBe('languages')
+    expect(collectionOfKind('item')).toBe('equipment')
+    expect(collectionOfKind('damage-type')).toBe('damage-types')
+  })
+
   it('is null where the compendium serves no collection', () => {
-    expect(collectionOfKind('language')).toBeNull()
+    expect(collectionOfKind('multiclass')).toBeNull()
     expect(collectionOfKind('')).toBeNull()
   })
 })

@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '@/lib/auth'
-import { AppShell, Button, Group, Tabs } from '@/ui'
+import { Anchor, AppShell, Button, Group, Tabs } from '@/ui'
 
 import { NAV_ITEMS } from './nav'
 import { Wordmark } from './Wordmark'
@@ -32,15 +32,24 @@ export function MobileShell() {
         <Group h="100%" px="md">
           <Wordmark order={4} />
           {/* Top right rather than a tab: see nav.ts. The tab bar is for the
-              parts of the app, and the account is not one of them. */}
-          <Button component={Link} to="/account" variant="subtle" ml="auto">
-            Account
-          </Button>
-          {/* See DesktopShell: ending a guest session destroys the only copy
-              of whatever they built, and the label should say so. */}
-          <Button variant="subtle" onClick={() => void signOut()}>
-            {user?.anonymous ? 'End guest session' : 'Sign out'}
-          </Button>
+              parts of the app, and the account is not one of them. The pair
+              is pushed right together, so the header still ends in the
+              account whether or not there is a name to draw. */}
+          <Group gap="sm" ml="auto">
+            {/* See DesktopShell: the name is the link, so this header says
+                whose session it is instead of spending its narrowest row on
+                a button that repeats the word above the page it opens. */}
+            {user ? (
+              <Anchor component={Link} to="/account" size="sm" c="dimmed">
+                {user.display_name.trim() || 'Account'}
+              </Anchor>
+            ) : null}
+            {/* See DesktopShell: ending a guest session destroys the only copy
+                of whatever they built, and the label should say so. */}
+            <Button variant="subtle" onClick={() => void signOut()}>
+              {user?.anonymous ? 'End guest session' : 'Sign out'}
+            </Button>
+          </Group>
         </Group>
       </AppShell.Header>
 

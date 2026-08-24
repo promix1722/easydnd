@@ -140,6 +140,35 @@ func (r *CharacterRepository) Truncate(_ context.Context, id domain.ID, expected
 	return nil
 }
 
+// Rewrite replaces a character's whole log, rejecting a stale expectedSeq.
+//
+// It is neither an append nor a truncation: replacing one entry can drop
+// entries after it, so the sequence numbers close up and the stored slice is
+// a different length in either direction. The caller hands over a log it has
+// already rebuilt and revalidated; what is left here is the concurrency check
+// and one last Validate, because a store that will accept a malformed log is
+// a store that will hand one back.
+func (r *CharacterRepository) Rewrite(_ context.Context, id domain.ID, expectedSeq int, log domain.Log) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	c, ok := r.items[id]
+	if !ok {
+		return types.NewNotFoundError("character %q", id)
+	}
+	if got := c.Log.LastSeq(); got != expectedSeq {
+		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
+	}
+	if err := log.Validate(); err != nil {
+		return err
+	}
+	// Cloned on the way in for the same reason it is cloned on the way out:
+	// the caller must not keep a handle on our backing array.
+	c.Log = domain.Log{Events: slices.Clone(log.Events)}
+	r.items[id] = c
+	return nil
+}
+
 // Delete removes a character.
 func (r *CharacterRepository) Delete(_ context.Context, id domain.ID) error {
 	r.mu.Lock()

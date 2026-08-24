@@ -60,6 +60,8 @@ export { DragonMark } from './DragonMark'
 export type { DragonMarkProps } from './DragonMark'
 export { ModalSheet } from './ModalSheet'
 export type { ModalSheetProps } from './ModalSheet'
+export { TabRow } from './TabRow'
+export type { TabRowProps, TabRowTab } from './TabRow'
 
 // Viewport access, for the shell and for components whose two renderings share
 // no markup. Prefer the primitives above.

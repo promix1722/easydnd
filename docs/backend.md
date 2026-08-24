@@ -184,7 +184,7 @@ that.
 | `GET` | `/v1/catalog` | the compendium's index: ruleset, locales, collections and counts |
 | `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it |
 | `GET` | `/v1/characters` | summaries |
-| `POST` | `/v1/characters` | create: a name and the *base* ability scores |
+| `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
 | `POST` | `/v1/characters/import` | import a sheet exported by another tool |
 | `GET` | `/v1/characters/{id}` | the log |
 | `DELETE` | `/v1/characters/{id}` | |
@@ -193,6 +193,12 @@ that.
 | `GET` | `/v1/characters/{id}/events` | the log |
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
 | `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
+| `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
+| `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
+
+The last two address a *member* of the log by position, which is what `Seq`
+means. That is not a third level: `events` is the sub-resource, `{seq}` names
+one of them, and there is no route below it.
 
 ### Importing states, not histories
 
@@ -215,7 +221,10 @@ fit as the one the player made. So instead:
 - the export's final state becomes the character's **opening** state, as an
   `init` event carrying the numbers;
 - typed `race`, `class`, `level` and `subclass` events name what the export
-  states outright, so traits, features and level-scaled values attach;
+  states outright, so traits, features and level-scaled values attach -- each
+  level before the subclass it makes due, so that the log the importer writes
+  is one the build flow could have written itself and one a later replacement
+  will keep;
 - **no prompt is answered.** Every choice stays open, and the client sends the
   player to the build screen rather than the sheet;
 - anything with no home in the model is named in the report rather than
@@ -232,6 +241,23 @@ or two light until it is answered.
 `internal/adapter/sheet/hexsheet` also holds the codebase's only name-to-slug
 lookup. Everywhere else a reference is already a slug; an import is the one
 place a display name is all there is.
+
+### Creating a character takes a name
+
+`POST /v1/characters` takes a name, and an alignment if the player already has
+one in mind. It used to take the generation method and the six base scores as
+well, and the init event it seeded carried all eight -- which is precisely why
+the name and the scores were the two things a build screen could not offer to
+revisit. The log is **one entry per selection**; a selection with no entry of
+its own is a selection nobody can point at. See
+[dnd.md](dnd.md#log-and-events).
+
+So the scores are an ordinary open choice now. A freshly created character has
+`character/abilities` outstanding, answered with a `change` event carrying the
+six `abilities.<ability>` paths, and the generation method travels with that
+answer rather than with creation. The bound on a score -- 1 to 30, wide enough
+for a DM's ruling and narrow enough to reject a typo -- moved with them, and is
+checked where they now arrive.
 
 ### Creation and level-up are one flow
 
@@ -271,12 +297,134 @@ Every write returns the freshly projected sheet. That makes a build step one
 round trip instead of two, and it is why the client needs no cache
 invalidation: the response *is* the invalidation.
 
-`DELETE /events?after=N&expectedSeq=M` is the undo primitive -- a Back button,
-or un-taking a level. The log's invariant is not "append-only", which would
-make going back impossible; it is **append, or drop a suffix; never edit the
-middle**, and the init event can never be dropped. Note that undo is not what
-*changing a pick* needs: answers fold last-write-wins across the whole log, so
-re-answering a prompt is a plain append.
+Every write also records a **`source`**: the group of the prompt the entry
+answers -- `identity`, `abilities`, `race`, `background`, `class` or `advance`,
+the same vocabulary `/prompts` groups its questions by. The **server** writes
+it, from the prompt the event was matched against, and it is ignored if a
+request carries one. That is not distrust for its own sake: the client already
+posts what a prompt told it to post, so the server knows which prompt that was,
+and a client-supplied source would be a second vocabulary for the same fact,
+free to disagree with the one the rules produce. Entries the server cannot
+attribute -- an imported log, a DM's `change` -- carry no source. `GET
+/characters/{id}/events` remains the unabridged record either way.
+
+`DELETE /events?after=N&expectedSeq=M` is the undo primitive: dropping a suffix,
+which is what un-taking a level is. Nothing in the web client calls it any
+more -- changing a pick goes through the replace route below -- but it is
+working, tested API, and removing it would be a breaking change made as a side
+effect of a UI decision.
+
+An earlier version of this page said that changing a pick needs no undo,
+because answers fold last-write-wins and re-answering a prompt is a plain
+append. **That was false.** `promptBuilder.add` stops emitting a prompt the
+moment it is fully answered, so posting the same prompt again is rejected as a
+prompt the character does not have open. Last-write-wins is what lets a *later*
+entry answer an *earlier* entry's question -- a trait's prompt does not exist
+until the race is chosen -- and it was never a way to change an answer. The
+route below is what changing an answer needs.
+
+#### Replacing an entry
+
+```
+PUT    /v1/characters/{id}/events/{seq}[?dryRun=true]   {expectedSeq, event}
+DELETE /v1/characters/{id}/events/{seq}[?dryRun=true]   ?expectedSeq=M
+```
+
+One mechanism for changing anything a player chose: replace the entry that
+carries the choice and revalidate what follows. `PUT` because the body is a
+complete replacement entry; `DELETE` because removing a level has nothing to
+put back. `expectedSeq` guards the whole log exactly as it does on an append.
+
+**Seq 1 is replaceable when the replacement is also an init event** -- that is
+how a name is changed. `Log.Validate` already requires init to be first and to
+appear exactly once, so this is a type check rather than a prohibition: what it
+refuses is a log that could not be read back. Anything else at seq 1, and an
+init event anywhere else, is a field error on `seq`.
+
+The algorithm, in `internal/usecase/character/revise.go`:
+
+1. the prefix before the target is kept untouched;
+2. a replacement is validated **strictly**, exactly as an append is, so a
+   rejection writes nothing and the stored log is byte-identical afterwards;
+3. every entry after the target is replayed **in order**, each judged against
+   the log rebuilt *so far* -- before it is applied. Not against the old log,
+   which is gone, and not against the finished new one, which would make an
+   entry's legality depend on entries that come after it;
+4. the rebuilt log is renumbered by `character.Rebuild`, validated, and
+   projected.
+
+Two invariants make this something a player can trust.
+
+**Revalidation is never stricter than the predicate that accepted the entry,
+except where that predicate was wrong.** The replay checks each entry against
+exactly the prefix it will sit on, which is the same thing the append checked
+against. The exception is deliberate and is the whole reason the bug below had
+to be closed first: an entry that only ever got in because nothing checked it
+does not survive a replay.
+
+**An entry carrying a `Ref` is never dropped merely because its answers died.**
+A rogue whose race change invalidated one of their four class skills is still a
+rogue: the class entry stands, keeps every other answer it carries -- the
+Expertise, the starting weapon -- and the invalidated question comes back
+outstanding under its own group. Deleting the entry would take the class, the
+answers that were still fine and every level built on it, and a revalidation
+that silently eats a player's choices is worse than the truncation it replaces.
+
+The granularity is one **answer**, not one pick. An answer is what a prompt was
+asked for, so half of one answers nothing: four skills picked together stand or
+fall together, and the prompt is asked again.
+
+**The response** is the ordinary `WriteResponse` plus `dropped[]`. Each entry
+names its **original** seq -- the position the client last saw, not the one
+after the rebuild -- its type, ref, level and source, a `reason`, and the
+answers that were lost in the `rule` vocabulary a rejected append already
+speaks. The three reasons are different events for a player: `not-offered`
+means the entry itself is gone, `empty` means it had nothing left once its
+answers went, and `answers-dropped` is *not* a deletion -- the entry stands,
+minus some answers.
+
+**The dry run is the same function with `commit=false`.** It loads, validates,
+replays, renumbers, validates the rebuilt log and projects it, then skips
+exactly one line: `repo.Rewrite`. A separate preview route would be two paths
+to drift, and a preview that disagrees with its commit is worse than none. A
+stale preview cannot be committed silently either, and that costs nothing
+extra: the commit re-runs the replay, and if the log moved in between,
+`expectedSeq` makes it the ordinary sequence conflict.
+
+`Repository.Rewrite` is the port method behind it -- neither an append nor a
+truncation, because replacing one entry can drop entries after it and the
+stored log comes back a different length. The in-memory adapter is the only
+implementation; the Postgres adapter holds accounts only, so there is no
+migration and no backfill for `source` either.
+
+#### Two questions about a reference
+
+`validateRef` asks **does this entry exist in the compendium?**
+`answersAnOpenPrompt` asks **was the character offered it?** Only the first
+used to be asked, and that is a bug this change closes on the way: `POST
+.../events {"type":"subrace","ref":"subrace:hill-dwarf"}` was accepted for a
+half-elf, because `subrace:hill-dwarf` resolves perfectly well and nothing
+looked at whether anything had asked for a subrace at all. The projector then
+applied it. Revalidation cannot work until that is closed -- a replay with no
+notion of "was this offered?" has no way to notice an entry the new prefix
+orphaned -- so the two are now asked together, in that order, on every
+structural event.
+
+`answersAnOpenPrompt` matches on the prompt's own `event` block -- the same
+three fields a client copies into the body -- and then on one of two shapes:
+the prompt selects the entry itself ("which race?"), and the event names an
+option it offers; or the prompt hangs off an entry the character already holds,
+in which case it states the `ref` to post with, and matching that ref is what
+keeps a race's own follow-up entries alive. It is also the function that yields
+the entry's `source`, so an entry's group and its legality are decided by one
+match rather than two that can disagree.
+
+One consequence worth stating: a `feat` event is no longer acceptable, because
+no prompt offers one. The Ability Score Improvement's feat branch is answered
+as a `level` event -- that is what the prompt says to post -- and no other
+prompt asks for a feat at all. The projector still knows the type; "nothing can
+be answered before it is asked" simply now applies to it like everything else,
+and a prompt that wants one has to say so.
 
 ### Ownership
 
@@ -422,12 +570,18 @@ Three ways in, one account model. There is no password and no email of our own.
   and the browser picks the passkey -- sign-in asks for nothing at all, because
   the credential is *discoverable* and carries the account handle on the
   authenticator. **Sign-up asks for nothing either.** `register/begin` takes no
-  body; the display name the operating system's passkey prompt needs to label
-  the passkey with is minted here, beside the account id, exactly as the SSO
-  path already mints one when a provider's claims are useless. So there is no
+  body; the account id is minted here, and the display name the operating
+  system's passkey prompt needs to label the passkey with is the fixed word
+  **`easydnd`** -- every passkey account is called that. The label's job is to
+  say which site the passkey opens when somebody scrolls their credential
+  manager months later, and a name invented per account answered a different
+  question. Sharing one name costs nothing: `users.display_name` is neither
+  unique nor indexed, and no lookup anywhere goes through it. So there is no
   username, no email and no client-supplied text anywhere in this API's auth
-  surface: every string in `users.display_name` was either generated here or
-  asserted by a provider. See `newDisplayName` in `internal/usecase/auth`.
+  surface: every string in `users.display_name` is either that constant or a
+  provider's claim. See `PasskeyDisplayName` in `internal/usecase/auth` -- a
+  constant rather than the configured `auth.rp_name`, because the usecase layer
+  imports no configuration and `make lint/layers` enforces it.
 - **Google**, over OpenID Connect. Optional configuration: with no client id
   and secret the provider is simply not offered, and everything else works
   unchanged.

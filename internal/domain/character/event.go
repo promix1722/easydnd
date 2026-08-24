@@ -91,6 +91,23 @@ type Event struct {
 
 	Type EventType
 
+	// Source is the group of the prompt this entry answers: the race prompt
+	// makes a race entry, the class prompt a class entry. It is what lets a
+	// client group the log by the question each entry settles instead of
+	// inferring the grouping from the event's type -- an inference that has
+	// no answer for a change event carrying six ability scores.
+	//
+	// It is written by the server, from the prompt the event was matched
+	// against, and never read off a request. A client-supplied source would
+	// be a second vocabulary for the same fact, unverified and free to
+	// disagree with the one the rules produce.
+	//
+	// Zero where the server cannot attribute the entry: an imported log
+	// answers no prompt, and a DM's change answers whatever the DM had in
+	// mind. Those entries are still in the log; they simply belong to no
+	// question.
+	Source PromptGroup
+
 	// At is when the event was recorded, not when it happened in the game.
 	At time.Time
 

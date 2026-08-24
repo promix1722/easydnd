@@ -11,9 +11,10 @@ export interface NavItem {
   shortLabel?: string
 }
 
-// Account is deliberately absent: it is a header control in the top right of
-// both shells, next to the button that ends the session, rather than a section
-// of the app -- the whole page is about the identity that header names.
+// Account is deliberately absent: it is reached from the top right of both
+// shells, where the signed-in name links to it next to the button that ends
+// the session, rather than being a section of the app -- the whole page is
+// about the identity that header names, which is why the name is the link.
 //
 // So is system status: `/status` is a deploy diagnostic, not a part of the app
 // somebody navigates around, and it renders in the landing chrome for everyone

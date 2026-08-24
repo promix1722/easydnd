@@ -104,19 +104,39 @@ record what was *chosen*, not what it evaluated to.
 
 ### Log and events
 
-The log is ordered and append-only. It is small, so it is stored as one database
-record holding a JSON array — which is exactly why appending states the sequence
-number it expects to follow. Without that check, two clients editing one
+The log is ordered. It is small, so it is stored as one database record holding
+a JSON array — which is exactly why every write states the sequence number it
+expects the log to end at. Without that check, two clients editing one
 character read, modify and write the same blob, and the later write silently
 discards the earlier.
+
+It is **not** append-only, and saying that it was hid the reason it is safe.
+The invariant is **append, drop a suffix, or replace one entry and revalidate
+what follows**. What holds across all three is that *a stored answer's meaning
+depends only on the entries before it*: dropping a suffix removes entries that
+nothing earlier depends on, and a replacement leaves the prefix untouched, so
+every earlier entry still means what it meant. What a replacement can
+invalidate is the suffix, which is therefore re-checked entry by entry against
+the log rebuilt so far. Editing an entry in the middle *without* that replay is
+the thing that stays forbidden, and it is forbidden for the original reason: it
+would leave answers standing that the new prefix never offered.
+
+**One entry per selection.** Choosing a race is one entry. Setting the six
+ability scores is one entry. Naming the character is one entry. Nothing bundles
+several selections together, and that is not tidiness — a selection with no
+entry of its own is a selection the player cannot change, because the only
+thing they could point at is an entry that also carries five other decisions.
+Creation used to seed the name, the generation method and all six scores into
+the opening event, which is exactly why identity and abilities were the two
+things a build screen could not offer to revisit.
 
 Every event has the **same field structure** — one struct with a `Type`
 discriminator, not a sealed interface. Fields a given type does not use are zero.
 
 | Type | Carries |
 | --- | --- |
-| `init` | Opening state: name, ability scores. Always first, exactly once |
-| `change` | An arbitrary addressed mutation — the escape hatch for a DM ruling or homebrew |
+| `init` | The opening state — for a character created here, the name. Always first, exactly once |
+| `change` | An arbitrary addressed mutation — the escape hatch for a DM ruling or homebrew, and how the ability scores are answered |
 | `race`, `subrace`, `background`, `class`, `subclass` | A catalogue entry plus the answers to its prompts |
 | `level` | A level gained in a class |
 | `feat` | A feat taken |
@@ -126,6 +146,27 @@ An event names a catalogue entry by typed reference, records `Choices` as
 answers keyed by prompt id, and — for `init` and `change` only — carries
 `Changes`: a path, an operator (`set`, `increment`, `add`, `remove`) and a
 typed value.
+
+It also records a **`source`**: the group of the prompt it answers — `identity`,
+`abilities`, `race`, `background`, `class` or `advance`, the same vocabulary
+`Prompts` groups its questions by. Grouping the log is then a fact the server
+wrote rather than something a reader infers from the type, and the difference
+is not cosmetic: a `change` event carrying six numbers and a `change` event
+carrying a DM's ruling have the same type and belong to different questions.
+The server derives it from the prompt the event was matched against and never
+reads it off a request, because a client-supplied source would be a second,
+unverified vocabulary for the same fact. Entries the server cannot attribute —
+an imported log, a DM's `change` — carry no source at all. They are still in
+the log; they simply belong to no question.
+
+**The trade this accepts.** The log records how a character is *constructed*,
+not every state it passed through. "Why do I have this proficiency?" stays
+answerable, because the entry that granted it is still there and still says
+what it answered. "Was I ever a High Elf?" does not, because the entry that
+said so was replaced rather than superseded. That is the right way round: the
+first question is asked at the table every session, the second is asked by
+nobody, and keeping a second history alongside the constructor would be a
+second thing to hold consistent with the first.
 
 Most of what a change addresses is a value nothing derives. Two are not:
 `skills.<skill>` and `savingThrows.<ability>` state training the rules would

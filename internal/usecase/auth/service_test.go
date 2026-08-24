@@ -115,8 +115,8 @@ func credential(id string) user.Credential {
 // violate users_display_name_len, and an OS passkey prompt with a blank label
 // is unusable long before that.
 //
-// The name itself is not asserted -- newDisplayName draws it at random, and
-// TestGeneratedDisplayNamesAreValid already covers what it can produce.
+// The name is asserted exactly, because it is a fixed one now. A passkey
+// labelled anything but the site it opens is the regression this catches.
 func TestBeginRegistrationNamesTheAccount(t *testing.T) {
 	ceremony := &fakeCeremony{state: []byte("state"), credential: credential("c1")}
 	svc, repo := newService(t, ceremony, newFakeSigner())
@@ -130,15 +130,32 @@ func TestBeginRegistrationNamesTheAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FinishRegistration: %v", err)
 	}
-	if n := utf8.RuneCountInString(account.DisplayName); n < MinDisplayName || n > MaxDisplayName {
-		t.Errorf("DisplayName = %q, %d runes, outside %d..%d",
-			account.DisplayName, n, MinDisplayName, MaxDisplayName)
-	}
-	if strings.Count(account.DisplayName, " ") != 1 {
-		t.Errorf("DisplayName = %q, want two words", account.DisplayName)
+	if account.DisplayName != PasskeyDisplayName {
+		t.Errorf("DisplayName = %q, want %q", account.DisplayName, PasskeyDisplayName)
 	}
 	if _, err := repo.ByID(ctx, account.ID); err != nil {
 		t.Fatalf("the account was not stored: %v", err)
+	}
+}
+
+// TestPasskeyDisplayNameIsStorable is the only test guarding
+// users_display_name_len, the CHECK on users.display_name bounding it to 1..64
+// characters: the Postgres adapter tests need TEST_DATABASE_URL and are skipped
+// by `make verify`, so a constant edited to something the column refuses would
+// otherwise reach a real database first -- at the far end of a ceremony that
+// has already prompted the authenticator.
+func TestPasskeyDisplayNameIsStorable(t *testing.T) {
+	got, err := normalizeDisplayName(PasskeyDisplayName)
+	if err != nil {
+		t.Fatalf("normalizeDisplayName(%q): %v", PasskeyDisplayName, err)
+	}
+	// Unchanged, not merely accepted: a name carrying stray whitespace would
+	// still normalize, and the stored string would still not be the constant.
+	if got != PasskeyDisplayName {
+		t.Fatalf("normalizeDisplayName(%q) = %q, want it unchanged", PasskeyDisplayName, got)
+	}
+	if n := utf8.RuneCountInString(got); n < MinDisplayName || n > MaxDisplayName {
+		t.Fatalf("%q is %d runes, outside %d..%d", got, n, MinDisplayName, MaxDisplayName)
 	}
 }
 

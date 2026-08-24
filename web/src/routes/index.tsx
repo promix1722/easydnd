@@ -3,7 +3,7 @@ import { createBrowserRouter } from 'react-router'
 import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
 import { BuildScreen, CharacterLogScreen, CharacterSheetScreen } from '@/features/character'
-import { CreateCharacterScreen, ImportCharacterScreen } from '@/features/characters'
+import { ImportCharacterScreen } from '@/features/characters'
 import { StatusScreen } from '@/features/status'
 import { LandingShell } from '@/shell/LandingShell'
 import { RootGate } from '@/shell/RootGate'
@@ -35,11 +35,17 @@ export const router = createBrowserRouter([
       // A character is somebody's, so these render the landing page to a
       // signed-out visitor rather than redirecting: the URL survives being
       // shared, and signing in fills it in.
+      //
+      // The same screen as `/characters/:id/build`, and not by coincidence:
+      // creating is answering the first question, and a separate create page
+      // was a second shape for one thing. Without an `:id` it holds the name
+      // alone; answering it creates the character and replaces this URL with
+      // the build one.
       {
         path: 'characters/new',
         element: (
           <Private>
-            <CreateCharacterScreen />
+            <BuildScreen />
           </Private>
         ),
       },

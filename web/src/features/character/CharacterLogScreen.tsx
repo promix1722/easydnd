@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router'
 
-import { bySlug, getEntries, getEvents } from '@/lib/api'
-import type { Answer, CharacterEvent, Entry } from '@/lib/api'
+import { getEvents } from '@/lib/api'
+import type { Answer, CharacterEvent } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
 import {
   Alert,
@@ -17,8 +17,9 @@ import {
   Title,
 } from '@/ui'
 
+import { resolveRefNames } from './refNames'
+
 import {
-  collectionOfKind,
   describeChange,
   eventLabel,
   formatAt,
@@ -143,41 +144,6 @@ export function CharacterLogScreen() {
       />
     </Stack>
   )
-}
-
-/**
- * Looks up the compendium's name for every reference the log makes.
- *
- * One request per collection rather than one per event, and a failure yields
- * no names rather than no page: the slug is a worse label than the name, but
- * it is a much better label than an error.
- */
-async function resolveRefNames(events: readonly CharacterEvent[]): Promise<Map<string, string>> {
-  const wanted = new Map<string, Map<string, string>>()
-  for (const event of events) {
-    if (event.ref === undefined) continue
-    const collection = collectionOfKind(kindOf(event.ref))
-    if (collection === null) continue
-    const slugs = wanted.get(collection) ?? new Map<string, string>()
-    slugs.set(slugOf(event.ref), event.ref)
-    wanted.set(collection, slugs)
-  }
-
-  const names = new Map<string, string>()
-  await Promise.all(
-    [...wanted].map(async ([collection, slugs]) => {
-      try {
-        const entries = bySlug(await getEntries<Entry>(collection, [...slugs.keys()]))
-        for (const [slug, ref] of slugs) {
-          const entry = entries.get(slug)
-          if (entry !== undefined) names.set(ref, entry.name)
-        }
-      } catch {
-        // The log renders on slugs alone. See the doc comment.
-      }
-    }),
-  )
-  return names
 }
 
 /**

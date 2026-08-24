@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router'
 
 import { useAuth } from '@/lib/auth'
-import { AppShell, Burger, Button, Group, NavLink, Text, useDisclosure } from '@/ui'
+import { Anchor, AppShell, Burger, Button, Group, NavLink, useDisclosure } from '@/ui'
 
 import { NAV_ITEMS } from './nav'
 import { Wordmark } from './Wordmark'
@@ -25,17 +25,19 @@ export function DesktopShell() {
           <Burger opened={opened} onClick={toggle} size="sm" aria-label="Toggle navigation" />
           <Wordmark />
           <Group gap="sm" ml="auto">
-            {user ? (
-              <Text size="sm" c="dimmed">
-                {user.display_name}
-              </Text>
-            ) : null}
             {/* The account lives in the corner that names the account, beside
                 the control that ends the session -- not in the navbar, which
-                lists the parts of the app rather than who is using it. */}
-            <Button component={Link} to="/account" variant="subtle">
-              Account
-            </Button>
+                lists the parts of the app rather than who is using it. The
+                name *is* the link: naming whose session this is and offering
+                the way into it are one job, and a button labelled "Account"
+                beside the account's own name was that sentence said twice.
+                A session with nothing to show under a name falls back to the
+                word, since a link with no label is a link nobody can find. */}
+            {user ? (
+              <Anchor component={Link} to="/account" size="sm" c="dimmed">
+                {user.display_name.trim() || 'Account'}
+              </Anchor>
+            ) : null}
             {/* A guest's session is the only copy of their work, so the
                 button that ends it says what it ends rather than borrowing
                 the word for leaving an account you can come back to. */}

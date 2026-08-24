@@ -22,6 +22,17 @@ func slugStrings(slugs []rules.Slug) []string {
 	return out
 }
 
+// sourceString names the prompt group an entry answers, or nothing at all
+// where the server could not attribute it -- an imported log, a DM's change.
+// PromptGroupNone stringifies as "none", which would read on the wire as a
+// group rather than as an absence.
+func sourceString(group domain.PromptGroup) string {
+	if group == domain.PromptGroupNone {
+		return ""
+	}
+	return group.String()
+}
+
 func refString(ref rules.Ref) string {
 	if ref.IsZero() {
 		return ""
@@ -61,11 +72,12 @@ func characterOf(c domain.Character) Character {
 
 func eventOf(e domain.Event) Event {
 	out := Event{
-		Seq:   e.Seq,
-		Type:  e.Type.String(),
-		Ref:   refString(e.Ref),
-		Level: e.Level,
-		Note:  e.Note,
+		Seq:    e.Seq,
+		Type:   e.Type.String(),
+		Source: sourceString(e.Source),
+		Ref:    refString(e.Ref),
+		Level:  e.Level,
+		Note:   e.Note,
 	}
 	if !e.At.IsZero() {
 		out.At = e.At.UTC().Format(time.RFC3339)
@@ -349,6 +361,9 @@ func toEvent(p Event, index int) (domain.Event, []types.FieldError) {
 		})
 	}
 
+	// Source is deliberately not read. The server writes it, from the prompt
+	// the event turns out to answer; taking it from the body would let a
+	// client file its own answer under whatever category suited it.
 	out := domain.Event{Type: eventType, Level: p.Level, Note: p.Note}
 	if p.Ref != "" {
 		ref, ok := rules.ParseRef(p.Ref)

@@ -17,6 +17,22 @@ export interface Choosable {
 }
 
 /**
+ * Whether a prompt offers anything to pick between.
+ *
+ * Two questions arrive with the kind `ability-scores`: the improvement a level
+ * grants, which offers "raise two scores" or "take a feat", and the six a
+ * character starts with, which offers nothing because it is six numbers rather
+ * than a choice of N. This is what tells them apart, and it asks the option set
+ * rather than the prompt's slug so that the answer comes from the server's own
+ * statement of what may be picked.
+ */
+export function offersOptions(prompt: Prompt): boolean {
+  const set = prompt.choice.from
+  if ((set.options ?? []).length > 0) return true
+  return set.collection !== undefined || set.category !== undefined
+}
+
+/**
  * Turns a prompt's options into the buttons the card draws.
  *
  * An option's key is always the server's, never computed here. A bundle of a

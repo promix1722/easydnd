@@ -152,6 +152,16 @@ export interface CharacterEvent {
   choices?: Answer[]
   changes?: Change[]
   note?: string
+  /**
+   * The group of the prompt this entry answered, written by the server.
+   *
+   * Never sent: a client-supplied source would be a second, unverified
+   * vocabulary for what an answer means, and the server already knows which
+   * prompt it accepted. Absent where nothing can be attributed -- an imported
+   * log, a DM's adjustment -- which is what puts those entries in no tab and
+   * leaves `/characters/:id/log` as the unabridged record.
+   */
+  source?: string
 }
 
 /** What the answer to a prompt must be posted as. */
@@ -195,18 +205,69 @@ export interface WriteResponse {
   sheet: Sheet
 }
 
+/** Why an entry did not survive a replacement. */
+export type DropReason =
+  /** The character is no longer being asked the question it answered. */
+  | 'not-offered'
+  /** It stayed, but some of its answers did not. */
+  | 'answers-dropped'
+  /** Everything it said is gone, so there is nothing left to keep. */
+  | 'empty'
+
+/** One answer a replacement invalidated, named the way the server names it. */
+export interface LostAnswer {
+  prompt: string
+  picks?: string[]
+  /** The `validateAnswer` vocabulary: no new words on the wire. */
+  rule: string
+  message?: string
+}
+
+/**
+ * An entry a replacement cost, reported before it is paid for.
+ *
+ * `seq` is the entry's **original** position: the log is renumbered on the way
+ * out, so the number that identifies it to the reader is the one it had when
+ * they wrote it.
+ */
+export interface Dropped {
+  seq: number
+  type: string
+  ref?: string
+  level?: number
+  source?: string
+  reason: DropReason
+  lost?: LostAnswer[]
+}
+
+/**
+ * The write response, plus what the replacement cost.
+ *
+ * A dry run and its commit return the same shape from the same code path, so
+ * a preview that disagrees with what actually happens is not a thing that can
+ * be built here.
+ */
+export interface ReviseResponse extends WriteResponse {
+  dropped?: Dropped[]
+}
+
 export interface CreateResponse {
   id: string
   seq: number
   sheet: Sheet
 }
 
+/**
+ * Everything creating a character takes: a name.
+ *
+ * It used to take the score method and all six scores too, and that was eight
+ * selections written as one entry -- which meant the name and the scores had
+ * nothing a player could point at and change. They are ordinary open choices
+ * now, answered from their own tabs and each written as its own entry.
+ */
 export interface NewCharacter {
   name: string
   alignment?: string
-  method?: string
-  /** The *base* array, before racial bonuses; the server applies those. */
-  abilities: Record<string, number>
 }
 
 /** One line of an import report: a field of the export, and what became of it. */
@@ -300,10 +361,63 @@ export function appendEvents(
 }
 
 /**
- * Drops every event after `after`: the Back button, and un-taking a level.
+ * Replaces one entry in place, revalidating everything after it.
  *
- * Not what changing a pick needs -- answers fold last-write-wins, so
- * re-answering a prompt is a plain append.
+ * This is the whole of changing your mind: there is no append-a-correction
+ * path, because a correction that does not sit where the original sat leaves
+ * the entries between them meaning what they meant before it. The server
+ * replays the suffix against the log as rebuilt *so far*, so an entry is
+ * judged by what came before it and nothing is circular.
+ *
+ * `expectedSeq` guards the whole log, exactly as it does on append. It is also
+ * what makes a stale preview safe: if the log moved between the dry run and
+ * the commit, the commit is a sequence conflict rather than a quiet surprise.
+ *
+ * `dryRun` runs every line of that except the store, so the `dropped` list a
+ * player is shown is produced by the code that will do the work.
+ */
+export function replaceEvent(
+  id: string,
+  seq: number,
+  expectedSeq: number,
+  event: CharacterEvent,
+  dryRun = false,
+): Promise<ReviseResponse> {
+  return request<ReviseResponse>(`/characters/${id}/events/${seq}${dryRun ? '?dryRun=true' : ''}`, {
+    method: 'PUT',
+    body: { expectedSeq, event },
+  })
+}
+
+/**
+ * Removes one entry, revalidating everything after it.
+ *
+ * The same mechanism as `replaceEvent` with nothing put back: un-taking a
+ * level, and dropping an answer so its question comes back outstanding.
+ *
+ * `expectedSeq` travels in the query rather than in a body, matching the
+ * truncate route it sits beside -- a DELETE with a body is legal and widely
+ * mishandled, and there is nothing here that a query string cannot carry.
+ */
+export function deleteEvent(
+  id: string,
+  seq: number,
+  expectedSeq: number,
+  dryRun = false,
+): Promise<ReviseResponse> {
+  return request<ReviseResponse>(
+    `/characters/${id}/events/${seq}?expectedSeq=${expectedSeq}${dryRun ? '&dryRun=true' : ''}`,
+    { method: 'DELETE' },
+  )
+}
+
+/**
+ * Drops every event after `after`.
+ *
+ * Nothing in this client calls it any more -- changing an answer is
+ * `replaceEvent`, and un-taking a level is `deleteEvent` -- but it is working,
+ * tested API, and withdrawing it would be a breaking change made as a side
+ * effect of a decision about a screen.
  */
 export function truncateEvents(
   id: string,

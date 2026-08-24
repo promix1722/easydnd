@@ -52,30 +52,19 @@ func (s *Service) now() time.Time {
 	return time.Now().UTC()
 }
 
-// NewCharacter is the opening state a character is created with.
+// NewCharacter is the opening state a character is created with: a name, and
+// an alignment if the player has one in mind.
 //
-// The scores are the *base* array as generated -- point buy, standard array,
-// dice. Racial bonuses are applied by the projection, every time, which is
-// what lets a player change their mind about a race without re-entering six
-// numbers.
+// It used to carry the generation method and all six ability scores as well,
+// and that was eight selections seeded into one log entry. A selection with
+// no entry of its own is a selection the player cannot change, which is why
+// creation stopped bundling: the scores are an ordinary open choice now,
+// answered from the abilities tab as their own entry, and the method travels
+// with them.
 type NewCharacter struct {
 	Name      string
 	Alignment rules.Slug
-	Method    rules.Slug
-	Abilities map[rules.Ability]int
 }
-
-// minScore and maxScore bound an ability score.
-//
-// The bounds are deliberately wide. Point buy and the standard array are far
-// narrower, but validating them here would make a legitimate DM ruling --
-// a boon, a cursed item, a homebrew race -- impossible to record. The client
-// enforces the generation method it is offering; the server enforces only
-// what no rule can produce.
-const (
-	minScore = 1
-	maxScore = 30
-)
 
 // Create starts a new character for owner and seeds it with an init event.
 func (s *Service) Create(ctx context.Context, owner domain.OwnerID, opening NewCharacter) (domain.Character, error) {
@@ -93,24 +82,14 @@ func (s *Service) Create(ctx context.Context, owner domain.OwnerID, opening NewC
 	return s.repo.Get(ctx, created.ID)
 }
 
+// validateOpening checks what creation is now allowed to carry: a name, and
+// nothing that has a prompt of its own.
 func validateOpening(opening NewCharacter) error {
-	var fields []types.FieldError
 	if opening.Name == "" {
-		fields = append(fields, types.FieldError{
-			Field: "name", Rule: "required", Message: "a character needs a name",
-		})
-	}
-	for ability, score := range opening.Abilities {
-		if score < minScore || score > maxScore {
-			fields = append(fields, types.FieldError{
-				Field:   "abilities." + ability.Slug().String(),
-				Rule:    "range",
-				Message: "an ability score must be between 1 and 30",
+		return types.NewFieldValidationError("the character could not be created",
+			types.FieldError{
+				Field: "name", Rule: "required", Message: "a character needs a name",
 			})
-		}
-	}
-	if len(fields) > 0 {
-		return types.NewFieldValidationError("the character could not be created", fields...)
 	}
 	return nil
 }
@@ -118,6 +97,11 @@ func validateOpening(opening NewCharacter) error {
 // initEvent builds the opening event. Everything it carries is a change,
 // because everything it carries is an input the rules derive from rather than
 // a catalogue entry the character selected.
+//
+// Its source is identity without asking, and it is the one event for which
+// that is a statement rather than a lookup: no prompt offers an init event to
+// a character that already exists, because the way to change a name is to
+// replace this entry.
 func initEvent(opening NewCharacter) domain.Event {
 	changes := []domain.Change{
 		{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue(opening.Name)},
@@ -127,24 +111,7 @@ func initEvent(opening NewCharacter) domain.Event {
 			Path: "identity.alignment", Op: domain.OpSet, Value: domain.SlugValue(opening.Alignment),
 		})
 	}
-	if !opening.Method.IsZero() {
-		changes = append(changes, domain.Change{
-			Path: "abilities.method", Op: domain.OpSet, Value: domain.SlugValue(opening.Method),
-		})
-	}
-	// Ordered, so that two identical requests produce identical logs.
-	for _, ability := range rules.Abilities() {
-		score, ok := opening.Abilities[ability]
-		if !ok {
-			continue
-		}
-		changes = append(changes, domain.Change{
-			Path:  domain.Path("abilities." + ability.Slug().String()),
-			Op:    domain.OpSet,
-			Value: domain.IntValue(score),
-		})
-	}
-	return domain.Event{Type: domain.EventInit, Changes: changes}
+	return domain.Event{Type: domain.EventInit, Source: domain.GroupIdentity, Changes: changes}
 }
 
 // List returns summaries of the characters owned by owner.
@@ -222,10 +189,11 @@ func (s *Service) Prompts(
 // Apply validates events against the catalogue and appends them to a
 // character's log, returning the sequence the log now ends at.
 //
-// Validation is the substance here: an answer must name a prompt the
-// character actually has open, and its picks must be options that prompt
-// actually offers. Without that check a typo is not an error but a silently
-// missing proficiency, discovered weeks later as a wrong number on a sheet.
+// Validation is the substance here: an event must select something the
+// character is being offered, an answer must name a prompt they actually have
+// open, and its picks must be options that prompt actually offers. Without
+// those checks a typo is not an error but a silently missing proficiency,
+// discovered weeks later as a wrong number on a sheet.
 func (s *Service) Apply(
 	ctx context.Context,
 	owner domain.OwnerID,
@@ -246,7 +214,9 @@ func (s *Service) Apply(
 			"character %q is at sequence %d, not %d", id, got, expectedSeq)
 	}
 
-	if err := validateEvents(character.Log, cat, events); err != nil {
+	// Validating stamps each event with the source of the prompt it answers,
+	// so the slice handed to the repository is not the slice that arrived.
+	if err := validateAndAttribute(character.Log, cat, events); err != nil {
 		return 0, err
 	}
 	if err := s.repo.Append(ctx, id, expectedSeq, events...); err != nil {

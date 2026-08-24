@@ -40,6 +40,28 @@ const userIDBytes = 16
 // exists so the header has something to render.
 const GuestDisplayName = "Guest"
 
+// PasskeyDisplayName is what an account created with a passkey is called.
+//
+// Neither passkey ceremony asks for anything -- sign-in is discoverable, and
+// sign-up has no reason to be different -- but the credential still needs a
+// label, because this string is what the operating system's passkey prompt,
+// and the credential manager the passkey is later listed in, show for the
+// account. So it says the one thing somebody scrolling that list wants to
+// know: which site the passkey opens. An invented per-account name answered a
+// question nobody was asking, and buried the answer to the one they were.
+//
+// It is a constant rather than the configured `auth.rp_name` because this
+// layer imports no configuration -- it depends on the user domain, the auth
+// ports and internal/types, and nothing else, which `make lint/layers`
+// enforces. The two spellings can drift; a deployment that renames the relying
+// party gets a passkey labelled with the old word and nothing worse, which is
+// a cheaper failure than plumbing config through the usecase to avoid it.
+//
+// Every passkey account therefore carries the same name, which costs nothing:
+// the account id is the key, and users.display_name is neither unique nor
+// indexed. Nothing in the tree looks an account up by what it is called.
+const PasskeyDisplayName = "easydnd"
+
 // Sealed-envelope kinds. Both the WebAuthn ceremony and the SSO flight ride in
 // a cookie sealed by the same Signer, so each says which it is and each
 // refuses the other. Without that, a value minted by one flow would be fed to
@@ -138,24 +160,19 @@ func (s *Service) GuestSessionTTL() time.Duration { return s.guestSessionTTL }
 // It asks for nothing, which is the whole point: sign-in is discoverable and
 // names no account, so a sign-up that demanded a piece of text would be the
 // only place in this API where a visitor had to know which of the two they
-// were doing. The account id and the label the operating system's passkey
-// prompt shows are both minted here -- see newDisplayName.
+// were doing. The account id is minted here; the label the operating system's
+// passkey prompt shows is fixed -- see PasskeyDisplayName.
 //
 // Nothing is written: the freshly minted account rides inside the sealed
 // ceremony token and is stored only if FinishRegistration verifies. An
 // abandoned sign-up therefore leaves no orphan record and no reserved name.
 func (s *Service) BeginRegistration(_ context.Context) (options []byte, ceremony string, err error) {
-	name, err := newDisplayName()
-	if err != nil {
-		return nil, "", err
-	}
-
 	id, err := newUserID()
 	if err != nil {
 		return nil, "", err
 	}
 
-	candidate := user.User{ID: id, DisplayName: name, CreatedAt: s.now()}
+	candidate := user.User{ID: id, DisplayName: PasskeyDisplayName, CreatedAt: s.now()}
 
 	options, state, err := s.ceremony.BeginRegistration(candidate)
 	if err != nil {
@@ -427,9 +444,10 @@ func (s *Service) warnOnStalledCounter(current user.User, presented user.Credent
 
 // normalizeDisplayName trims and bounds a display name this service did not
 // mint. Nothing a visitor types reaches it any more -- there is no such text
-// left in the auth surface -- but a provider's claims still arrive as whatever
-// that provider felt like sending, and newDisplayName runs its own output
-// through it as a cheap guard on the column's CHECK constraint.
+// left in the auth surface, and the passkey path stores a constant -- but a
+// provider's claims still arrive as whatever that provider felt like sending,
+// which is the one place a name can still be empty, unbounded or not text.
+// See displayNameFor.
 func normalizeDisplayName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	switch {

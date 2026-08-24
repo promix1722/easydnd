@@ -21,13 +21,18 @@ const (
 
 // TruncateEvents handles DELETE /v1/characters/{id}/events?after=N&expectedSeq=M.
 //
-// This is the undo primitive: the build flow's Back button, and un-taking a
-// level. The log's invariant is not "append-only" -- that would make going
-// back impossible -- but "append, or drop a suffix; never edit the middle".
+// This is the suffix-dropping primitive: un-taking a level, and everything
+// after it. The log's invariant is not "append-only" -- that would make going
+// back impossible -- but "append, drop a suffix, or replace one entry and
+// revalidate what follows".
 //
-// Note that undo is not what changing a pick needs. Answers fold last-write-
-// wins across the whole log, so re-answering a prompt is a plain append; this
-// is for structural undo, where an event should never have been recorded.
+// It is not what changing a pick needs, and the reason is not the one an
+// earlier version of this comment gave. Answers do fold last-write-wins, but a
+// prompt that has been answered stops being emitted, so re-answering it is
+// rejected as a prompt the character does not have open; changing a pick is
+// ReplaceEvent. Nothing in the web client calls this route any more. It stays
+// because it is working, tested API, and removing it would be a breaking
+// change made as a side effect of a UI decision.
 func (h *Handler) TruncateEvents(c *gin.Context) {
 	after, err := intQuery(c, AfterQueryParam)
 	if err != nil {

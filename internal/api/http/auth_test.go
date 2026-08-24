@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 
@@ -312,9 +311,9 @@ func TestRegisterThenMe(t *testing.T) {
 		t.Fatalf("decode body %q: %v", rec.Body.String(), err)
 	}
 	// Nobody sent a name, so the server owed us one -- this is the handler-level
-	// proof that it minted a usable label rather than storing an empty string.
-	if n := utf8.RuneCountInString(body.User.DisplayName); n < 1 || n > 64 {
-		t.Errorf("display_name = %q, %d runes, want 1..64", body.User.DisplayName, n)
+	// proof that the fixed label reaches the client rather than an empty string.
+	if body.User.DisplayName != authuc.PasskeyDisplayName {
+		t.Errorf("display_name = %q, want %q", body.User.DisplayName, authuc.PasskeyDisplayName)
 	}
 	if len(body.User.Credentials) != 1 {
 		t.Errorf("credentials = %d, want 1", len(body.User.Credentials))

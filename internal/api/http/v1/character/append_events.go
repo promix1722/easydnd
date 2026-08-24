@@ -32,6 +32,42 @@ type AppendEventsParams struct {
 type WriteResponse struct {
 	Seq   int   `json:"seq"`
 	Sheet Sheet `json:"sheet"`
+
+	// Dropped is what a replacement cost, and is present only on the routes
+	// that can cost anything. An append and a truncation never populate it:
+	// an append adds, and a truncation's cost is the range the caller named.
+	Dropped []Dropped `json:"dropped,omitempty"`
+}
+
+// Dropped is one entry a replacement did not leave alone.
+//
+// Seq is its position in the log as the client last saw it, *before* the
+// replacement -- the whole point is to name rows still on screen, and after
+// the rebuild half of them have moved and some are gone.
+type Dropped struct {
+	Seq    int    `json:"seq"`
+	Type   string `json:"type"`
+	Ref    string `json:"ref,omitempty"`
+	Level  int    `json:"level,omitempty"`
+	Source string `json:"source,omitempty"`
+
+	// Reason is one of "not-offered" (nothing offers this entry any more),
+	// "answers-dropped" (the entry stands, minus some picks) or "empty" (the
+	// entry was nothing but answers and they all went). Only the first and
+	// last remove a row.
+	Reason string `json:"reason"`
+
+	// Lost names the answers that did not survive, in the same rule
+	// vocabulary a rejected append reports.
+	Lost []DroppedAnswer `json:"lost,omitempty"`
+}
+
+// DroppedAnswer is one answer a replacement invalidated.
+type DroppedAnswer struct {
+	Prompt  string   `json:"prompt"`
+	Picks   []string `json:"picks,omitempty"`
+	Rule    string   `json:"rule"`
+	Message string   `json:"message,omitempty"`
 }
 
 // AppendEvents handles POST /v1/characters/{id}/events.
