@@ -11,14 +11,60 @@ tested. The battle tracker is not.
 ## Quick start
 
 ```sh
-make web/deps                       # once
-make web/dev                        # http://localhost:5173, proxies /v1 to :8080
+make web/deps                       # once, per worktree -- node_modules is not shared
+make web/dev                        # http://127.0.0.1:5173, proxies /v1 to :8080
 make web/check                      # typecheck, lint, layer-check, tests -- mirrors CI
 ```
 
-`make web/dev` proxies `/v1` to `localhost:8080`, so run `make run/server`
-alongside it. `make verify` at the repo root runs the frontend checks and the
-Go ones together.
+`make web/dev` proxies `/v1` to the API, so run `make run/server` alongside it
+-- or `make dev` at the repo root, which starts both and a Postgres. `make
+verify` at the repo root runs the frontend checks and the Go ones together.
+
+## One dev server per worktree
+
+The ports above are what an unclaimed worktree uses. Once one claims a slot
+(see [backend.md](backend.md#running-more-than-one-worktree)), `make web/dev`
+passes three variables that `vite.config.ts` reads, all defaulting to the
+values quoted above:
+
+| | |
+| --- | --- |
+| `EASYDND_WEB_PORT` | what Vite binds, on `127.0.0.1` |
+| `EASYDND_API_ORIGIN` | where `/v1` is proxied -- this worktree's API, not `:8080` |
+| `EASYDND_WEB_PUBLIC_URL` | where a *browser* reaches this dev server, when a proxy is in front |
+
+The last one is the interesting one, and it exists because a proxy makes "the
+port Vite binds" and "the port the browser dials" two different numbers. Two
+settings have to be told:
+
+- **`server.allowedHosts`.** Vite refuses a `Host` header it does not
+  recognise, and a proxy that preserves the browser's `Host` -- as it must, or
+  the origin the API sees would be wrong -- forwards a name Vite has never
+  heard of. Without the public hostname listed, every request comes back
+  *"Blocked request. This host is not allowed."*
+- **`server.hmr.clientPort`.** The HMR WebSocket is dialled *by the browser*,
+  so it would otherwise be pointed at a port only this machine can reach and
+  the console would loop `[vite] failed to connect to websocket`. The app is
+  unaffected when that happens -- module loads and `/v1` are ordinary HTTP --
+  but edits stop appearing without a reload.
+
+`EASYDND_WEB_PUBLIC_URL` must also match an entry in the API's
+`auth.rp_origins` byte for byte, trailing slash and port included, or
+`middleware.SameOrigin` rejects every POST. `make dev` derives both from the
+same place, which is the point.
+
+`server.strictPort` is on: a busy port fails instead of sliding to the next
+one. Three other things name this port -- the proxy in front, `auth.rp_origins`
+and the neighbouring worktree that must not be handed it -- so a silent drift
+would not surface as "port busy" but as "request origin is not allowed" on
+every write.
+
+One consequence of reaching the client over plain HTTP on a name that is not
+`localhost`: it is not a secure context, so `window.PublicKeyCredential` is
+undefined, `lib/webauthn/support.ts` reports passkeys unavailable and the
+sign-in screen draws no passkey card. That is the designed degradation, not a
+bug -- the guest session is the way in, and `lib/api/client.ts` already falls
+back off `crypto.randomUUID` so `X-Request-Id` is still sent.
 
 ## Layout
 

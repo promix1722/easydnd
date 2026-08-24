@@ -40,6 +40,32 @@ function versionManifest(): Plugin {
   }
 }
 
+/**
+ * Where this dev server listens, and where a browser reaches it.
+ *
+ * They are the same thing until something proxies between them. Each worktree
+ * claims a slot (`make ports`), so Vite binds one port while the browser dials
+ * another on the proxy in front. Two settings have to be told: `allowedHosts`,
+ * because Vite refuses a Host header it does not recognise, and
+ * `hmr.clientPort`, because the HMR socket is dialled by the browser and would
+ * otherwise be sent to a port nothing outside can reach.
+ *
+ * EASYDND_WEB_PUBLIC_URL must appear byte for byte in this worktree's
+ * `auth.rp_origins`, or middleware.SameOrigin rejects every POST -- including
+ * the guest sign-in, which over plain HTTP is the only way in at all.
+ *
+ * The defaults reproduce what an unclaimed worktree has always done, so
+ * `make web/dev` in a fresh clone is unchanged.
+ */
+const devPort = Number(process.env.EASYDND_WEB_PORT ?? 5173)
+const apiTarget = process.env.EASYDND_API_ORIGIN ?? 'http://127.0.0.1:8080'
+const publicUrl = process.env.EASYDND_WEB_PUBLIC_URL
+  ? new URL(process.env.EASYDND_WEB_PUBLIC_URL)
+  : null
+const publicPort = publicUrl
+  ? Number(publicUrl.port) || (publicUrl.protocol === 'https:' ? 443 : 80)
+  : devPort
+
 export default defineConfig({
   plugins: [
     react(),
@@ -85,12 +111,37 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    // Loopback, like the API and for the same reason: this may be a shared
+    // machine, and whatever proxies in front connects to 127.0.0.1. Named
+    // rather than left default because Vite's `localhost` can resolve to ::1
+    // while the proxy dials the v4 literal.
+    host: '127.0.0.1',
+    port: devPort,
+    // A fixed port, not "the next one free". Three other things name this port
+    // -- the proxy in front, auth.rp_origins, and the neighbouring worktree
+    // that must not be handed it -- so drifting to 5174 would not surface as
+    // "port busy" but as "request origin is not allowed" on every POST, which
+    // is a much longer afternoon.
+    strictPort: true,
+    ...(publicUrl
+      ? {
+          // Vite rejects an unrecognised Host header and the proxy forwards
+          // the browser's, so the public name has to be listed. localhost and
+          // bare IPs are always allowed and need no entry.
+          allowedHosts: [publicUrl.hostname],
+          // hmr.host stays unset: the client falls back to location.hostname,
+          // which is already right. Only the port is wrong without this.
+          hmr: {
+            clientPort: publicPort,
+            protocol: publicUrl.protocol === 'https:' ? 'wss' : 'ws',
+          },
+        }
+      : {}),
     // The API binds 127.0.0.1 and has no CORS middleware by design; proxying
     // keeps dev same-origin so the browser never needs one.
     proxy: {
       '/v1': {
-        target: 'http://127.0.0.1:8080',
+        target: apiTarget,
         changeOrigin: false,
       },
     },

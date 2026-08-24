@@ -5,23 +5,31 @@
 # && make test/db` works on a laptop, and so that a contributor can run the API
 # with durable accounts without an AWS account.
 #
-# Port 5433, not 5432, so a Postgres already installed on the machine keeps
-# working and nobody points the tests at their own data by accident.
+# Never 5432, so a Postgres already installed on the machine keeps working and
+# nobody points the tests at their own data by accident. 5433 for a worktree
+# that has not claimed a slot, and 5440+<slot> for one that has -- a separate
+# decade, so a slotted worktree can never publish the unclaimed port and
+# quietly adopt its database.
+#
 # Named explicitly: compose otherwise derives the project name from the
 # directory, which here is "local" -- generic enough to collide with another
-# checkout's deploy/local and adopt its containers.
+# checkout's deploy/local and adopt its containers. `make db/up` overrides this
+# with -p easydnd-<slot>, which is what keeps two worktrees apart.
 name: easydnd
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: easydnd-postgres
+    # No container_name on purpose: it is a global name, so two worktrees would
+    # collide on it however their projects are named. Compose derives
+    # <project>-postgres-1, which is already unique; `make db/psql` is the way
+    # in without having to know it.
     environment:
       POSTGRES_USER: easydnd
       POSTGRES_PASSWORD: easydnd
       POSTGRES_DB: easydnd
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:${EASYDND_PG_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U easydnd -d easydnd"]
       interval: 5s

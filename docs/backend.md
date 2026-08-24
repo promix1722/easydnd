@@ -30,13 +30,91 @@ make test/db                        # the suite including the Postgres adapter (
 make db/down                        # and delete it again
 ```
 
+Or all of it at once, which is also the way to run more than one worktree:
+
+```sh
+make dev                            # Postgres, the API and the web client, one Ctrl-C
+make ports                          # what this worktree claimed, and where to open it
+```
+
 `make run/db` loads `config.local.yaml` if you have one (it is gitignored);
-otherwise it writes a throwaway config that is `config.dev.yaml` plus a `db.url`
-pointing at the container.
+otherwise `make config/dev` writes `config.dev-run.yaml` for it, carrying this
+worktree's ports and origins.
 
 Without `TEST_DATABASE_URL` the Postgres adapter tests skip themselves, which is
 what keeps `go test ./...` and `make verify` green on a machine with no Docker.
 CI sets it against a service container, so they are not skipped there.
+
+## Running more than one worktree
+
+Every port the local stack binds used to be a constant, so exactly one checkout
+could run at a time -- and worse, a second `make db/up` adopted the first one's
+container and its database. Ports are now derived from a **slot**, one number
+per worktree:
+
+| | port | reached at |
+| --- | --- | --- |
+| Vite dev server | `8080 + slot` | `$PUBLIC_HOST:{8880 + slot}`, if a proxy is in front |
+| the API | `18080 + slot` | loopback only; Vite proxies `/v1` to it |
+| Postgres | `5440 + slot` | loopback only |
+| compose project | `easydnd-{slot}` | its own network and containers |
+
+Only the web server needs to be reachable from outside, so a ten-port proxy
+range holds ten worktrees. A worktree that has claimed nothing keeps the old
+constants exactly -- Vite `5173`, the API `8080`, Postgres `5433`, project
+`easydnd` -- which is what the quick start above describes. Each family starts
+*past* its unclaimed default on purpose: had slot 0 been Postgres `5433`, an
+unclaimed worktree and a slot-0 worktree would publish the same port and the
+second one up would quietly talk to the first one's database, which is the
+failure this exists to remove.
+
+`make dev` claims a slot by binding each candidate port to see whether it is
+really free, and writes the answer to `.dev-slot` (gitignored). It prefers the
+slot this worktree used last, so the address you bookmarked survives a restart;
+if that one has been taken it says so and moves. Every other target *reads*
+`.dev-slot` rather than probing, which is what stops `make db/down` and
+`make test/db` reaching into a neighbour's stack.
+
+```sh
+make dev                            # claim, then bring the stack up
+make ports                          # this worktree: slot, ports, and the URL to open
+make slots                          # every slot on the machine and who holds it
+make db/psql                        # a shell on this worktree's database
+```
+
+`cmd/devslot` is the prober. It binds the exact address a server will use,
+because connecting instead would call a bound-but-not-accepting socket free.
+Claims are recorded under `$XDG_RUNTIME_DIR/easydnd-devslots` so worktrees can
+see each other's, and a claim with nothing listening behind it ages out after a
+minute -- long enough to cover the gap between claiming a slot and binding it.
+Two `make dev` in the same second can still pick the same slot; the loser fails
+loudly on the port bind, and re-running fixes it.
+
+### Reaching it from another machine
+
+If a reverse proxy fronts this machine, tell the Makefile once, in
+`~/.config/easydnd/dev.mk` (gitignored, read by every worktree):
+
+```make
+PUBLIC_HOST      := dev.example.org
+PUBLIC_PORT_BASE := 8880
+```
+
+That is the whole configuration. `make dev` then puts
+`http://dev.example.org:{8880 + slot}` into the generated config's
+`auth.rp_origins` and hands it to Vite, which needs it for two things of its
+own -- see [web.md](web.md#one-dev-server-per-worktree).
+
+Two consequences of reaching the app over plain HTTP on a name that is not
+`localhost`, both by design rather than breakage:
+
+- **Passkeys are unavailable.** WebAuthn requires a secure context, so
+  `window.PublicKeyCredential` is undefined and the sign-in page draws no
+  passkey card at all. The guest session is the way in. Passkeys still work at
+  `http://localhost:{port}`, which browsers treat as secure.
+- **`env: development` is doing real work.** It is what clears the cookie
+  `Secure` flag and the `__Host-` prefix; a production-mode cookie would never
+  be sent over such a connection. The generated config always sets it.
 
 ## Layout
 
@@ -46,6 +124,7 @@ internals follow clean architecture.
 ```
 cmd/easydnd/          process entrypoint: flags, config, logger, signals
 cmd/srdgen/           converts the vendored SRD dump into data/srd_5.1/
+cmd/devslot/          hands each worktree its own development ports
 internal/
   app/                composition root -- the only package that knows every layer
   buildinfo/          Version, stamped by the linker
@@ -302,7 +381,7 @@ rather than quietly defaulted.
 | `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The example file's placeholder is rejected by name |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
-| `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id |
+| `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
 | `auth.session_ttl` | `168h` | how long a session cookie lasts |
 | `auth.guest_session_ttl` | `24h` | how long an anonymous session lasts. Deliberately its own key, and shorter: a guest token cannot be revoked and names nothing recoverable, so the only thing bounding a leaked one is how soon it expires |
 | `auth.ceremony_ttl` | `5m` | how long a begin/finish pair stays valid; also bounds an in-flight SSO redirect |
@@ -533,6 +612,12 @@ CSRF is covered three ways, in `middleware.SameOrigin`: `SameSite` on the
 cookie, an `Origin` check against `auth.rp_origins`, and a required
 `X-Request-Id` header -- which `web/src/lib/api/client.ts` already sends on
 every call, and which an HTML form cannot set at all.
+
+That `Origin` check is why `auth.rp_origins` is not only a passkey setting. It
+is the list of addresses this instance will accept a write from, so a
+development instance reached on some other host has to have that host in it or
+every POST comes back "request origin is not allowed" -- which is what
+`make dev` generates it for.
 
 ### `auth.rp_id` is permanent
 
