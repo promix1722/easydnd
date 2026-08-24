@@ -77,8 +77,10 @@ DEV_RUN_CONFIG := config.dev-run.yaml
 .DEFAULT_GOAL := help
 
 ## help: list available targets
+# -h because MAKEFILE_LIST holds the optional dev.mk/local.mk includes too, and
+# grep prefixes every match with the file it came from once it has more than one.
 help:
-	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/^## /  /'
+	@grep -hE '^## ' $(MAKEFILE_LIST) | sed 's/^## /  /'
 
 ## build/server: build the API binary into bin/
 build/server:
@@ -172,16 +174,39 @@ dev:
 	@go run ./cmd/devslot claim $(DEVSLOT_FLAGS) >/dev/null
 	@$(MAKE) dev/up
 
-# Three processes, one Ctrl-C: `kill 0` signals the whole process group on the
-# way out, so a `go run` binary or a Vite server cannot outlive the make that
-# started it and hold the ports against the next `make dev`.
+# Three processes, one Ctrl-C, and nothing left behind.
+#
+# INT and TERM are trapped, not just EXIT: a shell killed by a signal it does
+# not trap dies without running its EXIT trap, so the cleanup below would be
+# skipped by the very Ctrl-C that is supposed to trigger it. The handlers exit,
+# which is what reaches EXIT -- with 0, because Ctrl-C is how this target is
+# meant to end and a red "Error 130" would suggest something went wrong.
+#
+# `kill 0` signals the whole process group, which is what stops a `go run`
+# binary or a Vite server outliving the make that started it and holding the
+# ports against the next `make dev`. It also ends this shell, so anything meant
+# to run afterwards never would -- which is why the database comes down first.
+#
+# Every `make dev` therefore starts on an empty schema. That is the point of
+# it: a disposable stack. To keep accounts across restarts, use the three
+# targets it composes -- `make db/up` once, then `make run/db` and
+# `make web/dev` -- and take it down with `make dev/down` when you are done.
 dev/up: db/up
 	@echo "web  http://127.0.0.1:$(WEB_PORT)$(if $(WEB_PUBLIC_URL),  -> $(WEB_PUBLIC_URL),)"; \
 	 echo "api  http://127.0.0.1:$(API_PORT)   pg 127.0.0.1:$(PG_PORT)   compose $(COMPOSE_PROJECT)"; \
-	 trap 'kill 0' EXIT; \
+	 trap 'exit 0' INT TERM; \
+	 trap '$(MAKE) --no-print-directory db/down; kill 0' EXIT; \
 	 $(MAKE) run/db & \
 	 $(MAKE) web/dev & \
 	 wait
+
+## dev/down: take this worktree's stack down and delete its database
+# `make dev` already does this on the way out. This is for when it could not --
+# a closed terminal, a SIGKILL -- and for a stack started from db/up and run/db
+# separately. The listing afterwards is the check that worked: this worktree's
+# row should read "idle".
+dev/down: db/down
+	@go run ./cmd/devslot list $(DEVSLOT_FLAGS)
 
 ## slots: which slot each worktree on this machine is holding
 slots:
@@ -284,7 +309,7 @@ clean:
 	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist $(DEV_RUN_CONFIG)
 
 .PHONY: help build/server build/release run/server run/db test/unit test/cover \
-        dev dev/up slots ports config/dev \
+        dev dev/up dev/down slots ports config/dev \
         db/up db/down db/psql test/db \
         data/srd data/srd/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \

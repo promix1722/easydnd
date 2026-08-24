@@ -121,8 +121,10 @@ func status(l layout, s slot, root string) string {
 		return "free"
 	case !ok:
 		return "busy (no claim -- something else is on these ports)"
+	case path == root && l.free(s):
+		return "this worktree (idle)"
 	case path == root:
-		return "this worktree"
+		return "this worktree (running)"
 	case !l.free(s), time.Since(at) <= staleAfter:
 		return shorten(path)
 	default:

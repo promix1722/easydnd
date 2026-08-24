@@ -37,6 +37,12 @@ make dev                            # Postgres, the API and the web client, one 
 make ports                          # what this worktree claimed, and where to open it
 ```
 
+`make dev` is a **disposable** stack: Ctrl-C takes the database down with the
+servers, so every run starts on an empty schema and nothing is left behind.
+When you want accounts to survive a restart, use the three targets it composes
+instead -- `make db/up` once, then `make run/db` and `make web/dev` -- and
+`make dev/down` when you are finished with them.
+
 `make run/db` loads `config.local.yaml` if you have one (it is gitignored);
 otherwise `make config/dev` writes `config.dev-run.yaml` for it, carrying this
 worktree's ports and origins.
@@ -77,10 +83,19 @@ if that one has been taken it says so and moves. Every other target *reads*
 
 ```sh
 make dev                            # claim, then bring the stack up
+make dev/down                       # take it down and delete its database
 make ports                          # this worktree: slot, ports, and the URL to open
 make slots                          # every slot on the machine and who holds it
 make db/psql                        # a shell on this worktree's database
 ```
+
+`make dev` cleans up after itself: it traps `INT` and `TERM` as well as `EXIT`,
+because a shell killed by a signal it does not trap dies *without* running its
+`EXIT` trap -- which would skip the cleanup on the very Ctrl-C meant to trigger
+it. `make dev/down` is for when it could not clean up anyway: a closed
+terminal, a `SIGKILL`, or a stack started from `db/up` and `run/db` separately.
+It prints the slot table afterwards, and this worktree's row reading **idle**
+is the proof that the ports came back.
 
 `cmd/devslot` is the prober. It binds the exact address a server will use,
 because connecting instead would call a bound-but-not-accepting socket free.
