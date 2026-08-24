@@ -43,19 +43,28 @@ func (o OwnerID) String() string { return string(o) }
 // It holds no state fields of its own: everything about the character lives in
 // the Log, and the readable picture comes from Project. Adding a field here
 // that is not derivable from the log would create a second source of truth.
+//
+// Owner and Folder are not exceptions to that, because neither is a fact about
+// the character. They are facts about the *record* -- who it belongs to, and
+// where its owner filed it -- so neither is projected onto a sheet and neither
+// belongs in the log. Moving a character to another folder is not something
+// that happened to the character in the fiction, and it has no business
+// appearing in their history.
 type Character struct {
-	ID    ID
-	Owner OwnerID
-	Log   Log
+	ID     ID
+	Owner  OwnerID
+	Folder FolderID
+	Log    Log
 }
 
 // Summary is the short form used for listings, where projecting every
 // character's full state would be wasteful.
 type Summary struct {
-	ID    ID
-	Owner OwnerID
-	Name  string
-	Level int
+	ID     ID
+	Owner  OwnerID
+	Folder FolderID
+	Name   string
+	Level  int
 
 	// Classes is the class line, e.g. "Rogue 3" or "Cleric 2 / Wizard 1".
 	Classes []ClassLevel
@@ -200,9 +209,14 @@ func (l Log) Validate() error {
 // under internal/adapter/repository; internal/app picks the concrete one, and
 // that assignment is what proves conformance at compile time.
 type Repository interface {
-	// Create stores a new character owned by owner and returns it with its
-	// assigned ID and an empty log.
-	Create(ctx context.Context, owner OwnerID) (Character, error)
+	// Create stores a new character owned by owner, filed in folder, and
+	// returns it with its assigned ID and an empty log.
+	//
+	// The folder is a parameter rather than something set afterwards
+	// because a character is never in no folder: the application layer
+	// resolves the owner's default when the caller named none, and passing
+	// the zero value here would store a character nothing can list.
+	Create(ctx context.Context, owner OwnerID, folder FolderID) (Character, error)
 
 	// Get returns the character with the given ID. Implementations report a
 	// *types.NotFoundError when it does not exist.
@@ -216,6 +230,14 @@ type Repository interface {
 	// which a repository has neither access to nor any business holding.
 	// The application layer summarises; see Summarize.
 	List(ctx context.Context, owner OwnerID) ([]Character, error)
+
+	// SetFolder files a character in another folder. Implementations report
+	// a *types.NotFoundError when the character does not exist.
+	//
+	// It does not verify the folder: whether it exists and whether the
+	// caller owns it are authorization questions, and those are settled in
+	// the application layer where every other one is.
+	SetFolder(ctx context.Context, id ID, folder FolderID) error
 
 	// Append adds events to a character's log, but only if the stored log
 	// still ends at expectedSeq. Implementations report a

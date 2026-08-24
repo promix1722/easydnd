@@ -24,6 +24,7 @@ import (
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
@@ -102,7 +103,8 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
 
 	source := catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
-	characterService := charuc.NewService(memory.NewCharacterRepository(), source, hexsheet.NewImporter(), log)
+	characterService := charuc.NewService(memory.NewCharacterRepository(),
+		memory.NewFolderRepository(), source, hexsheet.NewImporter(), log)
 	// The same signer mints invite links; the kind claim is what keeps them
 	// from being interchangeable with the session cookie beside them.
 	groupService := groupuc.NewService(memory.NewGroupRepository(users), users, signer, log)
@@ -113,6 +115,7 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 		Authenticator: authService,
 		Catalog:       catalogapi.New(source, log),
 		Character:     characterapi.New(characterService, log),
+		Folder:        folderapi.New(characterService, log),
 		Group:         groupapi.New(groupService, log),
 	})
 	if err != nil {

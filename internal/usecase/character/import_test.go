@@ -27,6 +27,7 @@ func newImportingService(t *testing.T) *charuc.Service {
 	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
 	return charuc.NewService(
 		memory.NewCharacterRepository(),
+		memory.NewFolderRepository(),
 		catalogfile.NewSource(dir),
 		hexsheet.NewImporter(),
 		slog.New(slog.DiscardHandler),
@@ -49,7 +50,7 @@ func TestImportCreatesAnOwnedCharacter(t *testing.T) {
 	s := newImportingService(t)
 	ctx := context.Background()
 
-	imported, report, err := s.Import(ctx, "owner-1", rules.DefaultLocale, referenceExport(t))
+	imported, report, err := s.Import(ctx, "owner-1", "", rules.DefaultLocale, referenceExport(t))
 	if err != nil {
 		t.Fatalf("Import() error = %v", err)
 	}
@@ -87,7 +88,7 @@ func TestImportLeavesPromptsOpen(t *testing.T) {
 	s := newImportingService(t)
 	ctx := context.Background()
 
-	imported, _, err := s.Import(ctx, "owner-1", rules.DefaultLocale, referenceExport(t))
+	imported, _, err := s.Import(ctx, "owner-1", "", rules.DefaultLocale, referenceExport(t))
 	if err != nil {
 		t.Fatalf("Import() error = %v", err)
 	}
@@ -116,7 +117,7 @@ func TestImportedCharacterAcceptsAnswers(t *testing.T) {
 	s := newImportingService(t)
 	ctx := context.Background()
 
-	imported, _, err := s.Import(ctx, "owner-1", rules.DefaultLocale, referenceExport(t))
+	imported, _, err := s.Import(ctx, "owner-1", "", rules.DefaultLocale, referenceExport(t))
 	if err != nil {
 		t.Fatalf("Import() error = %v", err)
 	}
@@ -148,7 +149,7 @@ func TestImportRejectsRubbish(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := s.Import(context.Background(), "owner-1",
+			_, _, err := s.Import(context.Background(), "owner-1", "",
 				rules.DefaultLocale, strings.NewReader(tt.body))
 			if err == nil {
 				t.Fatal("Import() should have failed")
@@ -166,10 +167,11 @@ func TestImportRejectsRubbish(t *testing.T) {
 func TestImportWithoutAnImporter(t *testing.T) {
 	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
 	s := charuc.NewService(
-		memory.NewCharacterRepository(), catalogfile.NewSource(dir), nil,
+		memory.NewCharacterRepository(),
+		memory.NewFolderRepository(), catalogfile.NewSource(dir), nil,
 		slog.New(slog.DiscardHandler),
 	)
-	_, _, err := s.Import(context.Background(), "owner-1",
+	_, _, err := s.Import(context.Background(), "owner-1", "",
 		rules.DefaultLocale, strings.NewReader("{}"))
 
 	var notImplemented *types.NotImplementedError
@@ -185,7 +187,7 @@ func TestImportWithoutAnImporter(t *testing.T) {
 func TestImportedLogSelectsNothing(t *testing.T) {
 	s := newImportingService(t)
 
-	imported, _, err := s.Import(context.Background(), "owner-1", rules.DefaultLocale, referenceExport(t))
+	imported, _, err := s.Import(context.Background(), "owner-1", "", rules.DefaultLocale, referenceExport(t))
 	if err != nil {
 		t.Fatalf("Import() error = %v", err)
 	}
@@ -216,7 +218,7 @@ func TestImportedLogSurvivesARevision(t *testing.T) {
 	ctx := context.Background()
 	s := newImportingService(t)
 
-	imported, _, err := s.Import(ctx, "owner-1", rules.DefaultLocale, referenceExport(t))
+	imported, _, err := s.Import(ctx, "owner-1", "", rules.DefaultLocale, referenceExport(t))
 	if err != nil {
 		t.Fatalf("Import() error = %v", err)
 	}

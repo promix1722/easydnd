@@ -5,10 +5,10 @@
 //
 // For accounts that is now only the development fallback: production stores
 // them in internal/adapter/repository/postgres, and the two adapters are held
-// to one contract by internal/adapter/repository/repotest. For characters it is
-// still the whole story, because no character route exists yet to reach them --
-// a SQL sibling replaces this one without any change above this layer, exactly
-// as the account store did.
+// to one contract by internal/adapter/repository/repotest. For characters and
+// the folders they are filed in it is still the whole story: both are reachable
+// over the API and both are lost on restart. A SQL sibling replaces either one
+// without any change above this layer, exactly as the account store did.
 package memory
 
 import (
@@ -43,13 +43,19 @@ func NewCharacterRepository() *CharacterRepository {
 	return &CharacterRepository{items: make(map[domain.ID]domain.Character)}
 }
 
-// Create stores a new empty character for owner.
-func (r *CharacterRepository) Create(_ context.Context, owner domain.OwnerID) (domain.Character, error) {
+// Create stores a new empty character for owner, filed in folder.
+func (r *CharacterRepository) Create(
+	_ context.Context, owner domain.OwnerID, folder domain.FolderID,
+) (domain.Character, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.nextID++
-	c := domain.Character{ID: domain.ID(fmt.Sprintf("chr_%06d", r.nextID)), Owner: owner}
+	c := domain.Character{
+		ID:     domain.ID(fmt.Sprintf("chr_%06d", r.nextID)),
+		Owner:  owner,
+		Folder: folder,
+	}
 	r.items[c.ID] = c
 	return c, nil
 }
@@ -87,6 +93,25 @@ func (r *CharacterRepository) List(_ context.Context, owner domain.OwnerID) ([]d
 		return strings.Compare(a.ID.String(), b.ID.String())
 	})
 	return out, nil
+}
+
+// SetFolder files a character in another folder.
+//
+// There is no expectedSeq here and there should not be: a folder is not part of
+// the log, so moving a character races with nothing that appends to it.
+func (r *CharacterRepository) SetFolder(
+	_ context.Context, id domain.ID, folder domain.FolderID,
+) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	c, ok := r.items[id]
+	if !ok {
+		return types.NewNotFoundError("character %q", id)
+	}
+	c.Folder = folder
+	r.items[id] = c
+	return nil
 }
 
 // Append adds events to a character's log, rejecting a stale expectedSeq.

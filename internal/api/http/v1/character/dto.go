@@ -7,7 +7,12 @@ package character
 
 // Summary is one row of a character listing.
 type Summary struct {
-	ID      string       `json:"id"`
+	ID string `json:"id"`
+
+	// Folder is where the character is filed. Always set: a character is
+	// never in no folder, so a client can group a listing by this without
+	// a fallback bucket.
+	Folder  string       `json:"folder"`
 	Name    string       `json:"name"`
 	Level   int          `json:"level"`
 	Classes []ClassLevel `json:"classes,omitempty"`

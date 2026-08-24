@@ -17,6 +17,9 @@ export interface ClassLevel {
 
 export interface Summary {
   id: string
+  /** The folder the character is filed in. Always set: a character is never
+   * in no folder, so a listing can group by this without a fallback bucket. */
+  folder: string
   name: string
   level: number
   classes?: ClassLevel[]
@@ -268,6 +271,8 @@ export interface CreateResponse {
 export interface NewCharacter {
   name: string
   alignment?: string
+  /** Where to file it. Omitted means the account's default folder. */
+  folder?: string
 }
 
 /** One line of an import report: a field of the export, and what became of it. */
@@ -299,8 +304,18 @@ export interface ImportResponse {
   report: ImportReport
 }
 
-export function listCharacters(signal?: AbortSignal): Promise<{ characters: Summary[] }> {
-  return request<{ characters: Summary[] }>('/characters', signal ? { signal } : {})
+/**
+ * Lists the account's characters, optionally narrowing to one folder.
+ *
+ * A folder the account does not own is a 404 rather than an empty list, so an
+ * unowned id cannot be mistaken for a folder with nothing in it.
+ */
+export function listCharacters(
+  folder?: string,
+  signal?: AbortSignal,
+): Promise<{ characters: Summary[] }> {
+  const path = folder ? `/characters?folder=${encodeURIComponent(folder)}` : '/characters'
+  return request<{ characters: Summary[] }>(path, signal ? { signal } : {})
 }
 
 export function createCharacter(body: NewCharacter): Promise<CreateResponse> {
@@ -317,8 +332,12 @@ export function createCharacter(body: NewCharacter): Promise<CreateResponse> {
  * An imported character arrives with every choice unanswered, so callers
  * should send the player to the build screen rather than the sheet.
  */
-export async function importCharacter(file: File): Promise<ImportResponse> {
-  return request<ImportResponse>('/characters/import', {
+export async function importCharacter(file: File, folder?: string): Promise<ImportResponse> {
+  // The folder rides in the query because the body is the export itself.
+  const path = folder
+    ? `/characters/import?folder=${encodeURIComponent(folder)}`
+    : '/characters/import'
+  return request<ImportResponse>(path, {
     method: 'POST',
     rawBody: await file.text(),
   })
@@ -432,4 +451,30 @@ export function truncateEvents(
 
 export function deleteCharacter(id: string): Promise<void> {
   return request<void>(`/characters/${id}`, { method: 'DELETE' })
+}
+
+/**
+ * Files a character in another folder.
+ *
+ * Its own route rather than a PATCH on the character, because the folder is the
+ * one thing about a stored character that changes without an event -- a name, a
+ * level or a score can only change by appending to the log.
+ *
+ * An empty folder means the account's default.
+ */
+export function moveCharacter(id: string, folder: string): Promise<void> {
+  return request<void>(`/characters/${id}/folder`, { method: 'PUT', body: { folder } })
+}
+
+/**
+ * Duplicates a character, log and all.
+ *
+ * The copy is named after the original with " (copy)" on the end, and lands
+ * beside it unless another folder is named.
+ */
+export function copyCharacter(id: string, folder?: string): Promise<CreateResponse> {
+  return request<CreateResponse>(`/characters/${id}/copy`, {
+    method: 'POST',
+    body: { folder: folder ?? '' },
+  })
 }

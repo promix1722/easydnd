@@ -59,11 +59,20 @@ type ImportReport struct {
 // state and every prompt stays open. The client should send the player to the
 // build screen afterwards, not the sheet.
 func (s *Service) Import(
-	ctx context.Context, owner domain.OwnerID, locale rules.Locale, r io.Reader,
+	ctx context.Context,
+	owner domain.OwnerID,
+	folder domain.FolderID,
+	locale rules.Locale,
+	r io.Reader,
 ) (domain.Character, ImportReport, error) {
 	if s.importer == nil {
 		return domain.Character{}, ImportReport{}, types.NewNotImplementedError(
 			"importing sheets is not configured")
+	}
+
+	folder, err := s.resolveFolder(ctx, owner, folder)
+	if err != nil {
+		return domain.Character{}, ImportReport{}, err
 	}
 
 	cat, err := s.catalog.Load(ctx, locale)
@@ -79,7 +88,7 @@ func (s *Service) Import(
 		return domain.Character{}, ImportReport{}, err
 	}
 
-	created, err := s.repo.Create(ctx, owner)
+	created, err := s.repo.Create(ctx, owner, folder)
 	if err != nil {
 		return domain.Character{}, ImportReport{}, err
 	}

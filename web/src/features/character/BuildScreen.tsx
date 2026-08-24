@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 
 import {
   appendEvents,
@@ -103,6 +103,11 @@ interface Preview {
 export function BuildScreen() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  // The folder the party list was filtered to when New character was pressed.
+  // Only /characters/new carries it; absent means the account's default, which
+  // the server resolves.
+  const [search] = useSearchParams()
+  const folder = search.get('folder') ?? undefined
   const isNew = id === ''
 
   const build = useResource<BuildView>(`build:${id}`, async (signal) => {
@@ -168,7 +173,10 @@ export function BuildScreen() {
       setNameError('A character needs a name to be created under.')
       return
     }
-    const created = await create.run({ name: nameDraft.trim() })
+    const created = await create.run({
+      name: nameDraft.trim(),
+      ...(folder ? { folder } : {}),
+    })
     // replace: true, because the URL of a character that does not exist is
     // not a place the Back button should return anyone to.
     if (created) await navigate(`/characters/${created.id}/build`, { replace: true })

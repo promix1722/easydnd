@@ -43,8 +43,9 @@ export {
   ActionIcon,
   Button,
   FileInput,
-  // Per-row member actions. The alternative is four buttons in every roster
-  // row, which DataList's mobile card rendering cannot lay out legibly.
+  // Per-row actions -- a roster's members, a party list's characters. The
+  // alternative is four buttons in every row, which DataList's mobile card
+  // rendering cannot lay out legibly.
   Menu,
   NumberInput,
   Popover,

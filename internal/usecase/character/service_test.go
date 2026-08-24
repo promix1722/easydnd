@@ -22,6 +22,7 @@ func newService(t *testing.T) *charuc.Service {
 	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
 	return charuc.NewService(
 		memory.NewCharacterRepository(),
+		memory.NewFolderRepository(),
 		catalogfile.NewSource(dir),
 		nil,
 		slog.New(slog.DiscardHandler),
@@ -34,7 +35,7 @@ func opening() charuc.NewCharacter {
 
 func mustCreate(t *testing.T, s *charuc.Service) domain.Character {
 	t.Helper()
-	c, err := s.Create(context.Background(), testOwner, opening())
+	c, err := s.Create(context.Background(), testOwner, "", opening())
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -128,7 +129,7 @@ func TestCreateSeedsANameOnlyInitEvent(t *testing.T) {
 
 func TestCreateRequiresAName(t *testing.T) {
 	s := newService(t)
-	_, err := s.Create(context.Background(), testOwner, charuc.NewCharacter{})
+	_, err := s.Create(context.Background(), testOwner, "", charuc.NewCharacter{})
 	var fieldErr *types.FieldValidationError
 	if !errors.As(err, &fieldErr) {
 		t.Fatalf("Create() error = %v, want a FieldValidationError", err)
@@ -438,7 +439,7 @@ func TestListSummarisesWithoutProjecting(t *testing.T) {
 		t.Fatalf("Apply() error = %v", err)
 	}
 
-	got, err := s.List(ctx, testOwner, rules.DefaultLocale)
+	got, err := s.List(ctx, testOwner, "", rules.DefaultLocale)
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -458,7 +459,7 @@ func TestListSummarisesWithoutProjecting(t *testing.T) {
 	}
 
 	// Another owner's list is empty, which is the seam ownership will use.
-	other, err := s.List(ctx, "somebody-else", rules.DefaultLocale)
+	other, err := s.List(ctx, "somebody-else", "", rules.DefaultLocale)
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}

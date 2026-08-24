@@ -37,6 +37,11 @@ modelled at all: a group holds no characters. The Characters tab is
 short-labelled "Party" on mobile for exactly the SRD sense, which is why the
 account-level feature could not also be called one.
 
+A **folder** is the third word and the smallest of the three: one account's
+private shelf for its own characters. It is not people and not in-fiction --
+nothing is shared through it and no rule reads it. Group, party, folder:
+people, characters in the fiction, characters on a shelf.
+
 Two of those are more than renaming:
 
 **Traits and features are different collections.** A **trait** comes from a race
@@ -111,6 +116,12 @@ search.
 That is what makes level-up reversible, makes "why do I have this proficiency?"
 answerable, and lets a character survive a catalogue regeneration — the events
 record what was *chosen*, not what it evaluated to.
+
+**A folder is not part of this model.** Characters are filed into folders — see
+[backend.md](backend.md#folders) — and a folder records where a record is kept,
+not anything about the character. It is neither the group above nor the party:
+no rule reads it, nothing is shared through it, and it never appears in a log or
+on a sheet. Look for it in the service, not here.
 
 ### Log and events
 

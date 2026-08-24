@@ -17,8 +17,8 @@ import (
 // compendium. Everything else here comes from the log alone, which is why an
 // unresolvable race or a missing class does not make a character unlistable
 // the way it would make it unprojectable.
-func Summarize(id ID, owner OwnerID, log Log, cat *catalog.Catalog) Summary {
-	s := Summary{ID: id, Owner: owner}
+func Summarize(id ID, owner OwnerID, folder FolderID, log Log, cat *catalog.Catalog) Summary {
+	s := Summary{ID: id, Owner: owner, Folder: folder}
 	for _, e := range log.Events {
 		switch e.Type {
 		case EventInit, EventChange:

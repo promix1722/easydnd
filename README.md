@@ -21,8 +21,10 @@ is passkeys only. Accounts, their passkeys and their linked accounts are
 stored in PostgreSQL, with the schema migrating itself at startup, so a restart
 no longer costs anybody their account. There is also a **guest session**: one
 click, no account, nothing stored beyond the group roster a guest asks to be
-named in, and nothing that survives it. **Characters still live in memory** and
-are wiped by a restart. See [Authentication](docs/backend.md#authentication).
+named in, and nothing that survives it. **Characters and the folders they are
+filed in still live in memory** and are wiped by a restart. See
+[Authentication](docs/backend.md#authentication) and
+[Folders](docs/backend.md#folders).
 
 **Groups** are the second main section: a table of people with three ranks --
 owner, DM, player -- who invite each other with a link that works for 24 hours.
@@ -30,6 +32,10 @@ They live in PostgreSQL and survive a restart. A group holds people, not
 characters; attaching characters to one is a later change, because a character
 id does not outlive the process. See
 [Ownership, and membership](docs/backend.md#ownership-and-membership).
+
+A **group** and a **folder** are different things and the words are not
+interchangeable. A group is people, shared, with ranks. A folder is one
+account's private shelf for its own characters, shared with nobody.
 
 ## Documentation
 

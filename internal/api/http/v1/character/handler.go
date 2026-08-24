@@ -39,3 +39,20 @@ func (h *Handler) owner(c *gin.Context) domain.OwnerID {
 
 // idOf reads the character id from the path.
 func idOf(c *gin.Context) domain.ID { return domain.ID(c.Param("id")) }
+
+// FolderQueryParam names the query parameter that narrows a listing to one
+// folder, and that says which folder a new character is filed in.
+//
+// Creating states its folder in the body, where the rest of the character's
+// opening state already is. Importing cannot: the body of an import is the
+// exported sheet itself, so the only place left to put it is the query.
+const FolderQueryParam = "folder"
+
+// folderOf reads the folder from the query, if the caller named one.
+//
+// The zero value is not an error and does not mean "no folder": it means the
+// caller did not choose, and the application layer resolves it to their
+// default. A character is never filed nowhere.
+func folderOf(c *gin.Context) domain.FolderID {
+	return domain.FolderID(c.Query(FolderQueryParam))
+}

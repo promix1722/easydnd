@@ -201,6 +201,12 @@ that.
 | `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
 | `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
 | `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
+| `PUT` | `/v1/characters/{id}/folder` | file it elsewhere |
+| `POST` | `/v1/characters/{id}/copy` | duplicate it, log and all |
+| `GET` | `/v1/folders` | the account's folders, default first |
+| `POST` | `/v1/folders` | create: a name |
+| `PATCH` | `/v1/folders/{id}` | rename |
+| `DELETE` | `/v1/folders/{id}` | **deletes the characters in it too** |
 | `GET` | `/v1/groups` | the groups you are in, with your role in each |
 | `POST` | `/v1/groups` | create; you become its owner |
 | `GET` | `/v1/groups/{id}` | the group and its whole roster |
@@ -231,6 +237,10 @@ off. Both take the token in the **body** and never in the URL: our own access
 log records the route pattern, but nginx in front of it logs the whole request
 line, and an invite token is usable for a day. The browser keeps it in a URL
 *fragment*, which is never sent to any server at all.
+
+`GET /v1/characters` takes `?folder=` to narrow the listing, and `POST
+/v1/characters` takes a `folder` in the body. `POST /v1/characters/import` takes
+`?folder=` instead, because its body is the exported sheet itself.
 
 ### Importing states, not histories
 
@@ -458,6 +468,56 @@ prompt asks for a feat at all. The projector still knows the type; "nothing can
 be answered before it is asked" simply now applies to it like everything else,
 and a prompt that wants one has to say so.
 
+### Folders
+
+A folder is a named place one account files its characters. That is the whole
+of it: one owner, nothing shared, no rule in the game reads it. It is **not** a
+group of players -- that word is reserved, and kept out of this feature's
+types, routes and screens on purpose, so the two cannot be confused when the
+other one arrives.
+
+**Every account always has one.** The default folder is created by the first
+read that needs it -- `GET /v1/folders`, or creating a character with no folder
+named -- so "a character is always somewhere" is true without a nullable column
+and without a migration that walks every account that already exists.
+Materialising it is `FolderRepository.EnsureDefault`, and it is a repository
+method rather than a get-or-create in the usecase for one reason: two requests
+arriving together for a new account would otherwise both find no default and
+both make one, leaving that account two folders it can never delete. The store
+holds the lock, so the store holds the invariant.
+
+The default folder can be renamed and cannot be deleted. What an account cannot
+lose is the folder, not the word on it.
+
+**Membership is a field, not an event.** `Character.Folder` sits beside
+`Character.Owner` and outside the log, because neither is a fact about the
+character -- they are facts about the record: who it belongs to, and where its
+owner filed it. Moving a character to another folder is not something that
+happened to them in the fiction and has no business appearing in their history.
+
+**Deleting a folder deletes the characters in it.** There is no undo, and
+characters live in memory, so there is not even a backup behind it. A client
+that offers the button owes the player a confirmation that says how many
+characters are about to go; the web client's does. The cascade runs in the
+usecase, not the store -- two aggregates, two stores, and a repository that
+wrote to both would be two repositories sharing a name. Characters go first and
+the folder last: there is no transaction across the two, so the order is chosen
+for what a crash half way leaves behind. This one leaves a folder holding fewer
+characters, which the application already understands. The other would leave
+characters filed in a folder that no longer exists, which nothing can list.
+
+**Why `PUT /v1/characters/{id}/folder` and not `PATCH /v1/characters/{id}`.**
+The folder is the one thing about a stored character that changes without an
+event. A general PATCH on the character would read as an invitation to patch a
+name, a level or a score -- and the log is the only way any of those can
+change. A route named after the single mutable field cannot be misread.
+
+**Copying** is `POST /v1/characters/{id}/copy`: a new character in the same
+folder unless another is named, carrying the source's whole log, with its name
+suffixed `(copy)`. That rename arrives as one more appended event rather than
+as an edit of the init event it was duplicated from -- otherwise the copy would
+be the one record in the system that broke the log's invariant.
+
 ### Ownership, and membership
 
 There are two authorization models here, and the difference between them is
@@ -474,6 +534,16 @@ through `Service.owned`, which refuses a character to anyone but its owner --
 and refuses it as a **404, not a 403**, because a 403 on somebody else's id
 confirms that the id exists and turns a guessable identifier into an
 enumeration oracle.
+
+**A folder belongs to one account too**, and is on this side of the split
+rather than the membership side: it is one person's private filing, it has no
+ranks, and nothing is ever shared through it. The choke point is
+`Service.ownedFolder`, which is `owned` for the other aggregate down to the
+refusal being a 404. That is why naming a folder you do not own returns 404
+rather than an empty listing -- an empty listing would say the folder is there
+and happens to be empty. Both ends of a move are checked, because without the
+folder half an account could file its own character into somebody else's
+folder, where it would vanish from its own listing.
 
 **A group belongs to several people at three ranks.** `owner` > `dm` >
 `player`, and every rule is a comparison between two of them. The choke point

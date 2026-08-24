@@ -42,9 +42,14 @@ export type {
   Spell,
 } from './catalog'
 
+// Folders: where an account files its characters. Not a group of players.
+export { createFolder, deleteFolder, listFolders, renameFolder } from './folders'
+export type { Folder } from './folders'
+
 // Characters.
 export {
   appendEvents,
+  copyCharacter,
   createCharacter,
   deleteCharacter,
   deleteEvent,
@@ -53,6 +58,7 @@ export {
   getSheet,
   importCharacter,
   listCharacters,
+  moveCharacter,
   replaceEvent,
   truncateEvents,
 } from './characters'

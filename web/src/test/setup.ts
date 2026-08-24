@@ -22,6 +22,17 @@ class NoResizeObserver implements ResizeObserver {
 
 globalThis.ResizeObserver ??= NoResizeObserver
 
+/**
+ * The same gap, one layer up: Mantine's Select scrolls the highlighted option
+ * into view as the dropdown opens, and jsdom has no such method to call.
+ *
+ * Making those dropdowns *visible* is a separate matter and is not here --
+ * src/test/render.tsx renders the provider in Mantine's own test environment,
+ * because Mantine hides a popover whose anchor it cannot see and in jsdom no
+ * anchor ever is.
+ */
+Element.prototype.scrollIntoView ??= function scrollIntoView(): void {}
+
 afterEach(() => {
   cleanup()
   resetViewport()

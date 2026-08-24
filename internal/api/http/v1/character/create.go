@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
@@ -23,6 +24,10 @@ import (
 type CreateParams struct {
 	Name      string `json:"name"`
 	Alignment string `json:"alignment"`
+
+	// Folder files the character. Empty means the caller's default folder,
+	// which is created on the spot if this is their first character.
+	Folder string `json:"folder"`
 }
 
 // CreateResponse is what a newly created character looks like.
@@ -42,7 +47,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	locale := helpers.Locale(c)
-	created, err := h.service.Create(ctx, h.owner(c), charuc.NewCharacter{
+	created, err := h.service.Create(ctx, h.owner(c), domain.FolderID(params.Folder), charuc.NewCharacter{
 		Name:      params.Name,
 		Alignment: rules.Slug(params.Alignment),
 	})

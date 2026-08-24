@@ -22,6 +22,7 @@ import (
 // constructor; there are no package-level singletons.
 type Service struct {
 	repo     domain.Repository
+	folders  domain.FolderRepository
 	catalog  catalog.Source
 	importer SheetImporter
 	log      *slog.Logger
@@ -31,17 +32,27 @@ type Service struct {
 	clock func() time.Time
 }
 
-// NewService wires a Service over the given repository, catalogue source and
+// NewService wires a Service over the given repositories, catalogue source and
 // sheet importer.
+//
+// Characters and folders are two stores but one service, because two of this
+// package's rules span both: every character is in a folder, and deleting a
+// folder deletes the characters in it. A separate folder service would have to
+// reach into this one to keep either of them, which is a dependency drawn to
+// avoid a field.
 //
 // The importer may be nil, in which case Import reports that the feature is
 // not configured rather than panicking. That is not a convenience: a build
 // that ships without an importer should fail the one route that needs one, not
 // every route that does not.
 func NewService(
-	repo domain.Repository, source catalog.Source, importer SheetImporter, log *slog.Logger,
+	repo domain.Repository,
+	folders domain.FolderRepository,
+	source catalog.Source,
+	importer SheetImporter,
+	log *slog.Logger,
 ) *Service {
-	return &Service{repo: repo, catalog: source, importer: importer, log: log}
+	return &Service{repo: repo, folders: folders, catalog: source, importer: importer, log: log}
 }
 
 // now reads the clock, defaulting to the real one.
@@ -67,12 +78,22 @@ type NewCharacter struct {
 }
 
 // Create starts a new character for owner and seeds it with an init event.
-func (s *Service) Create(ctx context.Context, owner domain.OwnerID, opening NewCharacter) (domain.Character, error) {
+//
+// A zero folder means the owner's default, which is materialised here if this
+// is their first character. Naming a folder somebody else owns is a 404, like
+// every other reach for what is not yours.
+func (s *Service) Create(
+	ctx context.Context, owner domain.OwnerID, folder domain.FolderID, opening NewCharacter,
+) (domain.Character, error) {
 	if err := validateOpening(opening); err != nil {
 		return domain.Character{}, err
 	}
+	folder, err := s.resolveFolder(ctx, owner, folder)
+	if err != nil {
+		return domain.Character{}, err
+	}
 
-	created, err := s.repo.Create(ctx, owner)
+	created, err := s.repo.Create(ctx, owner, folder)
 	if err != nil {
 		return domain.Character{}, err
 	}
@@ -115,7 +136,18 @@ func initEvent(opening NewCharacter) domain.Event {
 }
 
 // List returns summaries of the characters owned by owner.
-func (s *Service) List(ctx context.Context, owner domain.OwnerID, locale rules.Locale) ([]domain.Summary, error) {
+//
+// A zero folder lists all of them. A named one narrows to that folder, and must
+// be one the caller owns -- otherwise an unowned id would list nothing and read
+// as an empty folder rather than as somebody else's.
+func (s *Service) List(
+	ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale,
+) ([]domain.Summary, error) {
+	if !folder.IsZero() {
+		if _, err := s.ownedFolder(ctx, owner, folder); err != nil {
+			return nil, err
+		}
+	}
 	characters, err := s.repo.List(ctx, owner)
 	if err != nil {
 		return nil, err
@@ -126,7 +158,10 @@ func (s *Service) List(ctx context.Context, owner domain.OwnerID, locale rules.L
 	}
 	out := make([]domain.Summary, 0, len(characters))
 	for _, c := range characters {
-		out = append(out, domain.Summarize(c.ID, c.Owner, c.Log, cat))
+		if !folder.IsZero() && c.Folder != folder {
+			continue
+		}
+		out = append(out, domain.Summarize(c.ID, c.Owner, c.Folder, c.Log, cat))
 	}
 	return out, nil
 }

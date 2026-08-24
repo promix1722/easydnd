@@ -56,6 +56,7 @@ func classLevels(classes []domain.ClassLevel) []ClassLevel {
 func summaryOf(s domain.Summary) Summary {
 	return Summary{
 		ID:      s.ID.String(),
+		Folder:  s.Folder.String(),
 		Name:    s.Name,
 		Level:   s.Level,
 		Classes: classLevels(s.Classes),

@@ -21,6 +21,7 @@ import (
 	"github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
@@ -34,6 +35,7 @@ type Handlers struct {
 	Auth      *auth.Handler
 	Catalog   *catalogapi.Handler
 	Character *characterapi.Handler
+	Folder    *folderapi.Handler
 	Group     *groupapi.Handler
 	// Authenticator resolves the session cookie for the guarded routes. It is
 	// the same object Auth is built over; the router takes it separately
@@ -172,6 +174,23 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// there will not be one.
 			authed.PUT("/characters/:id/events/:seq", h.Character.ReplaceEvent)
 			authed.DELETE("/characters/:id/events/:seq", h.Character.DeleteEvent)
+
+			// The folder is the one thing about a stored character that
+			// changes without an event, so it is its own route rather
+			// than a PATCH on the character -- which would read as an
+			// invitation to patch a name or a level, and those only the
+			// log can change.
+			authed.PUT("/characters/:id/folder", h.Character.SetFolder)
+			authed.POST("/characters/:id/copy", h.Character.Copy)
+
+			// Folders: where one account files its own characters. The
+			// neighbouring word is taken and this is not it -- a folder
+			// has one owner and shares nothing. Deleting one deletes the
+			// characters in it.
+			authed.GET("/folders", h.Folder.List)
+			authed.POST("/folders", h.Folder.Create)
+			authed.PATCH("/folders/:id", h.Folder.Rename)
+			authed.DELETE("/folders/:id", h.Folder.Delete)
 
 			// Groups. A group is the first thing here that belongs to more
 			// than one person, so unlike a character it is reached by rank

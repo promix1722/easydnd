@@ -34,6 +34,7 @@ import (
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/buildinfo"
@@ -89,12 +90,16 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 	// against the domain's ports, which is how the account store could move to
 	// Postgres without a line changing above this layer.
 	characterRepo := memory.NewCharacterRepository()
+	folderRepo := memory.NewFolderRepository()
 
-	// Accounts and groups are durable; characters are not yet. The character
-	// store still lives in the process because a character id is a
-	// process-local counter, and a group that referred to one would be
+	// Accounts and groups are durable; characters and the folders they are
+	// filed in are not. Both still live in the process because a character id
+	// is a process-local counter, and a group that referred to one would be
 	// dangling after the next restart -- a schema written against an
-	// unfinished feature is a migration nobody can revise later.
+	// unfinished feature is a migration nobody can revise later. A restart
+	// therefore still costs a player everything they made, and moving the two
+	// of them to Postgres is its own change: the assignments above are what a
+	// SQL sibling would have to satisfy.
 	userRepo, groupRepo, pool, err := newRepositories(ctx, cfg, log)
 	if err != nil {
 		return nil, err
@@ -149,7 +154,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 
 	// Application layer.
 	characterService := charuc.NewService(
-		characterRepo, catalogSource, hexsheet.NewImporter(),
+		characterRepo, folderRepo, catalogSource, hexsheet.NewImporter(),
 		log.With("usecase", "character"))
 	authService := authuc.NewService(userRepo, ceremony, signer, federations, authuc.Config{
 		SessionTTL:      cfg.Auth.SessionTTL,
@@ -172,6 +177,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 		Authenticator: authService,
 		Catalog:       catalogapi.New(catalogSource, log.With("handler", "catalog")),
 		Character:     characterapi.New(characterService, log.With("handler", "character")),
+		Folder:        folderapi.New(characterService, log.With("handler", "folder")),
 		Group:         groupapi.New(groupService, log.With("handler", "group")),
 	})
 	if err != nil {

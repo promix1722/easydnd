@@ -24,11 +24,11 @@ export interface RenderAtResult extends Omit<RenderResult, 'rerender'> {
  */
 export function renderAt(viewport: Viewport, ui: ReactElement): RenderAtResult {
   setViewport(viewport)
-  const result = render(<AppTheme>{ui}</AppTheme>)
+  const result = render(<AppTheme env="test">{ui}</AppTheme>)
   return {
     ...result,
     rerender: (next: ReactNode) => {
-      result.rerender(<AppTheme>{next}</AppTheme>)
+      result.rerender(<AppTheme env="test">{next}</AppTheme>)
     },
   }
 }

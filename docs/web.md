@@ -4,10 +4,11 @@ The engineering doc for the [easydnd.org](https://easydnd.org) browser client:
 layout, layer rules, and how it ships. For the Go API it talks to, see
 [backend.md](backend.md); for the game model behind both, see [dnd.md](dnd.md).
 
-Status: **real**. Sign-in (passkeys and Google), the party list, character
-creation, the build loop, the account screen and the sheet are all built and
-tested. **Level-up is not**, and this client does not offer it -- see [Level-up
-is not offered](#level-up-is-not-offered). Neither is the battle tracker.
+Status: **real**. Sign-in (passkeys and Google), the party list with its
+folders, character creation, the build loop, the account screen and the sheet
+are all built and tested. **Level-up is not**, and this client does not offer
+it -- see [Level-up is not offered](#level-up-is-not-offered). Neither is the
+battle tracker.
 
 ## Quick start
 
@@ -100,14 +101,51 @@ library behind either, and the reason is structural rather than a preference.
 Every endpoint that writes to a character returns the freshly projected sheet,
 so there is nothing to invalidate -- the response *is* the invalidation. A
 query library earns its keep when many components read overlapping queries with
-independent lifetimes, and here one screen owns one character. Revisit it if a
-party view ever renders six.
+independent lifetimes, and here one screen owns one character.
+
+The party list is now the one screen that holds two resources -- its folders
+and its characters -- which is the case that sentence used to leave open. It
+still does not need a library. The two reads are independent, the character
+read is keyed by the selected folder so changing the filter aborts the request
+in flight rather than leaving the old folder's rows under the new heading, and
+every mutation on that screen is followed by an explicit reload of the lists
+that changed. There is no cache to go stale in between. Revisit it when
+something needs a *third* component's copy of the same data to update by
+itself.
 
 The compendium is immutable for the life of the server process, so
 `lib/api/catalog.ts` memoises each collection's *promise* for the session: two
 components mounting in the same tick make one request, not two.
 
 Net new dependencies for the whole character feature: zero.
+
+## Folders are filing, not sharing
+
+A folder is a named place one account files its characters, and nothing else:
+one owner, nothing shared with anybody, which is why the screen has no owner
+column and no permissions on it. It is deliberately **not** called a group: the
+Groups section next to it is the shared one, with people and ranks in it, and
+the two words name genuinely different things. A folder lives inside the
+Characters section and never appears in Groups.
+
+`CharacterListScreen` carries the whole feature: a `Select` filters the list to
+one folder, a **Manage folders** dialog creates, renames and deletes them, and
+each row has a menu with Move, Copy and Delete. The filter is a `Select` rather
+than tabs because it renders the same at both viewports and does not overflow
+once an account keeps more than a few folders.
+
+Two things on that screen are not cosmetic:
+
+- **The default folder's row has no delete control.** It is the folder an
+  account is guaranteed to have, and the API refuses to delete it. Rename is
+  offered, because what an account cannot lose is the folder, not its name.
+- **The delete-folder confirmation states the character count.** Deleting a
+  folder deletes the characters in it, and characters live in memory, so there
+  is no undo and no backup. A dialog that only named the folder would be
+  describing a smaller action than the one about to happen.
+
+New character and Import carry the selected folder through as `?folder=`, so
+whatever the list was filtered to is where the next character lands.
 
 ## The build screen is a loop, not a wizard
 
@@ -169,6 +207,10 @@ there was never a second thing being done -- and creation used to carry the
 score method and all six numbers, which meant eight selections in one log entry
 and nothing a player could point at and change. The scores are an ordinary open
 choice now, answered on the abilities tab and written as their own entry.
+
+`/characters/new?folder=` carries the folder the party list was filtered to, so
+whatever the list was showing is where the next character lands. Import does the
+same. Absent, the server resolves the account's default.
 
 ### Changing anything is one mechanism
 
