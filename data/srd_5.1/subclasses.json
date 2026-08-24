@@ -1,0 +1,398 @@
+[
+  {
+    "slug": "berserker",
+    "class": "barbarian"
+  },
+  {
+    "slug": "champion",
+    "class": "fighter"
+  },
+  {
+    "slug": "devotion",
+    "class": "paladin",
+    "spells": [
+      {
+        "spell": "protection-from-evil-and-good",
+        "level": 3
+      },
+      {
+        "spell": "sanctuary",
+        "level": 3
+      },
+      {
+        "spell": "lesser-restoration",
+        "level": 5
+      },
+      {
+        "spell": "zone-of-truth",
+        "level": 5
+      },
+      {
+        "spell": "beacon-of-hope",
+        "level": 9
+      },
+      {
+        "spell": "dispel-magic",
+        "level": 9
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 13
+      },
+      {
+        "spell": "guardian-of-faith",
+        "level": 13
+      },
+      {
+        "spell": "commune",
+        "level": 17
+      },
+      {
+        "spell": "flame-strike",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "draconic",
+    "class": "sorcerer"
+  },
+  {
+    "slug": "evocation",
+    "class": "wizard"
+  },
+  {
+    "slug": "fiend",
+    "class": "warlock",
+    "spells": [
+      {
+        "spell": "burning-hands",
+        "level": 1
+      },
+      {
+        "spell": "command",
+        "level": 1
+      },
+      {
+        "spell": "blindness-deafness",
+        "level": 3
+      },
+      {
+        "spell": "scorching-ray",
+        "level": 3
+      },
+      {
+        "spell": "fireball",
+        "level": 5
+      },
+      {
+        "spell": "stinking-cloud",
+        "level": 5
+      },
+      {
+        "spell": "fire-shield",
+        "level": 7
+      },
+      {
+        "spell": "wall-of-fire",
+        "level": 7
+      },
+      {
+        "spell": "flame-strike",
+        "level": 9
+      },
+      {
+        "spell": "hallow",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "hunter",
+    "class": "ranger"
+  },
+  {
+    "slug": "land",
+    "class": "druid",
+    "spells": [
+      {
+        "spell": "hold-person",
+        "level": 3
+      },
+      {
+        "spell": "spike-growth",
+        "level": 3
+      },
+      {
+        "spell": "sleet-storm",
+        "level": 5
+      },
+      {
+        "spell": "slow",
+        "level": 5
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "ice-storm",
+        "level": 7
+      },
+      {
+        "spell": "commune-with-nature",
+        "level": 9
+      },
+      {
+        "spell": "cone-of-cold",
+        "level": 9
+      },
+      {
+        "spell": "mirror-image",
+        "level": 3
+      },
+      {
+        "spell": "misty-step",
+        "level": 3
+      },
+      {
+        "spell": "water-breathing",
+        "level": 5
+      },
+      {
+        "spell": "water-walk",
+        "level": 5
+      },
+      {
+        "spell": "control-water",
+        "level": 7
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "conjure-elemental",
+        "level": 9
+      },
+      {
+        "spell": "scrying",
+        "level": 9
+      },
+      {
+        "spell": "blur",
+        "level": 3
+      },
+      {
+        "spell": "silence",
+        "level": 3
+      },
+      {
+        "spell": "create-food-and-water",
+        "level": 5
+      },
+      {
+        "spell": "protection-from-energy",
+        "level": 5
+      },
+      {
+        "spell": "blight",
+        "level": 7
+      },
+      {
+        "spell": "hallucinatory-terrain",
+        "level": 7
+      },
+      {
+        "spell": "insect-plague",
+        "level": 9
+      },
+      {
+        "spell": "wall-of-stone",
+        "level": 9
+      },
+      {
+        "spell": "barkskin",
+        "level": 3
+      },
+      {
+        "spell": "spider-climb",
+        "level": 3
+      },
+      {
+        "spell": "call-lightning",
+        "level": 5
+      },
+      {
+        "spell": "plant-growth",
+        "level": 5
+      },
+      {
+        "spell": "divination",
+        "level": 7
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "commune-with-nature",
+        "level": 9
+      },
+      {
+        "spell": "tree-stride",
+        "level": 9
+      },
+      {
+        "spell": "invisibility",
+        "level": 3
+      },
+      {
+        "spell": "pass-without-trace",
+        "level": 3
+      },
+      {
+        "spell": "daylight",
+        "level": 5
+      },
+      {
+        "spell": "haste",
+        "level": 5
+      },
+      {
+        "spell": "divination",
+        "level": 7
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "dream",
+        "level": 9
+      },
+      {
+        "spell": "insect-plague",
+        "level": 9
+      },
+      {
+        "spell": "spider-climb",
+        "level": 3
+      },
+      {
+        "spell": "spike-growth",
+        "level": 3
+      },
+      {
+        "spell": "lightning-bolt",
+        "level": 5
+      },
+      {
+        "spell": "meld-into-stone",
+        "level": 5
+      },
+      {
+        "spell": "stone-shape",
+        "level": 7
+      },
+      {
+        "spell": "stoneskin",
+        "level": 7
+      },
+      {
+        "spell": "passwall",
+        "level": 9
+      },
+      {
+        "spell": "wall-of-stone",
+        "level": 9
+      },
+      {
+        "spell": "acid-arrow",
+        "level": 3
+      },
+      {
+        "spell": "darkness",
+        "level": 3
+      },
+      {
+        "spell": "water-walk",
+        "level": 5
+      },
+      {
+        "spell": "stinking-cloud",
+        "level": 5
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "locate-creature",
+        "level": 7
+      },
+      {
+        "spell": "insect-plague",
+        "level": 9
+      },
+      {
+        "spell": "scrying",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "life",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "bless",
+        "level": 1
+      },
+      {
+        "spell": "cure-wounds",
+        "level": 1
+      },
+      {
+        "spell": "lesser-restoration",
+        "level": 3
+      },
+      {
+        "spell": "spiritual-weapon",
+        "level": 3
+      },
+      {
+        "spell": "beacon-of-hope",
+        "level": 5
+      },
+      {
+        "spell": "revivify",
+        "level": 5
+      },
+      {
+        "spell": "death-ward",
+        "level": 7
+      },
+      {
+        "spell": "mass-cure-wounds",
+        "level": 9
+      },
+      {
+        "spell": "raise-dead",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "lore",
+    "class": "bard"
+  },
+  {
+    "slug": "open-hand",
+    "class": "monk"
+  },
+  {
+    "slug": "thief",
+    "class": "rogue"
+  }
+]

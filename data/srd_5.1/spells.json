@@ -1,0 +1,10741 @@
+[
+  {
+    "slug": "acid-arrow",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "attackType": "ranged",
+    "damage": {
+      "type": "acid",
+      "scaling": {
+        "atSlotLevel": {
+          "2": "4d4",
+          "3": "5d4",
+          "4": "6d4",
+          "5": "7d4",
+          "6": "8d4",
+          "7": "9d4",
+          "8": "10d4",
+          "9": "11d4"
+        }
+      }
+    },
+    "classes": [
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "acid-splash",
+    "level": 0,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "negates"
+    },
+    "damage": {
+      "type": "acid",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d6",
+          "11": "3d6",
+          "17": "4d6",
+          "5": "2d6"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "aid",
+    "level": 2,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "2": "5",
+        "3": "10",
+        "4": "15",
+        "5": "20",
+        "6": "25",
+        "7": "30",
+        "8": "35",
+        "9": "40"
+      }
+    },
+    "classes": [
+      "cleric",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "alarm",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "area": {
+      "kind": "cube",
+      "size": 20
+    },
+    "classes": [
+      "ranger",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "alter-self",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "animal-friendship",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "ranger"
+    ]
+  },
+  {
+    "slug": "animal-messenger",
+    "level": 2,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "bard",
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "animal-shapes",
+    "level": 8,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "animate-dead",
+    "level": 3,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "animate-objects",
+    "level": 5,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "antilife-shell",
+    "level": 5,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 10
+    },
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "antimagic-field",
+    "level": 8,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 10
+    },
+    "classes": [
+      "cleric",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "antipathy-sympathy",
+    "level": 8,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "day"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 200
+    },
+    "classes": [
+      "druid",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "arcane-eye",
+    "level": 4,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 30
+    },
+    "classes": [
+      "cleric",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "arcane-hand",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "arcane-lock",
+    "level": 2,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "arcane-sword",
+    "level": 7,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "attackType": "melee",
+    "damage": {
+      "type": "force",
+      "scaling": {
+        "atSlotLevel": {
+          "7": "3d10"
+        }
+      }
+    },
+    "classes": [
+      "bard",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "arcanists-magic-aura",
+    "level": 2,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "astral-projection",
+    "level": 9,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "special"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "augury",
+    "level": 2,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "awaken",
+    "level": 5,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "druid"
+    ]
+  },
+  {
+    "slug": "bane",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "cha",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "banishment",
+    "level": 4,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "cha",
+      "success": "negates"
+    },
+    "classes": [
+      "cleric",
+      "paladin",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "barkskin",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "beacon-of-hope",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore",
+      "life",
+      "devotion"
+    ]
+  },
+  {
+    "slug": "bestow-curse",
+    "level": 3,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "black-tentacles",
+    "level": 4,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "negates"
+    },
+    "damage": {
+      "type": "bludgeoning",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "3d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "cube",
+      "size": 20
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "blade-barrier",
+    "level": 6,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "slashing",
+      "scaling": {
+        "atSlotLevel": {
+          "6": "6d10"
+        }
+      }
+    },
+    "area": {
+      "kind": "line",
+      "size": 100
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "bless",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore",
+      "life"
+    ]
+  },
+  {
+    "slug": "blight",
+    "level": 4,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "necrotic",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "8d8",
+          "5": "9d8",
+          "6": "10d8",
+          "7": "11d8",
+          "8": "12d8",
+          "9": "13d8"
+        }
+      }
+    },
+    "classes": [
+      "druid",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "blindness-deafness",
+    "level": 2,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "fiend"
+    ]
+  },
+  {
+    "slug": "blink",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "blur",
+    "level": 2,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true
+    },
+    "concentration": true,
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "branding-smite",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true
+    },
+    "concentration": true,
+    "damage": {
+      "type": "radiant",
+      "scaling": {
+        "atSlotLevel": {
+          "2": "2d6",
+          "3": "3d6",
+          "4": "4d6",
+          "5": "5d6",
+          "6": "6d6",
+          "7": "7d6",
+          "8": "8d6",
+          "9": "9d6"
+        }
+      }
+    },
+    "classes": [
+      "paladin"
+    ]
+  },
+  {
+    "slug": "burning-hands",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "1": "3d6",
+          "2": "4d6",
+          "3": "5d6",
+          "4": "6d6",
+          "5": "7d6",
+          "6": "8d6",
+          "7": "9d6",
+          "8": "10d6",
+          "9": "11d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "cone",
+      "size": 15
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "fiend"
+    ]
+  },
+  {
+    "slug": "call-lightning",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "damage": {
+      "type": "lightning",
+      "scaling": {
+        "atSlotLevel": {
+          "3": "3d10",
+          "4": "4d10",
+          "5": "5d10",
+          "6": "6d10",
+          "7": "7d10",
+          "8": "8d10",
+          "9": "9d10"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 5
+    },
+    "classes": [
+      "druid"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "calm-emotions",
+    "level": 2,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "cha",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "bard",
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "chain-lightning",
+    "level": 6,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "lightning",
+      "scaling": {
+        "atSlotLevel": {
+          "6": "10d8"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "charm-person",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "chill-touch",
+    "level": 0,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "ranged",
+    "damage": {
+      "type": "necrotic",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d8",
+          "11": "3d8",
+          "17": "4d8",
+          "5": "2d8"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "circle-of-death",
+    "level": 6,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "necrotic",
+      "scaling": {
+        "atSlotLevel": {
+          "6": "8d6",
+          "7": "10d6",
+          "8": "12d6",
+          "9": "14d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 60
+    },
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "clairvoyance",
+    "level": 3,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 5280
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "cleric",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "clone",
+    "level": 8,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "cloudkill",
+    "level": 5,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "poison",
+      "scaling": {
+        "atSlotLevel": {
+          "5": "5d8",
+          "6": "6d8",
+          "7": "7d8",
+          "8": "8d8",
+          "9": "9d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "color-spray",
+    "level": 1,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cone",
+      "size": 15
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "command",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round"
+    },
+    "components": {
+      "verbal": true
+    },
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "cleric",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore",
+      "fiend"
+    ]
+  },
+  {
+    "slug": "commune",
+    "level": 5,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "devotion"
+    ]
+  },
+  {
+    "slug": "commune-with-nature",
+    "level": 5,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "ritual": true,
+    "classes": [
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "comprehend-languages",
+    "level": 1,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "compulsion",
+    "level": 4,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard"
+    ]
+  },
+  {
+    "slug": "cone-of-cold",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "cold",
+      "scaling": {
+        "atSlotLevel": {
+          "5": "8d8",
+          "6": "9d8",
+          "7": "10d8",
+          "8": "11d8",
+          "9": "12d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "cone",
+      "size": 60
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "confusion",
+    "level": 4,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 10
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "conjure-animals",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "conjure-celestial",
+    "level": 7,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "conjure-elemental",
+    "level": 5,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "cube",
+      "size": 10
+    },
+    "classes": [
+      "druid",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "conjure-fey",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "warlock"
+    ]
+  },
+  {
+    "slug": "conjure-minor-elementals",
+    "level": 4,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "conjure-woodland-beings",
+    "level": 4,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "ranger"
+    ]
+  },
+  {
+    "slug": "contact-other-plane",
+    "level": 5,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true
+    },
+    "ritual": true,
+    "save": {
+      "ability": "int",
+      "success": "other"
+    },
+    "classes": [
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "contagion",
+    "level": 5,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 7,
+      "unit": "day"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "melee",
+    "save": {
+      "ability": "con",
+      "success": "other"
+    },
+    "classes": [
+      "cleric",
+      "druid"
+    ]
+  },
+  {
+    "slug": "contingency",
+    "level": 6,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "day"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "continual-flame",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "control-water",
+    "level": 4,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 300
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "str",
+      "success": "half"
+    },
+    "damage": {
+      "type": "bludgeoning",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "2d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "cube",
+      "size": 100
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "control-weather",
+    "level": 8,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric",
+      "druid",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "counterspell",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "reaction",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "somatic": true
+    },
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "create-food-and-water",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "create-or-destroy-water",
+    "level": 1,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 30
+    },
+    "classes": [
+      "cleric",
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "create-undead",
+    "level": 6,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "creation",
+    "level": 5,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "special"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 5
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "cure-wounds",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "1": "1d8 + MOD",
+        "2": "2d8 + MOD",
+        "3": "3d8 + MOD",
+        "4": "4d8 + MOD",
+        "5": "5d8 + MOD",
+        "6": "6d8 + MOD",
+        "7": "7d8 + MOD",
+        "8": "8d8 + MOD",
+        "9": "9d8 + MOD"
+      }
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "paladin",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore",
+      "life"
+    ]
+  },
+  {
+    "slug": "dancing-lights",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "darkness",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 15
+    },
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "darkvision",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "druid",
+      "ranger",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "daylight",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 60
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "paladin",
+      "ranger",
+      "sorcerer"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "death-ward",
+    "level": 4,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "cleric",
+      "paladin"
+    ],
+    "subclasses": [
+      "life"
+    ]
+  },
+  {
+    "slug": "delayed-blast-fireball",
+    "level": 7,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "7": "12d6",
+          "8": "13d6",
+          "9": "14d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "demiplane",
+    "level": 8,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "somatic": true
+    },
+    "classes": [
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "detect-evil-and-good",
+    "level": 1,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 30
+    },
+    "classes": [
+      "cleric",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "detect-magic",
+    "level": 1,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "ritual": true,
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 30
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "paladin",
+      "ranger",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "detect-poison-and-disease",
+    "level": 1,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 30
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "paladin",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "detect-thoughts",
+    "level": 2,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "dimension-door",
+    "level": 4,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 500
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "damage": {
+      "type": "force",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "4d6"
+        }
+      }
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "disguise-self",
+    "level": 1,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "disintegrate",
+    "level": 6,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "negates"
+    },
+    "damage": {
+      "type": "force",
+      "scaling": {
+        "atSlotLevel": {
+          "6": "10d6 + 40"
+        }
+      }
+    },
+    "area": {
+      "kind": "cube",
+      "size": 10
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "dispel-evil-and-good",
+    "level": 5,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "cha",
+      "success": "other"
+    },
+    "classes": [
+      "cleric",
+      "paladin"
+    ]
+  },
+  {
+    "slug": "dispel-magic",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "paladin",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "devotion"
+    ]
+  },
+  {
+    "slug": "divination",
+    "level": 4,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "druid"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "divine-favor",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "damage": {
+      "type": "radiant",
+      "scaling": {
+        "atSlotLevel": {
+          "1": "1d4"
+        }
+      }
+    },
+    "classes": [
+      "paladin"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "divine-word",
+    "level": 7,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "save": {
+      "ability": "cha",
+      "success": "negates"
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "dominate-beast",
+    "level": 4,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "druid",
+      "sorcerer"
+    ]
+  },
+  {
+    "slug": "dominate-monster",
+    "level": 8,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "dominate-person",
+    "level": 5,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "other"
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "dream",
+    "level": 5,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "special"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "damage": {
+      "type": "psychic",
+      "scaling": {
+        "atSlotLevel": {
+          "5": "3d6"
+        }
+      }
+    },
+    "classes": [
+      "bard",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "druidcraft",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "earthquake",
+    "level": 8,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 500
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 100
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "sorcerer"
+    ]
+  },
+  {
+    "slug": "eldritch-blast",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "ranged",
+    "damage": {
+      "type": "force",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d10",
+          "11": "1d10",
+          "17": "1d10",
+          "5": "1d10"
+        }
+      }
+    },
+    "classes": [
+      "warlock"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "enhance-ability",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "sorcerer"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "enlarge-reduce",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "con",
+      "success": "negates"
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "entangle",
+    "level": 1,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "str",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "cube",
+      "size": 20
+    },
+    "classes": [
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "enthrall",
+    "level": 2,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "warlock"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "etherealness",
+    "level": 7,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "expeditious-retreat",
+    "level": 1,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "eyebite",
+    "level": 6,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "fabricate",
+    "level": 4,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "faerie-fire",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "cube",
+      "size": 20
+    },
+    "classes": [
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "faithful-hound",
+    "level": 4,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "attackType": "melee",
+    "damage": {
+      "type": "piercing",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "4d8"
+        }
+      }
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "false-life",
+    "level": 1,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "1": "1d4 + 4",
+        "2": "1d4 + 9",
+        "3": "1d4 + 14",
+        "4": "1d4 + 19",
+        "5": "1d4 + 24",
+        "6": "1d4 + 29",
+        "7": "1d4 + 34",
+        "8": "1d4 + 39",
+        "9": "1d4 + 44"
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "fear",
+    "level": 3,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "cone",
+      "size": 30
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "feather-fall",
+    "level": 1,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "reaction",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "feeblemind",
+    "level": 8,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "int",
+      "success": "other"
+    },
+    "damage": {
+      "type": "psychic",
+      "scaling": {
+        "atSlotLevel": {
+          "8": "4d6"
+        }
+      }
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "find-familiar",
+    "level": 1,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "find-steed",
+    "level": 2,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "paladin"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "find-the-path",
+    "level": 6,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "cleric",
+      "druid"
+    ]
+  },
+  {
+    "slug": "find-traps",
+    "level": 2,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "finger-of-death",
+    "level": 7,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "necrotic",
+      "scaling": {
+        "atSlotLevel": {
+          "7": "7d8 + 30"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "fire-bolt",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "ranged",
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d10",
+          "11": "3d10",
+          "17": "4d10",
+          "5": "2d10"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "fire-shield",
+    "level": 4,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "2d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 5
+    },
+    "classes": [
+      "wizard"
+    ],
+    "subclasses": [
+      "fiend"
+    ]
+  },
+  {
+    "slug": "fire-storm",
+    "level": 7,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "7": "7d10"
+        }
+      }
+    },
+    "area": {
+      "kind": "cube",
+      "size": 100
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "sorcerer"
+    ]
+  },
+  {
+    "slug": "fireball",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "3": "8d6",
+          "4": "9d6",
+          "5": "10d6",
+          "6": "11d6",
+          "7": "12d6",
+          "8": "13d6",
+          "9": "14d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "fiend"
+    ]
+  },
+  {
+    "slug": "flame-blade",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "2": "3d6",
+          "4": "4d6",
+          "6": "5d6",
+          "8": "6d6"
+        }
+      }
+    },
+    "classes": [
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "flame-strike",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "5": "4d6 + 4d6",
+          "6": "4d6 + 5d6",
+          "7": "4d6 + 6d6",
+          "8": "4d6 + 7d6",
+          "9": "4d6 + 8d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "cylinder",
+      "size": 40
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "devotion",
+      "fiend"
+    ]
+  },
+  {
+    "slug": "flaming-sphere",
+    "level": 2,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "2": "2d6",
+          "3": "3d6",
+          "4": "4d6",
+          "5": "5d6",
+          "6": "6d6",
+          "7": "7d6",
+          "8": "8d6",
+          "9": "9d6"
+        }
+      }
+    },
+    "classes": [
+      "druid",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "flesh-to-stone",
+    "level": 6,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "con",
+      "success": "negates"
+    },
+    "classes": [
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "floating-disk",
+    "level": 1,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "fly",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "fog-cloud",
+    "level": 1,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "druid",
+      "ranger",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "forbiddance",
+    "level": 6,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "area": {
+      "kind": "cube",
+      "size": 40000
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "forcecage",
+    "level": 7,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 100
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 20
+    },
+    "classes": [
+      "bard",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "foresight",
+    "level": 9,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "freedom-of-movement",
+    "level": 4,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "land",
+      "devotion"
+    ]
+  },
+  {
+    "slug": "freezing-sphere",
+    "level": 6,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 300
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "cold",
+      "scaling": {
+        "atSlotLevel": {
+          "6": "10d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 60
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "gaseous-form",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "gate",
+    "level": 9,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "geas",
+    "level": 5,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 30,
+      "unit": "day"
+    },
+    "components": {
+      "verbal": true
+    },
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "paladin",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "gentle-repose",
+    "level": 2,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "day"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "cleric",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "giant-insect",
+    "level": 4,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "glibness",
+    "level": 8,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true
+    },
+    "classes": [
+      "bard",
+      "warlock"
+    ]
+  },
+  {
+    "slug": "globe-of-invulnerability",
+    "level": 6,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 10
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "glyph-of-warding",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "goodberry",
+    "level": 1,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "druid",
+      "ranger"
+    ]
+  },
+  {
+    "slug": "grease",
+    "level": 1,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "cube",
+      "size": 10
+    },
+    "classes": [
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "greater-invisibility",
+    "level": 4,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "greater-restoration",
+    "level": 5,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid"
+    ]
+  },
+  {
+    "slug": "guardian-of-faith",
+    "level": 4,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "radiant",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "20"
+        }
+      }
+    },
+    "area": {
+      "kind": "cylinder",
+      "size": 10
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "guards-and-wards",
+    "level": 6,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 2500
+    },
+    "classes": [
+      "bard",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "guidance",
+    "level": 0,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric",
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "guiding-bolt",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "ranged",
+    "damage": {
+      "type": "radiant",
+      "scaling": {
+        "atSlotLevel": {
+          "1": "4d6",
+          "2": "5d6",
+          "3": "6d6",
+          "4": "7d6",
+          "5": "8d6",
+          "6": "9d6",
+          "7": "10d6",
+          "8": "11d6",
+          "9": "12d6"
+        }
+      }
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "gust-of-wind",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "str",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "line",
+      "size": 60
+    },
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "hallow",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "cha",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 60
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "fiend"
+    ]
+  },
+  {
+    "slug": "hallucinatory-terrain",
+    "level": 4,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 300
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 150
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "harm",
+    "level": 6,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "necrotic",
+      "scaling": {
+        "atSlotLevel": {
+          "6": "14d6"
+        }
+      }
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "haste",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "heal",
+    "level": 6,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "6": "70",
+        "7": "80",
+        "8": "90",
+        "9": "100"
+      }
+    },
+    "classes": [
+      "cleric",
+      "druid"
+    ]
+  },
+  {
+    "slug": "healing-word",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "1": "1d4 + MOD",
+        "2": "2d4 + MOD",
+        "3": "3d4 + MOD",
+        "4": "4d4 + MOD",
+        "5": "5d4 + MOD",
+        "6": "6d4 + MOD",
+        "7": "7d4 + MOD",
+        "8": "8d4 + MOD",
+        "9": "9d4 + MOD"
+      }
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "heat-metal",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "con",
+      "success": "other"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "2": "2d8",
+          "3": "3d8",
+          "4": "4d8",
+          "5": "5d8",
+          "6": "6d8",
+          "7": "7d8",
+          "8": "8d8",
+          "9": "9d8"
+        }
+      }
+    },
+    "classes": [
+      "bard",
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "hellish-rebuke",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "reaction",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "1": "2d10",
+          "2": "3d10",
+          "3": "4d10",
+          "4": "5d10",
+          "5": "6d10",
+          "6": "7d10",
+          "7": "8d10",
+          "8": "9d10",
+          "9": "10d10"
+        }
+      }
+    },
+    "classes": [
+      "warlock"
+    ]
+  },
+  {
+    "slug": "heroes-feast",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric",
+      "druid"
+    ]
+  },
+  {
+    "slug": "heroism",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "hideous-laughter",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "hold-monster",
+    "level": 5,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "hold-person",
+    "level": 2,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "holy-aura",
+    "level": 8,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 30
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "hunters-mark",
+    "level": 1,
+    "school": "divination",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true
+    },
+    "concentration": true,
+    "classes": [
+      "ranger"
+    ]
+  },
+  {
+    "slug": "hypnotic-pattern",
+    "level": 3,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "ice-storm",
+    "level": 4,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 300
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "bludgeoning",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "2d8 + 4d6",
+          "5": "3d8 + 4d6",
+          "6": "4d8 + 4d6",
+          "7": "5d8 + 4d6",
+          "8": "6d8 + 4d6",
+          "9": "7d8 + 4d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "cylinder",
+      "size": 20
+    },
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "identify",
+    "level": 1,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "bard",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "illusory-script",
+    "level": 1,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "day"
+    },
+    "components": {
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "bard",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "imprisonment",
+    "level": 9,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "incendiary-cloud",
+    "level": 8,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "8": "10d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "inflict-wounds",
+    "level": 1,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "melee",
+    "damage": {
+      "type": "necrotic",
+      "scaling": {
+        "atSlotLevel": {
+          "1": "3d10",
+          "2": "4d10",
+          "3": "5d10",
+          "4": "6d10",
+          "5": "7d10",
+          "6": "8d10",
+          "7": "9d10",
+          "8": "10d10",
+          "9": "11d10"
+        }
+      }
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "insect-plague",
+    "level": 5,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 300
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "piercing",
+      "scaling": {
+        "atSlotLevel": {
+          "5": "4d10",
+          "6": "5d10",
+          "7": "6d10",
+          "8": "7d10",
+          "9": "8d10"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "sorcerer"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "instant-summons",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "invisibility",
+    "level": 2,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "irresistible-dance",
+    "level": 6,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "jump",
+    "level": 1,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "druid",
+      "ranger",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "knock",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "legend-lore",
+    "level": 5,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "lesser-restoration",
+    "level": 2,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "paladin",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore",
+      "life",
+      "devotion"
+    ]
+  },
+  {
+    "slug": "levitate",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "light",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "material": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "lightning-bolt",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "lightning",
+      "scaling": {
+        "atSlotLevel": {
+          "3": "8d6",
+          "4": "9d6",
+          "5": "10d6",
+          "6": "11d6",
+          "7": "12d6",
+          "8": "13d6",
+          "9": "14d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "line",
+      "size": 100
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "locate-animals-or-plants",
+    "level": 2,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "bard",
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "locate-creature",
+    "level": 4,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "paladin",
+      "ranger",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "locate-object",
+    "level": 2,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "paladin",
+      "ranger",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "longstrider",
+    "level": 1,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "ranger",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "mage-armor",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "mage-hand",
+    "level": 0,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "magic-circle",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "cha",
+      "success": "other"
+    },
+    "area": {
+      "kind": "cylinder",
+      "size": 10
+    },
+    "classes": [
+      "cleric",
+      "paladin",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "magic-jar",
+    "level": 6,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "cha",
+      "success": "other"
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "magic-missile",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "damage": {
+      "type": "force",
+      "scaling": {
+        "atSlotLevel": {
+          "1": "3d4 + 3",
+          "2": "4d4 + 4",
+          "3": "5d4 + 5",
+          "4": "6d4 + 6",
+          "5": "7d4 + 7",
+          "6": "8d4 + 8",
+          "7": "9d4 + 9",
+          "8": "10d4 + 10",
+          "9": "11d4 + 11"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "magic-mouth",
+    "level": 2,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "bard",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "magic-weapon",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "paladin",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "magnificent-mansion",
+    "level": 7,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 300
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 5
+    },
+    "classes": [
+      "bard",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "major-image",
+    "level": 3,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "mass-cure-wounds",
+    "level": 5,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "5": "3d8 + MOD",
+        "6": "4d8 + MOD",
+        "7": "5d8 + MOD",
+        "8": "6d8 + MOD",
+        "9": "7d8 + MOD"
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 30
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid"
+    ],
+    "subclasses": [
+      "life"
+    ]
+  },
+  {
+    "slug": "mass-heal",
+    "level": 9,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "9": "700"
+      }
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "mass-healing-word",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "3": "1d4 + MOD",
+        "4": "2d4 + MOD",
+        "5": "3d4 + MOD",
+        "6": "4d4 + MOD",
+        "7": "5d4 + MOD",
+        "8": "6d4 + MOD",
+        "9": "7d4 + MOD"
+      }
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "mass-suggestion",
+    "level": 6,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "material": true
+    },
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "maze",
+    "level": 8,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "meld-into-stone",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "ritual": true,
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "mending",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric",
+      "bard",
+      "druid",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "message",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "meteor-swarm",
+    "level": 9,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 5280
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "9": "20d6 + 20d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 40
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "mind-blank",
+    "level": 8,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "bard",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "minor-illusion",
+    "level": 0,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "mirage-arcane",
+    "level": 7,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "sight"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "day"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 5280
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "mirror-image",
+    "level": 2,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "mislead",
+    "level": 5,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "misty-step",
+    "level": 2,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "modify-memory",
+    "level": 5,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "moonbeam",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "radiant",
+      "scaling": {
+        "atSlotLevel": {
+          "2": "2d10",
+          "3": "3d10",
+          "4": "4d10",
+          "5": "5d10",
+          "6": "6d10",
+          "7": "7d10",
+          "8": "8d10",
+          "9": "9d10"
+        }
+      }
+    },
+    "area": {
+      "kind": "cylinder",
+      "size": 5
+    },
+    "classes": [
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "move-earth",
+    "level": 6,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 2,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "cone",
+      "size": 40
+    },
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "nondetection",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "ranger",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "pass-without-trace",
+    "level": 2,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "passwall",
+    "level": 5,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "phantasmal-killer",
+    "level": 4,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "damage": {
+      "type": "psychic",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "4d10"
+        }
+      }
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "phantom-steed",
+    "level": 3,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "ritual": true,
+    "classes": [
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "planar-ally",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "planar-binding",
+    "level": 5,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "cha",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "plane-shift",
+    "level": 7,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "attackType": "melee",
+    "save": {
+      "ability": "cha",
+      "success": "negates"
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "plant-growth",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "poison-spray",
+    "level": 0,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "negates"
+    },
+    "damage": {
+      "type": "poison",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d12",
+          "11": "3d12",
+          "17": "4d12",
+          "5": "2d12"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard",
+      "druid"
+    ]
+  },
+  {
+    "slug": "polymorph",
+    "level": 4,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "power-word-kill",
+    "level": 9,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "power-word-stun",
+    "level": 8,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "prayer-of-healing",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "2": "2d8 + MOD",
+        "3": "3d8 + MOD",
+        "4": "4d8 + MOD",
+        "5": "5d8 + MOD",
+        "6": "6d8 + MOD",
+        "7": "7d8 + MOD",
+        "8": "8d8 + MOD",
+        "9": "9d8 + MOD"
+      }
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "prestidigitation",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "prismatic-spray",
+    "level": 7,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "other"
+    },
+    "damage": {
+      "scaling": {
+        "atSlotLevel": {
+          "7": "10d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "cone",
+      "size": 60
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "prismatic-wall",
+    "level": 9,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "area": {
+      "kind": "line",
+      "size": 90
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "private-sanctum",
+    "level": 4,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 100
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "produce-flame",
+    "level": 0,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "ranged",
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d8",
+          "11": "3d8",
+          "17": "4d8",
+          "5": "2d8"
+        }
+      }
+    },
+    "classes": [
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "programmed-illusion",
+    "level": 6,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 30
+    },
+    "classes": [
+      "bard",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "project-image",
+    "level": 7,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 2640000
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "protection-from-energy",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric",
+      "druid",
+      "ranger",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "protection-from-evil-and-good",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric",
+      "paladin",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "devotion"
+    ]
+  },
+  {
+    "slug": "protection-from-poison",
+    "level": 2,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "paladin",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "purify-food-and-drink",
+    "level": 1,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "ritual": true,
+    "classes": [
+      "cleric",
+      "druid",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "raise-dead",
+    "level": 5,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "paladin"
+    ],
+    "subclasses": [
+      "life"
+    ]
+  },
+  {
+    "slug": "ray-of-enfeeblement",
+    "level": 2,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "attackType": "ranged",
+    "save": {
+      "ability": "con",
+      "success": "negates"
+    },
+    "classes": [
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "ray-of-frost",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "ranged",
+    "damage": {
+      "type": "cold",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d8",
+          "11": "3d8",
+          "17": "4d8",
+          "5": "2d8"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "regenerate",
+    "level": 7,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "heal": {
+      "atSlotLevel": {
+        "7": "4d8 + 15"
+      }
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid"
+    ]
+  },
+  {
+    "slug": "reincarnate",
+    "level": 5,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "remove-curse",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "cleric",
+      "paladin",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "resilient-sphere",
+    "level": 4,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "negates"
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "resistance",
+    "level": 0,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric",
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "resurrection",
+    "level": 7,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric"
+    ]
+  },
+  {
+    "slug": "reverse-gravity",
+    "level": 7,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 100
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "other"
+    },
+    "area": {
+      "kind": "cylinder",
+      "size": 50
+    },
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "revivify",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore",
+      "life"
+    ]
+  },
+  {
+    "slug": "rope-trick",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "sacred-flame",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "dex",
+      "success": "negates"
+    },
+    "damage": {
+      "type": "radiant",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d8",
+          "11": "3d8",
+          "17": "4d8",
+          "5": "2d8"
+        }
+      }
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "sanctuary",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore",
+      "devotion"
+    ]
+  },
+  {
+    "slug": "scorching-ray",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "2": "2d6"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "fiend"
+    ]
+  },
+  {
+    "slug": "scrying",
+    "level": 5,
+    "school": "divination",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "druid",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "secret-chest",
+    "level": 4,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "see-invisibility",
+    "level": 2,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "seeming",
+    "level": 5,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "sending",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "unlimited"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "sequester",
+    "level": 7,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "shapechange",
+    "level": 9,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "shatter",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "thunder",
+      "scaling": {
+        "atSlotLevel": {
+          "2": "3d8",
+          "3": "4d8",
+          "4": "5d8",
+          "5": "6d8",
+          "6": "7d8",
+          "7": "8d8",
+          "8": "9d8",
+          "9": "10d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 10
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "shield",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "reaction",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "shield-of-faith",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "shillelagh",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "druid"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "shocking-grasp",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "melee",
+    "damage": {
+      "type": "lightning",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d8",
+          "11": "3d8",
+          "17": "4d8",
+          "5": "2d8"
+        }
+      }
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "silence",
+    "level": 2,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "ritual": true,
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "silent-image",
+    "level": 1,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "cube",
+      "size": 15
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "simulacrum",
+    "level": 7,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 12,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "sleep",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "damage": {
+      "scaling": {
+        "atSlotLevel": {
+          "1": "5d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "sleet-storm",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "cylinder",
+      "size": 40
+    },
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "slow",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "cube",
+      "size": 40
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "spare-the-dying",
+    "level": 0,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "speak-with-animals",
+    "level": 1,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "ritual": true,
+    "classes": [
+      "bard",
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "speak-with-dead",
+    "level": 3,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "speak-with-plants",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 30
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "spider-climb",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "spike-growth",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "cylinder",
+      "size": 20
+    },
+    "classes": [
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "spirit-guardians",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "spiritual-weapon",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "bonus-action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "attackType": "melee",
+    "damage": {
+      "type": "force",
+      "scaling": {
+        "atSlotLevel": {
+          "2": "1d8 + MOD",
+          "3": "1d8 + MOD",
+          "4": "2d8 + MOD",
+          "5": "2d8 + MOD",
+          "6": "3d8 + MOD",
+          "7": "3d8 + MOD",
+          "8": "4d8 + MOD",
+          "9": "4d8 + MOD"
+        }
+      }
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore",
+      "life"
+    ]
+  },
+  {
+    "slug": "stinking-cloud",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 90
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "con",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 20
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land",
+      "fiend"
+    ]
+  },
+  {
+    "slug": "stone-shape",
+    "level": 4,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric",
+      "druid",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "stoneskin",
+    "level": 4,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "ranger",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "storm-of-vengeance",
+    "level": 9,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "sight"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "con",
+      "success": "negates"
+    },
+    "damage": {
+      "type": "thunder",
+      "scaling": {
+        "atSlotLevel": {
+          "9": "2d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 360
+    },
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "suggestion",
+    "level": 2,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "sunbeam",
+    "level": 6,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "radiant",
+      "scaling": {
+        "atSlotLevel": {
+          "6": "6d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "line",
+      "size": 60
+    },
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "sunburst",
+    "level": 8,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 150
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "radiant",
+      "scaling": {
+        "atSlotLevel": {
+          "8": "12d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "cylinder",
+      "size": 60
+    },
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "symbol",
+    "level": 7,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "until-dispelled"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 10
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "telekinesis",
+    "level": 5,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "sphere",
+      "size": 30
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "telepathic-bond",
+    "level": 5,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "teleport",
+    "level": 7,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "area": {
+      "kind": "cube",
+      "size": 10
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "teleportation-circle",
+    "level": 5,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round"
+    },
+    "components": {
+      "verbal": true,
+      "material": true
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 10
+    },
+    "classes": [
+      "bard",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "thaumaturgy",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "thunderwave",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "save": {
+      "ability": "con",
+      "success": "half"
+    },
+    "damage": {
+      "type": "thunder",
+      "scaling": {
+        "atSlotLevel": {
+          "1": "2d8",
+          "2": "3d8",
+          "3": "4d8",
+          "4": "5d8",
+          "5": "6d8",
+          "6": "7d8",
+          "7": "8d8",
+          "8": "9d8",
+          "9": "10d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "cube",
+      "size": 15
+    },
+    "classes": [
+      "bard",
+      "druid",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "time-stop",
+    "level": 9,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "tiny-hut",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "area": {
+      "kind": "sphere",
+      "size": 10
+    },
+    "classes": [
+      "bard",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "tongues",
+    "level": 3,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "transport-via-plants",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 10
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "tree-stride",
+    "level": 5,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "true-polymorph",
+    "level": 9,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "true-resurrection",
+    "level": 9,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric",
+      "druid"
+    ]
+  },
+  {
+    "slug": "true-seeing",
+    "level": 6,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "true-strike",
+    "level": 0,
+    "school": "divination",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "round",
+      "upTo": true
+    },
+    "components": {
+      "somatic": true
+    },
+    "concentration": true,
+    "classes": [
+      "bard",
+      "sorcerer",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "unseen-servant",
+    "level": 1,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "bard",
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "vampiric-touch",
+    "level": 3,
+    "school": "necromancy",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "attackType": "melee",
+    "damage": {
+      "type": "necrotic",
+      "scaling": {
+        "atSlotLevel": {
+          "3": "3d6",
+          "4": "4d6",
+          "5": "5d6",
+          "6": "6d6",
+          "7": "7d6",
+          "8": "8d6",
+          "9": "9d6"
+        }
+      }
+    },
+    "classes": [
+      "warlock",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "vicious-mockery",
+    "level": 0,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "damage": {
+      "type": "psychic",
+      "scaling": {
+        "atCharacterLevel": {
+          "1": "1d4",
+          "11": "3d4",
+          "17": "4d4",
+          "5": "2d4"
+        }
+      }
+    },
+    "classes": [
+      "bard"
+    ]
+  },
+  {
+    "slug": "wall-of-fire",
+    "level": 4,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "fire",
+      "scaling": {
+        "atSlotLevel": {
+          "4": "5d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "line",
+      "size": 60
+    },
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "fiend"
+    ]
+  },
+  {
+    "slug": "wall-of-force",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "wall-of-ice",
+    "level": 6,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "cold",
+      "scaling": {
+        "atSlotLevel": {
+          "6": "10d6",
+          "7": "12d6",
+          "8": "14d6",
+          "9": "16d6"
+        }
+      }
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 10
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "wall-of-stone",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "land"
+    ]
+  },
+  {
+    "slug": "wall-of-thorns",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "dex",
+      "success": "half"
+    },
+    "damage": {
+      "type": "piercing",
+      "scaling": {
+        "atSlotLevel": {
+          "6": "7d8",
+          "7": "8d8",
+          "8": "9d8",
+          "9": "10d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "line",
+      "size": 60
+    },
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "warding-bond",
+    "level": 2,
+    "school": "abjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "touch"
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "cleric"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "water-breathing",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 24,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "druid",
+      "ranger",
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "water-walk",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "ritual": true,
+    "classes": [
+      "cleric",
+      "druid",
+      "ranger",
+      "sorcerer"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "web",
+    "level": 2,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "hour",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "area": {
+      "kind": "cube",
+      "size": 20
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ],
+    "subclasses": [
+      "lore",
+      "land"
+    ]
+  },
+  {
+    "slug": "weird",
+    "level": 9,
+    "school": "illusion",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "wis",
+      "success": "negates"
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 30
+    },
+    "classes": [
+      "wizard"
+    ]
+  },
+  {
+    "slug": "wind-walk",
+    "level": 6,
+    "school": "transmutation",
+    "castingTime": {
+      "kind": "over-time",
+      "amount": 1,
+      "unit": "minute"
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 30
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 8,
+      "unit": "hour"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "wind-wall",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 120
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 1,
+      "unit": "minute",
+      "upTo": true
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": true
+    },
+    "concentration": true,
+    "save": {
+      "ability": "str",
+      "success": "half"
+    },
+    "damage": {
+      "type": "bludgeoning",
+      "scaling": {
+        "atSlotLevel": {
+          "3": "3d8"
+        }
+      }
+    },
+    "area": {
+      "kind": "line",
+      "size": 50
+    },
+    "classes": [
+      "druid",
+      "ranger"
+    ],
+    "subclasses": [
+      "lore"
+    ]
+  },
+  {
+    "slug": "wish",
+    "level": 9,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "self"
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "word-of-recall",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 5
+    },
+    "duration": {
+      "kind": "instantaneous"
+    },
+    "components": {
+      "verbal": true
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 5
+    },
+    "classes": [
+      "cleric"
+    ]
+  },
+  {
+    "slug": "zone-of-truth",
+    "level": 2,
+    "school": "enchantment",
+    "castingTime": {
+      "kind": "action",
+      "amount": 1
+    },
+    "range": {
+      "kind": "distance",
+      "distance": 60
+    },
+    "duration": {
+      "kind": "timed",
+      "amount": 10,
+      "unit": "minute"
+    },
+    "components": {
+      "verbal": true,
+      "somatic": true
+    },
+    "area": {
+      "kind": "sphere",
+      "size": 15
+    },
+    "classes": [
+      "bard",
+      "cleric",
+      "paladin"
+    ],
+    "subclasses": [
+      "lore",
+      "devotion"
+    ]
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "cha": {
+    "name": "ХАР",
+    "fields": {
+      "fullName": "Харизма"
+    }
+  },
+  "con": {
+    "name": "ТЕЛ",
+    "fields": {
+      "fullName": "Телосложение"
+    }
+  },
+  "dex": {
+    "name": "ЛОВ",
+    "fields": {
+      "fullName": "Ловкость"
+    }
+  },
+  "int": {
+    "name": "ИНТ",
+    "fields": {
+      "fullName": "Интеллект"
+    }
+  },
+  "str": {
+    "name": "СИЛ",
+    "fields": {
+      "fullName": "Сила"
+    }
+  },
+  "wis": {
+    "name": "МДР",
+    "fields": {
+      "fullName": "Мудрость"
+    }
+  }
+}

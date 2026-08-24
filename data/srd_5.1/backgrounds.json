@@ -1,0 +1,220 @@
+[
+  {
+    "slug": "acolyte",
+    "startingProficiencies": [
+      "skill-insight",
+      "skill-religion"
+    ],
+    "languageOptions": {
+      "prompt": "acolyte/language/0",
+      "choose": 2,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "startingEquipment": [
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "acolyte/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "equipment-category",
+          "category": "holy-symbols"
+        }
+      }
+    ],
+    "feature": "acolyte-shelter-of-the-faithful",
+    "personalityTraits": {
+      "prompt": "acolyte/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-idolize-a-particular-hero-of"
+          },
+          {
+            "kind": "text",
+            "key": "i-can-find-common-ground-between"
+          },
+          {
+            "kind": "text",
+            "key": "i-see-omens-in-every-event"
+          },
+          {
+            "kind": "text",
+            "key": "nothing-can-shake-my-optimistic-attitude"
+          },
+          {
+            "kind": "text",
+            "key": "i-quote-or-misquote-sacred-texts"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-tolerant-or-intolerant-of"
+          },
+          {
+            "kind": "text",
+            "key": "ive-enjoyed-fine-food-drink-and"
+          },
+          {
+            "kind": "text",
+            "key": "ive-spent-so-long-in-the"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "acolyte/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "tradition-the-ancient-traditions-of-worship",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "charity-i-always-try-to-help",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "change-we-must-help-bring-about",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "power-i-hope-to-one-day",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "faith-i-trust-that-my-deity",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "aspiration-i-seek-to-prove-myself",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "acolyte/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-would-die-to-recover-an"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-someday-get-revenge-on"
+          },
+          {
+            "kind": "text",
+            "key": "i-owe-my-life-to-the"
+          },
+          {
+            "kind": "text",
+            "key": "everything-i-do-is-for-the"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-do-anything-to-protect"
+          },
+          {
+            "kind": "text",
+            "key": "i-seek-to-preserve-a-sacred"
+          }
+        ]
+      }
+    },
+    "flaws": {
+      "prompt": "acolyte/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-judge-others-harshly-and-myself"
+          },
+          {
+            "kind": "text",
+            "key": "i-put-too-much-trust-in"
+          },
+          {
+            "kind": "text",
+            "key": "my-piety-sometimes-leads-me-to"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-inflexible-in-my-thinking"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-suspicious-of-strangers-and"
+          },
+          {
+            "kind": "text",
+            "key": "once-i-pick-a-goal-i"
+          }
+        ]
+      }
+    }
+  }
+]

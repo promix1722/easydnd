@@ -1,0 +1,353 @@
+{
+  "alchemists-supplies": {
+    "name": "Alchemist's Supplies"
+  },
+  "all-armor": {
+    "name": "All armor"
+  },
+  "bagpipes": {
+    "name": "Bagpipes"
+  },
+  "battleaxes": {
+    "name": "Battleaxes"
+  },
+  "blowguns": {
+    "name": "Blowguns"
+  },
+  "breastplate": {
+    "name": "Breastplate"
+  },
+  "brewers-supplies": {
+    "name": "Brewer's Supplies"
+  },
+  "calligraphers-supplies": {
+    "name": "Calligrapher's Supplies"
+  },
+  "carpenters-tools": {
+    "name": "Carpenter's Tools"
+  },
+  "cartographers-tools": {
+    "name": "Cartographer's Tools"
+  },
+  "chain-mail": {
+    "name": "Chain Mail"
+  },
+  "chain-shirt": {
+    "name": "Chain Shirt"
+  },
+  "clubs": {
+    "name": "Clubs"
+  },
+  "cobblers-tools": {
+    "name": "Cobbler's Tools"
+  },
+  "cooks-utensils": {
+    "name": "Cook's utensils"
+  },
+  "crossbows-heavy": {
+    "name": "Crossbows, heavy"
+  },
+  "crossbows-light": {
+    "name": "Crossbows, light"
+  },
+  "daggers": {
+    "name": "Daggers"
+  },
+  "darts": {
+    "name": "Darts"
+  },
+  "dice-set": {
+    "name": "Dice Set"
+  },
+  "disguise-kit": {
+    "name": "Disguise Kit"
+  },
+  "drum": {
+    "name": "Drum"
+  },
+  "dulcimer": {
+    "name": "Dulcimer"
+  },
+  "flails": {
+    "name": "Flails"
+  },
+  "flute": {
+    "name": "Flute"
+  },
+  "forgery-kit": {
+    "name": "Forgery Kit"
+  },
+  "glaives": {
+    "name": "Glaives"
+  },
+  "glassblowers-tools": {
+    "name": "Glassblower's Tools"
+  },
+  "greataxes": {
+    "name": "Greataxes"
+  },
+  "greatclubs": {
+    "name": "Greatclubs"
+  },
+  "greatswords": {
+    "name": "Greatswords"
+  },
+  "halberds": {
+    "name": "Halberds"
+  },
+  "half-plate-armor": {
+    "name": "Half Plate Armor"
+  },
+  "hand-crossbows": {
+    "name": "Hand crossbows"
+  },
+  "handaxes": {
+    "name": "Handaxes"
+  },
+  "heavy-armor": {
+    "name": "Heavy Armor"
+  },
+  "herbalism-kit": {
+    "name": "Herbalism Kit"
+  },
+  "hide-armor": {
+    "name": "Hide Armor"
+  },
+  "horn": {
+    "name": "Horn"
+  },
+  "javelins": {
+    "name": "Javelins"
+  },
+  "jewelers-tools": {
+    "name": "Jeweler's Tools"
+  },
+  "lances": {
+    "name": "Lances"
+  },
+  "land-vehicles": {
+    "name": "Land Vehicles"
+  },
+  "leather-armor": {
+    "name": "Leather Armor"
+  },
+  "leatherworkers-tools": {
+    "name": "Leatherworker's Tools"
+  },
+  "light-armor": {
+    "name": "Light Armor"
+  },
+  "light-hammers": {
+    "name": "Light hammers"
+  },
+  "longbows": {
+    "name": "Longbows"
+  },
+  "longswords": {
+    "name": "Longswords"
+  },
+  "lute": {
+    "name": "Lute"
+  },
+  "lyre": {
+    "name": "Lyre"
+  },
+  "maces": {
+    "name": "Maces"
+  },
+  "martial-weapons": {
+    "name": "Martial Weapons"
+  },
+  "masons-tools": {
+    "name": "Mason's Tools"
+  },
+  "mauls": {
+    "name": "Mauls"
+  },
+  "medium-armor": {
+    "name": "Medium Armor"
+  },
+  "morningstars": {
+    "name": "Morningstars"
+  },
+  "navigators-tools": {
+    "name": "Navigator's Tools"
+  },
+  "nets": {
+    "name": "Nets"
+  },
+  "padded-armor": {
+    "name": "Padded Armor"
+  },
+  "painters-supplies": {
+    "name": "Painter's Supplies"
+  },
+  "pan-flute": {
+    "name": "Pan flute"
+  },
+  "pikes": {
+    "name": "Pikes"
+  },
+  "plate-armor": {
+    "name": "Plate Armor"
+  },
+  "playing-card-set": {
+    "name": "Playing Card Set"
+  },
+  "poisoners-kit": {
+    "name": "Poisoner's Kit"
+  },
+  "potters-tools": {
+    "name": "Potter's Tools"
+  },
+  "quarterstaffs": {
+    "name": "Quarterstaffs"
+  },
+  "rapiers": {
+    "name": "Rapiers"
+  },
+  "ring-mail": {
+    "name": "Ring Mail"
+  },
+  "saving-throw-cha": {
+    "name": "Saving Throw: CHA"
+  },
+  "saving-throw-con": {
+    "name": "Saving Throw: CON"
+  },
+  "saving-throw-dex": {
+    "name": "Saving Throw: DEX"
+  },
+  "saving-throw-int": {
+    "name": "Saving Throw: INT"
+  },
+  "saving-throw-str": {
+    "name": "Saving Throw: STR"
+  },
+  "saving-throw-wis": {
+    "name": "Saving Throw: WIS"
+  },
+  "scale-mail": {
+    "name": "Scale Mail"
+  },
+  "scimitars": {
+    "name": "Scimitars"
+  },
+  "shawm": {
+    "name": "Shawm"
+  },
+  "shields": {
+    "name": "Shields"
+  },
+  "shortbows": {
+    "name": "Shortbows"
+  },
+  "shortswords": {
+    "name": "Shortswords"
+  },
+  "sickles": {
+    "name": "Sickles"
+  },
+  "simple-weapons": {
+    "name": "Simple Weapons"
+  },
+  "skill-acrobatics": {
+    "name": "Skill: Acrobatics"
+  },
+  "skill-animal-handling": {
+    "name": "Skill: Animal Handling"
+  },
+  "skill-arcana": {
+    "name": "Skill: Arcana"
+  },
+  "skill-athletics": {
+    "name": "Skill: Athletics"
+  },
+  "skill-deception": {
+    "name": "Skill: Deception"
+  },
+  "skill-history": {
+    "name": "Skill: History"
+  },
+  "skill-insight": {
+    "name": "Skill: Insight"
+  },
+  "skill-intimidation": {
+    "name": "Skill: Intimidation"
+  },
+  "skill-investigation": {
+    "name": "Skill: Investigation"
+  },
+  "skill-medicine": {
+    "name": "Skill: Medicine"
+  },
+  "skill-nature": {
+    "name": "Skill: Nature"
+  },
+  "skill-perception": {
+    "name": "Skill: Perception"
+  },
+  "skill-performance": {
+    "name": "Skill: Performance"
+  },
+  "skill-persuasion": {
+    "name": "Skill: Persuasion"
+  },
+  "skill-religion": {
+    "name": "Skill: Religion"
+  },
+  "skill-sleight-of-hand": {
+    "name": "Skill: Sleight of Hand"
+  },
+  "skill-stealth": {
+    "name": "Skill: Stealth"
+  },
+  "skill-survival": {
+    "name": "Skill: Survival"
+  },
+  "slings": {
+    "name": "Slings"
+  },
+  "smiths-tools": {
+    "name": "Smith's Tools"
+  },
+  "spears": {
+    "name": "Spears"
+  },
+  "splint-armor": {
+    "name": "Splint Armor"
+  },
+  "studded-leather-armor": {
+    "name": "Studded Leather Armor"
+  },
+  "thieves-tools": {
+    "name": "Thieves' Tools"
+  },
+  "tinkers-tools": {
+    "name": "Tinker's Tools"
+  },
+  "tridents": {
+    "name": "Tridents"
+  },
+  "viol": {
+    "name": "Viol"
+  },
+  "war-picks": {
+    "name": "War picks"
+  },
+  "warhammers": {
+    "name": "Warhammers"
+  },
+  "water-vehicles": {
+    "name": "Water Vehicles"
+  },
+  "weavers-tools": {
+    "name": "Weaver's Tools"
+  },
+  "whips": {
+    "name": "Whips"
+  },
+  "woodcarvers-tools": {
+    "name": "Woodcarver's Tools"
+  }
+}

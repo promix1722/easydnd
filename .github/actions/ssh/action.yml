@@ -1,0 +1,54 @@
+name: ssh setup
+description: >-
+  Install the deploy key and known_hosts, failing fast when the server secrets
+  are not configured. Used by every job in the deploy and restart stages.
+
+inputs:
+  host:
+    description: Target host (secrets.SSH_HOST). Empty means "not configured".
+    required: true
+  key:
+    description: Private deploy key (secrets.SSH_PRIVATE_KEY).
+    required: true
+  known-hosts:
+    description: Pinned host keys (secrets.SSH_KNOWN_HOSTS).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # This replaces the old `preflight` job. Secrets are not readable in a
+    # job-level `if`, which is why that job existed at all -- but a whole runner
+    # spin-up to test one string is a poor trade, and a missing secret now fails
+    # the run instead of silently skipping the deploy. Checked here rather than
+    # per job so all three deploy-stage jobs get it for free.
+    - name: require server secrets
+      shell: bash
+      env:
+        HOST: ${{ inputs.host }}
+        KEY: ${{ inputs.key }}
+        KNOWN: ${{ inputs.known-hosts }}
+      run: |
+        missing=
+        [ -n "$HOST" ]  || missing="$missing SSH_HOST"
+        [ -n "$KEY" ]   || missing="$missing SSH_PRIVATE_KEY"
+        [ -n "$KNOWN" ] || missing="$missing SSH_KNOWN_HOSTS"
+        if [ -n "$missing" ]; then
+          echo "::error::server secrets not configured:$missing"
+          exit 1
+        fi
+
+    # known_hosts is pinned rather than accepted on first use: StrictHostKeyChecking
+    # defaults to accept-new on a fresh runner, which would happily trust whatever
+    # answers on port 22.
+    - name: install key and known_hosts
+      shell: bash
+      env:
+        KEY: ${{ inputs.key }}
+        KNOWN: ${{ inputs.known-hosts }}
+      run: |
+        mkdir -p ~/.ssh && chmod 700 ~/.ssh
+        printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+        chmod 600 ~/.ssh/id_deploy
+        printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts

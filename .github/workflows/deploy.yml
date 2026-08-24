@@ -1,0 +1,441 @@
+name: deploy
+
+# Check -> Build -> Test -> Deploy -> Restart, with an independent frontend and
+# backend lane in every stage. A failure names itself: `check-frontend` red means
+# a lint or typecheck problem in web/, `test-backend` red means Go tests or a
+# broken version injection. Nothing has to be opened to learn which side broke.
+#
+# Build before Test is deliberate. The two assertions that matter most can only
+# run against a built artifact -- `./easydnd -version` and the bundle's own
+# version.json must both equal the commit SHA -- so they are the Test stage's
+# whole point, one per lane.
+#
+# The lanes stay separate all the way into releases/<sha>/ on the server. Only
+# `restart` flips the symlink, because nginx serves the frontend from inside the
+# same release directory the binary lives in: one swap, one restart, one
+# rollback, one SHA. Splitting that would let the API and the bundle drift apart
+# mid-release, which is exactly what the public health gates exist to catch.
+#
+# The Test stage is skippable, and only by naming the tag for it: a `v*` tag
+# ending in `-notest` drops both test jobs and deploys straight from Build. It
+# is for a release whose checks were just run by hand -- `make verify` is the
+# real gate anyway, since nothing runs on main -- and it buys about ninety
+# seconds of a four-minute deploy. What it costs is spelled out at the Test
+# stage below. The suffix reaches nothing but this decision: VERSION comes from
+# `git rev-parse HEAD` and every path on the server is keyed by GITHUB_SHA, so
+# the artifact, the release directory and both health gates cannot tell a
+# `-notest` tag from any other.
+
+on:
+  # TAGS ONLY. A push to main runs nothing at all -- not even the tests.
+  # Everything this workflow does, including the build, is gated behind a
+  # deliberate `git tag -a vX.Y.Z && git push origin vX.Y.Z`. Run the checks
+  # locally with `make verify` before tagging; there is no CI on main to catch
+  # what you miss.
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# Nothing here writes to the repository, and the deploy authenticates to the
+# server with its own ssh key. Declared because the default is broader.
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------- CHECK -----
+  # Static analysis only. Nothing here compiles an artifact or runs a test.
+
+  check-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+          cache: true
+
+      # The same targets `make verify` runs, so local and CI cannot drift. Two
+      # are worth spelling out:
+      #
+      # lint/layers -- the inner layers must not import the HTTP framework,
+      # net/http, database/sql, pgx or goose. depguard says the same thing at
+      # lint time, but golangci is not run here; this grep over the real module
+      # graph is, and it is transitive, which is what catches a library that
+      # pulls net/http in three hops down.
+      #
+      # data/srd/check -- the committed compendium must match what cmd/srdgen
+      # produces. Without it, a hand-edit to data/srd_5.1 survives until someone
+      # regenerates and silently reverts it.
+      - name: gofmt, vet, layers, srd drift
+        run: make fmt/check vet lint/layers data/srd/check
+
+  check-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: deps
+        run: make web/deps
+      - name: typecheck, lint, layers
+        run: make web/lint
+
+  # ---------------------------------------------------------------- BUILD -----
+
+  build-backend:
+    needs: check-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+          cache: true
+
+      # make build/release owns the ldflags, including the -X path into
+      # internal/buildinfo, and derives VERSION from `git rev-parse HEAD` -- on a
+      # tag checkout that is the tag's commit, i.e. GITHUB_SHA. Keeping the flags
+      # in one place means CI cannot ship a binary built differently from what
+      # `make verify` produced locally. test-backend asserts the injection worked.
+      - name: build linux/amd64 binary
+        run: make build/release
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: api
+          path: |
+            easydnd
+            deploy/deploy.sh
+            data/srd_5.1
+          retention-days: 7
+
+  build-frontend:
+    needs: check-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: deps
+        run: make web/deps
+
+      # make web/release passes VITE_APP_VERSION=$(VERSION) and tars web/dist.
+      # That variable is not optional: vite.config.ts refuses to build without
+      # it, so a bundle can never ship silently reporting "dev". test-frontend
+      # asserts the value actually landed in the bundle.
+      - name: build and tar the bundle
+        run: make web/release
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web
+          path: web.tar.gz
+          retention-days: 7
+
+  # ----------------------------------------------------------------- TEST -----
+  # Skipped wholesale by a `-notest` tag, version assertions included. Those
+  # two are cheap and catch a silent ldflags no-op or a badly tarred bundle
+  # before the swap; without them the same mistake comes back minutes later as
+  # a failed health gate, an automatic rollback and a red `restart` that does
+  # not say why. That is the trade the suffix buys, so tag for it deliberately.
+
+  test-backend:
+    needs: build-backend
+    if: ${{ !endsWith(github.ref, '-notest') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # The Postgres adapter owns account durability, and its tests skip themselves
+    # when TEST_DATABASE_URL is unset. Without this container they would skip
+    # here too, and the first time anyone learned that a constraint name or an
+    # error mapping was wrong would be during a deploy.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: easydnd
+          POSTGRES_PASSWORD: easydnd
+          POSTGRES_DB: easydnd_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U easydnd -d easydnd_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+          cache: true
+
+      # make test/unit is `go test -race ./...`, which is what `make verify`
+      # runs; the plain `go test ./...` this replaces missed data races in the
+      # HTTP layer and the stores by construction.
+      #
+      # sslmode=disable: the container has no CA, and this also exercises the
+      # branch of newPoolConfig that must leave an explicit disable alone.
+      - name: go test -race, against Postgres
+        env:
+          TEST_DATABASE_URL: postgres://easydnd:easydnd@localhost:5432/easydnd_test?sslmode=disable
+        run: make test/unit
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: api
+
+      # -X against a symbol the linker cannot find is a silent no-op, not an
+      # error. Unchecked, a wrong package path ships a binary reporting "dev",
+      # which fails deploy.sh's health gate, triggers a rollback and surfaces as
+      # an unexplained red deploy minutes later. Catch it before shipping.
+      - name: binary reports this commit
+        run: |
+          chmod +x easydnd
+          got="$(./easydnd -version)"
+          if [ "$got" != "${GITHUB_SHA}" ]; then
+            echo "ldflags injection broken: got '$got', want '${GITHUB_SHA}'"
+            echo "check the -X path in the Makefile against internal/buildinfo"
+            exit 1
+          fi
+          echo "version injection ok: $got"
+
+  test-frontend:
+    needs: build-frontend
+    if: ${{ !endsWith(github.ref, '-notest') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: deps
+        run: make web/deps
+      - name: vitest
+        run: make web/test
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: web
+
+      # The frontend's half of the version contract, and the exact counterpart to
+      # the binary check above. vite.config.ts emits version.json into the bundle
+      # so a release can be identified from the browser, and restart reads it
+      # through the public URL -- so a bundle not carrying the SHA would fail the
+      # deploy minutes after this cheap check could have caught it.
+      # Extracts the whole archive rather than naming one member: `make
+      # web/release` tars with `-C web/dist .`, so every entry is prefixed
+      # `./` and asking tar for `version.json` fails with "Not found in
+      # archive". Unpacking everything does not care how the members are named.
+      - name: bundle reports this commit
+        run: |
+          mkdir -p bundle
+          tar -xzf web.tar.gz -C bundle
+          echo "bundle version.json: $(cat bundle/version.json)"
+          grep -q "${GITHUB_SHA}" bundle/version.json || {
+            echo "bundle does not report ${GITHUB_SHA}"
+            exit 1
+          }
+
+  # --------------------------------------------------------------- DEPLOY -----
+  # Both lanes fill the same releases/<sha>/ and neither touches the symlink.
+  # `mkdir -p` from two jobs at once is safe and idempotent.
+  #
+  # Shipping still needs a v* tag ref. workflow_dispatch survives as a way to
+  # re-run a tag that failed halfway (select the tag as the ref); dispatching
+  # from a branch checks, builds and tests but cannot ship. GITHUB_SHA on a tag
+  # push is the commit the tag points at, so the SHA-keyed release directory
+  # and deploy.sh's health gate are unaffected.
+  #
+  # The rest of the `if` is what makes `-notest` work. A job's implicit gate is
+  # `success()`, which in a job context means "nothing in my ancestry was
+  # skipped or failed" -- so a skipped Test stage takes the whole rest of the
+  # pipeline down with it, and a `-notest` tag would build and then ship
+  # nothing. Naming a status function (`!cancelled()`) lifts that rule; the
+  # result checks then say by hand what it said for free -- the artifact must
+  # exist, and a Test stage that ran and failed still stops the release. Only a
+  # Test stage that never ran is waved through. `restart` needs the same, for
+  # the same reason, one stage further down.
+
+  deploy-backend:
+    needs: [build-backend, test-backend]
+    if: >-
+      ${{ !cancelled()
+          && needs.build-backend.result == 'success'
+          && needs.test-backend.result != 'failure'
+          && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: api
+      - uses: ./.github/actions/ssh
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      - name: ship the binary, deploy.sh and the compendium
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          set -euo pipefail
+          REL="/opt/easydnd/releases/${GITHUB_SHA}"
+          chmod +x easydnd deploy/deploy.sh
+          ssh -i ~/.ssh/id_deploy "deploy@$HOST" "mkdir -p $REL/data /opt/easydnd/bin"
+          scp -i ~/.ssh/id_deploy easydnd "deploy@$HOST:$REL/easydnd"
+          scp -i ~/.ssh/id_deploy deploy/deploy.sh "deploy@$HOST:/opt/easydnd/bin/deploy.sh"
+
+          # The SRD data is ~1.7 MB across 50-odd files in nested directories.
+          # One tar beats fifty scp round trips, and lands the tree atomically
+          # enough that deploy.sh's existence check is meaningful.
+          tar -czf srd.tgz -C data srd_5.1
+          scp -i ~/.ssh/id_deploy srd.tgz "deploy@$HOST:$REL/srd.tgz"
+          ssh -i ~/.ssh/id_deploy "deploy@$HOST" \
+            "tar -xzf $REL/srd.tgz -C $REL/data && rm -f $REL/srd.tgz"
+
+  deploy-frontend:
+    needs: [build-frontend, test-frontend]
+    if: >-
+      ${{ !cancelled()
+          && needs.build-frontend.result == 'success'
+          && needs.test-frontend.result != 'failure'
+          && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Checkout FIRST: it cleans the workspace, so downloading the artifact
+      # before it would simply delete the artifact. Only needed at all because
+      # the local composite action below has to exist on disk.
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: web
+      - uses: ./.github/actions/ssh
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      # Only places the tarball. deploy.sh unpacks it during restart and checks
+      # web/index.html exists before swapping -- a bundle that unpacked badly
+      # would otherwise go live as a blank site, an outage the API-side gate
+      # cannot even see.
+      - name: ship the bundle
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          set -euo pipefail
+          REL="/opt/easydnd/releases/${GITHUB_SHA}"
+          ssh -i ~/.ssh/id_deploy "deploy@$HOST" "mkdir -p $REL"
+          scp -i ~/.ssh/id_deploy web.tar.gz "deploy@$HOST:$REL/web.tar.gz"
+
+  # -------------------------------------------------------------- RESTART -----
+
+  # The `if` is the deploy jobs' one, and for the same reason -- with a twist
+  # that cost a release to learn. A job's implicit gate is `success()`, and in
+  # a job context that is not "my needs succeeded" but "no job anywhere in my
+  # ancestry was skipped or failed". The Test stage is this job's ancestor
+  # through the deploy jobs, so a -notest tag skipped `restart` even though
+  # both deploys reported success: artifacts uploaded, symlink never swapped,
+  # and a green run that shipped nothing. Naming a status function lifts that,
+  # and the result checks then say the part that was actually meant.
+  restart:
+    needs: [deploy-backend, deploy-frontend]
+    if: >-
+      ${{ !cancelled()
+          && needs.deploy-backend.result == 'success'
+          && needs.deploy-frontend.result == 'success'
+          && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Two grey boxes in the Test stage are ambiguous at a glance -- skipped
+      # on purpose and skipped because something upstream died look alike. Say
+      # which this release was, on the run's own summary page.
+      - name: note the skipped Test stage
+        if: ${{ endsWith(github.ref, '-notest') }}
+        run: |
+          {
+            echo "### Shipped without the Test stage"
+            echo
+            echo "Tag \`${GITHUB_REF_NAME}\` ends in \`-notest\`: neither suite ran, and neither version assertion did."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/ssh
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      # The single point where a release goes live, which is what keeps
+      # deploy.sh's rollback a meaningful undo: pre-swap checks, atomic symlink
+      # swap, supervisor restart, health gate, rollback on failure, prune.
+      - name: swap, restart, health gate, rollback
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          ssh -i ~/.ssh/id_deploy "deploy@$HOST" \
+            "chmod +x /opt/easydnd/bin/deploy.sh && /opt/easydnd/bin/deploy.sh ${GITHUB_SHA}"
+
+      - name: verify the public API serves this build
+        run: |
+          for i in $(seq 1 15); do
+            body=$(curl -fsS -m 5 https://easydnd.org/v1/version || true)
+            case "$body" in
+              *"${GITHUB_SHA}"*) echo "api live: $body"; exit 0 ;;
+            esac
+            sleep 2
+          done
+          echo "public /v1/version did not report ${GITHUB_SHA}"; exit 1
+
+      # Separate from the API check because they fail for different reasons and
+      # the fix differs: a stale bundle here means nginx is serving a cached
+      # index.html or its root is not following the current symlink, which the
+      # API check cannot see.
+      - name: verify the public site serves this build
+        run: |
+          for i in $(seq 1 15); do
+            body=$(curl -fsS -m 5 https://easydnd.org/version.json || true)
+            case "$body" in
+              *"${GITHUB_SHA}"*) echo "web live: $body"; exit 0 ;;
+            esac
+            sleep 2
+          done
+          echo "public /version.json did not report ${GITHUB_SHA}"; exit 1
+
+      # Strictly redundant -- a missing auth.session_secret fails config.Load,
+      # so the process would never start and the version gate above would have
+      # rolled the release back already. It costs one request and independently
+      # proves the auth routes are mounted and the session guard is live, which
+      # neither check above can see.
+      - name: verify the session guard is live
+        run: |
+          # Not curl -fsS: the expected answer IS a 401, which --fail treats as
+          # an error.
+          code=$(curl -s -o /dev/null -m 5 -w '%{http_code}' https://easydnd.org/v1/auth/me)
+          if [ "$code" != "401" ]; then
+            echo "GET /v1/auth/me returned $code, want 401"
+            exit 1
+          fi
+          echo "session guard live: unauthenticated /v1/auth/me is 401"

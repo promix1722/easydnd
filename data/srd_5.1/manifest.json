@@ -1,0 +1,32 @@
+{
+  "ruleset": "2014",
+  "source": "5e-bits/5e-database src/2014/en, vendored at docs/reference_srd_5.1/data/5e-database-2014-en",
+  "locales": [
+    "en",
+    "ru"
+  ],
+  "counts": {
+    "abilities.json": 6,
+    "alignments.json": 9,
+    "backgrounds.json": 1,
+    "class-levels.json": 290,
+    "classes.json": 12,
+    "conditions.json": 15,
+    "damage-types.json": 13,
+    "equipment-categories.json": 39,
+    "equipment.json": 237,
+    "feats.json": 1,
+    "features.json": 407,
+    "languages.json": 16,
+    "magic-items.json": 362,
+    "magic-schools.json": 8,
+    "proficiencies.json": 117,
+    "races.json": 9,
+    "skills.json": 18,
+    "spells.json": 319,
+    "subclasses.json": 12,
+    "subraces.json": 4,
+    "traits.json": 38,
+    "weapon-properties.json": 11
+  }
+}

@@ -1,0 +1,153 @@
+import { Navigate, useLocation, useNavigate } from 'react-router'
+
+import { useAuth } from '@/lib/auth'
+import { isPasskeySupported } from '@/lib/webauthn'
+import { Alert, Button, Card, Group, Stack, Text, Title } from '@/ui'
+
+/**
+ * The way in, on a page of its own.
+ *
+ * They are not variations on one flow: a passkey asks the browser a question, a
+ * Google sign-in leaves for Google, and a guest session asks nobody anything. A
+ * header popover could hold two of those; laying them out where they can be
+ * read and compared is what the page buys, and it is also the only place with
+ * room to say what each one costs.
+ *
+ * There is no "create an account" card, and that is the point. Signing in with
+ * a passkey and signing up with one are the same press, because the browser
+ * will not tell a page whether a passkey exists for it -- so asking the visitor
+ * to choose would be asking a question the platform refuses to answer, and a
+ * wrong answer strands whichever of the two they are. The button tries to sign
+ * in and makes an account when there was nothing to sign in with. The only text
+ * this app ever asked for went with that choice; the server names the account.
+ *
+ * Google comes first when it is offered. It is the only option that both keeps
+ * your characters and works on a browser with no WebAuthn, which makes it the
+ * one to reach for when you do not already know what a passkey is.
+ *
+ * Guest sits last because it is the only one that keeps nothing. It stays on
+ * the page without WebAuthn, so a browser that lacks passkeys still leads
+ * somewhere.
+ */
+export function LoginScreen() {
+  const { status, signInOrRegister, signInAsGuest, signInWith, providers, busy, error } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const passkeys = isPasskeySupported()
+
+  // Whoever sent us here recorded where they were, so signing in returns them
+  // to the deep link they arrived on rather than dropping them at the root.
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/'
+
+  // Already signed in: this page has nothing to offer, and leaving it reachable
+  // would mean a "Log in" screen rendered inside the signed-in shell.
+  if (status === 'authenticated') return <Navigate to="/" replace />
+
+  const attempt = (run: () => Promise<boolean>) => {
+    void run().then((ok) => {
+      if (ok) void navigate(from, { replace: true })
+    })
+  }
+
+  return (
+    <Stack gap="lg" maw={560} mx="auto" py="xl">
+      <Stack gap="xs">
+        <Title order={2}>Log in to easydnd</Title>
+        <Text c="dimmed" size="sm">
+          {providers.length > 0
+            ? 'Several ways in. All but one of them keep your characters.'
+            : 'Two ways in. One of them keeps your characters; the other does not.'}
+        </Text>
+      </Stack>
+
+      {/* One alert for every flow. Whichever attempt failed most recently is
+          the one worth showing, and the provider only keeps that one. */}
+      {error ? (
+        <Alert color="red" title="That did not work">
+          {error}
+        </Alert>
+      ) : null}
+
+      {passkeys ? null : (
+        <Alert color="yellow" title="This browser cannot use passkeys">
+          Passkeys need a browser that supports them -- recent versions of Chrome, Safari, Firefox
+          and Edge all do.{' '}
+          {providers.length > 0
+            ? 'You can still sign in with a provider below, or play as a guest.'
+            : 'You can still play as a guest below.'}
+        </Alert>
+      )}
+
+      {/* First, and one card per provider. It signs in and signs up in a
+          single press: the provider has already established who this is, so
+          asking which of the two was meant would be a question with no
+          content. Nothing renders when the deployment configured none -- a
+          button for a provider that is not there would be a dead end. */}
+      {providers.map((provider) => (
+        <Card key={provider.id} withBorder padding="md">
+          <Stack gap="sm">
+            <div>
+              <Title order={4}>Continue with {provider.name}</Title>
+              <Text c="dimmed" size="sm">
+                Sign in with the {provider.name} account you already have. Nothing to make and
+                nothing to remember, and your characters are kept.
+              </Text>
+            </div>
+            <Group>
+              {/* No `loading`: this leaves the page rather than resolving, so
+                  a spinner here would spin until the browser navigated away
+                  and then come back on a fresh mount. */}
+              <Button disabled={busy} onClick={() => signInWith(provider.id)}>
+                Continue with {provider.name}
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
+      ))}
+
+      {/* One button for both halves of an account's life. The copy carries the
+          whole of the mitigation for the one rough edge: a cancelled picker is
+          indistinguishable from an empty one, so cancelling is followed by an
+          offer to make a passkey. Saying so before the press turns a surprise
+          into something expected, and costs a first-time visitor nothing -- a
+          confirmation dialog would charge every one of them a click to save a
+          returning visitor a single Escape. */}
+      {passkeys ? (
+        <Card withBorder padding="md">
+          <Stack gap="sm">
+            <div>
+              <Title order={4}>Use a passkey</Title>
+              <Text c="dimmed" size="sm">
+                Nothing to type and no password. Your browser offers the passkey it holds for
+                easydnd, and a fingerprint, a face or a PIN unlocks it. If you do not have one yet,
+                your device makes one and that is your account -- we will pick a name for it.
+              </Text>
+            </div>
+            <Group>
+              <Button loading={busy} onClick={() => attempt(signInOrRegister)}>
+                Continue with a passkey
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
+      ) : null}
+
+      <Card withBorder padding="md">
+        <Stack gap="sm">
+          <div>
+            <Title order={4}>Play as a guest</Title>
+            <Text c="dimmed" size="sm">
+              Straight in, with no account and nothing to remember.
+            </Text>
+          </div>
+
+          <Group>
+            <Button variant="default" loading={busy} onClick={() => attempt(signInAsGuest)}>
+              Continue as a guest
+            </Button>
+          </Group>
+        </Stack>
+      </Card>
+    </Stack>
+  )
+}

@@ -1,0 +1,759 @@
+[
+  {
+    "slug": "alchemists-supplies",
+    "type": "artisans-tools",
+    "reference": "item:alchemists-supplies"
+  },
+  {
+    "slug": "all-armor",
+    "type": "armor",
+    "reference": "equipment-category:armor",
+    "classes": [
+      "fighter",
+      "paladin"
+    ]
+  },
+  {
+    "slug": "bagpipes",
+    "type": "musical-instruments",
+    "reference": "item:bagpipes"
+  },
+  {
+    "slug": "battleaxes",
+    "type": "weapons",
+    "reference": "item:battleaxe",
+    "races": [
+      "dwarf"
+    ]
+  },
+  {
+    "slug": "blowguns",
+    "type": "weapons",
+    "reference": "item:blowgun"
+  },
+  {
+    "slug": "breastplate",
+    "type": "armor",
+    "reference": "item:breastplate"
+  },
+  {
+    "slug": "brewers-supplies",
+    "type": "artisans-tools",
+    "reference": "item:brewers-supplies"
+  },
+  {
+    "slug": "calligraphers-supplies",
+    "type": "artisans-tools",
+    "reference": "item:calligraphers-supplies"
+  },
+  {
+    "slug": "carpenters-tools",
+    "type": "artisans-tools",
+    "reference": "item:carpenters-tools"
+  },
+  {
+    "slug": "cartographers-tools",
+    "type": "artisans-tools",
+    "reference": "item:cartographers-tools"
+  },
+  {
+    "slug": "chain-mail",
+    "type": "armor",
+    "reference": "item:chain-mail"
+  },
+  {
+    "slug": "chain-shirt",
+    "type": "armor",
+    "reference": "item:chain-shirt"
+  },
+  {
+    "slug": "clubs",
+    "type": "weapons",
+    "reference": "item:club",
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "cobblers-tools",
+    "type": "artisans-tools",
+    "reference": "item:cobblers-tools"
+  },
+  {
+    "slug": "cooks-utensils",
+    "type": "artisans-tools",
+    "reference": "item:cooks-utensils"
+  },
+  {
+    "slug": "crossbows-heavy",
+    "type": "weapons",
+    "reference": "item:crossbow-heavy"
+  },
+  {
+    "slug": "crossbows-light",
+    "type": "weapons",
+    "reference": "item:crossbow-light",
+    "classes": [
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "daggers",
+    "type": "weapons",
+    "reference": "item:dagger",
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "darts",
+    "type": "weapons",
+    "reference": "item:dart",
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "dice-set",
+    "type": "gaming-sets",
+    "reference": "item:dice-set"
+  },
+  {
+    "slug": "disguise-kit",
+    "type": "artisans-tools",
+    "reference": "item:disguise-kit"
+  },
+  {
+    "slug": "drum",
+    "type": "musical-instruments",
+    "reference": "item:drum"
+  },
+  {
+    "slug": "dulcimer",
+    "type": "musical-instruments",
+    "reference": "item:dulcimer"
+  },
+  {
+    "slug": "flails",
+    "type": "weapons",
+    "reference": "item:flail"
+  },
+  {
+    "slug": "flute",
+    "type": "musical-instruments",
+    "reference": "item:flute"
+  },
+  {
+    "slug": "forgery-kit",
+    "type": "artisans-tools",
+    "reference": "item:forgery-kit"
+  },
+  {
+    "slug": "glaives",
+    "type": "weapons",
+    "reference": "item:glaive"
+  },
+  {
+    "slug": "glassblowers-tools",
+    "type": "artisans-tools",
+    "reference": "item:glassblowers-tools"
+  },
+  {
+    "slug": "greataxes",
+    "type": "weapons",
+    "reference": "item:greataxe"
+  },
+  {
+    "slug": "greatclubs",
+    "type": "weapons",
+    "reference": "item:greatclub"
+  },
+  {
+    "slug": "greatswords",
+    "type": "weapons",
+    "reference": "item:greatsword"
+  },
+  {
+    "slug": "halberds",
+    "type": "weapons",
+    "reference": "item:halberd"
+  },
+  {
+    "slug": "half-plate-armor",
+    "type": "armor",
+    "reference": "item:half-plate-armor"
+  },
+  {
+    "slug": "hand-crossbows",
+    "type": "weapons",
+    "reference": "item:crossbow-hand",
+    "classes": [
+      "bard",
+      "rogue"
+    ]
+  },
+  {
+    "slug": "handaxes",
+    "type": "weapons",
+    "reference": "item:handaxe",
+    "races": [
+      "dwarf"
+    ]
+  },
+  {
+    "slug": "heavy-armor",
+    "type": "armor",
+    "reference": "equipment-category:heavy-armor"
+  },
+  {
+    "slug": "herbalism-kit",
+    "type": "other-tools",
+    "reference": "item:herbalism-kit",
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "hide-armor",
+    "type": "armor",
+    "reference": "item:hide-armor"
+  },
+  {
+    "slug": "horn",
+    "type": "musical-instruments",
+    "reference": "item:horn"
+  },
+  {
+    "slug": "javelins",
+    "type": "weapons",
+    "reference": "item:javelin",
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "jewelers-tools",
+    "type": "artisans-tools",
+    "reference": "item:jewelers-tools"
+  },
+  {
+    "slug": "lances",
+    "type": "weapons",
+    "reference": "item:lance"
+  },
+  {
+    "slug": "land-vehicles",
+    "type": "vehicles",
+    "reference": "equipment-category:land-vehicles"
+  },
+  {
+    "slug": "leather-armor",
+    "type": "armor",
+    "reference": "item:leather-armor"
+  },
+  {
+    "slug": "leatherworkers-tools",
+    "type": "artisans-tools",
+    "reference": "item:leatherworkers-tools"
+  },
+  {
+    "slug": "light-armor",
+    "type": "armor",
+    "reference": "equipment-category:light-armor",
+    "classes": [
+      "barbarian",
+      "bard",
+      "cleric",
+      "druid",
+      "ranger",
+      "rogue",
+      "warlock"
+    ]
+  },
+  {
+    "slug": "light-hammers",
+    "type": "weapons",
+    "reference": "item:light-hammer",
+    "races": [
+      "dwarf"
+    ]
+  },
+  {
+    "slug": "longbows",
+    "type": "weapons",
+    "reference": "item:longbow",
+    "races": [
+      "high-elf"
+    ]
+  },
+  {
+    "slug": "longswords",
+    "type": "weapons",
+    "reference": "item:longsword",
+    "classes": [
+      "bard",
+      "rogue"
+    ],
+    "races": [
+      "high-elf"
+    ]
+  },
+  {
+    "slug": "lute",
+    "type": "musical-instruments",
+    "reference": "item:lute"
+  },
+  {
+    "slug": "lyre",
+    "type": "musical-instruments",
+    "reference": "item:lyre"
+  },
+  {
+    "slug": "maces",
+    "type": "weapons",
+    "reference": "item:mace",
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "martial-weapons",
+    "type": "weapons",
+    "reference": "equipment-category:martial-weapons",
+    "classes": [
+      "barbarian",
+      "fighter",
+      "paladin",
+      "ranger"
+    ]
+  },
+  {
+    "slug": "masons-tools",
+    "type": "artisans-tools",
+    "reference": "item:masons-tools"
+  },
+  {
+    "slug": "mauls",
+    "type": "weapons",
+    "reference": "item:maul"
+  },
+  {
+    "slug": "medium-armor",
+    "type": "armor",
+    "reference": "equipment-category:medium-armor",
+    "classes": [
+      "barbarian",
+      "cleric",
+      "druid",
+      "ranger"
+    ]
+  },
+  {
+    "slug": "morningstars",
+    "type": "weapons",
+    "reference": "item:morningstar"
+  },
+  {
+    "slug": "navigators-tools",
+    "type": "other-tools",
+    "reference": "item:navigators-tools"
+  },
+  {
+    "slug": "nets",
+    "type": "weapons",
+    "reference": "item:net"
+  },
+  {
+    "slug": "padded-armor",
+    "type": "armor",
+    "reference": "item:padded-armor"
+  },
+  {
+    "slug": "painters-supplies",
+    "type": "artisans-tools",
+    "reference": "item:painters-supplies"
+  },
+  {
+    "slug": "pan-flute",
+    "type": "musical-instruments",
+    "reference": "item:pan-flute"
+  },
+  {
+    "slug": "pikes",
+    "type": "weapons",
+    "reference": "item:pike"
+  },
+  {
+    "slug": "plate-armor",
+    "type": "armor",
+    "reference": "item:plate-armor"
+  },
+  {
+    "slug": "playing-card-set",
+    "type": "gaming-sets",
+    "reference": "item:playing-card-set"
+  },
+  {
+    "slug": "poisoners-kit",
+    "type": "other-tools",
+    "reference": "item:poisoners-kit"
+  },
+  {
+    "slug": "potters-tools",
+    "type": "artisans-tools",
+    "reference": "item:potters-tools"
+  },
+  {
+    "slug": "quarterstaffs",
+    "type": "weapons",
+    "reference": "item:quarterstaff",
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "rapiers",
+    "type": "weapons",
+    "reference": "item:rapier",
+    "classes": [
+      "bard",
+      "rogue"
+    ]
+  },
+  {
+    "slug": "ring-mail",
+    "type": "armor",
+    "reference": "item:ring-mail"
+  },
+  {
+    "slug": "saving-throw-cha",
+    "type": "saving-throws",
+    "reference": "ability:cha",
+    "classes": [
+      "bard",
+      "cleric",
+      "paladin",
+      "sorcerer",
+      "warlock"
+    ]
+  },
+  {
+    "slug": "saving-throw-con",
+    "type": "saving-throws",
+    "reference": "ability:con",
+    "classes": [
+      "barbarian",
+      "fighter",
+      "sorcerer"
+    ]
+  },
+  {
+    "slug": "saving-throw-dex",
+    "type": "saving-throws",
+    "reference": "ability:dex",
+    "classes": [
+      "bard",
+      "monk",
+      "ranger",
+      "rogue"
+    ]
+  },
+  {
+    "slug": "saving-throw-int",
+    "type": "saving-throws",
+    "reference": "ability:int",
+    "classes": [
+      "druid",
+      "rogue",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "saving-throw-str",
+    "type": "saving-throws",
+    "reference": "ability:str",
+    "classes": [
+      "barbarian",
+      "fighter",
+      "monk",
+      "ranger"
+    ]
+  },
+  {
+    "slug": "saving-throw-wis",
+    "type": "saving-throws",
+    "reference": "ability:wis",
+    "classes": [
+      "cleric",
+      "druid",
+      "paladin",
+      "warlock",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "scale-mail",
+    "type": "armor",
+    "reference": "item:scale-mail"
+  },
+  {
+    "slug": "scimitars",
+    "type": "weapons",
+    "reference": "item:scimitar",
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "shawm",
+    "type": "musical-instruments",
+    "reference": "item:shawm"
+  },
+  {
+    "slug": "shields",
+    "type": "armor",
+    "reference": "item:shield",
+    "classes": [
+      "barbarian",
+      "cleric",
+      "druid",
+      "fighter",
+      "paladin",
+      "ranger"
+    ]
+  },
+  {
+    "slug": "shortbows",
+    "type": "weapons",
+    "reference": "item:shortbow",
+    "races": [
+      "high-elf"
+    ]
+  },
+  {
+    "slug": "shortswords",
+    "type": "weapons",
+    "reference": "item:shortsword",
+    "classes": [
+      "bard",
+      "monk",
+      "rogue"
+    ],
+    "races": [
+      "high-elf"
+    ]
+  },
+  {
+    "slug": "sickles",
+    "type": "weapons",
+    "reference": "item:sickle",
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "simple-weapons",
+    "type": "weapons",
+    "reference": "equipment-category:simple-weapons",
+    "classes": [
+      "barbarian",
+      "bard",
+      "cleric",
+      "fighter",
+      "monk",
+      "paladin",
+      "ranger",
+      "rogue",
+      "warlock"
+    ]
+  },
+  {
+    "slug": "skill-acrobatics",
+    "type": "skills",
+    "reference": "skill:acrobatics"
+  },
+  {
+    "slug": "skill-animal-handling",
+    "type": "skills",
+    "reference": "skill:animal-handling"
+  },
+  {
+    "slug": "skill-arcana",
+    "type": "skills",
+    "reference": "skill:arcana"
+  },
+  {
+    "slug": "skill-athletics",
+    "type": "skills",
+    "reference": "skill:athletics"
+  },
+  {
+    "slug": "skill-deception",
+    "type": "skills",
+    "reference": "skill:deception"
+  },
+  {
+    "slug": "skill-history",
+    "type": "skills",
+    "reference": "skill:history"
+  },
+  {
+    "slug": "skill-insight",
+    "type": "skills",
+    "reference": "skill:insight"
+  },
+  {
+    "slug": "skill-intimidation",
+    "type": "skills",
+    "reference": "skill:intimidation"
+  },
+  {
+    "slug": "skill-investigation",
+    "type": "skills",
+    "reference": "skill:investigation"
+  },
+  {
+    "slug": "skill-medicine",
+    "type": "skills",
+    "reference": "skill:medicine"
+  },
+  {
+    "slug": "skill-nature",
+    "type": "skills",
+    "reference": "skill:nature"
+  },
+  {
+    "slug": "skill-perception",
+    "type": "skills",
+    "reference": "skill:perception",
+    "races": [
+      "elf"
+    ]
+  },
+  {
+    "slug": "skill-performance",
+    "type": "skills",
+    "reference": "skill:performance"
+  },
+  {
+    "slug": "skill-persuasion",
+    "type": "skills",
+    "reference": "skill:persuasion"
+  },
+  {
+    "slug": "skill-religion",
+    "type": "skills",
+    "reference": "skill:religion"
+  },
+  {
+    "slug": "skill-sleight-of-hand",
+    "type": "skills",
+    "reference": "skill:sleight-of-hand"
+  },
+  {
+    "slug": "skill-stealth",
+    "type": "skills",
+    "reference": "skill:stealth"
+  },
+  {
+    "slug": "skill-survival",
+    "type": "skills",
+    "reference": "skill:survival"
+  },
+  {
+    "slug": "slings",
+    "type": "weapons",
+    "reference": "item:sling",
+    "classes": [
+      "druid",
+      "sorcerer",
+      "wizard"
+    ]
+  },
+  {
+    "slug": "smiths-tools",
+    "type": "artisans-tools",
+    "reference": "item:smiths-tools"
+  },
+  {
+    "slug": "spears",
+    "type": "weapons",
+    "reference": "item:spear",
+    "classes": [
+      "druid"
+    ]
+  },
+  {
+    "slug": "splint-armor",
+    "type": "armor",
+    "reference": "item:splint-armor"
+  },
+  {
+    "slug": "studded-leather-armor",
+    "type": "armor",
+    "reference": "item:studded-leather-armor"
+  },
+  {
+    "slug": "thieves-tools",
+    "type": "other-tools",
+    "reference": "item:thieves-tools",
+    "classes": [
+      "rogue"
+    ]
+  },
+  {
+    "slug": "tinkers-tools",
+    "type": "artisans-tools",
+    "reference": "item:tinkers-tools"
+  },
+  {
+    "slug": "tridents",
+    "type": "weapons",
+    "reference": "item:trident"
+  },
+  {
+    "slug": "viol",
+    "type": "musical-instruments",
+    "reference": "item:viol"
+  },
+  {
+    "slug": "war-picks",
+    "type": "weapons",
+    "reference": "item:war-pick"
+  },
+  {
+    "slug": "warhammers",
+    "type": "weapons",
+    "reference": "item:warhammer",
+    "races": [
+      "dwarf"
+    ]
+  },
+  {
+    "slug": "water-vehicles",
+    "type": "vehicles",
+    "reference": "equipment-category:waterborne-vehicles"
+  },
+  {
+    "slug": "weavers-tools",
+    "type": "artisans-tools",
+    "reference": "item:weavers-tools"
+  },
+  {
+    "slug": "whips",
+    "type": "weapons",
+    "reference": "item:whip"
+  },
+  {
+    "slug": "woodcarvers-tools",
+    "type": "artisans-tools",
+    "reference": "item:woodcarvers-tools"
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "slug": "grappler",
+    "prerequisites": [
+      {
+        "kind": "ability",
+        "ability": "str",
+        "minimumScore": 13
+      }
+    ]
+  }
+]

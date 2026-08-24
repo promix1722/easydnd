@@ -1,0 +1,3739 @@
+[
+  {
+    "slug": "action-surge-1-use",
+    "class": "fighter",
+    "level": 2
+  },
+  {
+    "slug": "action-surge-2-uses",
+    "class": "fighter",
+    "level": 17
+  },
+  {
+    "slug": "additional-fighting-style",
+    "class": "fighter",
+    "subclass": "champion",
+    "level": 10,
+    "subfeatureOptions": {
+      "prompt": "additional-fighting-style/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-archery",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-dueling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-great-weapon-fighting",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-protection",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-two-weapon-fighting",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "additional-magical-secrets",
+    "class": "bard",
+    "subclass": "lore",
+    "level": 6
+  },
+  {
+    "slug": "arcane-recovery",
+    "class": "wizard",
+    "level": 1
+  },
+  {
+    "slug": "arcane-tradition",
+    "class": "wizard",
+    "level": 2
+  },
+  {
+    "slug": "arcane-tradition-improvement-1",
+    "class": "wizard",
+    "level": 6
+  },
+  {
+    "slug": "arcane-tradition-improvement-2",
+    "class": "wizard",
+    "level": 10
+  },
+  {
+    "slug": "arcane-tradition-improvement-3",
+    "class": "wizard",
+    "level": 14
+  },
+  {
+    "slug": "archdruid",
+    "class": "druid",
+    "level": 20
+  },
+  {
+    "slug": "aura-improvements",
+    "class": "paladin",
+    "level": 18
+  },
+  {
+    "slug": "aura-of-courage",
+    "class": "paladin",
+    "level": 10
+  },
+  {
+    "slug": "aura-of-devotion",
+    "class": "paladin",
+    "subclass": "devotion",
+    "level": 7
+  },
+  {
+    "slug": "aura-of-protection",
+    "class": "paladin",
+    "level": 6
+  },
+  {
+    "slug": "barbarian-ability-score-improvement-1",
+    "class": "barbarian",
+    "level": 4
+  },
+  {
+    "slug": "barbarian-ability-score-improvement-2",
+    "class": "barbarian",
+    "level": 8
+  },
+  {
+    "slug": "barbarian-ability-score-improvement-3",
+    "class": "barbarian",
+    "level": 12
+  },
+  {
+    "slug": "barbarian-ability-score-improvement-4",
+    "class": "barbarian",
+    "level": 16
+  },
+  {
+    "slug": "barbarian-ability-score-improvement-5",
+    "class": "barbarian",
+    "level": 19
+  },
+  {
+    "slug": "barbarian-extra-attack",
+    "class": "barbarian",
+    "level": 5
+  },
+  {
+    "slug": "barbarian-unarmored-defense",
+    "class": "barbarian",
+    "level": 1
+  },
+  {
+    "slug": "bard-ability-score-improvement-1",
+    "class": "bard",
+    "level": 4
+  },
+  {
+    "slug": "bard-ability-score-improvement-2",
+    "class": "bard",
+    "level": 8
+  },
+  {
+    "slug": "bard-ability-score-improvement-3",
+    "class": "bard",
+    "level": 12
+  },
+  {
+    "slug": "bard-ability-score-improvement-4",
+    "class": "bard",
+    "level": 16
+  },
+  {
+    "slug": "bard-ability-score-improvement-5",
+    "class": "bard",
+    "level": 19
+  },
+  {
+    "slug": "bard-college",
+    "class": "bard",
+    "level": 3
+  },
+  {
+    "slug": "bard-college-improvement-1",
+    "class": "bard",
+    "level": 6
+  },
+  {
+    "slug": "bard-college-improvement-2",
+    "class": "bard",
+    "level": 14
+  },
+  {
+    "slug": "bard-expertise-1",
+    "class": "bard",
+    "level": 3,
+    "expertiseOptions": {
+      "prompt": "bard-expertise-1/expertise/0",
+      "choose": 2,
+      "kind": "proficiency",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-acrobatics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-animal-handling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-arcana",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-athletics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-deception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-history",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-insight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-intimidation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-investigation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-medicine",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-nature",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-perception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-performance",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-persuasion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-religion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-sleight-of-hand",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-stealth",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-survival",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "bard-expertise-2",
+    "class": "bard",
+    "level": 10,
+    "expertiseOptions": {
+      "prompt": "bard-expertise-2/expertise/0",
+      "choose": 2,
+      "kind": "proficiency",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-acrobatics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-animal-handling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-arcana",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-athletics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-deception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-history",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-insight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-intimidation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-investigation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-medicine",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-nature",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-perception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-performance",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-persuasion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-religion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-sleight-of-hand",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-stealth",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-survival",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "bardic-inspiration-d10",
+    "class": "bard",
+    "level": 10
+  },
+  {
+    "slug": "bardic-inspiration-d12",
+    "class": "bard",
+    "level": 15
+  },
+  {
+    "slug": "bardic-inspiration-d6",
+    "class": "bard",
+    "level": 1
+  },
+  {
+    "slug": "bardic-inspiration-d8",
+    "class": "bard",
+    "level": 5
+  },
+  {
+    "slug": "beast-spells",
+    "class": "druid",
+    "level": 18
+  },
+  {
+    "slug": "blessed-healer",
+    "class": "cleric",
+    "subclass": "life",
+    "level": 6
+  },
+  {
+    "slug": "blindsense",
+    "class": "rogue",
+    "level": 14
+  },
+  {
+    "slug": "bonus-cantrip",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2
+  },
+  {
+    "slug": "bonus-proficiencies",
+    "class": "bard",
+    "subclass": "lore",
+    "level": 3
+  },
+  {
+    "slug": "bonus-proficiency",
+    "class": "cleric",
+    "subclass": "life",
+    "level": 1
+  },
+  {
+    "slug": "brutal-critical-1-die",
+    "class": "barbarian",
+    "level": 9
+  },
+  {
+    "slug": "brutal-critical-2-dice",
+    "class": "barbarian",
+    "level": 13
+  },
+  {
+    "slug": "brutal-critical-3-dice",
+    "class": "barbarian",
+    "level": 17
+  },
+  {
+    "slug": "channel-divinity",
+    "class": "paladin",
+    "level": 3
+  },
+  {
+    "slug": "channel-divinity-1-rest",
+    "class": "cleric",
+    "level": 2
+  },
+  {
+    "slug": "channel-divinity-2-rest",
+    "class": "cleric",
+    "level": 6
+  },
+  {
+    "slug": "channel-divinity-3-rest",
+    "class": "cleric",
+    "level": 18
+  },
+  {
+    "slug": "channel-divinity-preserve-life",
+    "class": "cleric",
+    "subclass": "life",
+    "level": 2
+  },
+  {
+    "slug": "channel-divinity-sacred-weapon",
+    "class": "paladin",
+    "subclass": "devotion",
+    "level": 3
+  },
+  {
+    "slug": "channel-divinity-turn-the-unholy",
+    "class": "paladin",
+    "subclass": "devotion",
+    "level": 3
+  },
+  {
+    "slug": "channel-divinity-turn-undead",
+    "class": "cleric",
+    "level": 2
+  },
+  {
+    "slug": "circle-of-the-land",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2,
+    "subfeatureOptions": {
+      "prompt": "circle-of-the-land/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:circle-of-the-land-arctic",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:circle-of-the-land-coast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:circle-of-the-land-desert",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:circle-of-the-land-forest",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:circle-of-the-land-grassland",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:circle-of-the-land-mountain",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:circle-of-the-land-swamp",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "circle-of-the-land-arctic",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2,
+    "parent": "circle-of-the-land"
+  },
+  {
+    "slug": "circle-of-the-land-coast",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2,
+    "parent": "circle-of-the-land"
+  },
+  {
+    "slug": "circle-of-the-land-desert",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2,
+    "parent": "circle-of-the-land"
+  },
+  {
+    "slug": "circle-of-the-land-forest",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2,
+    "parent": "circle-of-the-land"
+  },
+  {
+    "slug": "circle-of-the-land-grassland",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2,
+    "parent": "circle-of-the-land"
+  },
+  {
+    "slug": "circle-of-the-land-mountain",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2,
+    "parent": "circle-of-the-land"
+  },
+  {
+    "slug": "circle-of-the-land-swamp",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2,
+    "parent": "circle-of-the-land"
+  },
+  {
+    "slug": "circle-spells-1",
+    "class": "druid",
+    "subclass": "land",
+    "level": 3
+  },
+  {
+    "slug": "circle-spells-2",
+    "class": "druid",
+    "subclass": "land",
+    "level": 5
+  },
+  {
+    "slug": "circle-spells-3",
+    "class": "druid",
+    "subclass": "land",
+    "level": 7
+  },
+  {
+    "slug": "circle-spells-4",
+    "class": "druid",
+    "subclass": "land",
+    "level": 9
+  },
+  {
+    "slug": "cleansing-touch",
+    "class": "paladin",
+    "level": 14
+  },
+  {
+    "slug": "cleric-ability-score-improvement-1",
+    "class": "cleric",
+    "level": 4
+  },
+  {
+    "slug": "cleric-ability-score-improvement-2",
+    "class": "cleric",
+    "level": 8
+  },
+  {
+    "slug": "cleric-ability-score-improvement-3",
+    "class": "cleric",
+    "level": 12
+  },
+  {
+    "slug": "cleric-ability-score-improvement-4",
+    "class": "cleric",
+    "level": 16
+  },
+  {
+    "slug": "cleric-ability-score-improvement-5",
+    "class": "cleric",
+    "level": 19
+  },
+  {
+    "slug": "countercharm",
+    "class": "bard",
+    "level": 6
+  },
+  {
+    "slug": "cunning-action",
+    "class": "rogue",
+    "level": 2
+  },
+  {
+    "slug": "cutting-words",
+    "class": "bard",
+    "subclass": "lore",
+    "level": 3
+  },
+  {
+    "slug": "danger-sense",
+    "class": "barbarian",
+    "level": 2
+  },
+  {
+    "slug": "dark-ones-blessing",
+    "class": "warlock",
+    "subclass": "fiend",
+    "level": 1
+  },
+  {
+    "slug": "dark-ones-own-luck",
+    "class": "warlock",
+    "subclass": "fiend",
+    "level": 6
+  },
+  {
+    "slug": "defensive-tactics",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 7,
+    "subfeatureOptions": {
+      "prompt": "defensive-tactics/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:defensive-tactics-escape-the-horde",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:defensive-tactics-multiattack-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:defensive-tactics-steel-will",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "defensive-tactics-escape-the-horde",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 7,
+    "parent": "defensive-tactics"
+  },
+  {
+    "slug": "defensive-tactics-multiattack-defense",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 7,
+    "parent": "defensive-tactics"
+  },
+  {
+    "slug": "defensive-tactics-steel-will",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 7,
+    "parent": "defensive-tactics"
+  },
+  {
+    "slug": "deflect-missiles",
+    "class": "monk",
+    "level": 3
+  },
+  {
+    "slug": "destroy-undead-cr-1-2-or-below",
+    "class": "cleric",
+    "level": 5
+  },
+  {
+    "slug": "destroy-undead-cr-1-or-below",
+    "class": "cleric",
+    "level": 8
+  },
+  {
+    "slug": "destroy-undead-cr-2-or-below",
+    "class": "cleric",
+    "level": 11
+  },
+  {
+    "slug": "destroy-undead-cr-3-or-below",
+    "class": "cleric",
+    "level": 14
+  },
+  {
+    "slug": "destroy-undead-cr-4-or-below",
+    "class": "cleric",
+    "level": 17
+  },
+  {
+    "slug": "diamond-soul",
+    "class": "monk",
+    "level": 14
+  },
+  {
+    "slug": "disciple-of-life",
+    "class": "cleric",
+    "subclass": "life",
+    "level": 1
+  },
+  {
+    "slug": "divine-domain",
+    "class": "cleric",
+    "level": 1
+  },
+  {
+    "slug": "divine-domain-improvement-1",
+    "class": "cleric",
+    "level": 2
+  },
+  {
+    "slug": "divine-domain-improvement-2",
+    "class": "cleric",
+    "level": 6
+  },
+  {
+    "slug": "divine-domain-improvement-3",
+    "class": "cleric",
+    "level": 8
+  },
+  {
+    "slug": "divine-domain-improvement-4",
+    "class": "cleric",
+    "level": 17
+  },
+  {
+    "slug": "divine-health",
+    "class": "paladin",
+    "level": 3
+  },
+  {
+    "slug": "divine-intervention",
+    "class": "cleric",
+    "level": 10
+  },
+  {
+    "slug": "divine-intervention-improvement",
+    "class": "cleric",
+    "level": 20
+  },
+  {
+    "slug": "divine-sense",
+    "class": "paladin",
+    "level": 1
+  },
+  {
+    "slug": "divine-smite",
+    "class": "paladin",
+    "level": 2
+  },
+  {
+    "slug": "divine-strike",
+    "class": "cleric",
+    "subclass": "life",
+    "level": 8
+  },
+  {
+    "slug": "domain-spells-1",
+    "class": "cleric",
+    "level": 1
+  },
+  {
+    "slug": "domain-spells-2",
+    "class": "cleric",
+    "level": 3
+  },
+  {
+    "slug": "domain-spells-3",
+    "class": "cleric",
+    "level": 5
+  },
+  {
+    "slug": "domain-spells-4",
+    "class": "cleric",
+    "level": 7
+  },
+  {
+    "slug": "domain-spells-5",
+    "class": "cleric",
+    "level": 9
+  },
+  {
+    "slug": "draconic-presence",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 18
+  },
+  {
+    "slug": "draconic-resilience",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1
+  },
+  {
+    "slug": "dragon-ancestor",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "subfeatureOptions": {
+      "prompt": "dragon-ancestor/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-black---acid-damage",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-blue---lightning-damage",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-brass---fire-damage",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-bronze---lightning-damage",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-copper---acid-damage",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-gold---fire-damage",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-green---poison-damage",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-red---fire-damage",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-silver---cold-damage",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:dragon-ancestor-white---cold-damage",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "dragon-ancestor-black---acid-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-ancestor-blue---lightning-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-ancestor-brass---fire-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-ancestor-bronze---lightning-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-ancestor-copper---acid-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-ancestor-gold---fire-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-ancestor-green---poison-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-ancestor-red---fire-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-ancestor-silver---cold-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-ancestor-white---cold-damage",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 1,
+    "parent": "dragon-ancestor"
+  },
+  {
+    "slug": "dragon-wings",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 14
+  },
+  {
+    "slug": "druid-ability-score-improvement-1",
+    "class": "druid",
+    "level": 4
+  },
+  {
+    "slug": "druid-ability-score-improvement-2",
+    "class": "druid",
+    "level": 8
+  },
+  {
+    "slug": "druid-ability-score-improvement-3",
+    "class": "druid",
+    "level": 12
+  },
+  {
+    "slug": "druid-ability-score-improvement-4",
+    "class": "druid",
+    "level": 16
+  },
+  {
+    "slug": "druid-ability-score-improvement-5",
+    "class": "druid",
+    "level": 19
+  },
+  {
+    "slug": "druid-circle",
+    "class": "druid",
+    "level": 2
+  },
+  {
+    "slug": "druid-circle-improvement-1",
+    "class": "druid",
+    "level": 6
+  },
+  {
+    "slug": "druid-circle-improvement-2",
+    "class": "druid",
+    "level": 10
+  },
+  {
+    "slug": "druid-circle-improvement-3",
+    "class": "druid",
+    "level": 14
+  },
+  {
+    "slug": "druid-lands-stride",
+    "class": "druid",
+    "subclass": "land",
+    "level": 6
+  },
+  {
+    "slug": "druid-timeless-body",
+    "class": "druid",
+    "level": 18
+  },
+  {
+    "slug": "druidic",
+    "class": "druid",
+    "level": 1
+  },
+  {
+    "slug": "eldritch-invocation-agonizing-blast",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "spell:api-2014-spells-eldritch-blast"
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-armor-of-shadows",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-ascendant-step",
+    "class": "warlock",
+    "level": 9,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-beast-speech",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-beguiling-influence",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-bewitching-whispers",
+    "class": "warlock",
+    "level": 7,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 7
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-book-of-ancient-secrets",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "feature:api-2014-features-pact-of-the-tome"
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-chains-of-carceri",
+    "class": "warlock",
+    "level": 15,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 15
+      },
+      {
+        "kind": "entry",
+        "ref": "feature:api-2014-features-pact-of-the-chain"
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-devils-sight",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-dreadful-word",
+    "class": "warlock",
+    "level": 7,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 7
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-eldritch-sight",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-eldritch-spear",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "spell:api-2014-spells-eldritch-blast"
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-eyes-of-the-rune-keeper",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-fiendish-vigor",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-gaze-of-two-minds",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-lifedrinker",
+    "class": "warlock",
+    "level": 12,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 12
+      },
+      {
+        "kind": "entry",
+        "ref": "feature:api-2014-features-pact-of-the-blade"
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-mask-of-many-faces",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-master-of-myriad-forms",
+    "class": "warlock",
+    "level": 15,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 15
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-minions-of-chaos",
+    "class": "warlock",
+    "level": 9,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-mire-the-mind",
+    "class": "warlock",
+    "level": 5,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 5
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-misty-visions",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-one-with-shadows",
+    "class": "warlock",
+    "level": 5,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 5
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-otherworldly-leap",
+    "class": "warlock",
+    "level": 9,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-repelling-blast",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "spell:api-2014-spells-eldritch-blast"
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-sculptor-of-flesh",
+    "class": "warlock",
+    "level": 7,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 7
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-sign-of-ill-omen",
+    "class": "warlock",
+    "level": 5,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 5
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-thief-of-five-fates",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations"
+  },
+  {
+    "slug": "eldritch-invocation-thirsting-blade",
+    "class": "warlock",
+    "level": 5,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 5
+      },
+      {
+        "kind": "entry",
+        "ref": "feature:api-2014-features-pact-of-the-blade"
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-visions-of-distant-realms",
+    "class": "warlock",
+    "level": 15,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 15
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-voice-of-the-chain-master",
+    "class": "warlock",
+    "level": 2,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "feature:api-2014-features-pact-of-the-chain"
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-whispers-of-the-grave",
+    "class": "warlock",
+    "level": 9,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocation-witch-sight",
+    "class": "warlock",
+    "level": 15,
+    "parent": "eldritch-invocations",
+    "prerequisites": [
+      {
+        "kind": "level",
+        "level": 15
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-invocations",
+    "class": "warlock",
+    "level": 2,
+    "invocations": [
+      "eldritch-invocation-agonizing-blast",
+      "eldritch-invocation-armor-of-shadows",
+      "eldritch-invocation-beast-speech",
+      "eldritch-invocation-beguiling-influence",
+      "eldritch-invocation-book-of-ancient-secrets",
+      "eldritch-invocation-devils-sight",
+      "eldritch-invocation-eldritch-sight",
+      "eldritch-invocation-eldritch-spear",
+      "eldritch-invocation-eyes-of-the-rune-keeper",
+      "eldritch-invocation-fiendish-vigor",
+      "eldritch-invocation-gaze-of-two-minds",
+      "eldritch-invocation-mask-of-many-faces",
+      "eldritch-invocation-misty-visions",
+      "eldritch-invocation-repelling-blast",
+      "eldritch-invocation-thief-of-five-fates",
+      "eldritch-invocation-voice-of-the-chain-master",
+      "eldritch-invocation-mire-the-mind",
+      "eldritch-invocation-one-with-shadows",
+      "eldritch-invocation-sign-of-ill-omen",
+      "eldritch-invocation-thirsting-blade",
+      "eldritch-invocation-bewitching-whispers",
+      "eldritch-invocation-dreadful-word",
+      "eldritch-invocation-sculptor-of-flesh",
+      "eldritch-invocation-ascendant-step",
+      "eldritch-invocation-minions-of-chaos",
+      "eldritch-invocation-otherworldly-leap",
+      "eldritch-invocation-whispers-of-the-grave",
+      "eldritch-invocation-lifedrinker",
+      "eldritch-invocation-chains-of-carceri",
+      "eldritch-invocation-master-of-myriad-forms",
+      "eldritch-invocation-visions-of-distant-realms",
+      "eldritch-invocation-witch-sight"
+    ]
+  },
+  {
+    "slug": "eldritch-master",
+    "class": "warlock",
+    "level": 20
+  },
+  {
+    "slug": "elemental-affinity",
+    "class": "sorcerer",
+    "subclass": "draconic",
+    "level": 6
+  },
+  {
+    "slug": "elusive",
+    "class": "rogue",
+    "level": 18
+  },
+  {
+    "slug": "empowered-evocation",
+    "class": "wizard",
+    "subclass": "evocation",
+    "level": 10
+  },
+  {
+    "slug": "empty-body",
+    "class": "monk",
+    "level": 18
+  },
+  {
+    "slug": "evocation-savant",
+    "class": "wizard",
+    "subclass": "evocation",
+    "level": 2
+  },
+  {
+    "slug": "extra-attack-1",
+    "class": "fighter",
+    "level": 5
+  },
+  {
+    "slug": "extra-attack-2",
+    "class": "fighter",
+    "level": 11
+  },
+  {
+    "slug": "extra-attack-3",
+    "class": "fighter",
+    "level": 20
+  },
+  {
+    "slug": "fast-hands",
+    "class": "rogue",
+    "subclass": "thief",
+    "level": 3
+  },
+  {
+    "slug": "fast-movement",
+    "class": "barbarian",
+    "level": 5
+  },
+  {
+    "slug": "favored-enemy-1-type",
+    "class": "ranger",
+    "level": 1,
+    "enemyTypeOptions": {
+      "prompt": "favored-enemy-1-type/enemy-type/0",
+      "choose": 1,
+      "kind": "text",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "aberrations"
+          },
+          {
+            "kind": "text",
+            "key": "beasts"
+          },
+          {
+            "kind": "text",
+            "key": "celestials"
+          },
+          {
+            "kind": "text",
+            "key": "constructs"
+          },
+          {
+            "kind": "text",
+            "key": "dragons"
+          },
+          {
+            "kind": "text",
+            "key": "elementals"
+          },
+          {
+            "kind": "text",
+            "key": "fey"
+          },
+          {
+            "kind": "text",
+            "key": "fiends"
+          },
+          {
+            "kind": "text",
+            "key": "giants"
+          },
+          {
+            "kind": "text",
+            "key": "monstrosities"
+          },
+          {
+            "kind": "text",
+            "key": "oozes"
+          },
+          {
+            "kind": "text",
+            "key": "plants"
+          },
+          {
+            "kind": "text",
+            "key": "undead"
+          },
+          {
+            "kind": "text",
+            "key": "humanoids"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "favored-enemy-2-types",
+    "class": "ranger",
+    "level": 6,
+    "enemyTypeOptions": {
+      "prompt": "favored-enemy-2-types/enemy-type/0",
+      "choose": 1,
+      "kind": "text",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "aberrations"
+          },
+          {
+            "kind": "text",
+            "key": "beasts"
+          },
+          {
+            "kind": "text",
+            "key": "celestials"
+          },
+          {
+            "kind": "text",
+            "key": "constructs"
+          },
+          {
+            "kind": "text",
+            "key": "dragons"
+          },
+          {
+            "kind": "text",
+            "key": "elementals"
+          },
+          {
+            "kind": "text",
+            "key": "fey"
+          },
+          {
+            "kind": "text",
+            "key": "fiends"
+          },
+          {
+            "kind": "text",
+            "key": "giants"
+          },
+          {
+            "kind": "text",
+            "key": "monstrosities"
+          },
+          {
+            "kind": "text",
+            "key": "oozes"
+          },
+          {
+            "kind": "text",
+            "key": "plants"
+          },
+          {
+            "kind": "text",
+            "key": "undead"
+          },
+          {
+            "kind": "text",
+            "key": "humanoids"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "favored-enemy-3-enemies",
+    "class": "ranger",
+    "level": 14,
+    "enemyTypeOptions": {
+      "prompt": "favored-enemy-3-enemies/enemy-type/0",
+      "choose": 1,
+      "kind": "text",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "aberrations"
+          },
+          {
+            "kind": "text",
+            "key": "beasts"
+          },
+          {
+            "kind": "text",
+            "key": "celestials"
+          },
+          {
+            "kind": "text",
+            "key": "constructs"
+          },
+          {
+            "kind": "text",
+            "key": "dragons"
+          },
+          {
+            "kind": "text",
+            "key": "elementals"
+          },
+          {
+            "kind": "text",
+            "key": "fey"
+          },
+          {
+            "kind": "text",
+            "key": "fiends"
+          },
+          {
+            "kind": "text",
+            "key": "giants"
+          },
+          {
+            "kind": "text",
+            "key": "monstrosities"
+          },
+          {
+            "kind": "text",
+            "key": "oozes"
+          },
+          {
+            "kind": "text",
+            "key": "plants"
+          },
+          {
+            "kind": "text",
+            "key": "undead"
+          },
+          {
+            "kind": "text",
+            "key": "humanoids"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "feral-instinct",
+    "class": "barbarian",
+    "level": 7
+  },
+  {
+    "slug": "feral-senses",
+    "class": "ranger",
+    "level": 18
+  },
+  {
+    "slug": "fiendish-resilience",
+    "class": "warlock",
+    "subclass": "fiend",
+    "level": 10
+  },
+  {
+    "slug": "fighter-ability-score-improvement-1",
+    "class": "fighter",
+    "level": 4
+  },
+  {
+    "slug": "fighter-ability-score-improvement-2",
+    "class": "fighter",
+    "level": 6
+  },
+  {
+    "slug": "fighter-ability-score-improvement-3",
+    "class": "fighter",
+    "level": 8
+  },
+  {
+    "slug": "fighter-ability-score-improvement-4",
+    "class": "fighter",
+    "level": 12
+  },
+  {
+    "slug": "fighter-ability-score-improvement-5",
+    "class": "fighter",
+    "level": 14
+  },
+  {
+    "slug": "fighter-ability-score-improvement-6",
+    "class": "fighter",
+    "level": 16
+  },
+  {
+    "slug": "fighter-ability-score-improvement-7",
+    "class": "fighter",
+    "level": 19
+  },
+  {
+    "slug": "fighter-fighting-style",
+    "class": "fighter",
+    "level": 1,
+    "subfeatureOptions": {
+      "prompt": "fighter-fighting-style/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-archery",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-dueling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-great-weapon-fighting",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-protection",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighter-fighting-style-two-weapon-fighting",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "fighter-fighting-style-archery",
+    "class": "fighter",
+    "level": 1,
+    "parent": "fighter-fighting-style"
+  },
+  {
+    "slug": "fighter-fighting-style-defense",
+    "class": "fighter",
+    "level": 1,
+    "parent": "fighter-fighting-style"
+  },
+  {
+    "slug": "fighter-fighting-style-dueling",
+    "class": "fighter",
+    "level": 1,
+    "parent": "fighter-fighting-style"
+  },
+  {
+    "slug": "fighter-fighting-style-great-weapon-fighting",
+    "class": "fighter",
+    "level": 1,
+    "parent": "fighter-fighting-style"
+  },
+  {
+    "slug": "fighter-fighting-style-protection",
+    "class": "fighter",
+    "level": 1,
+    "parent": "fighter-fighting-style"
+  },
+  {
+    "slug": "fighter-fighting-style-two-weapon-fighting",
+    "class": "fighter",
+    "level": 1,
+    "parent": "fighter-fighting-style"
+  },
+  {
+    "slug": "fighting-style-defense",
+    "class": "paladin",
+    "level": 2,
+    "parent": "paladin-fighting-style"
+  },
+  {
+    "slug": "fighting-style-dueling",
+    "class": "paladin",
+    "level": 2,
+    "parent": "paladin-fighting-style"
+  },
+  {
+    "slug": "fighting-style-great-weapon-fighting",
+    "class": "paladin",
+    "level": 2,
+    "parent": "paladin-fighting-style"
+  },
+  {
+    "slug": "fighting-style-protection",
+    "class": "paladin",
+    "level": 2,
+    "parent": "paladin-fighting-style"
+  },
+  {
+    "slug": "flexible-casting-converting-spell-slot",
+    "class": "sorcerer",
+    "level": 2
+  },
+  {
+    "slug": "flexible-casting-creating-spell-slots",
+    "class": "sorcerer",
+    "level": 2
+  },
+  {
+    "slug": "flurry-of-blows",
+    "class": "monk",
+    "level": 2
+  },
+  {
+    "slug": "foe-slayer",
+    "class": "ranger",
+    "level": 20
+  },
+  {
+    "slug": "font-of-inspiration",
+    "class": "bard",
+    "level": 5
+  },
+  {
+    "slug": "font-of-magic",
+    "class": "sorcerer",
+    "level": 2
+  },
+  {
+    "slug": "frenzy",
+    "class": "barbarian",
+    "subclass": "berserker",
+    "level": 3
+  },
+  {
+    "slug": "hide-in-plain-sight",
+    "class": "ranger",
+    "level": 10
+  },
+  {
+    "slug": "holy-nimbus",
+    "class": "paladin",
+    "subclass": "devotion",
+    "level": 20
+  },
+  {
+    "slug": "hunters-prey",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 3,
+    "subfeatureOptions": {
+      "prompt": "hunters-prey/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:hunters-prey-colossus-slayer",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:hunters-prey-giant-killer",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:hunters-prey-horde-breaker",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "hunters-prey-colossus-slayer",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 3,
+    "parent": "hunters-prey"
+  },
+  {
+    "slug": "hunters-prey-giant-killer",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 3,
+    "parent": "hunters-prey"
+  },
+  {
+    "slug": "hunters-prey-horde-breaker",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 3,
+    "parent": "hunters-prey"
+  },
+  {
+    "slug": "hurl-through-hell",
+    "class": "warlock",
+    "subclass": "fiend",
+    "level": 14
+  },
+  {
+    "slug": "improved-critical",
+    "class": "fighter",
+    "subclass": "champion",
+    "level": 3
+  },
+  {
+    "slug": "improved-divine-smite",
+    "class": "paladin",
+    "level": 11
+  },
+  {
+    "slug": "indomitable-1-use",
+    "class": "fighter",
+    "level": 9
+  },
+  {
+    "slug": "indomitable-2-uses",
+    "class": "fighter",
+    "level": 13
+  },
+  {
+    "slug": "indomitable-3-uses",
+    "class": "fighter",
+    "level": 17
+  },
+  {
+    "slug": "indomitable-might",
+    "class": "barbarian",
+    "level": 18
+  },
+  {
+    "slug": "intimidating-presence",
+    "class": "barbarian",
+    "subclass": "berserker",
+    "level": 10
+  },
+  {
+    "slug": "jack-of-all-trades",
+    "class": "bard",
+    "level": 2
+  },
+  {
+    "slug": "ki",
+    "class": "monk",
+    "level": 2
+  },
+  {
+    "slug": "ki-empowered-strikes",
+    "class": "monk",
+    "level": 6
+  },
+  {
+    "slug": "lay-on-hands",
+    "class": "paladin",
+    "level": 1
+  },
+  {
+    "slug": "magical-secrets-1",
+    "class": "bard",
+    "level": 10
+  },
+  {
+    "slug": "magical-secrets-2",
+    "class": "bard",
+    "level": 14
+  },
+  {
+    "slug": "magical-secrets-3",
+    "class": "bard",
+    "level": 18
+  },
+  {
+    "slug": "martial-archetype",
+    "class": "fighter",
+    "level": 3
+  },
+  {
+    "slug": "martial-archetype-improvement-1",
+    "class": "fighter",
+    "level": 7
+  },
+  {
+    "slug": "martial-archetype-improvement-2",
+    "class": "fighter",
+    "level": 10
+  },
+  {
+    "slug": "martial-archetype-improvement-3",
+    "class": "fighter",
+    "level": 15
+  },
+  {
+    "slug": "martial-archetype-improvement-4",
+    "class": "fighter",
+    "level": 18
+  },
+  {
+    "slug": "martial-arts",
+    "class": "monk",
+    "level": 1
+  },
+  {
+    "slug": "metamagic-1",
+    "class": "sorcerer",
+    "level": 3,
+    "subfeatureOptions": {
+      "prompt": "metamagic-1/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-careful-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-distant-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-empowered-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-extended-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-heightened-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-quickened-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-subtle-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-twinned-spell",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "metamagic-2",
+    "class": "sorcerer",
+    "level": 10,
+    "subfeatureOptions": {
+      "prompt": "metamagic-2/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-careful-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-distant-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-empowered-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-extended-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-heightened-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-quickened-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-subtle-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-twinned-spell",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "metamagic-3",
+    "class": "sorcerer",
+    "level": 17,
+    "subfeatureOptions": {
+      "prompt": "metamagic-3/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-careful-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-distant-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-empowered-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-extended-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-heightened-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-quickened-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-subtle-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-twinned-spell",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "metamagic-careful-spell",
+    "class": "sorcerer",
+    "level": 3,
+    "parent": "metamagic-1"
+  },
+  {
+    "slug": "metamagic-distant-spell",
+    "class": "sorcerer",
+    "level": 3,
+    "parent": "metamagic-1"
+  },
+  {
+    "slug": "metamagic-empowered-spell",
+    "class": "sorcerer",
+    "level": 3,
+    "parent": "metamagic-1"
+  },
+  {
+    "slug": "metamagic-extended-spell",
+    "class": "sorcerer",
+    "level": 3,
+    "parent": "metamagic-1"
+  },
+  {
+    "slug": "metamagic-heightened-spell",
+    "class": "sorcerer",
+    "level": 3,
+    "parent": "metamagic-1"
+  },
+  {
+    "slug": "metamagic-quickened-spell",
+    "class": "sorcerer",
+    "level": 3,
+    "parent": "metamagic-1"
+  },
+  {
+    "slug": "metamagic-subtle-spell",
+    "class": "sorcerer",
+    "level": 3,
+    "parent": "metamagic-1"
+  },
+  {
+    "slug": "metamagic-twinned-spell",
+    "class": "sorcerer",
+    "level": 3
+  },
+  {
+    "slug": "mindless-rage",
+    "class": "barbarian",
+    "subclass": "berserker",
+    "level": 6
+  },
+  {
+    "slug": "monastic-tradition",
+    "class": "monk",
+    "level": 3
+  },
+  {
+    "slug": "monastic-tradition-improvement-1",
+    "class": "monk",
+    "level": 6
+  },
+  {
+    "slug": "monastic-tradition-improvement-2",
+    "class": "monk",
+    "level": 11
+  },
+  {
+    "slug": "monastic-tradition-improvement-3",
+    "class": "monk",
+    "level": 17
+  },
+  {
+    "slug": "monk-ability-score-improvement-1",
+    "class": "monk",
+    "level": 4
+  },
+  {
+    "slug": "monk-ability-score-improvement-2",
+    "class": "monk",
+    "level": 8
+  },
+  {
+    "slug": "monk-ability-score-improvement-3",
+    "class": "monk",
+    "level": 12
+  },
+  {
+    "slug": "monk-ability-score-improvement-4",
+    "class": "monk",
+    "level": 16
+  },
+  {
+    "slug": "monk-ability-score-improvement-5",
+    "class": "monk",
+    "level": 19
+  },
+  {
+    "slug": "monk-evasion",
+    "class": "monk",
+    "level": 7
+  },
+  {
+    "slug": "monk-extra-attack",
+    "class": "monk",
+    "level": 5
+  },
+  {
+    "slug": "monk-timeless-body",
+    "class": "monk",
+    "level": 15
+  },
+  {
+    "slug": "monk-unarmored-defense",
+    "class": "monk",
+    "level": 1
+  },
+  {
+    "slug": "multiattack",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 11,
+    "subfeatureOptions": {
+      "prompt": "multiattack/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:multiattack-volley",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:multiattack-whirlwind-attack",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "multiattack-volley",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 11,
+    "parent": "multiattack"
+  },
+  {
+    "slug": "multiattack-whirlwind-attack",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 11,
+    "parent": "multiattack"
+  },
+  {
+    "slug": "mystic-arcanum-6th-level",
+    "class": "warlock",
+    "level": 11
+  },
+  {
+    "slug": "mystic-arcanum-7th-level",
+    "class": "warlock",
+    "level": 13
+  },
+  {
+    "slug": "mystic-arcanum-8th-level",
+    "class": "warlock",
+    "level": 15
+  },
+  {
+    "slug": "mystic-arcanum-9th-level",
+    "class": "warlock",
+    "level": 17
+  },
+  {
+    "slug": "natural-explorer-1-terrain-type",
+    "class": "ranger",
+    "level": 1,
+    "terrainTypeOptions": {
+      "prompt": "natural-explorer-1-terrain-type/terrain-type/0",
+      "choose": 1,
+      "kind": "text",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "arctic"
+          },
+          {
+            "kind": "text",
+            "key": "coast"
+          },
+          {
+            "kind": "text",
+            "key": "desert"
+          },
+          {
+            "kind": "text",
+            "key": "forest"
+          },
+          {
+            "kind": "text",
+            "key": "grassland"
+          },
+          {
+            "kind": "text",
+            "key": "mountain"
+          },
+          {
+            "kind": "text",
+            "key": "swamp"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "natural-explorer-2-terrain-types",
+    "class": "ranger",
+    "level": 6,
+    "terrainTypeOptions": {
+      "prompt": "natural-explorer-2-terrain-types/terrain-type/0",
+      "choose": 1,
+      "kind": "text",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "arctic"
+          },
+          {
+            "kind": "text",
+            "key": "coast"
+          },
+          {
+            "kind": "text",
+            "key": "desert"
+          },
+          {
+            "kind": "text",
+            "key": "forest"
+          },
+          {
+            "kind": "text",
+            "key": "grassland"
+          },
+          {
+            "kind": "text",
+            "key": "mountain"
+          },
+          {
+            "kind": "text",
+            "key": "swamp"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "natural-explorer-3-terrain-types",
+    "class": "ranger",
+    "level": 10,
+    "terrainTypeOptions": {
+      "prompt": "natural-explorer-3-terrain-types/terrain-type/0",
+      "choose": 1,
+      "kind": "text",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "arctic"
+          },
+          {
+            "kind": "text",
+            "key": "coast"
+          },
+          {
+            "kind": "text",
+            "key": "desert"
+          },
+          {
+            "kind": "text",
+            "key": "forest"
+          },
+          {
+            "kind": "text",
+            "key": "grassland"
+          },
+          {
+            "kind": "text",
+            "key": "mountain"
+          },
+          {
+            "kind": "text",
+            "key": "swamp"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "natural-recovery",
+    "class": "druid",
+    "subclass": "land",
+    "level": 2
+  },
+  {
+    "slug": "natures-sanctuary",
+    "class": "druid",
+    "subclass": "land",
+    "level": 14
+  },
+  {
+    "slug": "natures-ward",
+    "class": "druid",
+    "subclass": "land",
+    "level": 10
+  },
+  {
+    "slug": "oath-spells",
+    "class": "paladin",
+    "level": 3
+  },
+  {
+    "slug": "open-hand-technique",
+    "class": "monk",
+    "subclass": "open-hand",
+    "level": 3
+  },
+  {
+    "slug": "otherworldly-patron",
+    "class": "warlock",
+    "level": 1
+  },
+  {
+    "slug": "otherworldly-patron-improvement-1",
+    "class": "warlock",
+    "level": 6
+  },
+  {
+    "slug": "otherworldly-patron-improvement-2",
+    "class": "warlock",
+    "level": 10
+  },
+  {
+    "slug": "otherworldly-patron-improvement-3",
+    "class": "warlock",
+    "level": 14
+  },
+  {
+    "slug": "overchannel",
+    "class": "wizard",
+    "subclass": "evocation",
+    "level": 14
+  },
+  {
+    "slug": "pact-boon",
+    "class": "warlock",
+    "level": 3,
+    "subfeatureOptions": {
+      "prompt": "pact-boon/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:pact-of-the-chain",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:pact-of-the-blade",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:pact-of-the-tome",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "pact-magic",
+    "class": "warlock",
+    "level": 1
+  },
+  {
+    "slug": "pact-of-the-blade",
+    "class": "warlock",
+    "level": 3,
+    "parent": "pact-boon"
+  },
+  {
+    "slug": "pact-of-the-chain",
+    "class": "warlock",
+    "level": 3,
+    "parent": "pact-boon"
+  },
+  {
+    "slug": "pact-of-the-tome",
+    "class": "warlock",
+    "level": 3,
+    "parent": "pact-boon"
+  },
+  {
+    "slug": "paladin-ability-score-improvement-1",
+    "class": "paladin",
+    "level": 4
+  },
+  {
+    "slug": "paladin-ability-score-improvement-2",
+    "class": "paladin",
+    "level": 8
+  },
+  {
+    "slug": "paladin-ability-score-improvement-3",
+    "class": "paladin",
+    "level": 12
+  },
+  {
+    "slug": "paladin-ability-score-improvement-4",
+    "class": "paladin",
+    "level": 16
+  },
+  {
+    "slug": "paladin-ability-score-improvement-5",
+    "class": "paladin",
+    "level": 19
+  },
+  {
+    "slug": "paladin-extra-attack",
+    "class": "paladin",
+    "level": 5
+  },
+  {
+    "slug": "paladin-fighting-style",
+    "class": "paladin",
+    "level": 2,
+    "subfeatureOptions": {
+      "prompt": "paladin-fighting-style/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:fighting-style-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighting-style-dueling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighting-style-great-weapon-fighting",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:fighting-style-protection",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "patient-defense",
+    "class": "monk",
+    "level": 2
+  },
+  {
+    "slug": "peerless-skill",
+    "class": "bard",
+    "subclass": "lore",
+    "level": 14
+  },
+  {
+    "slug": "perfect-self",
+    "class": "monk",
+    "level": 20
+  },
+  {
+    "slug": "persistent-rage",
+    "class": "barbarian",
+    "level": 15
+  },
+  {
+    "slug": "potent-cantrip",
+    "class": "wizard",
+    "subclass": "evocation",
+    "level": 6
+  },
+  {
+    "slug": "primal-champion",
+    "class": "barbarian",
+    "level": 20
+  },
+  {
+    "slug": "primal-path",
+    "class": "barbarian",
+    "level": 3
+  },
+  {
+    "slug": "primal-path-improvement-1",
+    "class": "barbarian",
+    "level": 6
+  },
+  {
+    "slug": "primal-path-improvement-2",
+    "class": "barbarian",
+    "level": 10
+  },
+  {
+    "slug": "primal-path-improvement-3",
+    "class": "barbarian",
+    "level": 14
+  },
+  {
+    "slug": "primeval-awareness",
+    "class": "ranger",
+    "level": 3
+  },
+  {
+    "slug": "purity-of-body",
+    "class": "monk",
+    "level": 10
+  },
+  {
+    "slug": "purity-of-spirit",
+    "class": "paladin",
+    "subclass": "devotion",
+    "level": 15
+  },
+  {
+    "slug": "quivering-palm",
+    "class": "monk",
+    "subclass": "open-hand",
+    "level": 17
+  },
+  {
+    "slug": "rage",
+    "class": "barbarian",
+    "level": 1
+  },
+  {
+    "slug": "ranger-ability-score-improvement-1",
+    "class": "ranger",
+    "level": 4
+  },
+  {
+    "slug": "ranger-ability-score-improvement-2",
+    "class": "ranger",
+    "level": 8
+  },
+  {
+    "slug": "ranger-ability-score-improvement-3",
+    "class": "ranger",
+    "level": 12
+  },
+  {
+    "slug": "ranger-ability-score-improvement-4",
+    "class": "ranger",
+    "level": 16
+  },
+  {
+    "slug": "ranger-ability-score-improvement-5",
+    "class": "ranger",
+    "level": 19
+  },
+  {
+    "slug": "ranger-archetype",
+    "class": "ranger",
+    "level": 3
+  },
+  {
+    "slug": "ranger-archetype-improvement-1",
+    "class": "ranger",
+    "level": 7
+  },
+  {
+    "slug": "ranger-archetype-improvement-2",
+    "class": "ranger",
+    "level": 11
+  },
+  {
+    "slug": "ranger-archetype-improvement-3",
+    "class": "ranger",
+    "level": 15
+  },
+  {
+    "slug": "ranger-extra-attack",
+    "class": "ranger",
+    "level": 5
+  },
+  {
+    "slug": "ranger-fighting-style",
+    "class": "ranger",
+    "level": 2,
+    "subfeatureOptions": {
+      "prompt": "ranger-fighting-style/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:ranger-fighting-style-archery",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:ranger-fighting-style-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:ranger-fighting-style-dueling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:ranger-fighting-style-two-weapon-fighting",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "ranger-fighting-style-archery",
+    "class": "ranger",
+    "level": 2,
+    "parent": "ranger-fighting-style"
+  },
+  {
+    "slug": "ranger-fighting-style-defense",
+    "class": "ranger",
+    "level": 2,
+    "parent": "ranger-fighting-style"
+  },
+  {
+    "slug": "ranger-fighting-style-dueling",
+    "class": "ranger",
+    "level": 2,
+    "parent": "ranger-fighting-style"
+  },
+  {
+    "slug": "ranger-fighting-style-two-weapon-fighting",
+    "class": "ranger",
+    "level": 2,
+    "parent": "ranger-fighting-style"
+  },
+  {
+    "slug": "ranger-lands-stride",
+    "class": "ranger",
+    "level": 8
+  },
+  {
+    "slug": "reckless-attack",
+    "class": "barbarian",
+    "level": 2
+  },
+  {
+    "slug": "relentless-rage",
+    "class": "barbarian",
+    "level": 11
+  },
+  {
+    "slug": "reliable-talent",
+    "class": "rogue",
+    "level": 11
+  },
+  {
+    "slug": "remarkable-athlete",
+    "class": "fighter",
+    "subclass": "champion",
+    "level": 7
+  },
+  {
+    "slug": "retaliation",
+    "class": "barbarian",
+    "subclass": "berserker",
+    "level": 14
+  },
+  {
+    "slug": "rogue-ability-score-improvement-1",
+    "class": "rogue",
+    "level": 4
+  },
+  {
+    "slug": "rogue-ability-score-improvement-2",
+    "class": "rogue",
+    "level": 8
+  },
+  {
+    "slug": "rogue-ability-score-improvement-3",
+    "class": "rogue",
+    "level": 10
+  },
+  {
+    "slug": "rogue-ability-score-improvement-4",
+    "class": "rogue",
+    "level": 12
+  },
+  {
+    "slug": "rogue-ability-score-improvement-5",
+    "class": "rogue",
+    "level": 16
+  },
+  {
+    "slug": "rogue-ability-score-improvement-6",
+    "class": "rogue",
+    "level": 19
+  },
+  {
+    "slug": "rogue-evasion",
+    "class": "rogue",
+    "level": 7
+  },
+  {
+    "slug": "rogue-expertise-1",
+    "class": "rogue",
+    "level": 1,
+    "expertiseOptions": {
+      "prompt": "rogue-expertise-1/expertise/0",
+      "choose": 1,
+      "kind": "proficiency",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "nested",
+            "choice": {
+              "prompt": "rogue-expertise-1/expertise/0/0",
+              "choose": 2,
+              "kind": "proficiency",
+              "from": {
+                "kind": "explicit",
+                "options": [
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-acrobatics",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-animal-handling",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-arcana",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-athletics",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-deception",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-history",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-insight",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-intimidation",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-investigation",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-medicine",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-nature",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-perception",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-performance",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-persuasion",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-religion",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-sleight-of-hand",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-stealth",
+                    "count": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:skill-survival",
+                    "count": 1
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "kind": "bundle",
+            "items": [
+              {
+                "kind": "nested",
+                "choice": {
+                  "prompt": "rogue-expertise-1/expertise/0/1/0",
+                  "choose": 1,
+                  "kind": "proficiency",
+                  "from": {
+                    "kind": "explicit",
+                    "options": [
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-acrobatics",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-animal-handling",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-arcana",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-athletics",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-deception",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-history",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-insight",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-intimidation",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-investigation",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-medicine",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-nature",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-perception",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-performance",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-persuasion",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-religion",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-sleight-of-hand",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-stealth",
+                        "count": 1
+                      },
+                      {
+                        "kind": "ref",
+                        "ref": "proficiency:skill-survival",
+                        "count": 1
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:thieves-tools",
+                "count": 1
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "rogue-expertise-2",
+    "class": "rogue",
+    "level": 6,
+    "expertiseOptions": {
+      "prompt": "rogue-expertise-2/expertise/0",
+      "choose": 2,
+      "kind": "proficiency",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-acrobatics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-animal-handling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-arcana",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-athletics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-deception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-history",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-insight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-intimidation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-investigation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-medicine",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-nature",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-perception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-performance",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-persuasion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-religion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-sleight-of-hand",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-stealth",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-survival",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:thieves-tools",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "roguish-archetype",
+    "class": "rogue",
+    "level": 3
+  },
+  {
+    "slug": "roguish-archetype-improvement-1",
+    "class": "rogue",
+    "level": 9
+  },
+  {
+    "slug": "roguish-archetype-improvement-2",
+    "class": "rogue",
+    "level": 13
+  },
+  {
+    "slug": "roguish-archetype-improvement-3",
+    "class": "rogue",
+    "level": 17
+  },
+  {
+    "slug": "sacred-oath",
+    "class": "paladin",
+    "level": 3
+  },
+  {
+    "slug": "sacred-oath-improvement-1",
+    "class": "paladin",
+    "level": 7
+  },
+  {
+    "slug": "sacred-oath-improvement-2",
+    "class": "paladin",
+    "level": 15
+  },
+  {
+    "slug": "sacred-oath-improvement-3",
+    "class": "paladin",
+    "level": 20
+  },
+  {
+    "slug": "sculpt-spells",
+    "class": "wizard",
+    "subclass": "evocation",
+    "level": 2
+  },
+  {
+    "slug": "second-story-work",
+    "class": "rogue",
+    "subclass": "thief",
+    "level": 3
+  },
+  {
+    "slug": "second-wind",
+    "class": "fighter",
+    "level": 1
+  },
+  {
+    "slug": "signature-spell",
+    "class": "wizard",
+    "level": 20
+  },
+  {
+    "slug": "slippery-mind",
+    "class": "rogue",
+    "level": 15
+  },
+  {
+    "slug": "slow-fall",
+    "class": "monk",
+    "level": 4
+  },
+  {
+    "slug": "sneak-attack",
+    "class": "rogue",
+    "level": 1
+  },
+  {
+    "slug": "song-of-rest-d10",
+    "class": "bard",
+    "level": 13
+  },
+  {
+    "slug": "song-of-rest-d12",
+    "class": "bard",
+    "level": 17
+  },
+  {
+    "slug": "song-of-rest-d6",
+    "class": "bard",
+    "level": 2
+  },
+  {
+    "slug": "song-of-rest-d8",
+    "class": "bard",
+    "level": 9
+  },
+  {
+    "slug": "sorcerer-ability-score-improvement-1",
+    "class": "sorcerer",
+    "level": 4
+  },
+  {
+    "slug": "sorcerer-ability-score-improvement-2",
+    "class": "sorcerer",
+    "level": 8
+  },
+  {
+    "slug": "sorcerer-ability-score-improvement-3",
+    "class": "sorcerer",
+    "level": 12
+  },
+  {
+    "slug": "sorcerer-ability-score-improvement-4",
+    "class": "sorcerer",
+    "level": 16
+  },
+  {
+    "slug": "sorcerer-ability-score-improvement-5",
+    "class": "sorcerer",
+    "level": 19
+  },
+  {
+    "slug": "sorcerous-origin",
+    "class": "sorcerer",
+    "level": 1
+  },
+  {
+    "slug": "sorcerous-origin-improvement-1",
+    "class": "sorcerer",
+    "level": 6
+  },
+  {
+    "slug": "sorcerous-origin-improvement-2",
+    "class": "sorcerer",
+    "level": 14
+  },
+  {
+    "slug": "sorcerous-origin-improvement-3",
+    "class": "sorcerer",
+    "level": 18
+  },
+  {
+    "slug": "sorcerous-restoration",
+    "class": "sorcerer",
+    "level": 20
+  },
+  {
+    "slug": "spell-mastery",
+    "class": "wizard",
+    "level": 18
+  },
+  {
+    "slug": "spellcasting-bard",
+    "class": "bard",
+    "level": 1
+  },
+  {
+    "slug": "spellcasting-cleric",
+    "class": "cleric",
+    "level": 1
+  },
+  {
+    "slug": "spellcasting-druid",
+    "class": "druid",
+    "level": 1
+  },
+  {
+    "slug": "spellcasting-paladin",
+    "class": "paladin",
+    "level": 2
+  },
+  {
+    "slug": "spellcasting-ranger",
+    "class": "ranger",
+    "level": 2
+  },
+  {
+    "slug": "spellcasting-sorcerer",
+    "class": "sorcerer",
+    "level": 1
+  },
+  {
+    "slug": "spellcasting-wizard",
+    "class": "wizard",
+    "level": 1
+  },
+  {
+    "slug": "step-of-the-wind",
+    "class": "monk",
+    "level": 2
+  },
+  {
+    "slug": "stillness-of-mind",
+    "class": "monk",
+    "level": 7
+  },
+  {
+    "slug": "stroke-of-luck",
+    "class": "rogue",
+    "level": 20
+  },
+  {
+    "slug": "stunning-strike",
+    "class": "monk",
+    "level": 5
+  },
+  {
+    "slug": "superior-critical",
+    "class": "fighter",
+    "subclass": "champion",
+    "level": 15
+  },
+  {
+    "slug": "superior-hunters-defense",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 15,
+    "subfeatureOptions": {
+      "prompt": "superior-hunters-defense/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:superior-hunters-defense-evasion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:superior-hunters-defense-stand-against-the-tide",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:superior-hunters-defense-uncanny-dodge",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "superior-hunters-defense-evasion",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 15,
+    "parent": "superior-hunters-defense"
+  },
+  {
+    "slug": "superior-hunters-defense-stand-against-the-tide",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 15,
+    "parent": "superior-hunters-defense"
+  },
+  {
+    "slug": "superior-hunters-defense-uncanny-dodge",
+    "class": "ranger",
+    "subclass": "hunter",
+    "level": 15,
+    "parent": "superior-hunters-defense"
+  },
+  {
+    "slug": "superior-inspiration",
+    "class": "bard",
+    "level": 20
+  },
+  {
+    "slug": "supreme-healing",
+    "class": "cleric",
+    "level": 17
+  },
+  {
+    "slug": "supreme-sneak",
+    "class": "rogue",
+    "subclass": "thief",
+    "level": 9
+  },
+  {
+    "slug": "survivor",
+    "class": "fighter",
+    "subclass": "champion",
+    "level": 18
+  },
+  {
+    "slug": "thiefs-reflexes",
+    "class": "rogue",
+    "subclass": "thief",
+    "level": 17
+  },
+  {
+    "slug": "thieves-cant",
+    "class": "rogue",
+    "level": 1
+  },
+  {
+    "slug": "tongue-of-the-sun-and-moon",
+    "class": "monk",
+    "level": 13
+  },
+  {
+    "slug": "tranquility",
+    "class": "monk",
+    "subclass": "open-hand",
+    "level": 11
+  },
+  {
+    "slug": "unarmored-movement-1",
+    "class": "monk",
+    "level": 2
+  },
+  {
+    "slug": "unarmored-movement-2",
+    "class": "monk",
+    "level": 9
+  },
+  {
+    "slug": "uncanny-dodge",
+    "class": "rogue",
+    "level": 5
+  },
+  {
+    "slug": "use-magic-device",
+    "class": "rogue",
+    "subclass": "thief",
+    "level": 13
+  },
+  {
+    "slug": "vanish",
+    "class": "ranger",
+    "level": 14
+  },
+  {
+    "slug": "warlock-ability-score-improvement-1",
+    "class": "warlock",
+    "level": 4
+  },
+  {
+    "slug": "warlock-ability-score-improvement-2",
+    "class": "warlock",
+    "level": 8
+  },
+  {
+    "slug": "warlock-ability-score-improvement-3",
+    "class": "warlock",
+    "level": 12
+  },
+  {
+    "slug": "warlock-ability-score-improvement-4",
+    "class": "warlock",
+    "level": 16
+  },
+  {
+    "slug": "warlock-ability-score-improvement-5",
+    "class": "warlock",
+    "level": 19
+  },
+  {
+    "slug": "wholeness-of-body",
+    "class": "monk",
+    "subclass": "open-hand",
+    "level": 6
+  },
+  {
+    "slug": "wild-shape-cr-1-2-or-below-no-flying-speed",
+    "class": "druid",
+    "level": 4
+  },
+  {
+    "slug": "wild-shape-cr-1-4-or-below-no-flying-or-swim-speed",
+    "class": "druid",
+    "level": 2
+  },
+  {
+    "slug": "wild-shape-cr-1-or-below",
+    "class": "druid",
+    "level": 8
+  },
+  {
+    "slug": "wizard-ability-score-improvement-1",
+    "class": "wizard",
+    "level": 4
+  },
+  {
+    "slug": "wizard-ability-score-improvement-2",
+    "class": "wizard",
+    "level": 8
+  },
+  {
+    "slug": "wizard-ability-score-improvement-3",
+    "class": "wizard",
+    "level": 12
+  },
+  {
+    "slug": "wizard-ability-score-improvement-4",
+    "class": "wizard",
+    "level": 16
+  },
+  {
+    "slug": "wizard-ability-score-improvement-5",
+    "class": "wizard",
+    "level": 19
+  }
+]

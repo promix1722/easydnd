@@ -1,0 +1,670 @@
+{
+  "exportVersion": "2.0",
+  "exportedAt": "2026-08-23T14:27:51.454Z",
+  "exportedFrom": "HexSheet",
+  "character": {
+    "gameSystem": "dnd5e",
+    "profilePicture": null,
+    "name": "Сахарок",
+    "alignment": "Neutral",
+    "race": "Half-Elf",
+    "background": "Urchin",
+    "class": "Rogue",
+    "subclass": "Thief",
+    "level": 3,
+    "ruleset": "2014",
+    "personalityTraits": "",
+    "ideals": "",
+    "bonds": "",
+    "flaws": "",
+    "inspiration": false,
+    "armorClass": {
+      "base": 14,
+      "current": 0
+    },
+    "hitPoints": {
+      "max": 24,
+      "current": 24
+    },
+    "tempHitPoints": {
+      "base": 0,
+      "current": 0
+    },
+    "initiative": 1,
+    "movement": [
+      {
+        "id": "1",
+        "name": "Walking",
+        "description": "30 ft."
+      },
+      {
+        "id": "m-darkvision",
+        "name": "Darkvision",
+        "description": "60 ft."
+      }
+    ],
+    "heroDice": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "exhaustion": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "deathSaves": {
+      "deaths": [
+        false,
+        false,
+        false
+      ],
+      "saves": [
+        false,
+        false,
+        false
+      ]
+    },
+    "abilities": {
+      "wisdom": {
+        "score": 12
+      },
+      "charisma": {
+        "score": 14
+      },
+      "strength": {
+        "score": 10
+      },
+      "dexterity": {
+        "score": 16
+      },
+      "constitution": {
+        "score": 14
+      },
+      "intelligence": {
+        "score": 10
+      }
+    },
+    "savingThrows": [
+      false,
+      true,
+      false,
+      true,
+      false,
+      false
+    ],
+    "abilityFeats": [],
+    "skillsTools": [
+      {
+        "id": "skill-deception-1787335639191-0.8765984402650858",
+        "icon": "EyeOff",
+        "name": "Deception",
+        "type": "Skill",
+        "modifier": 2
+      },
+      {
+        "id": "skill-acrobatics-1787335639191-0.7163302915943823",
+        "icon": "Zap",
+        "name": "Acrobatics",
+        "type": "Skill",
+        "modifier": 2
+      },
+      {
+        "id": "skill-persuasion-1787335639191-0.6461692023252991",
+        "icon": "MessageCircle",
+        "name": "Persuasion",
+        "type": "Skill",
+        "modifier": 4
+      },
+      {
+        "id": "skill-perception-1787335639191-0.9445217188970562",
+        "icon": "Eye",
+        "name": "Perception",
+        "type": "Skill",
+        "modifier": 2
+      },
+      {
+        "id": "skill-sleight-of-hand-1787335639191-0.4080631518731769",
+        "icon": "Hand",
+        "name": "Sleight of Hand",
+        "type": "Skill",
+        "modifier": 2
+      },
+      {
+        "id": "skill-stealth-1787335639191-0.012049532676227104",
+        "icon": "Ghost",
+        "name": "Stealth",
+        "type": "Skill",
+        "modifier": 4
+      },
+      {
+        "id": "tool-disguise-kit-1787335639191-0.7992846693430968",
+        "icon": "Wrench",
+        "name": "Disguise kit",
+        "type": "Tool",
+        "modifier": 2
+      },
+      {
+        "id": "tool-thieves'-tools-1787335639191-0.8296607023760972",
+        "icon": "Wrench",
+        "name": "Thieves' tools",
+        "type": "Tool",
+        "modifier": 2
+      }
+    ],
+    "languages": "Common, Elvish, One language of your choice",
+    "bonusActions": [
+      {
+        "id": "action-cunning-action-1787335639192-ez7tzgcii",
+        "name": "Cunning Action",
+        "notes": "Take a bonus action to Dash, Disengage, or Hide.",
+        "range": "Self",
+        "toHit": "",
+        "damage": "",
+        "showToHit": false,
+        "actionType": "bonus-action",
+        "damageType": "",
+        "showDamage": false,
+        "showCounter": false,
+        "showSpellSlot": false,
+        "showDamageType": false,
+        "showConcentration": false
+      }
+    ],
+    "bonusSpells": [],
+    "actions": [
+      {
+        "id": "action-sneak-attack-1787335639192-b23tw79m0",
+        "name": "Sneak Attack",
+        "notes": "Once per turn, deal extra damage when you hit with a finesse or ranged weapon and have advantage, or when another enemy of the target is within 5 ft of it (and you don't have disadvantage). Damage scales: ⌈level/2⌉d6.",
+        "range": "Special",
+        "toHit": "",
+        "damage": "1d6",
+        "showToHit": false,
+        "actionType": "action",
+        "damageType": "",
+        "showDamage": true,
+        "showCounter": false,
+        "showSpellSlot": false,
+        "showDamageType": false,
+        "showConcentration": false
+      },
+      {
+        "id": "rogue-cunning-action-1787335639191",
+        "name": "Cunning Action",
+        "notes": "Take a bonus action to Dash, Disengage, or Hide.",
+        "range": "",
+        "toHit": "",
+        "damage": "",
+        "source": "Rogue",
+        "showToHit": false,
+        "actionType": "bonus-action",
+        "damageType": "",
+        "showDamage": false,
+        "showDamageType": false
+      },
+      {
+        "id": "eq-guaranteed-3-0-1787335639190-0.954579780213196",
+        "name": "Dagger",
+        "range": "",
+        "toHit": "",
+        "damage": "1d4",
+        "damageType": "",
+        "notes": "Weapon • Finesse, Light, Thrown (20/60) • Simple melee weapon. Finesse, light, and thrown — equally at home in a fist or in flight.",
+        "showToHit": false,
+        "showDamage": true,
+        "showDamageType": false,
+        "showCounter": false,
+        "showConcentration": false,
+        "concentration": false,
+        "useSpellSlot": false,
+        "showSpellSlot": false,
+        "autoGeneratedFromEquipment": "guaranteed-3-0-1787335639190-0.954579780213196",
+        "actionType": "action"
+      },
+      {
+        "id": "eq-choice-0-0-0-1787335639190-0.4588886972022148",
+        "name": "Rapier",
+        "range": "",
+        "toHit": "",
+        "damage": "1d8",
+        "damageType": "",
+        "notes": "Weapon • Finesse • Martial melee weapon. Finesse — a slender thrusting blade rewarding precision.",
+        "showToHit": false,
+        "showDamage": true,
+        "showDamageType": false,
+        "showCounter": false,
+        "showConcentration": false,
+        "concentration": false,
+        "useSpellSlot": false,
+        "showSpellSlot": false,
+        "autoGeneratedFromEquipment": "choice-0-0-0-1787335639190-0.4588886972022148",
+        "actionType": "action"
+      },
+      {
+        "id": "eq-choice-1-0-0-1787335639190-0.8295416083789007",
+        "name": "Shortbow",
+        "range": "",
+        "toHit": "",
+        "damage": "1d6",
+        "damageType": "",
+        "notes": "Weapon • Ammunition (80/320), Two-Handed • Simple ranged weapon. Ammunition (80/320 ft.), two-handed.",
+        "showToHit": false,
+        "showDamage": true,
+        "showDamageType": false,
+        "showCounter": false,
+        "showConcentration": false,
+        "concentration": false,
+        "useSpellSlot": false,
+        "showSpellSlot": false,
+        "autoGeneratedFromEquipment": "choice-1-0-0-1787335639190-0.8295416083789007",
+        "actionType": "action"
+      }
+    ],
+    "spells": [],
+    "reactions": [
+      {
+        "id": "action-opportunity-attack-1787335639192-sg2xpywjl",
+        "name": "Opportunity Attack",
+        "notes": "When a hostile creature you can see moves out of your reach, you can use your reaction to make one melee attack against it.",
+        "range": "Melee",
+        "toHit": "",
+        "damage": "",
+        "showToHit": false,
+        "actionType": "reaction",
+        "damageType": "",
+        "showDamage": false,
+        "showCounter": false,
+        "showSpellSlot": false,
+        "showDamageType": false,
+        "showConcentration": false
+      },
+      {
+        "id": "action-uncanny-dodge-1787335639192-7pxaeqgjt",
+        "name": "Uncanny Dodge",
+        "notes": "When an attacker you can see hits you with an attack, use your reaction to halve the attack's damage against you (level 5+).",
+        "range": "Self",
+        "toHit": "",
+        "damage": "",
+        "showToHit": false,
+        "actionType": "reaction",
+        "damageType": "",
+        "showDamage": false,
+        "showCounter": false,
+        "showSpellSlot": false,
+        "showDamageType": false,
+        "showConcentration": false
+      }
+    ],
+    "equippedItems": [
+      {
+        "id": "guaranteed-0-0-1787335639190-0.7073741141076358",
+        "name": "Leather Armor",
+        "type": "Light Armor",
+        "count": 1,
+        "armorClass": "11 + DEX",
+        "description": "Light armor. AC 11 + Dex modifier. Supple boiled leather that never slows you down."
+      },
+      {
+        "id": "guaranteed-3-0-1787335639190-0.954579780213196",
+        "name": "Dagger",
+        "type": "Weapon",
+        "count": 2,
+        "damage": "1d4",
+        "properties": "Finesse, Light, Thrown (20/60)",
+        "description": "Simple melee weapon. Finesse, light, and thrown — equally at home in a fist or in flight."
+      },
+      {
+        "id": "choice-0-0-0-1787335639190-0.4588886972022148",
+        "name": "Rapier",
+        "type": "Weapon",
+        "count": 1,
+        "damage": "1d8",
+        "properties": "Finesse",
+        "description": "Martial melee weapon. Finesse — a slender thrusting blade rewarding precision."
+      },
+      {
+        "id": "choice-1-0-0-1787335639190-0.8295416083789007",
+        "name": "Shortbow",
+        "type": "Weapon",
+        "count": 1,
+        "damage": "1d6",
+        "properties": "Ammunition (80/320), Two-Handed",
+        "description": "Simple ranged weapon. Ammunition (80/320 ft.), two-handed."
+      }
+    ],
+    "backpackItems": [
+      {
+        "id": "guaranteed-1-0-1787335639190-0.2885601230371997",
+        "name": "Backpack",
+        "type": "Adventuring Gear",
+        "count": 1,
+        "description": "A backpack holds 1 cubic foot / 30 pounds of gear. You can also strap items such as a bedroll or a coil of rope to the outside."
+      },
+      {
+        "id": "guaranteed-1-1-1787335639190-0.42857749250815025",
+        "name": "Ball Bearings (bag of 1,000)",
+        "type": "Adventuring Gear",
+        "count": 1
+      },
+      {
+        "id": "guaranteed-1-2-1787335639190-0.36633335281089296",
+        "name": "String (10 feet)",
+        "type": "Adventuring Gear",
+        "count": 1
+      },
+      {
+        "id": "guaranteed-1-3-1787335639190-0.10548020446335216",
+        "name": "Bell",
+        "type": "Adventuring Gear",
+        "count": 1,
+        "description": "A small handbell, useful for signalling or as a simple alarm."
+      },
+      {
+        "id": "guaranteed-1-4-1787335639190-0.6341493615885203",
+        "name": "Candle",
+        "type": "Adventuring Gear",
+        "count": 5,
+        "description": "Burns for 1 hour, giving bright light in a 5-foot radius and dim light for an additional 5 feet."
+      },
+      {
+        "id": "guaranteed-1-5-1787335639190-0.6724332596954347",
+        "name": "Crowbar",
+        "type": "Adventuring Gear",
+        "count": 1,
+        "description": "Using a crowbar grants advantage on Strength checks where its leverage can be applied."
+      },
+      {
+        "id": "guaranteed-1-6-1787335639190-0.5668909872654851",
+        "name": "Hammer",
+        "type": "Adventuring Gear",
+        "count": 1,
+        "description": "A one-handed hammer used for driving pitons and general camp work."
+      },
+      {
+        "id": "guaranteed-1-7-1787335639190-0.9206023926615595",
+        "name": "Piton",
+        "type": "Adventuring Gear",
+        "count": 10,
+        "description": "An iron spike driven into rock or wood to anchor a rope while climbing."
+      },
+      {
+        "id": "guaranteed-1-8-1787335639190-0.6091740372716369",
+        "name": "Hooded Lantern",
+        "type": "Adventuring Gear",
+        "count": 1
+      },
+      {
+        "id": "guaranteed-1-9-1787335639190-0.28056660394017685",
+        "name": "Oil (flask)",
+        "type": "Adventuring Gear",
+        "count": 2
+      },
+      {
+        "id": "guaranteed-1-10-1787335639190-0.9090051183122809",
+        "name": "Rations (1 day)",
+        "type": "Adventuring Gear",
+        "count": 5,
+        "description": "Dry foods suitable for extended travel, including jerky, dried fruit, hardtack, and nuts."
+      },
+      {
+        "id": "guaranteed-1-11-1787335639190-0.3692026067703784",
+        "name": "Tinderbox",
+        "type": "Adventuring Gear",
+        "count": 1,
+        "description": "A small container holding flint, fire steel, and tinder. Lighting a torch (or anything with abundant exposed fuel) takes an action; any other fire takes 1 minute."
+      },
+      {
+        "id": "guaranteed-1-12-1787335639190-0.872461470280311",
+        "name": "Waterskin",
+        "type": "Adventuring Gear",
+        "count": 1,
+        "description": "Holds 4 pints of liquid. A creature needs roughly 1 gallon of water per day in temperate conditions."
+      },
+      {
+        "id": "guaranteed-1-13-1787335639190-0.32098798958956076",
+        "name": "Hempen Rope (50 feet)",
+        "type": "Adventuring Gear",
+        "count": 1,
+        "description": "Rope has 2 hit points and can be burst with a DC 17 Strength check. Useful for climbing, binding, and securing gear."
+      },
+      {
+        "id": "guaranteed-2-0-1787335639190-0.17825821694436184",
+        "name": "Thieves' Tools",
+        "type": "Tool",
+        "count": 1,
+        "description": "Lockpicks, a small file, a mirror on a handle, narrow-bladed scissors, and pliers. Proficiency lets you add your bonus to checks made to disarm traps or open locks."
+      },
+      {
+        "id": "choice-1-1-0-1787335639190-0.8803938089027907",
+        "name": "Arrows",
+        "type": "Ammunition",
+        "count": 20,
+        "description": "Ammunition for a bow. You can recover half your expended ammunition after a battle."
+      }
+    ],
+    "loot": [],
+    "equipmentPurse": "",
+    "equipmentTotal": "",
+    "currency": {
+      "cp": 0,
+      "ep": 0,
+      "gp": 10,
+      "pp": 0,
+      "sp": 0
+    },
+    "lifestyle": "",
+    "supply": "",
+    "campaignNotes": [],
+    "spellSlots": [],
+    "spellSlotLevel": 1,
+    "spellSlotCounter": [],
+    "spellSlotReplenish": "long-rest",
+    "classResources": [
+      {
+        "max": 2,
+        "name": "Sneak Attack",
+        "current": 2,
+        "replenish": "custom",
+        "description": "Extra damage dice (d6s) once per turn with advantage or ally adjacent"
+      }
+    ],
+    "damageModifiers": {},
+    "racialFeatures": [
+      {
+        "id": "race-1787335639191-0",
+        "name": "Darkvision",
+        "fromRace": true,
+        "description": "You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+      },
+      {
+        "id": "race-1787335639191-1",
+        "name": "Fey Ancestry",
+        "fromRace": true,
+        "description": "You have advantage on saving throws against being charmed, and magic can't put you to sleep."
+      },
+      {
+        "id": "race-1787335639191-2",
+        "name": "Skill Versatility",
+        "fromRace": true,
+        "description": "You gain proficiency in two skills of your choice."
+      }
+    ],
+    "classFeatures": [
+      {
+        "id": "rogue-sneak-attack",
+        "name": "Sneak Attack",
+        "level": 1,
+        "actionType": "special",
+        "description": "Once per turn, deal extra damage to one creature you hit with an attack if you have advantage, or if an ally is within 5 feet of the target."
+      },
+      {
+        "id": "rogue-cunning-action",
+        "name": "Cunning Action",
+        "level": 2,
+        "actionType": "bonus-action",
+        "description": "Take a bonus action to Dash, Disengage, or Hide."
+      },
+      {
+        "id": "thief-fast-hands",
+        "name": "Fast Hands",
+        "level": 3,
+        "actionType": "passive",
+        "description": "You can use the bonus action granted by your Cunning Action to make a Dexterity (Sleight of Hand) check, use your thieves' tools to disarm a trap or open a lock, or take the Use an Object action."
+      },
+      {
+        "id": "thief-second-story-work",
+        "name": "Second-Story Work",
+        "level": 3,
+        "actionType": "passive",
+        "description": "You gain the ability to climb faster than normal; climbing no longer costs you extra movement. In addition, when you make a running jump, the distance you cover increases by a number of feet equal to your Dexterity modifier."
+      }
+    ],
+    "isNameLocked": false,
+    "isRaceLocked": false,
+    "isClassLocked": false,
+    "isACBaseLocked": false,
+    "isHPBaseLocked": false,
+    "isBaseTempHPLocked": false,
+    "conditions": [
+      {
+        "id": "1",
+        "icon": "EyeOff",
+        "name": "Blinded",
+        "active": false,
+        "effect": "Can't see, auto-fail sight checks, attacks have disadvantage"
+      },
+      {
+        "id": "2",
+        "icon": "Heart",
+        "name": "Charmed",
+        "active": false,
+        "effect": "Can't attack charmer, charmer has advantage on social checks"
+      },
+      {
+        "id": "3",
+        "icon": "EarOff",
+        "name": "Deafened",
+        "active": false,
+        "effect": "Can't hear, auto-fail hearing checks"
+      },
+      {
+        "id": "4",
+        "icon": "Ghost",
+        "name": "Frightened",
+        "active": false,
+        "effect": "Disadvantage on checks while source is in sight, can't move closer"
+      },
+      {
+        "id": "5",
+        "icon": "Hand",
+        "name": "Grappled",
+        "active": false,
+        "effect": "Speed becomes 0, can't benefit from speed bonuses"
+      },
+      {
+        "id": "6",
+        "icon": "Ban",
+        "name": "Incapacitated",
+        "active": false,
+        "effect": "Can't take actions or reactions"
+      },
+      {
+        "id": "7",
+        "icon": "Eye",
+        "name": "Invisible",
+        "active": false,
+        "effect": "Impossible to see, attacks have advantage, attacks against have disadvantage"
+      },
+      {
+        "id": "8",
+        "icon": "Zap",
+        "name": "Paralyzed",
+        "active": false,
+        "effect": "Incapacitated, auto-fail STR and DEX saves, attacks have advantage"
+      },
+      {
+        "id": "9",
+        "icon": "Mountain",
+        "name": "Petrified",
+        "active": false,
+        "effect": "Transformed into solid substance, incapacitated, resistant to all damage"
+      },
+      {
+        "id": "10",
+        "icon": "Droplet",
+        "name": "Poisoned",
+        "active": false,
+        "effect": "Disadvantage on attack rolls and ability checks"
+      },
+      {
+        "id": "11",
+        "icon": "MoveDown",
+        "name": "Prone",
+        "active": false,
+        "effect": "Disadvantage on attacks, attacks within 5ft have advantage"
+      },
+      {
+        "id": "12",
+        "icon": "Lock",
+        "name": "Restrained",
+        "active": false,
+        "effect": "Speed becomes 0, attacks have disadvantage, attacks against have advantage"
+      },
+      {
+        "id": "13",
+        "icon": "CircleSlash",
+        "name": "Stunned",
+        "active": false,
+        "effect": "Incapacitated, auto-fail STR and DEX saves, attacks have advantage"
+      },
+      {
+        "id": "14",
+        "icon": "Moon",
+        "name": "Unconscious",
+        "active": false,
+        "effect": "Incapacitated, drop everything, prone, auto-fail STR and DEX saves"
+      }
+    ],
+    "spellSheet": {
+      "spellSlots": [],
+      "preparedSpells": [],
+      "spellcastingClass": "Rogue"
+    },
+    "combatSetupComplete": true,
+    "classes": [
+      {
+        "levels": 3,
+        "subclass": "Thief",
+        "className": "Rogue",
+        "isPrimaryClass": true
+      }
+    ],
+    "hitDicePool": {
+      "d6": {
+        "used": 0,
+        "total": 0
+      },
+      "d8": {
+        "used": 0,
+        "total": 3
+      },
+      "d10": {
+        "used": 0,
+        "total": 0
+      },
+      "d12": {
+        "used": 0,
+        "total": 0
+      }
+    },
+    "secondaryStatBlocks": [],
+    "knownForms": [],
+    "inventories": []
+  }
+}

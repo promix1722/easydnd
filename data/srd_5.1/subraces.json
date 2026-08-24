@@ -1,0 +1,57 @@
+[
+  {
+    "slug": "high-elf",
+    "race": "elf",
+    "abilityBonuses": [
+      {
+        "ability": "int",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "elf-weapon-training",
+      "high-elf-cantrip",
+      "extra-language"
+    ]
+  },
+  {
+    "slug": "hill-dwarf",
+    "race": "dwarf",
+    "abilityBonuses": [
+      {
+        "ability": "wis",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "dwarven-toughness"
+    ]
+  },
+  {
+    "slug": "lightfoot-halfling",
+    "race": "halfling",
+    "abilityBonuses": [
+      {
+        "ability": "cha",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "naturally-stealthy"
+    ]
+  },
+  {
+    "slug": "rock-gnome",
+    "race": "gnome",
+    "abilityBonuses": [
+      {
+        "ability": "con",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "artificers-lore",
+      "tinker"
+    ]
+  }
+]

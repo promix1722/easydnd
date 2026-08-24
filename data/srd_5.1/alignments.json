@@ -1,0 +1,29 @@
+[
+  {
+    "slug": "chaotic-evil"
+  },
+  {
+    "slug": "chaotic-good"
+  },
+  {
+    "slug": "chaotic-neutral"
+  },
+  {
+    "slug": "lawful-evil"
+  },
+  {
+    "slug": "lawful-good"
+  },
+  {
+    "slug": "lawful-neutral"
+  },
+  {
+    "slug": "neutral"
+  },
+  {
+    "slug": "neutral-evil"
+  },
+  {
+    "slug": "neutral-good"
+  }
+]

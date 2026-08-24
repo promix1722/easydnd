@@ -1,0 +1,31 @@
+# Compiled binaries
+/easydnd
+/srdgen
+/bin/
+
+# Frontend release tarball (`make web/release`). The bundle's own build output
+# and node_modules are ignored by web/.gitignore.
+/web.tar.gz
+
+# Test and coverage output
+*.test
+coverage.out
+coverage.html
+
+# Local environment overrides
+# Nothing reads these -- configuration lives in a YAML file now -- but they stay
+# ignored so a stray one can never be committed.
+.env
+.env.local
+
+# Local config override: copy config.dev.yaml and point -config at it.
+config.local.yaml
+
+# Written by `make run/db`: config.dev.yaml plus a db.url for the local
+# container. Generated, never edited by hand.
+config.dev-db.yaml
+
+# Editor / OS noise
+.idea/
+.vscode/
+.DS_Store

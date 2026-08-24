@@ -1,0 +1,165 @@
+package hexsheet
+
+// The on-the-wire shape of a HexSheet export.
+//
+// These structs mirror the file rather than the model: field names, spellings
+// and groupings are HexSheet's, and the JSON tags are why this package is an
+// adapter and not part of the domain. Converting them into something easydnd
+// understands is convert.go's job.
+//
+// Only the fields the importer reads are declared. HexSheet writes a good deal
+// more -- UI lock flags, icon names, per-entry ids built from a timestamp and
+// a random float -- and none of it means anything here. Unknown fields are
+// ignored rather than rejected: an export from a later HexSheet must still
+// import, and the alternative is a version bump breaking every existing file.
+
+// export is the top-level document.
+type export struct {
+	ExportVersion string `json:"exportVersion"`
+	ExportedFrom  string `json:"exportedFrom"`
+	Character     sheet  `json:"character"`
+}
+
+// sheet is the character itself.
+type sheet struct {
+	GameSystem string `json:"gameSystem"`
+	Ruleset    string `json:"ruleset"`
+
+	Name       string `json:"name"`
+	Alignment  string `json:"alignment"`
+	Race       string `json:"race"`
+	Background string `json:"background"`
+	Class      string `json:"class"`
+	Subclass   string `json:"subclass"`
+	Level      int    `json:"level"`
+
+	PersonalityTraits string `json:"personalityTraits"`
+	Ideals            string `json:"ideals"`
+	Bonds             string `json:"bonds"`
+	Flaws             string `json:"flaws"`
+	Inspiration       bool   `json:"inspiration"`
+
+	Abilities    abilities   `json:"abilities"`
+	SavingThrows []bool      `json:"savingThrows"`
+	SkillsTools  []skillTool `json:"skillsTools"`
+
+	ArmorClass    value     `json:"armorClass"`
+	HitPoints     hitPoints `json:"hitPoints"`
+	TempHitPoints value     `json:"tempHitPoints"`
+	Initiative    int       `json:"initiative"`
+
+	Languages  string `json:"languages"`
+	Exhaustion []bool `json:"exhaustion"`
+
+	// Classes is the multiclass table. It repeats Class/Subclass/Level for a
+	// single-classed character, and is the only place a second class appears.
+	Classes []classLevel `json:"classes"`
+
+	EquippedItems []item `json:"equippedItems"`
+	BackpackItems []item `json:"backpackItems"`
+	Loot          []item `json:"loot"`
+
+	RacialFeatures []named `json:"racialFeatures"`
+	ClassFeatures  []named `json:"classFeatures"`
+	Conditions     []cond  `json:"conditions"`
+
+	// Everything below has no home in the model and is read only so that the
+	// report can say it was left behind.
+	Currency       currency           `json:"currency"`
+	ClassResources []named            `json:"classResources"`
+	HitDicePool    map[string]hitDice `json:"hitDicePool"`
+	DeathSaves     deathSaves         `json:"deathSaves"`
+	Actions        []action           `json:"actions"`
+	BonusActions   []action           `json:"bonusActions"`
+	Reactions      []action           `json:"reactions"`
+	Spells         []named            `json:"spells"`
+	CampaignNotes  []named            `json:"campaignNotes"`
+}
+
+// abilities is HexSheet's long-form ability block. The scores are final: every
+// racial bonus is already folded in.
+type abilities struct {
+	Strength     score `json:"strength"`
+	Dexterity    score `json:"dexterity"`
+	Constitution score `json:"constitution"`
+	Intelligence score `json:"intelligence"`
+	Wisdom       score `json:"wisdom"`
+	Charisma     score `json:"charisma"`
+}
+
+type score struct {
+	Score int `json:"score"`
+}
+
+// skillTool is one row of the skills-and-tools box.
+//
+// Modifier is the *proficiency contribution*, not the total: at proficiency
+// bonus 2 a proficient skill reads 2 and one with Expertise reads 4. Reading
+// it as a total produces incoherent residuals against the ability modifiers,
+// which is how the reading was established.
+type skillTool struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Modifier int    `json:"modifier"`
+}
+
+type value struct {
+	Base    int `json:"base"`
+	Current int `json:"current"`
+}
+
+type hitPoints struct {
+	Max     int `json:"max"`
+	Current int `json:"current"`
+}
+
+type classLevel struct {
+	ClassName string `json:"className"`
+	Subclass  string `json:"subclass"`
+	Levels    int    `json:"levels"`
+	IsPrimary bool   `json:"isPrimaryClass"`
+}
+
+type item struct {
+	Name  string `json:"name"`
+	Type  string `json:"type"`
+	Count int    `json:"count"`
+}
+
+type named struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type cond struct {
+	Name   string `json:"name"`
+	Active bool   `json:"active"`
+}
+
+type currency struct {
+	CP int `json:"cp"`
+	SP int `json:"sp"`
+	EP int `json:"ep"`
+	GP int `json:"gp"`
+	PP int `json:"pp"`
+}
+
+type hitDice struct {
+	Used  int `json:"used"`
+	Total int `json:"total"`
+}
+
+type deathSaves struct {
+	Deaths []bool `json:"deaths"`
+	Saves  []bool `json:"saves"`
+}
+
+type action struct {
+	Name       string `json:"name"`
+	ActionType string `json:"actionType"`
+
+	// AutoGenerated is set when HexSheet derived the action from a piece of
+	// equipment. Those are not imported: easydnd derives its own, and copying
+	// them in would produce two of each the moment it starts.
+	AutoGenerated string `json:"autoGeneratedFromEquipment"`
+}

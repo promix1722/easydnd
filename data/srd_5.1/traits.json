@@ -1,0 +1,712 @@
+[
+  {
+    "slug": "artificers-lore",
+    "subraces": [
+      "rock-gnome"
+    ]
+  },
+  {
+    "slug": "brave",
+    "races": [
+      "halfling"
+    ]
+  },
+  {
+    "slug": "breath-weapon",
+    "races": [
+      "dragonborn"
+    ]
+  },
+  {
+    "slug": "damage-resistance",
+    "races": [
+      "dragonborn"
+    ]
+  },
+  {
+    "slug": "darkvision",
+    "races": [
+      "dwarf",
+      "elf",
+      "gnome",
+      "half-elf",
+      "half-orc",
+      "tiefling"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry",
+    "races": [
+      "dragonborn"
+    ],
+    "subtraitOptions": {
+      "prompt": "draconic-ancestry/subtrait/0",
+      "choose": 1,
+      "kind": "trait",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-black",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-blue",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-brass",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-bronze",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-copper",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-gold",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-green",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-red",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-silver",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "trait:draconic-ancestry-white",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "draconic-ancestry-black",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-black/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "acid",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "acid"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry-blue",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-blue/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "lightning",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "lightning"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry-brass",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-brass/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "fire",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "fire"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry-bronze",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-bronze/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "lightning",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "lightning"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry-copper",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-copper/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "acid",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "acid"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry-gold",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-gold/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "fire",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "fire"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry-green",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-green/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "poison",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "poison"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry-red",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-red/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "fire",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "fire"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry-silver",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-silver/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "cold",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "cold"
+    ]
+  },
+  {
+    "slug": "draconic-ancestry-white",
+    "races": [
+      "dragonborn"
+    ],
+    "breathWeapon": {
+      "prompt": "draconic-ancestry-white/breath-weapon/0",
+      "choose": 1,
+      "kind": "damage",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "damage",
+            "dice": "2d6",
+            "damageType": "cold",
+            "key": "breath-weapon"
+          }
+        ]
+      }
+    },
+    "damageResistance": [
+      "cold"
+    ]
+  },
+  {
+    "slug": "dwarven-combat-training",
+    "races": [
+      "dwarf"
+    ],
+    "proficiencies": [
+      "battleaxes",
+      "handaxes",
+      "light-hammers",
+      "warhammers"
+    ]
+  },
+  {
+    "slug": "dwarven-resilience",
+    "races": [
+      "dwarf"
+    ]
+  },
+  {
+    "slug": "dwarven-toughness",
+    "subraces": [
+      "hill-dwarf"
+    ]
+  },
+  {
+    "slug": "elf-weapon-training",
+    "subraces": [
+      "high-elf"
+    ],
+    "proficiencies": [
+      "longswords",
+      "shortswords",
+      "shortbows",
+      "longbows"
+    ]
+  },
+  {
+    "slug": "extra-language",
+    "subraces": [
+      "high-elf"
+    ]
+  },
+  {
+    "slug": "fey-ancestry",
+    "races": [
+      "elf",
+      "half-elf"
+    ]
+  },
+  {
+    "slug": "gnome-cunning",
+    "races": [
+      "gnome"
+    ]
+  },
+  {
+    "slug": "halfling-nimbleness",
+    "races": [
+      "halfling"
+    ]
+  },
+  {
+    "slug": "hellish-resistance",
+    "races": [
+      "tiefling"
+    ]
+  },
+  {
+    "slug": "high-elf-cantrip",
+    "subraces": [
+      "high-elf"
+    ],
+    "spellOptions": {
+      "prompt": "high-elf-cantrip/spell/0",
+      "choose": 1,
+      "kind": "spell",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "spell:light",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:mage-hand",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:mending",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:message",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:minor-illusion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:acid-splash",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:prestidigitation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:ray-of-frost",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:shocking-grasp",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:true-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:chill-touch",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:dancing-lights",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:fire-bolt",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "spell:poison-spray",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "infernal-legacy",
+    "races": [
+      "tiefling"
+    ]
+  },
+  {
+    "slug": "keen-senses",
+    "races": [
+      "elf"
+    ],
+    "proficiencies": [
+      "skill-perception"
+    ]
+  },
+  {
+    "slug": "lucky",
+    "races": [
+      "halfling"
+    ]
+  },
+  {
+    "slug": "menacing",
+    "races": [
+      "half-orc"
+    ],
+    "proficiencies": [
+      "skill-intimidation"
+    ]
+  },
+  {
+    "slug": "naturally-stealthy",
+    "subraces": [
+      "lightfoot-halfling"
+    ]
+  },
+  {
+    "slug": "relentless-endurance",
+    "races": [
+      "half-orc"
+    ]
+  },
+  {
+    "slug": "savage-attacks",
+    "races": [
+      "half-orc"
+    ]
+  },
+  {
+    "slug": "skill-versatility",
+    "races": [
+      "half-elf"
+    ],
+    "proficiencyOptions": {
+      "prompt": "skill-versatility/proficiency/0",
+      "choose": 2,
+      "kind": "proficiency",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-acrobatics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-animal-handling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-arcana",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-athletics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-deception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-history",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-insight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-intimidation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-investigation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-medicine",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-nature",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-perception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-performance",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-persuasion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-religion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-sleight-of-hand",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-stealth",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-survival",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "stonecunning",
+    "races": [
+      "dwarf"
+    ]
+  },
+  {
+    "slug": "tinker",
+    "subraces": [
+      "rock-gnome"
+    ],
+    "proficiencies": [
+      "tinkers-tools"
+    ]
+  },
+  {
+    "slug": "tool-proficiency",
+    "races": [
+      "dwarf"
+    ],
+    "proficiencyOptions": {
+      "prompt": "tool-proficiency/proficiency/0",
+      "choose": 1,
+      "kind": "proficiency",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "proficiency:smiths-tools",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:brewers-supplies",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:masons-tools",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "trance",
+    "races": [
+      "elf"
+    ]
+  }
+]

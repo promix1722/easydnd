@@ -1,0 +1,423 @@
+[
+  {
+    "slug": "dragonborn",
+    "speed": 30,
+    "size": "medium",
+    "abilityBonuses": [
+      {
+        "ability": "str",
+        "bonus": 2
+      },
+      {
+        "ability": "cha",
+        "bonus": 1
+      }
+    ],
+    "languages": [
+      "common",
+      "draconic"
+    ],
+    "traits": [
+      "draconic-ancestry",
+      "breath-weapon",
+      "damage-resistance"
+    ]
+  },
+  {
+    "slug": "dwarf",
+    "speed": 25,
+    "size": "medium",
+    "abilityBonuses": [
+      {
+        "ability": "con",
+        "bonus": 2
+      }
+    ],
+    "languages": [
+      "common",
+      "dwarvish"
+    ],
+    "traits": [
+      "darkvision",
+      "dwarven-resilience",
+      "stonecunning",
+      "dwarven-combat-training",
+      "tool-proficiency"
+    ],
+    "subraces": [
+      "hill-dwarf"
+    ]
+  },
+  {
+    "slug": "elf",
+    "speed": 30,
+    "size": "medium",
+    "abilityBonuses": [
+      {
+        "ability": "dex",
+        "bonus": 2
+      }
+    ],
+    "languages": [
+      "common",
+      "elvish"
+    ],
+    "traits": [
+      "darkvision",
+      "fey-ancestry",
+      "trance",
+      "keen-senses"
+    ],
+    "subraces": [
+      "high-elf"
+    ]
+  },
+  {
+    "slug": "gnome",
+    "speed": 25,
+    "size": "small",
+    "abilityBonuses": [
+      {
+        "ability": "int",
+        "bonus": 2
+      }
+    ],
+    "languages": [
+      "common",
+      "gnomish"
+    ],
+    "traits": [
+      "darkvision",
+      "gnome-cunning"
+    ],
+    "subraces": [
+      "rock-gnome"
+    ]
+  },
+  {
+    "slug": "half-elf",
+    "speed": 30,
+    "size": "medium",
+    "abilityBonuses": [
+      {
+        "ability": "cha",
+        "bonus": 2
+      }
+    ],
+    "abilityBonusOptions": {
+      "prompt": "half-elf/ability-bonus/0",
+      "choose": 2,
+      "kind": "ability-bonus",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ability-bonus",
+            "ability": "str",
+            "bonus": 1
+          },
+          {
+            "kind": "ability-bonus",
+            "ability": "dex",
+            "bonus": 1
+          },
+          {
+            "kind": "ability-bonus",
+            "ability": "con",
+            "bonus": 1
+          },
+          {
+            "kind": "ability-bonus",
+            "ability": "int",
+            "bonus": 1
+          },
+          {
+            "kind": "ability-bonus",
+            "ability": "wis",
+            "bonus": 1
+          }
+        ]
+      }
+    },
+    "languages": [
+      "common",
+      "elvish"
+    ],
+    "languageOptions": {
+      "prompt": "half-elf/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "language:dwarvish",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:giant",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:gnomish",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:goblin",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:halfling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:orc",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:abyssal",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:celestial",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:draconic",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:deep-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:infernal",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:primordial",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:sylvan",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:undercommon",
+            "count": 1
+          }
+        ]
+      }
+    },
+    "traits": [
+      "darkvision",
+      "fey-ancestry",
+      "skill-versatility"
+    ]
+  },
+  {
+    "slug": "half-orc",
+    "speed": 30,
+    "size": "medium",
+    "abilityBonuses": [
+      {
+        "ability": "str",
+        "bonus": 2
+      },
+      {
+        "ability": "con",
+        "bonus": 1
+      }
+    ],
+    "languages": [
+      "common",
+      "orc"
+    ],
+    "traits": [
+      "darkvision",
+      "savage-attacks",
+      "relentless-endurance",
+      "menacing"
+    ]
+  },
+  {
+    "slug": "halfling",
+    "speed": 25,
+    "size": "small",
+    "abilityBonuses": [
+      {
+        "ability": "dex",
+        "bonus": 2
+      }
+    ],
+    "languages": [
+      "common",
+      "halfling"
+    ],
+    "traits": [
+      "brave",
+      "halfling-nimbleness",
+      "lucky"
+    ],
+    "subraces": [
+      "lightfoot-halfling"
+    ]
+  },
+  {
+    "slug": "human",
+    "speed": 30,
+    "size": "medium",
+    "abilityBonuses": [
+      {
+        "ability": "str",
+        "bonus": 1
+      },
+      {
+        "ability": "dex",
+        "bonus": 1
+      },
+      {
+        "ability": "con",
+        "bonus": 1
+      },
+      {
+        "ability": "int",
+        "bonus": 1
+      },
+      {
+        "ability": "wis",
+        "bonus": 1
+      },
+      {
+        "ability": "cha",
+        "bonus": 1
+      }
+    ],
+    "languages": [
+      "common"
+    ],
+    "languageOptions": {
+      "prompt": "human/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "language:dwarvish",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:elvish",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:giant",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:gnomish",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:goblin",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:halfling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:orc",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:abyssal",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:celestial",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:draconic",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:deep-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:infernal",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:primordial",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:sylvan",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:undercommon",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "tiefling",
+    "speed": 30,
+    "size": "medium",
+    "abilityBonuses": [
+      {
+        "ability": "int",
+        "bonus": 1
+      },
+      {
+        "ability": "cha",
+        "bonus": 2
+      }
+    ],
+    "languages": [
+      "common",
+      "infernal"
+    ],
+    "traits": [
+      "darkvision",
+      "hellish-resistance",
+      "infernal-legacy"
+    ]
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "slug": "blinded"
+  },
+  {
+    "slug": "charmed"
+  },
+  {
+    "slug": "deafened"
+  },
+  {
+    "slug": "exhaustion"
+  },
+  {
+    "slug": "frightened"
+  },
+  {
+    "slug": "grappled"
+  },
+  {
+    "slug": "incapacitated"
+  },
+  {
+    "slug": "invisible"
+  },
+  {
+    "slug": "paralyzed"
+  },
+  {
+    "slug": "petrified"
+  },
+  {
+    "slug": "poisoned"
+  },
+  {
+    "slug": "prone"
+  },
+  {
+    "slug": "restrained"
+  },
+  {
+    "slug": "stunned"
+  },
+  {
+    "slug": "unconscious"
+  }
+]

@@ -1,0 +1,9 @@
+<!-- Same d20 mark as public/icons/*.png; regenerate those with `npm run icons`. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#99051d"/>
+  <g fill="none" stroke="#fff6e8" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M32 10 51.05 21 51.05 43 32 54 12.95 43 12.95 21Z"/>
+    <path d="M32 20.56 41.91 37.72 22.09 37.72Z"/>
+    <path d="M32 10 32 20.56M51.05 43 41.91 37.72M12.95 43 22.09 37.72"/>
+  </g>
+</svg>

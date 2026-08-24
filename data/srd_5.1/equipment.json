@@ -1,0 +1,3458 @@
+[
+  {
+    "slug": "abacus",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "acid-vial",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "alchemists-fire-flask",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "alchemists-supplies",
+    "category": "tools",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 8,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "alms-box",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 0,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "amulet",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "holy-symbols"
+    }
+  },
+  {
+    "slug": "animal-feed-1-day",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 5,
+      "unit": "cp"
+    },
+    "weight": 10,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "antitoxin-vial",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "arrow",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "ammunition",
+      "quantity": 20
+    }
+  },
+  {
+    "slug": "backpack",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "bagpipes",
+    "category": "tools",
+    "cost": {
+      "amount": 30,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "ball-bearings-bag-of-1000",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "barding-breastplate",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 1600,
+      "unit": "gp"
+    },
+    "weight": 40,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-chain-mail",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 300,
+      "unit": "gp"
+    },
+    "weight": 110,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-chain-shirt",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 200,
+      "unit": "gp"
+    },
+    "weight": 40,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-half-plate",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 3000,
+      "unit": "gp"
+    },
+    "weight": 80,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-hide",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 40,
+      "unit": "gp"
+    },
+    "weight": 24,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-leather",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 40,
+      "unit": "gp"
+    },
+    "weight": 20,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-padded",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 20,
+      "unit": "gp"
+    },
+    "weight": 16,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-plate",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 6000,
+      "unit": "gp"
+    },
+    "weight": 130,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-ring-mail",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 12,
+      "unit": "gp"
+    },
+    "weight": 80,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-scale-mail",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 200,
+      "unit": "gp"
+    },
+    "weight": 90,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-splint",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 800,
+      "unit": "gp"
+    },
+    "weight": 120,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barding-studded-leather",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 180,
+      "unit": "gp"
+    },
+    "weight": 26,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "barrel",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 70,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "basket",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 4,
+      "unit": "sp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "battleaxe",
+    "category": "weapon",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d8",
+      "damageType": "slashing",
+      "twoHandedDice": "1d10",
+      "twoHandedDamageType": "slashing",
+      "normalRange": 5,
+      "properties": [
+        "versatile"
+      ]
+    }
+  },
+  {
+    "slug": "bedroll",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 7,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "bell",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "bit-and-bridle",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "blanket",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "weight": 3,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "block-and-tackle",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "block-of-incense",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 0,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "blowgun",
+    "category": "weapon",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "weapon": {
+      "category": "martial",
+      "range": "ranged",
+      "dice": "1",
+      "damageType": "piercing",
+      "normalRange": 25,
+      "longRange": 100,
+      "properties": [
+        "ammunition",
+        "loading"
+      ]
+    }
+  },
+  {
+    "slug": "blowgun-needle",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "ammunition",
+      "quantity": 50
+    }
+  },
+  {
+    "slug": "book",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "bottle-glass",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "breastplate",
+    "category": "armor",
+    "cost": {
+      "amount": 400,
+      "unit": "gp"
+    },
+    "weight": 20,
+    "armor": {
+      "category": "medium",
+      "baseAC": 14,
+      "addsDexBonus": true,
+      "maxDexBonus": 2
+    }
+  },
+  {
+    "slug": "brewers-supplies",
+    "category": "tools",
+    "cost": {
+      "amount": 20,
+      "unit": "gp"
+    },
+    "weight": 9,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "bucket",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "cp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "burglars-pack",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 16,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "equipment-packs",
+      "contents": [
+        {
+          "item": "backpack",
+          "count": 1
+        },
+        {
+          "item": "ball-bearings-bag-of-1000",
+          "count": 1
+        },
+        {
+          "item": "string-10-feet",
+          "count": 1
+        },
+        {
+          "item": "bell",
+          "count": 1
+        },
+        {
+          "item": "candle",
+          "count": 5
+        },
+        {
+          "item": "crowbar",
+          "count": 1
+        },
+        {
+          "item": "hammer",
+          "count": 1
+        },
+        {
+          "item": "piton",
+          "count": 10
+        },
+        {
+          "item": "lantern-hooded",
+          "count": 1
+        },
+        {
+          "item": "oil-flask",
+          "count": 2
+        },
+        {
+          "item": "rations-1-day",
+          "count": 5
+        },
+        {
+          "item": "tinderbox",
+          "count": 1
+        },
+        {
+          "item": "waterskin",
+          "count": 1
+        },
+        {
+          "item": "rope-hempen-50-feet",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "slug": "calligraphers-supplies",
+    "category": "tools",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "caltrops",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "cp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "camel",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "mounts-and-other-animals",
+      "speed": 50
+    }
+  },
+  {
+    "slug": "candle",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "carpenters-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 8,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "carriage",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 100,
+      "unit": "gp"
+    },
+    "weight": 600,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "cart",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 15,
+      "unit": "gp"
+    },
+    "weight": 200,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "cartographers-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 15,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "case-crossbow-bolt",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "case-map-or-scroll",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "censer",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 0,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "chain-10-feet",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 10,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "chain-mail",
+    "category": "armor",
+    "cost": {
+      "amount": 75,
+      "unit": "gp"
+    },
+    "weight": 55,
+    "armor": {
+      "category": "heavy",
+      "baseAC": 16,
+      "addsDexBonus": false,
+      "strengthMinimum": 13,
+      "stealthDisadvantage": true
+    }
+  },
+  {
+    "slug": "chain-shirt",
+    "category": "armor",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 20,
+    "armor": {
+      "category": "medium",
+      "baseAC": 13,
+      "addsDexBonus": true,
+      "maxDexBonus": 2
+    }
+  },
+  {
+    "slug": "chalk-1-piece",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "chariot",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 250,
+      "unit": "gp"
+    },
+    "weight": 100,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "chest",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 25,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "climbers-kit",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 12,
+    "gear": {
+      "gearCategory": "kits"
+    }
+  },
+  {
+    "slug": "clothes-common",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "weight": 3,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "clothes-costume",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "clothes-fine",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 15,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "clothes-travelers",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "club",
+    "category": "weapon",
+    "cost": {
+      "amount": 1,
+      "unit": "sp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d4",
+      "damageType": "bludgeoning",
+      "normalRange": 5,
+      "properties": [
+        "light",
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "cobblers-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "component-pouch",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "cooks-utensils",
+    "category": "tools",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 8,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "crossbow-bolt",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 1.5,
+    "gear": {
+      "gearCategory": "ammunition",
+      "quantity": 20
+    }
+  },
+  {
+    "slug": "crossbow-hand",
+    "category": "weapon",
+    "cost": {
+      "amount": 75,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "weapon": {
+      "category": "martial",
+      "range": "ranged",
+      "dice": "1d6",
+      "damageType": "piercing",
+      "normalRange": 30,
+      "longRange": 120,
+      "properties": [
+        "ammunition",
+        "light",
+        "loading"
+      ]
+    }
+  },
+  {
+    "slug": "crossbow-heavy",
+    "category": "weapon",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 18,
+    "weapon": {
+      "category": "martial",
+      "range": "ranged",
+      "dice": "1d10",
+      "damageType": "piercing",
+      "normalRange": 100,
+      "longRange": 400,
+      "properties": [
+        "ammunition",
+        "heavy",
+        "loading",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "crossbow-light",
+    "category": "weapon",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "weapon": {
+      "category": "simple",
+      "range": "ranged",
+      "dice": "1d8",
+      "damageType": "piercing",
+      "normalRange": 80,
+      "longRange": 320,
+      "properties": [
+        "ammunition",
+        "loading",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "crowbar",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "crystal",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "arcane-foci"
+    }
+  },
+  {
+    "slug": "dagger",
+    "category": "weapon",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d4",
+      "damageType": "piercing",
+      "normalRange": 5,
+      "throwNormal": 20,
+      "throwLong": 60,
+      "properties": [
+        "finesse",
+        "light",
+        "thrown",
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "dart",
+    "category": "weapon",
+    "cost": {
+      "amount": 5,
+      "unit": "cp"
+    },
+    "weight": 0.25,
+    "weapon": {
+      "category": "simple",
+      "range": "ranged",
+      "dice": "1d4",
+      "damageType": "piercing",
+      "normalRange": 20,
+      "longRange": 60,
+      "throwNormal": 20,
+      "throwLong": 60,
+      "properties": [
+        "finesse",
+        "thrown"
+      ]
+    }
+  },
+  {
+    "slug": "dice-set",
+    "category": "tools",
+    "cost": {
+      "amount": 1,
+      "unit": "sp"
+    },
+    "tool": {
+      "toolCategory": "gaming-sets"
+    }
+  },
+  {
+    "slug": "diplomats-pack",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 39,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "equipment-packs",
+      "contents": [
+        {
+          "item": "chest",
+          "count": 1
+        },
+        {
+          "item": "case-map-or-scroll",
+          "count": 2
+        },
+        {
+          "item": "clothes-fine",
+          "count": 1
+        },
+        {
+          "item": "ink-1-ounce-bottle",
+          "count": 1
+        },
+        {
+          "item": "ink-pen",
+          "count": 1
+        },
+        {
+          "item": "lamp",
+          "count": 1
+        },
+        {
+          "item": "oil-flask",
+          "count": 2
+        },
+        {
+          "item": "paper-one-sheet",
+          "count": 5
+        },
+        {
+          "item": "perfume-vial",
+          "count": 1
+        },
+        {
+          "item": "sealing-wax",
+          "count": 1
+        },
+        {
+          "item": "soap",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "slug": "disguise-kit",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "gear": {
+      "gearCategory": "kits"
+    }
+  },
+  {
+    "slug": "donkey",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 8,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "mounts-and-other-animals",
+      "speed": 40
+    }
+  },
+  {
+    "slug": "drum",
+    "category": "tools",
+    "cost": {
+      "amount": 6,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "dulcimer",
+    "category": "tools",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 10,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "dungeoneers-pack",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 12,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "equipment-packs",
+      "contents": [
+        {
+          "item": "backpack",
+          "count": 1
+        },
+        {
+          "item": "crowbar",
+          "count": 1
+        },
+        {
+          "item": "hammer",
+          "count": 1
+        },
+        {
+          "item": "piton",
+          "count": 10
+        },
+        {
+          "item": "torch",
+          "count": 10
+        },
+        {
+          "item": "tinderbox",
+          "count": 1
+        },
+        {
+          "item": "rations-1-day",
+          "count": 10
+        },
+        {
+          "item": "waterskin",
+          "count": 1
+        },
+        {
+          "item": "rope-hempen-50-feet",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "slug": "elephant",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 200,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "mounts-and-other-animals",
+      "speed": 40
+    }
+  },
+  {
+    "slug": "emblem",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "holy-symbols"
+    }
+  },
+  {
+    "slug": "entertainers-pack",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 40,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "equipment-packs",
+      "contents": [
+        {
+          "item": "backpack",
+          "count": 1
+        },
+        {
+          "item": "bedroll",
+          "count": 1
+        },
+        {
+          "item": "clothes-costume",
+          "count": 2
+        },
+        {
+          "item": "candle",
+          "count": 5
+        },
+        {
+          "item": "rations-1-day",
+          "count": 5
+        },
+        {
+          "item": "waterskin",
+          "count": 1
+        },
+        {
+          "item": "disguise-kit",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "slug": "explorers-pack",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "equipment-packs",
+      "contents": [
+        {
+          "item": "backpack",
+          "count": 1
+        },
+        {
+          "item": "bedroll",
+          "count": 1
+        },
+        {
+          "item": "mess-kit",
+          "count": 1
+        },
+        {
+          "item": "tinderbox",
+          "count": 1
+        },
+        {
+          "item": "torch",
+          "count": 10
+        },
+        {
+          "item": "rations-1-day",
+          "count": 10
+        },
+        {
+          "item": "waterskin",
+          "count": 1
+        },
+        {
+          "item": "rope-hempen-50-feet",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "slug": "fishing-tackle",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "flail",
+    "category": "weapon",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d8",
+      "damageType": "bludgeoning",
+      "normalRange": 5
+    }
+  },
+  {
+    "slug": "flask-or-tankard",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "cp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "flute",
+    "category": "tools",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "forgery-kit",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 15,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "gear": {
+      "gearCategory": "kits"
+    }
+  },
+  {
+    "slug": "galley",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 30000,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "waterborne-vehicles",
+      "speed": 4
+    }
+  },
+  {
+    "slug": "glaive",
+    "category": "weapon",
+    "cost": {
+      "amount": 20,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d10",
+      "damageType": "slashing",
+      "normalRange": 5,
+      "properties": [
+        "heavy",
+        "reach",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "glassblowers-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 30,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "grappling-hook",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "greataxe",
+    "category": "weapon",
+    "cost": {
+      "amount": 30,
+      "unit": "gp"
+    },
+    "weight": 7,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d12",
+      "damageType": "slashing",
+      "normalRange": 5,
+      "properties": [
+        "heavy",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "greatclub",
+    "category": "weapon",
+    "cost": {
+      "amount": 2,
+      "unit": "sp"
+    },
+    "weight": 10,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d8",
+      "damageType": "bludgeoning",
+      "normalRange": 5,
+      "properties": [
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "greatsword",
+    "category": "weapon",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "2d6",
+      "damageType": "slashing",
+      "normalRange": 5,
+      "properties": [
+        "heavy",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "halberd",
+    "category": "weapon",
+    "cost": {
+      "amount": 20,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d10",
+      "damageType": "slashing",
+      "normalRange": 5,
+      "properties": [
+        "heavy",
+        "reach",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "half-plate-armor",
+    "category": "armor",
+    "cost": {
+      "amount": 750,
+      "unit": "gp"
+    },
+    "weight": 40,
+    "armor": {
+      "category": "medium",
+      "baseAC": 15,
+      "addsDexBonus": true,
+      "maxDexBonus": 2,
+      "stealthDisadvantage": true
+    }
+  },
+  {
+    "slug": "hammer",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "hammer-sledge",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 10,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "handaxe",
+    "category": "weapon",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d6",
+      "damageType": "slashing",
+      "normalRange": 5,
+      "throwNormal": 20,
+      "throwLong": 60,
+      "properties": [
+        "light",
+        "thrown",
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "healers-kit",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "gear": {
+      "gearCategory": "kits"
+    }
+  },
+  {
+    "slug": "herbalism-kit",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "gear": {
+      "gearCategory": "kits"
+    }
+  },
+  {
+    "slug": "hide-armor",
+    "category": "armor",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 12,
+    "armor": {
+      "category": "medium",
+      "baseAC": 12,
+      "addsDexBonus": true,
+      "maxDexBonus": 2
+    }
+  },
+  {
+    "slug": "holy-water-flask",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "horn",
+    "category": "tools",
+    "cost": {
+      "amount": 3,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "horse-draft",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "mounts-and-other-animals",
+      "speed": 40
+    }
+  },
+  {
+    "slug": "horse-riding",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 75,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "mounts-and-other-animals",
+      "speed": 60
+    }
+  },
+  {
+    "slug": "hourglass",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "hunting-trap",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 25,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "ink-1-ounce-bottle",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "ink-pen",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "javelin",
+    "category": "weapon",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d6",
+      "damageType": "piercing",
+      "normalRange": 5,
+      "throwNormal": 30,
+      "throwLong": 120,
+      "properties": [
+        "thrown",
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "jewelers-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "jug-or-pitcher",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "cp"
+    },
+    "weight": 4,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "keelboat",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 3000,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "waterborne-vehicles",
+      "speed": 1
+    }
+  },
+  {
+    "slug": "ladder-10-foot",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "sp"
+    },
+    "weight": 25,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "lamp",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "lance",
+    "category": "weapon",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d12",
+      "damageType": "piercing",
+      "normalRange": 5,
+      "properties": [
+        "reach",
+        "special"
+      ]
+    }
+  },
+  {
+    "slug": "lantern-bullseye",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "lantern-hooded",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "leather-armor",
+    "category": "armor",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 10,
+    "armor": {
+      "category": "light",
+      "baseAC": 11,
+      "addsDexBonus": true
+    }
+  },
+  {
+    "slug": "leatherworkers-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "light-hammer",
+    "category": "weapon",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d4",
+      "damageType": "bludgeoning",
+      "normalRange": 5,
+      "throwNormal": 20,
+      "throwLong": 60,
+      "properties": [
+        "light",
+        "thrown",
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "little-bag-of-sand",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 0,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "lock",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "longbow",
+    "category": "weapon",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "martial",
+      "range": "ranged",
+      "dice": "1d8",
+      "damageType": "piercing",
+      "normalRange": 150,
+      "longRange": 600,
+      "properties": [
+        "ammunition",
+        "heavy",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "longship",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 10000,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "waterborne-vehicles",
+      "speed": 3
+    }
+  },
+  {
+    "slug": "longsword",
+    "category": "weapon",
+    "cost": {
+      "amount": 15,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d8",
+      "damageType": "slashing",
+      "twoHandedDice": "1d10",
+      "twoHandedDamageType": "slashing",
+      "normalRange": 5,
+      "properties": [
+        "versatile"
+      ]
+    }
+  },
+  {
+    "slug": "lute",
+    "category": "tools",
+    "cost": {
+      "amount": 35,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "lyre",
+    "category": "tools",
+    "cost": {
+      "amount": 30,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "mace",
+    "category": "weapon",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d6",
+      "damageType": "bludgeoning",
+      "normalRange": 5,
+      "properties": [
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "magnifying-glass",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 100,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "manacles",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "masons-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 8,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "mastiff",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "mounts-and-other-animals",
+      "speed": 40
+    }
+  },
+  {
+    "slug": "maul",
+    "category": "weapon",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 10,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "2d6",
+      "damageType": "bludgeoning",
+      "normalRange": 5,
+      "properties": [
+        "heavy",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "mess-kit",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "sp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "kits"
+    }
+  },
+  {
+    "slug": "mirror-steel",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 0.5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "morningstar",
+    "category": "weapon",
+    "cost": {
+      "amount": 15,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d8",
+      "damageType": "piercing",
+      "normalRange": 5
+    }
+  },
+  {
+    "slug": "mule",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 8,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "mounts-and-other-animals",
+      "speed": 40
+    }
+  },
+  {
+    "slug": "navigators-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "tool": {
+      "toolCategory": "other-tools"
+    }
+  },
+  {
+    "slug": "net",
+    "category": "weapon",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "weapon": {
+      "category": "martial",
+      "range": "ranged",
+      "normalRange": 5,
+      "longRange": 15,
+      "throwNormal": 5,
+      "throwLong": 15,
+      "properties": [
+        "thrown",
+        "special"
+      ]
+    }
+  },
+  {
+    "slug": "oil-flask",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "sp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "orb",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 20,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "gear": {
+      "gearCategory": "arcane-foci"
+    }
+  },
+  {
+    "slug": "padded-armor",
+    "category": "armor",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 8,
+    "armor": {
+      "category": "light",
+      "baseAC": 11,
+      "addsDexBonus": true,
+      "stealthDisadvantage": true
+    }
+  },
+  {
+    "slug": "painters-supplies",
+    "category": "tools",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "pan-flute",
+    "category": "tools",
+    "cost": {
+      "amount": 12,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "paper-one-sheet",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "sp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "parchment-one-sheet",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "sp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "perfume-vial",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "pick-miners",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 10,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "pike",
+    "category": "weapon",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 18,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d10",
+      "damageType": "piercing",
+      "normalRange": 5,
+      "properties": [
+        "heavy",
+        "reach",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "piton",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "cp"
+    },
+    "weight": 0.25,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "plate-armor",
+    "category": "armor",
+    "cost": {
+      "amount": 1500,
+      "unit": "gp"
+    },
+    "weight": 65,
+    "armor": {
+      "category": "heavy",
+      "baseAC": 18,
+      "addsDexBonus": false,
+      "strengthMinimum": 15,
+      "stealthDisadvantage": true
+    }
+  },
+  {
+    "slug": "playing-card-set",
+    "category": "tools",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "tool": {
+      "toolCategory": "gaming-sets"
+    }
+  },
+  {
+    "slug": "poison-basic-vial",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 100,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "poisoners-kit",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "kits"
+    }
+  },
+  {
+    "slug": "pole-10-foot",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "cp"
+    },
+    "weight": 7,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "pony",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 30,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "mounts-and-other-animals",
+      "speed": 40
+    }
+  },
+  {
+    "slug": "pot-iron",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 10,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "potters-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "pouch",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "priests-pack",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 19,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "equipment-packs",
+      "contents": [
+        {
+          "item": "backpack",
+          "count": 1
+        },
+        {
+          "item": "blanket",
+          "count": 1
+        },
+        {
+          "item": "candle",
+          "count": 10
+        },
+        {
+          "item": "tinderbox",
+          "count": 1
+        },
+        {
+          "item": "rations-1-day",
+          "count": 2
+        },
+        {
+          "item": "waterskin",
+          "count": 1
+        },
+        {
+          "item": "alms-box",
+          "count": 1
+        },
+        {
+          "item": "block-of-incense",
+          "count": 2
+        },
+        {
+          "item": "censer",
+          "count": 1
+        },
+        {
+          "item": "vestments",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "slug": "quarterstaff",
+    "category": "weapon",
+    "cost": {
+      "amount": 2,
+      "unit": "sp"
+    },
+    "weight": 4,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d6",
+      "damageType": "bludgeoning",
+      "twoHandedDice": "1d8",
+      "twoHandedDamageType": "bludgeoning",
+      "normalRange": 5,
+      "properties": [
+        "versatile",
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "quiver",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "ram-portable",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 4,
+      "unit": "gp"
+    },
+    "weight": 35,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "rapier",
+    "category": "weapon",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d8",
+      "damageType": "piercing",
+      "normalRange": 5,
+      "properties": [
+        "finesse"
+      ]
+    }
+  },
+  {
+    "slug": "rations-1-day",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "reliquary",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "holy-symbols"
+    }
+  },
+  {
+    "slug": "ring-mail",
+    "category": "armor",
+    "cost": {
+      "amount": 30,
+      "unit": "gp"
+    },
+    "weight": 40,
+    "armor": {
+      "category": "heavy",
+      "baseAC": 14,
+      "addsDexBonus": false,
+      "stealthDisadvantage": true
+    }
+  },
+  {
+    "slug": "robes",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "rod",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "gear": {
+      "gearCategory": "arcane-foci"
+    }
+  },
+  {
+    "slug": "rope-hempen-50-feet",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 10,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "rope-silk-50-feet",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "rowboat",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "waterborne-vehicles",
+      "speed": 1.5
+    }
+  },
+  {
+    "slug": "sack",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "cp"
+    },
+    "weight": 0.5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "saddle-exotic",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 60,
+      "unit": "gp"
+    },
+    "weight": 50,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "saddle-military",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 20,
+      "unit": "gp"
+    },
+    "weight": 30,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "saddle-pack",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 15,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "saddle-riding",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 25,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "saddlebags",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 4,
+      "unit": "gp"
+    },
+    "weight": 8,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "sailing-ship",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 10000,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "waterborne-vehicles",
+      "speed": 2
+    }
+  },
+  {
+    "slug": "scale-mail",
+    "category": "armor",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 45,
+    "armor": {
+      "category": "medium",
+      "baseAC": 14,
+      "addsDexBonus": true,
+      "maxDexBonus": 2,
+      "stealthDisadvantage": true
+    }
+  },
+  {
+    "slug": "scale-merchants",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "scholars-pack",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 40,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "equipment-packs",
+      "contents": [
+        {
+          "item": "backpack",
+          "count": 1
+        },
+        {
+          "item": "book",
+          "count": 1
+        },
+        {
+          "item": "ink-1-ounce-bottle",
+          "count": 1
+        },
+        {
+          "item": "ink-pen",
+          "count": 1
+        },
+        {
+          "item": "parchment-one-sheet",
+          "count": 10
+        },
+        {
+          "item": "little-bag-of-sand",
+          "count": 1
+        },
+        {
+          "item": "small-knife",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "slug": "scimitar",
+    "category": "weapon",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d6",
+      "damageType": "slashing",
+      "normalRange": 5,
+      "properties": [
+        "finesse",
+        "light"
+      ]
+    }
+  },
+  {
+    "slug": "sealing-wax",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "shawm",
+    "category": "tools",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "shield",
+    "category": "armor",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 6,
+    "armor": {
+      "category": "shield",
+      "baseAC": 2,
+      "addsDexBonus": false
+    }
+  },
+  {
+    "slug": "shortbow",
+    "category": "weapon",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "simple",
+      "range": "ranged",
+      "dice": "1d6",
+      "damageType": "piercing",
+      "normalRange": 80,
+      "longRange": 320,
+      "properties": [
+        "ammunition",
+        "two-handed"
+      ]
+    }
+  },
+  {
+    "slug": "shortsword",
+    "category": "weapon",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d6",
+      "damageType": "piercing",
+      "normalRange": 5,
+      "properties": [
+        "finesse",
+        "light",
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "shovel",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "sickle",
+    "category": "weapon",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d4",
+      "damageType": "slashing",
+      "normalRange": 5,
+      "properties": [
+        "light",
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "signal-whistle",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "signet-ring",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "sled",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 20,
+      "unit": "gp"
+    },
+    "weight": 300,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "sling",
+    "category": "weapon",
+    "cost": {
+      "amount": 1,
+      "unit": "sp"
+    },
+    "weapon": {
+      "category": "simple",
+      "range": "ranged",
+      "dice": "1d4",
+      "damageType": "bludgeoning",
+      "normalRange": 30,
+      "longRange": 120,
+      "properties": [
+        "ammunition"
+      ]
+    }
+  },
+  {
+    "slug": "sling-bullet",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 4,
+      "unit": "cp"
+    },
+    "weight": 1.5,
+    "gear": {
+      "gearCategory": "ammunition",
+      "quantity": 20
+    }
+  },
+  {
+    "slug": "small-knife",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 0,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "smiths-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 20,
+      "unit": "gp"
+    },
+    "weight": 8,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "soap",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "spear",
+    "category": "weapon",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "weapon": {
+      "category": "simple",
+      "range": "melee",
+      "dice": "1d6",
+      "damageType": "piercing",
+      "twoHandedDice": "1d8",
+      "twoHandedDamageType": "piercing",
+      "normalRange": 5,
+      "throwNormal": 20,
+      "throwLong": 60,
+      "properties": [
+        "thrown",
+        "versatile",
+        "monk"
+      ]
+    }
+  },
+  {
+    "slug": "spellbook",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "spike-iron",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "sp"
+    },
+    "weight": 5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "splint-armor",
+    "category": "armor",
+    "cost": {
+      "amount": 200,
+      "unit": "gp"
+    },
+    "weight": 60,
+    "armor": {
+      "category": "heavy",
+      "baseAC": 17,
+      "addsDexBonus": false,
+      "strengthMinimum": 15,
+      "stealthDisadvantage": true
+    }
+  },
+  {
+    "slug": "sprig-of-mistletoe",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "druidic-foci"
+    }
+  },
+  {
+    "slug": "spyglass",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1000,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "stabling-1-day",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "staff",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "gear": {
+      "gearCategory": "arcane-foci"
+    }
+  },
+  {
+    "slug": "string-10-feet",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 0,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "studded-leather-armor",
+    "category": "armor",
+    "cost": {
+      "amount": 45,
+      "unit": "gp"
+    },
+    "weight": 13,
+    "armor": {
+      "category": "light",
+      "baseAC": 12,
+      "addsDexBonus": true
+    }
+  },
+  {
+    "slug": "tent-two-person",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 20,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "thieves-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 25,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "tool": {
+      "toolCategory": "other-tools"
+    }
+  },
+  {
+    "slug": "tinderbox",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "sp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "tinkers-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 50,
+      "unit": "gp"
+    },
+    "weight": 10,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "torch",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "cp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "totem",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "druidic-foci"
+    }
+  },
+  {
+    "slug": "trident",
+    "category": "weapon",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d6",
+      "damageType": "piercing",
+      "twoHandedDice": "1d8",
+      "twoHandedDamageType": "piercing",
+      "normalRange": 5,
+      "throwNormal": 20,
+      "throwLong": 60,
+      "properties": [
+        "thrown",
+        "versatile"
+      ]
+    }
+  },
+  {
+    "slug": "vestments",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 0,
+      "unit": "cp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "vial",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "viol",
+    "category": "tools",
+    "cost": {
+      "amount": 30,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "tool": {
+      "toolCategory": "musical-instrument"
+    }
+  },
+  {
+    "slug": "wagon",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 35,
+      "unit": "gp"
+    },
+    "weight": 400,
+    "vehicle": {
+      "vehicleCategory": "tack-harness-and-drawn-vehicles"
+    }
+  },
+  {
+    "slug": "wand",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "arcane-foci"
+    }
+  },
+  {
+    "slug": "war-pick",
+    "category": "weapon",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d8",
+      "damageType": "piercing",
+      "normalRange": 5
+    }
+  },
+  {
+    "slug": "warhammer",
+    "category": "weapon",
+    "cost": {
+      "amount": 15,
+      "unit": "gp"
+    },
+    "weight": 2,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d8",
+      "damageType": "bludgeoning",
+      "twoHandedDice": "1d10",
+      "twoHandedDamageType": "bludgeoning",
+      "normalRange": 5,
+      "properties": [
+        "versatile"
+      ]
+    }
+  },
+  {
+    "slug": "warhorse",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 400,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "mounts-and-other-animals",
+      "speed": 60
+    }
+  },
+  {
+    "slug": "warship",
+    "category": "mounts-and-vehicles",
+    "cost": {
+      "amount": 25000,
+      "unit": "gp"
+    },
+    "vehicle": {
+      "vehicleCategory": "waterborne-vehicles",
+      "speed": 2.5
+    }
+  },
+  {
+    "slug": "waterskin",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 2,
+      "unit": "sp"
+    },
+    "weight": 5,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "weavers-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "whetstone",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 1,
+      "unit": "cp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "standard-gear"
+    }
+  },
+  {
+    "slug": "whip",
+    "category": "weapon",
+    "cost": {
+      "amount": 2,
+      "unit": "gp"
+    },
+    "weight": 3,
+    "weapon": {
+      "category": "martial",
+      "range": "melee",
+      "dice": "1d4",
+      "damageType": "slashing",
+      "normalRange": 5,
+      "properties": [
+        "finesse",
+        "reach"
+      ]
+    }
+  },
+  {
+    "slug": "woodcarvers-tools",
+    "category": "tools",
+    "cost": {
+      "amount": 1,
+      "unit": "gp"
+    },
+    "weight": 5,
+    "tool": {
+      "toolCategory": "artisans-tools"
+    }
+  },
+  {
+    "slug": "wooden-staff",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 5,
+      "unit": "gp"
+    },
+    "weight": 4,
+    "gear": {
+      "gearCategory": "druidic-foci"
+    }
+  },
+  {
+    "slug": "yew-wand",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 10,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "gear": {
+      "gearCategory": "druidic-foci"
+    }
+  }
+]

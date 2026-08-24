@@ -1,0 +1,48 @@
+[
+  {
+    "slug": "cha",
+    "skills": [
+      "deception",
+      "intimidation",
+      "performance",
+      "persuasion"
+    ]
+  },
+  {
+    "slug": "con"
+  },
+  {
+    "slug": "dex",
+    "skills": [
+      "acrobatics",
+      "sleight-of-hand",
+      "stealth"
+    ]
+  },
+  {
+    "slug": "int",
+    "skills": [
+      "arcana",
+      "history",
+      "investigation",
+      "nature",
+      "religion"
+    ]
+  },
+  {
+    "slug": "str",
+    "skills": [
+      "athletics"
+    ]
+  },
+  {
+    "slug": "wis",
+    "skills": [
+      "animal-handling",
+      "insight",
+      "medicine",
+      "perception",
+      "survival"
+    ]
+  }
+]

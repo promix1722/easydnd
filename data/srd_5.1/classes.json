@@ -1,0 +1,2632 @@
+[
+  {
+    "slug": "barbarian",
+    "hitDie": 12,
+    "savingThrows": [
+      "str",
+      "con"
+    ],
+    "proficiencies": [
+      "light-armor",
+      "medium-armor",
+      "shields",
+      "simple-weapons",
+      "martial-weapons",
+      "saving-throw-str",
+      "saving-throw-con"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "barbarian/proficiency/0",
+        "choose": 2,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-animal-handling",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-intimidation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-nature",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-perception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-survival",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "explorers-pack",
+        "count": 1
+      },
+      {
+        "item": "javelin",
+        "count": 4
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "barbarian/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:greataxe",
+              "count": 1
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "barbarian/starting-equipment/0/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "martial-melee-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "barbarian/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 2
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "barbarian/starting-equipment/1/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-weapons"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "subclasses": [
+      "berserker"
+    ],
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "str",
+        "minimumScore": 13
+      }
+    ],
+    "multiclassProficiencies": [
+      "shields",
+      "simple-weapons",
+      "martial-weapons"
+    ]
+  },
+  {
+    "slug": "bard",
+    "hitDie": 8,
+    "savingThrows": [
+      "dex",
+      "cha"
+    ],
+    "proficiencies": [
+      "light-armor",
+      "simple-weapons",
+      "longswords",
+      "rapiers",
+      "shortswords",
+      "hand-crossbows",
+      "saving-throw-dex",
+      "saving-throw-cha"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "bard/proficiency/0",
+        "choose": 3,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-acrobatics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-animal-handling",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-arcana",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-deception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-history",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-intimidation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-investigation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-medicine",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-nature",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-perception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-performance",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-persuasion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-religion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-sleight-of-hand",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-stealth",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-survival",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "bard/proficiency/1",
+        "choose": 3,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:bagpipes",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:drum",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:dulcimer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:flute",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:lute",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:lyre",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:horn",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:pan-flute",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:shawm",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:viol",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "leather-armor",
+        "count": 1
+      },
+      {
+        "item": "dagger",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "bard/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:rapier",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:longsword",
+              "count": 1
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "bard/starting-equipment/0/2",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "bard/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:diplomats-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:entertainers-pack",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "bard/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:lute",
+              "count": 1
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "bard/starting-equipment/2/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "musical-instruments"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "subclasses": [
+      "lore"
+    ],
+    "spellcastingLevel": 1,
+    "spellcastingAbility": "cha",
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "cha",
+        "minimumScore": 13
+      }
+    ],
+    "multiclassProficiencies": [
+      "light-armor"
+    ],
+    "multiclassOptions": [
+      {
+        "prompt": "bard/multiclass/0",
+        "choose": 1,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-acrobatics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-animal-handling",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-arcana",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-deception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-history",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-intimidation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-investigation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-medicine",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-nature",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-perception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-performance",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-persuasion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-religion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-sleight-of-hand",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-stealth",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-survival",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "bard/multiclass/1",
+        "choose": 1,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:bagpipes",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:drum",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:dulcimer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:flute",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:lute",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:lyre",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:horn",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:pan-flute",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:shawm",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:viol",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "slug": "cleric",
+    "hitDie": 8,
+    "savingThrows": [
+      "wis",
+      "cha"
+    ],
+    "proficiencies": [
+      "light-armor",
+      "medium-armor",
+      "shields",
+      "simple-weapons",
+      "saving-throw-wis",
+      "saving-throw-cha"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "cleric/proficiency/0",
+        "choose": 2,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-history",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-medicine",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-persuasion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-religion",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "shield",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "cleric/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:warhammer",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "cleric/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:scale-mail",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:leather-armor",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:chain-mail",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "cleric/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "bundle",
+              "items": [
+                {
+                  "kind": "ref",
+                  "ref": "item:crossbow-light",
+                  "count": 1
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:crossbow-bolt",
+                  "count": 20
+                }
+              ]
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "cleric/starting-equipment/2/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "cleric/starting-equipment/3",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:priests-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:explorers-pack",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "cleric/starting-equipment/4",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "equipment-category",
+          "category": "holy-symbols"
+        }
+      }
+    ],
+    "subclasses": [
+      "life"
+    ],
+    "spellcastingLevel": 1,
+    "spellcastingAbility": "wis",
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "wis",
+        "minimumScore": 13
+      }
+    ],
+    "multiclassProficiencies": [
+      "light-armor",
+      "medium-armor",
+      "shields"
+    ]
+  },
+  {
+    "slug": "druid",
+    "hitDie": 8,
+    "savingThrows": [
+      "int",
+      "wis"
+    ],
+    "proficiencies": [
+      "light-armor",
+      "medium-armor",
+      "shields",
+      "clubs",
+      "daggers",
+      "javelins",
+      "maces",
+      "quarterstaffs",
+      "sickles",
+      "spears",
+      "darts",
+      "slings",
+      "scimitars",
+      "herbalism-kit",
+      "saving-throw-int",
+      "saving-throw-wis"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "druid/proficiency/0",
+        "choose": 2,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-arcana",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-animal-handling",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-medicine",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-nature",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-perception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-religion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-survival",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "leather-armor",
+        "count": 1
+      },
+      {
+        "item": "explorers-pack",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "druid/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:shield",
+              "count": 1
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "druid/starting-equipment/0/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "druid/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:scimitar",
+              "count": 1
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "druid/starting-equipment/1/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-melee-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "druid/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "equipment-category",
+          "category": "druidic-foci"
+        }
+      }
+    ],
+    "subclasses": [
+      "land"
+    ],
+    "spellcastingLevel": 1,
+    "spellcastingAbility": "wis",
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "wis",
+        "minimumScore": 13
+      }
+    ],
+    "multiclassProficiencies": [
+      "light-armor",
+      "medium-armor",
+      "shields"
+    ]
+  },
+  {
+    "slug": "fighter",
+    "hitDie": 10,
+    "savingThrows": [
+      "str",
+      "con"
+    ],
+    "proficiencies": [
+      "all-armor",
+      "shields",
+      "simple-weapons",
+      "martial-weapons",
+      "saving-throw-str",
+      "saving-throw-con"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "fighter/proficiency/0",
+        "choose": 2,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-acrobatics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-animal-handling",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-history",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-intimidation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-perception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-survival",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "fighter/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:chain-mail",
+              "count": 1
+            },
+            {
+              "kind": "bundle",
+              "items": [
+                {
+                  "kind": "ref",
+                  "ref": "item:leather-armor",
+                  "count": 1
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:longbow",
+                  "count": 1
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:arrow",
+                  "count": 20
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "fighter/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "bundle",
+              "items": [
+                {
+                  "kind": "nested",
+                  "choice": {
+                    "prompt": "fighter/starting-equipment/1/0/0",
+                    "choose": 1,
+                    "kind": "equipment",
+                    "from": {
+                      "kind": "equipment-category",
+                      "category": "martial-weapons"
+                    }
+                  }
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:shield",
+                  "count": 1
+                }
+              ]
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "fighter/starting-equipment/1/1",
+                "choose": 2,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "martial-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "fighter/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "bundle",
+              "items": [
+                {
+                  "kind": "ref",
+                  "ref": "item:crossbow-light",
+                  "count": 1
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:crossbow-bolt",
+                  "count": 20
+                }
+              ]
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 2
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "fighter/starting-equipment/3",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:dungeoneers-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:explorers-pack",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "subclasses": [
+      "champion"
+    ],
+    "multiclassProficiencies": [
+      "light-armor",
+      "medium-armor",
+      "shields",
+      "simple-weapons",
+      "martial-weapons"
+    ]
+  },
+  {
+    "slug": "monk",
+    "hitDie": 8,
+    "savingThrows": [
+      "str",
+      "dex"
+    ],
+    "proficiencies": [
+      "simple-weapons",
+      "shortswords",
+      "saving-throw-dex",
+      "saving-throw-str"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "monk/proficiency/0",
+        "choose": 2,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-acrobatics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-history",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-religion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-stealth",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "monk/proficiency/1",
+        "choose": 1,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "monk/proficiency/1/0",
+                "choose": 1,
+                "kind": "proficiency",
+                "from": {
+                  "kind": "explicit",
+                  "options": [
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:alchemists-supplies",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:brewers-supplies",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:calligraphers-supplies",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:carpenters-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:cartographers-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:cobblers-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:cooks-utensils",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:glassblowers-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:jewelers-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:leatherworkers-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:masons-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:painters-supplies",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:potters-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:smiths-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:tinkers-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:weavers-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:woodcarvers-tools",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:disguise-kit",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:forgery-kit",
+                      "count": 1
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "monk/proficiency/1/1",
+                "choose": 1,
+                "kind": "proficiency",
+                "from": {
+                  "kind": "explicit",
+                  "options": [
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:bagpipes",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:drum",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:dulcimer",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:flute",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:lute",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:lyre",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:horn",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:pan-flute",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:shawm",
+                      "count": 1
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": "proficiency:viol",
+                      "count": 1
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "dart",
+        "count": 10
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "monk/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:shortsword",
+              "count": 1
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "monk/starting-equipment/0/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "monk/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:dungeoneers-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:explorers-pack",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "subclasses": [
+      "open-hand"
+    ],
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "dex",
+        "minimumScore": 13
+      },
+      {
+        "kind": "ability",
+        "ability": "wis",
+        "minimumScore": 13
+      }
+    ],
+    "multiclassProficiencies": [
+      "simple-weapons",
+      "shortswords"
+    ]
+  },
+  {
+    "slug": "paladin",
+    "hitDie": 10,
+    "savingThrows": [
+      "wis",
+      "cha"
+    ],
+    "proficiencies": [
+      "all-armor",
+      "shields",
+      "simple-weapons",
+      "martial-weapons",
+      "saving-throw-wis",
+      "saving-throw-cha"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "paladin/proficiency/0",
+        "choose": 2,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-intimidation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-medicine",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-persuasion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-religion",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "chain-mail",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "paladin/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "bundle",
+              "items": [
+                {
+                  "kind": "nested",
+                  "choice": {
+                    "prompt": "paladin/starting-equipment/0/0/0",
+                    "choose": 1,
+                    "kind": "equipment",
+                    "from": {
+                      "kind": "equipment-category",
+                      "category": "martial-weapons"
+                    }
+                  }
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:shield",
+                  "count": 1
+                }
+              ]
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "paladin/starting-equipment/0/1",
+                "choose": 2,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "martial-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "paladin/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 5
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "paladin/starting-equipment/1/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "paladin/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:priests-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:explorers-pack",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "paladin/starting-equipment/3",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "equipment-category",
+          "category": "holy-symbols"
+        }
+      }
+    ],
+    "subclasses": [
+      "devotion"
+    ],
+    "spellcastingLevel": 2,
+    "spellcastingAbility": "cha",
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "str",
+        "minimumScore": 13
+      },
+      {
+        "kind": "ability",
+        "ability": "cha",
+        "minimumScore": 13
+      }
+    ],
+    "multiclassProficiencies": [
+      "light-armor",
+      "medium-armor",
+      "shields",
+      "simple-weapons",
+      "martial-weapons"
+    ]
+  },
+  {
+    "slug": "ranger",
+    "hitDie": 10,
+    "savingThrows": [
+      "str",
+      "dex"
+    ],
+    "proficiencies": [
+      "light-armor",
+      "medium-armor",
+      "shields",
+      "simple-weapons",
+      "martial-weapons",
+      "saving-throw-dex",
+      "saving-throw-str"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "ranger/proficiency/0",
+        "choose": 3,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-animal-handling",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-investigation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-nature",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-perception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-stealth",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-survival",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "longbow",
+        "count": 1
+      },
+      {
+        "item": "arrow",
+        "count": 20
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "ranger/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:scale-mail",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:leather-armor",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "ranger/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:shortsword",
+              "count": 2
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "ranger/starting-equipment/1/1",
+                "choose": 2,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-melee-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "ranger/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:dungeoneers-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:explorers-pack",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "subclasses": [
+      "hunter"
+    ],
+    "spellcastingLevel": 2,
+    "spellcastingAbility": "wis",
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "dex",
+        "minimumScore": 13
+      },
+      {
+        "kind": "ability",
+        "ability": "wis",
+        "minimumScore": 13
+      }
+    ],
+    "multiclassProficiencies": [
+      "light-armor",
+      "medium-armor",
+      "shields",
+      "simple-weapons",
+      "martial-weapons"
+    ],
+    "multiclassOptions": [
+      {
+        "prompt": "ranger/multiclass/0",
+        "choose": 1,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-animal-handling",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-investigation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-nature",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-perception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-stealth",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-survival",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "slug": "rogue",
+    "hitDie": 8,
+    "savingThrows": [
+      "dex",
+      "int"
+    ],
+    "proficiencies": [
+      "light-armor",
+      "simple-weapons",
+      "longswords",
+      "rapiers",
+      "shortswords",
+      "hand-crossbows",
+      "thieves-tools",
+      "saving-throw-dex",
+      "saving-throw-int"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "rogue/proficiency/0",
+        "choose": 4,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-acrobatics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-deception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-intimidation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-investigation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-perception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-performance",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-persuasion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-sleight-of-hand",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-stealth",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "leather-armor",
+        "count": 1
+      },
+      {
+        "item": "dagger",
+        "count": 2
+      },
+      {
+        "item": "thieves-tools",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "rogue/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:rapier",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortsword",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "rogue/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "bundle",
+              "items": [
+                {
+                  "kind": "ref",
+                  "ref": "item:shortbow",
+                  "count": 1
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:arrow",
+                  "count": 20
+                }
+              ]
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortsword",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "rogue/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:burglars-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dungeoneers-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:explorers-pack",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "subclasses": [
+      "thief"
+    ],
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "dex",
+        "minimumScore": 13
+      }
+    ],
+    "multiclassProficiencies": [
+      "light-armor",
+      "thieves-tools"
+    ],
+    "multiclassOptions": [
+      {
+        "prompt": "rogue/multiclass/0",
+        "choose": 1,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-acrobatics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-athletics",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-deception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-intimidation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-investigation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-perception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-performance",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-persuasion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-sleight-of-hand",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-stealth",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "slug": "sorcerer",
+    "hitDie": 6,
+    "savingThrows": [
+      "con",
+      "cha"
+    ],
+    "proficiencies": [
+      "daggers",
+      "darts",
+      "slings",
+      "quarterstaffs",
+      "crossbows-light",
+      "saving-throw-con",
+      "saving-throw-cha"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "sorcerer/proficiency/0",
+        "choose": 2,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-arcana",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-deception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-intimidation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-persuasion",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-religion",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "dagger",
+        "count": 2
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "sorcerer/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "bundle",
+              "items": [
+                {
+                  "kind": "ref",
+                  "ref": "item:crossbow-light",
+                  "count": 1
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:crossbow-bolt",
+                  "count": 20
+                }
+              ]
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "sorcerer/starting-equipment/0/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "sorcerer/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:component-pouch",
+              "count": 1
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "sorcerer/starting-equipment/1/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "arcane-foci"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "sorcerer/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:dungeoneers-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:explorers-pack",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "subclasses": [
+      "draconic"
+    ],
+    "spellcastingLevel": 1,
+    "spellcastingAbility": "cha",
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "cha",
+        "minimumScore": 13
+      }
+    ]
+  },
+  {
+    "slug": "warlock",
+    "hitDie": 8,
+    "savingThrows": [
+      "wis",
+      "cha"
+    ],
+    "proficiencies": [
+      "light-armor",
+      "simple-weapons",
+      "saving-throw-wis",
+      "saving-throw-cha"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "warlock/proficiency/0",
+        "choose": 2,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-arcana",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-deception",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-history",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-intimidation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-investigation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-nature",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-religion",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "dagger",
+        "count": 2
+      },
+      {
+        "item": "leather-armor",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "warlock/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "bundle",
+              "items": [
+                {
+                  "kind": "ref",
+                  "ref": "item:crossbow-light",
+                  "count": 1
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:crossbow-bolt",
+                  "count": 20
+                }
+              ]
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "warlock/starting-equipment/0/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "simple-weapons"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "warlock/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:component-pouch",
+              "count": 1
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "warlock/starting-equipment/1/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "arcane-foci"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "warlock/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:scholars-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dungeoneers-pack",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "warlock/starting-equipment/3",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "equipment-category",
+          "category": "simple-weapons"
+        }
+      }
+    ],
+    "subclasses": [
+      "fiend"
+    ],
+    "spellcastingLevel": 1,
+    "spellcastingAbility": "cha",
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "cha",
+        "minimumScore": 13
+      }
+    ],
+    "multiclassProficiencies": [
+      "light-armor",
+      "simple-weapons"
+    ]
+  },
+  {
+    "slug": "wizard",
+    "hitDie": 6,
+    "savingThrows": [
+      "int",
+      "wis"
+    ],
+    "proficiencies": [
+      "daggers",
+      "darts",
+      "slings",
+      "quarterstaffs",
+      "crossbows-light",
+      "saving-throw-int",
+      "saving-throw-wis"
+    ],
+    "proficiencyOptions": [
+      {
+        "prompt": "wizard/proficiency/0",
+        "choose": 2,
+        "kind": "proficiency",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-arcana",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-history",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-insight",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-investigation",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-medicine",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "proficiency:skill-religion",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingEquipment": [
+      {
+        "item": "spellbook",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "wizard/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "wizard/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:component-pouch",
+              "count": 1
+            },
+            {
+              "kind": "nested",
+              "choice": {
+                "prompt": "wizard/starting-equipment/1/1",
+                "choose": 1,
+                "kind": "equipment",
+                "from": {
+                  "kind": "equipment-category",
+                  "category": "arcane-foci"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "prompt": "wizard/starting-equipment/2",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:scholars-pack",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:explorers-pack",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "subclasses": [
+      "evocation"
+    ],
+    "spellcastingLevel": 1,
+    "spellcastingAbility": "int",
+    "multiclassPrerequisites": [
+      {
+        "kind": "ability",
+        "ability": "int",
+        "minimumScore": 13
+      }
+    ]
+  }
+]

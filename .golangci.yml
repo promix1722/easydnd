@@ -1,0 +1,91 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose
+    - depguard
+    - errorlint # catches == comparisons that should be errors.Is / errors.As
+    - copyloopvar
+    - misspell
+    - nilerr
+    - noctx
+    - revive
+    - unconvert
+
+  settings:
+    depguard:
+      rules:
+        # ARCHITECTURE ENFORCEMENT. The inner layers must not learn about
+        # transport or storage. This is the rule that keeps the HTTP framework
+        # out of the domain -- a convention nobody checks is a convention
+        # nobody keeps.
+        inner-layers:
+          files:
+            - "**/internal/domain/**"
+            - "**/internal/usecase/**"
+            - "**/internal/types/**"
+          deny:
+            - pkg: "github.com/gin-gonic/gin"
+              desc: "the domain and application layers must not know about the HTTP framework"
+            - pkg: "net/http"
+              desc: "HTTP status codes and requests belong in internal/api/http"
+            - pkg: "database/sql"
+              desc: "persistence details belong in internal/adapter/repository"
+            - pkg: "github.com/jackc/pgx"
+              desc: "the Postgres driver belongs in internal/adapter/repository/postgres, behind the user.Repository port -- and it reaches the database without database/sql, so the rule above does not cover it"
+            - pkg: "github.com/pressly/goose"
+              desc: "the schema is the storage adapter's business; migrations live in internal/adapter/repository/postgres"
+            - pkg: "github.com/go-webauthn"
+              desc: "WebAuthn is a transport concern; it reaches the application layer through the auth.Ceremony port, implemented in internal/adapter/webauthn"
+            - pkg: "github.com/golang-jwt"
+              desc: "the session token format belongs in internal/adapter/token, behind the auth.Signer port"
+            - pkg: "github.com/coreos/go-oidc"
+              desc: "OpenID Connect is a transport concern; it reaches the application layer through the auth.Federation port, implemented in internal/adapter/oidc"
+            - pkg: "golang.org/x/oauth2"
+              desc: "the authorization-code exchange belongs in internal/adapter/oidc, behind the auth.Federation port"
+
+        # Adapters depend inward, never sideways into one another.
+        outbound-adapters:
+          files:
+            - "**/internal/adapter/**"
+          deny:
+            - pkg: "github.com/gin-gonic/gin"
+              desc: "repositories must not import the HTTP framework"
+            - pkg: "github.com/promix1722/easydnd/internal/api"
+              desc: "outbound adapters must not import the inbound adapter"
+
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: error-strings
+        - name: context-as-argument
+        - name: indent-error-flow
+
+  exclusions:
+    generated: lax
+    rules:
+      # Tests may be looser about context plumbing and unchecked errors.
+      - path: _test\.go$
+        linters: [errcheck, noctx]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/promix1722/easydnd

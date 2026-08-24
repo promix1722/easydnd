@@ -1,0 +1,41 @@
+[
+  {
+    "slug": "acid"
+  },
+  {
+    "slug": "bludgeoning"
+  },
+  {
+    "slug": "cold"
+  },
+  {
+    "slug": "fire"
+  },
+  {
+    "slug": "force"
+  },
+  {
+    "slug": "lightning"
+  },
+  {
+    "slug": "necrotic"
+  },
+  {
+    "slug": "piercing"
+  },
+  {
+    "slug": "poison"
+  },
+  {
+    "slug": "psychic"
+  },
+  {
+    "slug": "radiant"
+  },
+  {
+    "slug": "slashing"
+  },
+  {
+    "slug": "thunder"
+  }
+]

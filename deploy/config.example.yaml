@@ -1,0 +1,163 @@
+# easydnd production configuration -- the template for /etc/easydnd/config.yaml.
+#
+# NOT APPLIED AUTOMATICALLY. Like the nginx and supervisor files, the live copy
+# lives on the server and this is the source of truth for what it should say.
+# The app finds it through EASYDND_CONFIG, which the supervisor program
+# definition sets and which is the only environment variable the app reads.
+#
+# Install it once, before applying the new supervisor config:
+#
+#   sudo install -d -o root -g easydnd -m 751 /etc/easydnd
+#   sudo install -o root -g easydnd -m 640 \
+#       deploy/config.example.yaml /etc/easydnd/config.yaml
+#   sudo -e /etc/easydnd/config.yaml          # fill in session_secret
+#
+# Mode 640 root:easydnd is the point of this file: the service account can read
+# the signing key and nothing else on the box can. The app warns at startup if
+# the file is world-readable.
+#
+# The DIRECTORY is 751, not 750, and that one bit matters. deploy.sh runs as the
+# `deploy` user and checks this file exists before swapping the release symlink;
+# testing a path requires execute permission on every parent directory, so a 750
+# directory makes that check fail with EACCES even though the file is there --
+# which is exactly how the v0.5.0 deploy failed. 751 gives others --x: a known
+# path can be traversed, the directory cannot be listed, and the 640 file inside
+# still cannot be read.
+#
+# Every key below is optional -- the loader has a default for each -- but an
+# UNKNOWN key is a startup error, so a typo fails loudly instead of silently
+# leaving production on a default nobody chose.
+
+env: production
+
+http:
+  host: 127.0.0.1
+  # Quoted because the port is a string. This must match the port
+  # deploy/deploy.sh health-checks and the one the nginx site proxies to;
+  # the app no longer reads $PORT, so the two are not linked automatically.
+  port: "8080"
+
+  # Keep below supervisor's stopwaitsecs (10s), or the drain is cut short by
+  # SIGKILL and graceful shutdown never actually completes. Raise stopwaitsecs
+  # first if you raise this.
+  shutdown_timeout: 5s
+
+  # gin trusts 0.0.0.0/0 by default, which lets any client forge
+  # X-Forwarded-For and poison ClientIP. Only our own proxy is upstream.
+  trusted_proxies:
+    - 127.0.0.1
+    - "::1"
+
+log:
+  format: json
+  level: info
+
+data:
+  # ABSOLUTE, and through `current` rather than a release id so it follows the
+  # symlink swap. The API reads its compendium from disk at startup and exits if
+  # it cannot; the built-in default is the *relative* "data/srd_5.1", which
+  # resolves against supervisor's `directory=` and not against the release.
+  # Leaving this unset once cost a deploy: the binary died on every restart, the
+  # health gate timed out, and the release rolled back.
+  srd_dir: /opt/easydnd/current/data/srd_5.1
+
+auth:
+  # A ONE-WAY DOOR. The RP id is burned into every passkey when the passkey is
+  # created, and changing it orphans all of them with no migration. It must stay
+  # the apex domain: a passkey made for easydnd.org keeps working on a future
+  # app.easydnd.org, and the reverse is impossible.
+  rp_id: easydnd.org
+
+  # What the operating system's passkey prompt calls us.
+  rp_name: easydnd
+
+  # A YAML list, so adding a second origin is just another line -- no comma
+  # quoting, unlike the supervisor environment= line this replaces.
+  rp_origins:
+    - https://easydnd.org
+
+  # REQUIRED. The process refuses to start without it, exactly as it refuses to
+  # start without its compendium, and for the same reason: a service that
+  # silently invented a key on every restart would sign everyone out and nobody
+  # would know why. Generate one once:
+  #
+  #   openssl rand -base64 48
+  #
+  # Read as base64, taken literally if it is not valid base64; must be at least
+  # 32 bytes decoded. ALWAYS QUOTE IT -- base64 contains + / and =.
+  #
+  # Rotating it signs everyone out. That is the only revocation lever a
+  # stateless session has, and it is cheap here: no passkey is lost, because
+  # credentials live in the account store rather than in the token. Everyone
+  # clicks "Sign in" once.
+  session_secret: "REPLACE-ME-WITH-openssl-rand-base64-48"
+
+  session_ttl: 168h
+  ceremony_ttl: 5m
+
+  # Sign in with Google. OPTIONAL, and the whole block may be omitted: without
+  # it the app is passkeys only, which starts and runs perfectly well. What is
+  # NOT allowed is half of it -- a client id without its secret is a startup
+  # error, deliberately, because the alternative is a button that fails at the
+  # first click.
+  #
+  # Get the pair from Google Cloud Console -> APIs & Services -> Credentials, as
+  # an OAuth 2.0 Client ID of type "Web application". Register BOTH redirect
+  # URIs on it, or development stops working the day production starts:
+  #
+  #   https://easydnd.org/v1/auth/sso/google/callback        (this deployment)
+  #   http://localhost:5173/v1/auth/sso/google/callback      (a developer's Vite)
+  #
+  # The dev one points at the Vite dev server rather than at the API, because
+  # Vite proxies /v1 and the session cookie has to land on the origin the
+  # browser is actually on.
+  #
+  # client_secret is the third secret in this file, alongside the signing key
+  # and the database password, and the placeholder below is rejected by name at
+  # startup for the same reason theirs are. "Configured" here means nothing more
+  # than "non-empty", so an unedited copy would otherwise advertise Google on
+  # the sign-in page and fail at the token exchange on every click.
+  #
+  # google:
+  #   client_id: REPLACE-ME.apps.googleusercontent.com
+  #   client_secret: "REPLACE-ME-WITH-THE-GOOGLE-CLIENT-SECRET"
+  #
+  #   # Defaulted per environment, so it is only worth setting if this
+  #   # deployment ever answers on another hostname. It must match a registered
+  #   # URI byte for byte -- a mismatch is redirect_uri_mismatch at the
+  #   # exchange, not at startup.
+  #   # redirect_url: https://easydnd.org/v1/auth/sso/google/callback
+
+db:
+  # The account store. REQUIRED in production -- the process refuses to start
+  # without it, exactly as it refuses without auth.session_secret, because a
+  # server that quietly fell back to in-memory accounts would destroy every
+  # registered passkey on the next restart and nobody would find out until
+  # people could not sign in.
+  #
+  # Keep sslmode=verify-full. The Amazon RDS certificate bundle is compiled
+  # into the binary, so there is no cert file to ship alongside a release. An
+  # omitted sslmode means libpq's "prefer", which sets InsecureSkipVerify AND
+  # allows a plaintext fallback -- on the table holding every account.
+  #
+  # This value carries the database password, the second secret in this file.
+  # It is why the live copy is 640 root:easydnd. The placeholder below is
+  # rejected by name at startup, so an unedited copy cannot reach production.
+  url: postgres://easydnd:REPLACE-ME-WITH-THE-RDS-PASSWORD@REPLACE-ME.eu-central-1.rds.amazonaws.com:5432/easydnd?sslmode=verify-full
+
+  # pgxpool size.
+  max_conns: 10
+
+  # Bounds the startup ping. deploy.sh's health gate allows 15 seconds for
+  # connect plus migrate plus listen, so a database that is not answering must
+  # give up well inside that budget.
+  connect_timeout: 5s
+
+  # Apply pending migrations before the listener binds, so a release is
+  # self-contained and there is no migration step for a deploy to forget. A
+  # failed migration fails startup, which deploy.sh turns into a rollback.
+  #
+  # Set false only to stage a risky migration by hand with `easydnd -migrate up`.
+  # Note the corollary of the rollback: it runs against the schema that was just
+  # applied, so migrations must be expand-only. See docs/backend.md.
+  migrate_on_start: true

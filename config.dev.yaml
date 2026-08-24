@@ -1,0 +1,59 @@
+# Development configuration, loaded by `make run/server`.
+#
+# Committed on purpose: the config file is mandatory in every environment, so
+# there has to be one in the repo. It contains no secret -- see auth below.
+#
+# Every key is optional; the loader has defaults for all of them. What is here
+# is only what differs from those defaults, plus the two values worth stating
+# out loud because they are what a passkey binds to.
+
+env: development
+
+log:
+  # Human-readable rather than the JSON production ships, at debug level.
+  format: text
+  level: debug
+
+data:
+  # Relative to the repo root, which is where `make run/server` runs.
+  srd_dir: data/srd_5.1
+
+auth:
+  # Passkeys created against this config are bound to localhost and are
+  # therefore useless in production, which is exactly what we want.
+  rp_id: localhost
+  rp_origins:
+    - http://localhost:5173
+
+  # NO session_secret here, deliberately. Development generates a random key per
+  # process and logs a warning: every restart signs everyone out, which matches
+  # the in-memory account store losing every account on the same restart.
+  # Production refuses to start this way.
+
+  # NO google block here either. Sign in with Google needs a real client id and
+  # secret, which do not belong in a committed file, so this config leaves the
+  # provider off and the sign-in page simply does not draw the button. To work
+  # on it locally, copy this file to config.local.yaml (gitignored) and add:
+  #
+  #   auth:
+  #     google:
+  #       client_id: ....apps.googleusercontent.com
+  #       client_secret: "...."
+  #
+  # then `make run/server EASYDND_CONFIG=config.local.yaml`. The redirect URL
+  # defaults to http://localhost:5173/v1/auth/sso/google/callback, which is the
+  # Vite dev server rather than this process -- register that exact URI on the
+  # OAuth client.
+
+# NO db section here, deliberately. With db.url unset the server runs on the
+# in-memory account store and logs a warning -- which is what lets `make
+# run/server`, `go test ./...` and `make verify` work on a machine with no
+# Postgres at all. Production refuses to start this way.
+#
+# For durable accounts locally, `make db/up` then `make run/db`, which points
+# -config at config.local.yaml if you have one, or supplies db.url on top of
+# this file. The simplest local override is to copy this file to
+# config.local.yaml (gitignored) and add:
+#
+#   db:
+#     url: postgres://easydnd:easydnd@127.0.0.1:5433/easydnd?sslmode=disable

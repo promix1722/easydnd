@@ -1,0 +1,66 @@
+[
+  {
+    "slug": "abyssal",
+    "type": "exotic"
+  },
+  {
+    "slug": "celestial",
+    "type": "exotic"
+  },
+  {
+    "slug": "common",
+    "type": "standard"
+  },
+  {
+    "slug": "deep-speech",
+    "type": "exotic"
+  },
+  {
+    "slug": "draconic",
+    "type": "exotic"
+  },
+  {
+    "slug": "dwarvish",
+    "type": "standard"
+  },
+  {
+    "slug": "elvish",
+    "type": "standard"
+  },
+  {
+    "slug": "giant",
+    "type": "standard"
+  },
+  {
+    "slug": "gnomish",
+    "type": "standard"
+  },
+  {
+    "slug": "goblin",
+    "type": "standard"
+  },
+  {
+    "slug": "halfling",
+    "type": "standard"
+  },
+  {
+    "slug": "infernal",
+    "type": "exotic"
+  },
+  {
+    "slug": "orc",
+    "type": "standard"
+  },
+  {
+    "slug": "primordial",
+    "type": "exotic"
+  },
+  {
+    "slug": "sylvan",
+    "type": "exotic"
+  },
+  {
+    "slug": "undercommon",
+    "type": "exotic"
+  }
+]

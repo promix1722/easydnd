@@ -1,0 +1,2100 @@
+[
+  {
+    "slug": "adamantine-armor",
+    "category": "armor",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "ammunition",
+    "category": "ammunition",
+    "rarity": "varies",
+    "variants": [
+      "ammunition-1",
+      "ammunition-2",
+      "ammunition-3"
+    ]
+  },
+  {
+    "slug": "ammunition-1",
+    "category": "ammunition",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "ammunition-2",
+    "category": "ammunition",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ammunition-3",
+    "category": "ammunition",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "amulet-of-health",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "amulet-of-proof-against-detection-and-location",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "amulet-of-the-planes",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "animated-shield",
+    "category": "armor",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "apparatus-of-the-crab",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "armor",
+    "category": "armor",
+    "rarity": "varies",
+    "variants": [
+      "armor-1",
+      "armor-2",
+      "armor-3"
+    ]
+  },
+  {
+    "slug": "armor-1",
+    "category": "armor",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "armor-2",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "armor-3",
+    "category": "armor",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "armor-of-invulnerability",
+    "category": "armor",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "armor-of-resistance",
+    "category": "armor",
+    "rarity": "rare"
+  },
+  {
+    "slug": "armor-of-vulnerability",
+    "category": "armor",
+    "rarity": "rare"
+  },
+  {
+    "slug": "arrow-catching-shield",
+    "category": "armor",
+    "rarity": "rare"
+  },
+  {
+    "slug": "arrow-of-slaying",
+    "category": "ammunition",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "bag-of-beans",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "bag-of-devouring",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "bag-of-holding",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "bag-of-tricks",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "variants": [
+      "bag-of-tricks-gray",
+      "bag-of-tricks-rust",
+      "bag-of-tricks-tan"
+    ]
+  },
+  {
+    "slug": "bag-of-tricks-gray",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "bag-of-tricks-rust",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "bag-of-tricks-tan",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "bead-of-force",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "belt-of-dwarvenkind",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "belt-of-giant-strength",
+    "category": "wondrous-items",
+    "rarity": "varies",
+    "variants": [
+      "belt-of-giant-strength-hill",
+      "belt-of-giant-strength-stone",
+      "belt-of-giant-strength-frost",
+      "belt-of-giant-strength-fire",
+      "belt-of-giant-strength-cloud",
+      "belt-of-giant-strength-storm"
+    ]
+  },
+  {
+    "slug": "belt-of-giant-strength-cloud",
+    "category": "wondrous-items",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "belt-of-giant-strength-fire",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "belt-of-giant-strength-frost",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "belt-of-giant-strength-hill",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "belt-of-giant-strength-stone",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "belt-of-giant-strength-storm",
+    "category": "wondrous-items",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "berserker-axe",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "boots-of-elvenkind",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "boots-of-levitation",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "boots-of-speed",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "boots-of-striding-and-springing",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "boots-of-the-winterlands",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "bowl-of-commanding-water-elementals",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "bracers-of-archery",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "bracers-of-defense",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "brazier-of-commanding-fire-elementals",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "brooch-of-shielding",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "broom-of-flying",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "candle-of-invocation",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "cape-of-the-mountebank",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "carpet-of-flying",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "variants": [
+      "carpet-of-flying-3x5",
+      "carpet-of-flying-4x6",
+      "carpet-of-flying-5x7",
+      "carpet-of-flying-6x9"
+    ]
+  },
+  {
+    "slug": "carpet-of-flying-3x5",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "carpet-of-flying-4x6",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "carpet-of-flying-5x7",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "carpet-of-flying-6x9",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "censer-of-controlling-air-elementals",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "chime-of-opening",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "circlet-of-blasting",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "cloak-of-arachnida",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "cloak-of-displacement",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "cloak-of-elvenkind",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "cloak-of-protection",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "cloak-of-the-bat",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "cloak-of-the-manta-ray",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "crystal-ball",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "variants": [
+      "crystal-ball-of-mind-reading",
+      "crystal-ball-of-telepathy",
+      "crystal-ball-of-true-seeing"
+    ]
+  },
+  {
+    "slug": "crystal-ball-of-mind-reading",
+    "category": "wondrous-items",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "crystal-ball-of-telepathy",
+    "category": "wondrous-items",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "crystal-ball-of-true-seeing",
+    "category": "wondrous-items",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "cube-of-force",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "cubic-gate",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "dagger-of-venom",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "dancing-sword",
+    "category": "weapon",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "decanter-of-endless-water",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "deck-of-illusions",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "deck-of-many-things",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "defender",
+    "category": "weapon",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "demon-armor",
+    "category": "armor",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "dimensional-shackles",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "dragon-scale-mail",
+    "category": "armor",
+    "rarity": "very-rare",
+    "variants": [
+      "dragon-scale-mail-black",
+      "dragon-scale-mail-blue",
+      "dragon-scale-mail-brass",
+      "dragon-scale-mail-bronze",
+      "dragon-scale-mail-copper",
+      "dragon-scale-mail-gold",
+      "dragon-scale-mail-green",
+      "dragon-scale-mail-red",
+      "dragon-scale-mail-silver",
+      "dragon-scale-mail-white"
+    ]
+  },
+  {
+    "slug": "dragon-scale-mail-black",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-scale-mail-blue",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-scale-mail-brass",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-scale-mail-bronze",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-scale-mail-copper",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-scale-mail-gold",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-scale-mail-green",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-scale-mail-red",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-scale-mail-silver",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-scale-mail-white",
+    "category": "armor",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "dragon-slayer",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "dust-of-disappearance",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "dust-of-dryness",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "dust-of-sneezing-and-choking",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "dwarven-plate",
+    "category": "armor",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "dwarven-thrower",
+    "category": "weapon",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "efficient-quiver",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "efreeti-bottle",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "elemental-gem",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "variants": [
+      "elemental-gem-air",
+      "elemental-gem-earth",
+      "elemental-gem-fire",
+      "elemental-gem-water"
+    ]
+  },
+  {
+    "slug": "elemental-gem-air",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "elemental-gem-earth",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "elemental-gem-fire",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "elemental-gem-water",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "elven-chain",
+    "category": "armor",
+    "rarity": "rare"
+  },
+  {
+    "slug": "eversmoking-bottle",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "eyes-of-charming",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "eyes-of-minute-seeing",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "eyes-of-the-eagle",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "feather-token",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "variants": [
+      "feather-token-anchor",
+      "feather-token-bird",
+      "feather-token-fan",
+      "feather-token-swan-boat",
+      "feather-token-tree",
+      "feather-token-whip"
+    ]
+  },
+  {
+    "slug": "feather-token-anchor",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "feather-token-bird",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "feather-token-fan",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "feather-token-swan-boat",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "feather-token-tree",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "feather-token-whip",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "figurine-of-wondrous-power",
+    "category": "wondrous-items",
+    "rarity": "varies",
+    "variants": [
+      "figurine-of-wondrous-power-bronze-griffon",
+      "figurine-of-wondrous-power-ebony-fly",
+      "figurine-of-wondrous-power-golden-lions",
+      "figurine-of-wondrous-power-ivory-goats",
+      "figurine-of-wondrous-power-marble-elephant",
+      "figurine-of-wondrous-power-obsidian-steed",
+      "figurine-of-wondrous-power-onyx-dog",
+      "figurine-of-wondrous-power-serpentine-owl",
+      "figurine-of-wondrous-power-silver-raven"
+    ]
+  },
+  {
+    "slug": "figurine-of-wondrous-power-bronze-griffon",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "figurine-of-wondrous-power-ebony-fly",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "figurine-of-wondrous-power-golden-lions",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "figurine-of-wondrous-power-ivory-goats",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "figurine-of-wondrous-power-marble-elephant",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "figurine-of-wondrous-power-obsidian-steed",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "figurine-of-wondrous-power-onyx-dog",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "figurine-of-wondrous-power-serpentine-owl",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "figurine-of-wondrous-power-silver-raven",
+    "category": "wondrous-items",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "flame-tongue",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "folding-boat",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "frost-brand",
+    "category": "weapon",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "gauntlets-of-ogre-power",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "gem-of-brightness",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "gem-of-seeing",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "giant-slayer",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "glamoured-studded-leather-armor",
+    "category": "armor",
+    "rarity": "rare"
+  },
+  {
+    "slug": "gloves-of-missile-snaring",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "gloves-of-swimming-and-climbing",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "goggles-of-night",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "hammer-of-thunderbolts",
+    "category": "weapon",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "handy-haversack",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "hat-of-disguise",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "headband-of-intellect",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "helm-of-brilliance",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "helm-of-comprehending-languages",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "helm-of-telepathy",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "helm-of-teleportation",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "holy-avenger",
+    "category": "weapon",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "horn-of-blasting",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "horn-of-valhalla",
+    "category": "wondrous-items",
+    "rarity": "varies",
+    "variants": [
+      "horn-of-valhalla-silver",
+      "horn-of-valhalla-brass",
+      "horn-of-valhalla-bronze",
+      "horn-of-valhalla-iron"
+    ]
+  },
+  {
+    "slug": "horn-of-valhalla-brass",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "horn-of-valhalla-bronze",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "horn-of-valhalla-iron",
+    "category": "wondrous-items",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "horn-of-valhalla-silver",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "horseshoes-of-a-zephyr",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "horseshoes-of-speed",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "immovable-rod",
+    "category": "rod",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "instant-fortress",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "ioun-stone",
+    "category": "wondrous-items",
+    "rarity": "varies",
+    "variants": [
+      "ioun-stone-of-absorption",
+      "ioun-stone-of-agility",
+      "ioun-stone-of-awareness",
+      "ioun-stone-of-fortitude",
+      "ioun-stone-of-greater-absorption",
+      "ioun-stone-of-insight",
+      "ioun-stone-of-intellect",
+      "ioun-stone-of-leadership",
+      "ioun-stone-of-mastery",
+      "ioun-stone-of-protection",
+      "ioun-stone-of-regeneration",
+      "ioun-stone-of-reserve",
+      "ioun-stone-of-strength",
+      "ioun-stone-of-sustenance"
+    ]
+  },
+  {
+    "slug": "ioun-stone-of-absorption",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-agility",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-awareness",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-fortitude",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-greater-absorption",
+    "category": "wondrous-items",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-insight",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-intellect",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-leadership",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-mastery",
+    "category": "wondrous-items",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-protection",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-regeneration",
+    "category": "wondrous-items",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-reserve",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-strength",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ioun-stone-of-sustenance",
+    "category": "wondrous-items",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "iron-bands-of-binding",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "iron-flask",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "javelin-of-lightning",
+    "category": "weapon",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "lantern-of-revealing",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "luck-blade",
+    "category": "weapon",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "mace-of-disruption",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "mace-of-smiting",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "mace-of-terror",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "mantle-of-spell-resistance",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "manual-of-bodily-health",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "manual-of-gainful-exercise",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "manual-of-golems",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "variants": [
+      "manual-of-golems-clay",
+      "manual-of-golems-flesh",
+      "manual-of-golems-iron",
+      "manual-of-golems-stone"
+    ]
+  },
+  {
+    "slug": "manual-of-golems-clay",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "manual-of-golems-flesh",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "manual-of-golems-iron",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "manual-of-golems-stone",
+    "category": "wondrous-items",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "manual-of-quickness-of-action",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "marvelous-pigments",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "medallion-of-thoughts",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "mirror-of-life-trapping",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "mithral-armor",
+    "category": "armor",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "necklace-of-adaptation",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "necklace-of-fireballs",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "necklace-of-prayer-beads",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "nine-lives-stealer",
+    "category": "weapon",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "oathbow",
+    "category": "weapon",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "oil-of-etherealness",
+    "category": "potion",
+    "rarity": "rare"
+  },
+  {
+    "slug": "oil-of-sharpness",
+    "category": "potion",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "oil-of-slipperiness",
+    "category": "potion",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "orb-of-dragonkind",
+    "category": "wondrous-items",
+    "rarity": "artifact"
+  },
+  {
+    "slug": "pearl-of-power",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "periapt-of-health",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "periapt-of-proof-against-poison",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "periapt-of-wound-closure",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "philter-of-love",
+    "category": "potion",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "pipes-of-haunting",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "pipes-of-the-sewers",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "plate-armor-of-etherealness",
+    "category": "armor",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "portable-hole",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "potion-of-animal-friendship",
+    "category": "potion",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "potion-of-clairvoyance",
+    "category": "potion",
+    "rarity": "rare"
+  },
+  {
+    "slug": "potion-of-climbing",
+    "category": "potion",
+    "rarity": "common"
+  },
+  {
+    "slug": "potion-of-diminution",
+    "category": "potion",
+    "rarity": "rare"
+  },
+  {
+    "slug": "potion-of-flying",
+    "category": "potion",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "potion-of-gaseous-form",
+    "category": "potion",
+    "rarity": "rare"
+  },
+  {
+    "slug": "potion-of-giant-strength",
+    "category": "potion",
+    "rarity": "varies",
+    "variants": [
+      "potion-of-giant-strength-hill",
+      "potion-of-giant-strength-frost",
+      "potion-of-giant-strength-stone",
+      "potion-of-giant-strength-fire",
+      "potion-of-giant-strength-cloud",
+      "potion-of-giant-strength-storm"
+    ]
+  },
+  {
+    "slug": "potion-of-giant-strength-cloud",
+    "category": "potion",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-giant-strength-fire",
+    "category": "potion",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-giant-strength-frost",
+    "category": "potion",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-giant-strength-hill",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-giant-strength-stone",
+    "category": "potion",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-giant-strength-storm",
+    "category": "potion",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-growth",
+    "category": "potion",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "potion-of-healing",
+    "category": "potion",
+    "rarity": "varies",
+    "variants": [
+      "potion-of-healing-common",
+      "potion-of-healing-greater",
+      "potion-of-healing-superior",
+      "potion-of-healing-supreme"
+    ]
+  },
+  {
+    "slug": "potion-of-healing-common",
+    "category": "potion",
+    "rarity": "common",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-healing-greater",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-healing-superior",
+    "category": "potion",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-healing-supreme",
+    "category": "potion",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-heroism",
+    "category": "potion",
+    "rarity": "rare"
+  },
+  {
+    "slug": "potion-of-invisibility",
+    "category": "potion",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "potion-of-mind-reading",
+    "category": "potion",
+    "rarity": "rare"
+  },
+  {
+    "slug": "potion-of-poison",
+    "category": "potion",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "potion-of-resistance",
+    "category": "potion",
+    "rarity": "uncommon",
+    "variants": [
+      "potion-of-resistance-acid",
+      "potion-of-resistance-cold",
+      "potion-of-resistance-fire",
+      "potion-of-resistance-force",
+      "potion-of-resistance-lightning",
+      "potion-of-resistance-necrotic",
+      "potion-of-resistance-poison",
+      "potion-of-resistance-psychic",
+      "potion-of-resistance-radiant",
+      "potion-of-resistance-thunder"
+    ]
+  },
+  {
+    "slug": "potion-of-resistance-acid",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-resistance-cold",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-resistance-fire",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-resistance-force",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-resistance-lightning",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-resistance-necrotic",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-resistance-poison",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-resistance-psychic",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-resistance-radiant",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-resistance-thunder",
+    "category": "potion",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "potion-of-speed",
+    "category": "potion",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "potion-of-water-breathing",
+    "category": "potion",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "restorative-ointment",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "ring-of-animal-influence",
+    "category": "ring",
+    "rarity": "rare"
+  },
+  {
+    "slug": "ring-of-djinni-summoning",
+    "category": "ring",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "ring-of-elemental-command",
+    "category": "ring",
+    "rarity": "legendary",
+    "variants": [
+      "ring-of-elemental-command-air",
+      "ring-of-elemental-command-earth",
+      "ring-of-elemental-command-fire",
+      "ring-of-elemental-command-water"
+    ]
+  },
+  {
+    "slug": "ring-of-elemental-command-air",
+    "category": "ring",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-elemental-command-earth",
+    "category": "ring",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-elemental-command-fire",
+    "category": "ring",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-elemental-command-water",
+    "category": "ring",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-evasion",
+    "category": "ring",
+    "rarity": "rare"
+  },
+  {
+    "slug": "ring-of-feather-falling",
+    "category": "ring",
+    "rarity": "rare"
+  },
+  {
+    "slug": "ring-of-free-action",
+    "category": "ring",
+    "rarity": "rare"
+  },
+  {
+    "slug": "ring-of-invisibility",
+    "category": "ring",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "ring-of-jumping",
+    "category": "ring",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "ring-of-mind-shielding",
+    "category": "ring",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "ring-of-protection",
+    "category": "ring",
+    "rarity": "rare"
+  },
+  {
+    "slug": "ring-of-regeneration",
+    "category": "ring",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "ring-of-resistance",
+    "category": "ring",
+    "rarity": "rare",
+    "variants": [
+      "ring-of-resistance-acid",
+      "ring-of-resistance-cold",
+      "ring-of-resistance-fire",
+      "ring-of-resistance-force",
+      "ring-of-resistance-lightning",
+      "ring-of-resistance-necrotic",
+      "ring-of-resistance-poison",
+      "ring-of-resistance-psychic",
+      "ring-of-resistance-radiant",
+      "ring-of-resistance-thunder"
+    ]
+  },
+  {
+    "slug": "ring-of-resistance-acid",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-resistance-cold",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-resistance-fire",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-resistance-force",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-resistance-lightning",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-resistance-necrotic",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-resistance-poison",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-resistance-psychic",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-resistance-radiant",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-resistance-thunder",
+    "category": "ring",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "ring-of-shooting-stars",
+    "category": "ring",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "ring-of-spell-storing",
+    "category": "ring",
+    "rarity": "rare"
+  },
+  {
+    "slug": "ring-of-spell-turning",
+    "category": "ring",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "ring-of-swimming",
+    "category": "ring",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "ring-of-telekinesis",
+    "category": "ring",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "ring-of-the-ram",
+    "category": "ring",
+    "rarity": "rare"
+  },
+  {
+    "slug": "ring-of-three-wishes",
+    "category": "ring",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "ring-of-warmth",
+    "category": "ring",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "ring-of-water-walking",
+    "category": "ring",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "ring-of-x-ray-vision",
+    "category": "ring",
+    "rarity": "rare"
+  },
+  {
+    "slug": "robe-of-eyes",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "robe-of-scintillating-colors",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "robe-of-stars",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "robe-of-the-archmagi",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "robe-of-useful-items",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "rod-of-absorption",
+    "category": "rod",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "rod-of-alertness",
+    "category": "rod",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "rod-of-lordly-might",
+    "category": "rod",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "rod-of-rulership",
+    "category": "rod",
+    "rarity": "rare"
+  },
+  {
+    "slug": "rod-of-security",
+    "category": "rod",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "rope-of-climbing",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "rope-of-entanglement",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "scarab-of-protection",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "scimitar-of-speed",
+    "category": "weapon",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "shield-of-missile-attraction",
+    "category": "armor",
+    "rarity": "rare"
+  },
+  {
+    "slug": "slippers-of-spider-climbing",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "sovereign-glue",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "spell-scroll",
+    "category": "scroll",
+    "rarity": "varies",
+    "variants": [
+      "spell-scroll-cantrip",
+      "spell-scroll-1st",
+      "spell-scroll-2nd",
+      "spell-scroll-3rd",
+      "spell-scroll-4th",
+      "spell-scroll-5th",
+      "spell-scroll-6th",
+      "spell-scroll-7th",
+      "spell-scroll-8th",
+      "spell-scroll-9th"
+    ]
+  },
+  {
+    "slug": "spell-scroll-1st",
+    "category": "scroll",
+    "rarity": "common",
+    "isVariant": true
+  },
+  {
+    "slug": "spell-scroll-2nd",
+    "category": "scroll",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "spell-scroll-3rd",
+    "category": "scroll",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "spell-scroll-4th",
+    "category": "scroll",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "spell-scroll-5th",
+    "category": "scroll",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "spell-scroll-6th",
+    "category": "scroll",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "spell-scroll-7th",
+    "category": "scroll",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "spell-scroll-8th",
+    "category": "scroll",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "spell-scroll-9th",
+    "category": "scroll",
+    "rarity": "legendary",
+    "isVariant": true
+  },
+  {
+    "slug": "spell-scroll-cantrip",
+    "category": "scroll",
+    "rarity": "common",
+    "isVariant": true
+  },
+  {
+    "slug": "spellguard-shield",
+    "category": "armor",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "sphere-of-annihilation",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "staff-of-charming",
+    "category": "staff",
+    "rarity": "rare"
+  },
+  {
+    "slug": "staff-of-fire",
+    "category": "staff",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "staff-of-frost",
+    "category": "staff",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "staff-of-healing",
+    "category": "staff",
+    "rarity": "rare"
+  },
+  {
+    "slug": "staff-of-power",
+    "category": "staff",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "staff-of-striking",
+    "category": "staff",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "staff-of-swarming-insects",
+    "category": "staff",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "staff-of-the-magi",
+    "category": "staff",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "staff-of-the-python",
+    "category": "staff",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "staff-of-the-woodlands",
+    "category": "staff",
+    "rarity": "rare"
+  },
+  {
+    "slug": "staff-of-thunder-and-lightning",
+    "category": "staff",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "staff-of-withering",
+    "category": "staff",
+    "rarity": "rare"
+  },
+  {
+    "slug": "stone-of-controlling-earth-elementals",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  },
+  {
+    "slug": "stone-of-good-luck-luckstone",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "sun-blade",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "sword-of-life-stealing",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "sword-of-sharpness",
+    "category": "weapon",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "sword-of-wounding",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "talisman-of-pure-good",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "talisman-of-the-sphere",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "talisman-of-ultimate-evil",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "tome-of-clear-thought",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "tome-of-leadership-and-influence",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "tome-of-understanding",
+    "category": "wondrous-items",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "trident-of-fish-command",
+    "category": "weapon",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "universal-solvent",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "vicious-weapon",
+    "category": "weapon",
+    "rarity": "rare"
+  },
+  {
+    "slug": "vorpal-sword",
+    "category": "weapon",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "wand-of-binding",
+    "category": "wand",
+    "rarity": "rare"
+  },
+  {
+    "slug": "wand-of-enemy-detection",
+    "category": "wand",
+    "rarity": "rare"
+  },
+  {
+    "slug": "wand-of-fear",
+    "category": "wand",
+    "rarity": "rare"
+  },
+  {
+    "slug": "wand-of-fireballs",
+    "category": "wand",
+    "rarity": "rare"
+  },
+  {
+    "slug": "wand-of-lightning-bolts",
+    "category": "wand",
+    "rarity": "rare"
+  },
+  {
+    "slug": "wand-of-magic-detection",
+    "category": "wand",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "wand-of-magic-missiles",
+    "category": "wand",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "wand-of-paralysis",
+    "category": "wand",
+    "rarity": "rare"
+  },
+  {
+    "slug": "wand-of-polymorph",
+    "category": "wand",
+    "rarity": "very-rare"
+  },
+  {
+    "slug": "wand-of-secrets",
+    "category": "wand",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "wand-of-the-war-mage",
+    "category": "wand",
+    "rarity": "varies",
+    "variants": [
+      "wand-of-the-war-mage-1",
+      "wand-of-the-war-mage-2",
+      "wand-of-the-war-mage-3"
+    ]
+  },
+  {
+    "slug": "wand-of-the-war-mage-1",
+    "category": "wand",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "wand-of-the-war-mage-2",
+    "category": "wand",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "wand-of-the-war-mage-3",
+    "category": "wand",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "wand-of-web",
+    "category": "wand",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "wand-of-wonder",
+    "category": "wand",
+    "rarity": "rare"
+  },
+  {
+    "slug": "weapon",
+    "category": "weapon",
+    "rarity": "varies",
+    "variants": [
+      "weapon-1",
+      "weapon-2",
+      "weapon-3"
+    ]
+  },
+  {
+    "slug": "weapon-1",
+    "category": "weapon",
+    "rarity": "uncommon",
+    "isVariant": true
+  },
+  {
+    "slug": "weapon-2",
+    "category": "weapon",
+    "rarity": "rare",
+    "isVariant": true
+  },
+  {
+    "slug": "weapon-3",
+    "category": "weapon",
+    "rarity": "very-rare",
+    "isVariant": true
+  },
+  {
+    "slug": "well-of-many-worlds",
+    "category": "wondrous-items",
+    "rarity": "legendary"
+  },
+  {
+    "slug": "wind-fan",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "winged-boots",
+    "category": "wondrous-items",
+    "rarity": "uncommon"
+  },
+  {
+    "slug": "wings-of-flying",
+    "category": "wondrous-items",
+    "rarity": "rare"
+  }
+]
