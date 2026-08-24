@@ -119,6 +119,28 @@ components mounting in the same tick make one request, not two.
 
 Net new dependencies for the whole character feature: zero.
 
+The landing carousel is the exception that finally broke that run, and it is
+recorded rather than slipped in: `@mantine/carousel`, `embla-carousel` and
+`embla-carousel-react`, three packages for one page. Hand-rolling was the
+default here and is wrong for this one thing -- a drag-and-snap carousel is
+momentum physics, pointer capture, RTL and keyboard semantics, and "it is just a
+flexbox with `scroll-snap`" stops being true the moment a thumb is involved. The
+price is small and measured rather than assumed: +27 kB of JavaScript and +3 kB
+of CSS minified, about +10 kB gzipped. The cost that outlives the decision is
+the peer range -- `@mantine/carousel` pins `@mantine/core` to an *exact* version
+rather than a range, so the four Mantine packages now move as a unit. A
+lockfile diff that bumps `@mantine/core` is a UI-wide upgrade wearing a
+carousel's clothes, and should be reviewed as one.
+
+It costs something in the test suite too. embla constructs a `ResizeObserver`
+and an `IntersectionObserver` unconditionally, and jsdom implements neither, so
+`test/setup.ts` installs inert stubs. They deliberately never fire: jsdom has no
+layout, so anything they reported would be fiction, and a test that leaned on one
+would be testing the stub. The carousel is therefore asserted on its structure --
+three panels named by their own headings, in a named region, and a height
+expression that still mentions both shell offsets -- and never on which panel is
+scrolled into view.
+
 ## Folders are filing, not sharing
 
 A folder is a named place one account files its characters, and nothing else:
@@ -394,25 +416,111 @@ branches on the auth state and picks the chrome: a loader while the session is
 still unknown, `LandingShell` when anonymous, `RootShell` when signed in. At
 `/`, `routes/HomeRoute.tsx` makes the same choice about the content.
 
-Signed out, that content is the dragon mark and nothing else -- no headline, no
-tagline, and since system status moved to `/status` alone, nothing under it
-either. With the page otherwise empty, the mark sits in the middle of the
-window -- the window itself, not the space left under the header, so it reads
-as centred rather than as nudged down by the chrome. The `Center` in
-`routes/LandingPage.tsx` starts below the header, so it is given a height of
-the viewport less *twice* that offset and stops short of the bottom by what the
-header takes at the top. Both terms are `AppShell`'s own custom properties, so
-the header height and the shell padding are still stated in one place. The
-chrome around it already does the work a pitch would: the header carries the
-name and the "Log in" button. What the old
-copy promised about the rules and level-up is either invisible until you are
-inside or better said on `/login`, which is one press away and has room to say
-what each way in costs.
+Signed out, that content is a carousel of three panels -- build a character,
+join a group, run an adventure. Those three are the whole of what this app means
+to be, in the order you meet them, and committing to that shape before
+committing to the words for it was the cheap order to do the work in: the
+layout, the swipe and the accessible names settled first, against panels that
+were literally empty, and the copy arrived after.
+
+The captions in `routes/LandingPage.tsx` are **sample copy** and are marked as
+such where they live: the right length and the right shape, not the words this
+page ships with. Two of them describe what the app does; `Run an adventure`
+describes intent, because the battle tracker is not built. That is the one to
+keep honest -- a landing page promising it would be the only thing on
+easydnd.org that did.
+
+They also paid for a piece of the design to be removed. While the panels were
+empty, `slideSize` was under 100% so the neighbours peeked: three identical
+blank rectangles at full width read as one rectangle, and a swipe between them
+appeared to do nothing. A panel that says something is already distinguishable
+from the panel beside it, so the peek went and the carousel shows one panel at a
+time. The border stayed, because a panel still wants an edge.
+
+Two of Mantine's own defaults are overridden, and both for the same reason --
+they are drawn for a carousel of photographs and this is a carousel of text on
+paper. The indicators are white at `0.6` opacity, which over a pale panel on a
+pale page is invisible; an invisible indicator is worse than no indicator,
+because it says there is one panel. They are repainted in the primary colour,
+which reads under `defaultColorScheme="auto"` where white does not. And the
+controls are `44px` rather than the default `26px`: they are the only way
+through for a visitor with neither a touchscreen nor the arrow keys, they sit
+*over* a panel rather than beside it, and 26px is under every published minimum
+for a pointer target.
+
+None of the three panels is a link, and not because two of them lead nowhere --
+`/groups` is real. It is that all three live behind the sign-in boundary, so a
+panel that navigated would bounce a signed-out visitor straight back to this
+page; the header's "Log in" stays the only control, and it carries them where
+they were going. What the old copy promised about the rules and level-up is
+still either invisible until you are inside or better said on `/login`, which is
+one press away and has room to say what each way in costs.
+
+Each panel is named by its own heading, through `aria-labelledby`, rather than
+carrying a second copy of the words in an `aria-label`. While the panels were
+empty the label was all there was, and a slide that announces itself as "slide 2
+of 3" is unusable without sight; now that the words are on screen, two spellings
+of one name is only how they come to disagree. Reachability *by name* is still
+the accessibility contract the mark used to hold up -- moved, not dropped -- and
+`LandingPage.test.tsx` pins the wiring and not merely the name, because an id
+that stops resolving turns every panel back into "Carousel slide" without
+failing a test that only looked one up.
+
+The dragon mark went with the emptiness. The old `Center` existed because a lone
+mark on a blank page should read as optically centred against the *window* --
+hence a box of the viewport less twice the header offset, stopping short of the
+bottom by what the header took at the top. With a footer below and structure in
+the middle there is no longer a figure to centre, and a hero mark stacked above a
+carousel is two heroes competing for one glance. `ui/DragonMark.tsx` stays: it is
+the app's mark rather than the landing page's, and its test keeps alive the
+inline-SVG conventions it set.
+
+So the height calc changed shape and not merely terms. The carousel fills
+`AppShell`'s main content box -- `100dvh` less the header offset, the footer
+offset and twice the shell padding -- with a `320px` floor, because `height` on
+a carousel is a hard height and a short landscape phone would otherwise squeeze
+three panels into a couple of hundred pixels. That floor is the old
+`min-height`-not-`height` argument in its new home. Every term is still
+`AppShell`'s own custom property, so the header height and the footer height in
+`shell/LandingShell.tsx` are each stated once. One trap worth naming: Mantine's
+`rem()` passes a length through untouched only when it begins `calc(` or
+`clamp(`, so the whole expression is wrapped in `calc(...)` rather than being a
+bare `max(...)`, which would be split on its spaces and mangled.
 
 The "this browser cannot use passkeys" warning went with the copy rather than
 being kept. `features/auth/LoginScreen.tsx` renders the same alert on `/login`,
 where the guest button that still works actually lives; a second copy on the
 landing page would only be a sentence read twice on the way to the same place.
+
+### The footer says whose this is
+
+The landing chrome now has a footer, and only the landing chrome does. It exists
+for one of the three things it carries: the SRD 5.1 data this app is built on is
+CC-BY-4.0, and that licence expects its attribution *in the product*. Until now
+`data/srd_5.1/ATTRIBUTION.md` had been travelling in the release tarball to a
+directory nginx does not serve, which `licensing.md` recorded against itself as
+an open gap. `/legal` closes it, the footer is how anybody reaches `/legal`, and
+the source link and the build are the two things that belong beside it once
+there is a line to put them on.
+
+It is a `Group` and not a `<nav>`, which is load-bearing rather than an
+oversight. `LandingShell.test.tsx` pins that the logged-out chrome exposes no
+navigation landmark -- while nobody is signed in there is nowhere in the app to
+navigate to -- and two links to static documents are not the app's navigation.
+The `<footer>` that `AppShell.Footer` renders supplies `contentinfo`, which is
+the landmark this content actually wants.
+
+The version is the short SHA as plain text. `/status` is where a version is a
+*diagnostic*: the full SHA, beside the API's, to be compared against it. Here it
+is provenance, in a form that fits a 390px footer, and linking it would promise
+a page for an arbitrary commit that nothing serves.
+
+The cost is worth stating rather than pretending away: the signed-in shells have
+no footer, so an account holder -- the person actually reading SRD-derived
+material on a character sheet -- has no link to `/legal` from anywhere.
+`MobileShell` could not carry one without redesigning its tab bar, which owns
+the only `AppShell.Footer` slot. That gap is recorded in
+[licensing.md](licensing.md#known-gaps) rather than quietly carried.
 
 Branching rather than redirecting is what keeps the address bar honest: an
 unauthenticated visit to a deep link does not bounce anywhere, so a link shared
@@ -620,12 +728,13 @@ ways. The d20 in `web/public/favicon.svg` is the tab icon, the PWA icons
 (`npm run icons` regenerates them from `scripts/gen-icons.mjs`) and the header
 wordmark; `shell/Wordmark.tsx` reaches it with an `<img>` because the browser
 has already fetched that file for the tab. The dragon in `ui/DragonMark.tsx` is
-the hero mark on the signed-out landing page, and it is an inline SVG
-component: nothing has pre-fetched it, so a `public/` asset would be a round
-trip before the page has anything to show, and there is no `vite-plugin-svgr`
-here to turn a `.svg` into a component without a new dependency. Neither is a
-mistake to be tidied into the other -- one is drawn to survive 16px, the other
-to carry a page.
+the app's hero mark -- it carried the signed-out landing page until the carousel
+replaced it, and it is currently unplaced -- and it is an inline SVG component:
+nothing pre-fetches it, so a `public/` asset would be a round trip before the
+page has anything to show, and there is no `vite-plugin-svgr` here to turn a
+`.svg` into a component without a new dependency. Neither is a mistake to be
+tidied into the other -- one is drawn to survive 16px, the other to carry a
+page.
 
 `DragonMark` is also the client's first inline SVG, so it sets the convention:
 colours as literals rather than `currentColor` (it carries its own field, which
@@ -655,17 +764,23 @@ is a link nobody can press, and a null user renders neither: the pair sits in
 its own right-pushed group so the header still ends in the sign-out control
 when there is no name to draw.
 
-`/` is the one page both sides of the sign-in boundary share: the landing pitch
-signed out, the party list signed in. It carries nothing else -- system status
-is a deploy question rather than something either audience came to `/` to read.
+`/` is the one page both sides of the sign-in boundary share: the three panels
+signed out, the party list signed in. It carries nothing else -- system
+status is a deploy question rather than something either audience came to `/` to
+read.
 
-`/status` answers that question, and it is the one route outside `RootGate`
+`/status` answers that question, and it is one of two routes outside `RootGate`
 entirely: it renders in `LandingShell` for everybody, signed in or out. Public
 because needing to sign in to check whether a deploy landed would be backwards;
 outside the signed-in chrome and absent from `shell/nav.ts` because it is a
 diagnostic rather than a part of the app to navigate around. The landing header
 offers a signed-in visitor the way back rather than a second invitation to sign
 in.
+
+`/legal` is the other, on adjacent grounds: needing an account to read the
+licence of the material you are being shown would be backwards in the same way.
+It is a document rather than a section, so it stays out of `shell/nav.ts` too,
+and it is reached from the footer the landing chrome carries.
 
 Routes added under `/` render inside `RootGate`, so they are only reached when
 somebody is signed in. A route that must stay public -- `/login`, which would be

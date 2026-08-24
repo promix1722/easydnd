@@ -19,6 +19,11 @@ export interface NavItem {
 // So is system status: `/status` is a deploy diagnostic, not a part of the app
 // somebody navigates around, and it renders in the landing chrome for everyone
 // rather than inside the signed-in shell. See routes/index.tsx.
+//
+// And so is `/legal`, on the same grounds and for a different reason: it is a
+// document rather than a section, it renders in the landing chrome for
+// everyone, and it is reached from the footer that chrome carries. See
+// shell/LandingFooter.tsx.
 export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/', label: 'Characters', shortLabel: 'Party' },
   { to: '/groups', label: 'Groups' },

@@ -37,8 +37,44 @@ describe('LandingShell', () => {
     const login = screen.getByRole('link', { name: 'Log in' })
     expect(login).toBeInTheDocument()
     expect(login).toHaveAttribute('href', '/login')
-    // Nowhere to navigate to yet: every section of the app is somebody's.
+  })
+
+  // Load-bearing for the footer's markup, not just a leftover: nowhere to
+  // navigate to yet, because every section of the app is somebody's -- and two
+  // links to static documents are not the app's navigation. So LandingFooter
+  // renders its links bare inside AppShell.Footer's <footer>, which announces
+  // itself as contentinfo, and never wraps them in a <nav>.
+  it('exposes a footer landmark and no navigation', () => {
+    landingAt()
+
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+  })
+
+  // The middle one is why the footer exists at all: the SRD 5.1 data is
+  // CC-BY-4.0, and that licence expects its notice in the product rather than
+  // only in the repository. See shell/LandingFooter.tsx.
+  it('carries the source, the terms and the build', () => {
+    landingAt()
+
+    const footer = screen.getByRole('contentinfo')
+
+    expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
+      'href',
+      'https://github.com/promix1722/easydnd',
+    )
+    expect(screen.getByRole('link', { name: 'Licences' })).toHaveAttribute('href', '/legal')
+    // 'dev' is what buildinfo reports when VITE_APP_VERSION is unset, which is
+    // every test run and every `vite dev`.
+    expect(footer).toHaveTextContent('dev')
+  })
+
+  // The footer is the logged-out chrome's, so it follows /status and /legal in
+  // rather than disappearing for somebody who is already signed in.
+  it('keeps the footer for a signed-in visitor on this chrome', () => {
+    landingAt({ status: 'authenticated' })
+
+    expect(screen.getByRole('link', { name: 'Licences' })).toBeInTheDocument()
   })
 
   // Unlike the passkey buttons it replaced, this one does not depend on

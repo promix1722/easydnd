@@ -5,6 +5,7 @@ import { LoginScreen } from '@/features/auth'
 import { BuildScreen, CharacterLogScreen, CharacterSheetScreen } from '@/features/character'
 import { ImportCharacterScreen } from '@/features/characters'
 import { GroupListScreen, GroupScreen } from '@/features/groups'
+import { LegalScreen } from '@/features/legal'
 import { StatusScreen } from '@/features/status'
 import { LandingShell } from '@/shell/LandingShell'
 import { RootGate } from '@/shell/RootGate'
@@ -148,5 +149,16 @@ export const router = createBrowserRouter([
     path: '/status',
     element: <LandingShell />,
     children: [{ index: true, element: <StatusScreen /> }],
+  },
+
+  // /legal sits outside RootGate for a related reason: a licence notice you
+  // have to sign in to read is not a notice. The SRD 5.1 data is CC-BY-4.0 and
+  // that licence expects its attribution in the product, so the landing
+  // footer links here and this renders for everybody. Absent from
+  // shell/nav.ts, like /status -- it is a document, not a section of the app.
+  {
+    path: '/legal',
+    element: <LandingShell />,
+    children: [{ index: true, element: <LegalScreen /> }],
   },
 ])

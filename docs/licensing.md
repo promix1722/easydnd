@@ -44,6 +44,27 @@ it is the only one CI checks, because `make data/srd/check` regenerates
 one follows srdgen. If the wording ever needs to change, change the constant
 first and let the generator propagate it.
 
+There is now one more copy, and it is the first that reaches a visitor's
+browser: `SRD_ATTRIBUTION` in
+[`web/src/features/legal/attribution.ts`](../web/src/features/legal/attribution.ts),
+rendered on `/legal`. A browser cannot read a file at the repository root, so
+the copy is unavoidable; what is avoidable is its drifting. Two checks in
+series, both inside `make verify`, stop that:
+
+```
+attribution.ts --(web/src/features/legal/attribution.test.ts)--> data/srd_5.1/ATTRIBUTION.md
+                                                                          |
+                                                     (make data/srd/check) |
+                                                                          v
+                                                                cmd/srdgen/main.go
+```
+
+The test reads the generated file off disk and compares it with the client's
+string, ignoring only the markdown autolink brackets and the hard wrapping --
+neither of which is a difference in wording. So the rule is unchanged: change
+the Go constant first and let the generator propagate. The client is a leaf that
+a test drags along behind it.
+
 ## Where the detail lives
 
 | Document | Covers |
@@ -51,6 +72,7 @@ first and let the generator propagate it.
 | [docs/reference_srd_5.1/README.md](reference_srd_5.1/README.md) | The fullest treatment: CC-BY-4.0 vs OGL 1.0a, why every machine-readable SRD is a community conversion, and what to check before redistributing |
 | [docs/reference_srd_5.1/data/ATTRIBUTION.md](reference_srd_5.1/data/ATTRIBUTION.md) | Per-dataset provenance for each vendored source |
 | [data/srd_5.1/ATTRIBUTION.md](../data/srd_5.1/ATTRIBUTION.md) | Generated; travels with the data it covers, including into the deploy tarball |
+| [web/src/features/legal/attribution.ts](../web/src/features/legal/attribution.ts) | The copy the browser shows, on `/legal`. Pinned to the generated notice by `attribution.test.ts` |
 
 One trap worth naming: `docs/reference_srd_5.1/data/cc-srd5/LICENSING.md` is
 **upstream's** notice, vendored along with the data, and it names its own author.
@@ -60,12 +82,17 @@ It is not this project's license and should not be read as one.
 
 Recorded rather than quietly carried:
 
-- **The served UI shows no attribution.** `data/srd_5.1/ATTRIBUTION.md` reaches
-  the server in the release tarball, but nothing user-visible on easydnd.org
-  displays the notice -- there is no footer, no About page, and
-  `web/src/routes/LandingPage.tsx` mentions "2014 rules and SRD 5.1" without the
-  WotC or CC-BY text. CC-BY-4.0 expects attribution in the product, not only in
-  the source repository. Open.
+- **The notice is on the public chrome only.** `/legal` now carries the MIT
+  notice and the SRD 5.1 attribution in full, reached from a footer in
+  `web/src/shell/LandingShell.tsx` -- so the older and larger gap, that nothing
+  user-visible on easydnd.org displayed the notice at all, is closed. What
+  remains is that the footer is on the *landing* chrome alone: `/`, `/login`,
+  `/status` and `/legal`. A signed-in visitor, who is the one actually reading
+  SRD-derived material on a character sheet, has no link to it from anywhere.
+  `MobileShell` spends its only `AppShell.Footer` slot on the tab bar, so
+  closing this means either a footer in `DesktopShell` and something else on
+  phones, or an "About" entry beside the account link in both signed-in headers.
+  Open.
 - **The English prose is sourced from the OGL-declared dump.** Both mechanics and
   prose currently come from `5e-bits/5e-database` (`src/2014/en`). The mechanics
   -- dice, ranges, bonuses, slot tables -- are facts and carry thin copyright;

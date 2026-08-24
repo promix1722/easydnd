@@ -4,6 +4,11 @@ import type { ReactNode } from 'react'
 import { theme } from './theme'
 
 import '@mantine/core/styles.css'
+// Carousel ships its own stylesheet; it is not part of core's. Imported here
+// rather than in the one screen that uses it, because src/ui is where the
+// design system is assembled and a feature importing Mantine CSS would be the
+// same leak the layer check exists to stop.
+import '@mantine/carousel/styles.css'
 
 /**
  * Wraps the app in the design system. Exists so that `main.tsx` -- which sits

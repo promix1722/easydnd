@@ -12,6 +12,12 @@
 // Application chrome. Re-exported so that src/shell -- which builds the two
 // layouts -- needs no Mantine import of its own, keeping the rule absolute.
 export { AppShell, Burger, NavLink, Tabs } from '@mantine/core'
+// Its own package, and the one component here that is not core's. Re-exported
+// plainly rather than wrapped the way Columns and ModalSheet are: those exist
+// because their phone and desktop renderings share no markup, and a carousel's
+// do -- the same slides, a narrower viewport. `Carousel.Slide` rides along as a
+// static member.
+export { Carousel } from '@mantine/carousel'
 export { useDisclosure } from '@mantine/hooks'
 
 // Layout and typography primitives, re-exported unchanged.
