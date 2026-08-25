@@ -27,6 +27,7 @@ func newImportingService(t *testing.T) *charuc.Service {
 	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
 	return charuc.NewService(
 		memory.NewCharacterRepository(),
+		memory.NewFolderRepository(),
 		catalogfile.NewSource(dir),
 		hexsheet.NewImporter(),
 		slog.New(slog.DiscardHandler),
@@ -49,7 +50,7 @@ func TestImportCreatesAnOwnedCharacter(t *testing.T) {
 	s := newImportingService(t)
 	ctx := context.Background()
 
-	imported, report, err := s.Import(ctx, "owner-1", rules.DefaultLocale, referenceExport(t))
+	imported, report, err := s.Import(ctx, "owner-1", "", rules.DefaultLocale, referenceExport(t))
 	if err != nil {
 		t.Fatalf("Import() error = %v", err)
 	}
@@ -87,7 +88,7 @@ func TestImportLeavesPromptsOpen(t *testing.T) {
 	s := newImportingService(t)
 	ctx := context.Background()
 
-	imported, _, err := s.Import(ctx, "owner-1", rules.DefaultLocale, referenceExport(t))
+	imported, _, err := s.Import(ctx, "owner-1", "", rules.DefaultLocale, referenceExport(t))
 	if err != nil {
 		t.Fatalf("Import() error = %v", err)
 	}
@@ -116,7 +117,7 @@ func TestImportedCharacterAcceptsAnswers(t *testing.T) {
 	s := newImportingService(t)
 	ctx := context.Background()
 
-	imported, _, err := s.Import(ctx, "owner-1", rules.DefaultLocale, referenceExport(t))
+	imported, _, err := s.Import(ctx, "owner-1", "", rules.DefaultLocale, referenceExport(t))
 	if err != nil {
 		t.Fatalf("Import() error = %v", err)
 	}
@@ -148,7 +149,7 @@ func TestImportRejectsRubbish(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := s.Import(context.Background(), "owner-1",
+			_, _, err := s.Import(context.Background(), "owner-1", "",
 				rules.DefaultLocale, strings.NewReader(tt.body))
 			if err == nil {
 				t.Fatal("Import() should have failed")
@@ -166,14 +167,83 @@ func TestImportRejectsRubbish(t *testing.T) {
 func TestImportWithoutAnImporter(t *testing.T) {
 	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
 	s := charuc.NewService(
-		memory.NewCharacterRepository(), catalogfile.NewSource(dir), nil,
+		memory.NewCharacterRepository(),
+		memory.NewFolderRepository(), catalogfile.NewSource(dir), nil,
 		slog.New(slog.DiscardHandler),
 	)
-	_, _, err := s.Import(context.Background(), "owner-1",
+	_, _, err := s.Import(context.Background(), "owner-1", "",
 		rules.DefaultLocale, strings.NewReader("{}"))
 
 	var notImplemented *types.NotImplementedError
 	if !errors.As(err, &notImplemented) {
 		t.Errorf("error = %v, want a *types.NotImplementedError", err)
+	}
+}
+
+// One entry per selection binds an import vacuously, and this is what says so
+// out loud: an import makes no selections at all. Not one typed event carries
+// an answer, so there is nothing bundled and nothing for a player to be
+// unable to change -- every prompt is still theirs to answer.
+func TestImportedLogSelectsNothing(t *testing.T) {
+	s := newImportingService(t)
+
+	imported, _, err := s.Import(context.Background(), "owner-1", "", rules.DefaultLocale, referenceExport(t))
+	if err != nil {
+		t.Fatalf("Import() error = %v", err)
+	}
+	if err := imported.Log.Validate(); err != nil {
+		t.Fatalf("the imported log does not validate: %v", err)
+	}
+	for _, e := range imported.Log.Events {
+		if len(e.Choices) > 0 {
+			t.Errorf("entry %d (%s) carries %d answers; an import answers nothing",
+				e.Seq, e.Type, len(e.Choices))
+		}
+		// Nor is any of it attributable: no prompt was answered, so no entry
+		// belongs to a group.
+		if e.Source != domain.PromptGroupNone {
+			t.Errorf("entry %d (%s) claims source %s", e.Seq, e.Type, e.Source)
+		}
+	}
+	// The opening state is the one entry that carries anything, and what it
+	// carries is an assertion rather than a set of choices.
+	if len(imported.Log.Events[0].Changes) == 0 {
+		t.Error("the init event carries nothing, so the export's numbers went nowhere")
+	}
+}
+
+// And an imported character is revisable like any other: the replay walks a
+// log full of entries that answer nothing, and must keep every one of them.
+func TestImportedLogSurvivesARevision(t *testing.T) {
+	ctx := context.Background()
+	s := newImportingService(t)
+
+	imported, _, err := s.Import(ctx, "owner-1", "", rules.DefaultLocale, referenceExport(t))
+	if err != nil {
+		t.Fatalf("Import() error = %v", err)
+	}
+	before := imported.Log.Len()
+
+	revision, err := s.Revise(ctx, "owner-1", imported.ID, rules.DefaultLocale,
+		imported.Log.LastSeq(), 1, &domain.Event{
+			Type: domain.EventInit,
+			Changes: []domain.Change{
+				{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue("Рурик")},
+			},
+		}, true)
+	if err != nil {
+		t.Fatalf("Revise() error = %v", err)
+	}
+	if len(revision.Dropped) != 0 {
+		t.Errorf("dropped = %+v, want nothing", revision.Dropped)
+	}
+	if revision.Seq != before {
+		t.Errorf("seq = %d, want %d", revision.Seq, before)
+	}
+	if revision.Sheet.Identity.Name != "Рурик" {
+		t.Errorf("name = %q, want Рурик", revision.Sheet.Identity.Name)
+	}
+	if revision.Sheet.Identity.Race != "half-elf" {
+		t.Errorf("race = %q, want the import's own half-elf still there", revision.Sheet.Identity.Race)
 	}
 }

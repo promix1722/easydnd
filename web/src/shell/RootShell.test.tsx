@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { screen } from '@testing-library/react'
 import { RouterProvider, createMemoryRouter } from 'react-router'
 
-import { withAuth } from '@/test/auth'
+import { testAccount, withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
 
 import { RootShell } from './RootShell'
@@ -38,13 +38,19 @@ describe('RootShell', () => {
   })
 
   // The account is who is looking, not a section of the app: it belongs beside
-  // the control that ends the session, and nowhere in the navigation.
-  it('keeps the account in the header rather than the navigation', () => {
-    shellAt('desktop')
+  // the control that ends the session, and nowhere in the navigation. The name
+  // is the link, so there is no second "Account" control to find.
+  it.each(['desktop', 'mobile'] as const)(
+    'links the account name to /account from the %s header',
+    (viewport) => {
+      shellAt(viewport)
 
-    expect(screen.getByRole('link', { name: 'Account' })).toBeInTheDocument()
-    expect(NAV_ITEMS.some((item) => item.to === '/account')).toBe(false)
-  })
+      const link = screen.getByRole('link', { name: testAccount.display_name })
+      expect(link).toHaveAttribute('href', '/account')
+      expect(screen.queryByRole('link', { name: 'Account' })).not.toBeInTheDocument()
+      expect(NAV_ITEMS.some((item) => item.to === '/account')).toBe(false)
+    },
+  )
 
   it('renders the routed content at both viewports', () => {
     const { unmount } = shellAt('desktop')

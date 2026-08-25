@@ -10,21 +10,32 @@ import (
 	"github.com/promix1722/easydnd/internal/types"
 )
 
-// validateEvents checks a batch of events against what the character can
-// actually answer right now.
+// validateAndAttribute checks a batch of events against what the character
+// can actually answer right now, and stamps each one with the group of the
+// prompt it answers.
 //
 // The batch is validated as a whole, event by event, against a log that grows
 // as it goes -- because a batch that chooses a race and answers that race's
 // prompt in one request is a perfectly reasonable thing for a client to send,
 // and the second half is only legal because of the first.
-func validateEvents(log domain.Log, cat *catalog.Catalog, events []domain.Event) error {
+//
+// Validating and attributing are one pass because they read the same thing:
+// the prompts open before the event. Splitting them would mean projecting the
+// log twice per event to reach the same answer, and would leave two places
+// where "which prompt is this?" is decided.
+func validateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.Event) error {
 	working := domain.Log{Events: slices.Clone(log.Events)}
 
-	for i, event := range events {
-		if err := validateEvent(working, cat, event, i); err != nil {
+	for i := range events {
+		open, err := domain.Prompts(working, cat)
+		if err != nil {
 			return err
 		}
-		if err := working.Append(event); err != nil {
+		if err := validateEvent(working, cat, open, events[i], i); err != nil {
+			return err
+		}
+		events[i].Source = sourceOf(working, cat, open, events[i])
+		if err := working.Append(events[i]); err != nil {
 			return err
 		}
 	}
@@ -41,14 +52,72 @@ func validateEvents(log domain.Log, cat *catalog.Catalog, events []domain.Event)
 // prompts open before the event would reject it, so the reference is applied
 // first, on a copy with the answers stripped, and the answers are checked
 // against what that opened.
-func validateEvent(log domain.Log, cat *catalog.Catalog, event domain.Event, index int) error {
+//
+// The structural half is checked twice over, and the two checks are different
+// questions. validateRef asks whether the entry exists in the compendium;
+// answersAnOpenPrompt asks whether the character was offered it. Only the
+// first of those used to be asked, which is how a half-elf could be given a
+// hill dwarf's subrace: subrace:hill-dwarf resolves perfectly well, and
+// nothing looked at whether anything had asked for a subrace at all.
+func validateEvent(
+	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event, index int,
+) error {
 	if requiredRef(event) {
 		if err := validateRef(cat, event, index); err != nil {
 			return err
 		}
+		if _, ok := answersAnOpenPrompt(log, cat, open, event); !ok {
+			return types.NewFieldValidationError("some answers are not valid", types.FieldError{
+				Field: fmt.Sprintf("events[%d].ref", index), Rule: "not-offered",
+				Message: fmt.Sprintf(
+					"nothing is asking this character for %s", event.Ref),
+			})
+		}
 	}
+	fields := validateChanges(event, index)
+
+	_, lost, err := surviving(log, cat, event, index)
+	if err != nil {
+		return err
+	}
+	// Append's policy on a lost answer: refuse the write. The player is
+	// answering right now, so an answer that is not legal is a mistake they
+	// can still correct -- unlike a replay, where nobody is at the keyboard.
+	for _, l := range lost {
+		fields = append(fields, l.Errors...)
+	}
+	if len(fields) > 0 {
+		return types.NewFieldValidationError("some answers are not valid", fields...)
+	}
+	return nil
+}
+
+// answerLoss is one answer that did not survive, and why.
+type answerLoss struct {
+	Answer domain.Answer
+	Errors []types.FieldError
+}
+
+// surviving splits an event's answers into the ones still legal against log
+// and the ones that are not.
+//
+// One loop, two policies. validateEvent turns any loss into a rejected write
+// because the player is answering right now; Revise keeps the entry and
+// reports the loss because they are not. Both read the same predicate, so
+// append's strictness and replay's leniency can never disagree about what
+// "legal" means -- which they would within a week if this existed twice.
+//
+// Answers are checked one at a time, against a log that grows as each is
+// accepted, because an answer can open the prompt the next one answers. The
+// rogue's Expertise is the case: choosing the "two skills" branch is what
+// brings the two-skill prompt into existence, and a client naturally sends
+// both in the same event. Checking them all against one snapshot would reject
+// the second every time.
+func surviving(
+	log domain.Log, cat *catalog.Catalog, event domain.Event, index int,
+) (kept []domain.Answer, lost []answerLoss, err error) {
 	if len(event.Choices) == 0 {
-		return nil
+		return nil, nil, nil
 	}
 
 	structural := event
@@ -56,37 +125,201 @@ func validateEvent(log domain.Log, cat *catalog.Catalog, event domain.Event, ind
 	structural.Seq = 0
 	opened := domain.Log{Events: slices.Clone(log.Events)}
 	if err := opened.Append(structural); err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	// Answers are checked one at a time, against a log that grows as each is
-	// accepted, because an answer can open the prompt the next one answers.
-	// The rogue's Expertise is the case: choosing the "two skills" branch is
-	// what brings the two-skill prompt into existence, and a client naturally
-	// sends both in the same event. Checking them all against one snapshot
-	// would reject the second every time.
-	var fields []types.FieldError
 	for _, answer := range event.Choices {
 		open, err := domain.Prompts(opened, cat)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
-		errs := validateAnswer(open, answer, index)
-		fields = append(fields, errs...)
-		if len(errs) > 0 {
+		if errs := validateAnswer(open, answer, index); len(errs) > 0 {
+			lost = append(lost, answerLoss{Answer: answer, Errors: errs})
 			continue
 		}
+		kept = append(kept, answer)
 		if err := opened.Append(domain.Event{
 			Type:    domain.EventChange,
 			Choices: []domain.Answer{answer},
 		}); err != nil {
-			return err
+			return nil, nil, err
 		}
 	}
-	if len(fields) > 0 {
-		return types.NewFieldValidationError("some answers are not valid", fields...)
+	return kept, lost, nil
+}
+
+// answersAnOpenPrompt reports whether a structural event is one the character
+// is *currently being asked for*, and returns the prompt it answers.
+//
+// Two shapes count, and the second is what keeps a race's own follow-up
+// entries alive:
+//
+//   - the prompt selects the entry itself -- "which race?", "which subrace?",
+//     "which class do you gain a level in?" -- and the event names one of the
+//     options it offers;
+//   - the prompt hangs off an entry the character already holds, in which case
+//     the prompt states the event it must be posted as, Ref and all, and the
+//     event matching that Ref is what makes it the entry those answers belong
+//     to.
+//
+// Level is compared only when both sides state one. A prompt that names no
+// level applies at any ("which class do you gain a level in?" does not know
+// the answer's level until it has one), and a client that omits the level is
+// answering the prompt it was handed either way.
+//
+// The first match in prompt order wins, and prompt order is the order a build
+// flow asks in -- so a level event carrying that level's own answers is
+// attributed to the class that poses them rather than to the standing offer
+// of another level.
+func answersAnOpenPrompt(
+	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event,
+) (domain.Prompt, bool) {
+	for _, p := range open {
+		if p.Event.Type != event.Type {
+			continue
+		}
+		if p.Event.Level != 0 && event.Level != 0 && p.Event.Level != event.Level {
+			continue
+		}
+		if p.Event.Ref.IsZero() && !offers(p.Choice.From, event.Ref) {
+			continue
+		}
+		if !p.Event.Ref.IsZero() && p.Event.Ref != event.Ref {
+			continue
+		}
+		if p.Advances && !advancesInOrder(log, cat, event) {
+			continue
+		}
+		return p, true
 	}
-	return nil
+	return domain.Prompt{}, false
+}
+
+// advancesInOrder reports whether a level event names the level that actually
+// comes next in the class it names.
+//
+// The offer of a level says which classes are eligible and cannot say which
+// level, because it does not know which class the answer will name. Without
+// this check the sixth level of a fighter stays legal on a character with no
+// fighter at all -- which nobody could reach by answering prompts, but which
+// a replay reaches the moment the entry that started that class is replaced.
+// Every level after it would then survive, and the character would come out
+// of the rebuild with a class they never took.
+//
+// A zero level is left alone. It is what a client sends when it copies the
+// prompt's own event verbatim, and it has always projected as no level at
+// all; turning that into a rejection is a separate decision from this one.
+func advancesInOrder(log domain.Log, cat *catalog.Catalog, event domain.Event) bool {
+	if event.Level == 0 {
+		return true
+	}
+	state, err := domain.Project(log, cat)
+	if err != nil {
+		return false
+	}
+	for _, taken := range state.Identity.Classes {
+		if taken.Class == event.Ref.Slug {
+			return event.Level == taken.Level+1
+		}
+	}
+	return event.Level == 1
+}
+
+// offers reports whether an option set contains a catalogue entry.
+func offers(from rules.OptionSet, ref rules.Ref) bool {
+	keys := rules.OptionKeys(from)
+	if keys == nil {
+		// A set drawn from a collection does not list its members: the
+		// collection *is* the option set, and validateRef has already
+		// established that the entry is in it. What is left to check is that
+		// it is the right collection -- offering a race is not offering a
+		// class.
+		return from.Collection == ref.Kind
+	}
+	if !slices.Contains(keys, ref.Slug) {
+		return false
+	}
+	// An option key is a slug and carries no kind, so a slug published under
+	// two collections would match on the wrong one. The options themselves
+	// carry the kind, which is what settles it.
+	for _, option := range from.Options {
+		if opt, ok := option.(rules.RefOption); ok && opt.Ref == ref {
+			return true
+		}
+	}
+	return false
+}
+
+// sourceOf names the group of the prompt an event answers.
+//
+// It is what the server writes into Event.Source, and it is derived rather
+// than accepted: the client posts what a prompt told it to post, and the
+// server already knows which prompt that was.
+//
+// The three shapes an answer arrives in, in the order they are tried:
+//
+//   - an init event is the identity entry, always. It is the one event no
+//     prompt hands out on a character that already exists, because the way to
+//     change a name is to replace it;
+//   - a structural event is attributed to the prompt that offered it, which is
+//     the same match that decided whether to accept it at all;
+//   - an event carrying answers is attributed to the first open prompt one of
+//     them names.
+//
+// Failing all three, an event carrying only changes is attributed to whatever
+// prompt it *closes*: the six ability scores are answered as changes and name
+// no prompt, so the only way to know they settled character/abilities is to
+// see that prompt stop being open. Everything left -- a note, a DM's ruling --
+// answers nothing and is attributed to nothing.
+func sourceOf(
+	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event,
+) domain.PromptGroup {
+	if event.Type == domain.EventInit {
+		return domain.GroupIdentity
+	}
+	if requiredRef(event) {
+		if p, ok := answersAnOpenPrompt(log, cat, open, event); ok {
+			return p.Group
+		}
+		return domain.PromptGroupNone
+	}
+	for _, answer := range event.Choices {
+		if p, found := findPrompt(open, answer.Prompt); found {
+			return p.Group
+		}
+	}
+	if len(event.Changes) > 0 {
+		return closedGroup(log, cat, open, event)
+	}
+	return domain.PromptGroupNone
+}
+
+// closedGroup returns the group of the first prompt that was open before the
+// event and is not open after it.
+//
+// This costs a second projection, and it is the only way to attribute a
+// change event without a table mapping paths to groups -- a table that would
+// be a second statement of what Prompts already says, and would be wrong the
+// first time a prompt moved between groups.
+func closedGroup(
+	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event,
+) domain.PromptGroup {
+	after := domain.Log{Events: slices.Clone(log.Events)}
+	staged := event
+	staged.Seq = 0
+	if err := after.Append(staged); err != nil {
+		return domain.PromptGroupNone
+	}
+	remaining, err := domain.Prompts(after, cat)
+	if err != nil {
+		return domain.PromptGroupNone
+	}
+	for _, p := range open {
+		if _, still := findPrompt(remaining, p.Choice.Prompt); !still {
+			return p.Group
+		}
+	}
+	return domain.PromptGroupNone
 }
 
 // requiredRef reports whether an event type must name a catalogue entry.
@@ -142,6 +375,48 @@ func exists(cat *catalog.Catalog, ref rules.Ref) bool {
 	// rejected: refusing what this function has not learned about yet would
 	// make adding a collection a breaking change.
 	return true
+}
+
+// minScore and maxScore bound an ability score.
+//
+// The bounds are deliberately wide. Point buy and the standard array are far
+// narrower, but validating them here would make a legitimate DM ruling --
+// a boon, a cursed item, a homebrew race -- impossible to record. The client
+// enforces the generation method it is offering; the server enforces only
+// what no rule can produce.
+const (
+	minScore = 1
+	maxScore = 30
+)
+
+// validateChanges checks the addressed mutations an event carries.
+//
+// Exactly one thing is checked, and it is the one thing no rule can produce.
+// The six ability scores used to arrive with the create call and were bounded
+// there; they arrive as an answer now, so the bound moved here with them
+// rather than being quietly dropped along the way.
+func validateChanges(event domain.Event, index int) []types.FieldError {
+	var fields []types.FieldError
+	for i, change := range event.Changes {
+		segments := change.Path.Segments()
+		if len(segments) != 2 || segments[0] != "abilities" {
+			continue
+		}
+		if _, ok := rules.ParseAbility(segments[1]); !ok {
+			continue
+		}
+		if change.Op != domain.OpSet || change.Value.Kind != domain.ValueInt {
+			continue
+		}
+		if change.Value.Int < minScore || change.Value.Int > maxScore {
+			fields = append(fields, types.FieldError{
+				Field:   fmt.Sprintf("events[%d].changes[%d].value", index, i),
+				Rule:    "range",
+				Message: "an ability score must be between 1 and 30",
+			})
+		}
+	}
+	return fields
 }
 
 // validateAnswer checks one answer against the prompts currently open.

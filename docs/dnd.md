@@ -26,6 +26,21 @@ than cosmetic — the wrong word usually hides a wrong shape.
 | max HP | **hit point maximum** | `hit point maximum` 56×; `max HP` **0×** |
 | spell casting | **spellcasting** | One word, 207× |
 | dark vision | **Darkvision** | One word — and it is a *racial trait*, not a *class feature* |
+| party (as an account-level thing) | **group** | See below — the two are not the same set of things |
+
+**A group is people; a party is characters.** A **group** is the account-level
+thing the app stores: the people at one table, with a rank each — owner, DM,
+player. A **party** is the in-fiction band of adventurers, which is characters,
+and the SRD uses it that way throughout ("the party", "party treasure"). They
+are deliberately not modelled as the same thing and today only one of them is
+modelled at all: a group holds no characters. The Characters tab is
+short-labelled "Party" on mobile for exactly the SRD sense, which is why the
+account-level feature could not also be called one.
+
+A **folder** is the third word and the smallest of the three: one account's
+private shelf for its own characters. It is not people and not in-fiction --
+nothing is shared through it and no rule reads it. Group, party, folder:
+people, characters in the fiction, characters on a shelf.
 
 Two of those are more than renaming:
 
@@ -102,21 +117,47 @@ That is what makes level-up reversible, makes "why do I have this proficiency?"
 answerable, and lets a character survive a catalogue regeneration — the events
 record what was *chosen*, not what it evaluated to.
 
+**A folder is not part of this model.** Characters are filed into folders — see
+[backend.md](backend.md#folders) — and a folder records where a record is kept,
+not anything about the character. It is neither the group above nor the party:
+no rule reads it, nothing is shared through it, and it never appears in a log or
+on a sheet. Look for it in the service, not here.
+
 ### Log and events
 
-The log is ordered and append-only. It is small, so it is stored as one database
-record holding a JSON array — which is exactly why appending states the sequence
-number it expects to follow. Without that check, two clients editing one
+The log is ordered. It is small, so it is stored as one database record holding
+a JSON array — which is exactly why every write states the sequence number it
+expects the log to end at. Without that check, two clients editing one
 character read, modify and write the same blob, and the later write silently
 discards the earlier.
+
+It is **not** append-only, and saying that it was hid the reason it is safe.
+The invariant is **append, drop a suffix, or replace one entry and revalidate
+what follows**. What holds across all three is that *a stored answer's meaning
+depends only on the entries before it*: dropping a suffix removes entries that
+nothing earlier depends on, and a replacement leaves the prefix untouched, so
+every earlier entry still means what it meant. What a replacement can
+invalidate is the suffix, which is therefore re-checked entry by entry against
+the log rebuilt so far. Editing an entry in the middle *without* that replay is
+the thing that stays forbidden, and it is forbidden for the original reason: it
+would leave answers standing that the new prefix never offered.
+
+**One entry per selection.** Choosing a race is one entry. Setting the six
+ability scores is one entry. Naming the character is one entry. Nothing bundles
+several selections together, and that is not tidiness — a selection with no
+entry of its own is a selection the player cannot change, because the only
+thing they could point at is an entry that also carries five other decisions.
+Creation used to seed the name, the generation method and all six scores into
+the opening event, which is exactly why identity and abilities were the two
+things a build screen could not offer to revisit.
 
 Every event has the **same field structure** — one struct with a `Type`
 discriminator, not a sealed interface. Fields a given type does not use are zero.
 
 | Type | Carries |
 | --- | --- |
-| `init` | Opening state: name, ability scores. Always first, exactly once |
-| `change` | An arbitrary addressed mutation — the escape hatch for a DM ruling or homebrew |
+| `init` | The opening state — for a character created here, the name. Always first, exactly once |
+| `change` | An arbitrary addressed mutation — the escape hatch for a DM ruling or homebrew, and how the ability scores are answered |
 | `race`, `subrace`, `background`, `class`, `subclass` | A catalogue entry plus the answers to its prompts |
 | `level` | A level gained in a class |
 | `feat` | A feat taken |
@@ -126,6 +167,27 @@ An event names a catalogue entry by typed reference, records `Choices` as
 answers keyed by prompt id, and — for `init` and `change` only — carries
 `Changes`: a path, an operator (`set`, `increment`, `add`, `remove`) and a
 typed value.
+
+It also records a **`source`**: the group of the prompt it answers — `identity`,
+`abilities`, `race`, `background`, `class` or `advance`, the same vocabulary
+`Prompts` groups its questions by. Grouping the log is then a fact the server
+wrote rather than something a reader infers from the type, and the difference
+is not cosmetic: a `change` event carrying six numbers and a `change` event
+carrying a DM's ruling have the same type and belong to different questions.
+The server derives it from the prompt the event was matched against and never
+reads it off a request, because a client-supplied source would be a second,
+unverified vocabulary for the same fact. Entries the server cannot attribute —
+an imported log, a DM's `change` — carry no source at all. They are still in
+the log; they simply belong to no question.
+
+**The trade this accepts.** The log records how a character is *constructed*,
+not every state it passed through. "Why do I have this proficiency?" stays
+answerable, because the entry that granted it is still there and still says
+what it answered. "Was I ever a High Elf?" does not, because the entry that
+said so was replaced rather than superseded. That is the right way round: the
+first question is asked at the table every session, the second is asked by
+nobody, and keeping a second history alongside the constructor would be a
+second thing to hold consistent with the first.
 
 Most of what a change addresses is a value nothing derives. Two are not:
 `skills.<skill>` and `savingThrows.<ability>` state training the rules would

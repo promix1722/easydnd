@@ -51,6 +51,9 @@ type ImportResponse struct {
 //
 // An imported character arrives with every prompt unanswered, so a client
 // should send the player to the build screen rather than the sheet.
+//
+// `?folder=` files it, defaulting to the caller's default folder. It is in the
+// query rather than the body because the body is the export.
 func (h *Handler) Import(c *gin.Context) {
 	body := http.MaxBytesReader(c.Writer, c.Request.Body, maxExportBytes)
 	defer body.Close()
@@ -59,7 +62,7 @@ func (h *Handler) Import(c *gin.Context) {
 	locale := helpers.Locale(c)
 	owner := h.owner(c)
 
-	imported, report, err := h.service.Import(ctx, owner, locale, body)
+	imported, report, err := h.service.Import(ctx, owner, folderOf(c), locale, body)
 	if err != nil {
 		helpers.FormatError(c, err)
 		return

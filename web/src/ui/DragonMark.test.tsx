@@ -6,9 +6,12 @@ import { renderAt } from '@/test/render'
 import { DragonMark } from './DragonMark'
 
 /**
- * The mark is the whole of the signed-out landing page, so the thing worth
- * pinning is not how it is drawn but that it is *announced*. A decorative
- * version of this component would leave that page empty to a screen reader.
+ * The mark was the whole of the signed-out landing page until the carousel
+ * replaced it, and it is still the app's hero art -- currently unplaced. These
+ * tests stay because what they pin is the convention it set for inline SVGs
+ * rather than its old address: that a mark carrying a page is *announced*
+ * rather than decorative, and that its size survives being a CSS length. Both
+ * outlive the page it used to be on.
  */
 describe('DragonMark', () => {
   it('is announced by name rather than hidden', () => {
@@ -23,9 +26,10 @@ describe('DragonMark', () => {
     expect(screen.getByRole('img', { name: 'easydnd, a red dragon' })).toBeInTheDocument()
   })
 
-  // The landing page passes a CSS clamp rather than a number, so the prop has
-  // to survive being a string all the way to the rendered style -- which is
-  // why it is set there and not on the width attribute.
+  // Callers pass a CSS clamp rather than a number, so the prop has to survive
+  // being a string all the way to the rendered style -- which is why it is set
+  // there and not on the width attribute. `routes/LandingPage.tsx` has the same
+  // requirement of the carousel's height, and pins it the same way.
   it('takes a CSS length for its size', () => {
     renderAt('desktop', <DragonMark size="min(64vw, 300px)" />)
 

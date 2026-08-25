@@ -92,6 +92,32 @@ func (r *UserRepository) Create(_ context.Context, u domain.User) error {
 	return nil
 }
 
+// EnsureGuest stores a guest's row if it is not already there.
+//
+// Idempotent by design: a guest reaches this on every group they join, so
+// "already present" is the ordinary case. It deliberately does not refresh the
+// stored name from u -- the first join is what named them, and letting a later
+// call rewrite it would let a guest change what the roster calls them by
+// joining a second group.
+func (r *UserRepository) EnsureGuest(_ context.Context, u domain.User) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if u.ID == "" {
+		return types.NewValidationError("account id must not be empty")
+	}
+	if _, exists := r.items[u.ID]; exists {
+		return nil
+	}
+
+	// Stored without Anonymous set: the field is synthesised from the session
+	// token and repositories never persist it. What marks this row as a guest
+	// is the id, which carries user.AnonymousIDPrefix.
+	stored := domain.User{ID: u.ID, DisplayName: u.DisplayName, CreatedAt: u.CreatedAt}
+	r.items[u.ID] = stored
+	return nil
+}
+
 // ByID returns the account with the given id.
 func (r *UserRepository) ByID(_ context.Context, id domain.ID) (domain.User, error) {
 	r.mu.RLock()

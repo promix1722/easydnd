@@ -7,7 +7,12 @@ package character
 
 // Summary is one row of a character listing.
 type Summary struct {
-	ID      string       `json:"id"`
+	ID string `json:"id"`
+
+	// Folder is where the character is filed. Always set: a character is
+	// never in no folder, so a client can group a listing by this without
+	// a fallback bucket.
+	Folder  string       `json:"folder"`
 	Name    string       `json:"name"`
 	Level   int          `json:"level"`
 	Classes []ClassLevel `json:"classes,omitempty"`
@@ -35,7 +40,21 @@ type Character struct {
 type Event struct {
 	Seq  int    `json:"seq,omitempty"`
 	Type string `json:"type"`
-	At   string `json:"at,omitempty"`
+
+	// Source is the group of the prompt this entry answers: identity, class,
+	// race, background, abilities or advance. It is what lets a client group
+	// the log by the question each entry settles rather than guessing from
+	// the type -- a guess with no answer for a change event carrying six
+	// ability scores.
+	//
+	// Written by the server and **ignored on the way in**. The client does
+	// not decide what an answer means; a client-supplied source would be a
+	// second vocabulary for the same fact, free to disagree with the rules.
+	// Empty where the server cannot attribute the entry: an imported log, a
+	// DM's change.
+	Source string `json:"source,omitempty"`
+
+	At string `json:"at,omitempty"`
 
 	// Ref names the catalogue entry this event selects, as "kind:slug".
 	Ref string `json:"ref,omitempty"`

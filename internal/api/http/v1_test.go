@@ -24,12 +24,15 @@ import (
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
+	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	domain "github.com/promix1722/easydnd/internal/domain/auth"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
 )
 
 // newFullRouter builds the whole route table over the real compendium, an
@@ -80,10 +83,15 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 
 	ceremony := &stubCeremony{}
 	federation := &stubFederation{identity: user.Identity{Subject: "google-1", Email: "g@example.test"}}
+	// One account store, shared by the auth service and the group service. A
+	// second instance would leave the group service writing guest rows into a
+	// store no roster ever reads, so every member would come back nameless.
+	users := memory.NewUserRepository()
+	signer := token.NewSigner(cfg.Auth.SessionSecret, cfg.Auth.SessionTTL)
 	authService := authuc.NewService(
-		memory.NewUserRepository(),
+		users,
 		ceremony,
-		token.NewSigner(cfg.Auth.SessionSecret, cfg.Auth.SessionTTL),
+		signer,
 		map[user.Provider]domain.Federation{user.ProviderGoogle: federation},
 		authuc.Config{
 			SessionTTL:      cfg.Auth.SessionTTL,
@@ -95,7 +103,11 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
 
 	source := catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
-	characterService := charuc.NewService(memory.NewCharacterRepository(), source, hexsheet.NewImporter(), log)
+	characterService := charuc.NewService(memory.NewCharacterRepository(),
+		memory.NewFolderRepository(), source, hexsheet.NewImporter(), log)
+	// The same signer mints invite links; the kind claim is what keeps them
+	// from being interchangeable with the session cookie beside them.
+	groupService := groupuc.NewService(memory.NewGroupRepository(users), users, signer, log)
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		System:        system.New(testVersion),
@@ -103,6 +115,8 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 		Authenticator: authService,
 		Catalog:       catalogapi.New(source, log),
 		Character:     characterapi.New(characterService, log),
+		Folder:        folderapi.New(characterService, log),
+		Group:         groupapi.New(groupService, log),
 	})
 	if err != nil {
 		t.Fatalf("NewRouter: %v", err)
@@ -315,11 +329,7 @@ func TestCharacterBuildFlow(t *testing.T) {
 	r, session := newFullRouter(t)
 
 	rec := send(t, r, session, http.MethodPost, "/v1/characters", map[string]any{
-		"name":   "Сахарок",
-		"method": "point-buy",
-		"abilities": map[string]int{
-			"str": 10, "dex": 15, "con": 13, "int": 10, "wis": 12, "cha": 12,
-		},
+		"name": "Сахарок",
 	})
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create = %d, want 201: %s", rec.Code, rec.Body)
@@ -329,16 +339,33 @@ func TestCharacterBuildFlow(t *testing.T) {
 	if created.Seq != 1 {
 		t.Errorf("seq = %d, want 1", created.Seq)
 	}
-	// The base array, unmodified: no race yet.
-	if created.Sheet.Abilities.Scores["dex"] != 15 {
-		t.Errorf("dexterity = %d, want the base 15", created.Sheet.Abilities.Scores["dex"])
-	}
 
+	// Creation carries a name and nothing else, so the scores are the first
+	// thing the character is asked for -- an ordinary open choice with an
+	// entry of its own, rather than eight selections bundled into the init.
 	prompts := decode[characterapi.PromptsResponse](t,
 		send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts", nil))
 	if prompts.Complete {
-		t.Error("a character with no race reads as complete")
+		t.Error("a character with nothing but a name reads as complete")
 	}
+	if first := firstRequired(t, prompts); first.Choice.Prompt != "character/abilities" {
+		t.Fatalf("first required prompt = %q, want character/abilities", first.Choice.Prompt)
+	}
+
+	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1,
+		"events":      []map[string]any{scoresEvent()},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("scores = %d, want 200: %s", rec.Code, rec.Body)
+	}
+	// The base array, unmodified: no race yet.
+	if got := decode[characterapi.WriteResponse](t, rec).Sheet.Abilities.Scores["dex"]; got != 15 {
+		t.Errorf("dexterity = %d, want the base 15", got)
+	}
+
+	prompts = decode[characterapi.PromptsResponse](t,
+		send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts", nil))
 	first := firstRequired(t, prompts)
 	if first.Choice.Prompt != "character/race" {
 		t.Fatalf("first required prompt = %q, want character/race", first.Choice.Prompt)
@@ -350,7 +377,7 @@ func TestCharacterBuildFlow(t *testing.T) {
 	}
 
 	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
-		"expectedSeq": 1,
+		"expectedSeq": 2,
 		"events": []map[string]any{{
 			"type": "race",
 			"ref":  "race:half-elf",
@@ -363,8 +390,8 @@ func TestCharacterBuildFlow(t *testing.T) {
 		t.Fatalf("append = %d, want 200: %s", rec.Code, rec.Body)
 	}
 	written := decode[characterapi.WriteResponse](t, rec)
-	if written.Seq != 2 {
-		t.Errorf("seq = %d, want 2", written.Seq)
+	if written.Seq != 3 {
+		t.Errorf("seq = %d, want 3", written.Seq)
 	}
 	// The write returns the new sheet, which is why the client needs no
 	// cache invalidation: the response is the invalidation.
@@ -392,9 +419,12 @@ func TestEventsReturnsTheLog(t *testing.T) {
 
 	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
 		"expectedSeq": 1,
-		"events": []map[string]any{{
+		"events": []map[string]any{scoresEvent(), {
 			"type": "race",
 			"ref":  "race:half-elf",
+			// A source the server must not repeat: it writes its own, from
+			// the prompt the event turns out to answer.
+			"source": "background",
 			"choices": []map[string]any{
 				{"prompt": "half-elf/ability-bonus/0", "picks": []string{"dex", "con"}},
 			},
@@ -405,20 +435,23 @@ func TestEventsReturnsTheLog(t *testing.T) {
 	}
 
 	got := decode[characterapi.EventsResponse](t, readLog(t, r, session, id))
-	if got.Seq != 2 {
-		t.Errorf("seq = %d, want 2", got.Seq)
+	if got.Seq != 3 {
+		t.Errorf("seq = %d, want 3", got.Seq)
 	}
-	if len(got.Events) != 2 {
-		t.Fatalf("events = %d, want 2", len(got.Events))
+	if len(got.Events) != 3 {
+		t.Fatalf("events = %d, want 3", len(got.Events))
 	}
 
-	// Creation seeds the log rather than storing the answers apart from it,
-	// so the first event is always the init that carries them.
+	// Creation seeds the log, and what it seeds is the name -- one entry, one
+	// selection, so the name is a thing a player can point at and change.
 	if got.Events[0].Type != "init" || got.Events[0].Seq != 1 {
 		t.Errorf("first event = %q at %d, want init at 1", got.Events[0].Type, got.Events[0].Seq)
 	}
-	if len(got.Events[0].Changes) == 0 {
-		t.Error("the init event carries no changes, so nothing records what the character was created with")
+	if len(got.Events[0].Changes) != 1 || got.Events[0].Changes[0].Path != "identity.name" {
+		t.Errorf("init changes = %+v, want the name alone", got.Events[0].Changes)
+	}
+	if got.Events[0].Source != "identity" {
+		t.Errorf("init source = %q, want identity", got.Events[0].Source)
 	}
 	// The server stamps the time, but not on the event Create seeds: a client
 	// reading the log has to render an event with no time at all.
@@ -426,15 +459,22 @@ func TestEventsReturnsTheLog(t *testing.T) {
 		t.Errorf("init At = %q, want empty", got.Events[0].At)
 	}
 
-	second := got.Events[1]
-	if second.Seq != 2 || second.Type != "race" || second.Ref != "race:half-elf" {
-		t.Errorf("second event = %+v, want the race at seq 2", second)
+	if got.Events[1].Source != "abilities" {
+		t.Errorf("scores source = %q, want abilities", got.Events[1].Source)
 	}
-	if second.At == "" {
+
+	third := got.Events[2]
+	if third.Seq != 3 || third.Type != "race" || third.Ref != "race:half-elf" {
+		t.Errorf("third event = %+v, want the race at seq 3", third)
+	}
+	if third.Source != "race" {
+		t.Errorf("race source = %q, want race -- the body said background", third.Source)
+	}
+	if third.At == "" {
 		t.Error("an appended event has no At, so the log cannot say when it happened")
 	}
-	if len(second.Choices) != 1 || second.Choices[0].Prompt != "half-elf/ability-bonus/0" {
-		t.Errorf("choices = %+v, want the answer as it was posted", second.Choices)
+	if len(third.Choices) != 1 || third.Choices[0].Prompt != "half-elf/ability-bonus/0" {
+		t.Errorf("choices = %+v, want the answer as it was posted", third.Choices)
 	}
 }
 
@@ -543,6 +583,152 @@ func TestTruncateUndoesAndProtectsInit(t *testing.T) {
 	}
 }
 
+// The route pair that makes a choice changeable, over HTTP: replace one entry
+// by position, see what it cost, and see it not cost anything until asked.
+func TestReplaceAndDeleteAnEntry(t *testing.T) {
+	r, session := newFullRouter(t)
+	id := createCharacter(t, r, session)
+
+	// A dwarf who took the hill dwarf subrace, so that changing the race has
+	// something real to orphan.
+	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1,
+		"events": []map[string]any{
+			scoresEvent(),
+			{"type": "race", "ref": "race:dwarf"},
+			{"type": "subrace", "ref": "subrace:hill-dwarf"},
+		},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("build = %d, want 200: %s", rec.Code, rec.Body)
+	}
+	if seq := decode[characterapi.WriteResponse](t, rec).Seq; seq != 4 {
+		t.Fatalf("seq = %d, want 4", seq)
+	}
+
+	replacement := map[string]any{
+		"expectedSeq": 4,
+		"event":       map[string]any{"type": "race", "ref": "race:half-elf"},
+	}
+
+	// The dry run: the full cost, and nothing written.
+	rec = send(t, r, session, http.MethodPut,
+		"/v1/characters/"+id+"/events/3?dryRun=true", replacement)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("dry run = %d, want 200: %s", rec.Code, rec.Body)
+	}
+	preview := decode[characterapi.WriteResponse](t, rec)
+	if len(preview.Dropped) != 1 {
+		t.Fatalf("dropped = %+v, want the orphaned subrace", preview.Dropped)
+	}
+	if preview.Dropped[0].Seq != 4 || preview.Dropped[0].Reason != "not-offered" {
+		t.Errorf("dropped = %+v, want entry 4 as not-offered", preview.Dropped[0])
+	}
+	if preview.Dropped[0].Source != "race" {
+		t.Errorf("dropped source = %q, want race", preview.Dropped[0].Source)
+	}
+	stored := decode[characterapi.EventsResponse](t, readLog(t, r, session, id))
+	if stored.Seq != 4 || stored.Events[2].Ref != "race:dwarf" {
+		t.Fatalf("the dry run wrote to the log: %+v", stored)
+	}
+
+	// The commit: the same request without the flag, reporting the same cost.
+	rec = send(t, r, session, http.MethodPut, "/v1/characters/"+id+"/events/3", replacement)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("replace = %d, want 200: %s", rec.Code, rec.Body)
+	}
+	written := decode[characterapi.WriteResponse](t, rec)
+	if len(written.Dropped) != len(preview.Dropped) {
+		t.Errorf("committed %d drops, previewed %d", len(written.Dropped), len(preview.Dropped))
+	}
+	if written.Seq != 3 {
+		t.Errorf("seq = %d, want 3: the subrace entry is gone", written.Seq)
+	}
+	if written.Sheet.Identity.Race != "half-elf" || written.Sheet.Identity.Subrace != "" {
+		t.Errorf("identity = %+v, want a half-elf with no subrace", written.Sheet.Identity)
+	}
+
+	// And the same log, addressed the same way, with nothing to put back.
+	rec = send(t, r, session, http.MethodDelete,
+		"/v1/characters/"+id+"/events/3?expectedSeq=3", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("delete = %d, want 200: %s", rec.Code, rec.Body)
+	}
+	if got := decode[characterapi.WriteResponse](t, rec); got.Sheet.Identity.Race != "" {
+		t.Errorf("race = %q, want the entry removed", got.Sheet.Identity.Race)
+	}
+}
+
+// The guards on the route: the position, the concurrency token, and the flag.
+func TestReplaceGuards(t *testing.T) {
+	r, session := newFullRouter(t)
+	id := createCharacter(t, r, session)
+
+	init := map[string]any{"type": "init", "changes": []map[string]any{{
+		"path": "identity.name", "op": "set",
+		"value": map[string]any{"kind": "string", "string": "Рурик"},
+	}}}
+
+	for _, tt := range []struct {
+		name string
+		path string
+		body any
+		want int
+	}{
+		{
+			name: "the opening entry, replaced by another init",
+			path: "/v1/characters/" + id + "/events/1",
+			body: map[string]any{"expectedSeq": 1, "event": init},
+			want: http.StatusOK,
+		},
+		{
+			name: "the opening entry, replaced by anything else",
+			path: "/v1/characters/" + id + "/events/1",
+			body: map[string]any{"expectedSeq": 1, "event": map[string]any{"type": "note", "note": "x"}},
+			want: http.StatusBadRequest,
+		},
+		{
+			name: "an entry the log does not have",
+			path: "/v1/characters/" + id + "/events/9",
+			body: map[string]any{"expectedSeq": 1, "event": init},
+			want: http.StatusBadRequest,
+		},
+		{
+			name: "a sequence that has moved",
+			path: "/v1/characters/" + id + "/events/1",
+			body: map[string]any{"expectedSeq": 7, "event": init},
+			want: http.StatusBadRequest,
+		},
+		{
+			// Anything but true or false, because ?dryRun=yes silently read
+			// as a commit is the change the player asked to preview.
+			name: "a dry-run flag that is neither",
+			path: "/v1/characters/" + id + "/events/1?dryRun=yes",
+			body: map[string]any{"expectedSeq": 1, "event": init},
+			want: http.StatusBadRequest,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := send(t, r, session, http.MethodPut, tt.path, tt.body)
+			if rec.Code != tt.want {
+				t.Errorf("status = %d, want %d: %s", rec.Code, tt.want, rec.Body)
+			}
+		})
+	}
+
+	// Removing the opening entry is not a thing either: a character with no
+	// opening state is not an earlier version of itself.
+	rec := send(t, r, session, http.MethodDelete, "/v1/characters/"+id+"/events/1?expectedSeq=1", nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("deleting the init event = %d, want 400", rec.Code)
+	}
+	// And the concurrency token is required, exactly as it is on a truncation.
+	rec = send(t, r, session, http.MethodDelete, "/v1/characters/"+id+"/events/1", nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("delete without expectedSeq = %d, want 400", rec.Code)
+	}
+}
+
 func TestListAndDelete(t *testing.T) {
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
@@ -560,16 +746,40 @@ func TestListAndDelete(t *testing.T) {
 	}
 }
 
+// createCharacter creates one the way the route now takes it: a name, and
+// nothing that has a prompt of its own.
 func createCharacter(t *testing.T, r *gin.Engine, session *http.Cookie) string {
 	t.Helper()
 	rec := send(t, r, session, http.MethodPost, "/v1/characters", map[string]any{
-		"name":      "Сахарок",
-		"abilities": map[string]int{"dex": 15, "con": 13},
+		"name": "Сахарок",
 	})
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create = %d, want 201: %s", rec.Code, rec.Body)
 	}
 	return decode[characterapi.CreateResponse](t, rec).ID
+}
+
+// scoresEvent is the answer to character/abilities: six scores and the method
+// they were generated with, as one entry of its own.
+func scoresEvent() map[string]any {
+	set := func(path string, value any) map[string]any {
+		kind := "int"
+		if _, ok := value.(string); ok {
+			kind = "slug"
+		}
+		return map[string]any{
+			"path": path, "op": "set",
+			"value": map[string]any{"kind": kind, kind: value},
+		}
+	}
+	return map[string]any{
+		"type": "change",
+		"changes": []map[string]any{
+			set("abilities.method", "point-buy"),
+			set("abilities.str", 10), set("abilities.dex", 15), set("abilities.con", 13),
+			set("abilities.int", 10), set("abilities.wis", 12), set("abilities.cha", 12),
+		},
+	}
 }
 
 func firstRequired(t *testing.T, p characterapi.PromptsResponse) characterapi.Prompt {
@@ -622,8 +832,23 @@ func TestCharacterRoutesRequireASession(t *testing.T) {
 		{http.MethodGet, "/v1/characters/" + id + "/events"},
 		{http.MethodPost, "/v1/characters/" + id + "/events"},
 		{http.MethodDelete, "/v1/characters/" + id + "/events?after=1&expectedSeq=1"},
+		{http.MethodPut, "/v1/characters/" + id + "/events/1"},
+		{http.MethodDelete, "/v1/characters/" + id + "/events/1?expectedSeq=1"},
 		{http.MethodGet, "/v1/catalog"},
 		{http.MethodGet, "/v1/catalog/races"},
+		{http.MethodGet, "/v1/groups"},
+		{http.MethodPost, "/v1/groups"},
+		{http.MethodGet, "/v1/groups/grp_x"},
+		{http.MethodPatch, "/v1/groups/grp_x"},
+		{http.MethodDelete, "/v1/groups/grp_x"},
+		{http.MethodPost, "/v1/groups/grp_x/invites"},
+		{http.MethodPatch, "/v1/groups/grp_x/members?user=someone"},
+		{http.MethodDelete, "/v1/groups/grp_x/members?user=someone"},
+		// The invite routes are guarded too. Redeeming a link is something a
+		// person does, not something a link does by itself: you have to be
+		// signed in as somebody before there is anybody to seat.
+		{http.MethodPost, "/v1/invites/preview"},
+		{http.MethodPost, "/v1/invites/accept"},
 	} {
 		rec := send(t, r, nil, route.method, route.path, nil)
 		if rec.Code != http.StatusUnauthorized {
@@ -658,6 +883,11 @@ func TestAnotherAccountCannotReachTheCharacter(t *testing.T) {
 			map[string]any{"expectedSeq": 1, "events": []map[string]any{{"type": "note", "note": "mine"}}},
 		},
 		{http.MethodDelete, "/v1/characters/" + id + "/events?after=1&expectedSeq=1", nil},
+		{
+			http.MethodPut, "/v1/characters/" + id + "/events/1",
+			map[string]any{"expectedSeq": 1, "event": map[string]any{"type": "init"}},
+		},
+		{http.MethodDelete, "/v1/characters/" + id + "/events/1?expectedSeq=1", nil},
 	} {
 		rec := send(t, r, intruder, route.method, route.path, route.body)
 		if rec.Code != http.StatusNotFound {

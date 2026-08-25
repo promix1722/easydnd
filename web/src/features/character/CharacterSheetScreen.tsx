@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router'
 
-import { getSheet } from '@/lib/api'
-import type { Sheet } from '@/lib/api'
+import { getPrompts, getSheet } from '@/lib/api'
+import type { Prompt, Sheet } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
 import {
   Alert,
@@ -18,12 +18,36 @@ import {
   Title,
 } from '@/ui'
 
-import { abilityName, classLine, signed, titleCase } from '@/domain'
+import { OutstandingChoices } from './OutstandingChoices'
+
+import { abilitiesInOrder, abilityName, answerable, classLine, signed, titleCase } from '@/domain'
+
+/** The sheet, and what the character has not decided yet. */
+interface SheetView {
+  sheet: Sheet
+  /**
+   * Null when `/prompts` failed. The list of what is left is worth having and
+   * is not worth losing the sheet over -- a sheet that refuses to draw because
+   * a second request failed is a page that fails for a reason it is not about.
+   */
+  prompts: Prompt[] | null
+}
 
 /** The character sheet. */
 export function CharacterSheetScreen() {
   const { id = '' } = useParams()
-  const sheet = useResource<Sheet>(`sheet:${id}`, (signal) => getSheet(id, signal))
+  const sheet = useResource<SheetView>(`sheet:${id}`, async (signal) => {
+    const [projected, prompts] = await Promise.all([
+      getSheet(id, signal),
+      getPrompts(id, signal).then(
+        // Advancement is not offered anywhere in this client while level-up
+        // does not work; see domain/stages.ts.
+        (response) => (response.prompts ?? []).filter((prompt) => answerable(prompt.group)),
+        () => null,
+      ),
+    ])
+    return { sheet: projected, prompts }
+  })
 
   if (sheet.loading) {
     return (
@@ -48,8 +72,9 @@ export function CharacterSheetScreen() {
     )
   }
 
-  const s = sheet.data
+  const s = sheet.data.sheet
   const identity = s.identity
+  const outstanding = sheet.data.prompts ?? []
 
   return (
     <Stack gap="lg">
@@ -66,25 +91,46 @@ export function CharacterSheetScreen() {
               .join(' · ')}
           </Text>
         </div>
-        <Group gap="xs">
-          <Anchor component={Link} to={`/characters/${id}/log`}>
-            <Button variant="subtle">Event log</Button>
-          </Anchor>
-          <Anchor component={Link} to={`/characters/${id}/build`}>
-            <Button>Level up</Button>
-          </Anchor>
-        </Group>
+        <Anchor component={Link} to={`/characters/${id}/log`}>
+          <Button variant="subtle">Event log</Button>
+        </Anchor>
       </Group>
 
+      {/*
+        An unfinished character says so on the page it is looked at most.
+        The list is the same component the build screen's tabs draw, reading
+        the same `/prompts` response -- there is no second notion anywhere in
+        this client of what is still outstanding, and so no way for the sheet
+        and the build screen to disagree about it.
+      */}
+      {outstanding.length > 0 && (
+        <Alert color="blue" title="Still to choose">
+          <Stack gap="xs" align="flex-start">
+            <OutstandingChoices prompts={outstanding} />
+            <Anchor component={Link} to={`/characters/${id}/build`}>
+              <Button variant="light">Answer these</Button>
+            </Anchor>
+          </Stack>
+        </Alert>
+      )}
+
+      {/*
+        Hit points lead. They are the one number on the sheet that moves
+        between one glance and the next, and the one a player reaches for
+        mid-turn; armor class is settled at the start of a fight and rarely
+        touched again. First position belongs to whichever is read most, and
+        on a phone -- two per row -- it is the only position visible without
+        the eye travelling.
+      */}
       <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
-        <Stat label="Armor class" value={s.status.armorClass} />
         <Stat label="Hit points" value={`${s.base.hitPoints.current} / ${s.base.hitPoints.max}`} />
+        <Stat label="Armor class" value={s.status.armorClass} />
         <Stat label="Initiative" value={signed(s.status.initiative)} />
         <Stat label="Proficiency" value={signed(s.status.proficiencyBonus)} />
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 3, sm: 6 }} spacing="sm">
-        {Object.entries(s.abilities.scores).map(([ability, score]) => (
+        {abilitiesInOrder(s.abilities.scores).map(([ability, score]) => (
           <Card key={ability} withBorder padding="sm" radius="md">
             <Stack gap={0} align="center">
               <Text size="xs" c="dimmed" tt="uppercase" title={abilityName(ability)}>
@@ -139,7 +185,7 @@ export function CharacterSheetScreen() {
             title: 'Saving throws',
             content: (
               <Stack gap={4}>
-                {Object.entries(s.savingThrows).map(([ability, state]) => (
+                {abilitiesInOrder(s.savingThrows).map(([ability, state]) => (
                   <Group key={ability} justify="space-between" gap="xs">
                     <Group gap={6}>
                       <Text size="sm" tt="uppercase">

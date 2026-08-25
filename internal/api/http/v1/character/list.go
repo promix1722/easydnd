@@ -14,8 +14,12 @@ type ListResponse struct {
 }
 
 // List handles GET /v1/characters.
+//
+// `?folder=` narrows the listing to one folder. Naming a folder the caller does
+// not own is a 404 rather than an empty list, so an unowned id cannot be
+// mistaken for a folder with nothing in it.
 func (h *Handler) List(c *gin.Context) {
-	summaries, err := h.service.List(c.Request.Context(), h.owner(c), helpers.Locale(c))
+	summaries, err := h.service.List(c.Request.Context(), h.owner(c), folderOf(c), helpers.Locale(c))
 	if err != nil {
 		helpers.FormatError(c, err)
 		return

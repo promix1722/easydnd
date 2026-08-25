@@ -22,6 +22,7 @@ import (
 // constructor; there are no package-level singletons.
 type Service struct {
 	repo     domain.Repository
+	folders  domain.FolderRepository
 	catalog  catalog.Source
 	importer SheetImporter
 	log      *slog.Logger
@@ -31,17 +32,27 @@ type Service struct {
 	clock func() time.Time
 }
 
-// NewService wires a Service over the given repository, catalogue source and
+// NewService wires a Service over the given repositories, catalogue source and
 // sheet importer.
+//
+// Characters and folders are two stores but one service, because two of this
+// package's rules span both: every character is in a folder, and deleting a
+// folder deletes the characters in it. A separate folder service would have to
+// reach into this one to keep either of them, which is a dependency drawn to
+// avoid a field.
 //
 // The importer may be nil, in which case Import reports that the feature is
 // not configured rather than panicking. That is not a convenience: a build
 // that ships without an importer should fail the one route that needs one, not
 // every route that does not.
 func NewService(
-	repo domain.Repository, source catalog.Source, importer SheetImporter, log *slog.Logger,
+	repo domain.Repository,
+	folders domain.FolderRepository,
+	source catalog.Source,
+	importer SheetImporter,
+	log *slog.Logger,
 ) *Service {
-	return &Service{repo: repo, catalog: source, importer: importer, log: log}
+	return &Service{repo: repo, folders: folders, catalog: source, importer: importer, log: log}
 }
 
 // now reads the clock, defaulting to the real one.
@@ -52,38 +63,37 @@ func (s *Service) now() time.Time {
 	return time.Now().UTC()
 }
 
-// NewCharacter is the opening state a character is created with.
+// NewCharacter is the opening state a character is created with: a name, and
+// an alignment if the player has one in mind.
 //
-// The scores are the *base* array as generated -- point buy, standard array,
-// dice. Racial bonuses are applied by the projection, every time, which is
-// what lets a player change their mind about a race without re-entering six
-// numbers.
+// It used to carry the generation method and all six ability scores as well,
+// and that was eight selections seeded into one log entry. A selection with
+// no entry of its own is a selection the player cannot change, which is why
+// creation stopped bundling: the scores are an ordinary open choice now,
+// answered from the abilities tab as their own entry, and the method travels
+// with them.
 type NewCharacter struct {
 	Name      string
 	Alignment rules.Slug
-	Method    rules.Slug
-	Abilities map[rules.Ability]int
 }
 
-// minScore and maxScore bound an ability score.
-//
-// The bounds are deliberately wide. Point buy and the standard array are far
-// narrower, but validating them here would make a legitimate DM ruling --
-// a boon, a cursed item, a homebrew race -- impossible to record. The client
-// enforces the generation method it is offering; the server enforces only
-// what no rule can produce.
-const (
-	minScore = 1
-	maxScore = 30
-)
-
 // Create starts a new character for owner and seeds it with an init event.
-func (s *Service) Create(ctx context.Context, owner domain.OwnerID, opening NewCharacter) (domain.Character, error) {
+//
+// A zero folder means the owner's default, which is materialised here if this
+// is their first character. Naming a folder somebody else owns is a 404, like
+// every other reach for what is not yours.
+func (s *Service) Create(
+	ctx context.Context, owner domain.OwnerID, folder domain.FolderID, opening NewCharacter,
+) (domain.Character, error) {
 	if err := validateOpening(opening); err != nil {
 		return domain.Character{}, err
 	}
+	folder, err := s.resolveFolder(ctx, owner, folder)
+	if err != nil {
+		return domain.Character{}, err
+	}
 
-	created, err := s.repo.Create(ctx, owner)
+	created, err := s.repo.Create(ctx, owner, folder)
 	if err != nil {
 		return domain.Character{}, err
 	}
@@ -93,24 +103,14 @@ func (s *Service) Create(ctx context.Context, owner domain.OwnerID, opening NewC
 	return s.repo.Get(ctx, created.ID)
 }
 
+// validateOpening checks what creation is now allowed to carry: a name, and
+// nothing that has a prompt of its own.
 func validateOpening(opening NewCharacter) error {
-	var fields []types.FieldError
 	if opening.Name == "" {
-		fields = append(fields, types.FieldError{
-			Field: "name", Rule: "required", Message: "a character needs a name",
-		})
-	}
-	for ability, score := range opening.Abilities {
-		if score < minScore || score > maxScore {
-			fields = append(fields, types.FieldError{
-				Field:   "abilities." + ability.Slug().String(),
-				Rule:    "range",
-				Message: "an ability score must be between 1 and 30",
+		return types.NewFieldValidationError("the character could not be created",
+			types.FieldError{
+				Field: "name", Rule: "required", Message: "a character needs a name",
 			})
-		}
-	}
-	if len(fields) > 0 {
-		return types.NewFieldValidationError("the character could not be created", fields...)
 	}
 	return nil
 }
@@ -118,6 +118,11 @@ func validateOpening(opening NewCharacter) error {
 // initEvent builds the opening event. Everything it carries is a change,
 // because everything it carries is an input the rules derive from rather than
 // a catalogue entry the character selected.
+//
+// Its source is identity without asking, and it is the one event for which
+// that is a statement rather than a lookup: no prompt offers an init event to
+// a character that already exists, because the way to change a name is to
+// replace this entry.
 func initEvent(opening NewCharacter) domain.Event {
 	changes := []domain.Change{
 		{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue(opening.Name)},
@@ -127,28 +132,22 @@ func initEvent(opening NewCharacter) domain.Event {
 			Path: "identity.alignment", Op: domain.OpSet, Value: domain.SlugValue(opening.Alignment),
 		})
 	}
-	if !opening.Method.IsZero() {
-		changes = append(changes, domain.Change{
-			Path: "abilities.method", Op: domain.OpSet, Value: domain.SlugValue(opening.Method),
-		})
-	}
-	// Ordered, so that two identical requests produce identical logs.
-	for _, ability := range rules.Abilities() {
-		score, ok := opening.Abilities[ability]
-		if !ok {
-			continue
-		}
-		changes = append(changes, domain.Change{
-			Path:  domain.Path("abilities." + ability.Slug().String()),
-			Op:    domain.OpSet,
-			Value: domain.IntValue(score),
-		})
-	}
-	return domain.Event{Type: domain.EventInit, Changes: changes}
+	return domain.Event{Type: domain.EventInit, Source: domain.GroupIdentity, Changes: changes}
 }
 
 // List returns summaries of the characters owned by owner.
-func (s *Service) List(ctx context.Context, owner domain.OwnerID, locale rules.Locale) ([]domain.Summary, error) {
+//
+// A zero folder lists all of them. A named one narrows to that folder, and must
+// be one the caller owns -- otherwise an unowned id would list nothing and read
+// as an empty folder rather than as somebody else's.
+func (s *Service) List(
+	ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale,
+) ([]domain.Summary, error) {
+	if !folder.IsZero() {
+		if _, err := s.ownedFolder(ctx, owner, folder); err != nil {
+			return nil, err
+		}
+	}
 	characters, err := s.repo.List(ctx, owner)
 	if err != nil {
 		return nil, err
@@ -159,7 +158,10 @@ func (s *Service) List(ctx context.Context, owner domain.OwnerID, locale rules.L
 	}
 	out := make([]domain.Summary, 0, len(characters))
 	for _, c := range characters {
-		out = append(out, domain.Summarize(c.ID, c.Owner, c.Log, cat))
+		if !folder.IsZero() && c.Folder != folder {
+			continue
+		}
+		out = append(out, domain.Summarize(c.ID, c.Owner, c.Folder, c.Log, cat))
 	}
 	return out, nil
 }
@@ -222,10 +224,11 @@ func (s *Service) Prompts(
 // Apply validates events against the catalogue and appends them to a
 // character's log, returning the sequence the log now ends at.
 //
-// Validation is the substance here: an answer must name a prompt the
-// character actually has open, and its picks must be options that prompt
-// actually offers. Without that check a typo is not an error but a silently
-// missing proficiency, discovered weeks later as a wrong number on a sheet.
+// Validation is the substance here: an event must select something the
+// character is being offered, an answer must name a prompt they actually have
+// open, and its picks must be options that prompt actually offers. Without
+// those checks a typo is not an error but a silently missing proficiency,
+// discovered weeks later as a wrong number on a sheet.
 func (s *Service) Apply(
 	ctx context.Context,
 	owner domain.OwnerID,
@@ -246,7 +249,9 @@ func (s *Service) Apply(
 			"character %q is at sequence %d, not %d", id, got, expectedSeq)
 	}
 
-	if err := validateEvents(character.Log, cat, events); err != nil {
+	// Validating stamps each event with the source of the prompt it answers,
+	// so the slice handed to the repository is not the slice that arrived.
+	if err := validateAndAttribute(character.Log, cat, events); err != nil {
 		return 0, err
 	}
 	if err := s.repo.Append(ctx, id, expectedSeq, events...); err != nil {

@@ -30,13 +30,112 @@ make test/db                        # the suite including the Postgres adapter (
 make db/down                        # and delete it again
 ```
 
+Or all of it at once, which is also the way to run more than one worktree:
+
+```sh
+make dev                            # Postgres, the API and the web client, one Ctrl-C
+make ports                          # what this worktree claimed, and where to open it
+```
+
+`make dev` is a **disposable** stack: Ctrl-C takes the database down with the
+servers, so every run starts on an empty schema and nothing is left behind.
+When you want accounts to survive a restart, use the three targets it composes
+instead -- `make db/up` once, then `make run/db` and `make web/dev` -- and
+`make dev/down` when you are finished with them.
+
 `make run/db` loads `config.local.yaml` if you have one (it is gitignored);
-otherwise it writes a throwaway config that is `config.dev.yaml` plus a `db.url`
-pointing at the container.
+otherwise `make config/dev` writes `config.dev-run.yaml` for it, carrying this
+worktree's ports and origins.
 
 Without `TEST_DATABASE_URL` the Postgres adapter tests skip themselves, which is
 what keeps `go test ./...` and `make verify` green on a machine with no Docker.
 CI sets it against a service container, so they are not skipped there.
+
+## Running more than one worktree
+
+Every port the local stack binds used to be a constant, so exactly one checkout
+could run at a time -- and worse, a second `make db/up` adopted the first one's
+container and its database. Ports are now derived from a **slot**, one number
+per worktree:
+
+| | port | reached at |
+| --- | --- | --- |
+| Vite dev server | `8080 + slot` | `$PUBLIC_HOST:{8880 + slot}`, if a proxy is in front |
+| the API | `18080 + slot` | loopback only; Vite proxies `/v1` to it |
+| Postgres | `5440 + slot` | loopback only |
+| compose project | `easydnd-{slot}` | its own network and containers |
+
+Only the web server needs to be reachable from outside, so a ten-port proxy
+range holds ten worktrees. A worktree that has claimed nothing keeps the old
+constants exactly -- Vite `5173`, the API `8080`, Postgres `5433`, project
+`easydnd` -- which is what the quick start above describes. Each family starts
+*past* its unclaimed default on purpose: had slot 0 been Postgres `5433`, an
+unclaimed worktree and a slot-0 worktree would publish the same port and the
+second one up would quietly talk to the first one's database, which is the
+failure this exists to remove.
+
+`make dev` claims a slot by binding each candidate port to see whether it is
+really free, and writes the answer to `.dev-slot` (gitignored). It prefers the
+slot this worktree used last, so the address you bookmarked survives a restart;
+if that one has been taken it says so and moves. Every other target *reads*
+`.dev-slot` rather than probing, which is what stops `make db/down` and
+`make test/db` reaching into a neighbour's stack.
+
+```sh
+make dev                            # claim, then bring the stack up
+make dev/down                       # take it down and delete its database
+make ports                          # this worktree: slot, ports, and the URL to open
+make slots                          # every slot on the machine and who holds it
+make db/psql                        # a shell on this worktree's database
+```
+
+`make dev` cleans up after itself: it traps `INT` and `TERM` as well as `EXIT`,
+because a shell killed by a signal it does not trap dies *without* running its
+`EXIT` trap -- which would skip the cleanup on the very Ctrl-C meant to trigger
+it. `make dev/down` is for when it could not clean up anyway: a closed
+terminal, a `SIGKILL`, or a stack started from `db/up` and `run/db` separately.
+It prints the slot table afterwards, and this worktree's row reading **idle**
+is the proof that the ports came back.
+
+`cmd/devslot` is the prober. It binds the exact address a server will use,
+because connecting instead would call a bound-but-not-accepting socket free.
+Claims are recorded under `$XDG_RUNTIME_DIR/easydnd-devslots` so worktrees can
+see each other's, and a claim with nothing listening behind it ages out after a
+minute -- long enough to cover the gap between claiming a slot and binding it.
+Two `make dev` in the same second can still pick the same slot; the loser fails
+loudly on the port bind, and re-running fixes it.
+
+### Reaching it from another machine
+
+If a reverse proxy fronts this machine, tell the Makefile once, in
+`~/.config/easydnd/dev.mk` (gitignored, read by every worktree):
+
+```make
+PUBLIC_HOST      := dev.example.org
+PUBLIC_PORT_BASE := 8880
+```
+
+That is the whole configuration. `make dev` then puts
+`http://dev.example.org:{8880 + slot}` into the generated config's
+`auth.rp_origins` and hands it to Vite, which needs it for two things of its
+own -- see [web.md](web.md#one-dev-server-per-worktree).
+
+Two consequences of reaching the app over plain HTTP on a name that is not
+`localhost`, both by design rather than breakage:
+
+- **Passkeys are unavailable.** WebAuthn requires a secure context, so
+  `window.PublicKeyCredential` is undefined and the sign-in page draws no
+  passkey card at all. The guest session is the way in. Passkeys still work at
+  `http://localhost:{port}`, which browsers treat as secure.
+- **`env: development` is doing real work.** It is what clears the cookie
+  `Secure` flag and the `__Host-` prefix; a production-mode cookie would never
+  be sent over such a connection. The generated config always sets it.
+- **`navigator.clipboard` is undefined**, for exactly the same reason as
+  `PublicKeyCredential`. The invite sheet falls back to a selection copy and,
+  if even that is refused, says so and selects the link -- see
+  [web.md](web.md#copying-the-invite-link). Worth knowing because the first
+  version used Mantine's `CopyButton`, which drops the error its own hook
+  reports, so the button silently did nothing here and worked on production.
 
 ## Layout
 
@@ -46,6 +145,7 @@ internals follow clean architecture.
 ```
 cmd/easydnd/          process entrypoint: flags, config, logger, signals
 cmd/srdgen/           converts the vendored SRD dump into data/srd_5.1/
+cmd/devslot/          hands each worktree its own development ports
 internal/
   app/                composition root -- the only package that knows every layer
   buildinfo/          Version, stamped by the linker
@@ -90,7 +190,7 @@ that.
 | `GET` | `/v1/catalog` | the compendium's index: ruleset, locales, collections and counts |
 | `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it |
 | `GET` | `/v1/characters` | summaries |
-| `POST` | `/v1/characters` | create: a name and the *base* ability scores |
+| `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
 | `POST` | `/v1/characters/import` | import a sheet exported by another tool |
 | `GET` | `/v1/characters/{id}` | the log |
 | `DELETE` | `/v1/characters/{id}` | |
@@ -99,6 +199,48 @@ that.
 | `GET` | `/v1/characters/{id}/events` | the log |
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
 | `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
+| `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
+| `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
+| `PUT` | `/v1/characters/{id}/folder` | file it elsewhere |
+| `POST` | `/v1/characters/{id}/copy` | duplicate it, log and all |
+| `GET` | `/v1/folders` | the account's folders, default first |
+| `POST` | `/v1/folders` | create: a name |
+| `PATCH` | `/v1/folders/{id}` | rename |
+| `DELETE` | `/v1/folders/{id}` | **deletes the characters in it too** |
+| `GET` | `/v1/groups` | the groups you are in, with your role in each |
+| `POST` | `/v1/groups` | create; you become its owner |
+| `GET` | `/v1/groups/{id}` | the group and its whole roster |
+| `PATCH` | `/v1/groups/{id}` | rename |
+| `DELETE` | `/v1/groups/{id}` | owner only |
+| `POST` | `/v1/groups/{id}/invites` | mint a link: `{"role":"dm"\|"player"}` |
+| `PATCH` | `/v1/groups/{id}/members` | change a rank: `?user=U`, `{"role":...}`; `owner` hands the group over |
+| `DELETE` | `/v1/groups/{id}/members` | remove: `?user=U`; your own id is how you leave |
+| `POST` | `/v1/invites/preview` | read a link without acting on it |
+| `POST` | `/v1/invites/accept` | redeem a link |
+
+The two `events/{seq}` routes address a *member* of the log by position, which
+is what `Seq` means. That is not a third level: `events` is the sub-resource,
+`{seq}` names one of them, and there is no route below it.
+
+A group's members are addressed the other way, by `?user=`. Either would have
+been consistent with the rule above; the query parameter is what
+`DELETE /v1/characters/{id}/events?after=N` already does, and a member is named
+by an opaque account id rather than by position.
+
+`PATCH` arrives with groups, as `PUT` does with the log entry routes above:
+everything older than both is `GET`, `POST` or `DELETE`.
+
+The invite routes are a separate tree rather than sitting under `/v1/groups`
+because somebody redeeming a link is **not in the group yet and cannot name
+it** -- the token carries the id, so there is no addressed parent to hang them
+off. Both take the token in the **body** and never in the URL: our own access
+log records the route pattern, but nginx in front of it logs the whole request
+line, and an invite token is usable for a day. The browser keeps it in a URL
+*fragment*, which is never sent to any server at all.
+
+`GET /v1/characters` takes `?folder=` to narrow the listing, and `POST
+/v1/characters` takes a `folder` in the body. `POST /v1/characters/import` takes
+`?folder=` instead, because its body is the exported sheet itself.
 
 ### Importing states, not histories
 
@@ -121,7 +263,10 @@ fit as the one the player made. So instead:
 - the export's final state becomes the character's **opening** state, as an
   `init` event carrying the numbers;
 - typed `race`, `class`, `level` and `subclass` events name what the export
-  states outright, so traits, features and level-scaled values attach;
+  states outright, so traits, features and level-scaled values attach -- each
+  level before the subclass it makes due, so that the log the importer writes
+  is one the build flow could have written itself and one a later replacement
+  will keep;
 - **no prompt is answered.** Every choice stays open, and the client sends the
   player to the build screen rather than the sheet;
 - anything with no home in the model is named in the report rather than
@@ -138,6 +283,23 @@ or two light until it is answered.
 `internal/adapter/sheet/hexsheet` also holds the codebase's only name-to-slug
 lookup. Everywhere else a reference is already a slug; an import is the one
 place a display name is all there is.
+
+### Creating a character takes a name
+
+`POST /v1/characters` takes a name, and an alignment if the player already has
+one in mind. It used to take the generation method and the six base scores as
+well, and the init event it seeded carried all eight -- which is precisely why
+the name and the scores were the two things a build screen could not offer to
+revisit. The log is **one entry per selection**; a selection with no entry of
+its own is a selection nobody can point at. See
+[dnd.md](dnd.md#log-and-events).
+
+So the scores are an ordinary open choice now. A freshly created character has
+`character/abilities` outstanding, answered with a `change` event carrying the
+six `abilities.<ability>` paths, and the generation method travels with that
+answer rather than with creation. The bound on a score -- 1 to 30, wide enough
+for a DM's ruling and narrow enough to reject a typo -- moved with them, and is
+checked where they now arrive.
 
 ### Creation and level-up are one flow
 
@@ -177,21 +339,195 @@ Every write returns the freshly projected sheet. That makes a build step one
 round trip instead of two, and it is why the client needs no cache
 invalidation: the response *is* the invalidation.
 
-`DELETE /events?after=N&expectedSeq=M` is the undo primitive -- a Back button,
-or un-taking a level. The log's invariant is not "append-only", which would
-make going back impossible; it is **append, or drop a suffix; never edit the
-middle**, and the init event can never be dropped. Note that undo is not what
-*changing a pick* needs: answers fold last-write-wins across the whole log, so
-re-answering a prompt is a plain append.
+Every write also records a **`source`**: the group of the prompt the entry
+answers -- `identity`, `abilities`, `race`, `background`, `class` or `advance`,
+the same vocabulary `/prompts` groups its questions by. The **server** writes
+it, from the prompt the event was matched against, and it is ignored if a
+request carries one. That is not distrust for its own sake: the client already
+posts what a prompt told it to post, so the server knows which prompt that was,
+and a client-supplied source would be a second vocabulary for the same fact,
+free to disagree with the one the rules produce. Entries the server cannot
+attribute -- an imported log, a DM's `change` -- carry no source. `GET
+/characters/{id}/events` remains the unabridged record either way.
 
-### Ownership
+`DELETE /events?after=N&expectedSeq=M` is the undo primitive: dropping a suffix,
+which is what un-taking a level is. Nothing in the web client calls it any
+more -- changing a pick goes through the replace route below -- but it is
+working, tested API, and removing it would be a breaking change made as a side
+effect of a UI decision.
 
-A character belongs to the account that created it. The owner is resolved in
-exactly one function, `handler.owner` in
-`internal/api/http/v1/character/handler.go`, from the account
-`middleware.RequireSession` put on the request; a handler reached without that
-middleware gets the zero `OwnerID`, which owns nothing, so a mis-wiring shows
-up as an empty party rather than as somebody else's.
+An earlier version of this page said that changing a pick needs no undo,
+because answers fold last-write-wins and re-answering a prompt is a plain
+append. **That was false.** `promptBuilder.add` stops emitting a prompt the
+moment it is fully answered, so posting the same prompt again is rejected as a
+prompt the character does not have open. Last-write-wins is what lets a *later*
+entry answer an *earlier* entry's question -- a trait's prompt does not exist
+until the race is chosen -- and it was never a way to change an answer. The
+route below is what changing an answer needs.
+
+#### Replacing an entry
+
+```
+PUT    /v1/characters/{id}/events/{seq}[?dryRun=true]   {expectedSeq, event}
+DELETE /v1/characters/{id}/events/{seq}[?dryRun=true]   ?expectedSeq=M
+```
+
+One mechanism for changing anything a player chose: replace the entry that
+carries the choice and revalidate what follows. `PUT` because the body is a
+complete replacement entry; `DELETE` because removing a level has nothing to
+put back. `expectedSeq` guards the whole log exactly as it does on an append.
+
+**Seq 1 is replaceable when the replacement is also an init event** -- that is
+how a name is changed. `Log.Validate` already requires init to be first and to
+appear exactly once, so this is a type check rather than a prohibition: what it
+refuses is a log that could not be read back. Anything else at seq 1, and an
+init event anywhere else, is a field error on `seq`.
+
+The algorithm, in `internal/usecase/character/revise.go`:
+
+1. the prefix before the target is kept untouched;
+2. a replacement is validated **strictly**, exactly as an append is, so a
+   rejection writes nothing and the stored log is byte-identical afterwards;
+3. every entry after the target is replayed **in order**, each judged against
+   the log rebuilt *so far* -- before it is applied. Not against the old log,
+   which is gone, and not against the finished new one, which would make an
+   entry's legality depend on entries that come after it;
+4. the rebuilt log is renumbered by `character.Rebuild`, validated, and
+   projected.
+
+Two invariants make this something a player can trust.
+
+**Revalidation is never stricter than the predicate that accepted the entry,
+except where that predicate was wrong.** The replay checks each entry against
+exactly the prefix it will sit on, which is the same thing the append checked
+against. The exception is deliberate and is the whole reason the bug below had
+to be closed first: an entry that only ever got in because nothing checked it
+does not survive a replay.
+
+**An entry carrying a `Ref` is never dropped merely because its answers died.**
+A rogue whose race change invalidated one of their four class skills is still a
+rogue: the class entry stands, keeps every other answer it carries -- the
+Expertise, the starting weapon -- and the invalidated question comes back
+outstanding under its own group. Deleting the entry would take the class, the
+answers that were still fine and every level built on it, and a revalidation
+that silently eats a player's choices is worse than the truncation it replaces.
+
+The granularity is one **answer**, not one pick. An answer is what a prompt was
+asked for, so half of one answers nothing: four skills picked together stand or
+fall together, and the prompt is asked again.
+
+**The response** is the ordinary `WriteResponse` plus `dropped[]`. Each entry
+names its **original** seq -- the position the client last saw, not the one
+after the rebuild -- its type, ref, level and source, a `reason`, and the
+answers that were lost in the `rule` vocabulary a rejected append already
+speaks. The three reasons are different events for a player: `not-offered`
+means the entry itself is gone, `empty` means it had nothing left once its
+answers went, and `answers-dropped` is *not* a deletion -- the entry stands,
+minus some answers.
+
+**The dry run is the same function with `commit=false`.** It loads, validates,
+replays, renumbers, validates the rebuilt log and projects it, then skips
+exactly one line: `repo.Rewrite`. A separate preview route would be two paths
+to drift, and a preview that disagrees with its commit is worse than none. A
+stale preview cannot be committed silently either, and that costs nothing
+extra: the commit re-runs the replay, and if the log moved in between,
+`expectedSeq` makes it the ordinary sequence conflict.
+
+`Repository.Rewrite` is the port method behind it -- neither an append nor a
+truncation, because replacing one entry can drop entries after it and the
+stored log comes back a different length. The in-memory adapter is the only
+implementation; the Postgres adapter holds accounts only, so there is no
+migration and no backfill for `source` either.
+
+#### Two questions about a reference
+
+`validateRef` asks **does this entry exist in the compendium?**
+`answersAnOpenPrompt` asks **was the character offered it?** Only the first
+used to be asked, and that is a bug this change closes on the way: `POST
+.../events {"type":"subrace","ref":"subrace:hill-dwarf"}` was accepted for a
+half-elf, because `subrace:hill-dwarf` resolves perfectly well and nothing
+looked at whether anything had asked for a subrace at all. The projector then
+applied it. Revalidation cannot work until that is closed -- a replay with no
+notion of "was this offered?" has no way to notice an entry the new prefix
+orphaned -- so the two are now asked together, in that order, on every
+structural event.
+
+`answersAnOpenPrompt` matches on the prompt's own `event` block -- the same
+three fields a client copies into the body -- and then on one of two shapes:
+the prompt selects the entry itself ("which race?"), and the event names an
+option it offers; or the prompt hangs off an entry the character already holds,
+in which case it states the `ref` to post with, and matching that ref is what
+keeps a race's own follow-up entries alive. It is also the function that yields
+the entry's `source`, so an entry's group and its legality are decided by one
+match rather than two that can disagree.
+
+One consequence worth stating: a `feat` event is no longer acceptable, because
+no prompt offers one. The Ability Score Improvement's feat branch is answered
+as a `level` event -- that is what the prompt says to post -- and no other
+prompt asks for a feat at all. The projector still knows the type; "nothing can
+be answered before it is asked" simply now applies to it like everything else,
+and a prompt that wants one has to say so.
+
+### Folders
+
+A folder is a named place one account files its characters. That is the whole
+of it: one owner, nothing shared, no rule in the game reads it. It is **not** a
+group of players -- that word is reserved, and kept out of this feature's
+types, routes and screens on purpose, so the two cannot be confused when the
+other one arrives.
+
+**Every account always has one.** The default folder is created by the first
+read that needs it -- `GET /v1/folders`, or creating a character with no folder
+named -- so "a character is always somewhere" is true without a nullable column
+and without a migration that walks every account that already exists.
+Materialising it is `FolderRepository.EnsureDefault`, and it is a repository
+method rather than a get-or-create in the usecase for one reason: two requests
+arriving together for a new account would otherwise both find no default and
+both make one, leaving that account two folders it can never delete. The store
+holds the lock, so the store holds the invariant.
+
+The default folder can be renamed and cannot be deleted. What an account cannot
+lose is the folder, not the word on it.
+
+**Membership is a field, not an event.** `Character.Folder` sits beside
+`Character.Owner` and outside the log, because neither is a fact about the
+character -- they are facts about the record: who it belongs to, and where its
+owner filed it. Moving a character to another folder is not something that
+happened to them in the fiction and has no business appearing in their history.
+
+**Deleting a folder deletes the characters in it.** There is no undo, and
+characters live in memory, so there is not even a backup behind it. A client
+that offers the button owes the player a confirmation that says how many
+characters are about to go; the web client's does. The cascade runs in the
+usecase, not the store -- two aggregates, two stores, and a repository that
+wrote to both would be two repositories sharing a name. Characters go first and
+the folder last: there is no transaction across the two, so the order is chosen
+for what a crash half way leaves behind. This one leaves a folder holding fewer
+characters, which the application already understands. The other would leave
+characters filed in a folder that no longer exists, which nothing can list.
+
+**Why `PUT /v1/characters/{id}/folder` and not `PATCH /v1/characters/{id}`.**
+The folder is the one thing about a stored character that changes without an
+event. A general PATCH on the character would read as an invitation to patch a
+name, a level or a score -- and the log is the only way any of those can
+change. A route named after the single mutable field cannot be misread.
+
+**Copying** is `POST /v1/characters/{id}/copy`: a new character in the same
+folder unless another is named, carrying the source's whole log, with its name
+suffixed `(copy)`. That rename arrives as one more appended event rather than
+as an edit of the init event it was duplicated from -- otherwise the copy would
+be the one record in the system that broke the log's invariant.
+
+### Ownership, and membership
+
+There are two authorization models here, and the difference between them is
+the difference between a character and a group.
+
+**A character belongs to one account.** The owner is resolved in exactly one
+function, `handler.owner` in `internal/api/http/v1/character/handler.go`, from
+the account `middleware.RequireSession` put on the request; a handler reached
+without that middleware gets the zero `OwnerID`, which owns nothing, so a
+mis-wiring shows up as an empty party rather than as somebody else's.
 
 Enforcement lives in the usecase, not the handler: every read and write goes
 through `Service.owned`, which refuses a character to anyone but its owner --
@@ -199,7 +535,65 @@ and refuses it as a **404, not a 403**, because a 403 on somebody else's id
 confirms that the id exists and turns a guessable identifier into an
 enumeration oracle.
 
-There is no role, group or sharing model. Authorization is one predicate.
+**A folder belongs to one account too**, and is on this side of the split
+rather than the membership side: it is one person's private filing, it has no
+ranks, and nothing is ever shared through it. The choke point is
+`Service.ownedFolder`, which is `owned` for the other aggregate down to the
+refusal being a 404. That is why naming a folder you do not own returns 404
+rather than an empty listing -- an empty listing would say the folder is there
+and happens to be empty. Both ends of a move are checked, because without the
+folder half an account could file its own character into somebody else's
+folder, where it would vanish from its own listing.
+
+**A group belongs to several people at three ranks.** `owner` > `dm` >
+`player`, and every rule is a comparison between two of them. The choke point
+is `Service.member` in `internal/usecase/group/service.go`, which is to a group
+what `owned` is to a character: the only way any read or write reaches one, and
+the only place a caller's rank is established.
+
+| | owner | dm | player | not a member |
+|---|---|---|---|---|
+| read the group and its roster | yes | yes | yes | **404** |
+| rename | yes | yes | 403 | **404** |
+| delete | yes | 403 | 403 | **404** |
+| invite (as `dm` or `player`) | yes | yes | 403 | **404** |
+| remove a player or a DM | yes | yes | 403 | **404** |
+| remove or demote the **owner** | **403** | 403 | 403 | **404** |
+| promote or demote between dm and player | yes | 403 | 403 | **404** |
+| hand the group over | yes | 403 | 403 | **404** |
+| leave | **403** | yes | yes | **404** |
+
+Two things in that table are worth saying in prose.
+
+**404 and 403 mean different things, and the split is deliberate.** A
+non-member gets 404 for the same enumeration reason a character does. A member
+who lacks a right gets **403**, because they are standing in the group with the
+roster on their screen -- hiding it from them would leak nothing and teach them
+nothing. The predicate that decides 404 (`member`) and the one that decides 403
+are different functions returning different error types, which is what stops
+the two from being confused.
+
+**Exactly one owner, always.** A group is created with one and only ever
+changes owner through a transfer, which demotes the outgoing owner to `dm` in
+the same step. That is why an owner may not leave: they must hand the group on
+first, or delete it -- both exist, so nobody is ever trapped. The invariant is
+enforced three times over, in the usecase, in the repository's statements, and
+in a partial unique index (`group_members_one_owner_idx`), because the last of
+those is the only one a second process racing the first obeys.
+
+Invitations are stateless. A link is a signed token naming a group and a rank,
+valid for 24 hours, **reusable and not revocable** -- there is no invites table
+and nothing to revoke against. The trade is written down beside the type in
+`internal/domain/group/invite.go`; the upgrade, if it ever stops being
+acceptable, is a stored invite whose id rides in the token.
+
+One trap worth naming, because it is invisible until somebody hits it: every
+token port reports failure as a `*types.UnauthenticatedError`, which renders as
+**401**, and a 401 is what tells the client its session is gone. A stale invite
+link must therefore *not* surface as one, or clicking yesterday's invitation
+would sign out the perfectly signed-in person who clicked it. `openInvite`
+translates it into a `*types.ValidationError` -- a 400 -- and there is a test
+for it.
 
 ### Dependency rule
 
@@ -302,7 +696,7 @@ rather than quietly defaulted.
 | `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The example file's placeholder is rejected by name |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
-| `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id |
+| `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
 | `auth.session_ttl` | `168h` | how long a session cookie lasts |
 | `auth.guest_session_ttl` | `24h` | how long an anonymous session lasts. Deliberately its own key, and shorter: a guest token cannot be revoked and names nothing recoverable, so the only thing bounding a leaked one is how soon it expires |
 | `auth.ceremony_ttl` | `5m` | how long a begin/finish pair stays valid; also bounds an in-flight SSO redirect |
@@ -328,12 +722,18 @@ Three ways in, one account model. There is no password and no email of our own.
   and the browser picks the passkey -- sign-in asks for nothing at all, because
   the credential is *discoverable* and carries the account handle on the
   authenticator. **Sign-up asks for nothing either.** `register/begin` takes no
-  body; the display name the operating system's passkey prompt needs to label
-  the passkey with is minted here, beside the account id, exactly as the SSO
-  path already mints one when a provider's claims are useless. So there is no
+  body; the account id is minted here, and the display name the operating
+  system's passkey prompt needs to label the passkey with is the fixed word
+  **`easydnd`** -- every passkey account is called that. The label's job is to
+  say which site the passkey opens when somebody scrolls their credential
+  manager months later, and a name invented per account answered a different
+  question. Sharing one name costs nothing: `users.display_name` is neither
+  unique nor indexed, and no lookup anywhere goes through it. So there is no
   username, no email and no client-supplied text anywhere in this API's auth
-  surface: every string in `users.display_name` was either generated here or
-  asserted by a provider. See `newDisplayName` in `internal/usecase/auth`.
+  surface: every string in `users.display_name` is either that constant or a
+  provider's claim. See `PasskeyDisplayName` in `internal/usecase/auth` -- a
+  constant rather than the configured `auth.rp_name`, because the usecase layer
+  imports no configuration and `make lint/layers` enforces it.
 - **Google**, over OpenID Connect. Optional configuration: with no client id
   and secret the provider is simply not offered, and everything else works
   unchanged.
@@ -455,10 +855,32 @@ agreeing with itself but not with the specification.
 ### Anonymous sessions
 
 A guest session is the same signed token in the same `HttpOnly` cookie as any
-other, carrying one extra private claim, `anon`. What it does not have is a
-row: the id is minted, sealed into the token and never written anywhere.
+other, carrying one extra private claim, `anon`. It rides in the token because
+there is nothing to look it up in.
 
-That claim is load-bearing in exactly one place. `Session()` -- the usecase
+A guest used to have no row anywhere at all. **Groups ended that, but only
+just**: a guest who joins somebody else's table has to be nameable in a roster
+other people read, and `group_members.user_id` is a real foreign key. So the
+group usecase writes a `users` row for a guest the first time they create or
+join a group -- `EnsureGuest`, idempotent, and called on those two paths and
+nowhere else. A guest who never touches a group is still stored nowhere.
+
+Which raised the question of what to call them. "Guest" was legible while a
+guest could only see their own things and useless the moment three shared a
+roster: nobody could tell which one to remove. A guest is now "Guest" plus four
+characters of the id they already carry -- `guestName`, a pure function of the
+session's subject.
+
+Derived rather than stored or claimed, which is the whole point: there is no
+extra claim to add, no row to keep in sync, no migration, and every cookie ever
+issued renders correctly through it. It is also the same judgement
+`PasskeyDisplayName` makes in the other direction -- a name should answer the
+question actually being asked. On a roster that question is "which of these
+people", and four characters answer it; an invented two-word name would answer
+"who are they", which a session with no account behind it cannot honestly claim
+to know.
+
+The `anon` claim is load-bearing in exactly one place. `Session()` -- the usecase
 behind `RequireSession`, and the only database read on the authenticated
 request path -- short-circuits on it and rebuilds the identity from the claims
 instead of calling `repo.ByID`. Without that, every guest request would answer
@@ -481,8 +903,18 @@ the process, which is honest for a session that cannot be signed back into.
 Two consequences worth stating plainly:
 
 - **A guest cannot become an account.** There is no conversion path, in either
-  direction: a guest session has no row to attach anything to. Every surface
-  that shows a guest session is obliged to say that nothing is being kept.
+  direction: the row `EnsureGuest` writes carries no credential and no identity,
+  and there is no method that would add one. It is an account nobody can ever
+  sign in to. Every surface that shows a guest session is obliged to say that
+  nothing is being kept.
+- **A guest can own a group, and that is a known hazard.** A guest id is minted
+  fresh per sign-in and expires with the session, so a guest who creates a group
+  owns it permanently and stops existing within a day. Nobody can then delete
+  that group or hand it on -- only an owner may, and the owner is unreachable.
+  The intended fix is a **scheduled job that reaps guest rows and everything
+  they own once their session lifetime has passed; it is not implemented**.
+  Until it is, orphaned groups accumulate and only a hand-written statement
+  removes one.
 - **`POST /v1/auth/anonymous` is unauthenticated and has no rate limit.**
   Signing is cheap and stateless, so the tokens are not the concern; the
   character store each one can then fill is bounded by nothing. There is no
@@ -529,10 +961,25 @@ primitive, for the same reason. Each envelope names its own kind and refuses
 the other's, so a value minted by one flow cannot be fed to the other's finish
 endpoint and land somewhere surprising.
 
+An **invite link is a fourth kind**, signed by the same key from the same
+adapter. That is safe only because of the kind claim, and this is the sharpest
+illustration of why it exists: without it, the session cookie every signed-in
+visitor already holds would verify perfectly well as an invitation to any group
+whose id they could guess -- and an invite link, which is meant to be forwarded
+to strangers, would verify as somebody's session. `internal/adapter/token` is
+still the only package that knows any of these are JWTs; the group usecase
+sees an `Inviter` port trading in strings and domain types.
+
 CSRF is covered three ways, in `middleware.SameOrigin`: `SameSite` on the
 cookie, an `Origin` check against `auth.rp_origins`, and a required
 `X-Request-Id` header -- which `web/src/lib/api/client.ts` already sends on
 every call, and which an HTML form cannot set at all.
+
+That `Origin` check is why `auth.rp_origins` is not only a passkey setting. It
+is the list of addresses this instance will accept a write from, so a
+development instance reached on some other host has to have that host in it or
+every POST comes back "request origin is not allowed" -- which is what
+`make dev` generates it for.
 
 ### `auth.rp_id` is permanent
 
@@ -547,17 +994,45 @@ Development uses `localhost`, so a passkey made in development will never work
 in production, and vice versa. That is two disjoint identities, and it is
 correct.
 
-### Where accounts live
+### Where accounts and groups live
 
-Accounts, their passkeys and their linked external identities are stored in
-PostgreSQL -- AWS RDS in production -- by
-`internal/adapter/repository/postgres`. Three tables:
+Accounts, their passkeys, their linked external identities and the groups they
+play in are stored in PostgreSQL -- AWS RDS in production -- by
+`internal/adapter/repository/postgres`. Five tables:
 
 | Table | Holds |
 |---|---|
 | `users` | the account id, display name and creation time |
 | `user_credentials` | one row per registered passkey |
 | `user_identities` | one row per linked external account |
+| `groups` | a group's id, name and who made it |
+| `group_members` | one row per seat: who, in which group, at which rank |
+
+Characters are **not** among them. They still live in the in-memory store and
+die with the process, which is why nothing in `groups` refers to one: a
+character id is a process-local counter, so a foreign key to it would be
+dangling by the next restart, and a schema written against an unfinished
+feature is a migration nobody can revise later.
+
+`users` is the only place a display name is stored, and a roster is a join
+rather than a copy -- so a rename shows up in every group at once or in none.
+That is also why a guest gets a row there when they join something: see
+[Anonymous sessions](#anonymous-sessions).
+
+`group_members` keys on `(group_id, user_id)`, which makes "a person is in a
+group at most once" the database's rule and gives the roster read its index.
+`created_by` on `groups` is **history, not authority**: ownership lives in the
+member rows and moves when the group is handed on, so nothing may consult that
+column to decide what anybody is allowed to do.
+
+The one-owner rule is a **partial unique index**, `group_members_one_owner_idx`
+`ON group_members (group_id) WHERE role = 'owner'`. It forces the order of a
+transfer and this is easy to get wrong: a unique index is checked as each
+statement runs and cannot be deferred to commit, so a transfer must **demote
+the outgoing owner first and promote the incoming one second**. The
+intermediate state is then zero owners, which the index permits; the other
+order is two, which it rejects. The in-memory adapter writes them in the same
+order deliberately, so that it cannot pass a test the real one fails.
 
 The credential id is the **primary key** of `user_credentials` rather than a
 surrogate. That is what gives `ByCredentialID` -- the lookup every usernameless
@@ -831,6 +1306,15 @@ lockstep.
 
 Errors travel as `internal/types` values and are rendered exactly once, by
 `helpers.FormatError`. Handlers never build an error body themselves.
+
+If the thing belongs to more than one person, add a sixth step: put the
+authorization in **one function in the usecase** that every read and write goes
+through, the way `character.owned` and `group.member` do, and decide
+deliberately which refusals are 404 and which are 403 -- see [Ownership, and
+membership](#ownership-and-membership). Two adapters means the shared contract
+suite in `internal/adapter/repository/repotest/` runs the identical assertions
+against both, which is the only thing that keeps them able to stand in for one
+another.
 
 The frontend side of the same feature is in
 [web.md](web.md#adding-a-feature).

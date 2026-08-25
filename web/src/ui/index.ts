@@ -12,6 +12,12 @@
 // Application chrome. Re-exported so that src/shell -- which builds the two
 // layouts -- needs no Mantine import of its own, keeping the rule absolute.
 export { AppShell, Burger, NavLink, Tabs } from '@mantine/core'
+// Its own package, and the one component here that is not core's. Re-exported
+// plainly rather than wrapped the way Columns and ModalSheet are: those exist
+// because their phone and desktop renderings share no markup, and a carousel's
+// do -- the same slides, a narrower viewport. `Carousel.Slide` rides along as a
+// static member.
+export { Carousel } from '@mantine/carousel'
 export { useDisclosure } from '@mantine/hooks'
 
 // Layout and typography primitives, re-exported unchanged.
@@ -43,6 +49,10 @@ export {
   ActionIcon,
   Button,
   FileInput,
+  // Per-row actions -- a roster's members, a party list's characters. The
+  // alternative is four buttons in every row, which DataList's mobile card
+  // rendering cannot lay out legibly.
+  Menu,
   NumberInput,
   Popover,
   Select,
@@ -60,6 +70,8 @@ export { DragonMark } from './DragonMark'
 export type { DragonMarkProps } from './DragonMark'
 export { ModalSheet } from './ModalSheet'
 export type { ModalSheetProps } from './ModalSheet'
+export { TabRow } from './TabRow'
+export type { TabRowProps, TabRowTab } from './TabRow'
 
 // Viewport access, for the shell and for components whose two renderings share
 // no markup. Prefer the primitives above.

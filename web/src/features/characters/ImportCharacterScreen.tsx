@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 
 import { importCharacter } from '@/lib/api'
 import type { ImportEntry, ImportReport } from '@/lib/api'
@@ -31,6 +31,9 @@ import {
  */
 export function ImportCharacterScreen() {
   const navigate = useNavigate()
+  // The folder the party list was filtered to when Import was pressed.
+  const [params] = useSearchParams()
+  const folder = params.get('folder') ?? undefined
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<{ id: string; report: ImportReport } | null>(null)
 
@@ -38,7 +41,7 @@ export function ImportCharacterScreen() {
 
   async function onImport() {
     if (file === null) return
-    const imported = await submit.run(file)
+    const imported = await submit.run(file, folder)
     if (imported !== null) {
       setResult({ id: imported.id, report: imported.report })
     }

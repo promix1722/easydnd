@@ -58,7 +58,15 @@ export function eventLabel(type: string): string {
   return EVENT_LABELS[type] ?? titleCase(type)
 }
 
-/** Ref kinds to the catalogue collection that names them. */
+/**
+ * Ref kinds to the catalogue collection that holds them.
+ *
+ * One table, two jobs: naming a reference the log stored, and finding the
+ * options when a prompt says "any member of this collection". It used to be
+ * two tables in two files -- this one and BuildScreen's own COLLECTION_OF --
+ * which is one table with two spellings, and the spelling that was missing an
+ * entry was whichever one you were not looking at.
+ */
 const REF_COLLECTIONS: Record<string, string> = {
   race: 'races',
   subrace: 'subraces',
@@ -68,6 +76,15 @@ const REF_COLLECTIONS: Record<string, string> = {
   feat: 'feats',
   trait: 'traits',
   feature: 'features',
+  item: 'equipment',
+  'magic-item': 'magic-items',
+  spell: 'spells',
+  language: 'languages',
+  proficiency: 'proficiencies',
+  alignment: 'alignments',
+  skill: 'skills',
+  condition: 'conditions',
+  'damage-type': 'damage-types',
 }
 
 /**

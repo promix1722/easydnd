@@ -398,16 +398,21 @@ func (c *converter) structure(at time.Time) []character.Event {
 			}
 		}
 
+		// The level comes first and the subclass follows it, never the other
+		// way round. A subclass is due *at* a level, so a log that names it
+		// before the level has been taken is a log the build flow could not
+		// have written and the replay behind a replacement will not keep --
+		// it would drop the subclass as something nothing was asking for.
 		for level := 2; level <= taken.Levels; level++ {
+			events = append(events, character.Event{
+				Type: character.EventLevel, At: at, Ref: ref, Level: level,
+			})
 			if level == subclassAt && !subclassRef.IsZero() {
 				events = append(events, character.Event{
 					Type: character.EventSubclass, At: at,
 					Ref: subclassRef, Level: level,
 				})
 			}
-			events = append(events, character.Event{
-				Type: character.EventLevel, At: at, Ref: ref, Level: level,
-			})
 		}
 		// A subclass taken at first level has no later level event to precede.
 		if subclassAt <= 1 && !subclassRef.IsZero() {

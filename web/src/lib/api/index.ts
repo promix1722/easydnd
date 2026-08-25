@@ -42,16 +42,24 @@ export type {
   Spell,
 } from './catalog'
 
+// Folders: where an account files its characters. Not a group of players.
+export { createFolder, deleteFolder, listFolders, renameFolder } from './folders'
+export type { Folder } from './folders'
+
 // Characters.
 export {
   appendEvents,
+  copyCharacter,
   createCharacter,
   deleteCharacter,
+  deleteEvent,
   getEvents,
   getPrompts,
   getSheet,
   importCharacter,
   listCharacters,
+  moveCharacter,
+  replaceEvent,
   truncateEvents,
 } from './characters'
 export type {
@@ -61,17 +69,44 @@ export type {
   CharacterEvent,
   ClassLevel,
   CreateResponse,
+  DropReason,
+  Dropped,
   Equipment,
   ImportEntry,
   ImportReport,
   ImportResponse,
+  LostAnswer,
   NewCharacter,
   Prompt,
   PromptEvent,
   PromptsResponse,
+  ReviseResponse,
   Sheet,
   Skill,
   Status,
   Summary,
   WriteResponse,
 } from './characters'
+
+// Groups.
+export {
+  acceptInvite,
+  createGroup,
+  createInvite,
+  deleteGroup,
+  getGroup,
+  listGroups,
+  previewInvite,
+  removeMember,
+  renameGroup,
+  setMemberRole,
+} from './groups'
+export type {
+  GroupDetail,
+  GroupMember,
+  GroupRole,
+  GroupSummary,
+  InvitableRole,
+  InviteLink,
+  InvitePreview,
+} from './groups'

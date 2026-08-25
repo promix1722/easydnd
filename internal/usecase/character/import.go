@@ -59,11 +59,20 @@ type ImportReport struct {
 // state and every prompt stays open. The client should send the player to the
 // build screen afterwards, not the sheet.
 func (s *Service) Import(
-	ctx context.Context, owner domain.OwnerID, locale rules.Locale, r io.Reader,
+	ctx context.Context,
+	owner domain.OwnerID,
+	folder domain.FolderID,
+	locale rules.Locale,
+	r io.Reader,
 ) (domain.Character, ImportReport, error) {
 	if s.importer == nil {
 		return domain.Character{}, ImportReport{}, types.NewNotImplementedError(
 			"importing sheets is not configured")
+	}
+
+	folder, err := s.resolveFolder(ctx, owner, folder)
+	if err != nil {
+		return domain.Character{}, ImportReport{}, err
 	}
 
 	cat, err := s.catalog.Load(ctx, locale)
@@ -79,7 +88,7 @@ func (s *Service) Import(
 		return domain.Character{}, ImportReport{}, err
 	}
 
-	created, err := s.repo.Create(ctx, owner)
+	created, err := s.repo.Create(ctx, owner, folder)
 	if err != nil {
 		return domain.Character{}, ImportReport{}, err
 	}
@@ -96,10 +105,26 @@ func (s *Service) Import(
 
 // validateImported checks what is worth checking about an imported log.
 //
-// Deliberately not validateEvents: that checks answers against the prompts a
-// character has open, and an import produces no answers at all. What does need
-// checking is that every catalogue reference resolves, because a dangling one
-// projects as a character who simply has no race, with nothing saying why.
+// Deliberately not validateAndAttribute: that checks answers against the
+// prompts a character has open, and an import produces no answers at all.
+// What does need checking is that every catalogue reference resolves, because
+// a dangling one projects as a character who simply has no race, with nothing
+// saying why.
+//
+// One-entry-per-selection binds this path vacuously, and it is worth saying
+// why rather than leaving the reader to check. An import makes *no*
+// selections: the typed events it writes name a race, a class and its levels
+// because the export states them outright, and not one of them carries an
+// answer -- every prompt is still open when the character arrives. The init
+// event carries the whole opening state as changes, and that is one thing
+// asserted rather than eight things chosen: "this is what the sheet said".
+// Its entries are therefore also the ones the server cannot attribute, and
+// they carry no source at all.
+//
+// The one place the rule bites is the name, which lives in that init event
+// alongside numbers the export pinned. Replacing entry 1 replaces all of it
+// together, which is right: an imported opening state is a single assertion,
+// and half-replacing it would leave a sheet asserting numbers nobody claimed.
 //
 // The projection is run as well, and that is the substantive check: it is what
 // catches a change addressing a path that does not exist. Doing it here means

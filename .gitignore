@@ -1,6 +1,7 @@
 # Compiled binaries
 /easydnd
 /srdgen
+/devslot
 /bin/
 
 # Frontend release tarball (`make web/release`). The bundle's own build output
@@ -21,9 +22,17 @@ coverage.html
 # Local config override: copy config.dev.yaml and point -config at it.
 config.local.yaml
 
-# Written by `make run/db`: config.dev.yaml plus a db.url for the local
-# container. Generated, never edited by hand.
-config.dev-db.yaml
+# Written by `make dev`: this worktree's port slot. Per-worktree by design --
+# it is the whole mechanism that stops two worktrees claiming the same ports.
+.dev-slot
+
+# Written by `make config/dev`: a whole development config for this worktree's
+# slot. Generated, never edited by hand.
+config.dev-run.yaml
+
+# Optional Make overrides for this machine or this worktree (PUBLIC_HOST,
+# SLOT). The machine-wide one lives at ~/.config/easydnd/dev.mk.
+local.mk
 
 # Editor / OS noise
 .idea/

@@ -40,13 +40,33 @@ export function kindOf(ref: string): string {
 }
 
 /**
+ * The six abilities, in the order every sheet in the game prints them.
+ *
+ * This order is the whole reason the constant exists. Scores and saving
+ * throws arrive as objects keyed by slug, and a Go map serialises its keys
+ * sorted, so a screen that walks the response as it came prints CHA, CON,
+ * DEX, INT, STR, WIS -- alphabetical, and unreadable to anyone who has held a
+ * character sheet. Anything drawing more than one ability in sequence walks
+ * this list instead of the response. (Skills are a different case: there are
+ * eighteen of them in no traditional order, so those really are alphabetical.)
+ *
+ * Hardcoded rather than fetched, as are the names below. These six are the
+ * one part of the compendium that cannot change -- a sixth-and-a-half ability
+ * would be a different game -- so waiting on a round trip to draw six labelled
+ * inputs would be a worse first screen for no benefit.
+ */
+export const ABILITY_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const
+
+const CANONICAL = new Set<string>(ABILITY_ORDER)
+
+/**
  * The six abilities' full names, keyed by the slug the API uses.
  *
- * Hardcoded for the same reason the create screen hardcodes the list: these
- * six are the one part of the compendium that cannot change, and "Dex +1" on
- * a button is worse than "Dexterity +1" for the sake of a round trip. The
+ * Here rather than fetched for the reason above, and because "Dex +1" on a
+ * button is worse than "Dexterity +1" for the sake of a round trip. The
  * catalogue's abilities collection carries the same names for anywhere that
- * needs them localized.
+ * needs them localized. The order these are written in carries no meaning --
+ * ABILITY_ORDER is the only thing that says what comes first.
  */
 const ABILITY_NAMES: Record<string, string> = {
   str: 'Strength',
@@ -60,4 +80,23 @@ const ABILITY_NAMES: Record<string, string> = {
 /** An ability's full name, or the slug title-cased if it is not one. */
 export function abilityName(slug: string): string {
   return ABILITY_NAMES[slug] ?? titleCase(slug)
+}
+
+/**
+ * The entries of anything keyed by ability slug, in the canonical order.
+ *
+ * Two decisions worth stating, because both are about a projection that is
+ * not the six keys the sheet expects. A slug the response *omits* draws
+ * nothing at all, since a blank card claiming a missing score is worse than a
+ * row of five. A slug the six do not cover is kept and drawn last rather than
+ * filtered out: an unrecognised ability on a sheet means the server and this
+ * client disagree about the game, which is a thing to see rather than a thing
+ * to hide.
+ */
+export function abilitiesInOrder<T>(byAbility: Record<string, T>): [string, T][] {
+  const canonical = ABILITY_ORDER.flatMap<[string, T]>((slug) => {
+    const value = byAbility[slug]
+    return value === undefined ? [] : [[slug, value]]
+  })
+  return [...canonical, ...Object.entries(byAbility).filter(([slug]) => !CANONICAL.has(slug))]
 }

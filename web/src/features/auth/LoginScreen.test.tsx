@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { RouterProvider, createMemoryRouter } from 'react-router'
+import { RouterProvider, createMemoryRouter, useLocation } from 'react-router'
 
 import type { AuthState } from '@/lib/auth'
 import { withAuth } from '@/test/auth'
@@ -9,14 +9,31 @@ import { renderAt } from '@/test/render'
 
 import { LoginScreen } from './LoginScreen'
 
-function loginAt(state: Partial<AuthState> = {}, from?: string) {
+/**
+ * Renders where it landed, so a test can assert the whole URL came back.
+ *
+ * The router's location, not window.location: a memory router keeps its own
+ * and never touches jsdom's, so reading the global would only ever report the
+ * '/' the test file started at.
+ */
+function JoinTarget() {
+  const { pathname, search, hash } = useLocation()
+  return <p>{`joined at ${pathname}${search}${hash}`}</p>
+}
+
+function loginAt(
+  state: Partial<AuthState> = {},
+  from?: string | { pathname: string; search?: string; hash?: string },
+) {
+  const origin = typeof from === 'string' ? { pathname: from } : from
   const router = createMemoryRouter(
     [
       { path: '/login', element: <LoginScreen /> },
       { path: '/', element: <p>the app</p> },
       { path: '/characters/new', element: <p>the character builder</p> },
+      { path: '/groups/join', element: <JoinTarget /> },
     ],
-    { initialEntries: [{ pathname: '/login', state: from ? { from: { pathname: from } } : null }] },
+    { initialEntries: [{ pathname: '/login', state: origin ? { from: origin } : null }] },
   )
   return renderAt(
     'desktop',
@@ -158,5 +175,32 @@ describe('LoginScreen', () => {
     loginAt({ providers: [google], error: 'Sign-in was cancelled.' })
 
     expect(screen.getByText('Sign-in was cancelled.')).toBeInTheDocument()
+  })
+})
+
+/**
+ * Signing in has to return somebody to the *whole* place they came from.
+ *
+ * This used to keep only the path. An invitation link is entirely fragment --
+ * `/groups/join#<token>` -- so dropping it returned the one visitor who most
+ * needed the deep link to the one screen that cannot work without it.
+ */
+describe('coming back to where you were', () => {
+  it('keeps the search and the fragment, not just the path', async () => {
+    loginAt({}, { pathname: '/groups/join', search: '?a=1', hash: '#a-token' })
+
+    await userEvent.click(screen.getByRole('button', { name: /guest/i }))
+
+    expect(await screen.findByText('joined at /groups/join?a=1#a-token')).toBeInTheDocument()
+  })
+
+  // The state is history, and history is attacker-reachable: a hand-written
+  // link could put anything in it.
+  it('ignores a return that is not a path of ours', async () => {
+    loginAt({}, { pathname: 'https://example.test/steal' })
+
+    await userEvent.click(screen.getByRole('button', { name: /guest/i }))
+
+    expect(await screen.findByText('the app')).toBeInTheDocument()
   })
 })

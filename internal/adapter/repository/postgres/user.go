@@ -35,6 +35,29 @@ const credentialColumns = `
 const identityColumns = `
 	provider, subject, email, email_verified, display_name, created_at, last_used_at`
 
+// EnsureGuest stores a guest's row if it is not already there.
+//
+// ON CONFLICT DO NOTHING rather than a SELECT and then an INSERT: two of a
+// guest's requests can reach this at once -- accepting an invite in one tab
+// while creating a group in another -- and the read-then-write version loses
+// that race and returns a primary key violation to one of them.
+//
+// The name is written once and never refreshed, matching the in-memory
+// adapter: the first join is what named them.
+func (r *UserRepository) EnsureGuest(ctx context.Context, u domain.User) error {
+	if u.ID == "" {
+		return types.NewValidationError("account id must not be empty")
+	}
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO users (id, display_name, created_at) VALUES ($1, $2, $3)
+		 ON CONFLICT ON CONSTRAINT users_pkey DO NOTHING`,
+		string(u.ID), u.DisplayName, u.CreatedAt)
+	if err != nil {
+		return types.WrapServerError(err, "ensure guest account")
+	}
+	return nil
+}
+
 // Create stores u together with its initial credentials.
 //
 // One transaction, all or nothing. The in-memory adapter emulates this by

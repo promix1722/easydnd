@@ -34,14 +34,18 @@ import (
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
+	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/buildinfo"
 	"github.com/promix1722/easydnd/internal/config"
 	authdomain "github.com/promix1722/easydnd/internal/domain/auth"
+	"github.com/promix1722/easydnd/internal/domain/group"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
 )
 
 // App owns the wired object graph and the HTTP server lifecycle.
@@ -86,12 +90,17 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 	// against the domain's ports, which is how the account store could move to
 	// Postgres without a line changing above this layer.
 	characterRepo := memory.NewCharacterRepository()
+	folderRepo := memory.NewFolderRepository()
 
-	// Accounts are durable; characters are not yet. The character store still
-	// lives in the process because no character route exists to reach it, and
-	// a schema written against an unfinished feature is a migration nobody can
-	// revise later.
-	userRepo, pool, err := newUserRepository(ctx, cfg, log)
+	// Accounts and groups are durable; characters and the folders they are
+	// filed in are not. Both still live in the process because a character id
+	// is a process-local counter, and a group that referred to one would be
+	// dangling after the next restart -- a schema written against an
+	// unfinished feature is a migration nobody can revise later. A restart
+	// therefore still costs a player everything they made, and moving the two
+	// of them to Postgres is its own change: the assignments above are what a
+	// SQL sibling would have to satisfy.
+	userRepo, groupRepo, pool, err := newRepositories(ctx, cfg, log)
 	if err != nil {
 		return nil, err
 	}
@@ -145,13 +154,18 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 
 	// Application layer.
 	characterService := charuc.NewService(
-		characterRepo, catalogSource, hexsheet.NewImporter(),
+		characterRepo, folderRepo, catalogSource, hexsheet.NewImporter(),
 		log.With("usecase", "character"))
 	authService := authuc.NewService(userRepo, ceremony, signer, federations, authuc.Config{
 		SessionTTL:      cfg.Auth.SessionTTL,
 		GuestSessionTTL: cfg.Auth.GuestSessionTTL,
 		CeremonyTTL:     cfg.Auth.CeremonyTTL,
 	}, log.With("usecase", "auth"))
+	// The same signer mints invite links. It is the one thing that knows the
+	// signing key, and an invite is separated from a session cookie by the
+	// token kind rather than by a second key -- see internal/adapter/token.
+	groupService := groupuc.NewService(
+		groupRepo, userRepo, signer, log.With("usecase", "group"))
 
 	// Inbound adapters. The character routes are declared behind
 	// RequireSession, and the handler reads the owner from the account that
@@ -163,6 +177,8 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 		Authenticator: authService,
 		Catalog:       catalogapi.New(catalogSource, log.With("handler", "catalog")),
 		Character:     characterapi.New(characterService, log.With("handler", "character")),
+		Folder:        folderapi.New(characterService, log.With("handler", "folder")),
+		Group:         groupapi.New(groupService, log.With("handler", "group")),
 	})
 	if err != nil {
 		return fail(fmt.Errorf("build router: %w", err))
@@ -188,26 +204,33 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 // Note the consequence, which is written up in docs/backend.md: the rollback
 // runs against the schema that was just applied, so the PREVIOUS binary has to
 // work on it. Migrations must be expand-only.
-func newUserRepository(ctx context.Context, cfg *config.Config, log *slog.Logger) (user.Repository, *pgxpool.Pool, error) {
+func newRepositories(
+	ctx context.Context, cfg *config.Config, log *slog.Logger,
+) (user.Repository, group.Repository, *pgxpool.Pool, error) {
 	if !cfg.DB.Enabled() {
 		// config.validate refuses this in production, so it can only be a
 		// developer with no Postgres running.
-		log.Warn("db.url is unset; accounts live in this process only -- every restart destroys every account and every registered passkey",
+		log.Warn("db.url is unset; accounts and groups live in this process only -- every restart destroys every account, every registered passkey and every group",
 			"config", cfg.Source)
-		return memory.NewUserRepository(), nil, nil
+		// One user store, shared. The in-memory group store reads display
+		// names out of it, exactly as the Postgres one reads them with a
+		// join -- give it a second instance and every roster comes back
+		// nameless.
+		users := memory.NewUserRepository()
+		return users, memory.NewGroupRepository(users), nil, nil
 	}
 
 	if cfg.DB.MigrateOnStart {
 		if err := postgres.Migrate(ctx, cfg.DB, log, postgres.CommandUp); err != nil {
-			return nil, nil, fmt.Errorf("migrate database: %w", err)
+			return nil, nil, nil, fmt.Errorf("migrate database: %w", err)
 		}
 	}
 
 	pool, err := postgres.NewPool(ctx, cfg.DB)
 	if err != nil {
-		return nil, nil, fmt.Errorf("connect to database: %w", err)
+		return nil, nil, nil, fmt.Errorf("connect to database: %w", err)
 	}
-	return postgres.NewUserRepository(pool), pool, nil
+	return postgres.NewUserRepository(pool), postgres.NewGroupRepository(pool), pool, nil
 }
 
 // Migrate runs one schema command and returns, without building the graph.

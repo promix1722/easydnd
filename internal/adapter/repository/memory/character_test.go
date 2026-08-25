@@ -14,17 +14,20 @@ import (
 // the port, this fails to compile rather than failing at wiring time.
 var _ domain.Repository = (*memory.CharacterRepository)(nil)
 
-const owner domain.OwnerID = "usr_1"
+const (
+	owner  domain.OwnerID  = "usr_1"
+	folder domain.FolderID = "fld_000001"
+)
 
 func TestCreateAssignsDistinctIDs(t *testing.T) {
 	repo := memory.NewCharacterRepository()
 	ctx := context.Background()
 
-	first, err := repo.Create(ctx, owner)
+	first, err := repo.Create(ctx, owner, folder)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	second, err := repo.Create(ctx, owner)
+	second, err := repo.Create(ctx, owner, folder)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -52,10 +55,10 @@ func TestListFiltersByOwner(t *testing.T) {
 	repo := memory.NewCharacterRepository()
 	ctx := context.Background()
 
-	if _, err := repo.Create(ctx, owner); err != nil {
+	if _, err := repo.Create(ctx, owner, folder); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	if _, err := repo.Create(ctx, "usr_2"); err != nil {
+	if _, err := repo.Create(ctx, "usr_2", folder); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 
@@ -75,7 +78,7 @@ func TestAppendNumbersEventsFromOne(t *testing.T) {
 	repo := memory.NewCharacterRepository()
 	ctx := context.Background()
 
-	c, err := repo.Create(ctx, owner)
+	c, err := repo.Create(ctx, owner, folder)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -110,7 +113,7 @@ func TestAppendRejectsStaleSequence(t *testing.T) {
 	repo := memory.NewCharacterRepository()
 	ctx := context.Background()
 
-	c, err := repo.Create(ctx, owner)
+	c, err := repo.Create(ctx, owner, folder)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -137,7 +140,7 @@ func TestGetReturnsACopy(t *testing.T) {
 	repo := memory.NewCharacterRepository()
 	ctx := context.Background()
 
-	c, err := repo.Create(ctx, owner)
+	c, err := repo.Create(ctx, owner, folder)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -178,7 +181,7 @@ func TestCharacterRepositoryConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			c, err := repo.Create(ctx, owner)
+			c, err := repo.Create(ctx, owner, folder)
 			if err != nil {
 				return
 			}
@@ -205,7 +208,7 @@ func TestTruncateDropsASuffix(t *testing.T) {
 	ctx := context.Background()
 	repo := memory.NewCharacterRepository()
 
-	c, err := repo.Create(ctx, "owner")
+	c, err := repo.Create(ctx, "owner", folder)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -233,7 +236,7 @@ func TestTruncateRejectsStaleAndImpossibleRequests(t *testing.T) {
 	ctx := context.Background()
 	repo := memory.NewCharacterRepository()
 
-	c, err := repo.Create(ctx, "owner")
+	c, err := repo.Create(ctx, "owner", folder)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -269,5 +272,126 @@ func TestTruncateRejectsStaleAndImpossibleRequests(t *testing.T) {
 
 	if err := repo.Truncate(ctx, "no-such-character", 1, 1); !types.IsNotFound(err) {
 		t.Errorf("Truncate() error = %v, want a NotFoundError", err)
+	}
+}
+
+// Rewrite is the write behind a replacement: neither an append nor a
+// truncation, because replacing one entry can drop entries after it and the
+// stored slice comes back a different length.
+func TestRewriteReplacesTheWholeLog(t *testing.T) {
+	ctx := context.Background()
+	repo := memory.NewCharacterRepository()
+
+	c, err := repo.Create(ctx, "owner", folder)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if err := repo.Append(ctx, c.ID, 0,
+		domain.Event{Type: domain.EventInit},
+		domain.Event{Type: domain.EventRace},
+		domain.Event{Type: domain.EventClass},
+	); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+
+	shorter, err := domain.Rebuild([]domain.Event{
+		{Type: domain.EventInit},
+		{Type: domain.EventBackground},
+	})
+	if err != nil {
+		t.Fatalf("Rebuild() error = %v", err)
+	}
+	if err := repo.Rewrite(ctx, c.ID, 3, shorter); err != nil {
+		t.Fatalf("Rewrite() error = %v", err)
+	}
+	got, err := repo.Get(ctx, c.ID)
+	if err != nil {
+		t.Fatalf("Get() error = %v", err)
+	}
+	if got.Log.Len() != 2 || got.Log.Events[1].Type != domain.EventBackground {
+		t.Errorf("log = %+v, want the rewritten two entries", got.Log.Events)
+	}
+
+	// The caller keeps no handle on the store's slice.
+	shorter.Events[1].Note = "mutated after the write"
+	again, err := repo.Get(ctx, c.ID)
+	if err != nil {
+		t.Fatalf("Get() error = %v", err)
+	}
+	if again.Log.Events[1].Note != "" {
+		t.Error("Rewrite() stored the caller's own backing array")
+	}
+}
+
+func TestRewriteRejectsStaleAndMalformedWrites(t *testing.T) {
+	ctx := context.Background()
+	repo := memory.NewCharacterRepository()
+
+	c, err := repo.Create(ctx, "owner", folder)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if err := repo.Append(ctx, c.ID, 0,
+		domain.Event{Type: domain.EventInit},
+		domain.Event{Type: domain.EventRace},
+	); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+	good := domain.Log{Events: []domain.Event{{Seq: 1, Type: domain.EventInit}}}
+
+	// The write being discarded by a stale sequence here is the whole
+	// history, which is why this check matters most on this method.
+	if err := repo.Rewrite(ctx, c.ID, 1, good); err == nil {
+		t.Error("Rewrite() accepted a stale sequence")
+	}
+	// A store that accepts a malformed log is a store that hands one back.
+	bad := domain.Log{Events: []domain.Event{{Seq: 4, Type: domain.EventInit}}}
+	if err := repo.Rewrite(ctx, c.ID, 2, bad); err == nil {
+		t.Error("Rewrite() accepted a log whose sequence numbers do not run 1..n")
+	}
+	if err := repo.Rewrite(ctx, "no-such-character", 0, good); !types.IsNotFound(err) {
+		t.Errorf("Rewrite() error = %v, want a NotFoundError", err)
+	}
+
+	got, err := repo.Get(ctx, c.ID)
+	if err != nil {
+		t.Fatalf("Get() error = %v", err)
+	}
+	if got.Log.Len() != 2 {
+		t.Errorf("log length = %d, want 2 after two rejected rewrites", got.Log.Len())
+	}
+}
+
+func TestSetFolderMovesACharacter(t *testing.T) {
+	repo := memory.NewCharacterRepository()
+	ctx := context.Background()
+
+	c, err := repo.Create(ctx, owner, folder)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if err := repo.SetFolder(ctx, c.ID, "fld_000002"); err != nil {
+		t.Fatalf("SetFolder() error = %v", err)
+	}
+
+	got, err := repo.Get(ctx, c.ID)
+	if err != nil {
+		t.Fatalf("Get() error = %v", err)
+	}
+	if got.Folder != "fld_000002" {
+		t.Errorf("Get() folder = %q, want fld_000002", got.Folder)
+	}
+	// A move must not disturb the log, which is the only thing about a
+	// character a move has no business touching.
+	if got.Log.Len() != c.Log.Len() {
+		t.Errorf("SetFolder() changed the log length to %d, want %d", got.Log.Len(), c.Log.Len())
+	}
+}
+
+func TestSetFolderReportsNotFound(t *testing.T) {
+	repo := memory.NewCharacterRepository()
+
+	if err := repo.SetFolder(context.Background(), "chr_missing", folder); !types.IsNotFound(err) {
+		t.Errorf("SetFolder() error = %v, want a NotFoundError", err)
 	}
 }

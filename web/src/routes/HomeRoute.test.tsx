@@ -36,13 +36,15 @@ function homeAt(state: Partial<AuthState>) {
  */
 describe('HomeRoute', () => {
   // The sign-in controls themselves live in the header, in LandingShell, and
-  // the page below it is deliberately wordless -- so the mark is what there is
-  // to assert. That it is reachable *by name* is the accessibility contract
-  // standing in for the headline this page used to open with.
+  // the page below it is deliberately wordless -- so the carousel's accessible
+  // names are what there is to assert. That the three panels are reachable *by
+  // name* is the accessibility contract standing in for the headline this page
+  // used to open with, and for the visible copy it does not have yet.
   it('renders the landing page when anonymous', () => {
     homeAt({ status: 'anonymous' })
 
-    expect(screen.getByRole('img', { name: 'easydnd' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'What easydnd is for' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Build a character' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Characters' })).not.toBeInTheDocument()
   })
 
@@ -60,7 +62,7 @@ describe('HomeRoute', () => {
     })
 
     expect(screen.getByRole('heading', { name: 'Characters' })).toBeInTheDocument()
-    expect(screen.queryByRole('img', { name: 'easydnd' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'What easydnd is for' })).not.toBeInTheDocument()
   })
 
   // How many ways in an account has belongs to the account screen, next to the

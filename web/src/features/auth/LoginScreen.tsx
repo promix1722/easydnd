@@ -37,7 +37,12 @@ export function LoginScreen() {
 
   // Whoever sent us here recorded where they were, so signing in returns them
   // to the deep link they arrived on rather than dropping them at the root.
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/'
+  //
+  // The whole location, not just its path. A query string or a fragment is
+  // part of where somebody was, and an invitation link is entirely fragment --
+  // returning them to a bare `/groups/join` would land them on the one screen
+  // that cannot work without it.
+  const from = returnTo(location.state)
 
   // Already signed in: this page has nothing to offer, and leaving it reachable
   // would mean a "Log in" screen rendered inside the signed-in shell.
@@ -150,4 +155,19 @@ export function LoginScreen() {
       </Card>
     </Stack>
   )
+}
+
+/**
+ * Where to send somebody after they sign in.
+ *
+ * Rebuilt from the parts rather than taken whole, so that a `state` shaped by
+ * something other than a react-router location -- a hand-written link, an
+ * older build's history entry -- cannot navigate anywhere unexpected. Anything
+ * unrecognisable falls back to the root.
+ */
+function returnTo(state: unknown): string {
+  const from = (state as { from?: { pathname?: string; search?: string; hash?: string } } | null)
+    ?.from
+  if (from?.pathname === undefined || !from.pathname.startsWith('/')) return '/'
+  return `${from.pathname}${from.search ?? ''}${from.hash ?? ''}`
 }

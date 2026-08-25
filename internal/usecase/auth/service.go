@@ -35,10 +35,31 @@ const (
 // WebAuthn user handle limit.
 const userIDBytes = 16
 
-// GuestDisplayName is what a session with no account behind it is called on
-// screen. It is not a name anyone chose, and it is not stored anywhere; it
-// exists so the header has something to render.
+// GuestDisplayName is what a guest is called, before the part that tells two
+// of them apart. See guestName.
 const GuestDisplayName = "Guest"
+
+// PasskeyDisplayName is what an account created with a passkey is called.
+//
+// Neither passkey ceremony asks for anything -- sign-in is discoverable, and
+// sign-up has no reason to be different -- but the credential still needs a
+// label, because this string is what the operating system's passkey prompt,
+// and the credential manager the passkey is later listed in, show for the
+// account. So it says the one thing somebody scrolling that list wants to
+// know: which site the passkey opens. An invented per-account name answered a
+// question nobody was asking, and buried the answer to the one they were.
+//
+// It is a constant rather than the configured `auth.rp_name` because this
+// layer imports no configuration -- it depends on the user domain, the auth
+// ports and internal/types, and nothing else, which `make lint/layers`
+// enforces. The two spellings can drift; a deployment that renames the relying
+// party gets a passkey labelled with the old word and nothing worse, which is
+// a cheaper failure than plumbing config through the usecase to avoid it.
+//
+// Every passkey account therefore carries the same name, which costs nothing:
+// the account id is the key, and users.display_name is neither unique nor
+// indexed. Nothing in the tree looks an account up by what it is called.
+const PasskeyDisplayName = "easydnd"
 
 // Sealed-envelope kinds. Both the WebAuthn ceremony and the SSO flight ride in
 // a cookie sealed by the same Signer, so each says which it is and each
@@ -138,24 +159,19 @@ func (s *Service) GuestSessionTTL() time.Duration { return s.guestSessionTTL }
 // It asks for nothing, which is the whole point: sign-in is discoverable and
 // names no account, so a sign-up that demanded a piece of text would be the
 // only place in this API where a visitor had to know which of the two they
-// were doing. The account id and the label the operating system's passkey
-// prompt shows are both minted here -- see newDisplayName.
+// were doing. The account id is minted here; the label the operating system's
+// passkey prompt shows is fixed -- see PasskeyDisplayName.
 //
 // Nothing is written: the freshly minted account rides inside the sealed
 // ceremony token and is stored only if FinishRegistration verifies. An
 // abandoned sign-up therefore leaves no orphan record and no reserved name.
 func (s *Service) BeginRegistration(_ context.Context) (options []byte, ceremony string, err error) {
-	name, err := newDisplayName()
-	if err != nil {
-		return nil, "", err
-	}
-
 	id, err := newUserID()
 	if err != nil {
 		return nil, "", err
 	}
 
-	candidate := user.User{ID: id, DisplayName: name, CreatedAt: s.now()}
+	candidate := user.User{ID: id, DisplayName: PasskeyDisplayName, CreatedAt: s.now()}
 
 	options, state, err := s.ceremony.BeginRegistration(candidate)
 	if err != nil {
@@ -321,7 +337,7 @@ func (s *Service) SignInAnonymously(_ context.Context) (user.User, string, error
 	now := s.now()
 	guest := user.User{
 		ID:          id,
-		DisplayName: GuestDisplayName,
+		DisplayName: guestName(id),
 		CreatedAt:   now,
 		Anonymous:   true,
 	}
@@ -348,10 +364,43 @@ func (s *Service) SignInAnonymously(_ context.Context) (user.User, string, error
 func guestUser(session domain.Session) user.User {
 	return user.User{
 		ID:          session.UserID,
-		DisplayName: GuestDisplayName,
+		DisplayName: guestName(session.UserID),
 		CreatedAt:   session.IssuedAt,
 		Anonymous:   true,
 	}
+}
+
+// guestNameTagLen is how much of a guest's id ends up on screen. Four
+// base64url characters is sixteen million values, which is far more than the
+// handful of guests who could ever share one roster.
+const guestNameTagLen = 4
+
+// guestName is what to call a guest.
+//
+// "Guest" alone was enough while a guest could only see their own things. It
+// stops being enough the moment three of them sit in the same group: the
+// roster reads "Guest, Guest, Guest" and the owner cannot tell which one to
+// remove.
+//
+// The suffix is taken from the id they already carry rather than invented,
+// which is the same judgement PasskeyDisplayName makes in the other direction
+// -- a name should answer the question actually being asked. Here that
+// question is "which of these people", and four characters of their id answer
+// it; a generated two-word name would answer "who are they", which a guest
+// session cannot honestly claim to know.
+//
+// Derived, not stored and not carried in the token: the id is in the session
+// already, so there is nothing to keep in sync, nothing to migrate, and every
+// cookie issued before this existed renders correctly.
+func guestName(id user.ID) string {
+	tag := strings.TrimPrefix(string(id), user.AnonymousIDPrefix)
+	if len(tag) > guestNameTagLen {
+		tag = tag[:guestNameTagLen]
+	}
+	if tag == "" {
+		return GuestDisplayName
+	}
+	return GuestDisplayName + " " + tag
 }
 
 // issue mints a session token for id.
@@ -427,9 +476,10 @@ func (s *Service) warnOnStalledCounter(current user.User, presented user.Credent
 
 // normalizeDisplayName trims and bounds a display name this service did not
 // mint. Nothing a visitor types reaches it any more -- there is no such text
-// left in the auth surface -- but a provider's claims still arrive as whatever
-// that provider felt like sending, and newDisplayName runs its own output
-// through it as a cheap guard on the column's CHECK constraint.
+// left in the auth surface, and the passkey path stores a constant -- but a
+// provider's claims still arrive as whatever that provider felt like sending,
+// which is the one place a name can still be empty, unbounded or not text.
+// See displayNameFor.
 func normalizeDisplayName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	switch {

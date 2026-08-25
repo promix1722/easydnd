@@ -21,6 +21,8 @@ import (
 	"github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
+	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	"github.com/promix1722/easydnd/internal/types"
@@ -33,6 +35,8 @@ type Handlers struct {
 	Auth      *auth.Handler
 	Catalog   *catalogapi.Handler
 	Character *characterapi.Handler
+	Folder    *folderapi.Handler
+	Group     *groupapi.Handler
 	// Authenticator resolves the session cookie for the guarded routes. It is
 	// the same object Auth is built over; the router takes it separately
 	// because middleware and handler need different halves of it.
@@ -164,6 +168,56 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.GET("/characters/:id/events", h.Character.Events)
 			authed.POST("/characters/:id/events", h.Character.AppendEvents)
 			authed.DELETE("/characters/:id/events", h.Character.TruncateEvents)
+			// One entry of that log, addressed by position -- which is what
+			// Seq means. Addressing a member of a sub-resource collection is
+			// not a third level: there is no route below these two, and
+			// there will not be one.
+			authed.PUT("/characters/:id/events/:seq", h.Character.ReplaceEvent)
+			authed.DELETE("/characters/:id/events/:seq", h.Character.DeleteEvent)
+
+			// The folder is the one thing about a stored character that
+			// changes without an event, so it is its own route rather
+			// than a PATCH on the character -- which would read as an
+			// invitation to patch a name or a level, and those only the
+			// log can change.
+			authed.PUT("/characters/:id/folder", h.Character.SetFolder)
+			authed.POST("/characters/:id/copy", h.Character.Copy)
+
+			// Folders: where one account files its own characters. The
+			// neighbouring word is taken and this is not it -- a folder
+			// has one owner and shares nothing. Deleting one deletes the
+			// characters in it.
+			authed.GET("/folders", h.Folder.List)
+			authed.POST("/folders", h.Folder.Create)
+			authed.PATCH("/folders/:id", h.Folder.Rename)
+			authed.DELETE("/folders/:id", h.Folder.Delete)
+
+			// Groups. A group is the first thing here that belongs to more
+			// than one person, so unlike a character it is reached by rank
+			// rather than by ownership -- but the guard is the same, and for
+			// the same reason.
+			authed.GET("/groups", h.Group.List)
+			authed.POST("/groups", h.Group.Create)
+			authed.GET("/groups/:id", h.Group.Get)
+			authed.PATCH("/groups/:id", h.Group.Rename)
+			authed.DELETE("/groups/:id", h.Group.Delete)
+			authed.POST("/groups/:id/invites", h.Group.CreateInvite)
+			// One member is addressed by ?user= rather than by a second path
+			// segment. Either would be consistent with the routes above --
+			// events/:seq addresses a member of a collection the same way --
+			// but this is the shape TruncateEvents already uses, and a member
+			// is named by an opaque account id rather than by position.
+			authed.PATCH("/groups/:id/members", h.Group.SetMemberRole)
+			authed.DELETE("/groups/:id/members", h.Group.RemoveMember)
+
+			// Invites are a separate tree on purpose. Somebody redeeming a
+			// link is not yet in the group and cannot name it -- the token
+			// carries the id -- so there is no addressed parent to hang these
+			// off. Both take the token in the body and never in the URL: our
+			// own access log records only the path, but nginx in front of it
+			// logs the whole request line, and this token is usable for a day.
+			authed.POST("/invites/preview", h.Group.PreviewInvite)
+			authed.POST("/invites/accept", h.Group.AcceptInvite)
 		}
 	}
 
