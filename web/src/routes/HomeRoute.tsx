@@ -8,7 +8,7 @@ import { LandingPage } from './LandingPage'
 /**
  * `/` for everybody.
  *
- * Signed out it is the landing page; signed in it is the party list. Branching
+ * Signed out it is the landing page; signed in it is the character list. Branching
  * here rather than redirecting is what keeps the address bar honest: there is
  * one home page, and it shows you what you are entitled to see.
  *

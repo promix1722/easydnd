@@ -111,7 +111,7 @@ interface Preview {
 export function BuildScreen() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  // The folder the party list was filtered to when New character was pressed.
+  // The folder the character list was filtered to when New character was pressed.
   // Only /characters/new carries it; absent means the account's default, which
   // the server resolves.
   const [search] = useSearchParams()

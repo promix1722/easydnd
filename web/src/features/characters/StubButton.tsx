@@ -7,14 +7,14 @@ import { Button } from '@/ui'
 
 /**
  * Makes the reference character in one press: a finished level-3 half-elf
- * rogue, so that working on the sheet, the log page or the party list does not
+ * rogue, so that working on the sheet, the log page or the character list does not
  * begin with a walk through five tabs.
  *
  * **A development build's button**, and it lives in its own file so that a
  * production bundle can genuinely drop it. Its one call site is behind
  * `import.meta.env.DEV`, which Vite replaces with a literal, so the branch
  * folds away and this module -- with `createStubCharacter` and the hook it
- * needs -- goes unreferenced and is eliminated. Inlined into the party list it
+ * needs -- goes unreferenced and is eliminated. Inlined into the character list it
  * could not be: a hook cannot sit inside a branch, so the call would have to be
  * unconditional and the code would ship to everybody merely unreachable.
  *
@@ -26,11 +26,11 @@ export function StubButton({
   folder,
   onFailed,
 }: {
-  /** The folder the party list is filtered to, if any. */
+  /** The folder the character list is filtered to, if any. */
   folder?: string | undefined
   /**
-   * Reported upward, because the party list owns where errors are drawn. Must
-   * be stable across renders; the party list passes a setState.
+   * Reported upward, because the character list owns where errors are drawn. Must
+   * be stable across renders; the character list passes a setState.
    */
   onFailed: (message: string | null) => void
 }) {

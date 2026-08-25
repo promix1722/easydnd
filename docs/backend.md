@@ -647,7 +647,7 @@ the difference between a character and a group.
 function, `handler.owner` in `internal/api/http/v1/character/handler.go`, from
 the account `middleware.RequireSession` put on the request; a handler reached
 without that middleware gets the zero `OwnerID`, which owns nothing, so a
-mis-wiring shows up as an empty party rather than as somebody else's.
+mis-wiring shows up as an empty list rather than as somebody else's.
 
 Enforcement lives in the usecase, not the handler: every read and write goes
 through `Service.owned`, which refuses a character to anyone but its owner --
@@ -1164,7 +1164,7 @@ is **composite** because a subject is only unique within its issuer: keyed on
 the subject alone, one provider's subject could resolve to an account linked
 through another, which is a sign-in as the wrong person. `email` is stored but
 is deliberately not unique and never a lookup key -- an address can be released
-and reassigned, so matching on one would eventually hand somebody else's party
+and reassigned, so matching on one would eventually hand somebody else's characters
 to a stranger.
 
 `sign_count` is a `bigint` because the domain's `SignCount` is a `uint32` and

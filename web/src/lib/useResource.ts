@@ -30,7 +30,7 @@ export interface Resource<T> {
  * returns the new sheet in its response, so there is no cache to invalidate --
  * the response *is* the invalidation. A query library earns its keep when many
  * components read overlapping queries with independent lifetimes, and here one
- * screen owns one character. Revisit if a party view ever renders six.
+ * screen owns one character. Revisit if a character list ever renders six.
  *
  * `key` identifies what is being fetched, e.g. `sheet:chr_000001`. Changing it
  * aborts the request in flight and starts a new one. It is a string rather

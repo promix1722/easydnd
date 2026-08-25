@@ -39,7 +39,7 @@ import { StubButton } from './StubButton'
 const ALL = 'all'
 
 /**
- * The party, filed into folders.
+ * The characters, filed into folders.
  *
  * A folder is one account's private filing -- not a group of players. Nothing
  * here is shared with anybody, which is why there is no owner column and no
@@ -47,7 +47,7 @@ const ALL = 'all'
  *
  * This screen holds two resources rather than one, which is the case
  * docs/web.md left open when it said to revisit the no-query-library decision
- * if a party view ever rendered six things. It still does not need one: the
+ * if this list ever rendered six things. It still does not need one: the
  * two reads are independent, every mutation here is followed by an explicit
  * reload of exactly the lists that changed, and there is no cache to go stale
  * in between.
@@ -86,7 +86,7 @@ export function CharacterListScreen() {
         <div>
           <Title order={2}>Characters</Title>
           <Text c="dimmed" size="sm">
-            Your party.
+            The people you play.
           </Text>
         </div>
         <Group gap="xs">

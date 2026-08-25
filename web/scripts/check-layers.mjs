@@ -26,17 +26,17 @@ const SRC = fileURLToPath(new URL('../src', import.meta.url))
 const RULES = [
   {
     dir: 'theme',
-    deny: ['react', '@mantine/', '@/'],
+    deny: ['react', '@mantine/', '@tabler/', '@/'],
     why: 'theme/ holds framework-free tokens; the Mantine binding lives in ui/theme.ts',
   },
   {
     dir: 'domain',
-    deny: ['react', 'react-dom', 'react-router', '@mantine/', '@/ui', '@/lib', '@/shell', '@/features', '@/routes'],
+    deny: ['react', 'react-dom', 'react-router', '@mantine/', '@tabler/', '@/ui', '@/lib', '@/shell', '@/features', '@/routes'],
     why: 'domain/ is pure rules: no UI framework, no transport, no I/O',
   },
   {
     dir: 'lib',
-    deny: ['@mantine/', '@/ui', '@/shell', '@/features', '@/routes'],
+    deny: ['@mantine/', '@tabler/', '@/ui', '@/shell', '@/features', '@/routes'],
     why: 'lib/ sits below the UI; it must not reach upward',
   },
   {
@@ -62,11 +62,15 @@ const RULES = [
 ]
 
 /**
- * The one directory allowed to import Mantine. Listed separately from RULES
- * so that a new top-level directory is denied by default rather than silently
- * exempt.
+ * The packages only `src/ui/` may import: the component library, and the icon
+ * set it draws with. Listed separately from RULES so that a new top-level
+ * directory is denied by default rather than silently exempt -- and as a list
+ * rather than one name so that adding a second vendor is an edit here rather
+ * than a hole. `@tabler/` arrived exactly that way: nothing denied it, so every
+ * layer could have imported icons directly until it was named.
  */
-const MANTINE_ALLOWED = 'ui'
+const UI_ONLY_PACKAGES = ['@mantine/', '@tabler/']
+const UI_ONLY_DIR = 'ui'
 
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g
 
@@ -102,11 +106,12 @@ for (const file of walk(SRC)) {
   const specifiers = importsOf(readFileSync(file, 'utf8'))
 
   for (const specifier of specifiers) {
-    if (specifier.startsWith('@mantine/') && top !== MANTINE_ALLOWED) {
+    const vendor = UI_ONLY_PACKAGES.find((prefix) => specifier.startsWith(prefix))
+    if (vendor && top !== UI_ONLY_DIR) {
       violations.push({
         file: rel,
         specifier,
-        why: `only src/${MANTINE_ALLOWED}/ may import Mantine; import from '@/ui' instead (re-export it there if missing)`,
+        why: `only src/${UI_ONLY_DIR}/ may import ${vendor}*; import from '@/ui' instead (re-export it there if missing)`,
       })
       continue
     }

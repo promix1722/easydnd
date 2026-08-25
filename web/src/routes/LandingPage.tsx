@@ -1,6 +1,6 @@
 import { useId } from 'react'
 
-import { Carousel, Paper, Stack, Text, Title } from '@/ui'
+import { Carousel, Paper, Stack, Text, Title, useIsDesktop } from '@/ui'
 
 /**
  * What a signed-out visitor sees at `/`: what this app is for, three panels of
@@ -102,6 +102,14 @@ export function LandingPage() {
   // say -- and duplicated heading ids would point every panel at the first.
   const headingId = useId()
 
+  // One of the few places outside a @/ui primitive that asks the viewport, and
+  // it is asking about the input rather than the layout: the arrows are the
+  // only way through this carousel for a pointer, and a phone has no pointer.
+  // There they are two 44px controls sitting on top of the panel they are
+  // covering, duplicating the swipe that a touchscreen already offers -- so
+  // they go, and the indicators below still say how many panels there are.
+  const withControls = useIsDesktop()
+
   return (
     // Named, because a landmark called "region" tells a screen reader nothing.
     // Mantine gives the root `role="region"` and an `aria-roledescription` of
@@ -111,9 +119,10 @@ export function LandingPage() {
       height={FILL_MAIN}
       slideGap="md"
       withIndicators
-      // Bigger than the 26px default. These are the only way through the
-      // carousel for anybody not using a touchscreen or the arrow keys, they
-      // sit over a panel rather than beside it, and 26px is under every
+      withControls={withControls}
+      // Bigger than the 26px default. On the viewport that draws them these are
+      // the only way through the carousel for anybody not using the arrow keys,
+      // they sit over a panel rather than beside it, and 26px is under every
       // published minimum for a pointer target.
       controlSize={44}
       styles={{

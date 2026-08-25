@@ -4,11 +4,11 @@ The engineering doc for the [easydnd.org](https://easydnd.org) browser client:
 layout, layer rules, and how it ships. For the Go API it talks to, see
 [backend.md](backend.md); for the game model behind both, see [dnd.md](dnd.md).
 
-Status: **real**. Sign-in (passkeys and Google), the party list with its
+Status: **real**. Sign-in (passkeys and Google), the character list with its
 folders, character creation, the build loop, the account screen and the sheet
 are all built and tested. **Level-up is not**, and this client does not offer
 it -- see [Level-up is not offered](#level-up-is-not-offered). Neither is the
-battle tracker.
+battle tracker: `/games` is a section in the navigation whose page says so.
 
 ## Quick start
 
@@ -140,7 +140,7 @@ so there is nothing to invalidate -- the response *is* the invalidation. A
 query library earns its keep when many components read overlapping queries with
 independent lifetimes, and here one screen owns one character.
 
-The party list is now the one screen that holds two resources -- its folders
+The character list is now the one screen that holds two resources -- its folders
 and its characters -- which is the case that sentence used to leave open. It
 still does not need a library. The two reads are independent, the character
 read is keyed by the selected folder so changing the filter aborts the request
@@ -364,7 +364,7 @@ score method and all six numbers, which meant eight selections in one log entry
 and nothing a player could point at and change. The scores are an ordinary open
 choice now, answered on the abilities tab and written as their own entry.
 
-`/characters/new?folder=` carries the folder the party list was filtered to, so
+`/characters/new?folder=` carries the folder the character list was filtered to, so
 whatever the list was showing is where the next character lands. Import does the
 same. Absent, the server resolves the account's default.
 
@@ -373,7 +373,7 @@ same. Absent, the server resolves the account's default.
 Beside Import there is a **Stub**, and it is there only in a development build.
 It posts to `/v1/characters/stub` and lands on a finished level-3 rogue -- the
 character in `docs/reference_hexsheet/` -- so that working on the sheet, the log
-page or the party list does not begin with a walk through five tabs.
+page or the character list does not begin with a walk through five tabs.
 
 It goes to **the sheet**, and that is the one place it differs from Import,
 which goes to the build screen. An import answers no prompts, so there is always
@@ -397,13 +397,13 @@ the other to stay hidden. See
 why it builds the character rather than importing it.
 
 That elimination is why the button is **its own component**, `StubButton.tsx`,
-rather than a few lines inline in the party list. A hook cannot sit inside a
+rather than a few lines inline in the character list. A hook cannot sit inside a
 branch, so inline the `useAction(createStubCharacter)` would have to be called
 unconditionally -- and an unconditional call keeps the whole path reachable, so
 the bundle would ship it and merely never draw it. Behind its own module the
 one reference folds away with the branch and the module goes with it. The check
 is a grep: `characters/stub` appears zero times in `dist/`, where
-`characters/import` beside it appears twice. What the party list keeps is one
+`characters/import` beside it appears twice. What the character list keeps is one
 `useState` holding an error nothing ever sets, because that too is a hook.
 
 It renders under Vitest, since `DEV` is set there, which is what makes the two
@@ -769,6 +769,11 @@ describes intent, because the battle tracker is not built. That is the one to
 keep honest -- a landing page promising it would be the only thing on
 easydnd.org that did.
 
+Those three panels are also the three sections a signed-in visitor gets, and
+since `/games` joined the navigation the third has somewhere to lead. What is
+behind it says it is not built, which is the honest middle between a promise
+with nothing under it and a section hidden until the day it works.
+
 They also paid for a piece of the design to be removed. While the panels were
 empty, `slideSize` was under 100% so the neighbours peeked: three identical
 blank rectangles at full width read as one rectangle, and a swipe between them
@@ -782,10 +787,18 @@ paper. The indicators are white at `0.6` opacity, which over a pale panel on a
 pale page is invisible; an invisible indicator is worse than no indicator,
 because it says there is one panel. They are repainted in the primary colour,
 which reads under `defaultColorScheme="auto"` where white does not. And the
-controls are `44px` rather than the default `26px`: they are the only way
-through for a visitor with neither a touchscreen nor the arrow keys, they sit
-*over* a panel rather than beside it, and 26px is under every published minimum
-for a pointer target.
+controls are `44px` rather than the default `26px`: on the viewport that draws
+them they are the only way through for a visitor not using the arrow keys, they
+sit *over* a panel rather than beside it, and 26px is under every published
+minimum for a pointer target.
+
+They are drawn on desktop **only**. This is one of the few places outside a
+`@/ui` primitive that calls `useIsDesktop`, and it asks about the *input*
+rather than the layout: a phone has no pointer, so two 44px arrows covering the
+panel they sit on would duplicate a swipe the screen already offers. Taking
+them away removes a control, not a way through -- the swipe, the arrow keys and
+the indicators all remain, and the indicators are what still say how many
+panels there are.
 
 None of the three panels is a link, and not because two of them lead nowhere --
 `/groups` is real. It is that all three live behind the sign-in boundary, so a
@@ -856,10 +869,13 @@ a page for an arbitrary commit that nothing serves.
 
 The cost is worth stating rather than pretending away: the signed-in shells have
 no footer, so an account holder -- the person actually reading SRD-derived
-material on a character sheet -- has no link to `/legal` from anywhere.
-`MobileShell` could not carry one without redesigning its tab bar, which owns
-the only `AppShell.Footer` slot. That gap is recorded in
-[licensing.md](licensing.md#known-gaps) rather than quietly carried.
+material on a character sheet -- has no link to `/legal` from anywhere. That
+used to be a layout that forbade it, `MobileShell` spending its only
+`AppShell.Footer` slot on the tab bar. Since the tab bar became a dropdown in
+the header, the slot is free and both signed-in shells could carry a footer.
+So it is now a decision nobody has made rather than a thing that cannot be
+done -- still recorded in [licensing.md](licensing.md#known-gaps) rather than
+quietly carried.
 
 Branching rather than redirecting is what keeps the address bar honest: an
 unauthenticated visit to a deep link does not bounce anywhere, so a link shared
@@ -947,8 +963,12 @@ busy/error/unmounted plumbing with it through `runAuth` and lets the flows
 differ only in what they await. Everything that offers account management
 has to check the flag: `features/auth/PasskeyNotice.tsx` renders a "nothing is
 saved" notice for a guest and nothing at all for an account, and both shells
-say "End guest session" rather than borrowing a word that implies you can come
-back.
+still *name* the control "End guest session" rather than borrowing a word that
+implies you can come back. Those words are now the control's accessible name
+and its tooltip rather than button text -- see
+[the account is two icons](#adding-a-feature) -- which is the one thing that
+had to survive the change intact, because a logout glyph is identical either
+way and the difference is whether pressing it destroys somebody's only copy.
 
 There is no "add a passkey" flow, on either side of the wire: an account's
 passkeys are the ones it was created with. `/account` therefore lists them and
@@ -999,8 +1019,37 @@ The Go side is in [backend.md](backend.md#authentication).
 ## Two views, one codebase
 
 There is exactly one viewport branch, in `shell/RootShell.tsx`: a persistent
-navbar on desktop, a thumb-reachable bottom tab bar on mobile. Below it,
-screens are viewport-agnostic. Where a layout genuinely has to differ, it
+navbar on desktop, and on mobile a single row of chrome whose sections live in
+a dropdown beside the mark. Below it, screens are viewport-agnostic.
+
+The phone chrome used to be a header *and* a thumb-reachable bottom tab bar, on
+the argument that the top of a phone is the hardest place to reach one-handed
+-- which is true, and is how this app gets used at a table. It lost to a bigger
+one. Two rows of chrome cost 108px of an 844px screen to draw two things, one
+of which is pressed rarely: you are usually already in the section you want.
+Folding the sections into a dropdown buys the content back a whole row, gives
+each section its full name instead of the tab bar's four characters, turns
+imperative `useNavigate` into real links, and costs the same whether there are
+two sections or six -- which a `Tabs.List grow` does not. Note what is *not*
+the reason: three tabs would have fit. Adding one is what made the question
+worth asking, not what answered it.
+
+It also freed the `AppShell.Footer` slot that the tab bar owned. Nothing fills
+it; see [licensing.md](licensing.md#known-gaps) for the thing that wants to.
+
+Two smaller rules the three shells share, both of them fixes for something that
+looked wrong on screen rather than preferences:
+
+- **One header height**, `HEADER_HEIGHT` in `shell/chrome.ts`. The landing
+  chrome drew 56 and the phone chrome 52, so signing in on a phone moved the
+  whole page up four pixels -- a flinch at the moment somebody first sees the
+  app. Three shells sharing a corner need to share its dimensions, or the
+  seam between logged-out and logged-in is visible.
+- **Nothing collapses the desktop navbar.** It had a `Burger` defaulting to
+  open, which meant the control it actually drew was a close cross, sitting
+  left of the mark and before the app's own name -- it read as a way to dismiss
+  something. A wide screen has room for a 240px navbar and no reason to hide
+  it; the viewport that cannot spare the width uses the other shell. Where a layout genuinely has to differ, it
 differs inside a `@/ui` primitive rather than at the call site:
 
 | Primitive | Desktop | Mobile |
@@ -1047,16 +1096,28 @@ A call site may still pass `size` where it genuinely means something different -
 size in three files, so a new one wants a reason beyond the button looking better
 on the screen being worked on.
 
+There is exactly one such call site: the phone header's section dropdown is
+`sm`. The reason is a tap target rather than taste -- it is the whole of the
+app's navigation on a phone, and `xs` is 30px, under every guideline there is.
+`ActionIcon` keeps Mantine's own default and gets no `defaultProps` entry of
+its own, because the three call sites that already use one rely on it and a new
+theme default would silently resize them.
+
 ## Dependency rule
 
 ```
 theme -> lib -> ui -> shell -> features -> routes
 ```
 
-Imports point left, and **only `src/ui/` may import `@mantine/*`** -- everything
-else imports from `@/ui`, which re-exports what it needs. `npm run lint:layers`
-enforces both, the same way `make lint/layers` does for the Go packages: a
-convention nobody can run is a convention that rots.
+Imports point left, and **only `src/ui/` may import `@mantine/*` or
+`@tabler/*`** -- everything else imports from `@/ui`, which re-exports what it
+needs. An icon set is a *look* the same way a component library is, so a
+feature reaching past `@/ui` for a glyph is the same leak with a smaller blast
+radius. `npm run lint:layers` enforces both, the same way `make lint/layers`
+does for the Go packages: a convention nobody can run is a convention that
+rots. The list of packages it guards lives in `scripts/check-layers.mjs` as a
+list rather than one name, because `@tabler/` arrived through the hole a single
+hard-coded `@mantine/` left open.
 
 ## Adding a feature
 
@@ -1066,9 +1127,29 @@ visuals belong in `web/src/ui/`, never inline in a feature. The API's error
 envelope is decoded exactly once, into `ApiError`, by `lib/api/client.ts`.
 
 A **new top-level section** is one more entry in `shell/nav.ts`; both shells map
-over `NAV_ITEMS` and neither needs touching. Which entry is highlighted comes
-from `activeNavPath` in the same file -- shared, because the two shells had
-drifted and only the mobile one kept a section lit on its nested routes.
+over `NAV_ITEMS` and neither needs touching -- the desktop navbar and the phone
+dropdown both build themselves from it. Which entry is highlighted comes from
+`activeNavPath` in the same file -- shared, because the two shells had drifted
+and only the mobile one kept a section lit on its nested routes.
+
+`navLabel` sits beside it and is the dropdown's alone. The navbar can leave
+every entry unlit where `activeNavPath` returns null -- on a character sheet,
+on `/account`, on a 404 -- because the list is still on screen saying where you
+could go. The dropdown is one control and the only thing naming the current
+place, so it falls back to the word for what the control *is*, `Menu`. The
+alternative was widening `activeNavPath` so `/characters/:id` resolved to `/`,
+which would change which navbar entry lights on desktop and undo the one
+property that function is pinned on: `/` matches only itself.
+
+**Games is the worked example, and it is a stub.** `/games` is a `NAV_ITEMS`
+entry, a route, and `routes/GamesPlaceholder.tsx` -- a page that says running a
+game is not built. There is no `features/games/`, deliberately: the real
+feature is being written elsewhere, and leaving the directory unclaimed means
+that work lands as a new directory rather than as a conflict. A visible section
+over a hidden route is the same judgement as
+[Level-up is not offered](#level-up-is-not-offered) -- the navigation is the
+shape the app is going to be, and a door that says "not built" beats both a
+missing door and one that opens onto a surface which does nothing.
 
 Watch the names when a feature's API types meet the design system. `@/ui`
 already exports Mantine's `Group` layout primitive and every screen uses it, so
@@ -1109,6 +1190,23 @@ rule behind all three: a mark carrying a page keeps its own colours and can
 afford a `<title>`; a mark riding inside text takes the text's colour and stays
 out of its content.
 
+There is now a **third** source, and a rule for choosing between them. A brand
+mark is drawn by hand and lives in `ui/` or `public/`, because there are two of
+them and they are the app's own. A **UI affordance** -- an account, a way out,
+a chevron, a tick -- comes from `@tabler/icons-react`, re-exported one glyph at
+a time through `@/ui`. Hand-drawing those is how two "delete" controls end up
+different shapes, and the re-export list doubles as the app's icon inventory:
+adding one is a decision somebody makes in `ui/index.ts` rather than an import
+nobody reviews. Four icons cost the production bundle about 2KB, because each
+is its own ES module and the package sets `sideEffects: false` -- named imports
+only, never the deep `dist/esm/...` paths.
+
+Those icons are **decorative**, which inverts both marks above: the control
+around them carries the accessible name, and a named glyph inside a named
+button says it twice. That is the generalisable half -- a mark is announced
+when it is the only thing saying what it says, and silent when something else
+already does.
+
 `/account` is where both inventories live -- passkeys and connected providers --
 and where connecting and disconnecting happen. It shows each of them only when
 there is something to show or something to do: a Google-only account is not
@@ -1122,17 +1220,36 @@ not from `shell/nav.ts`: the navigation lists the parts of the app, and the
 account is who is looking at them, so both shells put the way in at the top
 right beside the button that ends the session.
 
-**The signed-in name is that link.** The header has to say whose session this
-is, and a button labelled "Account" next to the account's own name said the
-same thing twice -- so the name itself navigates to `/account`, drawn dimmed
-and small rather than as a button, because it is still a label first. A session
-whose name is empty falls back to the word "Account", since a link with no text
-is a link nobody can press, and a null user renders neither: the pair sits in
-its own right-pushed group so the header still ends in the sign-out control
-when there is no name to draw.
+**The account is two icons**, built once in `shell/AccountActions.tsx` and used
+by both signed-in shells -- a profile mark linking to `/account`, and the one
+that ends the session.
+
+It was a display name and a text button, and the name *was* the link, on the
+reasoning that the header has to say whose session this is and that a button
+labelled "Account" beside the account's own name said it twice. The first half
+of that still holds; what broke it is the phone. A display name is arbitrary
+length in the narrowest row this app has, sharing it with a mark, the word
+"easydnd" and a button reading "End guest session" -- and the thing that
+overflowed first was the control that ends the session.
+
+So the name moved out of the header's *text* and into the controls' accessible
+names and tooltips: `Account: Alice` and `Sign out`, or `End guest session` for
+a guest. The header still says whose session this is; it says it on demand
+rather than spending a phone's chrome on it unprompted. The cost is real and
+worth naming rather than glossing: a sighted visitor now hovers the mark, or
+opens the page it leads to, which names the account at its top. The empty-name
+fallback survives as plain `Account`, since a control with no accessible name
+is a control nobody can find, and a null user renders neither -- the pair is
+right-pushed, so the header ends in the way out whether or not there is an
+account to link to.
+
+A tooltip cannot be the name. Mantine's wires `aria-describedby`, and only
+while it is open; the label is not in the DOM at all when it is closed. So the
+`aria-label` is the name and the tooltip is the sighted equivalent, both built
+from one string -- duplicated deliberately rather than by accident.
 
 `/` is the one page both sides of the sign-in boundary share: the three panels
-signed out, the party list signed in. It carries nothing else -- system
+signed out, the character list signed in. It carries nothing else -- system
 status is a deploy question rather than something either audience came to `/` to
 read.
 

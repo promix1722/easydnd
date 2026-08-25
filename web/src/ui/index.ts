@@ -20,6 +20,13 @@ export { AppShell, Burger, NavLink, Tabs } from '@mantine/core'
 export { Carousel } from '@mantine/carousel'
 export { useDisclosure } from '@mantine/hooks'
 
+// The icon set, named one glyph at a time. Re-exported for the same reason the
+// chrome above is: `shell/` builds the header and may not import a vendor
+// package, and `scripts/check-layers.mjs` holds both to that rule. Listing the
+// four the app actually draws -- rather than re-exporting the module -- is
+// also what keeps the production bundle to three icons instead of six thousand.
+export { IconCheck, IconChevronDown, IconLogout, IconUserCircle } from '@tabler/icons-react'
+
 // Layout and typography primitives, re-exported unchanged.
 export {
   Alert,
@@ -49,7 +56,7 @@ export {
   ActionIcon,
   Button,
   FileInput,
-  // Per-row actions -- a roster's members, a party list's characters. The
+  // Per-row actions -- a roster's members, a character list's rows. The
   // alternative is four buttons in every row, which DataList's mobile card
   // rendering cannot lay out legibly.
   Menu,

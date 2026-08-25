@@ -27,20 +27,39 @@ than cosmetic — the wrong word usually hides a wrong shape.
 | spell casting | **spellcasting** | One word, 207× |
 | dark vision | **Darkvision** | One word — and it is a *racial trait*, not a *class feature* |
 | party (as an account-level thing) | **group** | See below — the two are not the same set of things |
+| campaign / session (as an app-level thing) | **game** | Neither is an SRD word: "campaign" is a DMG term and a "session" is a calendar entry. A group is who is at the table; a game is what they are playing |
 
 **A group is people; a party is characters.** A **group** is the account-level
 thing the app stores: the people at one table, with a rank each — owner, DM,
 player. A **party** is the in-fiction band of adventurers, which is characters,
 and the SRD uses it that way throughout ("the party", "party treasure"). They
 are deliberately not modelled as the same thing and today only one of them is
-modelled at all: a group holds no characters. The Characters tab is
-short-labelled "Party" on mobile for exactly the SRD sense, which is why the
-account-level feature could not also be called one.
+modelled at all: a group holds no characters. That is why the account-level
+feature is a *group* and not a *party*: "party" is a fiction word naming
+nothing this app stores, and a set of people with ranks is not a party in any
+sense the SRD uses.
 
-A **folder** is the third word and the smallest of the three: one account's
-private shelf for its own characters. It is not people and not in-fiction --
-nothing is shared through it and no rule reads it. Group, party, folder:
-people, characters in the fiction, characters on a shelf.
+The client used to lean on this the other way round, short-labelling the
+Characters section "Party" on a phone. It no longer does — the section is
+"Characters" everywhere — and the argument above is unchanged, because it never
+depended on that label. What changed is that "party" is now a word in the
+fiction and in this document only: no screen, route, field or type in either
+half of the app is named one, so there is nothing left for "group" to collide
+with.
+
+A **folder** is the third word and the smallest of them: one account's private
+shelf for its own characters. It is not people and not in-fiction -- nothing is
+shared through it and no rule reads it. A **game** is the fourth, and the
+newest: what a group actually plays. Group, game, party, folder: people, what
+they play, characters in the fiction, characters on a shelf.
+
+The last row is different in kind from the others, and worth flagging rather
+than letting the table's authority stretch over it. The rest correct a wrong
+word against SRD evidence — counts of what the document itself says. "Game"
+names a **product** concept the SRD has no word for at all, so there is no
+count to appeal to; it is a choice, made here so that it is made once. It is
+also not modelled yet: `/games` is a section whose page says so. See
+[web.md](web.md#adding-a-feature).
 
 Two of those are more than renaming:
 
@@ -119,7 +138,8 @@ record what was *chosen*, not what it evaluated to.
 
 **A folder is not part of this model.** Characters are filed into folders — see
 [backend.md](backend.md#folders) — and a folder records where a record is kept,
-not anything about the character. It is neither the group above nor the party:
+not anything about the character. It is neither the group above, nor the game,
+nor the party:
 no rule reads it, nothing is shared through it, and it never appears in a log or
 on a sheet. Look for it in the service, not here.
 

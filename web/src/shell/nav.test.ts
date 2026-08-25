@@ -1,20 +1,31 @@
 import { describe, expect, it } from 'vitest'
 
-import { activeNavPath, NAV_ITEMS } from './nav'
+import { activeNavPath, NAV_ITEMS, navLabel } from './nav'
 
 describe('the navigation table', () => {
-  it('has Groups beside Characters', () => {
-    expect(NAV_ITEMS.map((item) => item.to)).toEqual(['/', '/groups'])
+  it('has Characters, Groups and Games', () => {
+    expect(NAV_ITEMS.map((item) => item.to)).toEqual(['/', '/groups', '/games'])
+  })
+
+  // The mobile dropdown uses labels as accessible names, so two the same would
+  // make a menu item impossible to address -- in a test or with a screen
+  // reader.
+  it('labels every section, distinctly', () => {
+    const labels = NAV_ITEMS.map((item) => item.label)
+
+    expect(labels.every((label) => label.length > 0)).toBe(true)
+    expect(new Set(labels).size).toBe(labels.length)
   })
 })
 
 describe('activeNavPath', () => {
   it('keeps a section lit on its nested routes', () => {
     // The bug this replaced: the desktop navbar matched exactly, so opening a
-    // group blanked the highlight while the mobile tab bar kept it.
+    // group blanked the highlight while the mobile chrome kept it.
     expect(activeNavPath('/groups')).toBe('/groups')
     expect(activeNavPath('/groups/grp_1')).toBe('/groups')
     expect(activeNavPath('/groups/join')).toBe('/groups')
+    expect(activeNavPath('/games')).toBe('/games')
   })
 
   it('does not let the root section swallow everything', () => {
@@ -22,5 +33,20 @@ describe('activeNavPath', () => {
     expect(activeNavPath('/')).toBe('/')
     expect(activeNavPath('/characters/abc')).toBeNull()
     expect(activeNavPath('/account')).toBeNull()
+  })
+})
+
+describe('navLabel', () => {
+  it('names the section a path belongs to', () => {
+    expect(navLabel('/')).toBe('Characters')
+    expect(navLabel('/groups/grp_1')).toBe('Groups')
+    expect(navLabel('/games')).toBe('Games')
+  })
+
+  it('falls back to the word for the control on a path in no section', () => {
+    // The desktop navbar can leave every entry unlit here; the dropdown is one
+    // control and cannot be left unlabelled.
+    expect(navLabel('/characters/abc')).toBe('Menu')
+    expect(navLabel('/account')).toBe('Menu')
   })
 })

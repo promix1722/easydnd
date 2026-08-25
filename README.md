@@ -33,6 +33,10 @@ characters; attaching characters to one is a later change, because a character
 id does not outlive the process. See
 [Ownership, and membership](docs/backend.md#ownership-and-membership).
 
+**Games** are the third section and are **not built**: `/games` is a door in the
+navigation whose page says so, rather than a section hidden until the day it
+works.
+
 A **group** and a **folder** are different things and the words are not
 interchangeable. A group is people, shared, with ranks. A folder is one
 account's private shelf for its own characters, shared with nobody.

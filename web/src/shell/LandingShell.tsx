@@ -2,6 +2,7 @@ import { Outlet } from 'react-router'
 
 import { AppShell, Group } from '@/ui'
 
+import { HEADER_HEIGHT } from './chrome'
 import { LandingFooter } from './LandingFooter'
 import { SignInActions } from './SignInActions'
 import { Wordmark } from './Wordmark'
@@ -27,7 +28,7 @@ import { Wordmark } from './Wordmark'
  */
 export function LandingShell() {
   return (
-    <AppShell header={{ height: 56 }} footer={{ height: 48 }} padding="lg">
+    <AppShell header={{ height: HEADER_HEIGHT }} footer={{ height: 48 }} padding="lg">
       <AppShell.Header>
         <Group h="100%" px="md" gap="sm">
           <Wordmark />

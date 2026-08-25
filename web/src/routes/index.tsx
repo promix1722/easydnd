@@ -10,6 +10,7 @@ import { StatusScreen } from '@/features/status'
 import { LandingShell } from '@/shell/LandingShell'
 import { RootGate } from '@/shell/RootGate'
 
+import { GamesPlaceholder } from './GamesPlaceholder'
 import { HomeRoute } from './HomeRoute'
 import { JoinRoute } from './JoinRoute'
 import { NotFoundPage } from './NotFoundPage'
@@ -22,8 +23,10 @@ import { Private } from './Private'
  * know the viewport, and never redirect on account of who is looking.
  *
  * Screens live in features/, not here: routes/ is the table, and a screen that
- * lives in it is drift. `/characters/:id/build` is one screen for creation and
- * for level-up, because the API poses them as the same question.
+ * lives in it is drift. The exception is a page that belongs to the table
+ * rather than to an aggregate -- NotFoundPage, and GamesPlaceholder until the
+ * feature behind it exists. `/characters/:id/build` is one screen for creation
+ * and for level-up, because the API poses them as the same question.
  *
  * nginx rewrites unknown paths to index.html, so a deep link lands here rather
  * than on the API's 404 envelope.
@@ -116,6 +119,20 @@ export const router = createBrowserRouter([
         element: (
           <Private>
             <GroupScreen />
+          </Private>
+        ),
+      },
+
+      // Games: a section with nothing behind it yet, and deliberately
+      // reachable anyway -- the navigation is the shape the app is going to
+      // be, and a door that says "not built" beats both a missing door and
+      // one that opens onto a surface which does nothing. The real feature is
+      // being written elsewhere; see ./GamesPlaceholder.tsx.
+      {
+        path: 'games',
+        element: (
+          <Private>
+            <GamesPlaceholder />
           </Private>
         ),
       },
