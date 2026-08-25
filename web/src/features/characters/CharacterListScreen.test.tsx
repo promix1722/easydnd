@@ -19,6 +19,8 @@ import { CharacterListScreen } from './CharacterListScreen'
 const DEFAULT_FOLDER = { id: 'fld_000001', name: 'Default', default: true }
 const CAMPAIGN = { id: 'fld_000002', name: 'Campaign', default: false }
 
+const STUB_ID = 'chr_000009'
+
 const ADA = { id: 'chr_000001', folder: DEFAULT_FOLDER.id, name: 'Ada', level: 3, classes: [] }
 const BRAM = { id: 'chr_000002', folder: CAMPAIGN.id, name: 'Bram', level: 1, classes: [] }
 
@@ -48,6 +50,9 @@ function mockApi() {
         return json({ folders: [DEFAULT_FOLDER, CAMPAIGN] })
       }
       if (url.includes('/copy')) return json({ id: 'chr_000003', seq: 2, sheet: {} }, 201)
+      // Ahead of the catch-all below: the stub answers with a character, not
+      // the 204 every other write on this screen returns.
+      if (url.includes('/v1/characters/stub')) return json({ id: STUB_ID, seq: 9, sheet: {} }, 201)
       if ((init?.method ?? 'GET') !== 'GET') return json(null, 204)
       if (url.includes(`folder=${CAMPAIGN.id}`)) return json({ characters: [BRAM] })
       if (url.includes(`folder=${DEFAULT_FOLDER.id}`)) return json({ characters: [ADA] })
@@ -64,6 +69,7 @@ function renderList(viewport: 'mobile' | 'desktop') {
         <Route path="/" element={<CharacterListScreen />} />
         <Route path="/characters/new" element={<div>new character screen</div>} />
         <Route path="/characters/import" element={<div>import screen</div>} />
+        <Route path="/characters/:id" element={<div>character sheet</div>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -222,6 +228,41 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     await user.click(screen.getByRole('button', { name: /Delete folder and 1/ }))
     await waitFor(() => {
       onlyRequestTo(`/v1/folders/${CAMPAIGN.id}`, 'DELETE')
+    })
+  })
+
+  // The stub is a development convenience, and these two say it behaves like
+  // the buttons beside it rather than like a special case. It renders here
+  // because Vitest runs with import.meta.env.DEV set; that a production bundle
+  // omits it is not something a test in this environment can observe.
+  it('creates a stub character and opens its sheet', async () => {
+    const user = userEvent.setup()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'Stub' }))
+
+    // No body: what the stub makes is the server's to decide.
+    const request = onlyRequestTo('/v1/characters/stub', 'POST')
+    expect(request.body).toBe('')
+    // The sheet, not the build screen -- unlike an import, this character is
+    // finished, so there is nothing to send the player back to answer.
+    expect(await screen.findByText('character sheet')).toBeInTheDocument()
+  })
+
+  it('files the stub into the folder the list is filtered to', async () => {
+    const user = userEvent.setup()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('combobox', { name: 'Folder' }))
+    await user.click(await screen.findByRole('option', { name: 'Campaign' }))
+    await screen.findByText('Bram')
+
+    await user.click(screen.getByRole('button', { name: 'Stub' }))
+
+    await waitFor(() => {
+      onlyRequestTo(`/v1/characters/stub?folder=${CAMPAIGN.id}`, 'POST')
     })
   })
 

@@ -51,6 +51,7 @@ export {
   appendEvents,
   copyCharacter,
   createCharacter,
+  createStubCharacter,
   deleteCharacter,
   deleteEvent,
   getEvents,

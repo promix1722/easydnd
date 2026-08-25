@@ -192,6 +192,7 @@ that.
 | `GET` | `/v1/characters` | summaries |
 | `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
 | `POST` | `/v1/characters/import` | import a sheet exported by another tool |
+| `POST` | `/v1/characters/stub` | **development only** -- build the reference character in one call |
 | `GET` | `/v1/characters/{id}` | the log |
 | `DELETE` | `/v1/characters/{id}` | |
 | `GET` | `/v1/characters/{id}/sheet` | the projection |
@@ -300,6 +301,83 @@ six `abilities.<ability>` paths, and the generation method travels with that
 answer rather than with creation. The bound on a score -- 1 to 30, wide enough
 for a DM's ruling and narrow enough to reject a typo -- moved with them, and is
 checked where they now arrive.
+
+### The stub builds a character; it does not import one
+
+`POST /v1/characters/stub` makes the level-3 half-elf rogue of
+`docs/reference_hexsheet/` in one call. It is a development convenience --
+reaching a character worth looking at otherwise means five tabs and a dozen
+answers, and the character store is in memory, so a restart costs that walk
+again.
+
+It would have been one line to point it at the importer, and that would have
+been wrong. An import records what a character *is* rather than what was
+chosen, so an imported log answers no prompts and arrives with every choice
+still open -- see [Importing states, not
+histories](#importing-states-not-histories). That is the honest way to carry a
+foreign sheet across and the exact opposite of what a stub is for. So the stub
+is *built*: `Create` writes the opening entry and one `Apply` puts the eight
+selections through `validateAndAttribute`, the same path an append from the
+build screen takes. Every entry is checked against the prompts open at that
+moment and stamped with the group of the prompt it answers, which is what keeps
+the stub a log the build flow could have written rather than a shape only this
+endpoint can produce.
+
+Two consequences of going through that path, both of which the tests pin:
+
+- **The level comes before the subclass it makes due.** A rogue is offered a
+  Roguish Archetype *because* they have reached level 3, so nothing offers
+  `subclass:thief` until the level granting it is in the log. Answering them the
+  other way round is rejected outright. The domain's own fixture in
+  `fixtures_test.go` has them the other way round and is not wrong to: it calls
+  `Log.Append`, which checks the shape of an entry and never asks whether
+  anything was offering it.
+- **One entry carries no source.** Equipping the leather armor a rogue's kit
+  contains answers no prompt and closes none, because no rule says a kit is
+  worn. It is therefore unattributed, exactly as a DM's ruling is, and sits in
+  no build-screen tab.
+
+The stub answers its **optional** prompts too, and that is worth saying because
+"complete" and "finished" are not the same thing. Seven prompts here are
+optional -- the half-elf's third language and all six acolyte poses -- so the
+character counted as complete while the build screen still listed seven rows
+under "still to choose". Those seven answers are the only part of the log that
+is *invented* rather than transcribed: the export names no third language, and
+its background is Urchin, which SRD 5.1 does not publish. `character/level` is
+left open on purpose, being the standing offer every complete character carries.
+
+One of the seven records an answer and buys nothing, and it is a gap in the
+model rather than in the stub. `acolyte/starting-equipment/0` draws its options
+from an equipment *category* (`rules.OptionsFromEquipmentCategory`, "any item in
+holy-symbols"), and nothing outside the catalogue DTO reads that option-set
+kind. `rules.OptionKeys` returns no keys for it, so `validateAnswer` skips the
+membership check and **any slug at all is accepted** -- a nonexistent one, or a
+rapier as a holy symbol -- and `Project` materialises none of them. The prompt
+closes, so the build screen is right to show it settled; the item simply never
+reaches the sheet. Every category-drawn equipment prompt in the compendium
+behaves this way, and `TestStubOptionalAnswersReachTheSheet` asserts the gap so
+that closing it fails loudly.
+
+The route exists **only when `env` is `development`**, which is why there is no
+check inside the handler: a guard in two places is a guard that can disagree
+with itself, and the routing table already answers "does this endpoint exist?".
+In production the path is not registered, so it answers 405 rather than 404 --
+`GET`/`DELETE /v1/characters/{id}` already claim that shape, and to gin "stub"
+is a character id there. Which of the two refusals gin picks is a routing
+detail; that no handler runs is the point.
+
+Gating it needed **no new configuration key**. `env` already distinguishes
+development from production and already defaults to production, which matters
+because unknown keys are fatal and a new one would have had to stage across two
+releases -- see [Configuration](#configuration).
+
+The stub's character is a second transcription of the one in
+`internal/domain/character/fixtures_test.go`, and they deliberately do not share
+a definition: that file is `package character` in the domain, so importing the
+application layer from it would be a cycle. They also differ in one place worth
+knowing when reconciling them -- the fixture carries the six ability scores in
+its `init` event, which is what an imported log looks like, whereas creation no
+longer bundles them and the stub answers `character/abilities` as its own entry.
 
 ### Creation and level-up are one flow
 

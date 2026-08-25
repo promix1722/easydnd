@@ -343,6 +343,26 @@ export async function importCharacter(file: File, folder?: string): Promise<Impo
   })
 }
 
+/**
+ * Creates the reference character in one call: a finished level-3 half-elf
+ * rogue, ready to read.
+ *
+ * Development only. The route is registered only when the server is in
+ * `development`, so this is a 405 against a production build -- which is why
+ * the button reaching it is behind `import.meta.env.DEV` rather than behind a
+ * check on anything the server says.
+ *
+ * There is no body. Unlike creating, a stub has no opening state for the
+ * caller to state -- the server supplies all of it -- so the folder rides in
+ * the query as it does for an import.
+ */
+export function createStubCharacter(folder?: string): Promise<CreateResponse> {
+  const path = folder
+    ? `/characters/stub?folder=${encodeURIComponent(folder)}`
+    : '/characters/stub'
+  return request<CreateResponse>(path, { method: 'POST' })
+}
+
 export function getSheet(id: string, signal?: AbortSignal): Promise<Sheet> {
   return request<Sheet>(`/characters/${id}/sheet`, signal ? { signal } : {})
 }

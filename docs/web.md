@@ -234,6 +234,48 @@ choice now, answered on the abilities tab and written as their own entry.
 whatever the list was showing is where the next character lands. Import does the
 same. Absent, the server resolves the account's default.
 
+### The Stub button is a development build's third button
+
+Beside Import there is a **Stub**, and it is there only in a development build.
+It posts to `/v1/characters/stub` and lands on a finished level-3 rogue -- the
+character in `docs/reference_hexsheet/` -- so that working on the sheet, the log
+page or the party list does not begin with a walk through five tabs.
+
+It goes to **the sheet**, and that is the one place it differs from Import,
+which goes to the build screen. An import answers no prompts, so there is always
+something left to decide; a stub is finished, so the sheet is the thing worth
+looking at. It carries `?folder=` like both its neighbours.
+
+Finished means the build screen's "still to choose" panel is **empty**, not
+merely that the rules call the character complete. Seven of its prompts are
+optional -- a language and the five questions acolyte asks about who the
+character is -- and a stub that left them would have shown seven untouched rows
+to anybody opening the build screen to look at one. The only row that remains is
+the standing offer of a level.
+
+The gate is `import.meta.env.DEV`, not a runtime check on a version or a
+feature flag, and the difference is the point: Vite replaces it with a literal,
+so a production build **drops the branch and everything behind it** rather than
+shipping code it merely never reaches. The server does the same on its side --
+the route is not registered outside `development` -- so neither half relies on
+the other to stay hidden. See
+[backend.md](backend.md#the-stub-builds-a-character-it-does-not-import-one) for
+why it builds the character rather than importing it.
+
+That elimination is why the button is **its own component**, `StubButton.tsx`,
+rather than a few lines inline in the party list. A hook cannot sit inside a
+branch, so inline the `useAction(createStubCharacter)` would have to be called
+unconditionally -- and an unconditional call keeps the whole path reachable, so
+the bundle would ship it and merely never draw it. Behind its own module the
+one reference folds away with the branch and the module goes with it. The check
+is a grep: `characters/stub` appears zero times in `dist/`, where
+`characters/import` beside it appears twice. What the party list keeps is one
+`useState` holding an error nothing ever sets, because that too is a hook.
+
+It renders under Vitest, since `DEV` is set there, which is what makes the two
+tests in `CharacterListScreen.test.tsx` possible. That a production bundle omits
+it is not something a test in that environment can observe.
+
 ### Changing anything is one mechanism
 
 Every row under "already chosen" is exactly one log entry, and `[Change]`

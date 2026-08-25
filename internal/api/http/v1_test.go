@@ -63,10 +63,23 @@ func newFullRouterWithCeremony(t *testing.T) (*gin.Engine, *http.Cookie, *stubCe
 // state, which would break the moment a test called t.Parallel.
 func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stubCeremony, *stubFederation) {
 	t.Helper()
+	return newFullRouterInEnv(t, config.EnvDevelopment)
+}
+
+// newFullRouterInEnv is the same table built for a named environment.
+//
+// Development is what every other caller wants and is the default above. The
+// parameter exists because one route -- the character stub -- is registered
+// only in development, and the test that matters for it is the one asserting
+// the route is absent from a production table.
+func newFullRouterInEnv(
+	t *testing.T, env string,
+) (*gin.Engine, *http.Cookie, *stubCeremony, *stubFederation) {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 
 	cfg := &config.Config{
-		Env:  config.EnvDevelopment,
+		Env:  env,
 		HTTP: config.HTTPConfig{TrustedProxies: []string{"127.0.0.1", "::1"}},
 		Auth: config.AuthConfig{
 			RPID:            "easydnd.test",

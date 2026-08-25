@@ -33,6 +33,8 @@ import {
   Title,
 } from '@/ui'
 
+import { StubButton } from './StubButton'
+
 /** The sentinel the folder filter uses for "don't narrow". */
 const ALL = 'all'
 
@@ -73,6 +75,11 @@ export function CharacterListScreen() {
 
   const nameOf = (id: string) => folderList.find((f) => f.id === id)?.name ?? 'Unknown folder'
 
+  // Written only by StubButton, which exists only in a development build. The
+  // state is unconditional because it is a hook; what it costs a production
+  // bundle is one string nothing ever sets.
+  const [stubError, setStubError] = useState<string | null>(null)
+
   return (
     <Stack gap="md">
       <Group justify="space-between" align="flex-start">
@@ -83,6 +90,11 @@ export function CharacterListScreen() {
           </Text>
         </div>
         <Group gap="xs">
+          {/* Development only, and absent from a production bundle rather than
+              hidden in one: Vite replaces import.meta.env.DEV with a literal,
+              so this folds away and StubButton is eliminated with it. The
+              route it would call is not registered in production either. */}
+          {import.meta.env.DEV && <StubButton folder={activeFolder} onFailed={setStubError} />}
           <Button
             variant="default"
             onClick={() =>
@@ -128,6 +140,12 @@ export function CharacterListScreen() {
               Try again
             </Button>
           </Stack>
+        </Alert>
+      )}
+
+      {import.meta.env.DEV && stubError !== null && (
+        <Alert color="red" title="Could not create the stub character">
+          <Text size="sm">{stubError}</Text>
         </Alert>
       )}
 
