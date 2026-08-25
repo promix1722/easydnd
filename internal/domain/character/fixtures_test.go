@@ -16,6 +16,13 @@ import (
 // transcription of the same character is a second chance to get it wrong, and
 // the first one already was wrong in four different ways.
 
+// One Source for the whole test binary. Source.Load caches per locale, so
+// this turns the two dozen reads of the 1.55 MB compendium these tests used to
+// make -- one of them inside a seven-case subtest loop -- into a single one. A
+// fresh Source per call threw that cache away. Sharing is safe for the reason
+// the cache is: a Catalog is immutable, and Load is mutex-guarded.
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+
 // LoadCatalog loads the committed compendium.
 //
 // The tests load the real data rather than a hand-built stub because a stub
@@ -25,8 +32,7 @@ import (
 // domain's stdlib-only rule is untouched.
 func LoadCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
-	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
-	c, err := catalogfile.NewSource(dir).Load(context.Background(), rules.DefaultLocale)
+	c, err := catalogSource.Load(context.Background(), rules.DefaultLocale)
 	if err != nil {
 		t.Fatalf("loading the compendium: %v", err)
 	}

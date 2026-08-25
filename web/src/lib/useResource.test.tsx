@@ -1,8 +1,8 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { useResource } from './useResource'
 
@@ -29,7 +29,7 @@ function Probe({ fetcher }: { fetcher: () => Promise<string> }) {
 
 describe('useResource', () => {
   it('takes the screen down to reload, because a reload has nothing to show', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { fetcher, release } = deferred()
     renderAt('desktop', <Probe fetcher={fetcher} />)
 
@@ -41,7 +41,7 @@ describe('useResource', () => {
   })
 
   it('leaves what is on screen alone while it refreshes behind it', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { fetcher, release } = deferred()
     renderAt('desktop', <Probe fetcher={fetcher} />)
 
@@ -63,7 +63,7 @@ describe('useResource', () => {
   })
 
   it('says so when a refresh fails rather than showing what it could not check', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     let attempt = 0
     const fetcher = () => {
       attempt += 1

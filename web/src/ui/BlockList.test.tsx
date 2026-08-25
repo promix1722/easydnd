@@ -1,9 +1,9 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
+import { setupUser } from '@/test/user'
 
 import { BlockList } from './BlockList'
 
@@ -34,7 +34,7 @@ describe.each(viewports)('BlockList at %s', (viewport) => {
   })
 
   it('opens the block that was pressed, and closes the one that was open', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const onOpen = vi.fn()
     const { rerender } = renderAt(viewport, <BlockList items={ITEMS} open={null} onOpen={onOpen} />)
 
@@ -48,7 +48,7 @@ describe.each(viewports)('BlockList at %s', (viewport) => {
   })
 
   it('says which block is open, and which region belongs to it', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderAt(viewport, <BlockList items={ITEMS} open="one" onOpen={vi.fn()} />)
 
     const control = screen.getByRole('button', { name: 'The first thing' })

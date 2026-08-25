@@ -129,3 +129,57 @@ if (violations.length > 0) {
 }
 
 console.log('layers clean')
+
+/**
+ * The second rule this script enforces, and the reason it is here rather than
+ * in a lint plugin: it is about a fact of the build, not a fact of the source.
+ *
+ * The suite runs test files without isolating them from one another, which is
+ * worth about two and a half times the speed (see the `test` block in
+ * vite.config.ts). One module registry per worker is the whole trick, and it is
+ * also exactly what `vi.mock` cannot survive: whichever file loads a module
+ * first decides what every later file sees, so a mock registered by the second
+ * file is simply too late. It does not fail loudly. It hands the test the real
+ * module and the assertion fails somewhere else, in a way that depends on the
+ * order the files happened to run in -- which is the worst kind of red.
+ *
+ * So vite.config.ts keeps a second project, with isolation, for the files that
+ * mock. This makes forgetting to add one a build failure rather than a
+ * Tuesday.
+ */
+const MOCKING_LIST = /const MOCKING_TESTS = \[([^\]]*)\]/s
+const declared = new Set(
+  (MOCKING_LIST.exec(readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8'))?.[1] ?? '')
+    .split(',')
+    .map((entry) => entry.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean),
+)
+
+const mocking = []
+for (const file of walk(SRC)) {
+  if (!/\.test\.tsx?$/.test(file)) continue
+  if (/\bvi\.mock\s*\(/.test(readFileSync(file, 'utf8'))) {
+    mocking.push(`src/${relative(SRC, file).split(sep).join('/')}`)
+  }
+}
+
+const undeclared = mocking.filter((file) => !declared.has(file))
+const stale = [...declared].filter((file) => !mocking.includes(file))
+
+if (undeclared.length > 0 || stale.length > 0) {
+  console.error('\nMOCKING TESTS OUT OF STEP WITH vite.config.ts\n')
+  for (const file of undeclared) {
+    console.error(`  ${file}`)
+    console.error("    calls vi.mock but is not in MOCKING_TESTS, so it runs without")
+    console.error('    isolation and its mock will be ignored whenever another test')
+    console.error('    file loaded the same module first.\n')
+  }
+  for (const file of stale) {
+    console.error(`  ${file}`)
+    console.error('    is in MOCKING_TESTS but no longer calls vi.mock; remove it so it')
+    console.error('    stops paying for isolation it does not need.\n')
+  }
+  process.exit(1)
+}
+
+console.log(`mocking tests isolated (${mocking.length})`)

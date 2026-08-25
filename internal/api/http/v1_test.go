@@ -59,12 +59,23 @@ func newFullRouterWithCeremony(t *testing.T) (*gin.Engine, *http.Cookie, *stubCe
 // newFullRouterWithFederation also hands back the stubbed identity provider,
 // for the tests that drive a federated sign-in. It is separate from the
 // three-value helper above so that the existing callers do not have to grow a
-// return value they ignore -- and so that nothing is shared through package
-// state, which would break the moment a test called t.Parallel.
+// return value they ignore -- and so that no *mutable* state is shared through
+// the package, which would break the moment a test called t.Parallel. The one
+// package-level value below is the compendium Source, which is safe to share
+// precisely because it has nothing a test can change.
 func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stubCeremony, *stubFederation) {
 	t.Helper()
 	return newFullRouterInEnv(t, config.EnvDevelopment)
 }
+
+// One compendium Source behind all thirty-seven routers these tests build.
+// Source.Load caches per locale and is mutex-guarded, and a Catalog is
+// immutable, so the routers can share it exactly as the running process does.
+// A fresh Source per router meant re-reading 1.55 MB of JSON for every test
+// that touched a catalogue route. Everything else here stays per-router:
+// each test gets its own account store, its own characters and its own
+// ceremony, which is what keeps them independent.
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
 
 // newFullRouterInEnv is the same table built for a named environment.
 //
@@ -115,7 +126,7 @@ func newFullRouterInEnv(
 	)
 	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
 
-	source := catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+	source := catalogSource
 	characterService := charuc.NewService(memory.NewCharacterRepository(),
 		memory.NewFolderRepository(), source, hexsheet.NewImporter(), log)
 	// The same signer mints invite links; the kind claim is what keeps them

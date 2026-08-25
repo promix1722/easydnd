@@ -1,7 +1,8 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
+import { resetCatalogCache } from '@/lib/api'
 import { resetViewport } from './viewport'
 
 /**
@@ -55,7 +56,24 @@ globalThis.IntersectionObserver ??= NoIntersectionObserver
  */
 Element.prototype.scrollIntoView ??= function scrollIntoView(): void {}
 
+/**
+ * Everything one test file can leave behind for the next one.
+ *
+ * This matters more than it looks, because the suite does not isolate test
+ * files from each other -- see the `test` block in vite.config.ts. One module
+ * registry and one jsdom are shared by every file a worker runs, which is most
+ * of why the suite is fast and all of why this hook matters: it is the only
+ * thing standing between that and a test passing because of what ran before it.
+ *
+ * The list is short because there is very little module-level mutable state in
+ * src/: the catalogue's in-flight request cache and the viewport width. Add to
+ * it when you add to those.
+ */
 afterEach(() => {
   cleanup()
   resetViewport()
+  // Fifteen test files stub a global; fourteen of them unstub it. Doing it
+  // here means a file that forgets cannot reach the next one.
+  vi.unstubAllGlobals()
+  resetCatalogCache()
 })

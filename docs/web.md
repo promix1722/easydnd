@@ -22,6 +22,43 @@ make web/check                      # typecheck, lint, layer-check, tests -- mir
 -- or `make dev` at the repo root, which starts both and a Postgres. `make
 verify` at the repo root runs the frontend checks and the Go ones together.
 
+## The test suite does not isolate test files
+
+`vite.config.ts` runs the suite with `isolate: false`, so the test files a
+worker picks up share **one** module registry and **one** jsdom rather than
+forking a fresh pair per file. Rebuilding the Mantine, embla and React module
+graph 48 times over cost 36s of imports and 78s of jsdom construction out of
+229s total; sharing both took the run to 64s without a single assertion
+changing. Passing `delay: null` to user-event (see `src/test/user.ts`) took it
+to 38s from there.
+
+What it costs is the guarantee that a test file starts from nothing, and two
+things follow from that.
+
+**`src/test/setup.ts` is what keeps the suite honest.** Its `afterEach`
+unmounts the tree, resets the viewport, clears stubbed globals and empties the
+catalogue request cache -- the only module-level mutable state in `src/`. If
+you add another piece, reset it there in the same change. A test that passes
+because of what ran before it is worse than one that fails.
+
+**`vi.mock` cannot work without isolation**, so files that use it get their own
+project. A shared registry means whichever file loads a module first decides
+what every later file sees, and a mock registered by the second file arrives
+too late. It does not fail loudly: the test gets the real module, and the
+assertion breaks somewhere else, in whatever order the files happened to run
+in. `InviteSheet.test.tsx` mocks `@/lib/clipboard`; `GroupScreen.test.tsx`
+pulls the real one in through the component tree. Neither is wrong -- they just
+cannot share a worker. So `vite.config.ts` lists the mocking files in
+`MOCKING_TESTS` and runs them as a second project with isolation on, and
+`npm run lint:layers` fails if a file calls `vi.mock` without being listed, or
+is listed without calling it. Mocking a module is not forbidden; it just has to
+say so.
+
+The suite also does not process CSS (`css: true` is off). Nothing asserts on a
+cascaded style -- the only style assertions read inline `element.style`, which
+components and Mantine write from JS -- and the class names the tests query on
+are emitted whether or not a stylesheet was ever parsed.
+
 ## One dev server per worktree
 
 The ports above are what an unclaimed worktree uses. Once one claims a slot

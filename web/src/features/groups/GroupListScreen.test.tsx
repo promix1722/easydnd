@@ -1,11 +1,11 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
+import { setupUser } from '@/test/user'
 
 import { GroupListScreen } from './GroupListScreen'
 
@@ -88,9 +88,9 @@ describe.each(['mobile', 'desktop'] as const)('GroupListScreen (%s)', (viewport)
     renderList(viewport)
     await waitFor(() => expect(screen.getByText(/No groups yet/)).toBeInTheDocument())
 
-    await userEvent.click(screen.getByRole('button', { name: 'New group' }))
-    await userEvent.type(await screen.findByLabelText('Name'), 'Wednesday Night')
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await setupUser().click(screen.getByRole('button', { name: 'New group' }))
+    await setupUser().type(await screen.findByLabelText('Name'), 'Wednesday Night')
+    await setupUser().click(screen.getByRole('button', { name: 'Create' }))
 
     await waitFor(() => expect(screen.getByText('the group')).toBeInTheDocument())
     const post = calls.find((call) => call.method === 'POST')

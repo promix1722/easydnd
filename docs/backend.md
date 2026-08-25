@@ -51,6 +51,48 @@ Without `TEST_DATABASE_URL` the Postgres adapter tests skip themselves, which is
 what keeps `go test ./...` and `make verify` green on a machine with no Docker.
 CI sets it against a service container, so they are not skipped there.
 
+## Tests
+
+```sh
+make test/unit                      # the suite, ~4s
+make test/race                      # the same suite under the race detector, ~9s
+make test/db                        # including the Postgres adapter (needs make db/up)
+```
+
+`make verify` runs `test/unit`. It does **not** run `test/race`, and that is a
+deliberate trade rather than an oversight.
+
+The race detector used to be on by default, and it cost far more than it
+looked: 46s against 10s. Two thirds of that gap was not even work. A `-race`
+test binary sleeps a full second at exit -- `GORACE`'s `atexit_sleep_ms`,
+defaulting to 1000 -- and this module has sixteen test packages, so every run
+spent sixteen seconds on an idle machine. `make test/race` sets
+`atexit_sleep_ms=0` and takes that back, which is why it now costs 9s rather
+than 25s. What the sleep buys is a last chance to check a goroutine still
+running when `main` returns, and nothing here leaves one: the HTTP tests drive
+`httptest` in-process and synchronously, and `internal/app`, which owns the
+only real server lifecycle, has no tests. A race *during* a test is reported
+exactly as before.
+
+That leaves 9s against 4s, and the reason the detector still sits outside
+`verify` is what `verify` is for. Nothing runs on `main`, so it is the only
+gate there is, and a gate slow enough to be worth skipping stops being a gate.
+The detector moved onto the path worth taking before a `git tag` -- the point
+where a missed race would otherwise ship. **Run `make test/race` before
+tagging.** It found real races in the HTTP layer and the stores once, and
+`make test/unit` will not find the next one.
+
+The other reason the suite is fast is that each test package shares **one**
+`catalogfile.Source`. `Source.Load` caches a converted `*catalog.Catalog` per
+locale, and a `Catalog` is immutable, so one read of the 1.55 MB compendium
+serves every test in the binary. Building a fresh `Source` per test threw that
+cache away, and the suite was doing it about 120 times a run -- which was most
+of its remaining runtime. `internal/domain/character` alone went from 3.0s to
+0.06s. If you add a helper that needs the compendium, reach for the package's
+existing `catalogSource` rather than calling `NewSource` again; the internal
+and external test packages of one directory need one each, since a package-level
+var cannot cross that line.
+
 ## Running more than one worktree
 
 Every port the local stack binds used to be a constant, so exactly one checkout

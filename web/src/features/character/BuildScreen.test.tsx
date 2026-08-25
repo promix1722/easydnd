@@ -1,10 +1,10 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { resetCatalogCache } from '@/lib/api'
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { BuildScreen } from './BuildScreen'
 
@@ -444,7 +444,7 @@ afterEach(() => {
 
 describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) => {
   it('names the question the server said was next, and opens it when pressed', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderBuild(viewport)
 
     // Named rather than asked, and shut until somebody asks for it: the screen
@@ -460,7 +460,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('posts the event the prompt specified, not one it decided on', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderBuild(viewport)
 
     await user.click(await screen.findByRole('button', { name: /A race/ }))
@@ -481,7 +481,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('answers in place, and lets new questions arrive underneath', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({
       prompts: OPEN_UNDER_RACE,
       then: AFTER_SUBRACE,
@@ -516,7 +516,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('offers the way on at the end of a finished tab', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
@@ -534,7 +534,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('leaves nothing open once an answer has landed', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderBuild(viewport)
 
     await user.click(await screen.findByRole('button', { name: /A race/ }))
@@ -549,7 +549,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('closes what was open when the tab changes', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
@@ -577,7 +577,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('shows a tab only the choices that belong to it', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
@@ -592,7 +592,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('posts the event the prompt named when a choice is answered from the list', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
@@ -622,7 +622,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('shows a tab with nothing open its settled rows, and posts nothing', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
@@ -636,7 +636,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('stays on the tab an answer was given on, whatever is asked next', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ then: AFTER_RACE })
     renderBuild(viewport)
 
@@ -659,7 +659,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('finishes to the sheet', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderBuild(viewport)
 
     await screen.findByText('A race')
@@ -684,7 +684,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('prices a change before making it, and makes nothing on Cancel', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({
       prompts: PARTWAY,
       events: PARTWAY_LOG,
@@ -719,7 +719,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('makes a change that costs nothing else without asking about it', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [] })
     renderBuild(viewport)
 
@@ -750,7 +750,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('shows a level already taken, and offers no way to take or unpick one', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: FINISHED, events: LEVELLED_LOG })
     renderBuild(viewport)
 
@@ -772,7 +772,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('puts a nested question again by dropping its entry, and says what that costs', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({
       prompts: PARTWAY,
       events: ANSWERED_LOG,
@@ -809,7 +809,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('changes the name by replacing the entry that holds it', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [] })
     renderBuild(viewport)
 
@@ -840,7 +840,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('settles an alignment as the change that settles it, not as a reference', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: ALIGNMENT, events: BACKGROUND_LOG })
     renderBuild(viewport)
 
@@ -870,7 +870,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('puts the alignment question again from the entry that settled it', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: { seq: 3, complete: false, prompts: [] }, events: ALIGNED_LOG, dropped: [] })
     renderBuild(viewport)
 
@@ -896,7 +896,7 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
   })
 
   it('answers the six scores as their own entry, from the abilities tab', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ prompts: UNSCORED, events: LOG_JUST_CREATED })
     renderBuild(viewport)
 
@@ -967,7 +967,7 @@ describe.each(['mobile', 'desktop'] as const)('a new character at %s', (viewport
   })
 
   it('creates the character once, with the name alone, when a tab is clicked', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderNew(viewport)
 
     await user.type(await screen.findByLabelText('Name'), 'Rurik')
@@ -986,7 +986,7 @@ describe.each(['mobile', 'desktop'] as const)('a new character at %s', (viewport
   })
 
   it('posts nothing for a blank name, and says why', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderNew(viewport)
 
     await screen.findByLabelText('Name')

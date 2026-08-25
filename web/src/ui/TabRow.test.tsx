@@ -1,9 +1,9 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
+import { setupUser } from '@/test/user'
 
 import { TabRow } from './TabRow'
 
@@ -47,7 +47,7 @@ describe.each(['mobile', 'desktop'] as const)('TabRow at %s', (viewport) => {
   })
 
   it('reports the tab that was pressed', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { onChange } = renderRow(viewport)
 
     await user.click(screen.getByRole('tab', { name: 'race' }))

@@ -1,9 +1,9 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { InviteSheet } from './InviteSheet'
 
@@ -32,7 +32,7 @@ function stubFetch() {
 /** Opens the sheet, mints a link, and hands back the copy button. */
 async function mintLink() {
   renderAt('desktop', withAuth({}, <InviteSheet groupId="grp_1" opened onClose={() => {}} />))
-  await userEvent.click(screen.getByRole('button', { name: 'Create link' }))
+  await setupUser().click(screen.getByRole('button', { name: 'Create link' }))
   return await screen.findByRole('button', { name: 'Copy link' })
 }
 
@@ -67,7 +67,7 @@ describe('the invitation link', () => {
 describe('copying', () => {
   it('copies the link and says it did', async () => {
     const button = await mintLink()
-    await userEvent.click(button)
+    await setupUser().click(button)
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument())
     expect(copyText).toHaveBeenCalledWith(expect.stringContaining(`#${TOKEN}`))
@@ -80,7 +80,7 @@ describe('copying', () => {
   it('says so, and selects the link, when it cannot copy', async () => {
     copyText.mockResolvedValue(false)
     const button = await mintLink()
-    await userEvent.click(button)
+    await setupUser().click(button)
 
     await waitFor(() =>
       expect(screen.getByText('Could not reach the clipboard')).toBeInTheDocument(),

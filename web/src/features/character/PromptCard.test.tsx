@@ -1,10 +1,10 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Entry, Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
+import { setupUser } from '@/test/user'
 
 import { PromptCard } from './PromptCard'
 
@@ -43,7 +43,7 @@ const viewports: Viewport[] = ['mobile', 'desktop']
 
 describe.each(viewports)('PromptCard at %s', (viewport) => {
   it('will not confirm until the right number is picked', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const onAnswer = vi.fn()
     renderAt(viewport, <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={onAnswer} />)
 
@@ -62,7 +62,7 @@ describe.each(viewports)('PromptCard at %s', (viewport) => {
   })
 
   it('answers with the server option keys, not with labels', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const onAnswer = vi.fn()
     const bundle = skillPrompt({
       choice: {
@@ -120,7 +120,7 @@ describe.each(viewports)('PromptCard at %s', (viewport) => {
   })
 
   it('clears the answer when the prompt changes', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { rerender } = renderAt(
       viewport,
       <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />,
@@ -154,7 +154,7 @@ describe.each(viewports)('PromptCard at %s', (viewport) => {
   })
 
   it('swaps the answer when only one is wanted', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const one = skillPrompt({ choice: { ...skillPrompt().choice, choose: 1 } })
     renderAt(viewport, <PromptCard prompt={one} entries={entries} pending={false} onAnswer={vi.fn()} />)
 
@@ -173,7 +173,7 @@ describe.each(viewports)('PromptCard at %s', (viewport) => {
   })
 
   it('greys out what is left once as many are picked as are wanted', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderAt(
       viewport,
       <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />,

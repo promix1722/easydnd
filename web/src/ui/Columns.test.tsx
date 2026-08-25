@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { Columns, type ColumnsSection } from './Columns'
 
@@ -54,7 +54,7 @@ describe('Columns', () => {
         />,
       )
 
-      await userEvent.click(screen.getByRole('button', { name: 'Filter' }))
+      await setupUser().click(screen.getByRole('button', { name: 'Filter' }))
       expect(clicked).toEqual(['aside'])
     })
 
@@ -65,7 +65,7 @@ describe('Columns', () => {
       // had been rendered inside the control, this would be a nested button.
       const control = screen.getByRole('button', { name: 'Abilities' })
       expect(control).toHaveAttribute('aria-expanded', 'true')
-      await userEvent.click(control)
+      await setupUser().click(control)
       expect(control).toHaveAttribute('aria-expanded', 'false')
     })
 

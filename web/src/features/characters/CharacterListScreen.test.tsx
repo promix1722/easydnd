@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { CharacterListScreen } from './CharacterListScreen'
 
@@ -124,7 +124,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('re-fetches with ?folder= when the filter changes', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -139,7 +139,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('moves a character to another folder', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -158,7 +158,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('copies a character', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -175,7 +175,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('confirms before deleting a character', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -197,7 +197,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('creates a folder', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -214,7 +214,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   // The whole reason this dialog exists. Deleting a folder destroys the
   // characters in it, so the confirmation has to say how many.
   it('names the character count before deleting a folder', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -236,7 +236,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   // because Vitest runs with import.meta.env.DEV set; that a production bundle
   // omits it is not something a test in this environment can observe.
   it('creates a stub character and opens its sheet', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -251,7 +251,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('files the stub into the folder the list is filtered to', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -269,7 +269,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   // The default folder is the one an account is guaranteed to have, so it
   // must not even offer the control.
   it('offers no delete for the default folder', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 

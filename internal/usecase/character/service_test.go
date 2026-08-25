@@ -17,13 +17,20 @@ import (
 
 const testOwner domain.OwnerID = "test-owner"
 
+// One Source for every service these tests build. Source.Load caches per
+// locale, so the ~47 services this package constructs now share a single read
+// of the 1.55 MB compendium instead of paying for one each. Sharing is safe
+// for the reason the cache is: a Catalog is immutable, and Load is
+// mutex-guarded. The repositories stay per-service -- those are the state a
+// test is entitled to have to itself.
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+
 func newService(t *testing.T) *charuc.Service {
 	t.Helper()
-	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
 	return charuc.NewService(
 		memory.NewCharacterRepository(),
 		memory.NewFolderRepository(),
-		catalogfile.NewSource(dir),
+		catalogSource,
 		nil,
 		slog.New(slog.DiscardHandler),
 	)

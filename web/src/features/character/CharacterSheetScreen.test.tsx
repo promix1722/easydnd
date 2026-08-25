@@ -1,5 +1,4 @@
 import { screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,6 +6,7 @@ import { resetCatalogCache } from '@/lib/api'
 import type { Sheet } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
+import { setupUser } from '@/test/user'
 
 import { CharacterSheetScreen } from './CharacterSheetScreen'
 
@@ -441,11 +441,11 @@ describe('the skills panel', () => {
     // panel, and the toggle is for the phone rather than a stored preference.
     expect(skillRows()).toHaveLength(18)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hide untrained' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Hide untrained' }))
     expect(skillRows()).toHaveLength(5)
     expect(skillNames()).not.toContain('Arcana')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Show all 18' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Show all 18' }))
     expect(skillRows()).toHaveLength(18)
   })
 
@@ -466,7 +466,7 @@ describe('the skills panel', () => {
 
     expect(skillRows()).toHaveLength(18)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hide untrained' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Hide untrained' }))
     expect(skillRows()).toHaveLength(5)
   })
 

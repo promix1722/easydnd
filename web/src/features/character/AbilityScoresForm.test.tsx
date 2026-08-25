@@ -1,10 +1,10 @@
 import { fireEvent, screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Change } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
+import { setupUser } from '@/test/user'
 
 import { AbilityScoresForm } from './AbilityScoresForm'
 
@@ -28,14 +28,14 @@ function method(changes: readonly Change[]): string | undefined {
 const chip = (value: string) => screen.getByRole('button', { name: value })
 const slot = (ability: RegExp) => screen.getByRole('button', { name: ability })
 
-async function place(user: ReturnType<typeof userEvent.setup>, value: string, ability: RegExp) {
+async function place(user: ReturnType<typeof setupUser>, value: string, ability: RegExp) {
   await user.click(chip(value))
   await user.click(slot(ability))
 }
 
 describe.each(viewports)('the standard array at %s', (viewport) => {
   it('deals out the printed numbers and will not be confirmed until all six are placed', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const onSubmit = vi.fn()
     renderAt(viewport, form({ onSubmit }))
 
@@ -63,7 +63,7 @@ describe.each(viewports)('the standard array at %s', (viewport) => {
   })
 
   it('swaps when a number is put where another one already is', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderAt(viewport, form())
 
     await place(user, '15', /Strength/)
@@ -89,7 +89,7 @@ describe.each(viewports)('the standard array at %s', (viewport) => {
   })
 
   it('starts from the scores it is changing, all six already placed', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const onSubmit = vi.fn()
     renderAt(
       viewport,
@@ -111,7 +111,7 @@ describe.each(viewports)('the standard array at %s', (viewport) => {
 
 describe.each(viewports)('rolling at %s', (viewport) => {
   it('rolls the numbers rather than taking them, and rolls again on request', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderAt(viewport, form())
 
     await user.click(screen.getByRole('combobox', { name: /How were the scores generated/ }))
@@ -143,13 +143,13 @@ function pool(): number[] {
 }
 
 describe.each(viewports)('point buy at %s', (viewport) => {
-  async function openPointBuy(user: ReturnType<typeof userEvent.setup>) {
+  async function openPointBuy(user: ReturnType<typeof setupUser>) {
     await user.click(screen.getByRole('combobox', { name: /How were the scores generated/ }))
     await user.click(screen.getByRole('option', { name: 'Point buy' }))
   }
 
   it('starts every score at 8 with the whole budget unspent', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderAt(viewport, form())
     await openPointBuy(user)
 
@@ -159,7 +159,7 @@ describe.each(viewports)('point buy at %s', (viewport) => {
   })
 
   it('charges two points for the fourteenth and two more for the fifteenth', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderAt(viewport, form())
     await openPointBuy(user)
 
@@ -178,7 +178,7 @@ describe.each(viewports)('point buy at %s', (viewport) => {
   })
 
   it('will not sell what the budget cannot afford', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderAt(viewport, form())
     await openPointBuy(user)
 
@@ -193,7 +193,7 @@ describe.each(viewports)('point buy at %s', (viewport) => {
   })
 
   it('lets a spread that leaves points over be confirmed', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const onSubmit = vi.fn()
     renderAt(viewport, form({ onSubmit }))
     await openPointBuy(user)
@@ -210,7 +210,7 @@ describe.each(viewports)('point buy at %s', (viewport) => {
 
 describe('manual', () => {
   it('is the one method where a number is typed', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const onSubmit = vi.fn()
     renderAt('desktop', form({ onSubmit }))
 

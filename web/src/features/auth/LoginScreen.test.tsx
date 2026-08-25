@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { RouterProvider, createMemoryRouter, useLocation } from 'react-router'
 
 import type { AuthState } from '@/lib/auth'
 import { withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { LoginScreen } from './LoginScreen'
 
@@ -76,7 +76,7 @@ describe('LoginScreen', () => {
     const signInOrRegister = vi.fn(async () => true)
     loginAt({ signInOrRegister })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Continue with a passkey' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Continue with a passkey' }))
 
     expect(signInOrRegister).toHaveBeenCalled()
   })
@@ -85,7 +85,7 @@ describe('LoginScreen', () => {
     const signInAsGuest = vi.fn(async () => true)
     loginAt({ signInAsGuest })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Continue as a guest' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Continue as a guest' }))
 
     expect(signInAsGuest).toHaveBeenCalled()
   })
@@ -112,7 +112,7 @@ describe('LoginScreen', () => {
   it('returns to the page the visitor came from', async () => {
     loginAt({ signInAsGuest: async () => true }, '/characters/new')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Continue as a guest' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Continue as a guest' }))
 
     expect(await screen.findByText('the character builder')).toBeInTheDocument()
   })
@@ -153,7 +153,7 @@ describe('LoginScreen', () => {
     const signInWith = vi.fn()
     loginAt({ providers: [google], signInWith })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Continue with Google' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Continue with Google' }))
 
     expect(signInWith).toHaveBeenCalledWith('google')
   })
@@ -189,7 +189,7 @@ describe('coming back to where you were', () => {
   it('keeps the search and the fragment, not just the path', async () => {
     loginAt({}, { pathname: '/groups/join', search: '?a=1', hash: '#a-token' })
 
-    await userEvent.click(screen.getByRole('button', { name: /guest/i }))
+    await setupUser().click(screen.getByRole('button', { name: /guest/i }))
 
     expect(await screen.findByText('joined at /groups/join?a=1#a-token')).toBeInTheDocument()
   })
@@ -199,7 +199,7 @@ describe('coming back to where you were', () => {
   it('ignores a return that is not a path of ours', async () => {
     loginAt({}, { pathname: 'https://example.test/steal' })
 
-    await userEvent.click(screen.getByRole('button', { name: /guest/i }))
+    await setupUser().click(screen.getByRole('button', { name: /guest/i }))
 
     expect(await screen.findByText('the app')).toBeInTheDocument()
   })

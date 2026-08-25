@@ -1,10 +1,10 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
+import { setupUser } from '@/test/user'
 
 import { blocksFor } from './blocks'
 import type { Asking } from './blocks'
@@ -139,7 +139,7 @@ describe.each(viewports)('StagePanel at %s', (viewport) => {
   })
 
   it('opens nothing of its own accord, and reports what was pressed', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const onOpen = vi.fn()
     renderAt(viewport, panel([], [SCORES], { onOpen }))
 
@@ -187,7 +187,7 @@ describe.each(viewports)('StagePanel at %s', (viewport) => {
   })
 
   it('offers the way on only once the tab has nothing left to answer', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const onNext = vi.fn()
     const { rerender } = renderAt(viewport, panel([CLASS_ROW], [SKILLS], { onNext }))
 

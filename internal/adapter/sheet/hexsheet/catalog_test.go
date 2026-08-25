@@ -10,6 +10,10 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
+// A second Source, because this file is the internal test package and
+// import_test.go's is the external one -- same binary, different packages.
+var internalCatalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "data", "srd_5.1"))
+
 // loadTestCatalog loads the committed compendium for the internal tests.
 //
 // The real data is used rather than a stub for the same reason the domain's
@@ -17,8 +21,7 @@ import (
 // stub would only prove the resolver agrees with itself.
 func loadTestCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
-	dir := filepath.Join("..", "..", "..", "..", "data", "srd_5.1")
-	c, err := catalogfile.NewSource(dir).Load(context.Background(), rules.DefaultLocale)
+	c, err := internalCatalogSource.Load(context.Background(), rules.DefaultLocale)
 	if err != nil {
 		t.Fatalf("loading the compendium: %v", err)
 	}

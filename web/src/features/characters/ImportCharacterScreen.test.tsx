@@ -1,9 +1,9 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { ImportCharacterScreen } from './ImportCharacterScreen'
 
@@ -96,7 +96,7 @@ describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (vie
   })
 
   it('posts the file to the import route as raw bytes', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())
@@ -112,7 +112,7 @@ describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (vie
   })
 
   it('shows what did not come across, rather than navigating straight on', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())
@@ -126,7 +126,7 @@ describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (vie
   })
 
   it('says how many choices are still open', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())
@@ -137,7 +137,7 @@ describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (vie
   })
 
   it('goes to the build screen, because an import answers nothing', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())
@@ -152,7 +152,7 @@ describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (vie
       { error: { code: 'validation_error', message: 'this file is not a HexSheet export' } },
       400,
     )
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())
