@@ -28,18 +28,27 @@ filed in still live in memory** and are wiped by a restart. See
 
 **Groups** are the second main section: a table of people with three ranks --
 owner, DM, player -- who invite each other with a link that works for 24 hours.
-They live in PostgreSQL and survive a restart. A group holds people, not
-characters; attaching characters to one is a later change, because a character
-id does not outlive the process. See
+They live in PostgreSQL and survive a restart.
+
+A group is no longer only people. Any member may **share** a character with it,
+and that grants a read: everybody at the table can open the sheet, and only its
+owner can ever change it.
+
+**Games** are the third main section, beside Characters and Groups. A game is
+one sitting run by a DM, played at one group's table, with a roster of the
+characters that group has shared. They are listed together across every table
+you sit at rather than being reached through a group -- the group is a fact
+about a game, not the way in to one. Note the split, which is surprising: the
+group and its members are in PostgreSQL, while the characters shared with it and
+the games run from them are **in memory and die with the characters they name**,
+because a character id does not outlive the process. See
 [Ownership, and membership](docs/backend.md#ownership-and-membership).
 
-**Games** are the third section and are **not built**: `/games` is a door in the
-navigation whose page says so, rather than a section hidden until the day it
-works.
-
-A **group** and a **folder** are different things and the words are not
-interchangeable. A group is people, shared, with ranks. A folder is one
-account's private shelf for its own characters, shared with nobody.
+A **group**, a **game** and a **folder** are different things and the words are
+not interchangeable. A group is people, shared, with ranks. A game is one
+sitting at that group's table, with the characters a DM seats at it -- never
+called a *session*, which here means being signed in. A folder is one account's
+private shelf for its own characters, shared with nobody.
 
 ## Documentation
 

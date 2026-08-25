@@ -27,7 +27,7 @@ func newImportingService(t *testing.T) *charuc.Service {
 		memory.NewCharacterRepository(),
 		memory.NewFolderRepository(),
 		catalogSource,
-		hexsheet.NewImporter(),
+		hexsheet.NewImporter(), nil,
 		slog.New(slog.DiscardHandler),
 	)
 }
@@ -165,7 +165,7 @@ func TestImportRejectsRubbish(t *testing.T) {
 func TestImportWithoutAnImporter(t *testing.T) {
 	s := charuc.NewService(
 		memory.NewCharacterRepository(),
-		memory.NewFolderRepository(), catalogSource, nil,
+		memory.NewFolderRepository(), catalogSource, nil, nil,
 		slog.New(slog.DiscardHandler),
 	)
 	_, _, err := s.Import(context.Background(), "owner-1", "",

@@ -193,6 +193,117 @@ each row has a menu with Move, Copy and Delete. The filter is a `Select` rather
 than tabs because it renders the same at both viewports and does not overflow
 once an account keeps more than a few folders.
 
+## Where a control lives says what it acts on
+
+Three rules, applied to every list screen, because a control's position is the
+only thing on screen that says what it will change.
+
+**The heading line acts on the entity the page is about**, and on nothing else:
+rename, leave, delete. It is not where you add to it.
+
+**A row acts on that row.** Rename and delete sit in the row whose entity they
+edit, with an icon each -- and whether they are drawn is the caller's rank at
+*that* row's table, not at whichever one happens to be first. A DM at one group
+and a player at another must not get a Delete on the second because they have
+one on the first. Row actions are spelled out rather than folded into a menu,
+and each carries its row's name as its accessible name: a column of buttons all
+called "Delete" is ambiguous to a screen reader and to a test alike.
+
+**Leaving is not editing.** It comes before rename and delete rather than
+between them, because sitting in the middle of that pair reads as though it
+were one of them.
+
+Every one of these controls is drawn at `ACTION_SIZE` with an `ACTION_ICON_SIZE`
+glyph, both from `@/ui`. They are constants rather than literals because the
+sizes had already drifted once: a row's buttons were `compact-xs`, a heading's
+were the default `md`, and the icons were a mix of 14, 16 and the icon
+package's own 24 -- so the same three actions were drawn three different sizes
+depending on which screen you were looking at. Small on purpose: a table is the
+content and its controls are not.
+
+The heading's controls are capped to `MAX_TABLE_WIDTH` too, so they land on the
+table's right edge rather than the window's -- otherwise Rename and Delete drift
+away from the rows they act on as the monitor gets wider.
+
+**Adding goes under the table, on the left.** New group, New game, Add a
+character, Invite -- all of them add a row, so all of them sit beneath the rows.
+Invite is the one that reads oddly until you see it that way: it is not a thing
+you do *to* a group, it is how a person gets added to one.
+
+The icons are inline SVG in `ui/icons.tsx` rather than an icon package -- five
+glyphs do not justify a dependency, and there is no `vite-plugin-svgr` here.
+They break `DragonMark`'s two conventions deliberately: `currentColor` so they
+take their button's colour, and `aria-hidden` because each sits beside a text
+label that already names the action.
+
+Every table is capped at `MAX_TABLE_WIDTH` (1024px) on desktop, set once in
+`DataList` rather than by each screen remembering to. Every table here is narrow
+content, and one spanning a 2560px monitor puts its first and last cell an eye
+movement apart.
+
+## Sharing is reading, and it is one component
+
+A group screen has two tabs -- Members and Characters -- because both are the
+same table seen two ways and neither is a page of its own. `TabRow` already
+existed for this. **Games are deliberately not a third tab**: see below.
+
+The **Characters** tab is what the group's members have shared with each other.
+Sharing grants a read and only a read, and the panel says so by what it does not
+draw: there is no edit control anywhere on it, no build link, no event log. That
+is not the client hiding things it could offer -- there is no route behind any of
+them for anybody but the owner, so a button would come back 404. The only action
+on somebody else's row is **Take off**, and only for a DM, because a guest's
+session ends and their character would otherwise be stuck on the table.
+
+A shared character opens at `/groups/:id/characters/:character`, and it draws
+`SheetBody` -- **the same component its owner's own sheet draws**. That is the
+point of the split: the server renders both with one converter, so the table is
+looking at the character rather than at a summary of it, and the two cannot
+drift into disagreeing about what it is. What surrounds the body differs, and
+that is the whole difference between the two pages.
+
+A **game** is one sitting, and it is never called a session -- in this client
+that word means being signed in, right down to `SessionUser` and
+`startGuestSession` in the same flat `@/lib/api` barrel.
+
+## Games are a section, not a corner of a group
+
+Games get their own `NAV_ITEMS` entry and live at `/games` and `/games/:id`,
+beside Characters and Groups rather than inside one.
+
+The reason is the same one that keeps folders out of Groups: **a game belongs
+to a group the way a character belongs to a folder** -- the group is a fact
+about the game, not the route to it. Somebody who plays at three tables wants
+one list of their games, and making them open a group first is asking them to
+remember where Thursday's game lives in order to find it. `GET /v1/games`
+answers that in one request, and each row carries `group_name` so the list can
+say which table without a request per row.
+
+A game screen offers two ways to fill a roster, and they are shaped differently
+because the things behind them are shaped differently.
+
+**Add character from group** is a flat list. A game is played at exactly one
+group, so there is one set of shared characters and nothing to branch on.
+
+**Add my characters** is a tree of your folders, collapsed. A folder is how its
+owner already thinks about their characters -- somebody with three campaigns'
+worth of them knows which shelf tonight's is on -- and a flat list would make
+them read every name to find it. It fetches everything up front rather than per
+branch, because a character listing carries its own folder: one request covers
+every shelf, and a request per shelf would be slower for no benefit.
+
+Only characters that are not already seated are offered, and a folder with
+nothing left to offer is left out of the tree entirely.
+
+`GamesScreen` offers **New game** only to somebody who runs at least one table,
+because a player has nowhere to put one and a dialog with an empty picker
+teaches nothing. The picker is where the group is chosen, which is why creation
+is the one call that names a group at all.
+
+A shared character's sheet stays at `/groups/:id/characters/:character`, and
+that asymmetry is deliberate: sharing *is* a group's doing and the group is what
+grants the read, so the URL says so.
+
 Two things on that screen are not cosmetic:
 
 - **The default folder's row has no delete control.** It is the folder an

@@ -1,7 +1,5 @@
-import { PasskeyNotice } from '@/features/auth'
 import { CharacterListScreen } from '@/features/characters'
 import { useAuth } from '@/lib/auth'
-import { Stack } from '@/ui'
 
 import { LandingPage } from './LandingPage'
 
@@ -15,16 +13,14 @@ import { LandingPage } from './LandingPage'
  * System status is deliberately not on it. "Which release am I talking to" is
  * a deploy question rather than something either audience came here to read,
  * so it lives on `/status` alone.
+ *
+ * Nor is the guest notice. What a guest session costs belongs where a guest
+ * goes to find out about their account -- `/account` says it, and the header
+ * names the session beside the button that ends it -- not standing over the
+ * character list every time they open the app.
  */
 export function HomeRoute() {
   const { status } = useAuth()
 
-  return status === 'authenticated' ? (
-    <Stack gap="md">
-      <PasskeyNotice />
-      <CharacterListScreen />
-    </Stack>
-  ) : (
-    <LandingPage />
-  )
+  return status === 'authenticated' ? <CharacterListScreen /> : <LandingPage />
 }

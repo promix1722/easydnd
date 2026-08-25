@@ -143,8 +143,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByLabelText('Actions for Ada'))
-    await user.click(await screen.findByRole('menuitem', { name: 'Move...' }))
+    await user.click(screen.getByRole('button', { name: 'Move Ada' }))
 
     const dialog = await screen.findByRole('dialog')
     await user.click(within(dialog).getByRole('combobox', { name: 'Folder' }))
@@ -162,8 +161,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByLabelText('Actions for Ada'))
-    await user.click(await screen.findByRole('menuitem', { name: 'Copy' }))
+    await user.click(screen.getByRole('button', { name: 'Copy Ada' }))
 
     await waitFor(() => {
       onlyRequestTo(`/v1/characters/${ADA.id}/copy`, 'POST')
@@ -179,8 +177,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByLabelText('Actions for Ada'))
-    await user.click(await screen.findByRole('menuitem', { name: 'Delete' }))
+    await user.click(screen.getByRole('button', { name: 'Delete Ada' }))
 
     // Nothing has been sent yet: the dialog is the point.
     expect(requestsTo(`/v1/characters/${ADA.id}`).filter((c) => c.method === 'DELETE')).toHaveLength(

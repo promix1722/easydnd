@@ -25,6 +25,7 @@ import (
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
+	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
@@ -32,6 +33,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/user"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
 	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
 )
 
@@ -126,12 +128,24 @@ func newFullRouterInEnv(
 	)
 	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
 
+	// dev's shared, cached catalogue source -- building a second one here is
+	// what the verify-speedup commit removed.
 	source := catalogSource
-	characterService := charuc.NewService(memory.NewCharacterRepository(),
-		memory.NewFolderRepository(), source, hexsheet.NewImporter(), log)
+	groupRepo := memory.NewGroupRepository(users)
+	// One character store, hoisted out of the constructor because the game
+	// service reads out of the same map this one writes into. A second
+	// instance would make every shared character a 404, with nothing in the
+	// failure naming the cause -- the same hazard as the one account store
+	// above, and it fails the same silent way.
+	characterRepo := memory.NewCharacterRepository()
+	gameService := gameuc.NewService(
+		memory.NewGameRepository(), memory.NewSharedRepository(),
+		groupRepo, characterRepo, source, log)
+	characterService := charuc.NewService(characterRepo,
+		memory.NewFolderRepository(), source, hexsheet.NewImporter(), gameService, log)
 	// The same signer mints invite links; the kind claim is what keeps them
 	// from being interchangeable with the session cookie beside them.
-	groupService := groupuc.NewService(memory.NewGroupRepository(users), users, signer, log)
+	groupService := groupuc.NewService(groupRepo, users, signer, gameService, log)
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		System:        system.New(testVersion),
@@ -140,6 +154,7 @@ func newFullRouterInEnv(
 		Catalog:       catalogapi.New(source, log),
 		Character:     characterapi.New(characterService, log),
 		Folder:        folderapi.New(characterService, log),
+		Game:          gameapi.New(gameService, log),
 		Group:         groupapi.New(groupService, log),
 	})
 	if err != nil {

@@ -28,6 +28,13 @@ describe('activeNavPath', () => {
     expect(activeNavPath('/games')).toBe('/games')
   })
 
+  it('lights Games on a game, not Groups', () => {
+    // A game is its own section: it is played at a table but it is not
+    // reached through one, and the highlight has to say so.
+    expect(activeNavPath('/games')).toBe('/games')
+    expect(activeNavPath('/games/gam_1')).toBe('/games')
+  })
+
   it('does not let the root section swallow everything', () => {
     // '/' is a prefix of every path, so it may only ever match itself.
     expect(activeNavPath('/')).toBe('/')

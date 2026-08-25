@@ -16,7 +16,8 @@ import type { Folder, Summary } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
-  ActionIcon,
+  ACTION_ICON_SIZE,
+  ACTION_SIZE,
   Alert,
   Anchor,
   Badge,
@@ -24,7 +25,10 @@ import {
   DataList,
   Group,
   Loader,
-  Menu,
+  IconCopy,
+  IconFolder,
+  IconPlus,
+  IconTrash,
   ModalSheet,
   Select,
   Stack,
@@ -83,38 +87,7 @@ export function CharacterListScreen() {
   return (
     <Stack gap="md">
       <Group justify="space-between" align="flex-start">
-        <div>
-          <Title order={2}>Characters</Title>
-          <Text c="dimmed" size="sm">
-            The people you play.
-          </Text>
-        </div>
-        <Group gap="xs">
-          {/* Development only, and absent from a production bundle rather than
-              hidden in one: Vite replaces import.meta.env.DEV with a literal,
-              so this folds away and StubButton is eliminated with it. The
-              route it would call is not registered in production either. */}
-          {import.meta.env.DEV && <StubButton folder={activeFolder} onFailed={setStubError} />}
-          <Button
-            variant="default"
-            onClick={() =>
-              void navigate(
-                activeFolder ? `/characters/import?folder=${activeFolder}` : '/characters/import',
-              )
-            }
-          >
-            Import
-          </Button>
-          <Button
-            onClick={() =>
-              void navigate(
-                activeFolder ? `/characters/new?folder=${activeFolder}` : '/characters/new',
-              )
-            }
-          >
-            New character
-          </Button>
-        </Group>
+        <Title order={2}>Characters</Title>
       </Group>
 
       <Group gap="xs" align="flex-end">
@@ -220,6 +193,38 @@ export function CharacterListScreen() {
           }
         />
       )}
+
+      {/* Under the table, on the left, like every other way of adding a row. */}
+      <Group gap="xs">
+        <Button
+          size={ACTION_SIZE}
+          variant="light"
+          leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
+          onClick={() =>
+            void navigate(
+              activeFolder ? `/characters/new?folder=${activeFolder}` : '/characters/new',
+            )
+          }
+        >
+          New character
+        </Button>
+        <Button
+          size={ACTION_SIZE}
+          variant="default"
+          onClick={() =>
+            void navigate(
+              activeFolder ? `/characters/import?folder=${activeFolder}` : '/characters/import',
+            )
+          }
+        >
+          Import
+        </Button>
+        {/* Development only, and absent from a production bundle rather than
+            hidden in one: Vite replaces import.meta.env.DEV with a literal, so
+            this folds away and StubButton is eliminated with it. The route it
+            would call is not registered in production either. */}
+        {import.meta.env.DEV && <StubButton folder={activeFolder} onFailed={setStubError} />}
+      </Group>
     </Stack>
   )
 }
@@ -246,35 +251,49 @@ function RowActions({
 
   return (
     <>
-      <Menu position="bottom-end" withinPortal>
-        <Menu.Target>
-          <ActionIcon variant="subtle" aria-label={`Actions for ${label}`}>
-            ...
-          </ActionIcon>
-        </Menu.Target>
-        <Menu.Dropdown>
-          <Menu.Item
-            onClick={() => {
-              setTarget(character.folder)
-              setMoving(true)
-            }}
-          >
-            Move...
-          </Menu.Item>
-          <Menu.Item
-            onClick={() => {
-              void copy.run(character.id).then((made) => {
-                if (made !== null) onChanged()
-              })
-            }}
-          >
-            Copy
-          </Menu.Item>
-          <Menu.Item color="red" onClick={() => setDeleting(true)}>
-            Delete
-          </Menu.Item>
-        </Menu.Dropdown>
-      </Menu>
+      {/* Spelled out rather than folded into a menu, so a row's actions read
+          the same way every other table's do -- and so that what you can do to
+          a character is visible without opening anything.
+          Each carries the row's name as its accessible name: a table of these
+          is otherwise a column of buttons all called "Delete", which is
+          ambiguous to a screen reader and to a test alike. */}
+      <Group gap="xs" wrap="nowrap">
+        <Button
+          size={ACTION_SIZE}
+          variant="subtle"
+          leftSection={<IconFolder size={ACTION_ICON_SIZE} />}
+          aria-label={`Move ${label}`}
+          onClick={() => {
+            setTarget(character.folder)
+            setMoving(true)
+          }}
+        >
+          Move
+        </Button>
+        <Button
+          size={ACTION_SIZE}
+          variant="subtle"
+          leftSection={<IconCopy size={ACTION_ICON_SIZE} />}
+          aria-label={`Copy ${label}`}
+          onClick={() => {
+            void copy.run(character.id).then((made) => {
+              if (made !== null) onChanged()
+            })
+          }}
+        >
+          Copy
+        </Button>
+        <Button
+          size={ACTION_SIZE}
+          variant="subtle"
+          color="red"
+          leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
+          aria-label={`Delete ${label}`}
+          onClick={() => setDeleting(true)}
+        >
+          Delete
+        </Button>
+      </Group>
 
       <ModalSheet opened={moving} onClose={() => setMoving(false)} title={`Move ${label}`}>
         <Stack gap="md">

@@ -95,7 +95,7 @@ func (h *Handler) revise(c *gin.Context, expectedSeq int, replacement *domain.Ev
 	}
 	c.JSON(http.StatusOK, WriteResponse{
 		Seq:     revision.Seq,
-		Sheet:   sheetOf(revision.Sheet),
+		Sheet:   SheetOf(revision.Sheet),
 		Dropped: droppedOf(revision.Dropped),
 	})
 }

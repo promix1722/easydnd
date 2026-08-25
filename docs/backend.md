@@ -260,6 +260,48 @@ that.
 | `DELETE` | `/v1/groups/{id}/members` | remove: `?user=U`; your own id is how you leave |
 | `POST` | `/v1/invites/preview` | read a link without acting on it |
 | `POST` | `/v1/invites/accept` | redeem a link |
+| `GET` | `/v1/groups/{id}/characters` | the group's table: what its members have shared |
+| `POST` | `/v1/groups/{id}/characters` | share one of your own: `{"character_id":"chr_x"}` |
+| `DELETE` | `/v1/groups/{id}/characters` | unshare: `?character=C`; **takes it out of every game too** |
+| `GET` | `/v1/games` | every game at every table you sit at, newest first |
+| `POST` | `/v1/games` | open one: `{"group_id":"grp_x","name":"..."}`. DM or owner |
+| `GET` | `/v1/games/{id}` | the game, your rank, and its roster |
+| `PATCH` | `/v1/games/{id}` | rename. DM or owner |
+| `DELETE` | `/v1/games/{id}` | DM or owner; the characters stay on the table |
+| `POST` | `/v1/games/{id}/characters` | seat some: `{"character_ids":[...]}`; your own land on the table too |
+| `DELETE` | `/v1/games/{id}/characters` | unseat one: `?character=C` |
+| `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only |
+
+Three of those need a word about their shape.
+
+**Nothing about a game hangs off `/v1/groups`.** A game is a section of its
+own, not a corner of a group: somebody at three tables wants one list of their
+games, and the group is a *field* on a game rather than the way in to one. So
+the listing is `GET /v1/games` with no group to name, and creation carries the
+group in the body -- it is the only operation here that has to say which table,
+and putting it in the path would make the other six look reachable that way too.
+
+The depth rule points the same way. Hung under its group, a game's own roster
+would be `/v1/groups/{id}/games/{gid}/characters`, which is three levels where
+the convention above allows one.
+
+**`/v1/shared/{id}/sheet` hangs off nothing at all**, and that is the honest
+shape: what grants the read is "some group we are both in", so naming any one
+of them in the URL would be a lie about why it was allowed. Note also what is
+absent — there is no `/v1/shared/{id}`. `/v1/characters/{id}` is a character's
+*log*, the record of every decision its owner made and the order they made them
+in, and that is not the table's business. A table sees what a character **is**.
+
+**Seating takes a list, always**, so there is one request shape whether it is
+one character or nine, and "everyone at this table" is the client sending the
+list it already has on screen.
+
+**Seating your own character shares it.** Everything on a roster has to be
+readable by every member -- a game carrying a name nobody but its owner may
+open would be a leak the DM caused by accident -- so a character that is not on
+the table yet is put there, provided it belongs to the caller. Somebody else's
+unshared character is still a 400: a DM runs the table, but does not get to
+publish another player's character on their behalf.
 
 The two `events/{seq}` routes address a *member* of the log by position, which
 is what `Seq` means. That is not a third level: `events` is the sub-resource,
@@ -701,6 +743,66 @@ enforced three times over, in the usecase, in the repository's statements, and
 in a partial unique index (`group_members_one_owner_idx`), because the last of
 those is the only one a second process racing the first obeys.
 
+### A third way a character is reached
+
+Sharing a character with a group is the first thing in this codebase that lets
+one account read another's character, and it needed a third chokepoint rather
+than a loosening of either existing one.
+
+`character.Service.owned` asks **"is this yours"** and grants a read *and* a
+write. `game.Service.readable` asks **"is it on a table you sit at"** and grants
+a read and nothing else. Neither was widened to accommodate the other: they are
+different functions, in different packages, over different stores, and the write
+paths still go only through the first. There is no route anywhere that writes to
+a character through the second, which is why "read-only" here is a property of
+the API's shape rather than a rule somebody has to remember.
+
+Both refuse with **404**, and for the reason `owned` does: a character id is a
+short counter, so a 403 on one that is not yours confirms it exists. A character
+that was never shared, one unshared a moment ago and one that never existed are
+indistinguishable from outside.
+
+| | its owner | group owner | dm | player | not a member |
+|---|---|---|---|---|---|
+| see the group's table | — | yes | yes | yes | **404** |
+| read a shared sheet | yes | yes | yes | yes | **404** |
+| read a character *not* shared here | yes | **404** | **404** | **404** | **404** |
+| share your own character | yes | yes | yes | yes | **404** |
+| share somebody else's | **404** | **404** | **404** | **404** | **404** |
+| unshare | yes | yes | yes | **403** | **404** |
+| edit or delete a shared character | yes | **404** | **404** | **404** | **404** |
+| open, rename or delete a game | — | yes | yes | **403** | **404** |
+| see a game and its roster | — | yes | yes | yes | **404** |
+| seat or unseat a character | — | yes | yes | **403** | **404** |
+| seat your own, not yet shared | — | yes | yes | **403** | **404** |
+| seat somebody else's, not yet shared | — | **400** | **400** | **403** | **404** |
+
+Two rows are worth saying in prose. **A player may share** — that is the whole
+of what a player does at a table, and it is the half of a group that was missing
+until now. **A DM may unshare somebody else's character**, which looks like a
+reach into another account and is not: a guest's session expires and cannot be
+recovered, so without it their character would sit on the table forever with
+nobody able to take it down.
+
+**Your character is always yours to delete.** Being on somebody's table does not
+make it theirs, so nothing consults a group before agreeing — the character comes
+off every table first, then out of the store. Deleting a group does the mirror
+image: its games go, then its table, and the characters themselves are untouched
+because they were never the group's.
+
+Both of those cascades run through a port rather than an import:
+`character.Sharing` and `group.Tables`, each one method, each satisfied by the
+game service and wired in `internal/app`. The arrows point outward from the
+thing being deleted, so a character still knows nothing about groups and a group
+still knows nothing about games.
+
+**Neither store is in Postgres, deliberately.** Every row on a table or a roster
+names a character id, and a character id is the process-local counter — the same
+argument `00003_groups.sql` makes for why the groups schema refuses to name one.
+So a group and its members survive a restart and the characters shared with it
+do not. That split is surprising and it is the price of having the feature
+before characters are durable; the two move to Postgres together or not at all.
+
 Invitations are stateless. A link is a signed token naming a group and a rank,
 valid for 24 hours, **reusable and not revocable** -- there is no invites table
 and nothing to revoke against. The trade is written down beside the type in
@@ -730,9 +832,12 @@ Imports point inward, never outward:
 
 - **`internal/domain/**`** imports the standard library only. No gin, no
   `net/http`, no `database/sql`, and no JSON or database struct tags --
-  serialization and persistence belong to adapters. The three domain packages
-  may import each other, one way only: `character` reads `catalog`, both read
-  `rules`, and nothing points back.
+  serialization and persistence belong to adapters. The domain packages may
+  import each other, one way only: `character` reads `catalog`, both read
+  `rules`, `group` reads `user`, and `game` reads `character`, `group` and
+  `user` — it is the one package that exists because two aggregates meet, and
+  it is the only one that names more than one of them. Nothing points back, so
+  a character still knows nothing about who is allowed to look at it.
 - **`internal/usecase/**`** imports the domain and `internal/types`. It never
   sees a `*gin.Context`; handlers pass `c.Request.Context()` and plain values
   inward.
@@ -1429,7 +1534,7 @@ Errors travel as `internal/types` values and are rendered exactly once, by
 
 If the thing belongs to more than one person, add a sixth step: put the
 authorization in **one function in the usecase** that every read and write goes
-through, the way `character.owned` and `group.member` do, and decide
+through, the way `character.owned`, `group.member` and `game.readable` do, and decide
 deliberately which refusals are 404 and which are 403 -- see [Ownership, and
 membership](#ownership-and-membership). Two adapters means the shared contract
 suite in `internal/adapter/repository/repotest/` runs the identical assertions

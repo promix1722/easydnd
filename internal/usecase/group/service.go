@@ -32,6 +32,7 @@ type Service struct {
 	repo    domain.Repository
 	users   user.Repository
 	invites domain.Inviter
+	tables  domain.Tables
 	log     *slog.Logger
 
 	// clock is injected so a test can predict the timestamps an invite and a
@@ -46,10 +47,14 @@ type Service struct {
 // one table in this schema that says what a person is called. It is also what
 // materialises the row a guest needs before they can be named in one -- see
 // ensureStored.
+//
+// The tables port may be nil, on the same terms character.Sharing may be: a
+// build with no games in it has nothing to tear down when a group goes.
 func NewService(
-	repo domain.Repository, users user.Repository, invites domain.Inviter, log *slog.Logger,
+	repo domain.Repository, users user.Repository, invites domain.Inviter,
+	tables domain.Tables, log *slog.Logger,
 ) *Service {
-	return &Service{repo: repo, users: users, invites: invites, log: log}
+	return &Service{repo: repo, users: users, invites: invites, tables: tables, log: log}
 }
 
 // now reads the clock, defaulting to the real one.
@@ -183,6 +188,15 @@ func (s *Service) Delete(ctx context.Context, actor user.ID, id domain.ID) error
 	}
 	if role != domain.RoleOwner {
 		return types.NewAccessDeniedError("only the owner may delete a group")
+	}
+	// The games and the shared table go first, for the reason deleting a
+	// character unshares it first: stopping in the middle leaves a group with
+	// nothing hung off it, which is a group, whereas the other order leaves
+	// rows naming a table that is gone.
+	if s.tables != nil {
+		if err := s.tables.DeleteForGroup(ctx, id); err != nil {
+			return err
+		}
 	}
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return err

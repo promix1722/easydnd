@@ -4,13 +4,13 @@ import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
 import { BuildScreen, CharacterLogScreen, CharacterSheetScreen } from '@/features/character'
 import { ImportCharacterScreen } from '@/features/characters'
+import { GameScreen, GamesScreen, SharedSheetScreen } from '@/features/games'
 import { GroupListScreen, GroupScreen } from '@/features/groups'
 import { LegalScreen } from '@/features/legal'
 import { StatusScreen } from '@/features/status'
 import { LandingShell } from '@/shell/LandingShell'
 import { RootGate } from '@/shell/RootGate'
 
-import { GamesPlaceholder } from './GamesPlaceholder'
 import { HomeRoute } from './HomeRoute'
 import { JoinRoute } from './JoinRoute'
 import { NotFoundPage } from './NotFoundPage'
@@ -24,9 +24,9 @@ import { Private } from './Private'
  *
  * Screens live in features/, not here: routes/ is the table, and a screen that
  * lives in it is drift. The exception is a page that belongs to the table
- * rather than to an aggregate -- NotFoundPage, and GamesPlaceholder until the
- * feature behind it exists. `/characters/:id/build` is one screen for creation
- * and for level-up, because the API poses them as the same question.
+ * rather than to an aggregate -- NotFoundPage. `/characters/:id/build` is one
+ * screen for creation and for level-up, because the API poses them as the same
+ * question.
  *
  * nginx rewrites unknown paths to index.html, so a deep link lands here rather
  * than on the API's 404 envelope.
@@ -123,16 +123,33 @@ export const router = createBrowserRouter([
         ),
       },
 
-      // Games: a section with nothing behind it yet, and deliberately
-      // reachable anyway -- the navigation is the shape the app is going to
-      // be, and a door that says "not built" beats both a missing door and
-      // one that opens onto a surface which does nothing. The real feature is
-      // being written elsewhere; see ./GamesPlaceholder.tsx.
+      // A shared character's sheet stays under its group, because sharing is a
+      // group's doing and the group is what grants the read.
+      {
+        path: 'groups/:id/characters/:character',
+        element: (
+          <Private>
+            <SharedSheetScreen />
+          </Private>
+        ),
+      },
+
+      // Games are their own section, so they sit at the top level rather than
+      // under the group they are played at -- which is also what keeps
+      // activeNavPath lighting Games instead of Groups when one is open.
       {
         path: 'games',
         element: (
           <Private>
-            <GamesPlaceholder />
+            <GamesScreen />
+          </Private>
+        ),
+      },
+      {
+        path: 'games/:id',
+        element: (
+          <Private>
+            <GameScreen />
           </Private>
         ),
       },

@@ -26,8 +26,6 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/', label: 'Characters' },
   { to: '/groups', label: 'Groups' },
-  // A placeholder section: the page behind it says so. See
-  // routes/GamesPlaceholder.tsx.
   { to: '/games', label: 'Games' },
 ]
 

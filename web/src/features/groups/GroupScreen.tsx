@@ -2,24 +2,35 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
 import type { GroupDetail, GroupMember } from '@/lib/api'
-import { deleteGroup, getGroup, removeMember, setMemberRole } from '@/lib/api'
+import { deleteGroup, getGroup, removeMember, renameGroup, setMemberRole } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
+  ACTION_ICON_SIZE,
+  ACTION_SIZE,
   Alert,
   Badge,
   Button,
   DataList,
   Group,
+  MAX_TABLE_WIDTH,
+  IconLogout,
+  IconPencil,
+  IconTrash,
+  IconUserPlus,
   Loader,
   Menu,
   ModalSheet,
   Stack,
+  TabRow,
   Text,
+  TextInput,
   Title,
   Tooltip,
 } from '@/ui'
+
+import { TablePanel } from '../games'
 
 import { InviteSheet } from './InviteSheet'
 import { atLeast, ROLE_LABELS } from './roles'
@@ -33,6 +44,10 @@ export function GroupScreen() {
     getGroup(id, signal),
   )
 
+  const [tab, setTab] = useState('members')
+  const [renaming, setRenaming] = useState(false)
+  const [newName, setNewName] = useState('')
+  const rename = useAction(renameGroup)
   const [inviting, setInviting] = useState(false)
   const [handover, setHandover] = useState<GroupMember | null>(null)
   const change = useAction(setMemberRole)
@@ -82,39 +97,68 @@ export function GroupScreen() {
     await navigate('/groups', { replace: true })
   }
 
-  const failure = change.error ?? remove.error ?? destroy.error
+  const failure = change.error ?? remove.error ?? destroy.error ?? rename.error
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="flex-start">
-        <div>
+      {/* Capped to the table's width so the controls land on its right edge
+          rather than the window's -- otherwise Rename and Delete drift away
+          from the rows they act on as the monitor gets wider. */}
+      <Group justify="space-between" align="center" maw={MAX_TABLE_WIDTH}>
+        <Group gap="xs" align="center">
           <Title order={2}>{group.name}</Title>
-          <Group gap="xs" mt={4}>
-            <Badge variant="light">{ROLE_LABELS[group.role]}</Badge>
-            <Text c="dimmed" size="sm">
-              {group.members.length} {group.members.length === 1 ? 'member' : 'members'}
-            </Text>
-          </Group>
-        </div>
+          <Badge variant="light">{ROLE_LABELS[group.role]}</Badge>
+        </Group>
         <Group gap="xs">
-          {canManage && <Button onClick={() => setInviting(true)}>Invite</Button>}
           {isOwner ? (
             // Rendered and disabled rather than hidden. A control that is not
             // there teaches nothing; one that is there with a reason teaches
             // the rule the first time somebody reaches for it.
             <Tooltip label="Make somebody else the owner first, or delete the group">
-              <Button variant="default" data-disabled onClick={(event) => event.preventDefault()}>
+              <Button
+                size={ACTION_SIZE}
+                variant="subtle"
+                leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
+                data-disabled
+                onClick={(event) => event.preventDefault()}
+              >
                 Leave
               </Button>
             </Tooltip>
           ) : (
-            <Button variant="default" loading={remove.pending} onClick={() => void leave()}>
+            <Button
+              size={ACTION_SIZE}
+              variant="subtle"
+              leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
+              loading={remove.pending}
+              onClick={() => void leave()}
+            >
               Leave
             </Button>
           )}
+          {canManage && (
+            <Button
+              size={ACTION_SIZE}
+              variant="subtle"
+              leftSection={<IconPencil size={ACTION_ICON_SIZE} />}
+              onClick={() => {
+                setNewName(group.name)
+                setRenaming(true)
+              }}
+            >
+              Rename
+            </Button>
+          )}
           {isOwner && (
-            <Button color="red" variant="light" loading={destroy.pending} onClick={() => void close()}>
-              Delete group
+            <Button
+              size={ACTION_SIZE}
+              color="red"
+              variant="subtle"
+              leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
+              loading={destroy.pending}
+              onClick={() => void close()}
+            >
+              Delete
             </Button>
           )}
         </Group>
@@ -126,6 +170,16 @@ export function GroupScreen() {
         </Alert>
       )}
 
+      <TabRow
+        tabs={[
+          { value: 'members', label: 'Members' },
+          { value: 'characters', label: 'Characters' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      >
+        {tab === 'characters' && <TablePanel groupId={group.id} role={group.role} />}
+        {tab === 'members' && (
       <DataList
         items={group.members}
         getKey={(member) => member.user_id}
@@ -169,7 +223,7 @@ export function GroupScreen() {
               return (
                 <Menu position="bottom-end" withinPortal>
                   <Menu.Target>
-                    <Button size="compact-xs" variant="subtle">
+                    <Button size={ACTION_SIZE} variant="subtle">
                       Manage
                     </Button>
                   </Menu.Target>
@@ -201,6 +255,50 @@ export function GroupScreen() {
         ]}
         empty="Nobody here yet."
       />
+        )}
+        {tab === 'members' && canManage && (
+          <Group mt="md">
+            <Button
+              size={ACTION_SIZE}
+              variant="light"
+              leftSection={<IconUserPlus size={ACTION_ICON_SIZE} />}
+              onClick={() => setInviting(true)}
+            >
+              Invite
+            </Button>
+          </Group>
+        )}
+      </TabRow>
+
+      <ModalSheet
+        opened={renaming}
+        onClose={() => setRenaming(false)}
+        title="Rename this group"
+      >
+        <Stack gap="sm">
+          <TextInput
+            label="Name"
+            value={newName}
+            error={rename.fields.find((field) => field.field === 'name')?.message}
+            onChange={(event) => setNewName(event.currentTarget.value)}
+            data-autofocus
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setRenaming(false)}>
+              Cancel
+            </Button>
+            <Button
+              loading={rename.pending}
+              onClick={() => {
+                setRenaming(false)
+                void act(rename.run(group.id, newName))
+              }}
+            >
+              Rename
+            </Button>
+          </Group>
+        </Stack>
+      </ModalSheet>
 
       <InviteSheet
         groupId={group.id}

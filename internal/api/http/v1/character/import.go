@@ -77,7 +77,7 @@ func (h *Handler) Import(c *gin.Context) {
 	c.JSON(http.StatusCreated, ImportResponse{
 		ID:     imported.ID.String(),
 		Seq:    imported.Log.LastSeq(),
-		Sheet:  sheetOf(sheet),
+		Sheet:  SheetOf(sheet),
 		Report: reportOf(report),
 	})
 }

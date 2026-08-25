@@ -52,6 +52,6 @@ func (h *Handler) Copy(c *gin.Context) {
 	c.JSON(http.StatusCreated, CreateResponse{
 		ID:    copied.ID.String(),
 		Seq:   copied.Log.LastSeq(),
-		Sheet: sheetOf(sheet),
+		Sheet: SheetOf(sheet),
 	})
 }

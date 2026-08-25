@@ -33,8 +33,7 @@ than cosmetic — the wrong word usually hides a wrong shape.
 thing the app stores: the people at one table, with a rank each — owner, DM,
 player. A **party** is the in-fiction band of adventurers, which is characters,
 and the SRD uses it that way throughout ("the party", "party treasure"). They
-are deliberately not modelled as the same thing and today only one of them is
-modelled at all: a group holds no characters. That is why the account-level
+are deliberately not modelled as the same thing. That is why the account-level
 feature is a *group* and not a *party*: "party" is a fiction word naming
 nothing this app stores, and a set of people with ranks is not a party in any
 sense the SRD uses.
@@ -47,19 +46,35 @@ fiction and in this document only: no screen, route, field or type in either
 half of the app is named one, so there is nothing left for "group" to collide
 with.
 
+A group is no longer only people. Its members may **share** characters with it,
+and what that grants is a read: every member can open a shared character's
+sheet, and only its owner can ever change it. The shared characters are not a
+party -- they are everything the table has to hand.
+
 A **folder** is the third word and the smallest of them: one account's private
 shelf for its own characters. It is not people and not in-fiction -- nothing is
-shared through it and no rule reads it. A **game** is the fourth, and the
-newest: what a group actually plays. Group, game, party, folder: people, what
-they play, characters in the fiction, characters on a shelf.
+shared through it and no rule reads it. A **game** is the fourth: one sitting at
+a group's table, with a roster drawn from what that group shares -- which is
+where a party is finally modelled. Group, game, party, folder: people, what they
+play, characters in the fiction, characters on a shelf.
+
+A game is played *at* a group but is not part of one: it is its own section of
+the app, listed with every other game you are in. The group is a fact about a
+game in the way a folder is a fact about a character. It is called a game and
+never a *session*, because that word is spent several times over on the thing
+that proves a request belongs to an account.
+
+One consequence is worth stating plainly because it is surprising. A group and
+its members live in PostgreSQL and survive a restart; the characters shared with
+it and the games run from it **do not**, because every one of those rows names a
+character id and a character id is a process-local counter. See
+[backend.md](backend.md#ownership-and-membership).
 
 The last row is different in kind from the others, and worth flagging rather
 than letting the table's authority stretch over it. The rest correct a wrong
 word against SRD evidence — counts of what the document itself says. "Game"
 names a **product** concept the SRD has no word for at all, so there is no
-count to appeal to; it is a choice, made here so that it is made once. It is
-also not modelled yet: `/games` is a section whose page says so. See
-[web.md](web.md#adding-a-feature).
+count to appeal to; it is a choice, made here so that it is made once.
 
 Two of those are more than renaming:
 

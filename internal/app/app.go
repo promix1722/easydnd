@@ -35,6 +35,7 @@ import (
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
+	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/buildinfo"
@@ -45,6 +46,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/user"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
 	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
 )
 
@@ -92,14 +94,26 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 	characterRepo := memory.NewCharacterRepository()
 	folderRepo := memory.NewFolderRepository()
 
-	// Accounts and groups are durable; characters and the folders they are
-	// filed in are not. Both still live in the process because a character id
-	// is a process-local counter, and a group that referred to one would be
-	// dangling after the next restart -- a schema written against an
-	// unfinished feature is a migration nobody can revise later. A restart
-	// therefore still costs a player everything they made, and moving the two
-	// of them to Postgres is its own change: the assignments above are what a
-	// SQL sibling would have to satisfy.
+	// The characters a group's members have offered to each other, and the
+	// games played from them. In memory even when Postgres is configured, and
+	// for the reason 00003_groups.sql gives for refusing to name a character
+	// at all: every row here points at a character id, and a character id is
+	// the process-local counter above. A table of these would be full of ids
+	// naming nothing by morning. They die with the characters they name, all
+	// three together, which is the only self-consistent thing they can do
+	// until characters are durable.
+	sharedRepo := memory.NewSharedRepository()
+	gameRepo := memory.NewGameRepository()
+
+	// Accounts and groups are durable; characters, the folders they are filed
+	// in, the tables they are shared on and the games run from them are not.
+	// They still live in the process because a character id is a process-local
+	// counter, and a durable row that referred to one would be dangling after
+	// the next restart -- a schema written against an unfinished feature is a
+	// migration nobody can revise later. A restart therefore still costs a
+	// player everything they made, and moving them to Postgres is its own
+	// change: the assignments above are what a SQL sibling would have to
+	// satisfy.
 	userRepo, groupRepo, pool, err := newRepositories(ctx, cfg, log)
 	if err != nil {
 		return nil, err
@@ -152,9 +166,23 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 		return fail(fmt.Errorf("load SRD data from %s: %w", cfg.Data.SRDDir, err))
 	}
 
-	// Application layer.
+	// Application layer. The game service is built first because the two
+	// services either side of it have to tell it when the things it refers to
+	// go away -- a deleted character comes off every table, a deleted group
+	// takes its games with it -- and it refers to their stores rather than to
+	// them, so nothing points back and the graph stays acyclic.
+	//
+	// One character store, shared with the character service below rather than
+	// a second instance. The game service reads shared characters out of the
+	// same map that one writes them into; give it its own and every shared
+	// character is a 404 with nothing in the failure pointing at why. It is
+	// the same hazard as the one account store, and it fails the same silent
+	// way.
+	gameService := gameuc.NewService(
+		gameRepo, sharedRepo, groupRepo, characterRepo, catalogSource,
+		log.With("usecase", "game"))
 	characterService := charuc.NewService(
-		characterRepo, folderRepo, catalogSource, hexsheet.NewImporter(),
+		characterRepo, folderRepo, catalogSource, hexsheet.NewImporter(), gameService,
 		log.With("usecase", "character"))
 	authService := authuc.NewService(userRepo, ceremony, signer, federations, authuc.Config{
 		SessionTTL:      cfg.Auth.SessionTTL,
@@ -165,7 +193,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 	// signing key, and an invite is separated from a session cookie by the
 	// token kind rather than by a second key -- see internal/adapter/token.
 	groupService := groupuc.NewService(
-		groupRepo, userRepo, signer, log.With("usecase", "group"))
+		groupRepo, userRepo, signer, gameService, log.With("usecase", "group"))
 
 	// Inbound adapters. The character routes are declared behind
 	// RequireSession, and the handler reads the owner from the account that
@@ -178,6 +206,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 		Catalog:       catalogapi.New(catalogSource, log.With("handler", "catalog")),
 		Character:     characterapi.New(characterService, log.With("handler", "character")),
 		Folder:        folderapi.New(characterService, log.With("handler", "folder")),
+		Game:          gameapi.New(gameService, log.With("handler", "game")),
 		Group:         groupapi.New(groupService, log.With("handler", "group")),
 	})
 	if err != nil {

@@ -81,7 +81,7 @@ describe.each(['mobile', 'desktop'] as const)('GroupScreen (%s)', (viewport) => 
 
     await waitFor(() => expect(screen.getByText('Wednesday Night')).toBeInTheDocument())
     expect(screen.getByRole('button', { name: 'Invite' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Delete group' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
   })
 
   it('offers a DM the invite button but not deletion', async () => {
@@ -89,7 +89,7 @@ describe.each(['mobile', 'desktop'] as const)('GroupScreen (%s)', (viewport) => 
 
     await waitFor(() => expect(screen.getByText('Wednesday Night')).toBeInTheDocument())
     expect(screen.getByRole('button', { name: 'Invite' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Delete group' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     // A DM may walk away; an owner may not, which the next test pins.
     expect(screen.getByRole('button', { name: 'Leave' })).toBeInTheDocument()
   })
@@ -99,7 +99,7 @@ describe.each(['mobile', 'desktop'] as const)('GroupScreen (%s)', (viewport) => 
 
     await waitFor(() => expect(screen.getByText('Wednesday Night')).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: 'Invite' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Delete group' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Manage' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Leave' })).toBeInTheDocument()
   })
@@ -124,6 +124,6 @@ describe('the owner cannot leave', () => {
     expect(leave).toBeInTheDocument()
     expect(leave).toHaveAttribute('data-disabled')
     // Deleting the group is the escape hatch, so it must be on screen too.
-    expect(screen.getByRole('button', { name: 'Delete group' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
   })
 })

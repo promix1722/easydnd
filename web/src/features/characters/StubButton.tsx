@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 
 import { createStubCharacter } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
-import { Button } from '@/ui'
+import { ACTION_SIZE, Button } from '@/ui'
 
 /**
  * Makes the reference character in one press: a finished level-3 half-elf
@@ -50,7 +50,13 @@ export function StubButton({
   }
 
   return (
-    <Button variant="default" loading={stub.pending} onClick={() => void onClick()}>
+    // Sized with the row of add-controls it sits in, not on its own terms.
+    <Button
+      size={ACTION_SIZE}
+      variant="default"
+      loading={stub.pending}
+      onClick={() => void onClick()}
+    >
       Stub
     </Button>
   )
