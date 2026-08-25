@@ -1,8 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { resetCatalogCache } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 
@@ -433,13 +432,10 @@ const writes = () => posted.filter((write) => !write.url.includes('dryRun'))
 const block = (name: RegExp) => screen.getByRole('button', { name })
 
 beforeEach(() => {
+  // No resetCatalogCache and no unstubAllGlobals: src/test/setup.ts does both
+  // after every test in the suite, which is where they have to be anyway.
   posted = []
-  resetCatalogCache()
   mockApi()
-})
-
-afterEach(() => {
-  vi.unstubAllGlobals()
 })
 
 /**
@@ -585,19 +581,30 @@ describe('BuildScreen', () => {
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
   })
 
-  it('shows a tab only the choices that belong to it', async () => {
+  // One mount, walked across three tabs: each shows only what belongs to it,
+  // and looking never posts. Splitting this would mount the same PARTWAY
+  // character twice to read two of the three.
+  it('shows a tab only the choices that belong to it, and posts nothing for looking', async () => {
     const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
     // The class tab opens first: it is the first category in order with
     // something required outstanding.
-    expect(await screen.findByText('A class')).toBeInTheDocument()
-    expect(screen.queryByText('A background')).not.toBeInTheDocument()
+    expect.soft(await screen.findByText('A class')).toBeInTheDocument()
+    expect.soft(screen.queryByText('A background')).not.toBeInTheDocument()
 
     await user.click(tab('race'))
-    expect(screen.getByText(/Two to be proficient in/)).toBeInTheDocument()
-    expect(screen.queryByText('A class')).not.toBeInTheDocument()
+    expect.soft(screen.getByText(/Two to be proficient in/)).toBeInTheDocument()
+    expect.soft(screen.queryByText('A class')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'identity' }))
+    expect.soft(screen.getByText('Name')).toBeInTheDocument()
+    // "Nothing left here", never "nothing left in identity": the category's
+    // word belongs to its tab and appears exactly once on the page.
+    expect.soft(screen.getByText('Nothing left here.')).toBeInTheDocument()
+
+    expect.soft(posted).toHaveLength(0)
   })
 
   it('posts the event the prompt named when a choice is answered from the list', async () => {
@@ -628,20 +635,6 @@ describe('BuildScreen', () => {
         },
       ],
     })
-  })
-
-  it('shows a tab with nothing open its settled rows, and posts nothing', async () => {
-    const user = setupUser()
-    mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
-    renderBuild(viewport)
-
-    await user.click(await screen.findByRole('tab', { name: 'identity' }))
-
-    expect(screen.getByText('Name')).toBeInTheDocument()
-    // "Nothing left here", never "nothing left in identity": the category's
-    // word belongs to its tab and appears exactly once on the page.
-    expect(screen.getByText('Nothing left here.')).toBeInTheDocument()
-    expect(posted).toHaveLength(0)
   })
 
   it('stays on the tab an answer was given on, whatever is asked next', async () => {
@@ -677,7 +670,12 @@ describe('BuildScreen', () => {
     expect(await screen.findByText('sheet')).toBeInTheDocument()
   })
 
-  it('gives Finish the weight once nothing is left', async () => {
+  // Two readings of the same finished character, from one mount: what the
+  // bottom row offers, and what the class tab says about the level it took.
+  // Neither writes anything, so re-mounting to ask the second question would
+  // buy nothing. expect.soft so a failure in the first still reports the rest.
+  it('offers Finish, and shows a level already taken as a fact rather than an offer', async () => {
+    const user = setupUser()
     mockApi({ prompts: FINISHED, events: LEVELLED_LOG })
     renderBuild(viewport)
 
@@ -685,11 +683,27 @@ describe('BuildScreen', () => {
     // order to answer things in is the player's and the tabs already say what
     // the categories are.
     const finish = await screen.findByRole('button', { name: 'Finish' })
-    expect(finish).toHaveAttribute('data-variant', 'filled')
-    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
+    expect.soft(finish).toHaveAttribute('data-variant', 'filled')
+    expect.soft(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
     // The one prompt the server still poses is the offer of a level, which
     // this client does not offer -- so there is genuinely nothing here.
-    expect(screen.getByText('Nothing left here.')).toBeInTheDocument()
+    expect.soft(screen.getByText('Nothing left here.')).toBeInTheDocument()
+
+    // Advancement is the class story continued, so a level that was taken
+    // sits on the class tab rather than under a tab of its own.
+    await user.click(screen.getByRole('tab', { name: 'class' }))
+    expect.soft(screen.getByText('Level gained')).toBeInTheDocument()
+
+    // Read-only, and the standing offer of another one is not on the page at
+    // all: level-up does not work, and a question that silently does nothing
+    // is worse than a question that is not asked. A level that was taken is a
+    // fact about the character, so it is not even a block that opens.
+    expect.soft(screen.queryByRole('button', { name: /Level gained/ })).not.toBeInTheDocument()
+    expect.soft(screen.queryByText(/Another level/)).not.toBeInTheDocument()
+    expect.soft(screen.getByText('Nothing left here.')).toBeInTheDocument()
+
+    // The class itself is still a choice like any other.
+    expect.soft(block(/Class chosen/)).toBeInTheDocument()
   })
 
   it('makes a change that costs nothing else without asking about it', async () => {
@@ -721,28 +735,6 @@ describe('BuildScreen', () => {
       expectedSeq: 3,
       event: { type: 'race', ref: 'race:dwarf' },
     })
-  })
-
-  it('shows a level already taken, and offers no way to take or unpick one', async () => {
-    const user = setupUser()
-    mockApi({ prompts: FINISHED, events: LEVELLED_LOG })
-    renderBuild(viewport)
-
-    // Advancement is the class story continued, so a level that was taken
-    // sits on the class tab rather than under a tab of its own.
-    await user.click(await screen.findByRole('tab', { name: 'class' }))
-    expect(screen.getByText('Level gained')).toBeInTheDocument()
-
-    // Read-only, and the standing offer of another one is not on the page at
-    // all: level-up does not work, and a question that silently does nothing
-    // is worse than a question that is not asked. A level that was taken is a
-    // fact about the character, so it is not even a block that opens.
-    expect(screen.queryByRole('button', { name: /Level gained/ })).not.toBeInTheDocument()
-    expect(screen.queryByText(/Another level/)).not.toBeInTheDocument()
-    expect(screen.getByText('Nothing left here.')).toBeInTheDocument()
-
-    // The class itself is still a choice like any other.
-    expect(block(/Class chosen/)).toBeInTheDocument()
   })
 
   it('changes the name by replacing the entry that holds it', async () => {

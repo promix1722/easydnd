@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
@@ -107,10 +107,6 @@ beforeEach(() => {
   mockApi()
 })
 
-afterEach(() => {
-  vi.unstubAllGlobals()
-})
-
 describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewport) => {
   it('lists every character and names the folder each is in', async () => {
     renderList(viewport)
@@ -177,55 +173,6 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
       onlyRequestTo(`/v1/characters/${ADA.id}`, 'DELETE')
     })
   })
-
-  it('creates a folder', async () => {
-    const user = setupUser()
-    renderList(viewport)
-    await screen.findByText('Ada')
-
-    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
-    await user.type(await screen.findByLabelText('New folder'), 'Retired')
-    await user.click(screen.getByRole('button', { name: 'Add' }))
-
-    await waitFor(() => {
-      const created = onlyRequestTo('/v1/folders', 'POST')
-      expect(JSON.parse(created.body)).toEqual({ name: 'Retired' })
-    })
-  })
-
-  // The whole reason this dialog exists. Deleting a folder destroys the
-  // characters in it, so the confirmation has to say how many.
-  it('names the character count before deleting a folder', async () => {
-    const user = setupUser()
-    renderList(viewport)
-    await screen.findByText('Ada')
-
-    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
-    const folders = await screen.findByRole('dialog')
-    await user.click(within(folders).getByRole('button', { name: 'Delete' }))
-
-    const confirm = await screen.findByText(/deletes the folder and the 1 character in it/i)
-    expect(confirm).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /Delete folder and 1/ }))
-    await waitFor(() => {
-      onlyRequestTo(`/v1/folders/${CAMPAIGN.id}`, 'DELETE')
-    })
-  })
-
-  // The default folder is the one an account is guaranteed to have, so it
-  // must not even offer the control.
-  it('offers no delete for the default folder', async () => {
-    const user = setupUser()
-    renderList(viewport)
-    await screen.findByText('Ada')
-
-    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
-    const dialog = await screen.findByRole('dialog')
-
-    expect(within(dialog).getAllByRole('button', { name: 'Rename' })).toHaveLength(2)
-    expect(within(dialog).getAllByRole('button', { name: 'Delete' })).toHaveLength(1)
-  })
 })
 
 
@@ -235,9 +182,12 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
  * The block above stays at both because `DataList` draws a table on a desktop
  * and cards on a phone, and `ModalSheet` swaps `Modal` for `Drawer` -- the row
  * actions live inside `DataList`, so anything that presses one belongs up
- * there. These three touch neither: what they press is the folder `Select` or
- * a button in the toolbar above the list, and what they assert is the request
- * that went out. See docs/web.md.
+ * there. Nothing here touches either: what these press is the folder `Select`
+ * or `Manage folders` in the toolbar above the list, and what they assert is
+ * the request that went out or a count of buttons inside a dialog -- the same
+ * markup at any width. The folders dialog is a `ModalSheet`, and that swap is
+ * asserted on its own terms in `src/ui/ModalSheet.test.tsx` rather than three
+ * more times here. See docs/web.md.
  */
 describe('CharacterListScreen', () => {
   const viewport = 'desktop'
@@ -290,5 +240,54 @@ describe('CharacterListScreen', () => {
     await waitFor(() => {
       onlyRequestTo(`/v1/characters/stub?folder=${CAMPAIGN.id}`, 'POST')
     })
+  })
+
+  it('creates a folder', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
+    await user.type(await screen.findByLabelText('New folder'), 'Retired')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    await waitFor(() => {
+      const created = onlyRequestTo('/v1/folders', 'POST')
+      expect(JSON.parse(created.body)).toEqual({ name: 'Retired' })
+    })
+  })
+
+  // The whole reason this dialog exists. Deleting a folder destroys the
+  // characters in it, so the confirmation has to say how many.
+  it('names the character count before deleting a folder', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
+    const folders = await screen.findByRole('dialog')
+    await user.click(within(folders).getByRole('button', { name: 'Delete' }))
+
+    const confirm = await screen.findByText(/deletes the folder and the 1 character in it/i)
+    expect(confirm).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Delete folder and 1/ }))
+    await waitFor(() => {
+      onlyRequestTo(`/v1/folders/${CAMPAIGN.id}`, 'DELETE')
+    })
+  })
+
+  // The default folder is the one an account is guaranteed to have, so it
+  // must not even offer the control.
+  it('offers no delete for the default folder', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
+    const dialog = await screen.findByRole('dialog')
+
+    expect(within(dialog).getAllByRole('button', { name: 'Rename' })).toHaveLength(2)
+    expect(within(dialog).getAllByRole('button', { name: 'Delete' })).toHaveLength(1)
   })
 })

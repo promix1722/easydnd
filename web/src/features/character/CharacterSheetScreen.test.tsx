@@ -1,9 +1,9 @@
 import { screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { bySlug, resetCatalogCache } from '@/lib/api'
+import { bySlug } from '@/lib/api'
 import type { CatalogSkill, Sheet } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
@@ -243,19 +243,14 @@ function cardText(slug: string): string {
 }
 
 beforeEach(() => {
-  // getCollection caches per session, so without this the first test's
-  // catalogue response would answer every later one -- including the test
-  // that needs the request to fail.
-  resetCatalogCache()
+  // The catalogue cache and the stubbed fetch are both emptied by
+  // src/test/setup.ts after every test -- including for the test that needs
+  // the catalogue request to fail -- so there is nothing to undo here.
   mockApi(SHEET)
 })
 
-afterEach(() => {
-  vi.unstubAllGlobals()
-})
-
 /**
- * Four readings of one sheet, in one test and one mount.
+ * Six readings of one sheet, in one test and one mount.
  *
  * They used to be four tests at two viewports -- eight mounts of the whole
  * sheet for assertions that never touch it twice. Nothing here branches on
@@ -265,7 +260,7 @@ afterEach(() => {
  * The accordion these tests were once about is covered on its own terms by
  * "is open on a phone, and collapses there too" below.
  *
- * expect.soft rather than expect: four separate tests reported four separate
+ * expect.soft rather than expect: six separate tests reported six separate
  * failures, and a merged test that stopped at the first would report one. The
  * saving is the mount, not the assertions, so there is no reason to give that
  * up as well.
@@ -294,17 +289,20 @@ it('draws the sheet in the order a player reads it', async () => {
   // is derived from, so they are what the page opens on.
   const position = screen.getByTitle('Strength').compareDocumentPosition(screen.getByText('Hit points'))
   expect.soft(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+  // Each card prints its own modifier: paired by slug, not by position, so a
+  // sheet that zipped two lists together would misreport every card after the
+  // first mistake.
+  expect.soft(cardText('str')).toBe('str+418Save+4')
+  expect.soft(cardText('dex')).toBe('dex+316Save+5')
+  expect.soft(cardText('cha')).toBe('cha-18Save-1')
+
+  // Nothing outstanding on this fixture, so the section is absent rather than
+  // present and empty.
+  expect.soft(screen.queryByText('Still to choose')).not.toBeInTheDocument()
 })
 
 describe('the sheet', () => {
-  it('reads a modifier off the slug it belongs to, not off the card next to it', async () => {
-    await renderSheet('desktop')
-
-    expect(cardText('str')).toBe('str+418Save+4')
-    expect(cardText('dex')).toBe('dex+316Save+5')
-    expect(cardText('cha')).toBe('cha-18Save-1')
-  })
-
   it('keeps an ability the six do not cover, and draws it last', async () => {
     // An unrecognised ability means the server and this client disagree about
     // the game. Dropping it silently would hide exactly the bug worth seeing.
@@ -415,61 +413,52 @@ describe('the skills panel', () => {
     return namesOf(skillRows())
   }
 
-  it('draws every skill, not only the ones something trained', () => {
+  /**
+   * Everything the default panel prints, from one mount.
+   *
+   * Five read-only assertions that shared a fixture and re-mounted for each,
+   * merged the way docs/web.md asks. expect.soft so the merged test still
+   * reports every failure rather than stopping at the first.
+   */
+  it('draws every skill, in the order and the words a player reads them', () => {
     renderPanel()
 
     // Eighteen rows, and the twelve untrained ones are the point: the skill a
     // player asks what to roll for is usually one nothing trained.
     const names = namesOf(skillRows())
-    expect(names).toHaveLength(18)
-    expect(names).toContain('Investigation')
-    expect(names).toContain('Nature')
-  })
-
-  it('says how each row is trained in words, not only in colour', () => {
-    renderPanel()
+    expect.soft(names).toHaveLength(18)
+    expect.soft(names).toContain('Investigation')
+    expect.soft(names).toContain('Nature')
 
     // A panel distinguishing eighteen rows by a shade of grey tells a screen
     // reader nothing, and tells a colour-blind reader nothing either.
-    expect(screen.getByRole('img', { name: /Expertise/ })).toBeInTheDocument()
-    expect(screen.getAllByRole('img', { name: /^Proficient/ })).toHaveLength(3)
-    expect(screen.getAllByRole('img', { name: /^Not proficient/ })).toHaveLength(13)
-    expect(screen.getByRole('img', { name: /^Half proficiency/ })).toBeInTheDocument()
-  })
-
-  it('leads with what the character is best at, alphabetical within each level', () => {
-    renderPanel()
+    expect.soft(screen.getByRole('img', { name: /Expertise/ })).toBeInTheDocument()
+    expect.soft(screen.getAllByRole('img', { name: /^Proficient/ })).toHaveLength(3)
+    expect.soft(screen.getAllByRole('img', { name: /^Not proficient/ })).toHaveLength(13)
+    expect.soft(screen.getByRole('img', { name: /^Half proficiency/ })).toBeInTheDocument()
 
     // Expertise, then proficient, then half, then the untrained. With six
     // rows the alphabet was the only searchable order; with eighteen, the
     // question is what the character is good at.
-    const names = namesOf(skillRows())
-    expect(names.slice(0, 5)).toEqual([
-      'Stealth',
-      'Deception',
-      'Perception',
-      'Sleight of Hand',
-      'Athletics',
-    ])
+    expect
+      .soft(names.slice(0, 5))
+      .toEqual(['Stealth', 'Deception', 'Perception', 'Sleight of Hand', 'Athletics'])
     // The untrained block is alphabetical from there on.
-    expect(names.slice(5, 8)).toEqual(['Acrobatics', 'Animal Handling', 'Arcana'])
-  })
-
-  it('reads a bonus and an ability off the skill they belong to', () => {
-    renderPanel()
+    expect.soft(names.slice(5, 8)).toEqual(['Acrobatics', 'Animal Handling', 'Arcana'])
 
     // Paired by row rather than by position: a panel that zipped two lists
     // together would misreport every row after the first mistake.
     const rows = skillRows()
-    expect(rows[0]).toBe('StealthDEX+7')
-    expect(rows.find((row) => row.startsWith('Athletics'))).toBe('AthleticsSTR+5')
-    expect(rows.find((row) => row.startsWith('Intimidation'))).toBe('IntimidationCHA-1')
-  })
+    expect.soft(rows[0]).toBe('StealthDEX+7')
+    expect.soft(rows.find((row) => row.startsWith('Athletics'))).toBe('AthleticsSTR+5')
+    expect.soft(rows.find((row) => row.startsWith('Intimidation'))).toBe('IntimidationCHA-1')
 
-  it('counts what is trained', () => {
-    renderPanel()
+    expect.soft(screen.getByText('5 proficient · 1 with expertise')).toBeInTheDocument()
 
-    expect(screen.getByText('5 proficient · 1 with expertise')).toBeInTheDocument()
+    // titleCase() renders the slug as "Sleight Of Hand". The catalogue is
+    // also the only name that is in the negotiated locale.
+    expect.soft(names).toContain('Sleight of Hand')
+    expect.soft(names).not.toContain('Sleight Of Hand')
   })
 
   it('collapses to the trained rows and back', async () => {
@@ -486,16 +475,6 @@ describe('the skills panel', () => {
 
     await user.click(screen.getByRole('button', { name: 'Show all 18' }))
     expect(skillRows()).toHaveLength(18)
-  })
-
-  it('names a skill the way the compendium does', () => {
-    renderPanel()
-
-    // titleCase() renders the slug as "Sleight Of Hand". The catalogue is
-    // also the only name that is in the negotiated locale.
-    const names = namesOf(skillRows())
-    expect(names).toContain('Sleight of Hand')
-    expect(names).not.toContain('Sleight Of Hand')
   })
 
   it('still draws every row when there is no compendium to name them by', () => {
@@ -569,12 +548,6 @@ describe('an unfinished character', () => {
     expect(screen.getByText(/A background/)).toBeInTheDocument()
     expect(screen.getByText(/One more language/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Answer these' })).toBeInTheDocument()
-  })
-
-  it('says nothing at all when there is nothing left', async () => {
-    await renderSheet('desktop')
-
-    expect(screen.queryByText('Still to choose')).not.toBeInTheDocument()
   })
 
   it('still draws the sheet when the prompts could not be fetched', async () => {

@@ -17,7 +17,7 @@ curl localhost:8080/v1/health       # {"status":"ok"}
 curl localhost:8080/v1/catalog      # the compendium's index
 curl localhost:8080/v1/characters   # {"characters":[]}
 
-make verify                         # everything CI checks, back and front
+make verify                         # everything CI checks, back and front, two jobs at once
 ```
 
 `make run/server` needs no database: `config.dev.yaml` sets no `db.url`, so it
@@ -81,6 +81,29 @@ The detector moved onto the path worth taking before a `git tag` -- the point
 where a missed race would otherwise ship. **Run `make test/race` before
 tagging.** It found real races in the HTTP layer and the stores once, and
 `make test/unit` will not find the next one.
+
+### verify runs two jobs, longest first
+
+`verify` used to be a serial chain, which meant the Go side's time was added to
+the frontend's rather than spent inside it. It is now a `make -j2` over the same
+leaf targets, and **the order they are named in is the schedule**: `make -j`
+starts goals left to right as slots come free, so `web/test` -- fifteen seconds
+against six for everything else put together -- has to go first. Left at the end
+of the list it lands in the last slot and the run costs its length plus
+everything before it. Named first, the Go lane, the frontend's typecheck and the
+production build all happen inside its shadow, and `verify` costs about what
+`web/test` costs.
+
+Two jobs, not more. One of them is vitest, which forks
+`availableParallelism - 1` workers of its own, so `-j2` is already the whole of
+a four-core machine; `VERIFY_JOBS` is the knob for a worktree sharing the box.
+`--output-sync=target` holds each target's output and prints it whole, so a
+failure arrives as one block rather than interleaved with whatever else was
+mid-run -- at the cost of nothing printing until a target finishes.
+
+This is the arrangement CI has always had: `check-backend` and `check-frontend`
+are separate jobs there, and so are the two Build and Test stages. It is only
+the local gate that was serial.
 
 The other reason the suite is fast is that each test package shares **one**
 `catalogfile.Source`. `Source.Load` caches a converted `*catalog.Catalog` per
