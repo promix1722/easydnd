@@ -152,4 +152,54 @@ describe.each(viewports)('PromptCard at %s', (viewport) => {
     )
     expect(screen.getByText(/SRD 5\.1 is a starter set/)).toBeInTheDocument()
   })
+
+  it('swaps the answer when only one is wanted', async () => {
+    const user = userEvent.setup()
+    const one = skillPrompt({ choice: { ...skillPrompt().choice, choose: 1 } })
+    renderAt(viewport, <PromptCard prompt={one} entries={entries} pending={false} onAnswer={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: /Acrobatics/ }))
+    // Picking another is how you change your mind. Making somebody unpick
+    // first would be asking them to operate the form rather than answer it.
+    const stealth = screen.getByRole('button', { name: /Stealth/ })
+    expect(stealth).toBeEnabled()
+    await user.click(stealth)
+
+    expect(stealth).toHaveAttribute('data-variant', 'filled')
+    expect(screen.getByRole('button', { name: /Acrobatics/ })).toHaveAttribute(
+      'data-variant',
+      'default',
+    )
+  })
+
+  it('greys out what is left once as many are picked as are wanted', async () => {
+    const user = userEvent.setup()
+    renderAt(
+      viewport,
+      <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /Acrobatics/ }))
+    expect(screen.getByRole('button', { name: /Deception/ })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: /Stealth/ }))
+
+    // Two of two are picked, so the third does nothing -- and an option that
+    // still looks pressable but does nothing reads as a broken button.
+    expect(screen.getByRole('button', { name: /Deception/ })).toBeDisabled()
+    // The two that were picked stay live, because unpicking is how you undo.
+    expect(screen.getByRole('button', { name: /Acrobatics/ })).toBeEnabled()
+  })
+
+  it('does not ask the question the block around it is already asking', () => {
+    renderAt(
+      viewport,
+      <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />,
+    )
+
+    // The block is headed "Two to be proficient in · from Rogue". A card that
+    // said "Choose 2 to be proficient in" under it would be asking twice.
+    expect(screen.queryByText('Choose 2 to be proficient in')).not.toBeInTheDocument()
+    expect(screen.queryByText('from Rogue')).not.toBeInTheDocument()
+  })
 })

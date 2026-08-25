@@ -98,10 +98,11 @@ export function CharacterSheetScreen() {
 
       {/*
         An unfinished character says so on the page it is looked at most.
-        The list is the same component the build screen's tabs draw, reading
-        the same `/prompts` response -- there is no second notion anywhere in
-        this client of what is still outstanding, and so no way for the sheet
-        and the build screen to disagree about it.
+        The same `/prompts` response the build screen's tabs draw, named by the
+        same `choiceName` -- there is no second notion anywhere in this client
+        of what is still outstanding, and so no way for the sheet and the build
+        screen to disagree about it. Here it is a statement of what is left and
+        the way in is the link below; there each choice is a block that opens.
       */}
       {outstanding.length > 0 && (
         <Alert color="blue" title="Still to choose">

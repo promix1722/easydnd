@@ -178,9 +178,30 @@ what brings the two-skill prompt into existence -- so the total number of steps
 is not knowable until the last one is answered. The tabs are not steps. They
 are the fixed set of *categories* a question can belong to, which is the
 server's own `Prompt.Group` and not a taxonomy this client invented, in the
-order `domain/stages.ts` states: identity, class, race, background, abilities.
+order `domain/stages.ts` states: identity, class, abilities, race, background.
 Class first after the name, because it is the choice the most other choices
-hang off.
+hang off -- and the scores straight after it, because they are what the class
+was picked *for*: a barbarian wants the 15 in Strength, and deciding that while
+the class is still the last thing you looked at is the difference between
+building a character and filling in a form.
+
+The screen opens on the first category with something required outstanding,
+and that is the whole of the help it offers: **answering does not move you**.
+A tab changes when a tab is pressed, and never on the way back from a write --
+answering one question is not a request to be asked another, and a player who
+has just chosen barbarian is usually looking at what barbarian brought with
+it. There is no Next in the tab row for the same reason: the order is the player's,
+and a control that walks the tabs in the server's order is a wizard's stride in
+a screen that is not a wizard. `Finish` sits against the last tab rather than
+across the row from it, because it is the thing to do after them.
+
+A `Next` does appear **under the list, once a tab has nothing left to answer**,
+and only then. That is not navigation -- the tabs are always there -- it is the
+end of a piece of work saying where the next piece is, at the moment when that
+is the only thing left to say. It goes to the next category with something
+*required* still open, wrapping round, and it names none of them: a finished
+character always has an optional prompt somewhere, and a Next that walked to
+that would never let anybody stop.
 
 Three requests, because they answer three different questions: `/prompts` says
 what is still open, `/events` says what was decided and in which entry, and
@@ -190,13 +211,14 @@ projection time -- so it is fetched rather than computed.
 
 **Nothing can be answered before it is asked.** Every tab is freely clickable,
 because a tab is a place to look as well as a place to answer, but what can be
-answered on one is exactly what `/prompts` returned for it.
-`features/character/OutstandingChoices` is that list, and it is one component
-with three callers -- each build tab filtered to its own category, the
-character sheet showing all of them, and the level-up page when there is one.
-There is deliberately no second notion of "outstanding" anywhere in this
-client, so there is no way for the sheet and the build screen to disagree
-about it.
+answered on one is exactly what `/prompts` returned for it. Two surfaces draw
+those questions: the build tab, as blocks that open, and
+`features/character/OutstandingChoices`, which is the character sheet's
+read-only statement of what is left -- and the level-up page's, when there is
+one. Both read the same response and name it through the same
+`features/character/promptNames`, so there is deliberately no second notion of
+"outstanding" anywhere in this client, and no second vocabulary for it. What
+differs is only that one is a list of ways in and the other is a list.
 
 **The client routes nothing.** Every stored entry carries the group of the
 prompt it answered, written by the server, so a change that invalidates an
@@ -211,20 +233,95 @@ learns that a first level is a `class` event and a fourth is a `level` one.
 Option keys come from the server for the same reason: a bundle of a shortbow
 and twenty arrows has no slug of its own.
 
+The exception, and its bounds, is the character's **inputs**: a name, an
+alignment and the six ability scores. They settle a value on the sheet rather
+than naming a catalogue entry or answering a grant, so each is stored as an
+addressed change -- and the prompt, which says the entry is a `change`, has
+nowhere to say to which path. `BuildScreen`'s `INPUTS` is that table and is
+deliberately the only place a path is written down. It is worth knowing why it
+exists: an alignment is namespaced `character/alignment` exactly like
+`character/race`, this screen read the namespace as the shape, and the
+`change` event it posted -- naming an alignment, changing nothing -- was
+accepted by a server that could attribute it to no prompt. The alignment
+simply never saved, with a 200 to say so.
+
 One `PromptCard` renders every kind of prompt rather than one component per
 kind, because the server synthesises "which race?" into the compendium's own
-grammar instead of a second vocabulary. What the kinds change is the wording.
+grammar instead of a second vocabulary. What the kinds change is the wording --
+and one thing they change is what a click means. Where a prompt wants **one**
+answer, picking another swaps it, because picking another *is* changing your
+mind and making somebody unpick first is asking them to operate the form rather
+than answer the question. Where it wants **N**, the options that were not
+picked go grey as soon as N are: the question has been answered, and an option
+that still looks pressable but does nothing reads as a broken button. What was
+picked stays live either way, because unpicking is how you undo.
 Two questions are genuinely not that shape and get a form each: a name
-(`NameForm`) and the six ability scores (`AbilityScoresForm`). `StagePanel`
+(`NameForm`) and the six ability scores (`AbilityScoresForm`, below).
+`StagePanel`
 chooses between the three by the kind of the prompt, and that is the only place
 in the client mapping a prompt kind to a control -- which is what let
 `PromptCard` stay exactly as it was while two new kinds arrived.
+
+None of the three says what the question is. The block they open inside is
+headed by the choice's own name, and a surface that repeated it -- "Two more
+languages", then "Choose 2 more languages" -- would be asking twice. `NameForm`
+is the one exception, because "What are they called?" is not what its block
+says and is the first line anybody reads in this application.
+
+### One block per choice
+
+A tab is one list, and every choice on it is a block that opens onto its own
+answering surface. There used to be three places for one thing: what had been
+decided in a card at the top, what was left in a card under it, and -- detached
+at the bottom -- whichever question was in hand. Answering meant reading a name
+in one card and finding its options in another.
+
+A decided choice and an open one are the same object at two moments, so they
+are one list rather than two sections: the choice of a race *is* the question
+"which race?" once it has an answer. `features/character/blocks` merges them,
+sorted by level with everything un-levelled first, which reads as the story it
+is -- took rogue at 1, still owes two skills at 1, gained a level at 2. What
+tells the two apart is that an open block is drawn to stand out, not where it
+sits.
+
+**Nothing opens itself**, with one exception below. The screen used to open the
+first open question of the tab; it has no way of knowing which of five a player
+came here to make, and a surface that opens itself is one they have to close.
+One block is open at a time, and answering closes it rather than advancing to
+the next question.
+
+**The list grows; it does not rearrange.** Level order decides where a block
+goes the first time it is drawn, and after that it stays there:
+`features/character/blocks` keeps a `BlockOrder` of where everything sits, and
+a key it has not seen sorts to the end. Answering a question therefore adds
+what the answer brought with it and moves nothing else -- and the entry that
+answers a question takes that question's own place, rather than the question
+vanishing from the middle of the list while its answer appears at the bottom.
+The screen learns which entry that is from the write's response: a single
+appended event is the log's new head, so the `seq` it answers with names it.
+
+Nor does the screen go away while it catches up. A write the server has
+already confirmed is followed by `useResource`'s `refresh` rather than its
+`reload`: the same request, with the list left standing rather than replaced
+by a spinner and rebuilt underneath whoever was reading it. A refresh that
+*fails* still takes the screen down to its error, because a list quietly out
+of date is worse than one that says it could not check.
+
+`ui/BlockList` is the primitive underneath, wrapping Mantine's accordion so
+that feature code neither assembles one nor re-decides its variant. It mounts a
+body only while its block is open, which is not a styling nicety: a prompt's
+surface fetches the catalogue entries its options name, and a tab of collapsed
+blocks would otherwise pay for a collection apiece on every paint. A block with
+no body -- a level already taken -- is a statement, not a disabled control.
 
 ### Creating is answering the first question
 
 `/characters/new` renders `BuildScreen` with no `:id`. The identity tab holds
 the name, answering it creates the character with that name alone, and the URL
-is replaced with the build one. There is no separate create screen because
+is replaced with the build one. It is also the one block that opens itself:
+there is no `/prompts` response yet, so the tab poses the question rather than
+reading it, and it is the only thing on the page -- nothing else is being
+pre-empted, and a front door whose one row is shut reads as broken. There is no separate create screen because
 there was never a second thing being done -- and creation used to carry the
 score method and all six numbers, which meant eight selections in one log entry
 and nothing a player could point at and change. The scores are an ordinary open
@@ -278,9 +375,11 @@ it is not something a test in that environment can observe.
 
 ### Changing anything is one mechanism
 
-Every row under "already chosen" is exactly one log entry, and `[Change]`
-replaces that entry: pick the new value, `PUT …?dryRun=true`, read what would
-be dropped, commit the same `PUT` on confirmation. There is no
+Every settled block is exactly one log entry, and opening it replaces that
+entry: pick the new value, `PUT …?dryRun=true`, read what would be dropped,
+commit the same `PUT` on confirmation. There is no separate `[Change]` button
+because there is no second gesture on this screen -- pressing the thing you
+want to deal with is the whole of it. There is no
 append-a-correction path and no Back button. The dialog names every dropped
 entry and says the questions will be waiting outstanding in their own
 categories, because they will be -- and it confirms even when nothing is
@@ -289,31 +388,70 @@ nothing" is a thing the screen says rather than a thing you infer from its
 silence.
 
 An answer to a *nested* prompt -- a rogue's Expertise, a half-elf's ability
-bonuses -- cannot be re-posed from here, because the options that made it up
+bonuses -- cannot be re-posed directly, because the options that made it up
 arrived with a prompt the server stopped emitting the moment it was answered.
-Those rows drop their entry instead, which reaches the same place from the
-other side: the question comes back outstanding, under its own tab.
+Opening one of those blocks therefore drops the entry, which reaches the same
+place from the other side: the question comes back outstanding, and
+`reclaimPlace` holds the block's own place for it, so what returns is where
+what went was. The player is shown none of that -- the same press, the same
+outcome, a moment longer -- and it is asked about on the same rule as
+everything else: only if another answer cannot survive it.
 
 ### A category's word appears exactly once
 
-In its tab. Panel headings use the question's own wording, the two sections are
-titled "already chosen" and "still to choose", and empty copy is "Nothing left
-here" rather than "nothing left in race". It is a small rule with a large
-payoff: `getByText('race')` means one thing on this page, and a test that
-breaks does so for the reason it says.
+In its tab. A block is headed by the choice's own name -- "A race" -- or by
+what was decided -- "Race chosen" -- and never by the category alone, and empty
+copy is "Nothing left here" rather than "nothing left in race". It is a small
+rule with a large payoff: `getByText('race')` means one thing on this page, and
+a test that breaks does so for the reason it says.
+
+### The method decides what there is to do about the scores
+
+`AbilityScoresForm` is four editors behind one `Select`, because in the rules
+the method decides what is actually being chosen -- and three of the four do
+not let a number be typed at all. That is the point of them rather than an
+omission: in none of them is the number yours to pick.
+
+| Method | What it is | What you do |
+| --- | --- | --- |
+| Standard array | six printed numbers | deal them out |
+| Rolled | six numbers, 4d6 drop lowest | deal them out, or roll again |
+| Point buy | a 27-point budget | spend it |
+| Manual | an escape hatch | type anything from 1 to 30 |
+
+The two that deal out a set share `ScoreAssignment`: a pool you take from and
+six abilities to put numbers on. Dragging is the obvious gesture on a mouse and
+does not exist on a phone, so a number can equally be picked up with a tap or
+the keyboard and put down with a second one -- the same operation, reachable
+without a pointing device. Dropping onto a taken ability swaps the two; putting
+a number back where it came from returns it to the pool. Nothing can be
+confirmed until all six are placed, because six numbers and five decisions is
+not an answer.
+
+Point buy is priced by `domain/abilities`, which is where the rule lives: 8
+costs nothing, 9 to 13 cost a point each, 14 costs two and 15 costs two more.
+The steppers refuse a raise the budget cannot afford, so the screen enforces
+the budget instead of complaining about it afterwards -- and points may be left
+unspent, because a player who wants an even spread of 13s has spent 25 and is
+finished.
+
+The dice live in `domain/abilities` too, and take the die as a parameter: a
+test that cannot say what was rolled can only assert that six numbers came
+back, and "between 3 and 18" is not a test of dropping the lowest.
 
 ### Level-up is not offered
 
 The server poses "gain a level in which class?" and everything that follows
 from it under the `advance` group, and this client filters that group out of
-everything it draws: no outstanding row, no answering surface, no control.
+everything it draws: no block, no answering surface, no control.
 Taking a level does not work -- the event the client would post is recorded as
 a no-op -- and a question that appears answerable and silently changes nothing
 is worse than a question that is not asked. It is the same judgement that took
 the "Level up" button off the sheet.
 
-Levels a character already *has* stay visible as settled rows on the class tab,
-and stay read-only. They are facts about the character -- an imported one may
+Levels a character already *has* stay visible as settled blocks on the class
+tab, and stay read-only -- blocks with nothing to open, which is why
+`ui/BlockList` draws one as a statement rather than as a control that refuses. They are facts about the character -- an imported one may
 well have several -- rather than controls, and editing one would drive the same
 machinery that cannot take one. `domain/stages.ts` is the single line that
 reverses all of this on the day it works.
@@ -712,14 +850,17 @@ differs inside a `@/ui` primitive rather than at the call site:
 | `DataList` | table | labelled cards |
 | `Columns` | side-by-side panels | accordion |
 | `TabRow` | tab strip, actions right | the same, scrolled sideways |
+| `BlockList` | a list of blocks, one open | the same |
 
-`TabRow` is the first of those whose two renderings are **identical markup**.
-The others genuinely swap components at the breakpoint; this one is a
+`TabRow` and `BlockList` are the ones whose two renderings are **identical
+markup**. The others genuinely swap components at the breakpoint; `TabRow` is a
 `ScrollArea type="never"` that is simply inert at a width the tabs fit in, so
 there is no second tree to keep working and a test at one width is a real test
 of the other. The active tab is brought into view by setting `scrollLeft`, not
 by `scrollIntoView`, which scrolls every scrollable ancestor -- it would drag
-the document as well as the strip, and jsdom does not implement it.
+the document as well as the strip, and jsdom does not implement it. A stack of
+bordered disclosures needs no branch either: it is right at 390px and at
+1440px, and the only difference is padding the spacing scale already handles.
 
 ## One button size, in one place
 

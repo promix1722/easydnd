@@ -259,8 +259,9 @@ describe('the sheet', () => {
 
 describe('an unfinished character', () => {
   it('says on the sheet what is still to choose, and offers the way in', async () => {
-    // The same list the build screen draws, from the same response: there is
-    // no second notion of "outstanding" for the two pages to disagree about.
+    // The same choices the build screen draws, from the same response and
+    // named the same way: there is no second notion of "outstanding" for the
+    // two pages to disagree about, and no second vocabulary for it either.
     mockApi(SHEET, OPEN)
     await renderSheet('desktop')
 

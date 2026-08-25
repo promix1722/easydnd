@@ -1,18 +1,20 @@
 import { useState } from 'react'
 
 import type { ApiFieldError, Change } from '@/lib/api'
-import { Button, Card, Group, NumberInput, Select, SimpleGrid, Stack, Text } from '@/ui'
+import { Button, Group, NumberInput, Select, SimpleGrid, Stack, Text } from '@/ui'
 
-import { ABILITY_ORDER, abilityName } from '@/domain'
+import { PointBuy } from './PointBuy'
+import { ScoreAssignment } from './ScoreAssignment'
+import type { Placement } from './ScoreAssignment'
 
-/**
- * The standard array, as the SRD prints it.
- *
- * Positional against ABILITY_ORDER: the first number goes to Strength because
- * that is the first input on the screen, not because the array has anything to
- * say about which ability wants a 15.
- */
-const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8]
+import {
+  ABILITY_ORDER,
+  POINT_BUY_MAX,
+  POINT_BUY_MIN,
+  STANDARD_ARRAY,
+  abilityName,
+  rollAbilityScores,
+} from '@/domain'
 
 const METHODS = [
   { value: 'standard-array', label: 'Standard array' },
@@ -20,6 +22,11 @@ const METHODS = [
   { value: 'rolled', label: 'Rolled' },
   { value: 'manual', label: 'Manual' },
 ]
+
+/** The two methods that deal out a set of numbers rather than take them. */
+function dealsOut(method: string): boolean {
+  return method === 'standard-array' || method === 'rolled'
+}
 
 export type Scores = Record<string, number>
 
@@ -47,6 +54,22 @@ export interface AbilityScoresFormProps {
  * create page. They used to travel with creation, where they had no entry of
  * their own and so nothing to point at and change.
  *
+ * Four methods, and the method decides what there is to do, because in the
+ * rules it decides what is actually being chosen:
+ *
+ *   - **standard array** deals out six printed numbers, and the decision is
+ *     which ability gets which;
+ *   - **rolled** does the same with 4d6-drop-lowest, plus the one thing dice
+ *     allow that a printed array does not, which is rolling again;
+ *   - **point buy** is not a set of numbers at all but a budget, so it is
+ *     priced steppers and a running total;
+ *   - **manual** is the escape hatch -- an imported character, a DM's house
+ *     rule -- and is the only one where a number is typed.
+ *
+ * The first three do not let a score be typed over, and that is the point
+ * rather than an omission: in none of them is the number yours to pick. What
+ * is yours is where it goes, or what you spend.
+ *
  * It emits the addressed changes rather than a shape of its own: the six
  * scores answer a prompt that names no picks, so what settles them is what the
  * log stores -- `abilities.str set 15` -- and inventing a wrapper here would
@@ -60,44 +83,109 @@ export function AbilityScoresForm({
   submitLabel,
   onSubmit,
 }: AbilityScoresFormProps) {
-  const [chosen, setChosen] = useState<Scores>(() => scores ?? standardArrayScores())
   const [how, setHow] = useState(method)
+  // The pool the dealing methods deal from, and where each of its numbers has
+  // been put. Scores that are already stored arrive placed: they were dealt
+  // out once already, and the entry records where they landed.
+  const [values, setValues] = useState<number[]>(() => dealt(method, scores))
+  const [placed, setPlaced] = useState<Placement>(() => (scores ? inOrder() : nothingPlaced()))
+  // Point buy holds numbers, because its steppers can only produce numbers.
+  // Manual holds whatever has been typed, including nothing at all: a field
+  // that refills itself with a 10 the moment it is cleared cannot be typed in.
+  const [bought, setBought] = useState<Scores>(() => boughtFrom(method, scores))
+  const [written, setWritten] = useState<Written>(() => ({ ...(scores ?? allAt(10)) }))
 
-  const errorFor = (field: string): string | undefined =>
-    fields.find((f) => f.field === field)?.message
+  const chosen = (): Scores => {
+    if (dealsOut(how)) {
+      return Object.fromEntries(
+        ABILITY_ORDER.map((ability) => [ability, values[placed[ability] ?? -1] ?? 0]),
+      )
+    }
+    if (how === 'point-buy') {
+      return Object.fromEntries(
+        ABILITY_ORDER.map((ability) => [ability, bought[ability] ?? POINT_BUY_MIN]),
+      )
+    }
+    return Object.fromEntries(ABILITY_ORDER.map((ability) => [ability, written10(written, ability)]))
+  }
+
+  const ready = !dealsOut(how) || ABILITY_ORDER.every((ability) => placed[ability] !== null)
+
+  const change = (next: string) => {
+    setHow(next)
+    // Each method starts from its own beginning. Carrying the last one's
+    // numbers over would produce a point-buy character with a 17 in it, or an
+    // array that is not the array.
+    if (next === 'standard-array') {
+      setValues([...STANDARD_ARRAY])
+      setPlaced(nothingPlaced())
+    } else if (next === 'rolled') {
+      setValues(rollAbilityScores())
+      setPlaced(nothingPlaced())
+    } else if (next === 'point-buy') {
+      setBought(allAt(POINT_BUY_MIN))
+    } else {
+      setWritten(chosen())
+    }
+  }
 
   const submit = () => {
+    const scored = chosen()
     onSubmit([
       { path: 'abilities.method', op: 'set', value: { kind: 'slug', slug: how } },
       ...ABILITY_ORDER.map<Change>((ability) => ({
         path: `abilities.${ability}`,
         op: 'set',
-        value: { kind: 'int', int: chosen[ability] ?? 10 },
+        value: { kind: 'int', int: scored[ability] ?? 10 },
       })),
     ])
   }
 
+  const errorFor = (field: string): string | undefined =>
+    fields.find((f) => f.field === field)?.message
+
   return (
-    <Card withBorder padding="lg" radius="md">
-      <Stack gap="md">
-        <Text fw={600}>Set the six scores</Text>
+    <Stack gap="md">
+      <Select
+        label="How were the scores generated?"
+        description="Recorded so that coming back here reopens the right editor."
+        data={METHODS}
+        value={how}
+        allowDeselect={false}
+        onChange={(value) => {
+          if (value !== null) change(value)
+        }}
+      />
 
-        <Select
-          label="How were the scores generated?"
-          description="Recorded so that coming back here reopens the right editor."
-          data={METHODS}
-          value={how}
-          allowDeselect={false}
-          onChange={(value) => {
-            if (value === null) return
-            setHow(value)
-            if (value === 'standard-array') setChosen(standardArrayScores())
-          }}
+      {dealsOut(how) && (
+        <ScoreAssignment
+          values={values}
+          placed={placed}
+          onPlace={setPlaced}
+          {...(how === 'rolled'
+            ? {
+                action: (
+                  <Button
+                    variant="light"
+                    onClick={() => {
+                      setValues(rollAbilityScores())
+                      setPlaced(nothingPlaced())
+                    }}
+                  >
+                    Roll again
+                  </Button>
+                ),
+              }
+            : {})}
         />
+      )}
 
+      {how === 'point-buy' && <PointBuy scores={bought} onChange={setBought} />}
+
+      {how === 'manual' && (
         <div>
           <Text size="xs" c="dimmed" mb="xs">
-            The base array. Racial bonuses are added by the rules, not here.
+            Anything from 1 to 30. Racial bonuses are added by the rules, not here.
           </Text>
           <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm">
             {ABILITY_ORDER.map((ability) => (
@@ -106,33 +194,67 @@ export function AbilityScoresForm({
                 label={abilityName(ability)}
                 min={1}
                 max={30}
-                value={chosen[ability] ?? 10}
+                value={written[ability] ?? ''}
                 error={errorFor(`abilities.${ability}`)}
                 onChange={(value) =>
-                  setChosen((current) => ({
-                    ...current,
-                    [ability]: typeof value === 'number' ? value : Number(value) || 10,
-                  }))
+                  setWritten((current) => ({ ...current, [ability]: value }))
                 }
               />
             ))}
           </SimpleGrid>
         </div>
+      )}
 
-        <Group>
-          <Button onClick={submit} loading={pending}>
-            {submitLabel}
-          </Button>
-        </Group>
-      </Stack>
-    </Card>
+      <Group>
+        <Button onClick={submit} loading={pending} disabled={!ready}>
+          {ready ? submitLabel : 'Place all six'}
+        </Button>
+      </Group>
+    </Stack>
   )
 }
 
-function standardArrayScores(): Scores {
-  const out: Scores = {}
-  ABILITY_ORDER.forEach((ability, i) => {
-    out[ability] = STANDARD_ARRAY[i] ?? 10
+/** The numbers a dealing method starts with, in the order they were produced. */
+function dealt(method: string, scores?: Scores): number[] {
+  if (scores !== undefined) return ABILITY_ORDER.map((ability) => scores[ability] ?? 10)
+  return method === 'rolled' ? rollAbilityScores() : [...STANDARD_ARRAY]
+}
+
+/** Each ability holding the number that was stored against it. */
+function inOrder(): Placement {
+  return Object.fromEntries(ABILITY_ORDER.map((ability, place) => [ability, place]))
+}
+
+function nothingPlaced(): Placement {
+  return Object.fromEntries(ABILITY_ORDER.map((ability) => [ability, null]))
+}
+
+function allAt(score: number): Scores {
+  return Object.fromEntries(ABILITY_ORDER.map((ability) => [ability, score]))
+}
+
+/** What is in the manual fields, which is whatever has been typed there. */
+type Written = Record<string, number | string>
+
+/** One typed field as a score. A field left empty is an average one. */
+function written10(written: Written, ability: string): number {
+  const value = written[ability]
+  const score = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(score) && score > 0 ? score : 10
+}
+
+/**
+ * What point buy starts from.
+ *
+ * It will not start from stored scores it could not have bought -- a rolled 17
+ * has no price -- so it starts from six 8s, which is where point buy starts
+ * anyway.
+ */
+function boughtFrom(method: string, scores?: Scores): Scores {
+  if (scores === undefined || method !== 'point-buy') return allAt(POINT_BUY_MIN)
+  const buyable = ABILITY_ORDER.every((ability) => {
+    const score = scores[ability] ?? 0
+    return score >= POINT_BUY_MIN && score <= POINT_BUY_MAX
   })
-  return out
+  return buyable ? { ...scores } : allAt(POINT_BUY_MIN)
 }

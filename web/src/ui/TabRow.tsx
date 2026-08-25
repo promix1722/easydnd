@@ -11,7 +11,7 @@ export interface TabRowProps {
   tabs: readonly TabRowTab[]
   value: string
   onChange: (value: string) => void
-  /** Right-aligned controls that belong to the row rather than to a tab. */
+  /** Controls that belong to the row rather than to a tab, drawn against it. */
   actions?: ReactNode
   /** The active tab's contents. */
   children?: ReactNode
@@ -19,12 +19,18 @@ export interface TabRowProps {
 
 /**
  * A row of tabs that scrolls sideways when it does not fit, with an actions
- * slot pinned to its right.
+ * slot against the end of it.
  *
  * A primitive rather than a call-site arrangement because Mantine's `Tabs.List`
- * offers only `grow` and `justify`: five tabs and two buttons across a 390px
+ * offers only `grow` and `justify`: five tabs and a button across a 390px
  * phone need a strip that scrolls and a slot that does not, and neither is a
  * prop on the component library.
+ *
+ * The strip takes the width it needs rather than all there is, so the actions
+ * sit against the last tab instead of across the page from it -- an action
+ * that follows the tabs reads as the thing to do after them, where one pinned
+ * to the far right reads as unrelated furniture. When the tabs do not fit, the
+ * strip is what gives way, and the actions stay where they are.
  *
  * It is the first responsive primitive whose **two renderings are the same
  * markup**. `ModalSheet` and `Columns` genuinely swap components at the
@@ -64,7 +70,7 @@ export function TabRow({ tabs, value, onChange, actions, children }: TabRowProps
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--mantine-spacing-sm)' }}>
-        <ScrollArea type="never" viewportRef={viewportRef} style={{ flex: 1, minWidth: 0 }}>
+        <ScrollArea type="never" viewportRef={viewportRef} style={{ flex: '0 1 auto', minWidth: 0 }}>
           <Tabs.List style={{ flexWrap: 'nowrap' }}>
             {tabs.map((tab) => (
               <Tabs.Tab

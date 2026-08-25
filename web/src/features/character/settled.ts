@@ -119,15 +119,18 @@ function rowFor(
 /**
  * Addressed changes, read back as a decision rather than as a patch.
  *
- * Two paths are written by this client and are worth naming: the character's
- * name, and the six ability scores. Anything else -- a DM's adjustment, a
- * path a later server learned before this client did -- falls back to the log
- * screen's own rendering, on the same principle `eventLabel` follows: an entry
- * drawn plainly is better than an entry refused.
+ * The paths this client writes are worth naming: the character's name, its
+ * alignment, and the six ability scores -- the three inputs. Anything else --
+ * a DM's adjustment, a path a later server learned before this client did --
+ * falls back to the log screen's own rendering, on the same principle
+ * `eventLabel` follows: an entry drawn plainly is better than one refused.
  */
 function summarise(changes: readonly Change[]): { label: string; value: string } {
   const name = changes.find((change) => change.path === 'identity.name')
   if (name !== undefined) return { label: 'Name', value: formatValue(name.value) }
+
+  const alignment = changes.find((change) => change.path === 'identity.alignment')
+  if (alignment !== undefined) return { label: 'Alignment', value: formatValue(alignment.value) }
 
   const scores = new Map<string, Change>()
   for (const change of changes) {

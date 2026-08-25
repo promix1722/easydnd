@@ -62,6 +62,8 @@ export {
 } from '@mantine/core'
 
 // Composed, responsive-by-construction components.
+export { BlockList } from './BlockList'
+export type { BlockListItem, BlockListProps } from './BlockList'
 export { Columns } from './Columns'
 export type { ColumnsProps, ColumnsSection } from './Columns'
 export { DataList } from './DataList'
