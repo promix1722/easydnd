@@ -33,6 +33,12 @@ export interface Identity {
   background?: string
   classes?: ClassLevel[]
   level: number
+  /**
+   * Experience points, recorded rather than acted on: a level comes from a
+   * level event, so crossing a threshold advances nobody. A table playing
+   * milestones leaves it at zero.
+   */
+  experience: number
   personalityTraits?: string[]
   ideals?: string[]
   bonds?: string[]

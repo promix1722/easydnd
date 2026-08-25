@@ -202,10 +202,10 @@ same catalogue, same result, no clock and no I/O.
 
 | Section | Holds |
 | --- | --- |
-| `Identity` | Name, alignment, race, background, classes, personality |
+| `Identity` | Name, alignment, race, background, classes, personality, experience |
 | `Base` | Hit points, speeds, senses, size, languages, exhaustion, death saves, inspiration |
 | `Abilities` | The six scores. Modifiers are computed, never stored |
-| `Skills` | Training per skill — an enum, because Expertise doubles and Jack of All Trades halves |
+| `Skills` | Training per skill — an enum, because Expertise doubles and Jack of All Trades halves. **Every** skill is present, the untrained ones at the bare ability modifier |
 | `SavingThrows` | Autocalculated |
 | `Status` | Armor class, initiative, proficiency bonus, passive Perception, and a spellcasting summary **per class** — a multiclassed cleric/wizard has two |
 | `Equipment` | Equipped, backpack, loot, purse. Homebrew items are first-class |
@@ -213,6 +213,33 @@ same catalogue, same result, no clock and no I/O.
 | `Spells` | Cantrips, known, prepared, ability |
 | `Actions` | See below |
 | `Feats`, `Traits`, `Features`, `Conditions` | Slug lists |
+
+**Experience is recorded, not acted on.** `Identity.Experience` is a number the
+log can set and nothing reads: a character is third level because three level
+events say so, not because the total crossed 900. That keeps one answer to
+"what level is this character" -- the log -- where deriving a level from XP as
+well would give two, and they would disagree the moment a table awarded a
+milestone. A group playing milestones leaves it at zero and loses nothing; a
+group counting XP has somewhere to keep the count. Set with a change event, on
+`identity.experience`, like every other value no rule computes.
+
+**The skills map holds every skill, not only the trained ones.** A character
+proficient in six of the eighteen still projects all eighteen; the other twelve
+carry `NotProficient` and a bonus that is just the governing ability's
+modifier. This is a deliberate cost — twelve entries per sheet that a grant
+never touched — paid because the question a skill list is read to answer is
+usually about a skill nothing trained, and because the alternative is every
+client adding an ability modifier itself. A second implementation of a rule is
+a second implementation to disagree, and it would disagree the day Jack of All
+Trades starts halving a bonus.
+
+Two consequences worth knowing. **Passive Perception depends on it**: the value
+is `10 +` the Perception bonus read straight off the map, so before every skill
+was present it read a missing key for an untrained character and silently
+dropped their Wisdom modifier — the sheet said exactly 10 whatever the score.
+And **presence in the map no longer means trained**, which is a trap the
+projector fell into once: whether a skill may take Expertise is a question
+about its training level, not about whether the key exists.
 
 **Actions have two provenances**, and the model says which. A *derived* action is
 recomputed on every projection — an equipped longsword produces its attack, a

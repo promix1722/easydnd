@@ -111,9 +111,10 @@ func TestStubHasItsExpertise(t *testing.T) {
 		t.Fatalf("Sheet() error = %v", err)
 	}
 
-	// Keyed by the bare skill slug, and holding only what the character is
-	// trained in -- an untrained skill is absent rather than present at
-	// "none", which is why athletics is checked by absence below.
+	// Keyed by the bare skill slug. Every skill in the compendium is on the
+	// sheet, an untrained one as a real entry at "none" rather than a missing
+	// key, so what this pins is which eight are *trained* and that nothing
+	// else is -- athletics being the one checked from the other direction.
 	want := map[rules.Slug]rules.Proficiency{
 		"stealth":         rules.Expertise,
 		"persuasion":      rules.Expertise,
@@ -133,11 +134,17 @@ func TestStubHasItsExpertise(t *testing.T) {
 			t.Errorf("%s = %v, want %v", skill, got, level)
 		}
 	}
-	if _, trained := sheet.Skills.BySkill["athletics"]; trained {
-		t.Error("athletics is trained; nothing in the log grants it")
+	if got := sheet.Skills.BySkill["athletics"].Proficiency; got != rules.NotProficient {
+		t.Errorf("athletics = %v, want none: nothing in the log grants it", got)
 	}
-	if got, want := len(sheet.Skills.BySkill), len(want); got != want {
-		t.Errorf("trained skills = %d, want %d", got, want)
+	trained := 0
+	for _, state := range sheet.Skills.BySkill {
+		if state.Proficiency != rules.NotProficient {
+			trained++
+		}
+	}
+	if trained != len(want) {
+		t.Errorf("trained skills = %d, want %d", trained, len(want))
 	}
 }
 

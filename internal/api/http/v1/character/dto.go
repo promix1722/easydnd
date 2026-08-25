@@ -126,6 +126,7 @@ type Identity struct {
 	Background        string       `json:"background,omitempty"`
 	Classes           []ClassLevel `json:"classes,omitempty"`
 	Level             int          `json:"level"`
+	Experience        int          `json:"experience"`
 	PersonalityTraits []string     `json:"personalityTraits,omitempty"`
 	Ideals            []string     `json:"ideals,omitempty"`
 	Bonds             []string     `json:"bonds,omitempty"`

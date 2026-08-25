@@ -163,6 +163,7 @@ func identityOf(i domain.Identity) Identity {
 		Background:        i.Background.String(),
 		Classes:           classLevels(i.Classes),
 		Level:             i.Level(),
+		Experience:        i.Experience,
 		PersonalityTraits: i.PersonalityTraits,
 		Ideals:            i.Ideals,
 		Bonds:             i.Bonds,

@@ -159,6 +159,134 @@ func TestProjectRogueSkillsAndSaves(t *testing.T) {
 	}
 }
 
+// Every skill in the compendium is on the sheet, not only the trained ones.
+//
+// The untrained ones are the point: a player reads a skill list to find out
+// what to roll, and the skill nothing trained is what that question is usually
+// about. An untrained skill carries the bare ability modifier, which is also
+// what proves the seeding runs before the bonuses are derived rather than
+// leaving a row of zeroes.
+func TestProjectPutsEveryUntrainedSkillOnTheSheet(t *testing.T) {
+	cat := LoadCatalog(t)
+	s := rogueSheet(t)
+
+	if got, want := len(s.Skills.BySkill), cat.Skills.Len(); got != want {
+		t.Errorf("sheet has %d skills, want all %d of them", got, want)
+	}
+	for _, slug := range cat.Skills.Slugs() {
+		if _, ok := s.Skills.BySkill[slug]; !ok {
+			t.Errorf("%s is not on the sheet", slug)
+		}
+	}
+
+	// The rogue's abilities project to str 10, dex 16, con 14, int 10,
+	// wis 12, cha 14. Nothing trained any of these four, so each is worth its
+	// ability modifier and nothing else.
+	for _, tt := range []struct {
+		skill rules.Slug
+		want  int
+	}{
+		{"athletics", 0},    // str 10
+		{"arcana", 0},       // int 10
+		{"survival", 1},     // wis 12
+		{"intimidation", 2}, // cha 14
+	} {
+		got := s.Skills.BySkill[tt.skill]
+		if got.Proficiency != rules.NotProficient {
+			t.Errorf("%s proficiency = %s, want none", tt.skill, got.Proficiency)
+		}
+		if got.Bonus != tt.want {
+			t.Errorf("%s bonus = %+d, want %+d", tt.skill, got.Bonus, tt.want)
+		}
+	}
+}
+
+// Expertise doubles a proficiency bonus, so it needs one to double.
+//
+// This guards the seeding above. Nothing validates an expertise answer against
+// what the character is actually trained in -- the projector reads the picks
+// back out of the log and trusts them -- so the guard is what stops a log that
+// names an untrained skill from doubling a bonus that is not there. It used to
+// ask whether the skill was in the map at all, which was true only of trained
+// skills; now that every skill is in the map, that question answers yes for
+// all eighteen and the guard has to ask about the training level instead.
+func TestProjectGivesExpertiseOnlyToTrainedSkills(t *testing.T) {
+	var log Log
+	err := log.Append(
+		Event{Type: EventInit, Changes: []Change{
+			{Path: "identity.name", Op: OpSet, Value: StringValue("Test")},
+			{Path: "abilities.str", Op: OpSet, Value: IntValue(16)},
+			{Path: "abilities.dex", Op: OpSet, Value: IntValue(16)},
+		}},
+		Event{
+			Type:  EventClass,
+			Ref:   rules.NewRef(rules.RefClass, "rogue"),
+			Level: 1,
+			Choices: []Answer{
+				{Prompt: "rogue/proficiency/0", Picks: []rules.Slug{
+					"skill-deception", "skill-persuasion", "skill-sleight-of-hand", "skill-stealth",
+				}},
+				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
+					"rogue-expertise-1/expertise/0/0",
+				}},
+				// Stealth the rogue is trained in; Athletics they are not.
+				{Prompt: "rogue-expertise-1/expertise/0/0", Picks: []rules.Slug{
+					"skill-athletics", "skill-stealth",
+				}},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+	s, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatalf("Project() error = %v", err)
+	}
+
+	// Strength 16 is +3. Doubling a proficiency bonus the character has not
+	// got would read +7 here, and would say "expertise" beside it.
+	athletics := s.Skills.BySkill["athletics"]
+	if athletics.Proficiency != rules.NotProficient {
+		t.Errorf("athletics proficiency = %s, want none: nothing trained it", athletics.Proficiency)
+	}
+	if athletics.Bonus != 3 {
+		t.Errorf("athletics bonus = %+d, want +3", athletics.Bonus)
+	}
+
+	// Dexterity 16 is +3, doubled proficiency at level 1 adds 4.
+	stealth := s.Skills.BySkill["stealth"]
+	if stealth.Proficiency != rules.Expertise {
+		t.Errorf("stealth proficiency = %s, want expertise", stealth.Proficiency)
+	}
+	if stealth.Bonus != 7 {
+		t.Errorf("stealth bonus = %+d, want +7", stealth.Bonus)
+	}
+}
+
+// Passive Perception is 10 plus the Perception bonus, and an untrained
+// character still has one -- their Wisdom modifier.
+//
+// This was wrong for every such character. Perception was absent from the map
+// unless something trained it, the lookup returned the zero value, and the
+// Wisdom modifier was silently dropped: the sheet read exactly 10 whatever the
+// score. The golden rogue never caught it because the acolyte background makes
+// them Perception-proficient.
+func TestProjectPassivePerceptionWithoutTheProficiency(t *testing.T) {
+	// A rogue who answered no proficiency prompts, with Wisdom 12 for +1.
+	s := skillLog(t)
+
+	if got := s.Skills.BySkill[perceptionSkill]; got.Proficiency != rules.NotProficient {
+		t.Fatalf("perception proficiency = %s, want none", got.Proficiency)
+	}
+	if got := s.Skills.BySkill[perceptionSkill].Bonus; got != 1 {
+		t.Fatalf("perception bonus = %+d, want +1", got)
+	}
+	if s.Status.PassivePerception != 11 {
+		t.Errorf("passive Perception = %d, want 11", s.Status.PassivePerception)
+	}
+}
+
 func TestProjectRogueTraitsFeaturesAndSenses(t *testing.T) {
 	s := rogueSheet(t)
 

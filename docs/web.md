@@ -456,7 +456,7 @@ well have several -- rather than controls, and editing one would drive the same
 machinery that cannot take one. `domain/stages.ts` is the single line that
 reverses all of this on the day it works.
 
-## The sheet decides what order the abilities come in
+## The sheet decides what order things come in
 
 `features/character/CharacterSheetScreen` prints ability scores and saving
 throws as a sheet does -- STR, DEX, CON, INT, WIS, CHA -- and it has to impose
@@ -465,14 +465,136 @@ slug and a Go map serialises its keys sorted, so a screen that walks the
 response as it came prints CHA first. The order lives in `domain/format.ts` as
 `ABILITY_ORDER`, and anything drawing more than one ability in sequence walks
 it through `abilitiesInOrder` rather than walking the response -- the ability
-scores form's six inputs included. Walking a fixed list against a projection that
-may not match it decides two things: a slug the response omits draws nothing,
-since a blank card claiming a score that is not there is worse than a row of
-five; a slug the six do not cover is kept and drawn last rather than filtered
-out, since an unrecognised ability means the server and this client disagree
-about the game, which is a thing to see rather than a thing to hide. The skills
-beside them stay alphabetical on purpose: there are eighteen in no traditional
-order, so the alphabet is the only sequence a reader can search.
+scores form's six inputs included. Walking a fixed list against a projection
+that may not match it also keeps a slug the six do not cover, drawn last rather
+than filtered out: an unrecognised ability means the server and this client
+disagree about the game, which is a thing to see rather than a thing to hide.
+
+**The saving throw is drawn inside its ability's card**, under a rule, rather
+than in a panel of its own further down. A save is an ability check the
+character may be trained in, so printing the two a screen apart asked the
+reader to carry a modifier between them, and the separate panel spent six rows
+repeating the six labels the cards had already given. Merged, the two cannot
+fall out of alignment, because there is no second list to align. Training is
+the same `ui/ProficiencyMark` the skills use -- one vocabulary for "you are
+proficient in this" across the whole sheet.
+
+That merge changed what a *missing* ability means, and the change is worth
+stating because the older rule said the opposite. Scores and saving throws are
+two projections and neither promises all six keys. The cards used to be driven
+by the scores alone, and an ability with no score drew nothing at all -- a
+blank card claiming a score that is not there being worse than a row of five.
+Now that the card is the only place either projection is drawn, dropping it
+would swallow a save the server did send. So the grid walks the **union** of
+the two (`abilitiesOnSheet`), and a card with no score prints a dash where the
+modifier goes and still prints its save. It claims nothing it was not sent, and
+hides nothing it was.
+
+Above them, `features/character/IdentityTable` says who the character is as
+labelled pairs -- name, race, subrace, level, class, subclass, background,
+experience. The sheet used to say this in one dimmed line under the name ("Elf
+· Wizard 1"), which reads well and answers badly: a line has no room for the
+subrace or the subclass, and a reader looking for one of them has to know the
+order it was written in. **Every field is drawn even when empty**, showing
+`--`, because "not chosen yet" is the answer to the question and a missing row
+is not -- on a half-built character the blanks are the most useful thing on the
+page. Names come from the compendium, five session-cached collections flattened
+into one map keyed `"<collection>:<slug>"`; keyed by collection as well as slug
+because two collections may share one, and a bare slug map would let a
+background rename a class. Without it the table falls back to title-casing, and
+"half-elf" becomes "Half Elf" rather than "Half-Elf".
+
+Under the cards is a second headline row, `features/character/Vitals`: passive
+Perception, the spellcasting numbers, speed, vision and Hit Dice. Four of those
+five were being projected and drawn nowhere at all -- speed and senses were on
+every sheet the server sent and on none it showed, and Hit Dice sat in
+"Resources and gear" beside the backpack, which is the wrong shelf: it is a
+fact about the body, not about the kit. It is drawn in one place now, not two.
+
+**Three lines of six**, the width of the ability row, so every character's
+sheet puts a number in the same place and a reader never hunts for one. The
+line breaks are meaning rather than wrapping: abilities, then the body's state
+-- hit points, the temporary pool on top of them, the Hit Dice that refill
+them, then armor class, initiative and proficiency -- then what the character
+can do at range. Hit points, temporary hit points and Hit Dice lead the second
+line together because they are one subject, and reading them apart means asking
+the same question three times.
+
+**A caster gets three cards, not one** -- attack bonus, save DC and the ability
+behind both are three questions asked at three different moments, and a spell
+that attacks never wants the DC. A character who casts nothing keeps all three
+and reads `n/a`, because a row that changes length between characters costs
+more than three quiet cards.
+
+The two absences are deliberately different words. **`n/a` is "this does not
+apply to you"** -- a barbarian has no spell save DC. **`--` is "this applies
+and is not known here"**, which is what an unset speed is. Neither is a zero,
+because `0 ft.` is a claim and temporary hit points of nought is a real answer
+that has to stay distinguishable from both. The sense names its own card --
+"Darkvision / 60 ft.", because "Vision / 60 ft." says less and the label is the
+half with room for the word.
+
+The skills beside them are a different case, and they used to be alphabetical
+for a reason that has since expired. `features/character/SkillsPanel` draws
+**all eighteen**, ordered by how trained the character is — Expertise, then
+proficient, then half, then untrained, alphabetical within each block. When the
+panel listed only the six a character was proficient in, the alphabet was the
+only sequence a reader could search. Eighteen rows of which six matter is a
+different problem: the question is what the character is good at, and the
+answer should not be scattered down a list of things nothing trained. The
+alphabet still breaks ties, so each block stays stable and searchable.
+
+It draws eighteen rows because the **server sends eighteen**, not because the
+client fills in the gaps. The untrained skills arrive with their bonuses
+already computed (see [dnd.md](dnd.md#the-projected-sheet)); this panel adds
+nothing up. Unioning the sheet against the compendium and adding an ability
+modifier here would be the browser computing a rule, which
+[`domain/format.ts`](../web/src/domain/format.ts) exists to forbid — and it
+would be wrong the day Jack of All Trades starts halving a bonus.
+
+What the compendium *is* asked for is each skill's **name and governing
+ability**, fetched with the session-cached `getCollection('skills')`. The name
+matters twice: it is in the negotiated locale, and it is the only spelling that
+gets "Sleight of Hand" right, where title-casing the slug capitalises the "Of".
+That request failing costs the ability tags and falls the names back to the
+slug; it does not stop the panel drawing, on the same reasoning as the prompts
+fetch above.
+
+Training level is carried by a mark — `ui/ProficiencyMark`, one glyph filling
+in across the four levels, with Expertise ringed rather than merely fuller
+because it is the bonus counted twice rather than more training. The mark is
+what separates the rows, and the dimming of untrained ones is a **second**,
+redundant channel: a panel distinguishing eighteen rows by a shade of grey
+reads to nobody on a monochrome print and to nobody who cannot tell the two
+greys apart. A "Hide untrained" toggle collapses to the trained rows; it starts
+showing everything, since that is the point of the panel, and is not persisted.
+It is drawn as the section's [`aside`](#two-views-one-codebase) rather than
+inside the body, which is why `CharacterSheetScreen` rather than `SkillsPanel`
+holds the flag it flips.
+
+Skills stays at half width rather than spreading now that the saving throws
+have moved up into the ability cards: its rows are name, ability and bonus, and
+a full page width would set the bonus so far from the name that the eye travels
+back along an empty line to pair them. **`features/character/ProficienciesPanel`
+takes the half beside it** -- everything the character is trained with that is
+not a skill or a save, grouped into Tools, Weapons and Armor. It used to be one
+comma-joined paragraph at the foot of "Traits and features", which is a
+sentence to be read rather than a list to be searched, and which filed a tool a
+player rolls with beside a racial trait they never touch again. It is drawn in
+one place now, not two.
+
+**The bonus is printed on tools and on nothing else**, and the reason is worth
+stating because it looks arbitrary. A tool check is an ability check, but
+*which* ability depends on what is being attempted -- picking a lock with
+thieves' tools is Dexterity, spotting a forgery with a forgery kit is
+Intelligence -- so the only part of the number fixed in advance is the
+proficiency bonus, which is exactly what a sheet can usefully print. A weapon's
+attack roll has a fixed ability, so a bare proficiency bonus would be the less
+useful half of a number this panel is not showing; armor proficiency adds
+nothing to any roll at all, and only stops the penalties. Nothing is computed
+here either: the number is `status.proficiencyBonus` as the server derived it,
+and the *type* that decides which rows get it comes from the compendium, via
+the same session-cached `getCollection` the skill names come from.
 
 The stat row above leads with hit points, then armor class, initiative and
 proficiency. Hit points are the one number that moves between one glance and
@@ -852,6 +974,17 @@ differs inside a `@/ui` primitive rather than at the call site:
 | `TabRow` | tab strip, actions right | the same, scrolled sideways |
 | `BlockList` | a list of blocks, one open | the same |
 
+A `Columns` section may carry an **`aside`** -- a control belonging to the panel
+as a whole, drawn on the title's line rather than as the first row of the body.
+The skills filter is the case it was added for: as content it left a whole panel
+width of empty title bar above it. The mobile rendering is the interesting half.
+`Accordion.Control` *is* a button, so an aside nested inside it would be a
+button within a button -- invalid markup, and the outer control swallows the
+press. It is therefore a sibling of the control rather than a child, the control
+flexing and the aside keeping its width. Because the two live in different
+subtrees from the content they act on, state an aside toggles belongs to the
+screen that builds the sections, not to the panel component.
+
 `TabRow` and `BlockList` are the ones whose two renderings are **identical
 markup**. The others genuinely swap components at the breakpoint; `TabRow` is a
 `ScrollArea type="never"` that is simply inert at a width the tabs fit in, so
@@ -924,6 +1057,20 @@ colours as literals rather than `currentColor` (it carries its own field, which
 is what makes it read under `defaultColorScheme="auto"`), and `role="img"` with
 a real accessible name rather than `aria-hidden`, because on a page with no
 text the mark is the only thing naming the app.
+
+`ui/ProficiencyMark` is the second, and it keeps the half of that convention
+worth keeping while inverting the other two -- which is the useful thing to
+know about drawing an SVG here, because the reasons are what generalise, not
+the choices. It is **announced**, like DragonMark. But it is drawn in
+`currentColor`, because it sits inline in a row of text and has to dim when the
+row dims; a literal would make it the one thing on the row ignoring both the
+row and the colour scheme. And it is named with `aria-label` rather than a
+`<title>` child, because a `<title>` is a text node: eighteen of these share
+the skills panel, whose rows are read as text, and "Stealth DEX +7" must not
+come back with a sentence about proficiency bonuses in the middle of it. The
+rule behind all three: a mark carrying a page keeps its own colours and can
+afford a `<title>`; a mark riding inside text takes the text's colour and stays
+out of its content.
 
 `/account` is where both inventories live -- passkeys and connected providers --
 and where connecting and disconnecting happen. It shows each of them only when

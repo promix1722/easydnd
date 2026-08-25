@@ -519,9 +519,7 @@ func (p *projector) applyAbilityScoreImprovements() {
 // deriveProficiencies sorts every granted proficiency into the place that can
 // use it: a skill, a saving throw, or the sheet's "other proficiencies" list.
 func (p *projector) deriveProficiencies() {
-	if p.state.Skills.BySkill == nil {
-		p.state.Skills.BySkill = make(map[rules.Slug]SkillState)
-	}
+	p.seedSkills()
 	for _, slug := range p.proficiencies {
 		def, ok := p.cat.Proficiencies.Get(slug)
 		if !ok {
@@ -544,7 +542,15 @@ func (p *projector) deriveProficiencies() {
 		if def, ok := p.cat.Proficiencies.Get(slug); ok && def.Reference.Kind == rules.RefSkill {
 			skill = def.Reference.Slug
 		}
-		if _, known := p.state.Skills.BySkill[skill]; known {
+		// Presence in the map is not the question -- seedSkills put every
+		// skill in it. Expertise doubles a proficiency bonus, so there has to
+		// be one, and the level is the only thing that says so.
+		//
+		// Phrased as holds() in prompts.go phrases the same question, down to
+		// the operator: that is what decides which skills the prompt offers,
+		// and a projector that then declined one of them would be a second
+		// opinion about the same rule.
+		if p.state.Skills.BySkill[skill].Proficiency != rules.NotProficient {
 			p.setSkill(skill, rules.Expertise)
 		}
 	}
@@ -553,6 +559,31 @@ func (p *projector) deriveProficiencies() {
 func abilityOfRef(ref rules.Ref) rules.Ability {
 	ability, _ := rules.ParseAbility(ref.Slug.String())
 	return ability
+}
+
+// seedSkills puts every skill in the compendium on the sheet, untrained.
+//
+// A sheet that lists only the skills something trained is the wrong sheet to
+// read at a table: the question asked most often is what to roll for a skill
+// the character has *no* training in, and that is exactly the row such a sheet
+// omits. Seeding here rather than filling the gaps in each client keeps the
+// rules in one place -- a browser adding the ability modifier itself would be
+// a second implementation to disagree, and it would be wrong the day Jack of
+// All Trades starts halving a bonus.
+//
+// The zero SkillState is NotProficient with no bonus; deriveStatus computes
+// every Bonus afterwards, so an untrained skill ends up at the bare ability
+// modifier. This runs before any grant because setSkill only ever raises a
+// level, so seeding cannot lower one.
+func (p *projector) seedSkills() {
+	if p.state.Skills.BySkill == nil {
+		p.state.Skills.BySkill = make(map[rules.Slug]SkillState, p.cat.Skills.Len())
+	}
+	for _, slug := range p.cat.Skills.Slugs() {
+		if _, known := p.state.Skills.BySkill[slug]; !known {
+			p.state.Skills.BySkill[slug] = SkillState{}
+		}
+	}
 }
 
 func (p *projector) setSkill(skill rules.Slug, level rules.Proficiency) {
@@ -643,6 +674,11 @@ func (p *projector) deriveStatus() {
 	dexModifier := p.state.Abilities.Modifier(rules.Dexterity)
 	p.state.Status.ArmorClass = armorClass(p.state.Equipment.Equipped, p.cat, dexModifier)
 	p.state.Status.Initiative = dexModifier
+	// Reads the Perception bonus rather than recomputing it, which is what
+	// makes this right for a character nothing trained in Perception: the
+	// skill is on the sheet either way now, carrying the bare Wisdom
+	// modifier. It used to read a missing key and quietly drop that modifier,
+	// so every untrained character had passive Perception exactly 10.
 	p.state.Status.PassivePerception = 10 + p.state.Skills.BySkill[perceptionSkill].Bonus
 
 	slots, pact := spellSlots(p.cat, p.state.Identity.Classes)

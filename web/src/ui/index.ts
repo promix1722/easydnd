@@ -72,6 +72,8 @@ export { DragonMark } from './DragonMark'
 export type { DragonMarkProps } from './DragonMark'
 export { ModalSheet } from './ModalSheet'
 export type { ModalSheetProps } from './ModalSheet'
+export { ProficiencyMark } from './ProficiencyMark'
+export type { ProficiencyLevel, ProficiencyMarkProps } from './ProficiencyMark'
 export { TabRow } from './TabRow'
 export type { TabRowProps, TabRowTab } from './TabRow'
 
