@@ -37,6 +37,7 @@ export type {
   Manifest,
   Option,
   OptionSet,
+  Proficiency as CatalogProficiency,
   Race,
   Skill as CatalogSkill,
   Spell,
@@ -51,6 +52,7 @@ export {
   appendEvents,
   copyCharacter,
   createCharacter,
+  createStubCharacter,
   deleteCharacter,
   deleteEvent,
   getEvents,
@@ -75,6 +77,7 @@ export type {
   ImportEntry,
   ImportReport,
   ImportResponse,
+  Identity,
   LostAnswer,
   NewCharacter,
   Prompt,
@@ -110,3 +113,20 @@ export type {
   InviteLink,
   InvitePreview,
 } from './groups'
+
+// Games. A game is one sitting run by a DM at a group's table -- never a
+// "session", which in this barrel means signing in.
+export {
+  addToGame,
+  createGame,
+  deleteGame,
+  getGame,
+  getSharedSheet,
+  listGames,
+  listTable,
+  removeFromGame,
+  renameGame,
+  shareCharacter,
+  unshareCharacter,
+} from './games'
+export type { GameDetail, GameSummary, TableCharacter } from './games'

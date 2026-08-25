@@ -17,9 +17,16 @@ var _ catalog.Source = (*file.Source)(nil)
 // dataDir is the committed compendium, four levels up from this package.
 func dataDir() string { return filepath.Join("..", "..", "..", "..", "data", "srd_5.1") }
 
+// loadSource is shared by every test in this package, because Source.Load
+// caches per locale and a fresh Source per call throws that cache away. One
+// load reads and converts 1.55 MB of JSON; this package alone asked for
+// thirteen of them. Sharing is safe for exactly the reason the cache is: a
+// Catalog is immutable, and Load is mutex-guarded (see source.go).
+var loadSource = file.NewSource(dataDir())
+
 func load(t *testing.T, locale rules.Locale) *catalog.Catalog {
 	t.Helper()
-	c, err := file.NewSource(dataDir()).Load(context.Background(), locale)
+	c, err := loadSource.Load(context.Background(), locale)
 	if err != nil {
 		t.Fatalf("Load(%q) error = %v", locale, err)
 	}

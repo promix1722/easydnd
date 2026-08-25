@@ -16,7 +16,10 @@ export interface Resource<T> {
   data: T | null
   error: string | null
   loading: boolean
+  /** Ask again from nothing: the screen has no answer and says so. */
   reload: () => void
+  /** Ask again behind what is already on screen. See below. */
+  refresh: () => void
 }
 
 /**
@@ -27,7 +30,7 @@ export interface Resource<T> {
  * returns the new sheet in its response, so there is no cache to invalidate --
  * the response *is* the invalidation. A query library earns its keep when many
  * components read overlapping queries with independent lifetimes, and here one
- * screen owns one character. Revisit if a party view ever renders six.
+ * screen owns one character. Revisit if a character list ever renders six.
  *
  * `key` identifies what is being fetched, e.g. `sheet:chr_000001`. Changing it
  * aborts the request in flight and starts a new one. It is a string rather
@@ -63,6 +66,25 @@ export function useResource<T>(key: string, fetcher: (signal: AbortSignal) => Pr
     setAttempt((n) => n + 1)
   }, [])
 
+  /**
+   * Fetches again without taking down what is on screen.
+   *
+   * The difference is not cosmetic. `reload` is for a screen that has no
+   * answer -- a first load, a retry after a failure -- and blanking it is
+   * honest. A refresh follows a write the server has already confirmed: the
+   * screen knows what happened, it is only catching up on what else changed,
+   * and clearing it would replace a list somebody is reading with a spinner
+   * and then rebuild it underneath them.
+   *
+   * The outcome stays `ready`, so this does not reintroduce the state the
+   * union exists to rule out: a *failed* refresh still takes the screen down
+   * to its error, because data that is quietly out of date is worse than a
+   * screen that says it could not check.
+   */
+  const refresh = useCallback(() => {
+    setAttempt((n) => n + 1)
+  }, [])
+
   useEffect(() => {
     const controller = new AbortController()
 
@@ -87,5 +109,6 @@ export function useResource<T>(key: string, fetcher: (signal: AbortSignal) => Pr
     error: outcome.kind === 'failed' ? outcome.error : null,
     loading: outcome.kind === 'loading',
     reload,
+    refresh,
   }
 }

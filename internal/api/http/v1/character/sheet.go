@@ -18,5 +18,5 @@ func (h *Handler) Sheet(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, sheetOf(state))
+	c.JSON(http.StatusOK, SheetOf(state))
 }

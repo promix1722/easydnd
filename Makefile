@@ -97,9 +97,29 @@ build/release:
 run/server: $(if $(SLOT),config/dev)
 	go run -ldflags "$(LDFLAGS)" $(CMD) -config $(if $(SLOT),$(DEV_RUN_CONFIG),$(DEV_CONFIG))
 
-## test/unit: run the test suite with the race detector
+## test/unit: run the test suite (~4s)
+# No -race here, and that is a deliberate trade rather than an oversight: the
+# detector costs roughly 9s against 4s, and it used to cost 46s against 10s
+# before the compendium sharing below. A gate slow enough to be worth skipping
+# stops being a gate, and since nothing runs on main this is the only one there
+# is.
+#
+# The detector is not gone, it has moved off the path everybody walks. Run
+# `make test/race` before tagging. See docs/backend.md#tests.
 test/unit:
-	go test -race ./...
+	go test ./...
+
+## test/race: the whole suite under the race detector (~9s) -- not in `verify`
+# atexit_sleep_ms=0 is most of why this is nine seconds and not twenty-five.
+# The race runtime sleeps a full second at the exit of every test binary by
+# default, which across sixteen test packages is sixteen seconds of an idle
+# machine. What the sleep buys is a last chance to check a goroutine still
+# running when main returns; nothing here leaves one, because the HTTP tests
+# drive httptest in-process and synchronously and internal/app -- which owns
+# the only real server lifecycle -- has no tests at all. A race *during* a test
+# is reported exactly as it was before, which is what this target is for.
+test/race:
+	GORACE=atexit_sleep_ms=0 go test -race ./...
 
 ## db/up: start this worktree's Postgres, for development and the adapter tests
 # -p is what keeps worktrees apart: it overrides the compose file's own `name`,
@@ -133,7 +153,7 @@ db/psql:
 # a global TRUNCATE mean the packages have to take turns; only this target
 # pays for it, because everywhere else those tests skip.
 test/db:
-	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test -race -p 1 ./...
+	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test -p 1 ./...
 
 ## config/dev: write the generated development config for this worktree
 # Written whole rather than appended to config.dev.yaml, because a slot needs
@@ -219,7 +239,7 @@ ports:
 
 ## test/cover: run tests and summarise coverage
 test/cover:
-	go test -race -coverprofile=coverage.out ./...
+	go test -coverprofile=coverage.out ./...
 	go tool cover -func=coverage.out | tail -1
 
 ## data/srd: regenerate data/srd_5.1 from the vendored SRD dump
@@ -308,7 +328,7 @@ clean:
 # the address you reach it on.
 	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist $(DEV_RUN_CONFIG)
 
-.PHONY: help build/server build/release run/server run/db test/unit test/cover \
+.PHONY: help build/server build/release run/server run/db test/unit test/race test/cover \
         dev dev/up dev/down slots ports config/dev \
         db/up db/down db/psql test/db \
         data/srd data/srd/check \

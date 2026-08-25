@@ -111,5 +111,5 @@ func (h *Handler) writeResponse(
 		helpers.FormatError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, WriteResponse{Seq: seq, Sheet: sheetOf(sheet)})
+	c.JSON(http.StatusOK, WriteResponse{Seq: seq, Sheet: SheetOf(sheet)})
 }

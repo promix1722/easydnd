@@ -13,20 +13,28 @@
 export type Stage = 'identity' | 'class' | 'race' | 'background' | 'abilities'
 
 /**
- * Display order. Class comes first after the name because it is the choice
- * every other choice hangs off -- a class opens more prompts than a race does,
- * and a player who has picked one can see the shape of the rest.
+ * Display order, which is the order a character is actually built in.
+ *
+ * Class comes first after the name because it is the choice every other choice
+ * hangs off -- a class opens more prompts than a race does, and a player who
+ * has picked one can see the shape of the rest. The scores follow immediately,
+ * because they are what the class was picked *for*: a barbarian wants the 15
+ * in Strength, and deciding that while the class is still the last thing you
+ * looked at is the difference between building a character and filling in a
+ * form. Race and background come after, and change nothing about the numbers
+ * that has not already been decided -- a racial bonus is applied by the rules,
+ * not typed in here.
  */
-export const STAGES = ['identity', 'class', 'race', 'background', 'abilities'] as const satisfies readonly Stage[]
+export const STAGES = ['identity', 'class', 'abilities', 'race', 'background'] as const satisfies readonly Stage[]
 
 /**
  * A stage's label, which is deliberately the stage's own word.
  *
  * The word lives here and appears in exactly one place in the document: the
- * tab. Panels are headed by the question they are asking, sections by "already
- * chosen" and "still to choose", and empty copy names no category at all. That
- * rule is what keeps "race" an unambiguous thing to look for on the page, and
- * it is why this table exists rather than the labels being inlined.
+ * tab. A block is headed by the choice's own name -- "A race" -- or by what
+ * was decided -- "Race chosen" -- and empty copy names no category at all.
+ * That rule is what keeps "race" an unambiguous thing to look for on the page,
+ * and it is why this table exists rather than the labels being inlined.
  */
 export const STAGE_LABELS: Record<Stage, string> = {
   identity: 'identity',

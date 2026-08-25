@@ -263,6 +263,53 @@ func TestHeldOptionsAreReportedNotRemoved(t *testing.T) {
 	}
 }
 
+// Expertise offers only the skills the character is trained in.
+//
+// HeldOnly inverts what Held means -- those are the only legal answers rather
+// than the illegal ones -- so Held is what the Expertise prompt is made of.
+// The projector now puts all eighteen skills on the sheet, untrained ones
+// included, and holds() has to keep reading the training level rather than
+// mere presence: if it ever stopped, this prompt would quietly offer every
+// skill in the game and Expertise would become free.
+func TestExpertiseOffersOnlyTheSkillsAlreadyTrained(t *testing.T) {
+	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
+	var log Log
+	if err := log.Append(
+		Event{Type: EventInit, At: at},
+		Event{Type: EventClass, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 1,
+			Choices: []Answer{
+				{Prompt: "rogue/proficiency/0", Picks: []rules.Slug{
+					"skill-deception", "skill-persuasion", "skill-sleight-of-hand", "skill-stealth",
+				}},
+				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
+					"rogue-expertise-1/expertise/0/0",
+				}},
+			}},
+	); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+
+	prompt := find(t, promptsFor(t, log), "rogue-expertise-1/expertise/0/0")
+	if !prompt.HeldOnly {
+		t.Fatal("the expertise prompt is not heldOnly; Held would read as the illegal answers")
+	}
+	for _, want := range []rules.Slug{"skill-stealth", "skill-persuasion"} {
+		if !slices.Contains(prompt.Held, want) {
+			t.Errorf("held = %v, want it to include %q", prompt.Held, want)
+		}
+	}
+	// Nothing trained these, so doubling them is not on offer.
+	for _, notHeld := range []rules.Slug{"skill-arcana", "skill-athletics", "skill-perception"} {
+		if slices.Contains(prompt.Held, notHeld) {
+			t.Errorf("held = %v, want it to exclude %q: nothing trained it", prompt.Held, notHeld)
+		}
+	}
+	// The four the class granted, and not one row per skill in the game.
+	if len(prompt.Held) != 4 {
+		t.Errorf("held %d options, want the 4 trained skills: %v", len(prompt.Held), prompt.Held)
+	}
+}
+
 // The subclass prompt appears at the level the compendium says, derived from
 // where the subclass's own advancement rows begin.
 func TestSubclassPromptAppearsWhenDue(t *testing.T) {

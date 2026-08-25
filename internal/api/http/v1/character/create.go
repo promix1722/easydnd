@@ -64,6 +64,6 @@ func (h *Handler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, CreateResponse{
 		ID:    created.ID.String(),
 		Seq:   created.Log.LastSeq(),
-		Sheet: sheetOf(sheet),
+		Sheet: SheetOf(sheet),
 	})
 }

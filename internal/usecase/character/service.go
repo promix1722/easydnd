@@ -25,6 +25,7 @@ type Service struct {
 	folders  domain.FolderRepository
 	catalog  catalog.Source
 	importer SheetImporter
+	sharing  domain.Sharing
 	log      *slog.Logger
 
 	// clock is injected so that an import stamps a time a test can predict.
@@ -44,15 +45,25 @@ type Service struct {
 // The importer may be nil, in which case Import reports that the feature is
 // not configured rather than panicking. That is not a convenience: a build
 // that ships without an importer should fail the one route that needs one, not
-// every route that does not.
+// every route that does not. The sharing port may be nil on the same terms: a
+// build in which nothing can hold a reference to a character has nothing to
+// tell when one is deleted.
 func NewService(
 	repo domain.Repository,
 	folders domain.FolderRepository,
 	source catalog.Source,
 	importer SheetImporter,
+	sharing domain.Sharing,
 	log *slog.Logger,
 ) *Service {
-	return &Service{repo: repo, folders: folders, catalog: source, importer: importer, log: log}
+	return &Service{
+		repo:     repo,
+		folders:  folders,
+		catalog:  source,
+		importer: importer,
+		sharing:  sharing,
+		log:      log,
+	}
 }
 
 // now reads the clock, defaulting to the real one.
@@ -272,9 +283,25 @@ func (s *Service) Truncate(
 }
 
 // Delete removes a character.
+//
+// It comes off every table it was shared with first, then out of the store.
+// That ordering is chosen for what a crash leaves behind, the way
+// DeleteFolder's is: stopping in the middle leaves a character nobody at a
+// table can see any more but which its owner still has, and they can simply
+// try again. The other order would leave rows naming a character that is gone,
+// and though every read skips those, "the cleanup ran" is a worse thing to
+// depend on than "the cleanup ran first".
+//
+// Your character is always yours to delete. Being at somebody's table does not
+// make it theirs, so nothing here consults a group before agreeing.
 func (s *Service) Delete(ctx context.Context, owner domain.OwnerID, id domain.ID) error {
 	if _, err := s.owned(ctx, owner, id); err != nil {
 		return err
+	}
+	if s.sharing != nil {
+		if err := s.sharing.UnshareEverywhere(ctx, id); err != nil {
+			return err
+		}
 	}
 	return s.repo.Delete(ctx, id)
 }

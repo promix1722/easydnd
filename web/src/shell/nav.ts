@@ -1,20 +1,19 @@
 /**
  * The navigation table, declared once and consumed by both shells. Keeping it
  * out of the shell components is what stops the desktop navbar and the mobile
- * tab bar from drifting apart as sections are added.
+ * dropdown from drifting apart as sections are added.
  */
 export interface NavItem {
-  /** Route path, also the tab value. */
+  /** Route path, also the menu item's value. */
   to: string
   label: string
-  /** Short form for the mobile tab bar, where space is measured in characters. */
-  shortLabel?: string
 }
 
 // Account is deliberately absent: it is reached from the top right of both
-// shells, where the signed-in name links to it next to the button that ends
-// the session, rather than being a section of the app -- the whole page is
-// about the identity that header names, which is why the name is the link.
+// shells, where a profile icon links to it next to the one that ends the
+// session, rather than being a section of the app -- the whole page is about
+// the identity that header names, which is why the way in sits beside the way
+// out rather than in this list.
 //
 // So is system status: `/status` is a deploy diagnostic, not a part of the app
 // somebody navigates around, and it renders in the landing chrome for everyone
@@ -25,8 +24,9 @@ export interface NavItem {
 // everyone, and it is reached from the footer that chrome carries. See
 // shell/LandingFooter.tsx.
 export const NAV_ITEMS: readonly NavItem[] = [
-  { to: '/', label: 'Characters', shortLabel: 'Party' },
+  { to: '/', label: 'Characters' },
   { to: '/groups', label: 'Groups' },
+  { to: '/games', label: 'Games' },
 ]
 
 /**
@@ -46,4 +46,21 @@ export function activeNavPath(pathname: string): string | null {
       .map((item) => item.to)
       .at(-1) ?? null
   )
+}
+
+/**
+ * What the mobile dropdown's trigger reads.
+ *
+ * The desktop navbar can leave every entry unlit when `activeNavPath` returns
+ * null -- on a character sheet, on `/account`, on a 404 -- because the list is
+ * still on screen saying where you could go. The dropdown has no such luxury:
+ * it is one control, it is the only thing naming the current place, and a
+ * button with no label is a button nobody presses. So the fallback is the word
+ * for what the control *is* rather than a guess at where you are; lighting
+ * Characters on `/characters/:id` would mean widening `activeNavPath`, and it
+ * is deliberately narrow -- see its note about `/` swallowing everything.
+ */
+export function navLabel(pathname: string): string {
+  const active = activeNavPath(pathname)
+  return NAV_ITEMS.find((item) => item.to === active)?.label ?? 'Menu'
 }

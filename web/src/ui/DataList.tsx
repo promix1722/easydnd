@@ -1,7 +1,16 @@
-import { Card, Stack, Table, Text } from '@mantine/core'
+import { Box, Card, Stack, Table, Text } from '@mantine/core'
 import type { ReactNode } from 'react'
 
 import { useIsDesktop } from './useIsDesktop'
+
+/**
+ * The widest a table gets on desktop.
+ *
+ * Every table here is narrow content -- a name, a rank, a couple of controls --
+ * and letting one span a 2560px monitor puts its first and last cell an eye
+ * movement apart.
+ */
+export const MAX_TABLE_WIDTH = 1024
 
 export interface DataListColumn<T> {
   key: string
@@ -43,28 +52,34 @@ export function DataList<T>({ items, columns, getKey, empty, onSelect }: DataLis
 
   if (isDesktop) {
     return (
-      <Table highlightOnHover={onSelect !== undefined} verticalSpacing="sm">
-        <Table.Thead>
-          <Table.Tr>
-            {columns.map((column) => (
-              <Table.Th key={column.key}>{column.header}</Table.Th>
-            ))}
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {items.map((item) => (
-            <Table.Tr
-              key={getKey(item)}
-              onClick={onSelect ? () => onSelect(item) : undefined}
-              style={onSelect ? { cursor: 'pointer' } : undefined}
-            >
+      // Capped rather than full-bleed: a four-column table stretched across a
+      // 2560px monitor puts its first and last cell an eye movement apart, and
+      // every table in this app is narrow content. Set here so that no screen
+      // has to remember to do it.
+      <Box maw={MAX_TABLE_WIDTH}>
+        <Table highlightOnHover={onSelect !== undefined} verticalSpacing="sm">
+          <Table.Thead>
+            <Table.Tr>
               {columns.map((column) => (
-                <Table.Td key={column.key}>{column.render(item)}</Table.Td>
+                <Table.Th key={column.key}>{column.header}</Table.Th>
               ))}
             </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+          </Table.Thead>
+          <Table.Tbody>
+            {items.map((item) => (
+              <Table.Tr
+                key={getKey(item)}
+                onClick={onSelect ? () => onSelect(item) : undefined}
+                style={onSelect ? { cursor: 'pointer' } : undefined}
+              >
+                {columns.map((column) => (
+                  <Table.Td key={column.key}>{column.render(item)}</Table.Td>
+                ))}
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Box>
     )
   }
 

@@ -1,6 +1,5 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import type { Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
@@ -73,29 +72,13 @@ describe('OutstandingChoices', () => {
     expect(screen.getByText('optional')).toBeInTheDocument()
   })
 
-  it('is a statement rather than a way in when nothing can be opened', () => {
+  it('is a statement rather than a way in', () => {
     renderAt('desktop', <OutstandingChoices prompts={[SKILLS]} />)
 
-    // The sheet renders it read-only: it says what is left, and the way to
-    // answer is the link beside it.
+    // The sheet renders it read-only, and that is the only way it renders: it
+    // says what is left, and the way to answer is the link beside it. The
+    // build screen draws the same choices as blocks that open, because there
+    // they are ways in.
     expect(screen.queryAllByRole('button')).toHaveLength(0)
-  })
-
-  it('opens the choice that was pressed', async () => {
-    const user = userEvent.setup()
-    const onOpen = vi.fn()
-    renderAt('desktop', <OutstandingChoices prompts={[SKILLS, LANGUAGE]} onOpen={onOpen} />)
-
-    await user.click(screen.getByRole('button', { name: /One more language/ }))
-
-    expect(onOpen).toHaveBeenCalledWith(LANGUAGE)
-  })
-
-  it('names no category when there is nothing left', () => {
-    renderAt('desktop', <OutstandingChoices prompts={[]} />)
-
-    // Never "nothing left in race": the category's word lives in its tab and
-    // appears exactly once on the page.
-    expect(screen.getByText('Nothing left here.')).toBeInTheDocument()
   })
 })

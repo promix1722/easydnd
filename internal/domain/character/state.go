@@ -54,6 +54,15 @@ type Identity struct {
 	// order taken; the first is the class the character started as.
 	Classes []ClassLevel
 
+	// Experience is the experience-point total, and it is *recorded* rather
+	// than acted on. Level comes from the log -- a level event is what makes
+	// a character third level -- so nothing here derives a level from this
+	// number and crossing a threshold advances nobody. A table playing
+	// milestones leaves it at zero and loses nothing; a table counting XP has
+	// somewhere to keep the count. Set by a change event, like every other
+	// value no rule computes.
+	Experience int
+
 	// PersonalityTraits, Ideals, Bonds and Flaws are the player's own text,
 	// seeded from the background's suggestions but freely edited. They are
 	// never localized: the player wrote them.
@@ -201,6 +210,12 @@ type SkillState struct {
 }
 
 // Skills maps each skill slug to the character's training in it.
+//
+// Every skill in the compendium is present, not only the trained ones: an
+// untrained skill is a real answer -- NotProficient, at the bare ability
+// modifier -- rather than a missing key. A sheet is read to find out what to
+// roll, and the skills nothing trained are the ones that question is asked
+// about most.
 type Skills struct {
 	BySkill map[rules.Slug]SkillState
 }

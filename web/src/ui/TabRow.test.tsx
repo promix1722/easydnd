@@ -1,9 +1,9 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
+import { setupUser } from '@/test/user'
 
 import { TabRow } from './TabRow'
 
@@ -34,7 +34,15 @@ function structure(html: string): string {
     .replace(/mantine-[a-z0-9]+-/gi, 'mantine-')
 }
 
-describe.each(['mobile', 'desktop'] as const)('TabRow at %s', (viewport) => {
+/**
+ * One viewport, because this file proves it is enough: the last test in it
+ * compares the two renderings byte for byte. `ModalSheet` and `Columns` swap
+ * components at the breakpoint and so need testing twice over; this is one
+ * rendering with a ScrollArea that is inert at a width the tabs fit in.
+ */
+describe('TabRow', () => {
+  const viewport = 'desktop'
+
   it('draws every tab in the order given, and marks the active one', () => {
     renderRow(viewport)
 
@@ -47,7 +55,7 @@ describe.each(['mobile', 'desktop'] as const)('TabRow at %s', (viewport) => {
   })
 
   it('reports the tab that was pressed', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { onChange } = renderRow(viewport)
 
     await user.click(screen.getByRole('tab', { name: 'race' }))

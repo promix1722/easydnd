@@ -184,13 +184,19 @@ jobs:
           go-version: '1.26'
           cache: true
 
-      # make test/unit is `go test -race ./...`, which is what `make verify`
-      # runs; the plain `go test ./...` this replaces missed data races in the
-      # HTTP layer and the stores by construction.
+      # make test/unit is `go test ./...`, which is what `make verify` runs, so
+      # local and CI cannot drift.
+      #
+      # No race detector, here or in `make verify`: it tripled the suite's
+      # runtime and two thirds of that was the race runtime's one-second sleep
+      # at the exit of each of sixteen test binaries. `make test/race` is the
+      # target that still runs it, and the rule is to run it before tagging --
+      # which is to say before this workflow ever starts. See
+      # docs/backend.md#tests for what that gives up.
       #
       # sslmode=disable: the container has no CA, and this also exercises the
       # branch of newPoolConfig that must leave an explicit disable alone.
-      - name: go test -race, against Postgres
+      - name: go test, against Postgres
         env:
           TEST_DATABASE_URL: postgres://easydnd:easydnd@localhost:5432/easydnd_test?sslmode=disable
         run: make test/unit

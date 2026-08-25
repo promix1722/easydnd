@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    /* tsBuildInfoFile alone writes a stub that carries no file signatures, so
+       `tsc -b` re-checked everything every run. */
+    "incremental": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "es2023",
     "lib": ["ES2023"],

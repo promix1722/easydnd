@@ -31,7 +31,7 @@ import {
  */
 export function ImportCharacterScreen() {
   const navigate = useNavigate()
-  // The folder the party list was filtered to when Import was pressed.
+  // The folder the character list was filtered to when Import was pressed.
   const [params] = useSearchParams()
   const folder = params.get('folder') ?? undefined
   const [file, setFile] = useState<File | null>(null)

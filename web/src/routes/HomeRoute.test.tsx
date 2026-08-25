@@ -97,9 +97,14 @@ describe('HomeRoute', () => {
 
   // A guest session is the one case the home page still speaks up about: it
   // ends without warning and takes the characters with it.
-  it('tells a guest their work is not saved', () => {
+  it('does not stand a guest notice over the character list', () => {
     homeAt({ status: 'authenticated', user: testGuest })
 
-    expect(screen.getByText(/You are playing as a guest/i)).toBeInTheDocument()
+    // What a guest session costs belongs where a guest goes to find out about
+    // their account -- /account says it, and the header names the session
+    // beside the button that ends it -- not over the list every time they open
+    // the app.
+    expect(screen.queryByText(/You are playing as a guest/i)).not.toBeInTheDocument()
+    expect(screen.getByText('Characters')).toBeInTheDocument()
   })
 })

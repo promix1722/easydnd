@@ -16,7 +16,8 @@ import type { Folder, Summary } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
-  ActionIcon,
+  ACTION_ICON_SIZE,
+  ACTION_SIZE,
   Alert,
   Anchor,
   Badge,
@@ -24,7 +25,10 @@ import {
   DataList,
   Group,
   Loader,
-  Menu,
+  IconCopy,
+  IconFolder,
+  IconPlus,
+  IconTrash,
   ModalSheet,
   Select,
   Stack,
@@ -33,11 +37,13 @@ import {
   Title,
 } from '@/ui'
 
+import { StubButton } from './StubButton'
+
 /** The sentinel the folder filter uses for "don't narrow". */
 const ALL = 'all'
 
 /**
- * The party, filed into folders.
+ * The characters, filed into folders.
  *
  * A folder is one account's private filing -- not a group of players. Nothing
  * here is shared with anybody, which is why there is no owner column and no
@@ -45,7 +51,7 @@ const ALL = 'all'
  *
  * This screen holds two resources rather than one, which is the case
  * docs/web.md left open when it said to revisit the no-query-library decision
- * if a party view ever rendered six things. It still does not need one: the
+ * if this list ever rendered six things. It still does not need one: the
  * two reads are independent, every mutation here is followed by an explicit
  * reload of exactly the lists that changed, and there is no cache to go stale
  * in between.
@@ -73,36 +79,15 @@ export function CharacterListScreen() {
 
   const nameOf = (id: string) => folderList.find((f) => f.id === id)?.name ?? 'Unknown folder'
 
+  // Written only by StubButton, which exists only in a development build. The
+  // state is unconditional because it is a hook; what it costs a production
+  // bundle is one string nothing ever sets.
+  const [stubError, setStubError] = useState<string | null>(null)
+
   return (
     <Stack gap="md">
       <Group justify="space-between" align="flex-start">
-        <div>
-          <Title order={2}>Characters</Title>
-          <Text c="dimmed" size="sm">
-            Your party.
-          </Text>
-        </div>
-        <Group gap="xs">
-          <Button
-            variant="default"
-            onClick={() =>
-              void navigate(
-                activeFolder ? `/characters/import?folder=${activeFolder}` : '/characters/import',
-              )
-            }
-          >
-            Import
-          </Button>
-          <Button
-            onClick={() =>
-              void navigate(
-                activeFolder ? `/characters/new?folder=${activeFolder}` : '/characters/new',
-              )
-            }
-          >
-            New character
-          </Button>
-        </Group>
+        <Title order={2}>Characters</Title>
       </Group>
 
       <Group gap="xs" align="flex-end">
@@ -128,6 +113,12 @@ export function CharacterListScreen() {
               Try again
             </Button>
           </Stack>
+        </Alert>
+      )}
+
+      {import.meta.env.DEV && stubError !== null && (
+        <Alert color="red" title="Could not create the stub character">
+          <Text size="sm">{stubError}</Text>
         </Alert>
       )}
 
@@ -202,6 +193,38 @@ export function CharacterListScreen() {
           }
         />
       )}
+
+      {/* Under the table, on the left, like every other way of adding a row. */}
+      <Group gap="xs">
+        <Button
+          size={ACTION_SIZE}
+          variant="light"
+          leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
+          onClick={() =>
+            void navigate(
+              activeFolder ? `/characters/new?folder=${activeFolder}` : '/characters/new',
+            )
+          }
+        >
+          New character
+        </Button>
+        <Button
+          size={ACTION_SIZE}
+          variant="default"
+          onClick={() =>
+            void navigate(
+              activeFolder ? `/characters/import?folder=${activeFolder}` : '/characters/import',
+            )
+          }
+        >
+          Import
+        </Button>
+        {/* Development only, and absent from a production bundle rather than
+            hidden in one: Vite replaces import.meta.env.DEV with a literal, so
+            this folds away and StubButton is eliminated with it. The route it
+            would call is not registered in production either. */}
+        {import.meta.env.DEV && <StubButton folder={activeFolder} onFailed={setStubError} />}
+      </Group>
     </Stack>
   )
 }
@@ -228,35 +251,49 @@ function RowActions({
 
   return (
     <>
-      <Menu position="bottom-end" withinPortal>
-        <Menu.Target>
-          <ActionIcon variant="subtle" aria-label={`Actions for ${label}`}>
-            ...
-          </ActionIcon>
-        </Menu.Target>
-        <Menu.Dropdown>
-          <Menu.Item
-            onClick={() => {
-              setTarget(character.folder)
-              setMoving(true)
-            }}
-          >
-            Move...
-          </Menu.Item>
-          <Menu.Item
-            onClick={() => {
-              void copy.run(character.id).then((made) => {
-                if (made !== null) onChanged()
-              })
-            }}
-          >
-            Copy
-          </Menu.Item>
-          <Menu.Item color="red" onClick={() => setDeleting(true)}>
-            Delete
-          </Menu.Item>
-        </Menu.Dropdown>
-      </Menu>
+      {/* Spelled out rather than folded into a menu, so a row's actions read
+          the same way every other table's do -- and so that what you can do to
+          a character is visible without opening anything.
+          Each carries the row's name as its accessible name: a table of these
+          is otherwise a column of buttons all called "Delete", which is
+          ambiguous to a screen reader and to a test alike. */}
+      <Group gap="xs" wrap="nowrap">
+        <Button
+          size={ACTION_SIZE}
+          variant="subtle"
+          leftSection={<IconFolder size={ACTION_ICON_SIZE} />}
+          aria-label={`Move ${label}`}
+          onClick={() => {
+            setTarget(character.folder)
+            setMoving(true)
+          }}
+        >
+          Move
+        </Button>
+        <Button
+          size={ACTION_SIZE}
+          variant="subtle"
+          leftSection={<IconCopy size={ACTION_ICON_SIZE} />}
+          aria-label={`Copy ${label}`}
+          onClick={() => {
+            void copy.run(character.id).then((made) => {
+              if (made !== null) onChanged()
+            })
+          }}
+        >
+          Copy
+        </Button>
+        <Button
+          size={ACTION_SIZE}
+          variant="subtle"
+          color="red"
+          leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
+          aria-label={`Delete ${label}`}
+          onClick={() => setDeleting(true)}
+        >
+          Delete
+        </Button>
+      </Group>
 
       <ModalSheet opened={moving} onClose={() => setMoving(false)} title={`Move ${label}`}>
         <Stack gap="md">

@@ -89,10 +89,12 @@ Recorded rather than quietly carried:
   remains is that the footer is on the *landing* chrome alone: `/`, `/login`,
   `/status` and `/legal`. A signed-in visitor, who is the one actually reading
   SRD-derived material on a character sheet, has no link to it from anywhere.
-  `MobileShell` spends its only `AppShell.Footer` slot on the tab bar, so
-  closing this means either a footer in `DesktopShell` and something else on
-  phones, or an "About" entry beside the account link in both signed-in headers.
-  Open.
+  This used to be a layout that forbade it: `MobileShell` spent its only
+  `AppShell.Footer` slot on the tab bar. That bar became a dropdown in the
+  header, so the slot is free and both signed-in shells could now carry a
+  footer -- closing this is a decision nobody has made rather than a thing that
+  cannot be done. Either a footer in both shells, or an "About" entry beside
+  the account icon. Open.
 - **The English prose is sourced from the OGL-declared dump.** Both mechanics and
   prose currently come from `5e-bits/5e-database` (`src/2014/en`). The mechanics
   -- dice, ranges, bonuses, slot tables -- are facts and carry thin copyright;

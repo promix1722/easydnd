@@ -33,10 +33,14 @@ import (
 //   - the background is Urchin, which SRD 5.1 does not publish, so it is
 //     reported rather than substituted.
 
+// One Source for this test package: Source.Load caches per locale, so the
+// compendium is read once rather than once per test. Safe because a Catalog is
+// immutable and Load is mutex-guarded (see catalog/file/source.go).
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "data", "srd_5.1"))
+
 func loadCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
-	dir := filepath.Join("..", "..", "..", "..", "data", "srd_5.1")
-	c, err := catalogfile.NewSource(dir).Load(context.Background(), rules.DefaultLocale)
+	c, err := catalogSource.Load(context.Background(), rules.DefaultLocale)
 	if err != nil {
 		t.Fatalf("loading the compendium: %v", err)
 	}

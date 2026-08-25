@@ -1,8 +1,29 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
+import { configure } from '@testing-library/react'
+
+import { resetCatalogCache } from '@/lib/api'
 import { resetViewport } from './viewport'
+
+/**
+ * Five seconds rather than the default one.
+ *
+ * This buys nothing on a passing run and is not a speed setting: waitFor runs
+ * its callback once, synchronously, before it ever waits (wait-for.js:84), so
+ * an assertion that is going to pass resolves on that first check whatever the
+ * timeout says. What the number decides is how long a *starved* test waits
+ * before giving up -- and a one-second budget is short enough that a loaded CI
+ * runner fails tests that have nothing wrong with them. That is the shape of
+ * the intermittent `web checks` failure that has blocked tag deploys: under CPU
+ * pressure the first to go were BuildScreen and AbilityScoresForm, the two
+ * files that drive the most interactions.
+ *
+ * The cost is paid only by genuine failures, which now take up to five seconds
+ * to report instead of one.
+ */
+configure({ asyncUtilTimeout: 5000 })
 
 /**
  * jsdom has no layout engine, so it ships neither observer the UI depends on --
@@ -55,7 +76,24 @@ globalThis.IntersectionObserver ??= NoIntersectionObserver
  */
 Element.prototype.scrollIntoView ??= function scrollIntoView(): void {}
 
+/**
+ * Everything one test file can leave behind for the next one.
+ *
+ * This matters more than it looks, because the suite does not isolate test
+ * files from each other -- see the `test` block in vite.config.ts. One module
+ * registry and one jsdom are shared by every file a worker runs, which is most
+ * of why the suite is fast and all of why this hook matters: it is the only
+ * thing standing between that and a test passing because of what ran before it.
+ *
+ * The list is short because there is very little module-level mutable state in
+ * src/: the catalogue's in-flight request cache and the viewport width. Add to
+ * it when you add to those.
+ */
 afterEach(() => {
   cleanup()
   resetViewport()
+  // Fifteen test files stub a global; fourteen of them unstub it. Doing it
+  // here means a file that forgets cannot reach the next one.
+  vi.unstubAllGlobals()
+  resetCatalogCache()
 })

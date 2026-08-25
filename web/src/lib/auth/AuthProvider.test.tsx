@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 
 import {
   dismissed,
@@ -11,6 +10,7 @@ import {
 
 import { AuthProvider } from './AuthProvider'
 import { useAuth } from './state'
+import { setupUser } from '@/test/user'
 
 function respond(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -112,7 +112,7 @@ describe('AuthProvider', () => {
     renderProvider()
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
 
-    await userEvent.click(screen.getByRole('button', { name: 'sign out' }))
+    await setupUser().click(screen.getByRole('button', { name: 'sign out' }))
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
   })
 
@@ -155,7 +155,7 @@ describe('AuthProvider', () => {
     renderProvider()
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
-    await userEvent.click(screen.getByRole('button', { name: 'guest' }))
+    await setupUser().click(screen.getByRole('button', { name: 'guest' }))
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
     expect(screen.getByTestId('user')).toHaveTextContent('Guest')
@@ -189,7 +189,7 @@ describe('AuthProvider', () => {
     renderProvider()
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
-    await userEvent.click(screen.getByRole('button', { name: 'guest' }))
+    await setupUser().click(screen.getByRole('button', { name: 'guest' }))
 
     await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('-'))
     expect(screen.getByTestId('status')).toHaveTextContent('anonymous')
@@ -291,7 +291,7 @@ describe('AuthProvider', () => {
 
     renderProvider()
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
-    await userEvent.click(screen.getByRole('button', { name: 'passkey' }))
+    await setupUser().click(screen.getByRole('button', { name: 'passkey' }))
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
     expect(screen.getByTestId('user')).toHaveTextContent('Alice')
@@ -316,7 +316,7 @@ describe('AuthProvider', () => {
 
     renderProvider()
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
-    await userEvent.click(screen.getByRole('button', { name: 'passkey' }))
+    await setupUser().click(screen.getByRole('button', { name: 'passkey' }))
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
     expect(called(fetchMock, '/v1/auth/register/begin')).toBe(true)
@@ -351,7 +351,7 @@ describe('AuthProvider', () => {
 
     renderProvider()
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
-    await userEvent.click(screen.getByRole('button', { name: 'passkey' }))
+    await setupUser().click(screen.getByRole('button', { name: 'passkey' }))
 
     await waitFor(() => expect(screen.getByTestId('error')).not.toHaveTextContent('-'))
     expect(screen.getByTestId('status')).toHaveTextContent('anonymous')

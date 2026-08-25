@@ -82,6 +82,19 @@ describe('LandingPage', () => {
     expect(screen.getByRole('button', { name: 'Previous slide' })).toBeInTheDocument()
   })
 
+  // And not drawn at all on a phone, which is the viewport they are least use
+  // on: they cover the panel they sit over to duplicate a swipe the screen
+  // already offers. The indicators still say how many panels there are.
+  it('draws no arrows on a touchscreen', () => {
+    renderAt('mobile', <LandingPage />)
+
+    expect(screen.queryByRole('button', { name: 'Next slide' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Previous slide' })).not.toBeInTheDocument()
+    // The panels are still reachable -- this removes a control, not a way
+    // through.
+    expect(screen.getByRole('region', { name: 'What easydnd is for' })).toBeInTheDocument()
+  })
+
   // Only the first of the three works end to end, so none of them is a door:
   // a carousel where one panel navigates and two do not teaches the wrong
   // thing about the app. The header's "Log in" is the only control, and the

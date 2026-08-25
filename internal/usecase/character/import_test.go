@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	"github.com/promix1722/easydnd/internal/adapter/sheet/hexsheet"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
@@ -24,12 +23,11 @@ import (
 // real importer can answer.
 func newImportingService(t *testing.T) *charuc.Service {
 	t.Helper()
-	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
 	return charuc.NewService(
 		memory.NewCharacterRepository(),
 		memory.NewFolderRepository(),
-		catalogfile.NewSource(dir),
-		hexsheet.NewImporter(),
+		catalogSource,
+		hexsheet.NewImporter(), nil,
 		slog.New(slog.DiscardHandler),
 	)
 }
@@ -165,10 +163,9 @@ func TestImportRejectsRubbish(t *testing.T) {
 // A service built without an importer answers the one route that needs it,
 // rather than panicking somewhere deeper.
 func TestImportWithoutAnImporter(t *testing.T) {
-	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
 	s := charuc.NewService(
 		memory.NewCharacterRepository(),
-		memory.NewFolderRepository(), catalogfile.NewSource(dir), nil,
+		memory.NewFolderRepository(), catalogSource, nil, nil,
 		slog.New(slog.DiscardHandler),
 	)
 	_, _, err := s.Import(context.Background(), "owner-1", "",

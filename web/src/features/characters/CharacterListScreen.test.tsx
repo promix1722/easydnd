@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { CharacterListScreen } from './CharacterListScreen'
 
@@ -18,6 +18,8 @@ import { CharacterListScreen } from './CharacterListScreen'
 
 const DEFAULT_FOLDER = { id: 'fld_000001', name: 'Default', default: true }
 const CAMPAIGN = { id: 'fld_000002', name: 'Campaign', default: false }
+
+const STUB_ID = 'chr_000009'
 
 const ADA = { id: 'chr_000001', folder: DEFAULT_FOLDER.id, name: 'Ada', level: 3, classes: [] }
 const BRAM = { id: 'chr_000002', folder: CAMPAIGN.id, name: 'Bram', level: 1, classes: [] }
@@ -48,6 +50,9 @@ function mockApi() {
         return json({ folders: [DEFAULT_FOLDER, CAMPAIGN] })
       }
       if (url.includes('/copy')) return json({ id: 'chr_000003', seq: 2, sheet: {} }, 201)
+      // Ahead of the catch-all below: the stub answers with a character, not
+      // the 204 every other write on this screen returns.
+      if (url.includes('/v1/characters/stub')) return json({ id: STUB_ID, seq: 9, sheet: {} }, 201)
       if ((init?.method ?? 'GET') !== 'GET') return json(null, 204)
       if (url.includes(`folder=${CAMPAIGN.id}`)) return json({ characters: [BRAM] })
       if (url.includes(`folder=${DEFAULT_FOLDER.id}`)) return json({ characters: [ADA] })
@@ -64,6 +69,7 @@ function renderList(viewport: 'mobile' | 'desktop') {
         <Route path="/" element={<CharacterListScreen />} />
         <Route path="/characters/new" element={<div>new character screen</div>} />
         <Route path="/characters/import" element={<div>import screen</div>} />
+        <Route path="/characters/:id" element={<div>character sheet</div>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -117,28 +123,12 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     expect(within(rowOf('Bram')).getByText('Campaign')).toBeInTheDocument()
   })
 
-  it('re-fetches with ?folder= when the filter changes', async () => {
-    const user = userEvent.setup()
-    renderList(viewport)
-    await screen.findByText('Ada')
-
-    await user.click(screen.getByRole('combobox', { name: 'Folder' }))
-    await user.click(await screen.findByRole('option', { name: 'Campaign' }))
-
-    await waitFor(() => {
-      expect(requestsTo(`/v1/characters?folder=${CAMPAIGN.id}`)).toHaveLength(1)
-    })
-    expect(await screen.findByText('Bram')).toBeInTheDocument()
-    expect(screen.queryByText('Ada')).not.toBeInTheDocument()
-  })
-
   it('moves a character to another folder', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByLabelText('Actions for Ada'))
-    await user.click(await screen.findByRole('menuitem', { name: 'Move...' }))
+    await user.click(screen.getByRole('button', { name: 'Move Ada' }))
 
     const dialog = await screen.findByRole('dialog')
     await user.click(within(dialog).getByRole('combobox', { name: 'Folder' }))
@@ -152,12 +142,11 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('copies a character', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByLabelText('Actions for Ada'))
-    await user.click(await screen.findByRole('menuitem', { name: 'Copy' }))
+    await user.click(screen.getByRole('button', { name: 'Copy Ada' }))
 
     await waitFor(() => {
       onlyRequestTo(`/v1/characters/${ADA.id}/copy`, 'POST')
@@ -169,12 +158,11 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('confirms before deleting a character', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByLabelText('Actions for Ada'))
-    await user.click(await screen.findByRole('menuitem', { name: 'Delete' }))
+    await user.click(screen.getByRole('button', { name: 'Delete Ada' }))
 
     // Nothing has been sent yet: the dialog is the point.
     expect(requestsTo(`/v1/characters/${ADA.id}`).filter((c) => c.method === 'DELETE')).toHaveLength(
@@ -191,7 +179,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('creates a folder', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -208,7 +196,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   // The whole reason this dialog exists. Deleting a folder destroys the
   // characters in it, so the confirmation has to say how many.
   it('names the character count before deleting a folder', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -228,7 +216,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   // The default folder is the one an account is guaranteed to have, so it
   // must not even offer the control.
   it('offers no delete for the default folder', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
@@ -237,5 +225,70 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
 
     expect(within(dialog).getAllByRole('button', { name: 'Rename' })).toHaveLength(2)
     expect(within(dialog).getAllByRole('button', { name: 'Delete' })).toHaveLength(1)
+  })
+})
+
+
+/**
+ * The rest of the screen, at one width.
+ *
+ * The block above stays at both because `DataList` draws a table on a desktop
+ * and cards on a phone, and `ModalSheet` swaps `Modal` for `Drawer` -- the row
+ * actions live inside `DataList`, so anything that presses one belongs up
+ * there. These three touch neither: what they press is the folder `Select` or
+ * a button in the toolbar above the list, and what they assert is the request
+ * that went out. See docs/web.md.
+ */
+describe('CharacterListScreen', () => {
+  const viewport = 'desktop'
+
+  it('re-fetches with ?folder= when the filter changes', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('combobox', { name: 'Folder' }))
+    await user.click(await screen.findByRole('option', { name: 'Campaign' }))
+
+    await waitFor(() => {
+      expect(requestsTo(`/v1/characters?folder=${CAMPAIGN.id}`)).toHaveLength(1)
+    })
+    expect(await screen.findByText('Bram')).toBeInTheDocument()
+    expect(screen.queryByText('Ada')).not.toBeInTheDocument()
+  })
+
+  // The stub is a development convenience, and these two say it behaves like
+  // the buttons beside it rather than like a special case. It renders here
+  // because Vitest runs with import.meta.env.DEV set; that a production bundle
+  // omits it is not something a test in this environment can observe.
+  it('creates a stub character and opens its sheet', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'Stub' }))
+
+    // No body: what the stub makes is the server's to decide.
+    const request = onlyRequestTo('/v1/characters/stub', 'POST')
+    expect(request.body).toBe('')
+    // The sheet, not the build screen -- unlike an import, this character is
+    // finished, so there is nothing to send the player back to answer.
+    expect(await screen.findByText('character sheet')).toBeInTheDocument()
+  })
+
+  it('files the stub into the folder the list is filtered to', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('combobox', { name: 'Folder' }))
+    await user.click(await screen.findByRole('option', { name: 'Campaign' }))
+    await screen.findByText('Bram')
+
+    await user.click(screen.getByRole('button', { name: 'Stub' }))
+
+    await waitFor(() => {
+      onlyRequestTo(`/v1/characters/stub?folder=${CAMPAIGN.id}`, 'POST')
+    })
   })
 })

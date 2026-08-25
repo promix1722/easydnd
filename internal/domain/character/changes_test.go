@@ -82,6 +82,33 @@ func TestChangeSkillRecomputesPassivePerception(t *testing.T) {
 	}
 }
 
+// Experience is recorded, not acted on: a level comes from a level event, so
+// crossing a threshold advances nobody. The test is here rather than in
+// project_test.go because a change event is the only thing that sets it.
+func TestChangeExperienceRecordsWithoutAdvancing(t *testing.T) {
+	s := skillLog(t, Change{
+		Path: "identity.experience", Op: OpSet, Value: IntValue(900),
+	})
+
+	if s.Identity.Experience != 900 {
+		t.Errorf("experience = %d, want 900", s.Identity.Experience)
+	}
+	// 900 XP is third level in the 2014 rules, and this character is third
+	// level because the log says so three times, not because of the number.
+	if got := s.Identity.Level(); got != 3 {
+		t.Errorf("level = %d, want 3: the log decides the level, not the XP", got)
+	}
+
+	// It increments, which is how a session's award is recorded.
+	s = skillLog(t,
+		Change{Path: "identity.experience", Op: OpSet, Value: IntValue(900)},
+		Change{Path: "identity.experience", Op: OpIncrement, Value: IntValue(350)},
+	)
+	if s.Identity.Experience != 1250 {
+		t.Errorf("experience = %d, want 1250", s.Identity.Experience)
+	}
+}
+
 func TestChangeSavingThrow(t *testing.T) {
 	// The rogue already has a Dexterity save, so setting Charisma is the case
 	// that proves a change can add one the class does not grant.

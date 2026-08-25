@@ -1,4 +1,4 @@
-import { Button, Card, Group, Stack, Text, TextInput } from '@/ui'
+import { Button, Group, Stack, Text, TextInput } from '@/ui'
 
 export interface NameFormProps {
   value: string
@@ -35,25 +35,28 @@ export function NameForm({
   const blank = value.trim() === ''
 
   return (
-    <Card withBorder padding="lg" radius="md">
-      <Stack gap="md">
-        <Text fw={600}>What are they called?</Text>
-        <TextInput
-          label="Name"
-          placeholder="Who are they?"
-          value={value}
-          error={error}
-          onChange={(event) => onValueChange(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !blank) onSubmit(value.trim())
-          }}
-        />
-        <Group>
-          <Button onClick={() => onSubmit(value.trim())} disabled={blank} loading={pending}>
-            {submitLabel}
-          </Button>
-        </Group>
-      </Stack>
-    </Card>
+    <Stack gap="md">
+      {/*
+        The one surface that keeps a heading of its own. The block above it is
+        headed "A name", which is what the choice is called, not what it asks
+        -- and this is the first line anybody reads in this application.
+      */}
+      <Text fw={600}>What are they called?</Text>
+      <TextInput
+        label="Name"
+        placeholder="Who are they?"
+        value={value}
+        error={error}
+        onChange={(event) => onValueChange(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !blank) onSubmit(value.trim())
+        }}
+      />
+      <Group>
+        <Button onClick={() => onSubmit(value.trim())} disabled={blank} loading={pending}>
+          {submitLabel}
+        </Button>
+      </Group>
+    </Stack>
   )
 }

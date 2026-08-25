@@ -133,7 +133,14 @@ func valueKindName(k domain.ValueKind) string {
 	return "none"
 }
 
-func sheetOf(s domain.State) Sheet {
+// SheetOf renders a projected state as the wire sheet.
+//
+// Exported because the game package serves the same sheet to a table that has
+// been shared a character. One converter rather than two, so that a shared
+// sheet and your own cannot drift into shapes the client would have to tell
+// apart -- the same argument the write handlers make for reading a record back
+// through its own detail path.
+func SheetOf(s domain.State) Sheet {
 	out := Sheet{
 		Identity:      identityOf(s.Identity),
 		Base:          baseOf(s.Base),
@@ -163,6 +170,7 @@ func identityOf(i domain.Identity) Identity {
 		Background:        i.Background.String(),
 		Classes:           classLevels(i.Classes),
 		Level:             i.Level(),
+		Experience:        i.Experience,
 		PersonalityTraits: i.PersonalityTraits,
 		Ideals:            i.Ideals,
 		Bonds:             i.Bonds,

@@ -27,20 +27,54 @@ than cosmetic — the wrong word usually hides a wrong shape.
 | spell casting | **spellcasting** | One word, 207× |
 | dark vision | **Darkvision** | One word — and it is a *racial trait*, not a *class feature* |
 | party (as an account-level thing) | **group** | See below — the two are not the same set of things |
+| campaign / session (as an app-level thing) | **game** | Neither is an SRD word: "campaign" is a DMG term and a "session" is a calendar entry. A group is who is at the table; a game is what they are playing |
 
 **A group is people; a party is characters.** A **group** is the account-level
 thing the app stores: the people at one table, with a rank each — owner, DM,
 player. A **party** is the in-fiction band of adventurers, which is characters,
 and the SRD uses it that way throughout ("the party", "party treasure"). They
-are deliberately not modelled as the same thing and today only one of them is
-modelled at all: a group holds no characters. The Characters tab is
-short-labelled "Party" on mobile for exactly the SRD sense, which is why the
-account-level feature could not also be called one.
+are deliberately not modelled as the same thing. That is why the account-level
+feature is a *group* and not a *party*: "party" is a fiction word naming
+nothing this app stores, and a set of people with ranks is not a party in any
+sense the SRD uses.
 
-A **folder** is the third word and the smallest of the three: one account's
-private shelf for its own characters. It is not people and not in-fiction --
-nothing is shared through it and no rule reads it. Group, party, folder:
-people, characters in the fiction, characters on a shelf.
+The client used to lean on this the other way round, short-labelling the
+Characters section "Party" on a phone. It no longer does — the section is
+"Characters" everywhere — and the argument above is unchanged, because it never
+depended on that label. What changed is that "party" is now a word in the
+fiction and in this document only: no screen, route, field or type in either
+half of the app is named one, so there is nothing left for "group" to collide
+with.
+
+A group is no longer only people. Its members may **share** characters with it,
+and what that grants is a read: every member can open a shared character's
+sheet, and only its owner can ever change it. The shared characters are not a
+party -- they are everything the table has to hand.
+
+A **folder** is the third word and the smallest of them: one account's private
+shelf for its own characters. It is not people and not in-fiction -- nothing is
+shared through it and no rule reads it. A **game** is the fourth: one sitting at
+a group's table, with a roster drawn from what that group shares -- which is
+where a party is finally modelled. Group, game, party, folder: people, what they
+play, characters in the fiction, characters on a shelf.
+
+A game is played *at* a group but is not part of one: it is its own section of
+the app, listed with every other game you are in. The group is a fact about a
+game in the way a folder is a fact about a character. It is called a game and
+never a *session*, because that word is spent several times over on the thing
+that proves a request belongs to an account.
+
+One consequence is worth stating plainly because it is surprising. A group and
+its members live in PostgreSQL and survive a restart; the characters shared with
+it and the games run from it **do not**, because every one of those rows names a
+character id and a character id is a process-local counter. See
+[backend.md](backend.md#ownership-and-membership).
+
+The last row is different in kind from the others, and worth flagging rather
+than letting the table's authority stretch over it. The rest correct a wrong
+word against SRD evidence — counts of what the document itself says. "Game"
+names a **product** concept the SRD has no word for at all, so there is no
+count to appeal to; it is a choice, made here so that it is made once.
 
 Two of those are more than renaming:
 
@@ -119,7 +153,8 @@ record what was *chosen*, not what it evaluated to.
 
 **A folder is not part of this model.** Characters are filed into folders — see
 [backend.md](backend.md#folders) — and a folder records where a record is kept,
-not anything about the character. It is neither the group above nor the party:
+not anything about the character. It is neither the group above, nor the game,
+nor the party:
 no rule reads it, nothing is shared through it, and it never appears in a log or
 on a sheet. Look for it in the service, not here.
 
@@ -202,10 +237,10 @@ same catalogue, same result, no clock and no I/O.
 
 | Section | Holds |
 | --- | --- |
-| `Identity` | Name, alignment, race, background, classes, personality |
+| `Identity` | Name, alignment, race, background, classes, personality, experience |
 | `Base` | Hit points, speeds, senses, size, languages, exhaustion, death saves, inspiration |
 | `Abilities` | The six scores. Modifiers are computed, never stored |
-| `Skills` | Training per skill — an enum, because Expertise doubles and Jack of All Trades halves |
+| `Skills` | Training per skill — an enum, because Expertise doubles and Jack of All Trades halves. **Every** skill is present, the untrained ones at the bare ability modifier |
 | `SavingThrows` | Autocalculated |
 | `Status` | Armor class, initiative, proficiency bonus, passive Perception, and a spellcasting summary **per class** — a multiclassed cleric/wizard has two |
 | `Equipment` | Equipped, backpack, loot, purse. Homebrew items are first-class |
@@ -213,6 +248,33 @@ same catalogue, same result, no clock and no I/O.
 | `Spells` | Cantrips, known, prepared, ability |
 | `Actions` | See below |
 | `Feats`, `Traits`, `Features`, `Conditions` | Slug lists |
+
+**Experience is recorded, not acted on.** `Identity.Experience` is a number the
+log can set and nothing reads: a character is third level because three level
+events say so, not because the total crossed 900. That keeps one answer to
+"what level is this character" -- the log -- where deriving a level from XP as
+well would give two, and they would disagree the moment a table awarded a
+milestone. A group playing milestones leaves it at zero and loses nothing; a
+group counting XP has somewhere to keep the count. Set with a change event, on
+`identity.experience`, like every other value no rule computes.
+
+**The skills map holds every skill, not only the trained ones.** A character
+proficient in six of the eighteen still projects all eighteen; the other twelve
+carry `NotProficient` and a bonus that is just the governing ability's
+modifier. This is a deliberate cost — twelve entries per sheet that a grant
+never touched — paid because the question a skill list is read to answer is
+usually about a skill nothing trained, and because the alternative is every
+client adding an ability modifier itself. A second implementation of a rule is
+a second implementation to disagree, and it would disagree the day Jack of All
+Trades starts halving a bonus.
+
+Two consequences worth knowing. **Passive Perception depends on it**: the value
+is `10 +` the Perception bonus read straight off the map, so before every skill
+was present it read a missing key for an untrained character and silently
+dropped their Wisdom modifier — the sheet said exactly 10 whatever the score.
+And **presence in the map no longer means trained**, which is a trap the
+projector fell into once: whether a skill may take Expertise is a question
+about its training level, not about whether the key exists.
 
 **Actions have two provenances**, and the model says which. A *derived* action is
 recomputed on every projection — an equipped longsword produces its attack, a

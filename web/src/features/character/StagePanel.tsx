@@ -2,35 +2,29 @@ import { useEffect, useState } from 'react'
 
 import { bySlug, getCollection, getEntries } from '@/lib/api'
 import type { ApiFieldError, Change, Entry, Prompt } from '@/lib/api'
-import { Badge, Button, Group, Paper, Stack, Text } from '@/ui'
+import { Badge, BlockList, Button, Group, Loader, Stack, Text } from '@/ui'
+import type { BlockListItem } from '@/ui'
 
 import { AbilityScoresForm } from './AbilityScoresForm'
 import type { Scores } from './AbilityScoresForm'
+import type { Asking, Block } from './blocks'
 import { NameForm } from './NameForm'
 import { offersOptions } from './options'
-import { OutstandingChoices } from './OutstandingChoices'
 import { PromptCard } from './PromptCard'
+import { choiceName } from './promptNames'
+import { refName } from './refNames'
 import type { SettledRow } from './settled'
 
 import { collectionOfKind, kindOf, slugOf } from '@/domain'
 
-/** The question on screen, and the entry answering it would replace. */
-export interface Asking {
-  prompt: Prompt
-  /** Null when the answer is an append: a question being asked for the first time. */
-  replaces: SettledRow | null
-}
-
 export interface StagePanelProps {
-  /** Entries already made on this tab, one per selection. */
-  settled: readonly SettledRow[]
-  /** Questions still open on this tab. */
-  prompts: readonly Prompt[]
-  names: ReadonlyMap<string, string>
+  /** Everything on this tab: what was decided, and what is still asked. */
+  blocks: readonly Block[]
+  openKey: string | null
+  onOpen: (key: string | null) => void
+  /** The question the open block is asking, where it has one. */
   asking: Asking | null
-  onAsk: (asking: Asking | null) => void
-  /** Re-ask the question behind a settled entry. */
-  onChange: (row: SettledRow) => void
+  names: ReadonlyMap<string, string>
   onAnswerPicks: (asking: Asking, picks: string[]) => void
   /** The name draft, which lives above this panel: see NameForm. */
   onNameChange: (name: string) => void
@@ -38,6 +32,13 @@ export interface StagePanelProps {
   onAnswerChanges: (asking: Asking, changes: Change[]) => void
   pending: boolean
   fields: readonly ApiFieldError[]
+  /**
+   * Where to go when there is nothing left here.
+   *
+   * Absent when there is nowhere to go, which is what makes the button the
+   * end of the list rather than a fixture of it.
+   */
+  onNext?: () => void
   /** What the character is called, so renaming starts from it. */
   name?: string
   /** The scores as the log stored them -- not as the sheet projects them. */
@@ -46,107 +47,194 @@ export interface StagePanelProps {
 }
 
 /**
- * One tab: what has been decided, what is still open, and the surface for
- * whichever question is in hand.
+ * One tab: every choice on it as a block, and the one that is open.
  *
- * The two sections are titled "already chosen" and "still to choose" on every
- * tab, and neither says which tab it is on. The category's word appears
- * exactly once in the document -- in the tab itself -- so that looking for
- * "race" on this page finds the tab and nothing else.
+ * There used to be two sections here -- what was decided above, what is left
+ * below -- and, detached at the bottom, whichever question was in hand. Three
+ * places for one thing. A choice is now a block that opens onto its own
+ * answering surface, and a decided choice is the same block with an answer in
+ * it, which is what it always was.
  *
- * A tab with nothing open shows only its settled rows. That is not the screen
- * hiding a step: it is the whole of the model, which is that nothing can be
- * answered before it is asked. The way to make a question appear is to change
- * the entry that would open it.
+ * Nothing is open until it is pressed. The screen no longer picks a question
+ * for the player, because it has no way of knowing which of five open choices
+ * they came here to make -- and a surface that opens itself is one they have
+ * to close.
+ *
+ * No block names the tab it is on. The category's word appears exactly once in
+ * the document -- in the tab itself -- so that looking for "race" on this page
+ * finds the tab and nothing else. That is why the empty line is "Nothing left
+ * here" rather than "nothing left in race".
+ *
+ * A tab with nothing open shows only its decided blocks. That is not the
+ * screen hiding a step: it is the whole of the model, which is that nothing
+ * can be answered before it is asked. The way to make a question appear is to
+ * change the entry that would open it.
  */
 export function StagePanel({
-  settled,
-  prompts,
-  names,
+  blocks,
+  openKey,
+  onOpen,
   asking,
-  onAsk,
-  onChange,
+  names,
   onAnswerPicks,
   onNameChange,
   onAnswerName,
   onAnswerChanges,
   pending,
   fields,
+  onNext,
   name,
   scores,
   method,
 }: StagePanelProps) {
+  const surface = (asked: Asking) => (
+    <AnswerSurface
+      asking={asked}
+      pending={pending}
+      fields={fields}
+      {...(name !== undefined ? { name } : {})}
+      {...(scores !== undefined ? { scores } : {})}
+      {...(method !== undefined ? { method } : {})}
+      onPicks={(picks) => onAnswerPicks(asked, picks)}
+      onNameChange={onNameChange}
+      onName={(next) => onAnswerName(asked, next)}
+      onChanges={(changes) => onAnswerChanges(asked, changes)}
+    />
+  )
+
+  const items = blocks.map<BlockListItem>((block) => {
+    const open = block.key === openKey
+    if (block.kind === 'settled') {
+      const header = <SettledHeader row={block.row} />
+      if (!block.changeable) return { key: block.key, header }
+      return {
+        key: block.key,
+        header,
+        // Only the open block's body is ever drawn, so a closed one is a
+        // placeholder that says nothing except that this block opens.
+        body: open ? (asking === null ? <Reasking /> : surface(asking)) : null,
+      }
+    }
+    return {
+      key: block.key,
+      header: <OpenHeader prompt={block.prompt} names={names} />,
+      highlighted: true,
+      body: open && asking !== null ? surface(asking) : null,
+    }
+  })
+
+  const nothingOpen = blocks.every((block) => block.kind === 'settled')
+
   return (
-    <Stack gap="md">
-      {settled.length > 0 && (
-        <Paper withBorder p="md" radius="md">
-          <Stack gap="xs">
-            <Text size="xs" c="dimmed" tt="uppercase">
-              already chosen
-            </Text>
-            {settled.map((row) => (
-              <Group key={row.seq} justify="space-between" gap="xs" wrap="nowrap" align="flex-start">
-                <div>
-                  <Group gap={6}>
-                    <Text size="xs" c="dimmed" tt="uppercase">
-                      {row.label}
-                    </Text>
-                    {row.level !== undefined && (
-                      <Badge size="xs" variant="light">
-                        Level {row.level}
-                      </Badge>
-                    )}
-                  </Group>
-                  <Text size="sm">{row.value}</Text>
-                </div>
-                {/*
-                  A level already taken is shown and not touched. Replacing or
-                  removing one drives the same machinery that cannot take one
-                  in the first place, so the row is a fact about the character
-                  rather than a control -- which is also what an imported
-                  character's levels are. Everything else keeps its Change.
-                */}
-                {row.event.type !== 'level' && (
-                  <Button size="compact-xs" variant="subtle" onClick={() => onChange(row)}>
-                    Change
-                  </Button>
-                )}
-              </Group>
-            ))}
-          </Stack>
-        </Paper>
-      )}
-
-      <Paper withBorder p="md" radius="md">
-        <Stack gap="xs">
-          <Text size="xs" c="dimmed" tt="uppercase">
-            still to choose
+    <Stack gap="sm">
+      <BlockList items={items} open={openKey} onOpen={onOpen} />
+      {blocks.length === 0 ? (
+        <Text size="sm" c="dimmed">
+          Nothing to answer yet.
+        </Text>
+      ) : (
+        nothingOpen && (
+          <Text size="sm" c="dimmed">
+            Nothing left here.
           </Text>
-          <OutstandingChoices
-            prompts={prompts}
-            names={names}
-            {...(asking?.replaces === null ? { selected: asking.prompt.choice.prompt } : {})}
-            onOpen={(prompt) => onAsk({ prompt, replaces: null })}
-            empty={settled.length > 0 ? 'Nothing left here.' : 'Nothing to answer yet.'}
-          />
-        </Stack>
-      </Paper>
-
-      {asking !== null && (
-        <AnswerSurface
-          asking={asking}
-          pending={pending}
-          fields={fields}
-          {...(name !== undefined ? { name } : {})}
-          {...(scores !== undefined ? { scores } : {})}
-          {...(method !== undefined ? { method } : {})}
-          onPicks={(picks) => onAnswerPicks(asking, picks)}
-          onNameChange={onNameChange}
-          onName={(next) => onAnswerName(asking, next)}
-          onChanges={(changes) => onAnswerChanges(asking, changes)}
-        />
+        )
+      )}
+      {/*
+        Under the list, and only once the list has nothing left to answer. It
+        is not navigation -- the tabs are, and they are always there -- it is
+        the end of a piece of work saying where the next piece is, at the
+        moment that is the only thing left to say. It names no category,
+        because the category's word belongs to its tab.
+      */}
+      {nothingOpen && onNext !== undefined && (
+        // In a Group rather than aligned by the Stack: aligning the stack to
+        // its start shrink-wraps every child, and the list is one of them --
+        // so the whole panel would take its width from whichever block
+        // happens to be open, and change width as blocks are opened and shut.
+        <Group>
+          <Button variant="light" onClick={onNext}>
+            Next
+          </Button>
+        </Group>
       )}
     </Stack>
+  )
+}
+
+/** What was decided, and what it was decided to be. */
+function SettledHeader({ row }: { row: SettledRow }) {
+  return (
+    <div>
+      <Group gap={6}>
+        <Text size="xs" c="dimmed" tt="uppercase">
+          {row.label}
+        </Text>
+        {row.level !== undefined && (
+          <Badge size="xs" variant="light">
+            Level {row.level}
+          </Badge>
+        )}
+      </Group>
+      <Text size="sm">{row.value}</Text>
+    </div>
+  )
+}
+
+/**
+ * A choice still to make, named rather than asked.
+ *
+ * The name and what posed it are the whole of the header, and they are also
+ * the whole of the question -- which is why the surfaces underneath no longer
+ * print a heading of their own. "from Half-Elf" is what makes a list of
+ * questions legible: two skills from a race and two from a class are different
+ * questions.
+ */
+function OpenHeader({ prompt, names }: { prompt: Prompt; names: ReadonlyMap<string, string> }) {
+  return (
+    <Group gap={8} wrap="nowrap" justify="space-between" w="100%">
+      <Text size="sm" fw={600} style={{ whiteSpace: 'normal', textAlign: 'left' }}>
+        {choiceName(prompt)}
+        {prompt.source !== undefined && (
+          <Text span size="xs" c="dimmed" fw={400}>
+            {' '}
+            · from {refName(prompt.source, names)}
+          </Text>
+        )}
+      </Text>
+      <Group gap={6} wrap="nowrap">
+        {prompt.level !== undefined && (
+          <Badge size="xs" variant="light">
+            Level {prompt.level}
+          </Badge>
+        )}
+        {prompt.optional && (
+          <Badge size="xs" variant="light" color="gray">
+            optional
+          </Badge>
+        )}
+      </Group>
+    </Group>
+  )
+}
+
+/**
+ * A decided choice whose question is being put again the long way round.
+ *
+ * An answer to a nested prompt -- a rogue's Expertise, a half-elf's ability
+ * bonuses -- came with a prompt the server stopped emitting the moment it was
+ * answered, so there is nothing here to re-pose directly. The screen drops the
+ * entry instead, which brings the question back outstanding in this block's
+ * own place: the same thing every other decided block does when it is opened,
+ * and the reason none of them needs a button to do it.
+ */
+function Reasking() {
+  return (
+    <Group gap="xs">
+      <Loader size="sm" />
+      <Text size="sm" c="dimmed">
+        Putting that question again...
+      </Text>
+    </Group>
   )
 }
 
@@ -233,7 +321,9 @@ function maybeError(fields: readonly ApiFieldError[], suffix: string): { error?:
  * Loads the entries a prompt's options refer to, then renders it.
  *
  * Split out so that the fetch is keyed by the prompt: React remounts it when
- * the prompt changes, which is exactly the lifecycle the options have.
+ * the prompt changes, which is exactly the lifecycle the options have. It is
+ * also why `BlockList` mounts a body only while its block is open -- a tab of
+ * collapsed blocks would otherwise fetch a collection apiece on every paint.
  */
 function PromptWithOptions({
   prompt,

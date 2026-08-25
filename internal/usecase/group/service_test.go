@@ -62,7 +62,7 @@ func newFixture(t *testing.T) *fixture {
 	inviter := &fakeInviter{}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return &fixture{
-		svc:     groupuc.NewService(memory.NewGroupRepository(users), users, inviter, log),
+		svc:     groupuc.NewService(memory.NewGroupRepository(users), users, inviter, nil, log),
 		users:   users,
 		inviter: inviter,
 	}

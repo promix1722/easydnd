@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 
 import type { SessionUser } from '@/lib/api'
 import type { AuthState } from '@/lib/auth'
 import { testAccount, testGuest, withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { AccountScreen } from './AccountScreen'
 
@@ -91,7 +91,7 @@ describe('AccountScreen', () => {
 
     expect(screen.getByText('Connected accounts')).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Connect Google' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Connect Google' }))
 
     expect(linkProvider).toHaveBeenCalledWith('google')
   })
@@ -111,8 +111,8 @@ describe('AccountScreen', () => {
       unlinkProvider,
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Disconnect' }))
+    await setupUser().click(screen.getByRole('button', { name: 'Disconnect' }))
 
     expect(unlinkProvider).toHaveBeenCalledWith('google', 'sub-1')
   })

@@ -25,6 +25,7 @@ import (
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
+	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
@@ -32,6 +33,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/user"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
 	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
 )
 
@@ -59,14 +61,38 @@ func newFullRouterWithCeremony(t *testing.T) (*gin.Engine, *http.Cookie, *stubCe
 // newFullRouterWithFederation also hands back the stubbed identity provider,
 // for the tests that drive a federated sign-in. It is separate from the
 // three-value helper above so that the existing callers do not have to grow a
-// return value they ignore -- and so that nothing is shared through package
-// state, which would break the moment a test called t.Parallel.
+// return value they ignore -- and so that no *mutable* state is shared through
+// the package, which would break the moment a test called t.Parallel. The one
+// package-level value below is the compendium Source, which is safe to share
+// precisely because it has nothing a test can change.
 func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stubCeremony, *stubFederation) {
+	t.Helper()
+	return newFullRouterInEnv(t, config.EnvDevelopment)
+}
+
+// One compendium Source behind all thirty-seven routers these tests build.
+// Source.Load caches per locale and is mutex-guarded, and a Catalog is
+// immutable, so the routers can share it exactly as the running process does.
+// A fresh Source per router meant re-reading 1.55 MB of JSON for every test
+// that touched a catalogue route. Everything else here stays per-router:
+// each test gets its own account store, its own characters and its own
+// ceremony, which is what keeps them independent.
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+
+// newFullRouterInEnv is the same table built for a named environment.
+//
+// Development is what every other caller wants and is the default above. The
+// parameter exists because one route -- the character stub -- is registered
+// only in development, and the test that matters for it is the one asserting
+// the route is absent from a production table.
+func newFullRouterInEnv(
+	t *testing.T, env string,
+) (*gin.Engine, *http.Cookie, *stubCeremony, *stubFederation) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
 	cfg := &config.Config{
-		Env:  config.EnvDevelopment,
+		Env:  env,
 		HTTP: config.HTTPConfig{TrustedProxies: []string{"127.0.0.1", "::1"}},
 		Auth: config.AuthConfig{
 			RPID:            "easydnd.test",
@@ -102,12 +128,24 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 	)
 	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
 
-	source := catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
-	characterService := charuc.NewService(memory.NewCharacterRepository(),
-		memory.NewFolderRepository(), source, hexsheet.NewImporter(), log)
+	// dev's shared, cached catalogue source -- building a second one here is
+	// what the verify-speedup commit removed.
+	source := catalogSource
+	groupRepo := memory.NewGroupRepository(users)
+	// One character store, hoisted out of the constructor because the game
+	// service reads out of the same map this one writes into. A second
+	// instance would make every shared character a 404, with nothing in the
+	// failure naming the cause -- the same hazard as the one account store
+	// above, and it fails the same silent way.
+	characterRepo := memory.NewCharacterRepository()
+	gameService := gameuc.NewService(
+		memory.NewGameRepository(), memory.NewSharedRepository(),
+		groupRepo, characterRepo, source, log)
+	characterService := charuc.NewService(characterRepo,
+		memory.NewFolderRepository(), source, hexsheet.NewImporter(), gameService, log)
 	// The same signer mints invite links; the kind claim is what keeps them
 	// from being interchangeable with the session cookie beside them.
-	groupService := groupuc.NewService(memory.NewGroupRepository(users), users, signer, log)
+	groupService := groupuc.NewService(groupRepo, users, signer, gameService, log)
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		System:        system.New(testVersion),
@@ -116,6 +154,7 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 		Catalog:       catalogapi.New(source, log),
 		Character:     characterapi.New(characterService, log),
 		Folder:        folderapi.New(characterService, log),
+		Game:          gameapi.New(gameService, log),
 		Group:         groupapi.New(groupService, log),
 	})
 	if err != nil {

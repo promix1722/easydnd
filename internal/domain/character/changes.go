@@ -84,6 +84,8 @@ func (p *projector) changeIdentity(sc seqChange, rest []string) error {
 		return setString(p, sc, &p.state.Identity.Name)
 	case "alignment":
 		return setSlug(p, sc, &p.state.Identity.Alignment)
+	case "experience":
+		return changeInt(p, sc, &p.state.Identity.Experience)
 	case "personalityTraits":
 		return changeStrings(p, sc, &p.state.Identity.PersonalityTraits)
 	case "ideals":

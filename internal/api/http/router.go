@@ -22,6 +22,7 @@ import (
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
+	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
@@ -36,6 +37,7 @@ type Handlers struct {
 	Catalog   *catalogapi.Handler
 	Character *characterapi.Handler
 	Folder    *folderapi.Handler
+	Game      *gameapi.Handler
 	Group     *groupapi.Handler
 	// Authenticator resolves the session cookie for the guarded routes. It is
 	// the same object Auth is built over; the router takes it separately
@@ -161,6 +163,18 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// Import is a sibling of create, not a sub-resource of a
 			// character: it is what makes one.
 			authed.POST("/characters/import", h.Character.Import)
+			// So is the stub, and it exists only in development. It builds
+			// the reference character in one call so that working on the
+			// sheet, the log or this list does not start with a walk through
+			// the build screen -- a development convenience with nothing to
+			// offer easydnd.org, so the route is simply not there in
+			// production rather than there and refusing. Gated on the
+			// environment the config already carries; no new key, which
+			// matters because unknown keys are fatal and a new one would have
+			// to stage across two releases.
+			if cfg.Env == config.EnvDevelopment {
+				authed.POST("/characters/stub", h.Character.Stub)
+			}
 			authed.GET("/characters/:id", h.Character.Get)
 			authed.DELETE("/characters/:id", h.Character.Delete)
 			authed.GET("/characters/:id/sheet", h.Character.Sheet)
@@ -218,6 +232,45 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// logs the whole request line, and this token is usable for a day.
 			authed.POST("/invites/preview", h.Group.PreviewInvite)
 			authed.POST("/invites/accept", h.Group.AcceptInvite)
+
+			// The group's table: the characters its members have offered to
+			// each other. This is the first thing here that lets one account
+			// read another's character, and it grants exactly that -- every
+			// member may read a shared sheet, and nobody but the owner may
+			// ever write to it, because there is no route here that would.
+			// A player may share, which is the whole of what a player does at
+			// a table; one character is addressed by ?character= for the
+			// reason a member is addressed by ?user= above.
+			authed.GET("/groups/:id/characters", h.Game.Table)
+			authed.POST("/groups/:id/characters", h.Game.Share)
+			authed.DELETE("/groups/:id/characters", h.Game.Unshare)
+
+			// Games are a section of their own, not a corner of a group.
+			// Nothing about them hangs off /groups: a player at three tables
+			// wants one list of their games, and the group is a field on a
+			// game rather than the way in to one. Creation names its group in
+			// the body for the same reason -- it is the only operation here
+			// that has to say which table, and putting it in the path would
+			// make the other six look reachable that way too.
+			//
+			// It is also what the depth rule wants. A game's own roster under
+			// its group would be /groups/:id/games/:gid/characters, three
+			// levels where the convention above allows one.
+			authed.GET("/games", h.Game.Mine)
+			authed.POST("/games", h.Game.Create)
+			authed.GET("/games/:id", h.Game.Get)
+			authed.PATCH("/games/:id", h.Game.Rename)
+			authed.DELETE("/games/:id", h.Game.Delete)
+			authed.POST("/games/:id/characters", h.Game.AddCharacters)
+			authed.DELETE("/games/:id/characters", h.Game.RemoveCharacter)
+
+			// One shared character's sheet, and only ever the sheet. It hangs
+			// off nothing because what grants the read is "some group we are
+			// both in", and naming any one of them in the URL would be a lie
+			// about why it was allowed. /characters/:id is the log, which is
+			// the record of its owner's decisions and none of the table's
+			// business.
+			authed.GET("/shared/:id/sheet", h.Game.Sheet)
 		}
 	}
 

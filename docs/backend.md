@@ -51,6 +51,48 @@ Without `TEST_DATABASE_URL` the Postgres adapter tests skip themselves, which is
 what keeps `go test ./...` and `make verify` green on a machine with no Docker.
 CI sets it against a service container, so they are not skipped there.
 
+## Tests
+
+```sh
+make test/unit                      # the suite, ~4s
+make test/race                      # the same suite under the race detector, ~9s
+make test/db                        # including the Postgres adapter (needs make db/up)
+```
+
+`make verify` runs `test/unit`. It does **not** run `test/race`, and that is a
+deliberate trade rather than an oversight.
+
+The race detector used to be on by default, and it cost far more than it
+looked: 46s against 10s. Two thirds of that gap was not even work. A `-race`
+test binary sleeps a full second at exit -- `GORACE`'s `atexit_sleep_ms`,
+defaulting to 1000 -- and this module has sixteen test packages, so every run
+spent sixteen seconds on an idle machine. `make test/race` sets
+`atexit_sleep_ms=0` and takes that back, which is why it now costs 9s rather
+than 25s. What the sleep buys is a last chance to check a goroutine still
+running when `main` returns, and nothing here leaves one: the HTTP tests drive
+`httptest` in-process and synchronously, and `internal/app`, which owns the
+only real server lifecycle, has no tests. A race *during* a test is reported
+exactly as before.
+
+That leaves 9s against 4s, and the reason the detector still sits outside
+`verify` is what `verify` is for. Nothing runs on `main`, so it is the only
+gate there is, and a gate slow enough to be worth skipping stops being a gate.
+The detector moved onto the path worth taking before a `git tag` -- the point
+where a missed race would otherwise ship. **Run `make test/race` before
+tagging.** It found real races in the HTTP layer and the stores once, and
+`make test/unit` will not find the next one.
+
+The other reason the suite is fast is that each test package shares **one**
+`catalogfile.Source`. `Source.Load` caches a converted `*catalog.Catalog` per
+locale, and a `Catalog` is immutable, so one read of the 1.55 MB compendium
+serves every test in the binary. Building a fresh `Source` per test threw that
+cache away, and the suite was doing it about 120 times a run -- which was most
+of its remaining runtime. `internal/domain/character` alone went from 3.0s to
+0.06s. If you add a helper that needs the compendium, reach for the package's
+existing `catalogSource` rather than calling `NewSource` again; the internal
+and external test packages of one directory need one each, since a package-level
+var cannot cross that line.
+
 ## Running more than one worktree
 
 Every port the local stack binds used to be a constant, so exactly one checkout
@@ -192,6 +234,7 @@ that.
 | `GET` | `/v1/characters` | summaries |
 | `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
 | `POST` | `/v1/characters/import` | import a sheet exported by another tool |
+| `POST` | `/v1/characters/stub` | **development only** -- build the reference character in one call |
 | `GET` | `/v1/characters/{id}` | the log |
 | `DELETE` | `/v1/characters/{id}` | |
 | `GET` | `/v1/characters/{id}/sheet` | the projection |
@@ -217,6 +260,48 @@ that.
 | `DELETE` | `/v1/groups/{id}/members` | remove: `?user=U`; your own id is how you leave |
 | `POST` | `/v1/invites/preview` | read a link without acting on it |
 | `POST` | `/v1/invites/accept` | redeem a link |
+| `GET` | `/v1/groups/{id}/characters` | the group's table: what its members have shared |
+| `POST` | `/v1/groups/{id}/characters` | share one of your own: `{"character_id":"chr_x"}` |
+| `DELETE` | `/v1/groups/{id}/characters` | unshare: `?character=C`; **takes it out of every game too** |
+| `GET` | `/v1/games` | every game at every table you sit at, newest first |
+| `POST` | `/v1/games` | open one: `{"group_id":"grp_x","name":"..."}`. DM or owner |
+| `GET` | `/v1/games/{id}` | the game, your rank, and its roster |
+| `PATCH` | `/v1/games/{id}` | rename. DM or owner |
+| `DELETE` | `/v1/games/{id}` | DM or owner; the characters stay on the table |
+| `POST` | `/v1/games/{id}/characters` | seat some: `{"character_ids":[...]}`; your own land on the table too |
+| `DELETE` | `/v1/games/{id}/characters` | unseat one: `?character=C` |
+| `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only |
+
+Three of those need a word about their shape.
+
+**Nothing about a game hangs off `/v1/groups`.** A game is a section of its
+own, not a corner of a group: somebody at three tables wants one list of their
+games, and the group is a *field* on a game rather than the way in to one. So
+the listing is `GET /v1/games` with no group to name, and creation carries the
+group in the body -- it is the only operation here that has to say which table,
+and putting it in the path would make the other six look reachable that way too.
+
+The depth rule points the same way. Hung under its group, a game's own roster
+would be `/v1/groups/{id}/games/{gid}/characters`, which is three levels where
+the convention above allows one.
+
+**`/v1/shared/{id}/sheet` hangs off nothing at all**, and that is the honest
+shape: what grants the read is "some group we are both in", so naming any one
+of them in the URL would be a lie about why it was allowed. Note also what is
+absent — there is no `/v1/shared/{id}`. `/v1/characters/{id}` is a character's
+*log*, the record of every decision its owner made and the order they made them
+in, and that is not the table's business. A table sees what a character **is**.
+
+**Seating takes a list, always**, so there is one request shape whether it is
+one character or nine, and "everyone at this table" is the client sending the
+list it already has on screen.
+
+**Seating your own character shares it.** Everything on a roster has to be
+readable by every member -- a game carrying a name nobody but its owner may
+open would be a leak the DM caused by accident -- so a character that is not on
+the table yet is put there, provided it belongs to the caller. Somebody else's
+unshared character is still a 400: a DM runs the table, but does not get to
+publish another player's character on their behalf.
 
 The two `events/{seq}` routes address a *member* of the log by position, which
 is what `Seq` means. That is not a third level: `events` is the sub-resource,
@@ -300,6 +385,83 @@ six `abilities.<ability>` paths, and the generation method travels with that
 answer rather than with creation. The bound on a score -- 1 to 30, wide enough
 for a DM's ruling and narrow enough to reject a typo -- moved with them, and is
 checked where they now arrive.
+
+### The stub builds a character; it does not import one
+
+`POST /v1/characters/stub` makes the level-3 half-elf rogue of
+`docs/reference_hexsheet/` in one call. It is a development convenience --
+reaching a character worth looking at otherwise means five tabs and a dozen
+answers, and the character store is in memory, so a restart costs that walk
+again.
+
+It would have been one line to point it at the importer, and that would have
+been wrong. An import records what a character *is* rather than what was
+chosen, so an imported log answers no prompts and arrives with every choice
+still open -- see [Importing states, not
+histories](#importing-states-not-histories). That is the honest way to carry a
+foreign sheet across and the exact opposite of what a stub is for. So the stub
+is *built*: `Create` writes the opening entry and one `Apply` puts the eight
+selections through `validateAndAttribute`, the same path an append from the
+build screen takes. Every entry is checked against the prompts open at that
+moment and stamped with the group of the prompt it answers, which is what keeps
+the stub a log the build flow could have written rather than a shape only this
+endpoint can produce.
+
+Two consequences of going through that path, both of which the tests pin:
+
+- **The level comes before the subclass it makes due.** A rogue is offered a
+  Roguish Archetype *because* they have reached level 3, so nothing offers
+  `subclass:thief` until the level granting it is in the log. Answering them the
+  other way round is rejected outright. The domain's own fixture in
+  `fixtures_test.go` has them the other way round and is not wrong to: it calls
+  `Log.Append`, which checks the shape of an entry and never asks whether
+  anything was offering it.
+- **One entry carries no source.** Equipping the leather armor a rogue's kit
+  contains answers no prompt and closes none, because no rule says a kit is
+  worn. It is therefore unattributed, exactly as a DM's ruling is, and sits in
+  no build-screen tab.
+
+The stub answers its **optional** prompts too, and that is worth saying because
+"complete" and "finished" are not the same thing. Seven prompts here are
+optional -- the half-elf's third language and all six acolyte poses -- so the
+character counted as complete while the build screen still listed seven rows
+under "still to choose". Those seven answers are the only part of the log that
+is *invented* rather than transcribed: the export names no third language, and
+its background is Urchin, which SRD 5.1 does not publish. `character/level` is
+left open on purpose, being the standing offer every complete character carries.
+
+One of the seven records an answer and buys nothing, and it is a gap in the
+model rather than in the stub. `acolyte/starting-equipment/0` draws its options
+from an equipment *category* (`rules.OptionsFromEquipmentCategory`, "any item in
+holy-symbols"), and nothing outside the catalogue DTO reads that option-set
+kind. `rules.OptionKeys` returns no keys for it, so `validateAnswer` skips the
+membership check and **any slug at all is accepted** -- a nonexistent one, or a
+rapier as a holy symbol -- and `Project` materialises none of them. The prompt
+closes, so the build screen is right to show it settled; the item simply never
+reaches the sheet. Every category-drawn equipment prompt in the compendium
+behaves this way, and `TestStubOptionalAnswersReachTheSheet` asserts the gap so
+that closing it fails loudly.
+
+The route exists **only when `env` is `development`**, which is why there is no
+check inside the handler: a guard in two places is a guard that can disagree
+with itself, and the routing table already answers "does this endpoint exist?".
+In production the path is not registered, so it answers 405 rather than 404 --
+`GET`/`DELETE /v1/characters/{id}` already claim that shape, and to gin "stub"
+is a character id there. Which of the two refusals gin picks is a routing
+detail; that no handler runs is the point.
+
+Gating it needed **no new configuration key**. `env` already distinguishes
+development from production and already defaults to production, which matters
+because unknown keys are fatal and a new one would have had to stage across two
+releases -- see [Configuration](#configuration).
+
+The stub's character is a second transcription of the one in
+`internal/domain/character/fixtures_test.go`, and they deliberately do not share
+a definition: that file is `package character` in the domain, so importing the
+application layer from it would be a cycle. They also differ in one place worth
+knowing when reconciling them -- the fixture carries the six ability scores in
+its `init` event, which is what an imported log looks like, whereas creation no
+longer bundles them and the stub answers `character/abilities` as its own entry.
 
 ### Creation and level-up are one flow
 
@@ -527,7 +689,7 @@ the difference between a character and a group.
 function, `handler.owner` in `internal/api/http/v1/character/handler.go`, from
 the account `middleware.RequireSession` put on the request; a handler reached
 without that middleware gets the zero `OwnerID`, which owns nothing, so a
-mis-wiring shows up as an empty party rather than as somebody else's.
+mis-wiring shows up as an empty list rather than as somebody else's.
 
 Enforcement lives in the usecase, not the handler: every read and write goes
 through `Service.owned`, which refuses a character to anyone but its owner --
@@ -581,6 +743,66 @@ enforced three times over, in the usecase, in the repository's statements, and
 in a partial unique index (`group_members_one_owner_idx`), because the last of
 those is the only one a second process racing the first obeys.
 
+### A third way a character is reached
+
+Sharing a character with a group is the first thing in this codebase that lets
+one account read another's character, and it needed a third chokepoint rather
+than a loosening of either existing one.
+
+`character.Service.owned` asks **"is this yours"** and grants a read *and* a
+write. `game.Service.readable` asks **"is it on a table you sit at"** and grants
+a read and nothing else. Neither was widened to accommodate the other: they are
+different functions, in different packages, over different stores, and the write
+paths still go only through the first. There is no route anywhere that writes to
+a character through the second, which is why "read-only" here is a property of
+the API's shape rather than a rule somebody has to remember.
+
+Both refuse with **404**, and for the reason `owned` does: a character id is a
+short counter, so a 403 on one that is not yours confirms it exists. A character
+that was never shared, one unshared a moment ago and one that never existed are
+indistinguishable from outside.
+
+| | its owner | group owner | dm | player | not a member |
+|---|---|---|---|---|---|
+| see the group's table | — | yes | yes | yes | **404** |
+| read a shared sheet | yes | yes | yes | yes | **404** |
+| read a character *not* shared here | yes | **404** | **404** | **404** | **404** |
+| share your own character | yes | yes | yes | yes | **404** |
+| share somebody else's | **404** | **404** | **404** | **404** | **404** |
+| unshare | yes | yes | yes | **403** | **404** |
+| edit or delete a shared character | yes | **404** | **404** | **404** | **404** |
+| open, rename or delete a game | — | yes | yes | **403** | **404** |
+| see a game and its roster | — | yes | yes | yes | **404** |
+| seat or unseat a character | — | yes | yes | **403** | **404** |
+| seat your own, not yet shared | — | yes | yes | **403** | **404** |
+| seat somebody else's, not yet shared | — | **400** | **400** | **403** | **404** |
+
+Two rows are worth saying in prose. **A player may share** — that is the whole
+of what a player does at a table, and it is the half of a group that was missing
+until now. **A DM may unshare somebody else's character**, which looks like a
+reach into another account and is not: a guest's session expires and cannot be
+recovered, so without it their character would sit on the table forever with
+nobody able to take it down.
+
+**Your character is always yours to delete.** Being on somebody's table does not
+make it theirs, so nothing consults a group before agreeing — the character comes
+off every table first, then out of the store. Deleting a group does the mirror
+image: its games go, then its table, and the characters themselves are untouched
+because they were never the group's.
+
+Both of those cascades run through a port rather than an import:
+`character.Sharing` and `group.Tables`, each one method, each satisfied by the
+game service and wired in `internal/app`. The arrows point outward from the
+thing being deleted, so a character still knows nothing about groups and a group
+still knows nothing about games.
+
+**Neither store is in Postgres, deliberately.** Every row on a table or a roster
+names a character id, and a character id is the process-local counter — the same
+argument `00003_groups.sql` makes for why the groups schema refuses to name one.
+So a group and its members survive a restart and the characters shared with it
+do not. That split is surprising and it is the price of having the feature
+before characters are durable; the two move to Postgres together or not at all.
+
 Invitations are stateless. A link is a signed token naming a group and a rank,
 valid for 24 hours, **reusable and not revocable** -- there is no invites table
 and nothing to revoke against. The trade is written down beside the type in
@@ -610,9 +832,12 @@ Imports point inward, never outward:
 
 - **`internal/domain/**`** imports the standard library only. No gin, no
   `net/http`, no `database/sql`, and no JSON or database struct tags --
-  serialization and persistence belong to adapters. The three domain packages
-  may import each other, one way only: `character` reads `catalog`, both read
-  `rules`, and nothing points back.
+  serialization and persistence belong to adapters. The domain packages may
+  import each other, one way only: `character` reads `catalog`, both read
+  `rules`, `group` reads `user`, and `game` reads `character`, `group` and
+  `user` — it is the one package that exists because two aggregates meet, and
+  it is the only one that names more than one of them. Nothing points back, so
+  a character still knows nothing about who is allowed to look at it.
 - **`internal/usecase/**`** imports the domain and `internal/types`. It never
   sees a `*gin.Context`; handlers pass `c.Request.Context()` and plain values
   inward.
@@ -1044,7 +1269,7 @@ is **composite** because a subject is only unique within its issuer: keyed on
 the subject alone, one provider's subject could resolve to an account linked
 through another, which is a sign-in as the wrong person. `email` is stored but
 is deliberately not unique and never a lookup key -- an address can be released
-and reassigned, so matching on one would eventually hand somebody else's party
+and reassigned, so matching on one would eventually hand somebody else's characters
 to a stranger.
 
 `sign_count` is a `bigint` because the domain's `SignCount` is a `uint32` and
@@ -1309,7 +1534,7 @@ Errors travel as `internal/types` values and are rendered exactly once, by
 
 If the thing belongs to more than one person, add a sixth step: put the
 authorization in **one function in the usecase** that every read and write goes
-through, the way `character.owned` and `group.member` do, and decide
+through, the way `character.owned`, `group.member` and `game.readable` do, and decide
 deliberately which refusals are 404 and which are 403 -- see [Ownership, and
 membership](#ownership-and-membership). Two adapters means the shared contract
 suite in `internal/adapter/repository/repotest/` runs the identical assertions

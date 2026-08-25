@@ -11,7 +11,7 @@
 
 // Application chrome. Re-exported so that src/shell -- which builds the two
 // layouts -- needs no Mantine import of its own, keeping the rule absolute.
-export { AppShell, Burger, NavLink, Tabs } from '@mantine/core'
+export { Accordion, AppShell, Burger, NavLink, Tabs } from '@mantine/core'
 // Its own package, and the one component here that is not core's. Re-exported
 // plainly rather than wrapped the way Columns and ModalSheet are: those exist
 // because their phone and desktop renderings share no markup, and a carousel's
@@ -19,6 +19,24 @@ export { AppShell, Burger, NavLink, Tabs } from '@mantine/core'
 // static member.
 export { Carousel } from '@mantine/carousel'
 export { useDisclosure } from '@mantine/hooks'
+
+// The icon set, named one glyph at a time. Re-exported for the same reason the
+// chrome above is: `shell/` builds the header and may not import a vendor
+// package, and `scripts/check-layers.mjs` holds both to that rule. Listing the
+// handful the app actually draws -- rather than re-exporting the module -- is
+// also what keeps the production bundle to those instead of six thousand.
+export {
+  IconCheck,
+  IconChevronDown,
+  IconCopy,
+  IconFolder,
+  IconLogout,
+  IconPencil,
+  IconPlus,
+  IconTrash,
+  IconUserCircle,
+  IconUserPlus,
+} from '@tabler/icons-react'
 
 // Layout and typography primitives, re-exported unchanged.
 export {
@@ -28,6 +46,7 @@ export {
   Box,
   Card,
   Center,
+  Checkbox,
   Code,
   Container,
   Divider,
@@ -49,7 +68,7 @@ export {
   ActionIcon,
   Button,
   FileInput,
-  // Per-row actions -- a roster's members, a party list's characters. The
+  // Per-row actions -- a roster's members, a character list's rows. The
   // alternative is four buttons in every row, which DataList's mobile card
   // rendering cannot lay out legibly.
   Menu,
@@ -62,14 +81,19 @@ export {
 } from '@mantine/core'
 
 // Composed, responsive-by-construction components.
+export { BlockList } from './BlockList'
+export type { BlockListItem, BlockListProps } from './BlockList'
 export { Columns } from './Columns'
 export type { ColumnsProps, ColumnsSection } from './Columns'
-export { DataList } from './DataList'
+export { ACTION_ICON_SIZE, ACTION_SIZE } from './actions'
+export { DataList, MAX_TABLE_WIDTH } from './DataList'
 export type { DataListColumn, DataListProps } from './DataList'
 export { DragonMark } from './DragonMark'
 export type { DragonMarkProps } from './DragonMark'
 export { ModalSheet } from './ModalSheet'
 export type { ModalSheetProps } from './ModalSheet'
+export { ProficiencyMark } from './ProficiencyMark'
+export type { ProficiencyLevel, ProficiencyMarkProps } from './ProficiencyMark'
 export { TabRow } from './TabRow'
 export type { TabRowProps, TabRowTab } from './TabRow'
 

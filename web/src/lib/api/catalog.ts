@@ -119,6 +119,20 @@ export interface Skill extends Entry {
   ability: string
 }
 
+export interface Proficiency extends Entry {
+  /**
+   * What the proficiency applies to: "armor", "weapons", "artisans-tools",
+   * "gaming-sets", "musical-instruments", "other-tools", "vehicles",
+   * "skills", "saving-throws".
+   *
+   * Optional because the wire omits it when the compendium has no type for an
+   * entry, not because a client may invent one.
+   */
+  type?: string
+  /** What it is a proficiency *in*, as "kind:slug". Absent when it stands alone. */
+  reference?: string
+}
+
 export interface Spell extends Entry {
   level: number
   school?: string

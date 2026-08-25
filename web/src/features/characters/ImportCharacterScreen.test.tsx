@@ -1,9 +1,9 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { ImportCharacterScreen } from './ImportCharacterScreen'
 
@@ -89,14 +89,22 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (viewport) => {
+/**
+ * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet` and
+ * `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * prop cannot move the DOM either -- nothing in this tree reaches any of them,
+ * so a test at one width is a test of both. See docs/web.md.
+ */
+describe('ImportCharacterScreen', () => {
+  const viewport = 'desktop'
+
   it('will not import until a file is chosen', () => {
     renderImport(viewport)
     expect(screen.getByRole('button', { name: 'Import' })).toBeDisabled()
   })
 
   it('posts the file to the import route as raw bytes', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())
@@ -112,7 +120,7 @@ describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (vie
   })
 
   it('shows what did not come across, rather than navigating straight on', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())
@@ -126,7 +134,7 @@ describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (vie
   })
 
   it('says how many choices are still open', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())
@@ -137,7 +145,7 @@ describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (vie
   })
 
   it('goes to the build screen, because an import answers nothing', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())
@@ -152,7 +160,7 @@ describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (vie
       { error: { code: 'validation_error', message: 'this file is not a HexSheet export' } },
       400,
     )
-    const user = userEvent.setup()
+    const user = setupUser()
     const { container } = renderImport(viewport)
 
     await user.upload(fileInputOf(container), exportFile())

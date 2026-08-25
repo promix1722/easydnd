@@ -26,17 +26,17 @@ const SRC = fileURLToPath(new URL('../src', import.meta.url))
 const RULES = [
   {
     dir: 'theme',
-    deny: ['react', '@mantine/', '@/'],
+    deny: ['react', '@mantine/', '@tabler/', '@/'],
     why: 'theme/ holds framework-free tokens; the Mantine binding lives in ui/theme.ts',
   },
   {
     dir: 'domain',
-    deny: ['react', 'react-dom', 'react-router', '@mantine/', '@/ui', '@/lib', '@/shell', '@/features', '@/routes'],
+    deny: ['react', 'react-dom', 'react-router', '@mantine/', '@tabler/', '@/ui', '@/lib', '@/shell', '@/features', '@/routes'],
     why: 'domain/ is pure rules: no UI framework, no transport, no I/O',
   },
   {
     dir: 'lib',
-    deny: ['@mantine/', '@/ui', '@/shell', '@/features', '@/routes'],
+    deny: ['@mantine/', '@tabler/', '@/ui', '@/shell', '@/features', '@/routes'],
     why: 'lib/ sits below the UI; it must not reach upward',
   },
   {
@@ -62,11 +62,15 @@ const RULES = [
 ]
 
 /**
- * The one directory allowed to import Mantine. Listed separately from RULES
- * so that a new top-level directory is denied by default rather than silently
- * exempt.
+ * The packages only `src/ui/` may import: the component library, and the icon
+ * set it draws with. Listed separately from RULES so that a new top-level
+ * directory is denied by default rather than silently exempt -- and as a list
+ * rather than one name so that adding a second vendor is an edit here rather
+ * than a hole. `@tabler/` arrived exactly that way: nothing denied it, so every
+ * layer could have imported icons directly until it was named.
  */
-const MANTINE_ALLOWED = 'ui'
+const UI_ONLY_PACKAGES = ['@mantine/', '@tabler/']
+const UI_ONLY_DIR = 'ui'
 
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g
 
@@ -102,11 +106,12 @@ for (const file of walk(SRC)) {
   const specifiers = importsOf(readFileSync(file, 'utf8'))
 
   for (const specifier of specifiers) {
-    if (specifier.startsWith('@mantine/') && top !== MANTINE_ALLOWED) {
+    const vendor = UI_ONLY_PACKAGES.find((prefix) => specifier.startsWith(prefix))
+    if (vendor && top !== UI_ONLY_DIR) {
       violations.push({
         file: rel,
         specifier,
-        why: `only src/${MANTINE_ALLOWED}/ may import Mantine; import from '@/ui' instead (re-export it there if missing)`,
+        why: `only src/${UI_ONLY_DIR}/ may import ${vendor}*; import from '@/ui' instead (re-export it there if missing)`,
       })
       continue
     }
@@ -129,3 +134,57 @@ if (violations.length > 0) {
 }
 
 console.log('layers clean')
+
+/**
+ * The second rule this script enforces, and the reason it is here rather than
+ * in a lint plugin: it is about a fact of the build, not a fact of the source.
+ *
+ * The suite runs test files without isolating them from one another, which is
+ * worth about two and a half times the speed (see the `test` block in
+ * vite.config.ts). One module registry per worker is the whole trick, and it is
+ * also exactly what `vi.mock` cannot survive: whichever file loads a module
+ * first decides what every later file sees, so a mock registered by the second
+ * file is simply too late. It does not fail loudly. It hands the test the real
+ * module and the assertion fails somewhere else, in a way that depends on the
+ * order the files happened to run in -- which is the worst kind of red.
+ *
+ * So vite.config.ts keeps a second project, with isolation, for the files that
+ * mock. This makes forgetting to add one a build failure rather than a
+ * Tuesday.
+ */
+const MOCKING_LIST = /const MOCKING_TESTS = \[([^\]]*)\]/s
+const declared = new Set(
+  (MOCKING_LIST.exec(readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8'))?.[1] ?? '')
+    .split(',')
+    .map((entry) => entry.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean),
+)
+
+const mocking = []
+for (const file of walk(SRC)) {
+  if (!/\.test\.tsx?$/.test(file)) continue
+  if (/\bvi\.mock\s*\(/.test(readFileSync(file, 'utf8'))) {
+    mocking.push(`src/${relative(SRC, file).split(sep).join('/')}`)
+  }
+}
+
+const undeclared = mocking.filter((file) => !declared.has(file))
+const stale = [...declared].filter((file) => !mocking.includes(file))
+
+if (undeclared.length > 0 || stale.length > 0) {
+  console.error('\nMOCKING TESTS OUT OF STEP WITH vite.config.ts\n')
+  for (const file of undeclared) {
+    console.error(`  ${file}`)
+    console.error("    calls vi.mock but is not in MOCKING_TESTS, so it runs without")
+    console.error('    isolation and its mock will be ignored whenever another test')
+    console.error('    file loaded the same module first.\n')
+  }
+  for (const file of stale) {
+    console.error(`  ${file}`)
+    console.error('    is in MOCKING_TESTS but no longer calls vi.mock; remove it so it')
+    console.error('    stops paying for isolation it does not need.\n')
+  }
+  process.exit(1)
+}
+
+console.log(`mocking tests isolated (${mocking.length})`)

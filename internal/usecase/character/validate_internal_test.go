@@ -20,10 +20,15 @@ import (
 // has: a race chosen from a collection, a subrace listed inline, a prompt
 // that hangs off an entry already held.
 
+// A second Source, because this file is the internal test package and
+// service_test.go's is the external one -- same binary, different packages, so
+// the var cannot be shared. Two loads of the compendium rather than one is
+// still two rather than the fifty this package used to do.
+var internalCatalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+
 func loadCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
-	dir := filepath.Join("..", "..", "..", "data", "srd_5.1")
-	cat, err := catalogfile.NewSource(dir).Load(context.Background(), rules.DefaultLocale)
+	cat, err := internalCatalogSource.Load(context.Background(), rules.DefaultLocale)
 	if err != nil {
 		t.Fatalf("loading the compendium: %v", err)
 	}

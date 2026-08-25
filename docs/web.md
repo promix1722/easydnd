@@ -4,11 +4,11 @@ The engineering doc for the [easydnd.org](https://easydnd.org) browser client:
 layout, layer rules, and how it ships. For the Go API it talks to, see
 [backend.md](backend.md); for the game model behind both, see [dnd.md](dnd.md).
 
-Status: **real**. Sign-in (passkeys and Google), the party list with its
+Status: **real**. Sign-in (passkeys and Google), the character list with its
 folders, character creation, the build loop, the account screen and the sheet
 are all built and tested. **Level-up is not**, and this client does not offer
 it -- see [Level-up is not offered](#level-up-is-not-offered). Neither is the
-battle tracker.
+battle tracker: `/games` is a section in the navigation whose page says so.
 
 ## Quick start
 
@@ -21,6 +21,76 @@ make web/check                      # typecheck, lint, layer-check, tests -- mir
 `make web/dev` proxies `/v1` to the API, so run `make run/server` alongside it
 -- or `make dev` at the repo root, which starts both and a Postgres. `make
 verify` at the repo root runs the frontend checks and the Go ones together.
+
+## The test suite does not isolate test files
+
+`vite.config.ts` runs the suite with `isolate: false`, so the test files a
+worker picks up share **one** module registry and **one** jsdom rather than
+forking a fresh pair per file. Rebuilding the Mantine, embla and React module
+graph 48 times over cost 36s of imports and 78s of jsdom construction out of
+229s total; sharing both took the run to 64s without a single assertion
+changing. Passing `delay: null` to user-event (see `src/test/user.ts`) took it
+to 38s from there, and the two rules below took it to 24s.
+
+What it costs is the guarantee that a test file starts from nothing, and two
+things follow from that.
+
+**`src/test/setup.ts` is what keeps the suite honest.** Its `afterEach`
+unmounts the tree, resets the viewport, clears stubbed globals and empties the
+catalogue request cache -- the only module-level mutable state in `src/`. If
+you add another piece, reset it there in the same change. A test that passes
+because of what ran before it is worse than one that fails.
+
+**`vi.mock` cannot work without isolation**, so files that use it get their own
+project. A shared registry means whichever file loads a module first decides
+what every later file sees, and a mock registered by the second file arrives
+too late. It does not fail loudly: the test gets the real module, and the
+assertion breaks somewhere else, in whatever order the files happened to run
+in. `InviteSheet.test.tsx` mocks `@/lib/clipboard`; `GroupScreen.test.tsx`
+pulls the real one in through the component tree. Neither is wrong -- they just
+cannot share a worker. So `vite.config.ts` lists the mocking files in
+`MOCKING_TESTS` and runs them as a second project with isolation on, and
+`npm run lint:layers` fails if a file calls `vi.mock` without being listed, or
+is listed without calling it. Mocking a module is not forbidden; it just has to
+say so.
+
+## Two rules about writing a test here
+
+**A test runs at one viewport unless the tree branches on width.** Exactly four
+components do: `Columns`, `DataList`, `ModalSheet` and `RootShell`. Nothing else
+can, because the suite runs without CSS -- a `SimpleGrid cols={{ base: 2, sm: 3 }}`
+renders one DOM whatever the width is -- so `describe.each(['mobile','desktop'])`
+around a tree that reaches none of those four is the same assertion run twice
+against byte-identical markup. `src/ui/TabRow.test.tsx` proves the point
+directly: its last test compares the two renderings and they are equal.
+
+That was 72 of the suite's 433 cases, weighted toward the slowest files --
+`BuildScreen.test.tsx` alone ran 48 cases where 26 say the same thing. Where a
+block runs at one width, the comment above it names this rule, so the next
+reader knows it was a decision. Where a block still runs at both -- the list
+screens, the group screens, `ModalSheet` and `Columns` themselves -- it is
+because the swap is what the test is about.
+
+**Render the panel, not the page, when the panel is what is under test.**
+`ProficienciesPanel.test.tsx`, `Vitals.test.tsx` and the skills-panel block of
+`CharacterSheetScreen.test.tsx` mount their component directly rather than the
+whole sheet, and keep one full-sheet test to hold the seam. A sheet test costs
+about twice a panel test, because most of the sheet's weight is the eighteen
+`ProficiencyMark`s -- each a Mantine `Tooltip`, each a floating-ui hook stack --
+and mounting the page to read one panel pays for the other seventeen sections
+too.
+
+Where several read-only assertions share one fixture, one test that renders
+once and asserts many times beats several that each re-mount it. Use
+`expect.soft` when merging, so the merged test still reports every failure
+instead of stopping at the first; a shared `beforeAll` render is not available,
+because `src/test/setup.ts`'s global `afterEach` unmounts between tests and
+exempting a file from that would give up the isolation rule above.
+
+The suite also does not process CSS (`css: true` is off). Nothing asserts on a
+cascaded style -- the only style assertions read inline `element.style`, which
+components and Mantine write from JS -- and the class names the tests query on
+are emitted whether or not a stylesheet was ever parsed.
 
 ## One dev server per worktree
 
@@ -103,7 +173,7 @@ so there is nothing to invalidate -- the response *is* the invalidation. A
 query library earns its keep when many components read overlapping queries with
 independent lifetimes, and here one screen owns one character.
 
-The party list is now the one screen that holds two resources -- its folders
+The character list is now the one screen that holds two resources -- its folders
 and its characters -- which is the case that sentence used to leave open. It
 still does not need a library. The two reads are independent, the character
 read is keyed by the selected folder so changing the filter aborts the request
@@ -156,6 +226,117 @@ each row has a menu with Move, Copy and Delete. The filter is a `Select` rather
 than tabs because it renders the same at both viewports and does not overflow
 once an account keeps more than a few folders.
 
+## Where a control lives says what it acts on
+
+Three rules, applied to every list screen, because a control's position is the
+only thing on screen that says what it will change.
+
+**The heading line acts on the entity the page is about**, and on nothing else:
+rename, leave, delete. It is not where you add to it.
+
+**A row acts on that row.** Rename and delete sit in the row whose entity they
+edit, with an icon each -- and whether they are drawn is the caller's rank at
+*that* row's table, not at whichever one happens to be first. A DM at one group
+and a player at another must not get a Delete on the second because they have
+one on the first. Row actions are spelled out rather than folded into a menu,
+and each carries its row's name as its accessible name: a column of buttons all
+called "Delete" is ambiguous to a screen reader and to a test alike.
+
+**Leaving is not editing.** It comes before rename and delete rather than
+between them, because sitting in the middle of that pair reads as though it
+were one of them.
+
+Every one of these controls is drawn at `ACTION_SIZE` with an `ACTION_ICON_SIZE`
+glyph, both from `@/ui`. They are constants rather than literals because the
+sizes had already drifted once: a row's buttons were `compact-xs`, a heading's
+were the default `md`, and the icons were a mix of 14, 16 and the icon
+package's own 24 -- so the same three actions were drawn three different sizes
+depending on which screen you were looking at. Small on purpose: a table is the
+content and its controls are not.
+
+The heading's controls are capped to `MAX_TABLE_WIDTH` too, so they land on the
+table's right edge rather than the window's -- otherwise Rename and Delete drift
+away from the rows they act on as the monitor gets wider.
+
+**Adding goes under the table, on the left.** New group, New game, Add a
+character, Invite -- all of them add a row, so all of them sit beneath the rows.
+Invite is the one that reads oddly until you see it that way: it is not a thing
+you do *to* a group, it is how a person gets added to one.
+
+The icons are inline SVG in `ui/icons.tsx` rather than an icon package -- five
+glyphs do not justify a dependency, and there is no `vite-plugin-svgr` here.
+They break `DragonMark`'s two conventions deliberately: `currentColor` so they
+take their button's colour, and `aria-hidden` because each sits beside a text
+label that already names the action.
+
+Every table is capped at `MAX_TABLE_WIDTH` (1024px) on desktop, set once in
+`DataList` rather than by each screen remembering to. Every table here is narrow
+content, and one spanning a 2560px monitor puts its first and last cell an eye
+movement apart.
+
+## Sharing is reading, and it is one component
+
+A group screen has two tabs -- Members and Characters -- because both are the
+same table seen two ways and neither is a page of its own. `TabRow` already
+existed for this. **Games are deliberately not a third tab**: see below.
+
+The **Characters** tab is what the group's members have shared with each other.
+Sharing grants a read and only a read, and the panel says so by what it does not
+draw: there is no edit control anywhere on it, no build link, no event log. That
+is not the client hiding things it could offer -- there is no route behind any of
+them for anybody but the owner, so a button would come back 404. The only action
+on somebody else's row is **Take off**, and only for a DM, because a guest's
+session ends and their character would otherwise be stuck on the table.
+
+A shared character opens at `/groups/:id/characters/:character`, and it draws
+`SheetBody` -- **the same component its owner's own sheet draws**. That is the
+point of the split: the server renders both with one converter, so the table is
+looking at the character rather than at a summary of it, and the two cannot
+drift into disagreeing about what it is. What surrounds the body differs, and
+that is the whole difference between the two pages.
+
+A **game** is one sitting, and it is never called a session -- in this client
+that word means being signed in, right down to `SessionUser` and
+`startGuestSession` in the same flat `@/lib/api` barrel.
+
+## Games are a section, not a corner of a group
+
+Games get their own `NAV_ITEMS` entry and live at `/games` and `/games/:id`,
+beside Characters and Groups rather than inside one.
+
+The reason is the same one that keeps folders out of Groups: **a game belongs
+to a group the way a character belongs to a folder** -- the group is a fact
+about the game, not the route to it. Somebody who plays at three tables wants
+one list of their games, and making them open a group first is asking them to
+remember where Thursday's game lives in order to find it. `GET /v1/games`
+answers that in one request, and each row carries `group_name` so the list can
+say which table without a request per row.
+
+A game screen offers two ways to fill a roster, and they are shaped differently
+because the things behind them are shaped differently.
+
+**Add character from group** is a flat list. A game is played at exactly one
+group, so there is one set of shared characters and nothing to branch on.
+
+**Add my characters** is a tree of your folders, collapsed. A folder is how its
+owner already thinks about their characters -- somebody with three campaigns'
+worth of them knows which shelf tonight's is on -- and a flat list would make
+them read every name to find it. It fetches everything up front rather than per
+branch, because a character listing carries its own folder: one request covers
+every shelf, and a request per shelf would be slower for no benefit.
+
+Only characters that are not already seated are offered, and a folder with
+nothing left to offer is left out of the tree entirely.
+
+`GamesScreen` offers **New game** only to somebody who runs at least one table,
+because a player has nowhere to put one and a dialog with an empty picker
+teaches nothing. The picker is where the group is chosen, which is why creation
+is the one call that names a group at all.
+
+A shared character's sheet stays at `/groups/:id/characters/:character`, and
+that asymmetry is deliberate: sharing *is* a group's doing and the group is what
+grants the read, so the URL says so.
+
 Two things on that screen are not cosmetic:
 
 - **The default folder's row has no delete control.** It is the folder an
@@ -178,9 +359,30 @@ what brings the two-skill prompt into existence -- so the total number of steps
 is not knowable until the last one is answered. The tabs are not steps. They
 are the fixed set of *categories* a question can belong to, which is the
 server's own `Prompt.Group` and not a taxonomy this client invented, in the
-order `domain/stages.ts` states: identity, class, race, background, abilities.
+order `domain/stages.ts` states: identity, class, abilities, race, background.
 Class first after the name, because it is the choice the most other choices
-hang off.
+hang off -- and the scores straight after it, because they are what the class
+was picked *for*: a barbarian wants the 15 in Strength, and deciding that while
+the class is still the last thing you looked at is the difference between
+building a character and filling in a form.
+
+The screen opens on the first category with something required outstanding,
+and that is the whole of the help it offers: **answering does not move you**.
+A tab changes when a tab is pressed, and never on the way back from a write --
+answering one question is not a request to be asked another, and a player who
+has just chosen barbarian is usually looking at what barbarian brought with
+it. There is no Next in the tab row for the same reason: the order is the player's,
+and a control that walks the tabs in the server's order is a wizard's stride in
+a screen that is not a wizard. `Finish` sits against the last tab rather than
+across the row from it, because it is the thing to do after them.
+
+A `Next` does appear **under the list, once a tab has nothing left to answer**,
+and only then. That is not navigation -- the tabs are always there -- it is the
+end of a piece of work saying where the next piece is, at the moment when that
+is the only thing left to say. It goes to the next category with something
+*required* still open, wrapping round, and it names none of them: a finished
+character always has an optional prompt somewhere, and a Next that walked to
+that would never let anybody stop.
 
 Three requests, because they answer three different questions: `/prompts` says
 what is still open, `/events` says what was decided and in which entry, and
@@ -190,13 +392,14 @@ projection time -- so it is fetched rather than computed.
 
 **Nothing can be answered before it is asked.** Every tab is freely clickable,
 because a tab is a place to look as well as a place to answer, but what can be
-answered on one is exactly what `/prompts` returned for it.
-`features/character/OutstandingChoices` is that list, and it is one component
-with three callers -- each build tab filtered to its own category, the
-character sheet showing all of them, and the level-up page when there is one.
-There is deliberately no second notion of "outstanding" anywhere in this
-client, so there is no way for the sheet and the build screen to disagree
-about it.
+answered on one is exactly what `/prompts` returned for it. Two surfaces draw
+those questions: the build tab, as blocks that open, and
+`features/character/OutstandingChoices`, which is the character sheet's
+read-only statement of what is left -- and the level-up page's, when there is
+one. Both read the same response and name it through the same
+`features/character/promptNames`, so there is deliberately no second notion of
+"outstanding" anywhere in this client, and no second vocabulary for it. What
+differs is only that one is a list of ways in and the other is a list.
 
 **The client routes nothing.** Every stored entry carries the group of the
 prompt it answered, written by the server, so a change that invalidates an
@@ -211,34 +414,153 @@ learns that a first level is a `class` event and a fourth is a `level` one.
 Option keys come from the server for the same reason: a bundle of a shortbow
 and twenty arrows has no slug of its own.
 
+The exception, and its bounds, is the character's **inputs**: a name, an
+alignment and the six ability scores. They settle a value on the sheet rather
+than naming a catalogue entry or answering a grant, so each is stored as an
+addressed change -- and the prompt, which says the entry is a `change`, has
+nowhere to say to which path. `BuildScreen`'s `INPUTS` is that table and is
+deliberately the only place a path is written down. It is worth knowing why it
+exists: an alignment is namespaced `character/alignment` exactly like
+`character/race`, this screen read the namespace as the shape, and the
+`change` event it posted -- naming an alignment, changing nothing -- was
+accepted by a server that could attribute it to no prompt. The alignment
+simply never saved, with a 200 to say so.
+
 One `PromptCard` renders every kind of prompt rather than one component per
 kind, because the server synthesises "which race?" into the compendium's own
-grammar instead of a second vocabulary. What the kinds change is the wording.
+grammar instead of a second vocabulary. What the kinds change is the wording --
+and one thing they change is what a click means. Where a prompt wants **one**
+answer, picking another swaps it, because picking another *is* changing your
+mind and making somebody unpick first is asking them to operate the form rather
+than answer the question. Where it wants **N**, the options that were not
+picked go grey as soon as N are: the question has been answered, and an option
+that still looks pressable but does nothing reads as a broken button. What was
+picked stays live either way, because unpicking is how you undo.
 Two questions are genuinely not that shape and get a form each: a name
-(`NameForm`) and the six ability scores (`AbilityScoresForm`). `StagePanel`
+(`NameForm`) and the six ability scores (`AbilityScoresForm`, below).
+`StagePanel`
 chooses between the three by the kind of the prompt, and that is the only place
 in the client mapping a prompt kind to a control -- which is what let
 `PromptCard` stay exactly as it was while two new kinds arrived.
+
+None of the three says what the question is. The block they open inside is
+headed by the choice's own name, and a surface that repeated it -- "Two more
+languages", then "Choose 2 more languages" -- would be asking twice. `NameForm`
+is the one exception, because "What are they called?" is not what its block
+says and is the first line anybody reads in this application.
+
+### One block per choice
+
+A tab is one list, and every choice on it is a block that opens onto its own
+answering surface. There used to be three places for one thing: what had been
+decided in a card at the top, what was left in a card under it, and -- detached
+at the bottom -- whichever question was in hand. Answering meant reading a name
+in one card and finding its options in another.
+
+A decided choice and an open one are the same object at two moments, so they
+are one list rather than two sections: the choice of a race *is* the question
+"which race?" once it has an answer. `features/character/blocks` merges them,
+sorted by level with everything un-levelled first, which reads as the story it
+is -- took rogue at 1, still owes two skills at 1, gained a level at 2. What
+tells the two apart is that an open block is drawn to stand out, not where it
+sits.
+
+**Nothing opens itself**, with one exception below. The screen used to open the
+first open question of the tab; it has no way of knowing which of five a player
+came here to make, and a surface that opens itself is one they have to close.
+One block is open at a time, and answering closes it rather than advancing to
+the next question.
+
+**The list grows; it does not rearrange.** Level order decides where a block
+goes the first time it is drawn, and after that it stays there:
+`features/character/blocks` keeps a `BlockOrder` of where everything sits, and
+a key it has not seen sorts to the end. Answering a question therefore adds
+what the answer brought with it and moves nothing else -- and the entry that
+answers a question takes that question's own place, rather than the question
+vanishing from the middle of the list while its answer appears at the bottom.
+The screen learns which entry that is from the write's response: a single
+appended event is the log's new head, so the `seq` it answers with names it.
+
+Nor does the screen go away while it catches up. A write the server has
+already confirmed is followed by `useResource`'s `refresh` rather than its
+`reload`: the same request, with the list left standing rather than replaced
+by a spinner and rebuilt underneath whoever was reading it. A refresh that
+*fails* still takes the screen down to its error, because a list quietly out
+of date is worse than one that says it could not check.
+
+`ui/BlockList` is the primitive underneath, wrapping Mantine's accordion so
+that feature code neither assembles one nor re-decides its variant. It mounts a
+body only while its block is open, which is not a styling nicety: a prompt's
+surface fetches the catalogue entries its options name, and a tab of collapsed
+blocks would otherwise pay for a collection apiece on every paint. A block with
+no body -- a level already taken -- is a statement, not a disabled control.
 
 ### Creating is answering the first question
 
 `/characters/new` renders `BuildScreen` with no `:id`. The identity tab holds
 the name, answering it creates the character with that name alone, and the URL
-is replaced with the build one. There is no separate create screen because
+is replaced with the build one. It is also the one block that opens itself:
+there is no `/prompts` response yet, so the tab poses the question rather than
+reading it, and it is the only thing on the page -- nothing else is being
+pre-empted, and a front door whose one row is shut reads as broken. There is no separate create screen because
 there was never a second thing being done -- and creation used to carry the
 score method and all six numbers, which meant eight selections in one log entry
 and nothing a player could point at and change. The scores are an ordinary open
 choice now, answered on the abilities tab and written as their own entry.
 
-`/characters/new?folder=` carries the folder the party list was filtered to, so
+`/characters/new?folder=` carries the folder the character list was filtered to, so
 whatever the list was showing is where the next character lands. Import does the
 same. Absent, the server resolves the account's default.
 
+### The Stub button is a development build's third button
+
+Beside Import there is a **Stub**, and it is there only in a development build.
+It posts to `/v1/characters/stub` and lands on a finished level-3 rogue -- the
+character in `docs/reference_hexsheet/` -- so that working on the sheet, the log
+page or the character list does not begin with a walk through five tabs.
+
+It goes to **the sheet**, and that is the one place it differs from Import,
+which goes to the build screen. An import answers no prompts, so there is always
+something left to decide; a stub is finished, so the sheet is the thing worth
+looking at. It carries `?folder=` like both its neighbours.
+
+Finished means the build screen's "still to choose" panel is **empty**, not
+merely that the rules call the character complete. Seven of its prompts are
+optional -- a language and the five questions acolyte asks about who the
+character is -- and a stub that left them would have shown seven untouched rows
+to anybody opening the build screen to look at one. The only row that remains is
+the standing offer of a level.
+
+The gate is `import.meta.env.DEV`, not a runtime check on a version or a
+feature flag, and the difference is the point: Vite replaces it with a literal,
+so a production build **drops the branch and everything behind it** rather than
+shipping code it merely never reaches. The server does the same on its side --
+the route is not registered outside `development` -- so neither half relies on
+the other to stay hidden. See
+[backend.md](backend.md#the-stub-builds-a-character-it-does-not-import-one) for
+why it builds the character rather than importing it.
+
+That elimination is why the button is **its own component**, `StubButton.tsx`,
+rather than a few lines inline in the character list. A hook cannot sit inside a
+branch, so inline the `useAction(createStubCharacter)` would have to be called
+unconditionally -- and an unconditional call keeps the whole path reachable, so
+the bundle would ship it and merely never draw it. Behind its own module the
+one reference folds away with the branch and the module goes with it. The check
+is a grep: `characters/stub` appears zero times in `dist/`, where
+`characters/import` beside it appears twice. What the character list keeps is one
+`useState` holding an error nothing ever sets, because that too is a hook.
+
+It renders under Vitest, since `DEV` is set there, which is what makes the two
+tests in `CharacterListScreen.test.tsx` possible. That a production bundle omits
+it is not something a test in that environment can observe.
+
 ### Changing anything is one mechanism
 
-Every row under "already chosen" is exactly one log entry, and `[Change]`
-replaces that entry: pick the new value, `PUT …?dryRun=true`, read what would
-be dropped, commit the same `PUT` on confirmation. There is no
+Every settled block is exactly one log entry, and opening it replaces that
+entry: pick the new value, `PUT …?dryRun=true`, read what would be dropped,
+commit the same `PUT` on confirmation. There is no separate `[Change]` button
+because there is no second gesture on this screen -- pressing the thing you
+want to deal with is the whole of it. There is no
 append-a-correction path and no Back button. The dialog names every dropped
 entry and says the questions will be waiting outstanding in their own
 categories, because they will be -- and it confirms even when nothing is
@@ -247,36 +569,75 @@ nothing" is a thing the screen says rather than a thing you infer from its
 silence.
 
 An answer to a *nested* prompt -- a rogue's Expertise, a half-elf's ability
-bonuses -- cannot be re-posed from here, because the options that made it up
+bonuses -- cannot be re-posed directly, because the options that made it up
 arrived with a prompt the server stopped emitting the moment it was answered.
-Those rows drop their entry instead, which reaches the same place from the
-other side: the question comes back outstanding, under its own tab.
+Opening one of those blocks therefore drops the entry, which reaches the same
+place from the other side: the question comes back outstanding, and
+`reclaimPlace` holds the block's own place for it, so what returns is where
+what went was. The player is shown none of that -- the same press, the same
+outcome, a moment longer -- and it is asked about on the same rule as
+everything else: only if another answer cannot survive it.
 
 ### A category's word appears exactly once
 
-In its tab. Panel headings use the question's own wording, the two sections are
-titled "already chosen" and "still to choose", and empty copy is "Nothing left
-here" rather than "nothing left in race". It is a small rule with a large
-payoff: `getByText('race')` means one thing on this page, and a test that
-breaks does so for the reason it says.
+In its tab. A block is headed by the choice's own name -- "A race" -- or by
+what was decided -- "Race chosen" -- and never by the category alone, and empty
+copy is "Nothing left here" rather than "nothing left in race". It is a small
+rule with a large payoff: `getByText('race')` means one thing on this page, and
+a test that breaks does so for the reason it says.
+
+### The method decides what there is to do about the scores
+
+`AbilityScoresForm` is four editors behind one `Select`, because in the rules
+the method decides what is actually being chosen -- and three of the four do
+not let a number be typed at all. That is the point of them rather than an
+omission: in none of them is the number yours to pick.
+
+| Method | What it is | What you do |
+| --- | --- | --- |
+| Standard array | six printed numbers | deal them out |
+| Rolled | six numbers, 4d6 drop lowest | deal them out, or roll again |
+| Point buy | a 27-point budget | spend it |
+| Manual | an escape hatch | type anything from 1 to 30 |
+
+The two that deal out a set share `ScoreAssignment`: a pool you take from and
+six abilities to put numbers on. Dragging is the obvious gesture on a mouse and
+does not exist on a phone, so a number can equally be picked up with a tap or
+the keyboard and put down with a second one -- the same operation, reachable
+without a pointing device. Dropping onto a taken ability swaps the two; putting
+a number back where it came from returns it to the pool. Nothing can be
+confirmed until all six are placed, because six numbers and five decisions is
+not an answer.
+
+Point buy is priced by `domain/abilities`, which is where the rule lives: 8
+costs nothing, 9 to 13 cost a point each, 14 costs two and 15 costs two more.
+The steppers refuse a raise the budget cannot afford, so the screen enforces
+the budget instead of complaining about it afterwards -- and points may be left
+unspent, because a player who wants an even spread of 13s has spent 25 and is
+finished.
+
+The dice live in `domain/abilities` too, and take the die as a parameter: a
+test that cannot say what was rolled can only assert that six numbers came
+back, and "between 3 and 18" is not a test of dropping the lowest.
 
 ### Level-up is not offered
 
 The server poses "gain a level in which class?" and everything that follows
 from it under the `advance` group, and this client filters that group out of
-everything it draws: no outstanding row, no answering surface, no control.
+everything it draws: no block, no answering surface, no control.
 Taking a level does not work -- the event the client would post is recorded as
 a no-op -- and a question that appears answerable and silently changes nothing
 is worse than a question that is not asked. It is the same judgement that took
 the "Level up" button off the sheet.
 
-Levels a character already *has* stay visible as settled rows on the class tab,
-and stay read-only. They are facts about the character -- an imported one may
+Levels a character already *has* stay visible as settled blocks on the class
+tab, and stay read-only -- blocks with nothing to open, which is why
+`ui/BlockList` draws one as a statement rather than as a control that refuses. They are facts about the character -- an imported one may
 well have several -- rather than controls, and editing one would drive the same
 machinery that cannot take one. `domain/stages.ts` is the single line that
 reverses all of this on the day it works.
 
-## The sheet decides what order the abilities come in
+## The sheet decides what order things come in
 
 `features/character/CharacterSheetScreen` prints ability scores and saving
 throws as a sheet does -- STR, DEX, CON, INT, WIS, CHA -- and it has to impose
@@ -285,14 +646,136 @@ slug and a Go map serialises its keys sorted, so a screen that walks the
 response as it came prints CHA first. The order lives in `domain/format.ts` as
 `ABILITY_ORDER`, and anything drawing more than one ability in sequence walks
 it through `abilitiesInOrder` rather than walking the response -- the ability
-scores form's six inputs included. Walking a fixed list against a projection that
-may not match it decides two things: a slug the response omits draws nothing,
-since a blank card claiming a score that is not there is worse than a row of
-five; a slug the six do not cover is kept and drawn last rather than filtered
-out, since an unrecognised ability means the server and this client disagree
-about the game, which is a thing to see rather than a thing to hide. The skills
-beside them stay alphabetical on purpose: there are eighteen in no traditional
-order, so the alphabet is the only sequence a reader can search.
+scores form's six inputs included. Walking a fixed list against a projection
+that may not match it also keeps a slug the six do not cover, drawn last rather
+than filtered out: an unrecognised ability means the server and this client
+disagree about the game, which is a thing to see rather than a thing to hide.
+
+**The saving throw is drawn inside its ability's card**, under a rule, rather
+than in a panel of its own further down. A save is an ability check the
+character may be trained in, so printing the two a screen apart asked the
+reader to carry a modifier between them, and the separate panel spent six rows
+repeating the six labels the cards had already given. Merged, the two cannot
+fall out of alignment, because there is no second list to align. Training is
+the same `ui/ProficiencyMark` the skills use -- one vocabulary for "you are
+proficient in this" across the whole sheet.
+
+That merge changed what a *missing* ability means, and the change is worth
+stating because the older rule said the opposite. Scores and saving throws are
+two projections and neither promises all six keys. The cards used to be driven
+by the scores alone, and an ability with no score drew nothing at all -- a
+blank card claiming a score that is not there being worse than a row of five.
+Now that the card is the only place either projection is drawn, dropping it
+would swallow a save the server did send. So the grid walks the **union** of
+the two (`abilitiesOnSheet`), and a card with no score prints a dash where the
+modifier goes and still prints its save. It claims nothing it was not sent, and
+hides nothing it was.
+
+Above them, `features/character/IdentityTable` says who the character is as
+labelled pairs -- name, race, subrace, level, class, subclass, background,
+experience. The sheet used to say this in one dimmed line under the name ("Elf
+· Wizard 1"), which reads well and answers badly: a line has no room for the
+subrace or the subclass, and a reader looking for one of them has to know the
+order it was written in. **Every field is drawn even when empty**, showing
+`--`, because "not chosen yet" is the answer to the question and a missing row
+is not -- on a half-built character the blanks are the most useful thing on the
+page. Names come from the compendium, five session-cached collections flattened
+into one map keyed `"<collection>:<slug>"`; keyed by collection as well as slug
+because two collections may share one, and a bare slug map would let a
+background rename a class. Without it the table falls back to title-casing, and
+"half-elf" becomes "Half Elf" rather than "Half-Elf".
+
+Under the cards is a second headline row, `features/character/Vitals`: passive
+Perception, the spellcasting numbers, speed, vision and Hit Dice. Four of those
+five were being projected and drawn nowhere at all -- speed and senses were on
+every sheet the server sent and on none it showed, and Hit Dice sat in
+"Resources and gear" beside the backpack, which is the wrong shelf: it is a
+fact about the body, not about the kit. It is drawn in one place now, not two.
+
+**Three lines of six**, the width of the ability row, so every character's
+sheet puts a number in the same place and a reader never hunts for one. The
+line breaks are meaning rather than wrapping: abilities, then the body's state
+-- hit points, the temporary pool on top of them, the Hit Dice that refill
+them, then armor class, initiative and proficiency -- then what the character
+can do at range. Hit points, temporary hit points and Hit Dice lead the second
+line together because they are one subject, and reading them apart means asking
+the same question three times.
+
+**A caster gets three cards, not one** -- attack bonus, save DC and the ability
+behind both are three questions asked at three different moments, and a spell
+that attacks never wants the DC. A character who casts nothing keeps all three
+and reads `n/a`, because a row that changes length between characters costs
+more than three quiet cards.
+
+The two absences are deliberately different words. **`n/a` is "this does not
+apply to you"** -- a barbarian has no spell save DC. **`--` is "this applies
+and is not known here"**, which is what an unset speed is. Neither is a zero,
+because `0 ft.` is a claim and temporary hit points of nought is a real answer
+that has to stay distinguishable from both. The sense names its own card --
+"Darkvision / 60 ft.", because "Vision / 60 ft." says less and the label is the
+half with room for the word.
+
+The skills beside them are a different case, and they used to be alphabetical
+for a reason that has since expired. `features/character/SkillsPanel` draws
+**all eighteen**, ordered by how trained the character is — Expertise, then
+proficient, then half, then untrained, alphabetical within each block. When the
+panel listed only the six a character was proficient in, the alphabet was the
+only sequence a reader could search. Eighteen rows of which six matter is a
+different problem: the question is what the character is good at, and the
+answer should not be scattered down a list of things nothing trained. The
+alphabet still breaks ties, so each block stays stable and searchable.
+
+It draws eighteen rows because the **server sends eighteen**, not because the
+client fills in the gaps. The untrained skills arrive with their bonuses
+already computed (see [dnd.md](dnd.md#the-projected-sheet)); this panel adds
+nothing up. Unioning the sheet against the compendium and adding an ability
+modifier here would be the browser computing a rule, which
+[`domain/format.ts`](../web/src/domain/format.ts) exists to forbid — and it
+would be wrong the day Jack of All Trades starts halving a bonus.
+
+What the compendium *is* asked for is each skill's **name and governing
+ability**, fetched with the session-cached `getCollection('skills')`. The name
+matters twice: it is in the negotiated locale, and it is the only spelling that
+gets "Sleight of Hand" right, where title-casing the slug capitalises the "Of".
+That request failing costs the ability tags and falls the names back to the
+slug; it does not stop the panel drawing, on the same reasoning as the prompts
+fetch above.
+
+Training level is carried by a mark — `ui/ProficiencyMark`, one glyph filling
+in across the four levels, with Expertise ringed rather than merely fuller
+because it is the bonus counted twice rather than more training. The mark is
+what separates the rows, and the dimming of untrained ones is a **second**,
+redundant channel: a panel distinguishing eighteen rows by a shade of grey
+reads to nobody on a monochrome print and to nobody who cannot tell the two
+greys apart. A "Hide untrained" toggle collapses to the trained rows; it starts
+showing everything, since that is the point of the panel, and is not persisted.
+It is drawn as the section's [`aside`](#two-views-one-codebase) rather than
+inside the body, which is why `CharacterSheetScreen` rather than `SkillsPanel`
+holds the flag it flips.
+
+Skills stays at half width rather than spreading now that the saving throws
+have moved up into the ability cards: its rows are name, ability and bonus, and
+a full page width would set the bonus so far from the name that the eye travels
+back along an empty line to pair them. **`features/character/ProficienciesPanel`
+takes the half beside it** -- everything the character is trained with that is
+not a skill or a save, grouped into Tools, Weapons and Armor. It used to be one
+comma-joined paragraph at the foot of "Traits and features", which is a
+sentence to be read rather than a list to be searched, and which filed a tool a
+player rolls with beside a racial trait they never touch again. It is drawn in
+one place now, not two.
+
+**The bonus is printed on tools and on nothing else**, and the reason is worth
+stating because it looks arbitrary. A tool check is an ability check, but
+*which* ability depends on what is being attempted -- picking a lock with
+thieves' tools is Dexterity, spotting a forgery with a forgery kit is
+Intelligence -- so the only part of the number fixed in advance is the
+proficiency bonus, which is exactly what a sheet can usefully print. A weapon's
+attack roll has a fixed ability, so a bare proficiency bonus would be the less
+useful half of a number this panel is not showing; armor proficiency adds
+nothing to any roll at all, and only stops the penalties. Nothing is computed
+here either: the number is `status.proficiencyBonus` as the server derived it,
+and the *type* that decides which rows get it comes from the compendium, via
+the same session-cached `getCollection` the skill names come from.
 
 The stat row above leads with hit points, then armor class, initiative and
 proficiency. Hit points are the one number that moves between one glance and
@@ -430,6 +913,11 @@ describes intent, because the battle tracker is not built. That is the one to
 keep honest -- a landing page promising it would be the only thing on
 easydnd.org that did.
 
+Those three panels are also the three sections a signed-in visitor gets, and
+since `/games` joined the navigation the third has somewhere to lead. What is
+behind it says it is not built, which is the honest middle between a promise
+with nothing under it and a section hidden until the day it works.
+
 They also paid for a piece of the design to be removed. While the panels were
 empty, `slideSize` was under 100% so the neighbours peeked: three identical
 blank rectangles at full width read as one rectangle, and a swipe between them
@@ -443,10 +931,18 @@ paper. The indicators are white at `0.6` opacity, which over a pale panel on a
 pale page is invisible; an invisible indicator is worse than no indicator,
 because it says there is one panel. They are repainted in the primary colour,
 which reads under `defaultColorScheme="auto"` where white does not. And the
-controls are `44px` rather than the default `26px`: they are the only way
-through for a visitor with neither a touchscreen nor the arrow keys, they sit
-*over* a panel rather than beside it, and 26px is under every published minimum
-for a pointer target.
+controls are `44px` rather than the default `26px`: on the viewport that draws
+them they are the only way through for a visitor not using the arrow keys, they
+sit *over* a panel rather than beside it, and 26px is under every published
+minimum for a pointer target.
+
+They are drawn on desktop **only**. This is one of the few places outside a
+`@/ui` primitive that calls `useIsDesktop`, and it asks about the *input*
+rather than the layout: a phone has no pointer, so two 44px arrows covering the
+panel they sit on would duplicate a swipe the screen already offers. Taking
+them away removes a control, not a way through -- the swipe, the arrow keys and
+the indicators all remain, and the indicators are what still say how many
+panels there are.
 
 None of the three panels is a link, and not because two of them lead nowhere --
 `/groups` is real. It is that all three live behind the sign-in boundary, so a
@@ -517,10 +1013,13 @@ a page for an arbitrary commit that nothing serves.
 
 The cost is worth stating rather than pretending away: the signed-in shells have
 no footer, so an account holder -- the person actually reading SRD-derived
-material on a character sheet -- has no link to `/legal` from anywhere.
-`MobileShell` could not carry one without redesigning its tab bar, which owns
-the only `AppShell.Footer` slot. That gap is recorded in
-[licensing.md](licensing.md#known-gaps) rather than quietly carried.
+material on a character sheet -- has no link to `/legal` from anywhere. That
+used to be a layout that forbade it, `MobileShell` spending its only
+`AppShell.Footer` slot on the tab bar. Since the tab bar became a dropdown in
+the header, the slot is free and both signed-in shells could carry a footer.
+So it is now a decision nobody has made rather than a thing that cannot be
+done -- still recorded in [licensing.md](licensing.md#known-gaps) rather than
+quietly carried.
 
 Branching rather than redirecting is what keeps the address bar honest: an
 unauthenticated visit to a deep link does not bounce anywhere, so a link shared
@@ -608,8 +1107,12 @@ busy/error/unmounted plumbing with it through `runAuth` and lets the flows
 differ only in what they await. Everything that offers account management
 has to check the flag: `features/auth/PasskeyNotice.tsx` renders a "nothing is
 saved" notice for a guest and nothing at all for an account, and both shells
-say "End guest session" rather than borrowing a word that implies you can come
-back.
+still *name* the control "End guest session" rather than borrowing a word that
+implies you can come back. Those words are now the control's accessible name
+and its tooltip rather than button text -- see
+[the account is two icons](#adding-a-feature) -- which is the one thing that
+had to survive the change intact, because a logout glyph is identical either
+way and the difference is whether pressing it destroys somebody's only copy.
 
 There is no "add a passkey" flow, on either side of the wire: an account's
 passkeys are the ones it was created with. `/account` therefore lists them and
@@ -660,8 +1163,37 @@ The Go side is in [backend.md](backend.md#authentication).
 ## Two views, one codebase
 
 There is exactly one viewport branch, in `shell/RootShell.tsx`: a persistent
-navbar on desktop, a thumb-reachable bottom tab bar on mobile. Below it,
-screens are viewport-agnostic. Where a layout genuinely has to differ, it
+navbar on desktop, and on mobile a single row of chrome whose sections live in
+a dropdown beside the mark. Below it, screens are viewport-agnostic.
+
+The phone chrome used to be a header *and* a thumb-reachable bottom tab bar, on
+the argument that the top of a phone is the hardest place to reach one-handed
+-- which is true, and is how this app gets used at a table. It lost to a bigger
+one. Two rows of chrome cost 108px of an 844px screen to draw two things, one
+of which is pressed rarely: you are usually already in the section you want.
+Folding the sections into a dropdown buys the content back a whole row, gives
+each section its full name instead of the tab bar's four characters, turns
+imperative `useNavigate` into real links, and costs the same whether there are
+two sections or six -- which a `Tabs.List grow` does not. Note what is *not*
+the reason: three tabs would have fit. Adding one is what made the question
+worth asking, not what answered it.
+
+It also freed the `AppShell.Footer` slot that the tab bar owned. Nothing fills
+it; see [licensing.md](licensing.md#known-gaps) for the thing that wants to.
+
+Two smaller rules the three shells share, both of them fixes for something that
+looked wrong on screen rather than preferences:
+
+- **One header height**, `HEADER_HEIGHT` in `shell/chrome.ts`. The landing
+  chrome drew 56 and the phone chrome 52, so signing in on a phone moved the
+  whole page up four pixels -- a flinch at the moment somebody first sees the
+  app. Three shells sharing a corner need to share its dimensions, or the
+  seam between logged-out and logged-in is visible.
+- **Nothing collapses the desktop navbar.** It had a `Burger` defaulting to
+  open, which meant the control it actually drew was a close cross, sitting
+  left of the mark and before the app's own name -- it read as a way to dismiss
+  something. A wide screen has room for a 240px navbar and no reason to hide
+  it; the viewport that cannot spare the width uses the other shell. Where a layout genuinely has to differ, it
 differs inside a `@/ui` primitive rather than at the call site:
 
 | Primitive | Desktop | Mobile |
@@ -670,14 +1202,28 @@ differs inside a `@/ui` primitive rather than at the call site:
 | `DataList` | table | labelled cards |
 | `Columns` | side-by-side panels | accordion |
 | `TabRow` | tab strip, actions right | the same, scrolled sideways |
+| `BlockList` | a list of blocks, one open | the same |
 
-`TabRow` is the first of those whose two renderings are **identical markup**.
-The others genuinely swap components at the breakpoint; this one is a
+A `Columns` section may carry an **`aside`** -- a control belonging to the panel
+as a whole, drawn on the title's line rather than as the first row of the body.
+The skills filter is the case it was added for: as content it left a whole panel
+width of empty title bar above it. The mobile rendering is the interesting half.
+`Accordion.Control` *is* a button, so an aside nested inside it would be a
+button within a button -- invalid markup, and the outer control swallows the
+press. It is therefore a sibling of the control rather than a child, the control
+flexing and the aside keeping its width. Because the two live in different
+subtrees from the content they act on, state an aside toggles belongs to the
+screen that builds the sections, not to the panel component.
+
+`TabRow` and `BlockList` are the ones whose two renderings are **identical
+markup**. The others genuinely swap components at the breakpoint; `TabRow` is a
 `ScrollArea type="never"` that is simply inert at a width the tabs fit in, so
 there is no second tree to keep working and a test at one width is a real test
 of the other. The active tab is brought into view by setting `scrollLeft`, not
 by `scrollIntoView`, which scrolls every scrollable ancestor -- it would drag
-the document as well as the strip, and jsdom does not implement it.
+the document as well as the strip, and jsdom does not implement it. A stack of
+bordered disclosures needs no branch either: it is right at 390px and at
+1440px, and the only difference is padding the spacing scale already handles.
 
 ## One button size, in one place
 
@@ -694,16 +1240,28 @@ A call site may still pass `size` where it genuinely means something different -
 size in three files, so a new one wants a reason beyond the button looking better
 on the screen being worked on.
 
+There is exactly one such call site: the phone header's section dropdown is
+`sm`. The reason is a tap target rather than taste -- it is the whole of the
+app's navigation on a phone, and `xs` is 30px, under every guideline there is.
+`ActionIcon` keeps Mantine's own default and gets no `defaultProps` entry of
+its own, because the three call sites that already use one rely on it and a new
+theme default would silently resize them.
+
 ## Dependency rule
 
 ```
 theme -> lib -> ui -> shell -> features -> routes
 ```
 
-Imports point left, and **only `src/ui/` may import `@mantine/*`** -- everything
-else imports from `@/ui`, which re-exports what it needs. `npm run lint:layers`
-enforces both, the same way `make lint/layers` does for the Go packages: a
-convention nobody can run is a convention that rots.
+Imports point left, and **only `src/ui/` may import `@mantine/*` or
+`@tabler/*`** -- everything else imports from `@/ui`, which re-exports what it
+needs. An icon set is a *look* the same way a component library is, so a
+feature reaching past `@/ui` for a glyph is the same leak with a smaller blast
+radius. `npm run lint:layers` enforces both, the same way `make lint/layers`
+does for the Go packages: a convention nobody can run is a convention that
+rots. The list of packages it guards lives in `scripts/check-layers.mjs` as a
+list rather than one name, because `@tabler/` arrived through the hole a single
+hard-coded `@mantine/` left open.
 
 ## Adding a feature
 
@@ -713,9 +1271,29 @@ visuals belong in `web/src/ui/`, never inline in a feature. The API's error
 envelope is decoded exactly once, into `ApiError`, by `lib/api/client.ts`.
 
 A **new top-level section** is one more entry in `shell/nav.ts`; both shells map
-over `NAV_ITEMS` and neither needs touching. Which entry is highlighted comes
-from `activeNavPath` in the same file -- shared, because the two shells had
-drifted and only the mobile one kept a section lit on its nested routes.
+over `NAV_ITEMS` and neither needs touching -- the desktop navbar and the phone
+dropdown both build themselves from it. Which entry is highlighted comes from
+`activeNavPath` in the same file -- shared, because the two shells had drifted
+and only the mobile one kept a section lit on its nested routes.
+
+`navLabel` sits beside it and is the dropdown's alone. The navbar can leave
+every entry unlit where `activeNavPath` returns null -- on a character sheet,
+on `/account`, on a 404 -- because the list is still on screen saying where you
+could go. The dropdown is one control and the only thing naming the current
+place, so it falls back to the word for what the control *is*, `Menu`. The
+alternative was widening `activeNavPath` so `/characters/:id` resolved to `/`,
+which would change which navbar entry lights on desktop and undo the one
+property that function is pinned on: `/` matches only itself.
+
+**Games is the worked example, and it is a stub.** `/games` is a `NAV_ITEMS`
+entry, a route, and `routes/GamesPlaceholder.tsx` -- a page that says running a
+game is not built. There is no `features/games/`, deliberately: the real
+feature is being written elsewhere, and leaving the directory unclaimed means
+that work lands as a new directory rather than as a conflict. A visible section
+over a hidden route is the same judgement as
+[Level-up is not offered](#level-up-is-not-offered) -- the navigation is the
+shape the app is going to be, and a door that says "not built" beats both a
+missing door and one that opens onto a surface which does nothing.
 
 Watch the names when a feature's API types meet the design system. `@/ui`
 already exports Mantine's `Group` layout primitive and every screen uses it, so
@@ -742,6 +1320,37 @@ is what makes it read under `defaultColorScheme="auto"`), and `role="img"` with
 a real accessible name rather than `aria-hidden`, because on a page with no
 text the mark is the only thing naming the app.
 
+`ui/ProficiencyMark` is the second, and it keeps the half of that convention
+worth keeping while inverting the other two -- which is the useful thing to
+know about drawing an SVG here, because the reasons are what generalise, not
+the choices. It is **announced**, like DragonMark. But it is drawn in
+`currentColor`, because it sits inline in a row of text and has to dim when the
+row dims; a literal would make it the one thing on the row ignoring both the
+row and the colour scheme. And it is named with `aria-label` rather than a
+`<title>` child, because a `<title>` is a text node: eighteen of these share
+the skills panel, whose rows are read as text, and "Stealth DEX +7" must not
+come back with a sentence about proficiency bonuses in the middle of it. The
+rule behind all three: a mark carrying a page keeps its own colours and can
+afford a `<title>`; a mark riding inside text takes the text's colour and stays
+out of its content.
+
+There is now a **third** source, and a rule for choosing between them. A brand
+mark is drawn by hand and lives in `ui/` or `public/`, because there are two of
+them and they are the app's own. A **UI affordance** -- an account, a way out,
+a chevron, a tick -- comes from `@tabler/icons-react`, re-exported one glyph at
+a time through `@/ui`. Hand-drawing those is how two "delete" controls end up
+different shapes, and the re-export list doubles as the app's icon inventory:
+adding one is a decision somebody makes in `ui/index.ts` rather than an import
+nobody reviews. Four icons cost the production bundle about 2KB, because each
+is its own ES module and the package sets `sideEffects: false` -- named imports
+only, never the deep `dist/esm/...` paths.
+
+Those icons are **decorative**, which inverts both marks above: the control
+around them carries the accessible name, and a named glyph inside a named
+button says it twice. That is the generalisable half -- a mark is announced
+when it is the only thing saying what it says, and silent when something else
+already does.
+
 `/account` is where both inventories live -- passkeys and connected providers --
 and where connecting and disconnecting happen. It shows each of them only when
 there is something to show or something to do: a Google-only account is not
@@ -755,17 +1364,36 @@ not from `shell/nav.ts`: the navigation lists the parts of the app, and the
 account is who is looking at them, so both shells put the way in at the top
 right beside the button that ends the session.
 
-**The signed-in name is that link.** The header has to say whose session this
-is, and a button labelled "Account" next to the account's own name said the
-same thing twice -- so the name itself navigates to `/account`, drawn dimmed
-and small rather than as a button, because it is still a label first. A session
-whose name is empty falls back to the word "Account", since a link with no text
-is a link nobody can press, and a null user renders neither: the pair sits in
-its own right-pushed group so the header still ends in the sign-out control
-when there is no name to draw.
+**The account is two icons**, built once in `shell/AccountActions.tsx` and used
+by both signed-in shells -- a profile mark linking to `/account`, and the one
+that ends the session.
+
+It was a display name and a text button, and the name *was* the link, on the
+reasoning that the header has to say whose session this is and that a button
+labelled "Account" beside the account's own name said it twice. The first half
+of that still holds; what broke it is the phone. A display name is arbitrary
+length in the narrowest row this app has, sharing it with a mark, the word
+"easydnd" and a button reading "End guest session" -- and the thing that
+overflowed first was the control that ends the session.
+
+So the name moved out of the header's *text* and into the controls' accessible
+names and tooltips: `Account: Alice` and `Sign out`, or `End guest session` for
+a guest. The header still says whose session this is; it says it on demand
+rather than spending a phone's chrome on it unprompted. The cost is real and
+worth naming rather than glossing: a sighted visitor now hovers the mark, or
+opens the page it leads to, which names the account at its top. The empty-name
+fallback survives as plain `Account`, since a control with no accessible name
+is a control nobody can find, and a null user renders neither -- the pair is
+right-pushed, so the header ends in the way out whether or not there is an
+account to link to.
+
+A tooltip cannot be the name. Mantine's wires `aria-describedby`, and only
+while it is open; the label is not in the DOM at all when it is closed. So the
+`aria-label` is the name and the tooltip is the sighted equivalent, both built
+from one string -- duplicated deliberately rather than by accident.
 
 `/` is the one page both sides of the sign-in boundary share: the three panels
-signed out, the party list signed in. It carries nothing else -- system
+signed out, the character list signed in. It carries nothing else -- system
 status is a deploy question rather than something either audience came to `/` to
 read.
 
