@@ -123,21 +123,6 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     expect(within(rowOf('Bram')).getByText('Campaign')).toBeInTheDocument()
   })
 
-  it('re-fetches with ?folder= when the filter changes', async () => {
-    const user = setupUser()
-    renderList(viewport)
-    await screen.findByText('Ada')
-
-    await user.click(screen.getByRole('combobox', { name: 'Folder' }))
-    await user.click(await screen.findByRole('option', { name: 'Campaign' }))
-
-    await waitFor(() => {
-      expect(requestsTo(`/v1/characters?folder=${CAMPAIGN.id}`)).toHaveLength(1)
-    })
-    expect(await screen.findByText('Bram')).toBeInTheDocument()
-    expect(screen.queryByText('Ada')).not.toBeInTheDocument()
-  })
-
   it('moves a character to another folder', async () => {
     const user = setupUser()
     renderList(viewport)
@@ -228,6 +213,50 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     })
   })
 
+  // The default folder is the one an account is guaranteed to have, so it
+  // must not even offer the control.
+  it('offers no delete for the default folder', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
+    const dialog = await screen.findByRole('dialog')
+
+    expect(within(dialog).getAllByRole('button', { name: 'Rename' })).toHaveLength(2)
+    expect(within(dialog).getAllByRole('button', { name: 'Delete' })).toHaveLength(1)
+  })
+})
+
+
+/**
+ * The rest of the screen, at one width.
+ *
+ * The block above stays at both because `DataList` draws a table on a desktop
+ * and cards on a phone, and `ModalSheet` swaps `Modal` for `Drawer` -- the row
+ * actions live inside `DataList`, so anything that presses one belongs up
+ * there. These three touch neither: what they press is the folder `Select` or
+ * a button in the toolbar above the list, and what they assert is the request
+ * that went out. See docs/web.md.
+ */
+describe('CharacterListScreen', () => {
+  const viewport = 'desktop'
+
+  it('re-fetches with ?folder= when the filter changes', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('combobox', { name: 'Folder' }))
+    await user.click(await screen.findByRole('option', { name: 'Campaign' }))
+
+    await waitFor(() => {
+      expect(requestsTo(`/v1/characters?folder=${CAMPAIGN.id}`)).toHaveLength(1)
+    })
+    expect(await screen.findByText('Bram')).toBeInTheDocument()
+    expect(screen.queryByText('Ada')).not.toBeInTheDocument()
+  })
+
   // The stub is a development convenience, and these two say it behaves like
   // the buttons beside it rather than like a special case. It renders here
   // because Vitest runs with import.meta.env.DEV set; that a production bundle
@@ -261,19 +290,5 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     await waitFor(() => {
       onlyRequestTo(`/v1/characters/stub?folder=${CAMPAIGN.id}`, 'POST')
     })
-  })
-
-  // The default folder is the one an account is guaranteed to have, so it
-  // must not even offer the control.
-  it('offers no delete for the default folder', async () => {
-    const user = setupUser()
-    renderList(viewport)
-    await screen.findByText('Ada')
-
-    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
-    const dialog = await screen.findByRole('dialog')
-
-    expect(within(dialog).getAllByRole('button', { name: 'Rename' })).toHaveLength(2)
-    expect(within(dialog).getAllByRole('button', { name: 'Delete' })).toHaveLength(1)
   })
 })

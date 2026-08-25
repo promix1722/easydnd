@@ -442,7 +442,16 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) => {
+/**
+ * One viewport. Nothing this screen draws branches on width -- only `Columns`,
+ * `DataList`, `ModalSheet` and `RootShell` do, and the suite runs without CSS,
+ * so a responsive prop cannot move the DOM either. The one exception is the
+ * sheet that prices a change, which is a `ModalSheet`; the two tests that open
+ * it are in their own block at the foot of this file. See docs/web.md.
+ */
+describe('BuildScreen', () => {
+  const viewport = 'desktop'
+
   it('names the question the server said was next, and opens it when pressed', async () => {
     const user = setupUser()
     renderBuild(viewport)
@@ -683,41 +692,6 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
     expect(screen.getByText('Nothing left here.')).toBeInTheDocument()
   })
 
-  it('prices a change before making it, and makes nothing on Cancel', async () => {
-    const user = setupUser()
-    mockApi({
-      prompts: PARTWAY,
-      events: PARTWAY_LOG,
-      dropped: [
-        {
-          seq: 3,
-          type: 'subrace',
-          ref: 'subrace:hill-dwarf',
-          source: 'race',
-          reason: 'not-offered',
-        },
-      ],
-    })
-    renderBuild(viewport)
-
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
-    // Pressing the decided block is the change gesture: it puts the question
-    // again where the answer is, rather than opening a surface elsewhere.
-    await user.click(block(/Race chosen/))
-    await user.click(await screen.findByRole('button', { name: 'Dwarf' }))
-    await user.click(screen.getByRole('button', { name: /^confirm$/i }))
-
-    // The dry run names the orphan before the click that would orphan it.
-    expect(await screen.findByText(/Subrace chosen: Hill Dwarf/)).toBeInTheDocument()
-    expect(screen.getByText('no longer offered')).toBeInTheDocument()
-    expect(posted).toHaveLength(1)
-    expect(posted[0]?.method).toBe('PUT')
-    expect(posted[0]?.url).toContain('/events/2?dryRun=true')
-
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(writes()).toHaveLength(0)
-  })
-
   it('makes a change that costs nothing else without asking about it', async () => {
     const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [] })
@@ -769,43 +743,6 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
 
     // The class itself is still a choice like any other.
     expect(block(/Class chosen/)).toBeInTheDocument()
-  })
-
-  it('puts a nested question again by dropping its entry, and says what that costs', async () => {
-    const user = setupUser()
-    mockApi({
-      prompts: PARTWAY,
-      events: ANSWERED_LOG,
-      dropped: [{ seq: 3, type: 'race', ref: 'race:half-elf', source: 'race', reason: 'empty' }],
-    })
-    renderBuild(viewport)
-
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
-    // The block reads as what was picked, not as the race it hangs off: the
-    // ref names what posed the question, and the answers are the selection.
-    await user.click(block(/Half Elf · Ability Bonus/))
-
-    // A nested prompt cannot be re-posed from here -- its options came with a
-    // prompt the server stopped emitting -- so opening the block drops the
-    // entry instead, which reaches the same place: the question comes back
-    // outstanding. No second gesture, and no button to find.
-    await waitFor(() => {
-      expect(posted).toHaveLength(1)
-    })
-    expect(posted[0]?.method).toBe('DELETE')
-    // expectedSeq travels in the query, not in a body.
-    expect(posted[0]?.url).toContain('/events/3?expectedSeq=3&dryRun=true')
-    expect(posted[0]?.body).toEqual({})
-
-    // This one costs another answer, so it is asked about before it is made.
-    expect(await screen.findByText(/waiting under whichever tab/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Ask it again' }))
-
-    await waitFor(() => {
-      expect(writes()).toHaveLength(1)
-    })
-    expect(writes()[0]?.url).toContain('/events/3?expectedSeq=3')
-    expect(writes()[0]?.url).not.toContain('dryRun')
   })
 
   it('changes the name by replacing the entry that holds it', async () => {
@@ -952,7 +889,9 @@ describe.each(['mobile', 'desktop'] as const)('BuildScreen at %s', (viewport) =>
  *
  * Net-new coverage: the create screen this replaced had no tests at all.
  */
-describe.each(['mobile', 'desktop'] as const)('a new character at %s', (viewport) => {
+describe('a new character', () => {
+  const viewport = 'desktop'
+
   it('asks for a name and nothing else', async () => {
     renderNew(viewport)
 
@@ -994,5 +933,87 @@ describe.each(['mobile', 'desktop'] as const)('a new character at %s', (viewport
 
     expect(posted).toHaveLength(0)
     expect(screen.getByText(/needs a name/)).toBeInTheDocument()
+  })
+})
+
+/**
+ * The two that do need both widths.
+ *
+ * `ModalSheet` is a `Modal` on a desktop and a `Drawer` on a phone
+ * (ModalSheet.tsx:24), and these are the only tests on this screen that open
+ * one. `src/ui/ModalSheet.test.tsx` covers the swap itself; what these cover is
+ * that the price and its buttons survive being drawn in either container.
+ */
+describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewport) => {
+  it('prices a change before making it, and makes nothing on Cancel', async () => {
+    const user = setupUser()
+    mockApi({
+      prompts: PARTWAY,
+      events: PARTWAY_LOG,
+      dropped: [
+        {
+          seq: 3,
+          type: 'subrace',
+          ref: 'subrace:hill-dwarf',
+          source: 'race',
+          reason: 'not-offered',
+        },
+      ],
+    })
+    renderBuild(viewport)
+
+    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    // Pressing the decided block is the change gesture: it puts the question
+    // again where the answer is, rather than opening a surface elsewhere.
+    await user.click(block(/Race chosen/))
+    await user.click(await screen.findByRole('button', { name: 'Dwarf' }))
+    await user.click(screen.getByRole('button', { name: /^confirm$/i }))
+
+    // The dry run names the orphan before the click that would orphan it.
+    expect(await screen.findByText(/Subrace chosen: Hill Dwarf/)).toBeInTheDocument()
+    expect(screen.getByText('no longer offered')).toBeInTheDocument()
+    expect(posted).toHaveLength(1)
+    expect(posted[0]?.method).toBe('PUT')
+    expect(posted[0]?.url).toContain('/events/2?dryRun=true')
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('puts a nested question again by dropping its entry, and says what that costs', async () => {
+    const user = setupUser()
+    mockApi({
+      prompts: PARTWAY,
+      events: ANSWERED_LOG,
+      dropped: [{ seq: 3, type: 'race', ref: 'race:half-elf', source: 'race', reason: 'empty' }],
+    })
+    renderBuild(viewport)
+
+    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    // The block reads as what was picked, not as the race it hangs off: the
+    // ref names what posed the question, and the answers are the selection.
+    await user.click(block(/Half Elf · Ability Bonus/))
+
+    // A nested prompt cannot be re-posed from here -- its options came with a
+    // prompt the server stopped emitting -- so opening the block drops the
+    // entry instead, which reaches the same place: the question comes back
+    // outstanding. No second gesture, and no button to find.
+    await waitFor(() => {
+      expect(posted).toHaveLength(1)
+    })
+    expect(posted[0]?.method).toBe('DELETE')
+    // expectedSeq travels in the query, not in a body.
+    expect(posted[0]?.url).toContain('/events/3?expectedSeq=3&dryRun=true')
+    expect(posted[0]?.body).toEqual({})
+
+    // This one costs another answer, so it is asked about before it is made.
+    expect(await screen.findByText(/waiting under whichever tab/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ask it again' }))
+
+    await waitFor(() => {
+      expect(writes()).toHaveLength(1)
+    })
+    expect(writes()[0]?.url).toContain('/events/3?expectedSeq=3')
+    expect(writes()[0]?.url).not.toContain('dryRun')
   })
 })

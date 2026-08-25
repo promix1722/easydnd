@@ -2,7 +2,6 @@ import { screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
-import type { Viewport } from '@/test/viewport'
 import { setupUser } from '@/test/user'
 
 import { BlockList } from './BlockList'
@@ -13,9 +12,16 @@ const ITEMS = [
   { key: 'three', header: 'A settled fact' },
 ]
 
-const viewports: Viewport[] = ['mobile', 'desktop']
 
-describe.each(viewports)('BlockList at %s', (viewport) => {
+/**
+ * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet` and
+ * `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * prop cannot move the DOM either -- nothing in this tree reaches any of them,
+ * so a test at one width is a test of both. See docs/web.md.
+ */
+describe('BlockList', () => {
+  const viewport = 'desktop'
+
   it('shows every header and no body until one is opened', () => {
     renderAt(viewport, <BlockList items={ITEMS} open={null} onOpen={vi.fn()} />)
 

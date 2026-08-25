@@ -2,8 +2,28 @@ import '@testing-library/jest-dom/vitest'
 import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
+import { configure } from '@testing-library/react'
+
 import { resetCatalogCache } from '@/lib/api'
 import { resetViewport } from './viewport'
+
+/**
+ * Five seconds rather than the default one.
+ *
+ * This buys nothing on a passing run and is not a speed setting: waitFor runs
+ * its callback once, synchronously, before it ever waits (wait-for.js:84), so
+ * an assertion that is going to pass resolves on that first check whatever the
+ * timeout says. What the number decides is how long a *starved* test waits
+ * before giving up -- and a one-second budget is short enough that a loaded CI
+ * runner fails tests that have nothing wrong with them. That is the shape of
+ * the intermittent `web checks` failure that has blocked tag deploys: under CPU
+ * pressure the first to go were BuildScreen and AbilityScoresForm, the two
+ * files that drive the most interactions.
+ *
+ * The cost is paid only by genuine failures, which now take up to five seconds
+ * to report instead of one.
+ */
+configure({ asyncUtilTimeout: 5000 })
 
 /**
  * jsdom has no layout engine, so it ships neither observer the UI depends on --

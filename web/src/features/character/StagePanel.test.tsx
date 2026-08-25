@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
-import type { Viewport } from '@/test/viewport'
 import { setupUser } from '@/test/user'
 
 import { blocksFor } from './blocks'
@@ -112,9 +111,16 @@ function panel(
   )
 }
 
-const viewports: Viewport[] = ['mobile', 'desktop']
 
-describe.each(viewports)('StagePanel at %s', (viewport) => {
+/**
+ * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet` and
+ * `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * prop cannot move the DOM either -- nothing in this tree reaches any of them,
+ * so a test at one width is a test of both. See docs/web.md.
+ */
+describe('StagePanel', () => {
+  const viewport = 'desktop'
+
   it('draws what was decided and what is still asked as one list, in level order', () => {
     renderAt(viewport, panel([LEVEL_ROW, CLASS_ROW], [SKILLS]))
 

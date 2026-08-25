@@ -1,14 +1,16 @@
 import { screen, within } from '@testing-library/react'
+import { useState } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { resetCatalogCache } from '@/lib/api'
-import type { Sheet } from '@/lib/api'
+import { bySlug, resetCatalogCache } from '@/lib/api'
+import type { CatalogSkill, Sheet } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
 import { setupUser } from '@/test/user'
 
 import { CharacterSheetScreen } from './CharacterSheetScreen'
+import { SkillsPanel, SkillsToggle } from './SkillsPanel'
 
 /**
  * The sheet, wired to a projection whose ability keys arrive **alphabetically**
@@ -252,46 +254,46 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-// Mobile collapses the saving throws behind an accordion control and desktop
-// does not, so neither rendering proves the other.
-describe.each(['desktop', 'mobile'] as const)('the sheet at %s', (viewport) => {
-  it('draws the six abilities in the order a sheet prints them, not the order they arrived', async () => {
-    await renderSheet(viewport)
+/**
+ * Four readings of one sheet, in one test and one mount.
+ *
+ * They used to be four tests at two viewports -- eight mounts of the whole
+ * sheet for assertions that never touch it twice. Nothing here branches on
+ * width: only `Columns`, `DataList`, `ModalSheet` and `RootShell` do, the suite
+ * runs without CSS, and the saving throws moved into the ability cards
+ * (CharacterSheetScreen.tsx:186), whose SimpleGrid sits above both `<Columns>`.
+ * The accordion these tests were once about is covered on its own terms by
+ * "is open on a phone, and collapses there too" below.
+ *
+ * expect.soft rather than expect: four separate tests reported four separate
+ * failures, and a merged test that stopped at the first would report one. The
+ * saving is the mount, not the assertions, so there is no reason to give that
+ * up as well.
+ */
+it('draws the sheet in the order a player reads it', async () => {
+  await renderSheet('desktop')
 
-    expect(abilityCardSlugs()).toEqual(['str', 'dex', 'con', 'int', 'wis', 'cha'])
-  })
+  expect.soft(abilityCardSlugs()).toEqual(['str', 'dex', 'con', 'int', 'wis', 'cha'])
 
-  it('prints each saving throw inside its own ability card', async () => {
-    await renderSheet(viewport)
+  // Six different bonuses, so a save drawn on the wrong card is a wrong number
+  // rather than only a wrong label. The order comes free: there is one list of
+  // abilities now, not two that could disagree.
+  expect.soft(abilityCardSlugs().map(cardSave)).toEqual(['+4', '+5', '+2', '+3', '+0', '-1'])
 
-    // Six different bonuses, so a save drawn on the wrong card is a wrong
-    // number rather than only a wrong label. The order comes free: there is
-    // one list of abilities now, not two that could disagree.
-    expect(abilityCardSlugs().map(cardSave)).toEqual(['+4', '+5', '+2', '+3', '+0', '-1'])
-  })
-
-  it('keeps the pool, its shield and the dice that refill it together', async () => {
-    await renderSheet(viewport)
-
-    // Hit points, temporary hit points and Hit Dice are one subject read in
-    // one glance, so they lead the row rather than being spread along it.
-    expect(
+  // Hit points, temporary hit points and Hit Dice are one subject read in one
+  // glance, so they lead the row rather than being spread along it.
+  expect
+    .soft(
       screen
         .getAllByText(/^(?:Hit points|Temp HP|Hit Dice|Armor class|Initiative|Proficiency)$/)
         .map((label) => label.textContent ?? ''),
-    ).toEqual(['Hit points', 'Temp HP', 'Hit Dice', 'Armor class', 'Initiative', 'Proficiency'])
-  })
+    )
+    .toEqual(['Hit points', 'Temp HP', 'Hit Dice', 'Armor class', 'Initiative', 'Proficiency'])
 
-  it('leads the page with the abilities everything else is derived from', async () => {
-    await renderSheet(viewport)
-
-    // Document order, not layout: the abilities are what every number below
-    // them is derived from, so they are what the page opens on.
-    const strength = screen.getByTitle('Strength')
-    const hitPoints = screen.getByText('Hit points')
-    const position = strength.compareDocumentPosition(hitPoints)
-    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  })
+  // Document order, not layout: the abilities are what every number below them
+  // is derived from, so they are what the page opens on.
+  const position = screen.getByTitle('Strength').compareDocumentPosition(screen.getByText('Hit points'))
+  expect.soft(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
 describe('the sheet', () => {
@@ -350,8 +352,41 @@ describe('the sheet', () => {
  * character is trained in are findable without reading every line, that the
  * training level is carried by something other than colour, and that a number
  * never drifts off the skill it belongs to.
+ *
+ * Rendered as the panel rather than as the whole sheet, which is the shape
+ * ProficienciesPanel.test.tsx and Vitals.test.tsx already use for their own
+ * panels. Mounting the sheet for these cost about seven times as much and
+ * brought along twenty-four Mantine Tooltips no assertion here ever opens. The
+ * two tests that follow keep the full sheet, because what they are about is
+ * the panel being wired into it.
  */
 describe('the skills panel', () => {
+  /**
+   * The panel and its filter, wired the way CharacterSheetScreen wires them.
+   *
+   * The showing/hiding state lives in the screen rather than in the panel --
+   * the button is the section's `aside` and ends up in a different subtree
+   * from the rows it hides -- so a harness holding that one piece of state is
+   * what makes the pair testable apart from the sheet.
+   */
+  function Panel({ catalog }: { catalog: Map<string, CatalogSkill> | null }) {
+    const [showUntrained, setShowUntrained] = useState(true)
+    return (
+      <>
+        <SkillsToggle
+          skills={SKILLS}
+          showing={showUntrained}
+          onToggle={() => setShowUntrained((shown) => !shown)}
+        />
+        <SkillsPanel skills={SKILLS} catalog={catalog} showUntrained={showUntrained} />
+      </>
+    )
+  }
+
+  function renderPanel(catalog: Map<string, CatalogSkill> | null = bySlug(SKILL_CATALOG)) {
+    return renderAt('desktop', <Panel catalog={catalog} />)
+  }
+
   /**
    * Each skill row's text, in the order the document draws them.
    *
@@ -360,53 +395,56 @@ describe('the skills panel', () => {
    * -- keeps the name, the ability and the bonus together, so a test can
    * assert that a bonus belongs to *its* skill rather than that the number
    * appears on the page somewhere.
+   *
+   * No scoping needed here: the ability cards draw the same mark for their
+   * saving throws, but only the panel is mounted.
    */
   function skillRows(): string[] {
-    // Scoped to the panel: the ability cards draw the same mark for their
-    // saving throws, so an unscoped query would return twenty-four rows and
-    // every count below would quietly be six too many.
-    const panel = screen.getByText(/proficient|Nothing trained/).parentElement
-    if (panel === null) throw new Error('the skills panel is not on the page')
-    return within(panel)
+    return screen
       .getAllByRole('img', { name: /proficien|Expertise/i })
       .map((mark) => mark.closest('div')?.parentElement?.parentElement?.textContent ?? '')
   }
 
-  function skillNames(): string[] {
+  function namesOf(rows: string[]): string[] {
     // The ability tag is optional: it is the half of the row that comes from
     // the compendium, so it is missing when that request failed.
-    return skillRows().map((row) => row.replace(/(?:STR|DEX|CON|INT|WIS|CHA)?[+-]\d+$/, ''))
+    return rows.map((row) => row.replace(/(?:STR|DEX|CON|INT|WIS|CHA)?[+-]\d+$/, ''))
   }
 
-  it('draws every skill, not only the ones something trained', async () => {
-    await renderSheet('desktop')
+  function skillNames(): string[] {
+    return namesOf(skillRows())
+  }
+
+  it('draws every skill, not only the ones something trained', () => {
+    renderPanel()
 
     // Eighteen rows, and the twelve untrained ones are the point: the skill a
     // player asks what to roll for is usually one nothing trained.
-    expect(skillRows()).toHaveLength(18)
-    expect(skillNames()).toContain('Investigation')
-    expect(skillNames()).toContain('Nature')
+    const names = namesOf(skillRows())
+    expect(names).toHaveLength(18)
+    expect(names).toContain('Investigation')
+    expect(names).toContain('Nature')
   })
 
-  it('says how each row is trained in words, not only in colour', async () => {
-    await renderSheet('desktop')
+  it('says how each row is trained in words, not only in colour', () => {
+    renderPanel()
 
     // A panel distinguishing eighteen rows by a shade of grey tells a screen
     // reader nothing, and tells a colour-blind reader nothing either.
-    const panel = within(screen.getByText(/proficient ·/).parentElement!)
-    expect(panel.getByRole('img', { name: /Expertise/ })).toBeInTheDocument()
-    expect(panel.getAllByRole('img', { name: /^Proficient/ })).toHaveLength(3)
-    expect(panel.getAllByRole('img', { name: /^Not proficient/ })).toHaveLength(13)
-    expect(panel.getByRole('img', { name: /^Half proficiency/ })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /Expertise/ })).toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: /^Proficient/ })).toHaveLength(3)
+    expect(screen.getAllByRole('img', { name: /^Not proficient/ })).toHaveLength(13)
+    expect(screen.getByRole('img', { name: /^Half proficiency/ })).toBeInTheDocument()
   })
 
-  it('leads with what the character is best at, alphabetical within each level', async () => {
-    await renderSheet('desktop')
+  it('leads with what the character is best at, alphabetical within each level', () => {
+    renderPanel()
 
     // Expertise, then proficient, then half, then the untrained. With six
     // rows the alphabet was the only searchable order; with eighteen, the
     // question is what the character is good at.
-    expect(skillNames().slice(0, 5)).toEqual([
+    const names = namesOf(skillRows())
+    expect(names.slice(0, 5)).toEqual([
       'Stealth',
       'Deception',
       'Perception',
@@ -414,11 +452,11 @@ describe('the skills panel', () => {
       'Athletics',
     ])
     // The untrained block is alphabetical from there on.
-    expect(skillNames().slice(5, 8)).toEqual(['Acrobatics', 'Animal Handling', 'Arcana'])
+    expect(names.slice(5, 8)).toEqual(['Acrobatics', 'Animal Handling', 'Arcana'])
   })
 
-  it('reads a bonus and an ability off the skill they belong to', async () => {
-    await renderSheet('desktop')
+  it('reads a bonus and an ability off the skill they belong to', () => {
+    renderPanel()
 
     // Paired by row rather than by position: a panel that zipped two lists
     // together would misreport every row after the first mistake.
@@ -428,35 +466,65 @@ describe('the skills panel', () => {
     expect(rows.find((row) => row.startsWith('Intimidation'))).toBe('IntimidationCHA-1')
   })
 
-  it('counts what is trained', async () => {
-    await renderSheet('desktop')
+  it('counts what is trained', () => {
+    renderPanel()
 
     expect(screen.getByText('5 proficient · 1 with expertise')).toBeInTheDocument()
   })
 
   it('collapses to the trained rows and back', async () => {
-    await renderSheet('desktop')
+    renderPanel()
 
     // It starts showing everything: drawing all eighteen is the point of the
     // panel, and the toggle is for the phone rather than a stored preference.
     expect(skillRows()).toHaveLength(18)
 
-    await setupUser().click(screen.getByRole('button', { name: 'Hide untrained' }))
+    const user = setupUser()
+    await user.click(screen.getByRole('button', { name: 'Hide untrained' }))
     expect(skillRows()).toHaveLength(5)
     expect(skillNames()).not.toContain('Arcana')
 
-    await setupUser().click(screen.getByRole('button', { name: 'Show all 18' }))
+    await user.click(screen.getByRole('button', { name: 'Show all 18' }))
     expect(skillRows()).toHaveLength(18)
   })
 
-  it('names a skill the way the compendium does', async () => {
-    await renderSheet('desktop')
+  it('names a skill the way the compendium does', () => {
+    renderPanel()
 
     // titleCase() renders the slug as "Sleight Of Hand". The catalogue is
     // also the only name that is in the negotiated locale.
-    expect(skillNames()).toContain('Sleight of Hand')
-    expect(skillNames()).not.toContain('Sleight Of Hand')
+    const names = namesOf(skillRows())
+    expect(names).toContain('Sleight of Hand')
+    expect(names).not.toContain('Sleight Of Hand')
   })
+
+  it('still draws every row when there is no compendium to name them by', () => {
+    renderPanel(null)
+
+    const names = namesOf(skillRows())
+    expect(names).toHaveLength(18)
+    // Falls back to titleCase() over the slug, and loses the ability tag.
+    expect(names).toContain('Sleight Of Hand')
+  })
+})
+
+/**
+ * The panel inside the sheet.
+ *
+ * Everything above renders SkillsPanel on its own, so these two are what still
+ * prove it is wired into the page: that the sheet puts it in the first Columns
+ * section, and that a failed compendium request reaches it as a null catalogue
+ * rather than as a blank sheet.
+ */
+describe('the skills panel, in the sheet', () => {
+  function sheetRows(): HTMLElement[] {
+    // Scoped to the panel: the ability cards draw the same mark for their
+    // saving throws, so an unscoped query would return twenty-four rows and
+    // every count below would quietly be six too many.
+    const panel = screen.getByText(/proficient|Nothing trained/).parentElement
+    if (panel === null) throw new Error('the skills panel is not on the page')
+    return within(panel).getAllByRole('img', { name: /proficien|Expertise/i })
+  }
 
   // The phone is where eighteen rows costs the most and where the toggle earns
   // its place. Skills is the first Columns section, so the accordion has it
@@ -464,10 +532,10 @@ describe('the skills panel', () => {
   it('is open on a phone, and collapses there too', async () => {
     await renderSheet('mobile')
 
-    expect(skillRows()).toHaveLength(18)
+    expect(sheetRows()).toHaveLength(18)
 
     await setupUser().click(screen.getByRole('button', { name: 'Hide untrained' }))
-    expect(skillRows()).toHaveLength(5)
+    expect(sheetRows()).toHaveLength(5)
   })
 
   it('still draws the panel when the compendium could not be fetched', async () => {
@@ -485,8 +553,8 @@ describe('the skills panel', () => {
     )
     await renderSheet('desktop')
 
-    expect(skillRows()).toHaveLength(18)
-    expect(skillNames()).toContain('Sleight Of Hand')
+    expect(sheetRows()).toHaveLength(18)
+    expect(screen.getByText(/Sleight Of Hand/)).toBeInTheDocument()
   })
 })
 

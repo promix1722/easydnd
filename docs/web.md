@@ -30,7 +30,7 @@ forking a fresh pair per file. Rebuilding the Mantine, embla and React module
 graph 48 times over cost 36s of imports and 78s of jsdom construction out of
 229s total; sharing both took the run to 64s without a single assertion
 changing. Passing `delay: null` to user-event (see `src/test/user.ts`) took it
-to 38s from there.
+to 38s from there, and the two rules below took it to 24s.
 
 What it costs is the guarantee that a test file starts from nothing, and two
 things follow from that.
@@ -53,6 +53,39 @@ cannot share a worker. So `vite.config.ts` lists the mocking files in
 `npm run lint:layers` fails if a file calls `vi.mock` without being listed, or
 is listed without calling it. Mocking a module is not forbidden; it just has to
 say so.
+
+## Two rules about writing a test here
+
+**A test runs at one viewport unless the tree branches on width.** Exactly four
+components do: `Columns`, `DataList`, `ModalSheet` and `RootShell`. Nothing else
+can, because the suite runs without CSS -- a `SimpleGrid cols={{ base: 2, sm: 3 }}`
+renders one DOM whatever the width is -- so `describe.each(['mobile','desktop'])`
+around a tree that reaches none of those four is the same assertion run twice
+against byte-identical markup. `src/ui/TabRow.test.tsx` proves the point
+directly: its last test compares the two renderings and they are equal.
+
+That was 72 of the suite's 433 cases, weighted toward the slowest files --
+`BuildScreen.test.tsx` alone ran 48 cases where 26 say the same thing. Where a
+block runs at one width, the comment above it names this rule, so the next
+reader knows it was a decision. Where a block still runs at both -- the list
+screens, the group screens, `ModalSheet` and `Columns` themselves -- it is
+because the swap is what the test is about.
+
+**Render the panel, not the page, when the panel is what is under test.**
+`ProficienciesPanel.test.tsx`, `Vitals.test.tsx` and the skills-panel block of
+`CharacterSheetScreen.test.tsx` mount their component directly rather than the
+whole sheet, and keep one full-sheet test to hold the seam. A sheet test costs
+about twice a panel test, because most of the sheet's weight is the eighteen
+`ProficiencyMark`s -- each a Mantine `Tooltip`, each a floating-ui hook stack --
+and mounting the page to read one panel pays for the other seventeen sections
+too.
+
+Where several read-only assertions share one fixture, one test that renders
+once and asserts many times beats several that each re-mount it. Use
+`expect.soft` when merging, so the merged test still reports every failure
+instead of stopping at the first; a shared `beforeAll` render is not available,
+because `src/test/setup.ts`'s global `afterEach` unmounts between tests and
+exempting a file from that would give up the isolation rule above.
 
 The suite also does not process CSS (`css: true` is off). Nothing asserts on a
 cascaded style -- the only style assertions read inline `element.style`, which

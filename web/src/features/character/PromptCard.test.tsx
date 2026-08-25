@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { Entry, Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
-import type { Viewport } from '@/test/viewport'
 import { setupUser } from '@/test/user'
 
 import { PromptCard } from './PromptCard'
@@ -39,9 +38,16 @@ function skillPrompt(overrides: Partial<Prompt> = {}): Prompt {
   }
 }
 
-const viewports: Viewport[] = ['mobile', 'desktop']
 
-describe.each(viewports)('PromptCard at %s', (viewport) => {
+/**
+ * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet` and
+ * `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * prop cannot move the DOM either -- nothing in this tree reaches any of them,
+ * so a test at one width is a test of both. See docs/web.md.
+ */
+describe('PromptCard', () => {
+  const viewport = 'desktop'
+
   it('will not confirm until the right number is picked', async () => {
     const user = setupUser()
     const onAnswer = vi.fn()

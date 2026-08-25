@@ -3,12 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { Change } from '@/lib/api'
 import { renderAt } from '@/test/render'
-import type { Viewport } from '@/test/viewport'
 import { setupUser } from '@/test/user'
 
 import { AbilityScoresForm } from './AbilityScoresForm'
 
-const viewports: Viewport[] = ['mobile', 'desktop']
 
 function form(over: Partial<Parameters<typeof AbilityScoresForm>[0]> = {}) {
   return (
@@ -33,7 +31,15 @@ async function place(user: ReturnType<typeof setupUser>, value: string, ability:
   await user.click(slot(ability))
 }
 
-describe.each(viewports)('the standard array at %s', (viewport) => {
+/**
+ * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet` and
+ * `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * prop cannot move the DOM either -- nothing in this tree reaches any of them,
+ * so a test at one width is a test of both. See docs/web.md.
+ */
+describe('the standard array', () => {
+  const viewport = 'desktop'
+
   it('deals out the printed numbers and will not be confirmed until all six are placed', async () => {
     const user = setupUser()
     const onSubmit = vi.fn()
@@ -109,7 +115,15 @@ describe.each(viewports)('the standard array at %s', (viewport) => {
   })
 })
 
-describe.each(viewports)('rolling at %s', (viewport) => {
+/**
+ * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet` and
+ * `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * prop cannot move the DOM either -- nothing in this tree reaches any of them,
+ * so a test at one width is a test of both. See docs/web.md.
+ */
+describe('rolling', () => {
+  const viewport = 'desktop'
+
   it('rolls the numbers rather than taking them, and rolls again on request', async () => {
     const user = setupUser()
     renderAt(viewport, form())
@@ -142,7 +156,15 @@ function pool(): number[] {
     .filter((value) => !Number.isNaN(value))
 }
 
-describe.each(viewports)('point buy at %s', (viewport) => {
+/**
+ * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet` and
+ * `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * prop cannot move the DOM either -- nothing in this tree reaches any of them,
+ * so a test at one width is a test of both. See docs/web.md.
+ */
+describe('point buy', () => {
+  const viewport = 'desktop'
+
   async function openPointBuy(user: ReturnType<typeof setupUser>) {
     await user.click(screen.getByRole('combobox', { name: /How were the scores generated/ }))
     await user.click(screen.getByRole('option', { name: 'Point buy' }))

@@ -89,7 +89,15 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe.each(['mobile', 'desktop'] as const)('ImportCharacterScreen (%s)', (viewport) => {
+/**
+ * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet` and
+ * `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * prop cannot move the DOM either -- nothing in this tree reaches any of them,
+ * so a test at one width is a test of both. See docs/web.md.
+ */
+describe('ImportCharacterScreen', () => {
+  const viewport = 'desktop'
+
   it('will not import until a file is chosen', () => {
     renderImport(viewport)
     expect(screen.getByRole('button', { name: 'Import' })).toBeDisabled()
