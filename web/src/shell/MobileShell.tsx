@@ -1,10 +1,18 @@
 import { Link, Outlet, useLocation } from 'react-router'
 
-import { AppShell, Button, Group, IconCheck, IconChevronDown, Menu } from '@/ui'
+import {
+  AppShell,
+  Button,
+  Group,
+  IconCheck,
+  IconChevronDown,
+  Menu,
+  SECTIONS,
+  sectionFor,
+} from '@/ui'
 
 import { AccountActions } from './AccountActions'
 import { HEADER_HEIGHT } from './chrome'
-import { activeNavPath, NAV_ITEMS, navLabel } from './nav'
 import { Wordmark } from './Wordmark'
 
 /**
@@ -33,8 +41,24 @@ import { Wordmark } from './Wordmark'
 export function MobileShell() {
   const { pathname } = useLocation()
 
-  // Shared with the desktop navbar: see activeNavPath in nav.ts.
-  const active = activeNavPath(pathname)
+  // Shared with the desktop navbar: see sectionFor in ui/sections.ts.
+  const active = sectionFor(pathname)
+
+  /*
+   * What the trigger reads.
+   *
+   * The desktop navbar can leave every entry unlit -- on `/account`, on a 404
+   * -- because the list is still on screen saying where you could go. This has
+   * no such luxury: it is one control, it is the only thing naming the current
+   * place, and a button with no label is a button nobody presses. So the
+   * fallback is the word for what the control *is*.
+   *
+   * It fires far less often than it used to. `sectionFor` now knows that a
+   * character sheet belongs to Characters, where the old `activeNavPath`
+   * matched on the link target alone and so answered "nowhere" for every
+   * detail page under `/`.
+   */
+  const label = active?.label ?? 'Menu'
 
   return (
     <AppShell header={{ height: HEADER_HEIGHT }} padding="sm">
@@ -54,32 +78,46 @@ export function MobileShell() {
                 variant="subtle"
                 size="sm"
                 px="xs"
+                // The section's own glyph, which is also what the desktop
+                // navbar draws beside this label. It carries more weight here
+                // than it does there: this control is the only thing on a
+                // phone naming where you are, and `ui/Page` now drops the
+                // section crumb below `md` precisely because this says it --
+                // so the glyph is the section's mark on the page, not
+                // decoration. Absent on a path in no section, where the label
+                // falls back to "Menu" and there is no glyph to draw.
+                {...(active ? { leftSection: <active.icon size={16} /> } : {})}
                 rightSection={<IconChevronDown size={16} />}
               >
-                {navLabel(pathname)}
+                {label}
               </Button>
             </Menu.Target>
             {/* Real links rather than an onChange that navigates: the desktop
                 navbar's entries are links, and a section should be the same
                 kind of thing to a browser on both. */}
             <Menu.Dropdown>
-              {NAV_ITEMS.map((item) => (
+              {SECTIONS.map((section) => (
                 <Menu.Item
-                  key={item.to}
+                  key={section.to}
                   component={Link}
-                  to={item.to}
-                  aria-current={active === item.to ? 'page' : undefined}
-                  // The tick is hidden rather than absent so every row keeps
-                  // the same left edge -- labels that shuffle sideways as you
-                  // move between sections read as a different list each time.
-                  leftSection={
+                  to={section.to}
+                  aria-current={active?.to === section.to ? 'page' : undefined}
+                  leftSection={<section.icon size={16} />}
+                  // The tick moved to the right when the sections got glyphs.
+                  // It used to sit on the left, drawn but invisible on every
+                  // inactive row, purely to stop the labels shuffling sideways
+                  // as you moved between sections -- a job the section's own
+                  // glyph now does, on every row, while also saying something.
+                  // Still hidden rather than absent, for the same alignment
+                  // reason it was before.
+                  rightSection={
                     <IconCheck
                       size={16}
-                      style={{ visibility: active === item.to ? 'visible' : 'hidden' }}
+                      style={{ visibility: active?.to === section.to ? 'visible' : 'hidden' }}
                     />
                   }
                 >
-                  {item.label}
+                  {section.label}
                 </Menu.Item>
               ))}
             </Menu.Dropdown>

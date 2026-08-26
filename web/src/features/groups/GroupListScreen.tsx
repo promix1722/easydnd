@@ -19,12 +19,12 @@ import {
   IconPencil,
   IconPlus,
   IconTrash,
-  Loader,
   ModalSheet,
+  Page,
+  pageState,
   Stack,
   Text,
   TextInput,
-  Title,
 } from '@/ui'
 
 import { atLeast, ROLE_LABELS } from './roles'
@@ -65,28 +65,17 @@ export function GroupListScreen() {
   }
 
   return (
-    <Stack gap="md">
-      <Title order={2}>Groups</Title>
-
-      {error !== null && (
-        <Alert color="red" title="Could not load your groups">
-          <Stack gap="xs" align="flex-start">
-            <Text size="sm">{error}</Text>
-            <Button variant="light" onClick={reload}>
-              Try again
-            </Button>
-          </Stack>
-        </Alert>
+    // No trail below the section, so `Page` draws "Groups" as the heading with
+    // the section's glyph and no breadcrumb above it -- which is exactly what
+    // this screen rendered before, plus the glyph.
+    <Page
+      trail={[]}
+      state={pageState(
+        { data, error, loading },
+        { title: 'Could not load your groups', fallback: 'Unknown error', onRetry: reload },
       )}
-
-      {loading ? (
-        <Group gap="xs">
-          <Loader size="sm" />
-          <Text size="sm" c="dimmed">
-            Loading...
-          </Text>
-        </Group>
-      ) : (
+    >
+      <Stack gap="md">
         <DataList
           items={groups}
           getKey={(group) => group.id}
@@ -156,114 +145,114 @@ export function GroupListScreen() {
           ]}
           empty="No groups yet. Make one, or open an invitation link somebody sent you."
         />
-      )}
 
-      {/* Under the table and to the left: adding a row belongs beneath the
-          rows, not in the heading, which is about the section rather than
-          about what you can put in it. */}
-      <Group>
-        <Button
-          size={ACTION_SIZE}
-          variant="light"
-          leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
-          onClick={() => setCreating(true)}
+        {/* Under the table and to the left: adding a row belongs beneath the
+            rows, not in the heading, which is about the section rather than
+            about what you can put in it. */}
+        <Group>
+          <Button
+            size={ACTION_SIZE}
+            variant="light"
+            leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
+            onClick={() => setCreating(true)}
+          >
+            New group
+          </Button>
+        </Group>
+
+        <ModalSheet
+          opened={renaming !== null}
+          onClose={() => setRenaming(null)}
+          title="Rename this group"
         >
-          New group
-        </Button>
-      </Group>
+          <Stack gap="sm">
+            <TextInput
+              label="Name"
+              value={newName}
+              error={rename.fields.find((field) => field.field === 'name')?.message}
+              onChange={(event) => setNewName(event.currentTarget.value)}
+              data-autofocus
+            />
+            {rename.error !== null && (
+              <Alert color="red" title="Could not rename it">
+                {rename.error}
+              </Alert>
+            )}
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setRenaming(null)}>
+                Cancel
+              </Button>
+              <Button
+                loading={rename.pending}
+                onClick={() => {
+                  const target = renaming
+                  setRenaming(null)
+                  if (target !== null) void act(rename.run(target.id, newName))
+                }}
+              >
+                Rename
+              </Button>
+            </Group>
+          </Stack>
+        </ModalSheet>
 
-      <ModalSheet
-        opened={renaming !== null}
-        onClose={() => setRenaming(null)}
-        title="Rename this group"
-      >
-        <Stack gap="sm">
-          <TextInput
-            label="Name"
-            value={newName}
-            error={rename.fields.find((field) => field.field === 'name')?.message}
-            onChange={(event) => setNewName(event.currentTarget.value)}
-            data-autofocus
-          />
-          {rename.error !== null && (
-            <Alert color="red" title="Could not rename it">
-              {rename.error}
-            </Alert>
-          )}
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setRenaming(null)}>
-              Cancel
-            </Button>
-            <Button
-              loading={rename.pending}
-              onClick={() => {
-                const target = renaming
-                setRenaming(null)
-                if (target !== null) void act(rename.run(target.id, newName))
-              }}
-            >
-              Rename
-            </Button>
-          </Group>
-        </Stack>
-      </ModalSheet>
+        <ModalSheet
+          opened={deleting !== null}
+          onClose={() => setDeleting(null)}
+          title="Delete this group"
+        >
+          <Stack gap="sm">
+            {/* Named in full: it takes the whole table with it, and nobody at it
+                can undo that. */}
+            <Text size="sm">
+              {deleting?.name} goes, along with everything shared with it and every game played
+              at it. The characters themselves stay yours.
+            </Text>
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setDeleting(null)}>
+                Cancel
+              </Button>
+              <Button
+                color="red"
+                loading={destroy.pending}
+                onClick={() => {
+                  const target = deleting
+                  setDeleting(null)
+                  if (target !== null) void act(destroy.run(target.id))
+                }}
+              >
+                Delete
+              </Button>
+            </Group>
+          </Stack>
+        </ModalSheet>
 
-      <ModalSheet
-        opened={deleting !== null}
-        onClose={() => setDeleting(null)}
-        title="Delete this group"
-      >
-        <Stack gap="sm">
-          {/* Named in full: it takes the whole table with it, and nobody at it
-              can undo that. */}
-          <Text size="sm">
-            {deleting?.name} goes, along with everything shared with it and every game played
-            at it. The characters themselves stay yours.
-          </Text>
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setDeleting(null)}>
-              Cancel
-            </Button>
-            <Button
-              color="red"
-              loading={destroy.pending}
-              onClick={() => {
-                const target = deleting
-                setDeleting(null)
-                if (target !== null) void act(destroy.run(target.id))
-              }}
-            >
-              Delete
-            </Button>
-          </Group>
-        </Stack>
-      </ModalSheet>
-
-      <ModalSheet opened={creating} onClose={() => setCreating(false)} title="New group">
-        <Stack gap="sm">
-          <TextInput
-            label="Name"
-            placeholder="Wednesday Night"
-            value={name}
-            onChange={(event) => setName(event.currentTarget.value)}
-            error={create.fields.find((field) => field.field === 'name')?.message}
-            data-autofocus
-          />
-          {create.error !== null && (
-            <Alert color="red" title="Could not create the group">
-              {create.error}
-            </Alert>
-          )}
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setCreating(false)}>
-              Cancel
-            </Button>
-            <Button loading={create.pending} onClick={() => void submit()}>
-              Create
-            </Button>
-          </Group>
-        </Stack>
-      </ModalSheet>
+        <ModalSheet opened={creating} onClose={() => setCreating(false)} title="New group">
+          <Stack gap="sm">
+            <TextInput
+              label="Name"
+              placeholder="Wednesday Night"
+              value={name}
+              onChange={(event) => setName(event.currentTarget.value)}
+              error={create.fields.find((field) => field.field === 'name')?.message}
+              data-autofocus
+            />
+            {create.error !== null && (
+              <Alert color="red" title="Could not create the group">
+                {create.error}
+              </Alert>
+            )}
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setCreating(false)}>
+                Cancel
+              </Button>
+              <Button loading={create.pending} onClick={() => void submit()}>
+                Create
+              </Button>
+            </Group>
+          </Stack>
+        </ModalSheet>
     </Stack>
+    </Page>
   )
 }

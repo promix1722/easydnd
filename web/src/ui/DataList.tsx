@@ -3,15 +3,6 @@ import type { ReactNode } from 'react'
 
 import { useIsDesktop } from './useIsDesktop'
 
-/**
- * The widest a table gets on desktop.
- *
- * Every table here is narrow content -- a name, a rank, a couple of controls --
- * and letting one span a 2560px monitor puts its first and last cell an eye
- * movement apart.
- */
-export const MAX_TABLE_WIDTH = 1024
-
 export interface DataListColumn<T> {
   key: string
   header: string
@@ -52,11 +43,12 @@ export function DataList<T>({ items, columns, getKey, empty, onSelect }: DataLis
 
   if (isDesktop) {
     return (
-      // Capped rather than full-bleed: a four-column table stretched across a
-      // 2560px monitor puts its first and last cell an eye movement apart, and
-      // every table in this app is narrow content. Set here so that no screen
-      // has to remember to do it.
-      <Box maw={MAX_TABLE_WIDTH}>
+      // Uncapped, deliberately. The cap used to live here, and it capped
+      // tables and nothing else -- so the two screens that wanted a heading to
+      // line up with the table beneath it copied the number by hand, and the
+      // character sheet was never capped at all. `ui/Page` now caps the whole
+      // content column; see CONTENT_MAX_WIDTH.
+      <Box>
         <Table highlightOnHover={onSelect !== undefined} verticalSpacing="sm">
           <Table.Thead>
             <Table.Tr>
@@ -104,9 +96,16 @@ export function DataList<T>({ items, columns, getKey, empty, onSelect }: DataLis
           <Stack gap={4}>
             {rest.map((column) => (
               <Text key={column.key} size="sm">
-                <Text span c="dimmed" size="sm">
-                  {column.header}:{' '}
-                </Text>
+                {/* A column with no header gets no label, rather than a bare
+                    colon on a line of its own. The actions column is the case:
+                    it is headerless by design on desktop, where a column of
+                    buttons needs no title, and the phone rendering was
+                    dutifully writing out ": " for it. */}
+                {column.header !== '' && (
+                  <Text span c="dimmed" size="sm">
+                    {column.header}:{' '}
+                  </Text>
+                )}
                 {column.render(item)}
               </Text>
             ))}

@@ -3,16 +3,7 @@ import { Link, useParams } from 'react-router'
 import { getPrompts, getSheet } from '@/lib/api'
 import type { Prompt, Sheet } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
-import {
-  Alert,
-  Anchor,
-  Button,
-  Group,
-  Loader,
-  Stack,
-  Text,
-  Title,
-} from '@/ui'
+import { Alert, Anchor, Button, Page, pageState, Stack } from '@/ui'
 
 import { OutstandingChoices } from './OutstandingChoices'
 import type { Compendium } from './compendium'
@@ -59,26 +50,22 @@ export function CharacterSheetScreen() {
     return { sheet: projected, prompts, compendium }
   })
 
-  if (sheet.loading) {
+  const state = pageState(sheet, {
+    title: 'Could not load this character',
+    fallback: 'Unknown error',
+    onRetry: sheet.reload,
+  })
+
+  if (state.kind !== 'ready' || sheet.data === null) {
+    // "Projecting the sheet" rather than "Loading": the sheet is derived from
+    // the event log on request, and the word says so. It is the one screen
+    // whose loading line says something the generic one does not, which is why
+    // `Page` takes an override rather than imposing a single word everywhere.
     return (
-      <Group gap="xs">
-        <Loader size="sm" />
-        <Text size="sm" c="dimmed">
-          Projecting the sheet...
-        </Text>
-      </Group>
-    )
-  }
-  if (sheet.error !== null || sheet.data === null) {
-    return (
-      <Alert color="red" title="Could not load this character">
-        <Stack gap="xs" align="flex-start">
-          <Text size="sm">{sheet.error ?? 'Unknown error'}</Text>
-          <Button variant="light" onClick={sheet.reload}>
-            Try again
-          </Button>
-        </Stack>
-      </Alert>
+      <Page
+        trail={[{ label: null }]}
+        state={state.kind === 'loading' ? { ...state, what: 'Projecting the sheet...' } : state}
+      />
     )
   }
 
@@ -87,34 +74,35 @@ export function CharacterSheetScreen() {
   const outstanding = sheet.data.prompts ?? []
 
   return (
-    <Stack gap="lg">
-      <Group justify="space-between" align="flex-start">
-        <Title order={2}>{identity.name || 'Unnamed'}</Title>
+    <Page
+      trail={[{ label: identity.name || 'Unnamed' }]}
+      actions={
         <Anchor component={Link} to={`/characters/${id}/log`}>
           <Button variant="subtle">Event log</Button>
         </Anchor>
-      </Group>
-
-
-      {/*
-        An unfinished character says so on the page it is looked at most.
-        The same `/prompts` response the build screen's tabs draw, named by the
-        same `choiceName` -- there is no second notion anywhere in this client
-        of what is still outstanding, and so no way for the sheet and the build
-        screen to disagree about it. Here it is a statement of what is left and
-        the way in is the link below; there each choice is a block that opens.
-      */}
-      {outstanding.length > 0 && (
-        <Alert color="blue" title="Still to choose">
-          <Stack gap="xs" align="flex-start">
-            <OutstandingChoices prompts={outstanding} />
-            <Anchor component={Link} to={`/characters/${id}/build`}>
-              <Button variant="light">Answer these</Button>
-            </Anchor>
-          </Stack>
-        </Alert>
-      )}
-      <SheetBody sheet={s} compendium={sheet.data.compendium} />
-    </Stack>
+      }
+    >
+      <Stack gap="lg">
+        {/*
+          An unfinished character says so on the page it is looked at most.
+          The same `/prompts` response the build screen's tabs draw, named by the
+          same `choiceName` -- there is no second notion anywhere in this client
+          of what is still outstanding, and so no way for the sheet and the build
+          screen to disagree about it. Here it is a statement of what is left and
+          the way in is the link below; there each choice is a block that opens.
+        */}
+        {outstanding.length > 0 && (
+          <Alert color="blue" title="Still to choose">
+            <Stack gap="xs" align="flex-start">
+              <OutstandingChoices prompts={outstanding} />
+              <Anchor component={Link} to={`/characters/${id}/build`}>
+                <Button variant="light">Answer these</Button>
+              </Anchor>
+            </Stack>
+          </Alert>
+        )}
+        <SheetBody sheet={s} compendium={sheet.data.compendium} />
+      </Stack>
+    </Page>
   )
 }

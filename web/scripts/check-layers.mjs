@@ -42,7 +42,13 @@ const RULES = [
   {
     dir: 'ui',
     deny: ['@/shell', '@/features', '@/routes'],
-    why: 'ui/ is the design system; it must not know about screens',
+    // react-router is permitted here, and deliberately rather than by omission:
+    // `ui/Page` builds a breadcrumb, and a crumb that is not a link is not a
+    // crumb. The vendor ban below exists because Mantine and Tabler *are* the
+    // look, and being able to swap them is the point of `@/ui`; a route is not
+    // a look, and `ui/sections.ts` has to be reachable from `features/`, which
+    // may not import `@/shell`.
+    why: 'ui/ is the design system; it must not know about screens (react-router is fine: a route is not a look)',
   },
   {
     dir: 'shell',

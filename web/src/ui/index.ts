@@ -28,14 +28,19 @@ export { useDisclosure } from '@mantine/hooks'
 export {
   IconCheck,
   IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
   IconCopy,
+  IconDice5,
   IconFolder,
   IconLogout,
   IconPencil,
   IconPlus,
+  IconShield,
   IconTrash,
   IconUserCircle,
   IconUserPlus,
+  IconUsers,
 } from '@tabler/icons-react'
 
 // Layout and typography primitives, re-exported unchanged.
@@ -48,7 +53,6 @@ export {
   Center,
   Checkbox,
   Code,
-  Container,
   Divider,
   Group,
   Loader,
@@ -60,6 +64,7 @@ export {
   Stack,
   Text,
   Title,
+  VisuallyHidden,
 } from '@mantine/core'
 export type { MantineColor, MantineSize } from '@mantine/core'
 
@@ -86,7 +91,7 @@ export type { BlockListItem, BlockListProps } from './BlockList'
 export { Columns } from './Columns'
 export type { ColumnsProps, ColumnsSection } from './Columns'
 export { ACTION_ICON_SIZE, ACTION_SIZE } from './actions'
-export { DataList, MAX_TABLE_WIDTH } from './DataList'
+export { DataList } from './DataList'
 export type { DataListColumn, DataListProps } from './DataList'
 export { DragonMark } from './DragonMark'
 export type { DragonMarkProps } from './DragonMark'
@@ -94,12 +99,22 @@ export { ModalSheet } from './ModalSheet'
 export type { ModalSheetProps } from './ModalSheet'
 export { ProficiencyMark } from './ProficiencyMark'
 export type { ProficiencyLevel, ProficiencyMarkProps } from './ProficiencyMark'
+export { Page } from './Page'
+export type { Crumb, PageProps } from './Page'
+export { pageState } from './pageState'
+export type { PageState } from './pageState'
+export { SECTIONS, sectionFor } from './sections'
+export type { Section } from './sections'
 export { TabRow } from './TabRow'
 export type { TabRowProps, TabRowTab } from './TabRow'
 
 // Viewport access, for the shell and for components whose two renderings share
 // no markup. Prefer the primitives above.
 export { useIsDesktop } from './useIsDesktop'
+
+// The content cap, re-exported so a screen has one import surface for the
+// design system rather than reaching past it into @/theme for one number.
+export { CHROME_INSET, CONTENT_MAX_WIDTH, ROW_HEIGHT } from '@/theme/tokens'
 
 // Theme + provider, so main.tsx never imports Mantine either.
 export { AppTheme } from './AppTheme'

@@ -25,13 +25,13 @@ import {
   Badge,
   Button,
   Group,
-  Loader,
   ModalSheet,
+  Page,
   Stack,
   TabRow,
   Text,
-  Title,
 } from '@/ui'
+import type { Crumb } from '@/ui'
 
 import {
   blockOrder,
@@ -336,24 +336,23 @@ export function BuildScreen() {
 
   if (build.loading) {
     return (
-      <Group gap="xs">
-        <Loader size="sm" />
-        <Text size="sm" c="dimmed">
-          Working out what is next...
-        </Text>
-      </Group>
+      <Page
+        trail={buildTrail(isNew, null, id)}
+        state={{ kind: 'loading', what: 'Working out what is next...' }}
+      />
     )
   }
   if (build.error !== null) {
     return (
-      <Alert color="red" title="Could not load this character">
-        <Stack gap="xs" align="flex-start">
-          <Text size="sm">{build.error}</Text>
-          <Button variant="light" onClick={build.reload}>
-            Try again
-          </Button>
-        </Stack>
-      </Alert>
+      <Page
+        trail={buildTrail(isNew, null, id)}
+        state={{
+          kind: 'failed',
+          title: 'Could not load this character',
+          detail: build.error,
+          onRetry: build.reload,
+        }}
+      />
     )
   }
 
@@ -367,143 +366,158 @@ export function BuildScreen() {
         : revise.fields
 
   return (
-    <Stack gap="lg">
-      <div>
-        <Title order={2}>{isNew ? 'New character' : `Build · ${title(view)}`}</Title>
-        <Text c="dimmed" size="sm">
-          {isNew
-            ? 'A name is all it takes to start. Everything else is a question, asked once there is somebody to ask it about.'
-            : view.prompts.complete
-              ? 'Everything required is answered. What is left is optional -- and a level.'
-              : 'Answer what is open, in any order.'}
-        </Text>
-      </div>
+    <Page
+      trail={buildTrail(isNew, title(view), id)}
+      subtitle={
+        isNew
+          ? 'A name is all it takes to start. Everything else is a question, asked once there is somebody to ask it about.'
+          : view.prompts.complete
+            ? 'Everything required is answered. What is left is optional -- and a level.'
+            : 'Answer what is open, in any order.'
+      }
+    >
+      <Stack gap="lg">
 
-      {failure !== null && (
-        <Alert color="red" title="The server did not accept that">
-          <Stack gap={4}>
-            <Text size="sm">{failure}</Text>
-            {fields.map((field) => (
-              <Text key={field.field} size="xs" c="dimmed">
-                {field.message ?? field.rule}
-              </Text>
-            ))}
-          </Stack>
-        </Alert>
-      )}
-
-      <TabRow
-        tabs={STAGES.map((name) => ({ value: name, label: STAGE_LABELS[name] }))}
-        value={stage}
-        onChange={(next) => goToStage(next as Stage)}
-        actions={
-          !isNew && (
-            <Button
-              variant={view.prompts.complete ? 'filled' : 'light'}
-              onClick={() => void navigate(`/characters/${id}`)}
-            >
-              Finish
-            </Button>
-          )
-        }
-      >
-        <StagePanel
-          blocks={blocks}
-          openKey={openKey}
-          onOpen={openBlock}
-          asking={asking}
-          names={view.names}
-
-          onAnswerPicks={(asked, picks) => submitEvent(asked, eventFor(asked.prompt, picks))}
-          onNameChange={(next) => {
-            setNameDraft(next)
-            setNameError(undefined)
-          }}
-          onAnswerName={(asked, next) => {
-            if (isNew) void createCharacterFromDraft()
-            else submitEvent(asked, initEventFor(next))
-          }}
-          onAnswerChanges={(asked, changes) =>
-            submitEvent(asked, { type: asked.prompt.event.type, changes })
-          }
-          pending={create.pending || answer.pending || revise.pending || remove.pending}
-          fields={fields}
-          {...(nextStage === null ? {} : { onNext: () => goToStage(nextStage) })}
-          {...(isNew || asking?.prompt.choice.kind === 'text' ? { name: nameDraft } : {})}
-          {...maybeScores(asking?.replaces ?? null)}
-        />
-      </TabRow>
-
-      {nameError !== undefined && (
-        <Text size="sm" c="red">
-          {nameError}
-        </Text>
-      )}
-
-      {/*
-        Only ever open because something would be lost. A change that costs
-        nothing else is simply made -- see `price` -- so this dialog means one
-        thing and never cries wolf.
-      */}
-      <ModalSheet
-        opened={preview !== null}
-        onClose={() => cancelPreview()}
-        title={preview?.event === null ? 'Put that question again?' : 'Change this?'}
-      >
-        {preview !== null && (
-          <Stack gap="md">
-            <Text size="sm">
-              {`${preview.dropped.length === 1 ? 'One other answer' : `${preview.dropped.length} other answers`} `}
-              {preview.event === null
-                ? 'depend on this one and cannot survive it being asked again.'
-                : 'depend on this and cannot survive the change.'}
-            </Text>
-
-            {preview.dropped.length > 0 && (
-              <Stack gap="xs">
-                {preview.dropped.map((entry) => (
-                  <div key={entry.seq}>
-                    <Group gap={6}>
-                      <Text size="sm" fw={500}>
-                        {eventLabel(entry.type)}
-                        {entry.ref !== undefined && `: ${preview.names.get(entry.ref) ?? entry.ref}`}
-                      </Text>
-                      <Badge size="xs" variant="light" color="gray">
-                        {REASONS[entry.reason] ?? entry.reason}
-                      </Badge>
-                    </Group>
-                    {(entry.lost ?? []).map((lost) => (
-                      <Text key={lost.prompt} size="xs" c="dimmed">
-                        {promptLabel(lost.prompt)}
-                        {lost.picks !== undefined && `: ${lost.picks.map(pickLabel).join(', ')}`}
-                      </Text>
-                    ))}
-                  </div>
-                ))}
-                <Text size="xs" c="dimmed">
-                  Nothing is lost that cannot be answered again: each of these becomes an open
-                  question, waiting under whichever tab it belongs to.
+        {failure !== null && (
+          <Alert color="red" title="The server did not accept that">
+            <Stack gap={4}>
+              <Text size="sm">{failure}</Text>
+              {fields.map((field) => (
+                <Text key={field.field} size="xs" c="dimmed">
+                  {field.message ?? field.rule}
                 </Text>
-              </Stack>
-            )}
-
-            <Group>
-              <Button
-                color="red"
-                loading={revise.pending || remove.pending}
-                onClick={() => void commit()}
-              >
-                {preview.event === null ? 'Ask it again' : 'Change it'}
-              </Button>
-              <Button variant="subtle" onClick={() => cancelPreview()}>
-                Cancel
-              </Button>
-            </Group>
-          </Stack>
+              ))}
+            </Stack>
+          </Alert>
         )}
-      </ModalSheet>
-    </Stack>
+
+        <TabRow
+          tabs={STAGES.map((name) => ({ value: name, label: STAGE_LABELS[name] }))}
+          value={stage}
+          onChange={(next) => goToStage(next as Stage)}
+          actions={
+            !isNew && (
+              <Button
+                variant={view.prompts.complete ? 'filled' : 'light'}
+                onClick={() => void navigate(`/characters/${id}`)}
+              >
+                Finish
+              </Button>
+            )
+          }
+        >
+          <StagePanel
+            blocks={blocks}
+            openKey={openKey}
+            onOpen={openBlock}
+            asking={asking}
+            names={view.names}
+
+            onAnswerPicks={(asked, picks) => submitEvent(asked, eventFor(asked.prompt, picks))}
+            onNameChange={(next) => {
+              setNameDraft(next)
+              setNameError(undefined)
+            }}
+            onAnswerName={(asked, next) => {
+              if (isNew) void createCharacterFromDraft()
+              else submitEvent(asked, initEventFor(next))
+            }}
+            onAnswerChanges={(asked, changes) =>
+              submitEvent(asked, { type: asked.prompt.event.type, changes })
+            }
+            pending={create.pending || answer.pending || revise.pending || remove.pending}
+            fields={fields}
+            {...(nextStage === null ? {} : { onNext: () => goToStage(nextStage) })}
+            {...(isNew || asking?.prompt.choice.kind === 'text' ? { name: nameDraft } : {})}
+            {...maybeScores(asking?.replaces ?? null)}
+          />
+        </TabRow>
+
+        {nameError !== undefined && (
+          <Text size="sm" c="red">
+            {nameError}
+          </Text>
+        )}
+
+        {/*
+          Only ever open because something would be lost. A change that costs
+          nothing else is simply made -- see `price` -- so this dialog means one
+          thing and never cries wolf.
+        */}
+        <ModalSheet
+          opened={preview !== null}
+          onClose={() => cancelPreview()}
+          title={preview?.event === null ? 'Put that question again?' : 'Change this?'}
+        >
+          {preview !== null && (
+            <Stack gap="md">
+              <Text size="sm">
+                {`${preview.dropped.length === 1 ? 'One other answer' : `${preview.dropped.length} other answers`} `}
+                {preview.event === null
+                  ? 'depend on this one and cannot survive it being asked again.'
+                  : 'depend on this and cannot survive the change.'}
+              </Text>
+
+              {preview.dropped.length > 0 && (
+                <Stack gap="xs">
+                  {preview.dropped.map((entry) => (
+                    <div key={entry.seq}>
+                      <Group gap={6}>
+                        <Text size="sm" fw={500}>
+                          {eventLabel(entry.type)}
+                          {entry.ref !== undefined && `: ${preview.names.get(entry.ref) ?? entry.ref}`}
+                        </Text>
+                        <Badge size="xs" variant="light" color="gray">
+                          {REASONS[entry.reason] ?? entry.reason}
+                        </Badge>
+                      </Group>
+                      {(entry.lost ?? []).map((lost) => (
+                        <Text key={lost.prompt} size="xs" c="dimmed">
+                          {promptLabel(lost.prompt)}
+                          {lost.picks !== undefined && `: ${lost.picks.map(pickLabel).join(', ')}`}
+                        </Text>
+                      ))}
+                    </div>
+                  ))}
+                  <Text size="xs" c="dimmed">
+                    Nothing is lost that cannot be answered again: each of these becomes an open
+                    question, waiting under whichever tab it belongs to.
+                  </Text>
+                </Stack>
+              )}
+
+              <Group>
+                <Button
+                  color="red"
+                  loading={revise.pending || remove.pending}
+                  onClick={() => void commit()}
+                >
+                  {preview.event === null ? 'Ask it again' : 'Change it'}
+                </Button>
+                <Button variant="subtle" onClick={() => cancelPreview()}>
+                  Cancel
+                </Button>
+              </Group>
+            </Stack>
+          )}
+          </ModalSheet>
+      </Stack>
+    </Page>
   )
+}
+
+/**
+ * The trail for a build page.
+ *
+ * Three crumbs once there is a character -- `Characters / Ada / Build` -- and
+ * two while creating one, because there is nothing yet to name. Note the
+ * asymmetry with the event log, which is two crumbs even for a character that
+ * exists: this screen already holds the sheet, and that one deliberately never
+ * asks for it. See CharacterLogScreen.
+ */
+function buildTrail(isNew: boolean, name: string | null, id: string): Crumb[] {
+  if (isNew) return [{ label: 'New character' }]
+  return [{ label: name, to: `/characters/${id}` }, { label: 'Build' }]
 }
 
 /** How a drop reason reads, without borrowing a category's word. */

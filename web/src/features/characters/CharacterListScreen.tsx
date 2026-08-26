@@ -24,17 +24,17 @@ import {
   Button,
   DataList,
   Group,
-  Loader,
   IconCopy,
   IconFolder,
   IconPlus,
   IconTrash,
   ModalSheet,
+  Page,
+  pageState,
   Select,
   Stack,
   Text,
   TextInput,
-  Title,
 } from '@/ui'
 
 import { StubButton } from './StubButton'
@@ -85,147 +85,148 @@ export function CharacterListScreen() {
   const [stubError, setStubError] = useState<string | null>(null)
 
   return (
-    <Stack gap="md">
-      <Group justify="space-between" align="flex-start">
-        <Title order={2}>Characters</Title>
-      </Group>
-
-      <Group gap="xs" align="flex-end">
-        <Select
-          label="Folder"
-          data={[
-            { value: ALL, label: 'All characters' },
-            ...folderList.map((f) => ({ value: f.id, label: f.name })),
-          ]}
-          value={selected}
-          onChange={(value) => setSelected(value ?? ALL)}
-          allowDeselect={false}
-          w={220}
-        />
-        <ManageFolders folders={folderList} onChanged={reloadAll} />
-      </Group>
-
-      {folders.error !== null && (
-        <Alert color="red" title="Could not load your folders">
-          <Stack gap="xs" align="flex-start">
-            <Text size="sm">{folders.error}</Text>
-            <Button variant="light" onClick={folders.reload}>
-              Try again
-            </Button>
-          </Stack>
-        </Alert>
-      )}
-
-      {import.meta.env.DEV && stubError !== null && (
-        <Alert color="red" title="Could not create the stub character">
-          <Text size="sm">{stubError}</Text>
-        </Alert>
-      )}
-
-      {characters.error !== null && (
-        <Alert color="red" title="Could not load your characters">
-          <Stack gap="xs" align="flex-start">
-            <Text size="sm">{characters.error}</Text>
-            <Button variant="light" onClick={characters.reload}>
-              Try again
-            </Button>
-          </Stack>
-        </Alert>
-      )}
-
-      {characters.loading ? (
-        <Group gap="xs">
-          <Loader size="sm" />
-          <Text size="sm" c="dimmed">
-            Loading...
-          </Text>
+    <Page
+      trail={[]}
+      state={pageState(characters, {
+        title: 'Could not load your characters',
+        fallback: 'Unknown error',
+        onRetry: characters.reload,
+      })}
+      /*
+       * The folder filter is this section's, and no other section has one.
+       *
+       * It sits above the table rather than on the heading line because it
+       * narrows the rows rather than acting on the section, and it survived
+       * the unification for that reason: a control doing real work here and
+       * nowhere else is not drift. The `Group` that used to wrap the title
+       * alone did not survive -- it held one child and justified nothing.
+       */
+      filters={
+        <Group gap="xs" align="flex-end">
+          <Select
+            label="Folder"
+            data={[
+              { value: ALL, label: 'All characters' },
+              ...folderList.map((f) => ({ value: f.id, label: f.name })),
+            ]}
+            value={selected}
+            onChange={(value) => setSelected(value ?? ALL)}
+            allowDeselect={false}
+            w={220}
+          />
+          <ManageFolders folders={folderList} onChanged={reloadAll} />
         </Group>
-      ) : (
-        <DataList
-          items={rows}
-          getKey={(character) => character.id}
-          columns={[
-            {
-              key: 'name',
-              header: 'Name',
-              primary: true,
-              render: (character) => (
-                <Anchor component={Link} to={`/characters/${character.id}`}>
-                  {character.name || 'Unnamed'}
-                </Anchor>
-              ),
-            },
-            { key: 'level', header: 'Level', render: (character) => character.level || '--' },
-            {
-              key: 'classes',
-              header: 'Classes',
-              render: (character) => classLine(character.classes),
-            },
-            // Only worth a column when the listing spans folders; inside one
-            // folder every row would say the same thing.
-            ...(selected === ALL
-              ? [
-                  {
-                    key: 'folder',
-                    header: 'Folder',
-                    render: (character: Summary) => (
-                      <Badge variant="light">{nameOf(character.folder)}</Badge>
-                    ),
-                  },
-                ]
-              : []),
-            {
-              key: 'actions',
-              header: 'Actions',
-              render: (character) => (
-                <RowActions
-                  character={character}
-                  folders={folderList}
-                  onChanged={reloadAll}
-                />
-              ),
-            },
-          ]}
-          empty={
-            selected === ALL
-              ? 'No characters yet. Make one.'
-              : 'Nothing in this folder yet. Make one, or move one here.'
-          }
-        />
-      )}
+      }
+    >
+      <Stack gap="md">
+        {/* The folders resource fails on its own terms, and inline.
+            Deliberately not folded into the page's state, which the characters
+            resource drives: folders are a filter, and a filter that would not
+            load is no reason to refuse to draw the characters it was going to
+            narrow. This screen is the only one holding two resources, and this
+            is the case that makes it worth the extra alert. */}
+        {folders.error !== null && (
+          <Alert color="red" title="Could not load your folders">
+            <Stack gap="xs" align="flex-start">
+              <Text size="sm">{folders.error}</Text>
+              <Button variant="light" onClick={folders.reload}>
+                Try again
+              </Button>
+            </Stack>
+          </Alert>
+        )}
 
-      {/* Under the table, on the left, like every other way of adding a row. */}
-      <Group gap="xs">
-        <Button
-          size={ACTION_SIZE}
-          variant="light"
-          leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
-          onClick={() =>
-            void navigate(
-              activeFolder ? `/characters/new?folder=${activeFolder}` : '/characters/new',
-            )
-          }
-        >
-          New character
-        </Button>
-        <Button
-          size={ACTION_SIZE}
-          variant="default"
-          onClick={() =>
-            void navigate(
-              activeFolder ? `/characters/import?folder=${activeFolder}` : '/characters/import',
-            )
-          }
-        >
-          Import
-        </Button>
-        {/* Development only, and absent from a production bundle rather than
-            hidden in one: Vite replaces import.meta.env.DEV with a literal, so
-            this folds away and StubButton is eliminated with it. The route it
-            would call is not registered in production either. */}
-        {import.meta.env.DEV && <StubButton folder={activeFolder} onFailed={setStubError} />}
-      </Group>
-    </Stack>
+        {import.meta.env.DEV && stubError !== null && (
+          <Alert color="red" title="Could not create the stub character">
+            <Text size="sm">{stubError}</Text>
+          </Alert>
+        )}
+
+          <DataList
+            items={rows}
+            getKey={(character) => character.id}
+            columns={[
+              {
+                key: 'name',
+                header: 'Name',
+                primary: true,
+                render: (character) => (
+                  <Anchor component={Link} to={`/characters/${character.id}`}>
+                    {character.name || 'Unnamed'}
+                  </Anchor>
+                ),
+              },
+              { key: 'level', header: 'Level', render: (character) => character.level || '--' },
+              {
+                key: 'classes',
+                header: 'Classes',
+                render: (character) => classLine(character.classes),
+              },
+              // Only worth a column when the listing spans folders; inside one
+              // folder every row would say the same thing.
+              ...(selected === ALL
+                ? [
+                    {
+                      key: 'folder',
+                      header: 'Folder',
+                      render: (character: Summary) => (
+                        <Badge variant="light">{nameOf(character.folder)}</Badge>
+                      ),
+                    },
+                  ]
+                : []),
+              {
+                key: 'actions',
+                header: 'Actions',
+                render: (character) => (
+                  <RowActions
+                    character={character}
+                    folders={folderList}
+                    onChanged={reloadAll}
+                  />
+                ),
+              },
+            ]}
+            empty={
+              selected === ALL
+                ? 'No characters yet. Make one.'
+                : 'Nothing in this folder yet. Make one, or move one here.'
+            }
+          />
+
+        {/* Under the table, on the left, like every other way of adding a row. */}
+        <Group gap="xs">
+          <Button
+            size={ACTION_SIZE}
+            variant="light"
+            leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
+            onClick={() =>
+              void navigate(
+                activeFolder ? `/characters/new?folder=${activeFolder}` : '/characters/new',
+              )
+            }
+          >
+            New character
+          </Button>
+          <Button
+            size={ACTION_SIZE}
+            variant="default"
+            onClick={() =>
+              void navigate(
+                activeFolder ? `/characters/import?folder=${activeFolder}` : '/characters/import',
+              )
+            }
+          >
+            Import
+          </Button>
+          {/* Development only, and absent from a production bundle rather than
+              hidden in one: Vite replaces import.meta.env.DEV with a literal, so
+              this folds away and StubButton is eliminated with it. The route it
+              would call is not registered in production either. */}
+          {import.meta.env.DEV && <StubButton folder={activeFolder} onFailed={setStubError} />}
+        </Group>
+      </Stack>
+    </Page>
   )
 }
 
