@@ -494,7 +494,7 @@ func TestRoleplayingPromptsAreTextInTheirOwnGroup(t *testing.T) {
 		kind   rules.ChoiceKind
 		choose int
 	}{
-		{"character/personality-traits", rules.ChoosePersonality, 2},
+		{"character/personality-trait", rules.ChoosePersonality, 1},
 		{"character/ideal", rules.ChooseIdeal, 1},
 		{"character/bond", rules.ChooseBond, 1},
 		{"character/flaw", rules.ChooseFlaw, 1},
@@ -503,6 +503,8 @@ func TestRoleplayingPromptsAreTextInTheirOwnGroup(t *testing.T) {
 		if p.Choice.Kind != want.kind {
 			t.Errorf("%s kind = %v, want %v", want.id, p.Choice.Kind, want.kind)
 		}
+		// One, whatever the background's table suggests: the count belonged to
+		// a menu, and what is asked now is one answer in the player's words.
 		if p.Choice.Choose != want.choose {
 			t.Errorf("%s chooses %d, want %d", want.id, p.Choice.Choose, want.choose)
 		}

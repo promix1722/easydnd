@@ -78,6 +78,11 @@ export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardPro
               key={option.key}
               variant={count > 0 ? 'filled' : 'default'}
               justify="space-between"
+              // The description underneath makes a picked option two or three
+              // lines tall, and a button that fixes its own height would crop
+              // it. Padded rather than sized.
+              h="auto"
+              py="xs"
               disabled={option.disabled || spent}
               onClick={() => toggle(option.key)}
               rightSection={
@@ -88,15 +93,22 @@ export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardPro
                 ) : null
               }
             >
-              <Text size="sm" style={{ whiteSpace: 'normal', textAlign: 'left' }}>
-                {option.label}
-                {option.detail !== undefined && (
-                  <Text span size="xs" c="dimmed">
-                    {' '}
-                    -- {option.detail}
+              <Stack gap={2} style={{ textAlign: 'left' }}>
+                <Text size="sm" style={{ whiteSpace: 'normal' }}>
+                  {option.label}
+                </Text>
+                {/*
+                  Only under the one that was picked. Every option carrying its
+                  own paragraph turns a list of six into a page nobody reads,
+                  and the same text cut to fit one line stops mid-word -- so it
+                  is shown where it is being decided about, in full.
+                */}
+                {count > 0 && option.detail !== undefined && (
+                  <Text size="xs" style={{ whiteSpace: 'normal', opacity: 0.8 }}>
+                    {option.detail}
                   </Text>
                 )}
-              </Text>
+              </Stack>
             </Button>
           )
         })}

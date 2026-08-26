@@ -209,3 +209,62 @@ describe('PromptCard', () => {
     expect(screen.queryByText('from Rogue')).not.toBeInTheDocument()
   })
 })
+
+/**
+ * What an option says about itself, and when.
+ *
+ * The compendium's description used to sit on the same line as the name, cut
+ * to 120 characters -- six options each trailing half a sentence, none of them
+ * finishing it. It is shown under the option that was picked instead, whole:
+ * that is the one being decided about, and it is the only one with room.
+ */
+describe('an option description', () => {
+  const viewport = 'desktop'
+
+  const DESC =
+    'You have draconic ancestry. Choose one type of dragon from the Draconic Ancestry table. ' +
+    'Your breath weapon and damage resistance are determined by the type.'
+
+  const dragons = new Map<string, Entry>([
+    ['draconic-ancestry-black', { slug: 'draconic-ancestry-black', name: 'Black', desc: [DESC] }],
+    ['draconic-ancestry-blue', { slug: 'draconic-ancestry-blue', name: 'Blue', desc: [DESC] }],
+  ])
+
+  const ancestry: Prompt = {
+    choice: {
+      prompt: 'draconic-ancestry/trait/0',
+      choose: 1,
+      kind: 'trait',
+      from: {
+        kind: 'explicit',
+        options: [
+          { key: 'draconic-ancestry-black', kind: 'ref', ref: 'trait:draconic-ancestry-black' },
+          { key: 'draconic-ancestry-blue', kind: 'ref', ref: 'trait:draconic-ancestry-blue' },
+        ],
+      },
+    },
+    group: 'race',
+    optional: false,
+    advances: false,
+    heldOnly: false,
+    event: { type: 'race', ref: 'race:dragonborn' },
+  }
+
+  it('stays out of the list until its option is picked, and then says all of it', async () => {
+    const user = setupUser()
+    renderAt(
+      viewport,
+      <PromptCard prompt={ancestry} entries={dragons} pending={false} onAnswer={vi.fn()} />,
+    )
+
+    // Nothing describes itself while the list is still a list.
+    expect(screen.queryByText(/draconic ancestry table/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^Black/ }))
+
+    // Whole, not cut mid-word: it is under the name now, so it has the room.
+    expect(screen.getByText(DESC)).toBeInTheDocument()
+    // And only the picked one carries it.
+    expect(screen.getAllByText(DESC)).toHaveLength(1)
+  })
+})

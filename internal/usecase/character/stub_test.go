@@ -224,13 +224,13 @@ func TestStubOptionalAnswersReachTheSheet(t *testing.T) {
 		t.Errorf("languages = %v, want %v", got, wantLanguages)
 	}
 
-	if len(sheet.Identity.PersonalityTraits) != 2 {
-		t.Errorf("personality traits = %v, want two", sheet.Identity.PersonalityTraits)
-	}
+	// One apiece: each roleplaying question asks for one answer in the
+	// player's own words, however many the background's table suggests.
 	for _, field := range []struct {
 		name  string
 		value []string
 	}{
+		{"personality traits", sheet.Identity.PersonalityTraits},
 		{"ideals", sheet.Identity.Ideals},
 		{"bonds", sheet.Identity.Bonds},
 		{"flaws", sheet.Identity.Flaws},

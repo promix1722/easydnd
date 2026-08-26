@@ -144,6 +144,7 @@ export function BuildScreen() {
   const [nameDraft, setNameDraft] = useState('')
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [preview, setPreview] = useState<Preview | null>(null)
+  const [creating, setCreating] = useState(false)
 
   // Held once and mutated, rather than replaced: see BlockOrder. The list is
   // redrawn by new data, never by the memory of where the old data sat.
@@ -165,11 +166,27 @@ export function BuildScreen() {
     does remount -- and neither path can be relied on alone.
   */
   const [shownId, setShownId] = useState(id)
-  if (shownId !== id) {
+  const arriving = shownId !== id
+  if (arriving) {
     setShownId(id)
     setChosenStage(landingStage(location.state))
-    setOpenKey(null)
+    setOpenKey(creating ? NEW_NAME_KEY : null)
   }
+  /*
+    The character has arrived, so this is an ordinary build screen again.
+
+    Both guards are load-bearing, and both were learned the hard way. On the
+    render that first sees the new id, `useResource` has not yet reset itself
+    -- it does that during its own render, and what it returns *this* time is
+    still the previous key's answer, which for a character that did not exist
+    is an empty view that reads as `ready`. So "there is data" is true on
+    exactly the render where it means nothing, and clearing there put the
+    spinner back a render later. And on `/characters/new` there is no read to
+    be in the middle of at all, so "not loading" is true from the moment the
+    flag is set. What has to be true is that the id has settled *and* the read
+    it started has finished.
+  */
+  if (creating && !arriving && !isNew && !build.loading) setCreating(false)
 
   const view = build.data ?? EMPTY_VIEW
   // Advancement is dropped before anything looks at it, so no tab, no list
@@ -205,7 +222,14 @@ export function BuildScreen() {
   // The order is the screen's memory of where things are, and `blocksFor`
   // both reads it and writes to it: whatever is new keeps the place the level
   // ordering just gave it, so the next answer moves nothing already on screen.
-  const blocks = blocksFor(settled.get(stage) ?? [], isNew ? [NEW_NAME_PROMPT] : openHere, order)
+  // While the character is being created there is no log to read yet, so the
+  // question it is being created by is still the thing on screen.
+  const posingName = isNew || creating
+  const blocks = blocksFor(
+    settled.get(stage) ?? [],
+    posingName ? [NEW_NAME_PROMPT] : openHere,
+    order,
+  )
   const opened = blocks.find((block) => block.key === openKey) ?? null
   // What the open block is asking, which is a fact about the block rather than
   // a second piece of state. A settled block whose question cannot be put
@@ -260,6 +284,10 @@ export function BuildScreen() {
     // replace: true, because the URL of a character that does not exist is
     // not a place the Back button should return anyone to.
     if (created) {
+      // Set before the navigation, because the navigation is what changes the
+      // resource key -- and the render that reads the new key is the one that
+      // would otherwise blank the page.
+      setCreating(true)
       await navigate(`/characters/${created.id}/build`, {
         replace: true,
         state: { stage: landOn },
@@ -383,7 +411,21 @@ export function BuildScreen() {
     else void price(asked.replaces, event, open)
   }
 
-  if (build.loading) {
+  /*
+    The whole page comes down for a first load, and only for a first load.
+
+    `useResource` blanks when its key changes, which is right -- a different
+    character is a different screen. But creation changes the key from
+    `build:` to `build:chr_1` under a screen that is already up, and taking it
+    down meant that typing a name tore the page off and rebuilt it, spinner
+    and all, for a write that had already succeeded. It read as a reload
+    because that is exactly what it looked like.
+
+    So the creating transition keeps the page: the same chrome, the same tab,
+    and the name still in the block it was typed into with its button turning.
+    What replaces it a moment later is that block with an answer in it.
+  */
+  if (build.loading && !creating) {
     return (
       <Page
         trail={buildTrail(isNew, null, id)}
@@ -416,9 +458,12 @@ export function BuildScreen() {
 
   return (
     <Page
-      trail={buildTrail(isNew, title(view), id)}
+      // The draft, while the character it names is being created: the sheet
+      // that would say so is the thing still in flight, and a trail that read
+      // "Unnamed" for a moment would be naming the one fact just supplied.
+      trail={buildTrail(isNew, creating ? nameDraft.trim() : title(view), id)}
       subtitle={
-        isNew
+        posingName
           ? 'A name is all it takes to start. Everything else is a question, asked once there is somebody to ask it about.'
           : view.prompts.complete
             ? 'Everything required is answered. What is left is optional -- and a level.'
@@ -474,7 +519,9 @@ export function BuildScreen() {
             onAnswerChanges={(asked, changes) =>
               submitEvent(asked, { type: asked.prompt.event.type, changes })
             }
-            pending={create.pending || answer.pending || revise.pending || remove.pending}
+            pending={
+              creating || create.pending || answer.pending || revise.pending || remove.pending
+            }
             fields={fields}
             {...(nextStage === null ? {} : { onNext: () => goToStage(nextStage) })}
             {...(isNew || asking?.prompt.choice.kind === 'text' ? { name: nameDraft } : {})}
@@ -559,15 +606,19 @@ export function BuildScreen() {
 /**
  * The trail for a build page.
  *
- * Three crumbs once there is a character -- `Characters / Ada / Build` -- and
- * two while creating one, because there is nothing yet to name. Note the
+ * Three crumbs once there is a character -- `Characters / Ada / Creation` --
+ * and two while creating one, because there is nothing yet to name. Note the
  * asymmetry with the event log, which is two crumbs even for a character that
  * exists: this screen already holds the sheet, and that one deliberately never
  * asks for it. See CharacterLogScreen.
+ *
+ * "Creation" is what the screen does, and the route stays `/build`: a URL
+ * somebody has open is not worth breaking over a word, and this file's own
+ * name is the one place the two spellings meet.
  */
 function buildTrail(isNew: boolean, name: string | null, id: string): Crumb[] {
   if (isNew) return [{ label: 'New character' }]
-  return [{ label: name, to: `/characters/${id}` }, { label: 'Build' }]
+  return [{ label: name, to: `/characters/${id}` }, { label: 'Creation' }]
 }
 
 /**
@@ -727,7 +778,7 @@ const INPUTS: readonly {
   // same reason the alignment is -- they settle a value and name nothing in
   // the compendium -- and they have no collection because there is nothing to
   // choose between. See features/character/promptNames for what each is called.
-  { prompt: 'character/personality-traits', path: 'identity.personalityTraits', kind: 'personality' },
+  { prompt: 'character/personality-trait', path: 'identity.personalityTraits', kind: 'personality' },
   { prompt: 'character/ideal', path: 'identity.ideals', kind: 'ideal' },
   { prompt: 'character/bond', path: 'identity.bonds', kind: 'bond' },
   { prompt: 'character/flaw', path: 'identity.flaws', kind: 'flaw' },
@@ -740,11 +791,11 @@ function inputOf(event: CharacterEvent): (typeof INPUTS)[number] | undefined {
 }
 
 /** The question an input poses, so that answering it again is one mechanism. */
-function inputPrompt(input: (typeof INPUTS)[number], stage: Stage, choose: number): Prompt {
+function inputPrompt(input: (typeof INPUTS)[number], stage: Stage): Prompt {
   return {
     choice: {
       prompt: input.prompt,
-      choose,
+      choose: 1,
       kind: input.kind,
       from:
         input.collection === undefined
@@ -802,12 +853,7 @@ function reask(row: SettledRow): Prompt | null {
   }
   const input = inputOf(event)
   if (input !== undefined) {
-    // A written answer is re-posed with as many fields as it has lines, which
-    // is the only statement of "how many" left once the prompt has gone: the
-    // background's own count came with the question, and the question is
-    // answered.
-    const written = linesOf(event, input.path)
-    return inputPrompt(input, row.stage, Math.max(written.length, 1))
+    return inputPrompt(input, row.stage)
   }
   if (isScores(event)) {
     return {

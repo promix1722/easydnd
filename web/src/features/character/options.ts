@@ -117,10 +117,19 @@ function labelOf(option: Option, entries: Map<string, Entry>): string {
   }
 }
 
+/**
+ * What an option says about itself, whole.
+ *
+ * It used to be cut to 120 characters, because it was drawn on the same line
+ * as the name and something had to give. It is drawn underneath now -- and
+ * only under the option that was picked -- so there is room for the sentence
+ * the compendium actually wrote, and a description that stops mid-word is
+ * worse than one that takes three lines.
+ */
 function detailOf(option: Option, entries: Map<string, Entry>): string | undefined {
   if (option.kind === 'ref') {
     const slug = option.ref === undefined ? '' : slugOf(option.ref)
-    return entries.get(slug)?.desc?.[0]?.slice(0, 120)
+    return entries.get(slug)?.desc?.[0]
   }
   return undefined
 }

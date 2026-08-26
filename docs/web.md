@@ -641,6 +641,13 @@ than answer the question. Where it wants **N**, the options that were not
 picked go grey as soon as N are: the question has been answered, and an option
 that still looks pressable but does nothing reads as a broken button. What was
 picked stays live either way, because unpicking is how you undo.
+
+An option's **description sits under the option that was picked**, and only
+there. It used to run along the same line as the name, cut to 120 characters,
+which gave a list of six draconic ancestries six half-sentences and no whole
+one. Under the name there is room for what the compendium actually wrote, and
+under *only the picked one* the list stays a list -- the description is shown
+where it is being decided about.
 Three questions are genuinely not that shape and get a form each: a name
 (`NameForm`), the six ability scores (`AbilityScoresForm`, below) and the four
 roleplaying lines (`WrittenForm`). `StagePanel` chooses between the four by the
@@ -697,6 +704,12 @@ by a spinner and rebuilt underneath whoever was reading it. A refresh that
 *fails* still takes the screen down to its error, because a list quietly out
 of date is worse than one that says it could not check.
 
+The trail reads `Characters / Ada / Creation`, which is what the screen does;
+the route stays `/build`, because a URL somebody has open is not worth breaking
+over a word. The tabs are capitalised for the same reason a heading is -- a tab
+is a title, not a sentence -- and the word in each is still the category's own,
+which is all the rule below asks of it.
+
 `ui/BlockList` is the primitive underneath, wrapping Mantine's accordion so
 that feature code neither assembles one nor re-decides its variant. It mounts a
 body only while its block is open, which is not a styling nicety: a prompt's
@@ -729,6 +742,23 @@ the character the screen is looking at changes: confirming the name stays on
 identity, and pressing a tab -- which also creates the character, because
 nothing else can be answered until it exists -- goes to *that* tab rather than
 discarding it.
+
+**Nor does the page come down to make way for it.** `useResource` blanks when
+its key changes, which is right -- a different character is a different screen
+-- but creation changes the key from `build:` to `build:chr_1` underneath a
+screen that is already up, so typing a name tore the whole page off, spinner
+and all, for a write that had already succeeded. It read as a page reload
+because that is what it looked like. A `creating` flag holds the page through
+that one transition: the same chrome, the same tab, and the name still in the
+block it was typed into with its button turning, replaced a moment later by
+that block with an answer in it.
+
+Clearing that flag is fiddlier than it looks, and the comment in the code says
+why: on the render that first sees the new id, `useResource` has not reset
+itself yet and still returns the *previous* key's answer -- which for a
+character that did not exist is an empty view reading as `ready`. So "there is
+data now" is true on exactly the render where it means nothing. The flag goes
+when the id has settled and the read it started has finished.
 
 `/characters/new?folder=` carries the folder the character list was filtered to, so
 whatever the list was showing is where the next character lands. Import does the
@@ -895,10 +925,18 @@ therefore how it reads back. `features/character/promptNames` holds the one
 table of kind to path to noun, from both ends: the field that writes a trait
 and the block that heads a decided one cannot come to call it two things.
 
-`WrittenForm` draws `choose` fields, because the background suggests two traits
-and one ideal. Blank lines are dropped rather than stored, so two suggested can
-be answered with one; nothing written at all is the same as not answering, and
-these are optional, so the button simply stays disabled.
+`WrittenForm` draws **one** field, and it is a `Textarea` rather than an input.
+Acolyte's table suggests two traits and the SRD prints eight of each, but a
+count is a fact about a *menu* -- "pick two of these eight" -- and what is
+asked now is one answer in the player's own words, which is a sentence and
+sometimes several. Nothing written is the same as not answering, and these are
+optional, so the button simply stays disabled.
+
+It is a fixed three rows rather than an autosizing one. Mantine's autosize is
+`react-textarea-autosize`, which measures through a listener jsdom has no
+element to attach -- the field could not even be focused under test -- and
+`vi.mock` is not available to paper over it. Three rows and a scrollbar is a
+smaller loss than a control the suite cannot drive.
 
 The prompt is told apart from a menu the same way the six starting scores are
 told apart from a level-up improvement: **by whether it offers anything to pick
@@ -1358,8 +1396,8 @@ branches on the auth state and picks the chrome: a loader while the session is
 still unknown, `LandingShell` when anonymous, `RootShell` when signed in. At
 `/`, `routes/HomeRoute.tsx` makes the same choice about the content.
 
-Signed out, that content is a carousel of three panels -- build a character,
-join a group, run an adventure. Those three are the whole of what this app means
+Signed out, that content is three panels -- build a character, join a group,
+run an adventure -- side by side on a desktop and a carousel on a phone. Those three are the whole of what this app means
 to be, in the order you meet them, and committing to that shape before
 committing to the words for it was the cheap order to do the work in: the
 layout, the swipe and the accessible names settled first, against panels that
@@ -1381,27 +1419,33 @@ They also paid for a piece of the design to be removed. While the panels were
 empty, `slideSize` was under 100% so the neighbours peeked: three identical
 blank rectangles at full width read as one rectangle, and a swipe between them
 appeared to do nothing. A panel that says something is already distinguishable
-from the panel beside it, so the peek went and the carousel shows one panel at a
-time. The border stayed, because a panel still wants an edge.
+from the panel beside it, so the peek went and the phone's carousel shows one
+panel at a time. The border stayed, because a panel still wants an edge.
 
-Two of Mantine's own defaults are overridden, and both for the same reason --
-they are drawn for a carousel of photographs and this is a carousel of text on
-paper. The indicators are white at `0.6` opacity, which over a pale panel on a
-pale page is invisible; an invisible indicator is worse than no indicator,
-because it says there is one panel. They are repainted in the primary colour,
-which reads under `defaultColorScheme="auto"` where white does not. And the
-controls are `44px` rather than the default `26px`: on the viewport that draws
-them they are the only way through for a visitor not using the arrow keys, they
-sit *over* a panel rather than beside it, and 26px is under every published
-minimum for a pointer target.
+**There is a carousel only where a carousel is the affordance.** This is one of
+the few places outside a `@/ui` primitive that calls `useIsDesktop`, and it asks
+what the window has room for. A phone fits one panel and offers a swipe, so
+there it is a carousel with no arrows at all: two 44px controls covering the
+panel they sit on would duplicate the gesture the screen already gives, and the
+indicators still say how many panels there are. A desktop has the width for all
+three, and there a carousel is a control asking to be *operated* in order to see
+what the window could simply have shown -- two panels behind an arrow, and the
+shape of what the app is for hidden with them. So on desktop the same three
+panels sit side by side in a `SimpleGrid`, and there is nothing to work.
 
-They are drawn on desktop **only**. This is one of the few places outside a
-`@/ui` primitive that calls `useIsDesktop`, and it asks about the *input*
-rather than the layout: a phone has no pointer, so two 44px arrows covering the
-panel they sit on would duplicate a swipe the screen already offers. Taking
-them away removes a control, not a way through -- the swipe, the arrow keys and
-the indicators all remain, and the indicators are what still say how many
-panels there are.
+The two renderings share their panel and nothing else, which is the test
+`ui/Columns` and `ui/ModalSheet` apply to whether a width split belongs in a
+file at all. `Panel` states its own `role="group"` and `aria-labelledby` rather
+than leaving them to the carousel, because `Carousel.Slide` would supply them on
+one viewport and nothing would on the other -- and a panel that is a named group
+at 390px and an anonymous box at 1440px is two components wearing one name.
+
+One of Mantine's defaults is still overridden, on the viewport that still has a
+carousel: the indicators are white at `0.6` opacity, drawn for a carousel of
+photographs, and over a pale panel on a pale page they are invisible -- worse
+than no indicator, because it says there is one panel. They are repainted in the
+primary colour, which reads under `defaultColorScheme="auto"` where white does
+not. The `44px` control override went with the controls.
 
 None of the three panels is a link, and not because two of them lead nowhere --
 `/groups` is real. It is that all three live behind the sign-in boundary, so a

@@ -445,14 +445,14 @@ func (b *promptBuilder) personality(background catalog.Background) {
 		if choice.Prompt.IsZero() || len(set) > 0 {
 			return
 		}
-		choose := choice.Choose
-		if choose < 1 {
-			choose = 1
-		}
 		b.out = append(b.out, Prompt{
 			Choice: rules.Choice{
 				Prompt: prompt,
-				Choose: choose,
+				// One, whatever the background's table suggests. The count
+				// belonged to a menu -- "pick two of these eight" -- and what
+				// is asked now is one answer in the player's own words, which
+				// can be as long as it wants to be.
+				Choose: 1,
 				Kind:   kind,
 				// Explicit and empty: there is nothing to pick between, and a
 				// client tells this apart from a menu by the absence of one.
@@ -465,7 +465,7 @@ func (b *promptBuilder) personality(background catalog.Background) {
 	}
 
 	id := b.state.Identity
-	written(background.PersonalityTraits, "character/personality-traits", rules.ChoosePersonality, id.PersonalityTraits)
+	written(background.PersonalityTraits, "character/personality-trait", rules.ChoosePersonality, id.PersonalityTraits)
 	written(background.Ideals, "character/ideal", rules.ChooseIdeal, id.Ideals)
 	written(background.Bonds, "character/bond", rules.ChooseBond, id.Bonds)
 	written(background.Flaws, "character/flaw", rules.ChooseFlaw, id.Flaws)

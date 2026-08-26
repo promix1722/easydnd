@@ -45,7 +45,7 @@ export function NameForm({
     <Stack gap="md">
       <TextInput
         aria-label="Name"
-        placeholder="Who are they?"
+        placeholder="Name"
         value={value}
         error={error}
         onChange={(event) => onValueChange(event.currentTarget.value)}

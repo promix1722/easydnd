@@ -48,14 +48,17 @@ export const STAGES = [
  * was decided -- "Race chosen" -- and empty copy names no category at all.
  * That rule is what keeps "race" an unambiguous thing to look for on the page,
  * and it is why this table exists rather than the labels being inlined.
+ *
+ * Capitalised, because a tab is a title rather than a sentence. The word is
+ * still the category's own, which is all the rule above asks.
  */
 export const STAGE_LABELS: Record<Stage, string> = {
-  identity: 'identity',
-  class: 'class',
-  race: 'race',
-  background: 'background',
-  abilities: 'abilities',
-  personality: 'personality',
+  identity: 'Identity',
+  class: 'Class',
+  race: 'Race',
+  background: 'Background',
+  abilities: 'Abilities',
+  personality: 'Personality',
 }
 
 const STAGE_OF_GROUP: Record<string, Stage> = {

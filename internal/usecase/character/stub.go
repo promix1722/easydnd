@@ -152,19 +152,11 @@ func stubEvents() []domain.Event {
 		// above travels in, and the same shape the build screen posts.
 		{
 			Type: domain.EventChange,
-			Changes: []domain.Change{
-				{
-					Path: "identity.personalityTraits", Op: domain.OpSet,
-					Value: domain.StringValue(
-						"I quote (or misquote) sacred texts and proverbs in almost every situation."),
-				},
-				{
-					Path: "identity.personalityTraits", Op: domain.OpAdd,
-					Value: domain.StringValue(
-						"I am tolerant (or intolerant) of other faiths and respect (or condemn) " +
-							"the worship of other gods."),
-				},
-			},
+			Changes: []domain.Change{{
+				Path: "identity.personalityTraits", Op: domain.OpSet,
+				Value: domain.StringValue(
+					"I quote (or misquote) sacred texts and proverbs in almost every situation."),
+			}},
 		},
 		{
 			Type: domain.EventChange,

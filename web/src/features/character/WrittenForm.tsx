@@ -1,16 +1,14 @@
 import { useState } from 'react'
 
 import type { Change } from '@/lib/api'
-import { Button, Group, Stack, Text, TextInput } from '@/ui'
+import { Button, Group, Stack, Textarea } from '@/ui'
 
 export interface WrittenFormProps {
-  /** How many lines the question asks for: acolyte suggests two traits. */
-  choose: number
   /** What is already written, so changing it starts from what it says. */
   lines?: readonly string[]
-  /** The path on the sheet these lines settle. */
+  /** The path on the sheet this settles. */
   path: string
-  /** What one of them is called, for the field's own label. */
+  /** What the answer is called, for the field's own label. */
   noun: string
   pending: boolean
   submitLabel: string
@@ -26,16 +24,16 @@ export interface WrittenFormProps {
  * the book and they are suggestions here; what goes on the sheet is whatever
  * the player writes.
  *
- * Like the six ability scores, this settles a value rather than picking an
- * entry, so it emits the addressed changes that settle it: the first line sets
- * the list and the rest add to it, which is exactly how the list is stored.
+ * One field, and it grows. These are sentences and sometimes several -- "I owe
+ * my life to the priest who took me in when my parents died" is already a line
+ * and a half at 390px -- so a single-line input would hide the middle of an
+ * answer behind a horizontal scroll nobody can see the ends of.
  *
- * Blank lines are dropped rather than stored, so a question asking for two
- * traits can be answered with one. Answering with none is the same as not
- * answering, and the button says so.
+ * Like the six ability scores, this settles a value rather than picking an
+ * entry, so it emits the addressed change that settles it. Blank is the same
+ * as not answering, and these are optional, so the button simply stays off.
  */
 export function WrittenForm({
-  choose,
   lines,
   path,
   noun,
@@ -43,49 +41,33 @@ export function WrittenForm({
   submitLabel,
   onSubmit,
 }: WrittenFormProps) {
-  const [written, setWritten] = useState<string[]>(() =>
-    Array.from({ length: choose }, (_, at) => lines?.[at] ?? ''),
-  )
+  const [written, setWritten] = useState(() => lines?.join('\n\n') ?? '')
 
-  const kept = written.map((line) => line.trim()).filter((line) => line !== '')
-  const blank = kept.length === 0
-
-  const submit = () => {
-    onSubmit(
-      kept.map((line, at) => ({
-        path,
-        op: at === 0 ? 'set' : 'add',
-        value: { kind: 'string', string: line },
-      })),
-    )
-  }
+  const kept = written.trim()
 
   return (
     <Stack gap="md">
-      {written.map((line, at) => (
-        <TextInput
-          // The index is the identity here: these are N slots for one kind of
-          // answer, not a list anything is inserted into or removed from.
-          key={at}
-          aria-label={choose === 1 ? noun : `${noun} ${at + 1}`}
-          placeholder="In their own words..."
-          value={line}
-          onChange={(event) => {
-            const next = event.currentTarget.value
-            setWritten((current) => current.map((was, i) => (i === at ? next : was)))
-          }}
-        />
-      ))}
+      <Textarea
+        aria-label={noun}
+        placeholder="In their own words..."
+        // Fixed rows rather than autosize: Mantine's autosizing textarea is
+        // `react-textarea-autosize`, which measures with a listener jsdom has
+        // no element to attach -- so the field could not even be focused in a
+        // test. Three rows holds the answers these questions actually get, and
+        // a longer one scrolls.
+        rows={3}
+        value={written}
+        onChange={(event) => setWritten(event.currentTarget.value)}
+      />
       <Group>
-        <Button onClick={submit} disabled={blank} loading={pending}>
+        <Button
+          onClick={() => onSubmit([{ path, op: 'set', value: { kind: 'string', string: kept } }])}
+          disabled={kept === ''}
+          loading={pending}
+        >
           {submitLabel}
         </Button>
       </Group>
-      {choose > 1 && (
-        <Text size="xs" c="dimmed">
-          Two is what the background suggests. One is an answer too.
-        </Text>
-      )}
     </Stack>
   )
 }

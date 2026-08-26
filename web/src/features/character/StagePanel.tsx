@@ -309,7 +309,6 @@ function AnswerSurface({
   if (written !== undefined && !offersOptions(prompt)) {
     return (
       <WrittenForm
-        choose={prompt.choice.choose}
         {...(lines !== undefined ? { lines } : {})}
         path={written.path}
         noun={written.noun}

@@ -7,6 +7,9 @@ import { setupUser } from '@/test/user'
 
 import { BuildScreen } from './BuildScreen'
 
+import { STAGE_LABELS } from '@/domain'
+import type { Stage } from '@/domain'
+
 /**
  * The build screen, wired to responses in the shape the real API sends.
  *
@@ -225,8 +228,8 @@ const TRAITS_OPEN = {
   prompts: [
     {
       choice: {
-        prompt: 'character/personality-traits',
-        choose: 2,
+        prompt: 'character/personality-trait',
+        choose: 1,
         kind: 'personality',
         from: { kind: 'explicit' },
       },
@@ -263,7 +266,7 @@ const ALIGNED_LOG = {
   ],
 }
 
-/** Two traits written, as one entry: a set and an add. */
+/** A trait written, as its own entry. */
 const TRAITED_LOG = {
   seq: 3,
   events: [
@@ -277,11 +280,6 @@ const TRAITED_LOG = {
           path: 'identity.personalityTraits',
           op: 'set',
           value: { kind: 'string', string: 'I quote sacred texts at every turn.' },
-        },
-        {
-          path: 'identity.personalityTraits',
-          op: 'add',
-          value: { kind: 'string', string: 'I am tolerant of other faiths.' },
         },
       ],
     },
@@ -421,9 +419,19 @@ interface Wire {
   thenEvents?: unknown
   dropped?: unknown[]
   created?: unknown
+  /**
+   * Held open until it resolves: every read after the first write waits on it.
+   *
+   * The suite's fetches otherwise settle within the same click, so a state
+   * that only exists while a request is in flight cannot be observed at all --
+   * and a test that cannot observe it passes whether or not the code is there.
+   */
+  until?: Promise<void>
 }
 
 let posted: { url: string; method: string; body: unknown }[] = []
+/** Every read the screen has started, so a test can wait for one to be in flight. */
+let read: string[] = []
 
 /**
  * Answers everything one build screen asks for.
@@ -439,6 +447,7 @@ function mockApi({
   thenEvents,
   dropped,
   created,
+  until,
 }: Wire = {}) {
   vi.stubGlobal(
     'fetch',
@@ -456,6 +465,8 @@ function mockApi({
         return jsonResponse({ seq: head, sheet: SHEET, ...(dropped ? { dropped } : {}) })
       }
       if (url.includes('/prompts')) {
+        read.push(url)
+        if (until !== undefined && posted.length > 0) await until
         return jsonResponse(then !== undefined && posted.length > 0 ? then : prompts)
       }
       if (url.includes('/events')) {
@@ -503,7 +514,14 @@ function renderNew(viewport: 'mobile' | 'desktop') {
 }
 
 const tabs = () => screen.getAllByRole('tab').map((tab) => tab.textContent ?? '')
-const tab = (name: string) => screen.getByRole('tab', { name })
+/**
+ * One tab, by the stage's own word.
+ *
+ * The label is that word capitalised -- a tab is a title, not a sentence --
+ * and `STAGE_LABELS` is the one place that says so, which is why this maps
+ * rather than every call site spelling it twice.
+ */
+const tab = (name: string) => screen.getByRole('tab', { name: STAGE_LABELS[name as Stage] })
 /** Which tab is showing, which is the one Mantine marks selected. */
 const current = () =>
   screen.getAllByRole('tab').find((each) => each.getAttribute('aria-selected') === 'true')
@@ -523,6 +541,7 @@ beforeEach(() => {
   // No resetCatalogCache and no unstubAllGlobals: src/test/setup.ts does both
   // after every test in the suite, which is where they have to be anyway.
   posted = []
+  read = []
   mockApi()
 })
 
@@ -583,7 +602,7 @@ describe('BuildScreen', () => {
     })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     const drawn = () => screen.getByRole('tabpanel').textContent ?? ''
     await waitFor(() => {
       expect(drawn()).toContain('A subrace')
@@ -646,7 +665,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     await user.click(block(/Two to be proficient in/))
     expect(await screen.findByRole('button', { name: /Acrobatics/ })).toBeInTheDocument()
 
@@ -665,7 +684,7 @@ describe('BuildScreen', () => {
     // hang off -- and the scores straight after it, because they are what the
     // class was picked for. Nothing is disabled, because a tab is a place to
     // look as well as a place to answer.
-    expect(tabs()).toEqual(['identity', 'class', 'abilities', 'race', 'background', 'personality'])
+    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
   })
 
@@ -686,7 +705,7 @@ describe('BuildScreen', () => {
     expect.soft(screen.getByText(/Two to be proficient in/)).toBeInTheDocument()
     expect.soft(screen.queryByText('A class')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'identity' }))
+    await user.click(tab('identity'))
     expect.soft(screen.getByText('Name')).toBeInTheDocument()
     // "Nothing left here", never "nothing left in identity": the category's
     // word belongs to its tab and appears exactly once on the page.
@@ -700,7 +719,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     await user.click(screen.getByRole('button', { name: /Two to be proficient in/ }))
     await user.click(await screen.findByRole('button', { name: /Acrobatics/ }))
     await user.click(screen.getByRole('button', { name: /Insight/ }))
@@ -730,7 +749,7 @@ describe('BuildScreen', () => {
     mockApi({ then: AFTER_RACE })
     renderBuild(viewport)
 
-    expect(await screen.findByRole('tab', { name: 'race' })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: 'Race' })).toHaveAttribute(
       'aria-selected',
       'true',
     )
@@ -779,7 +798,7 @@ describe('BuildScreen', () => {
 
     // Advancement is the class story continued, so a level that was taken
     // sits on the class tab rather than under a tab of its own.
-    await user.click(screen.getByRole('tab', { name: 'class' }))
+    await user.click(tab('class'))
     expect.soft(screen.getByText('Level gained')).toBeInTheDocument()
 
     // Read-only, and the standing offer of another one is not on the page at
@@ -799,7 +818,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     await user.click(block(/Race chosen/))
     await user.click(await screen.findByRole('button', { name: 'Dwarf' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
@@ -830,7 +849,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'identity' }))
+    await user.click(await screen.findByRole('tab', { name: 'Identity' }))
     await user.click(block(/Name/))
 
     // The field starts from the name it is changing rather than from nothing.
@@ -891,7 +910,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: { seq: 3, complete: false, prompts: [] }, events: ALIGNED_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'personality' }))
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
     // It reads as what was decided rather than as the patch that recorded it.
     await user.click(block(/Alignment/))
 
@@ -917,9 +936,9 @@ describe('BuildScreen', () => {
     mockApi({ prompts: TRAITS_OPEN, events: BACKGROUND_LOG })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /Two personality traits/ }))
+    await user.click(await screen.findByRole('button', { name: /One personality trait/ }))
     await user.type(
-      await screen.findByLabelText('Personality trait 1'),
+      await screen.findByLabelText('Personality trait'),
       'I quote sacred texts at every turn.',
     )
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
@@ -952,16 +971,15 @@ describe('BuildScreen', () => {
     mockApi({ prompts: { seq: 3, complete: false, prompts: [] }, events: TRAITED_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'personality' }))
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
     // It reads back as what was written, both lines of it.
     await user.click(block(/I quote sacred texts/))
 
-    const first = await screen.findByLabelText('Personality trait 1')
-    expect(first).toHaveValue('I quote sacred texts at every turn.')
-    expect(screen.getByLabelText('Personality trait 2')).toHaveValue('I am tolerant of other faiths.')
+    const written = await screen.findByLabelText('Personality trait')
+    expect(written).toHaveValue('I quote sacred texts at every turn.')
 
-    await user.clear(first)
-    await user.type(first, 'I keep my own counsel.')
+    await user.clear(written)
+    await user.type(written, 'I keep my own counsel.')
     await user.click(screen.getByRole('button', { name: 'Change it' }))
 
     await waitFor(() => {
@@ -975,11 +993,6 @@ describe('BuildScreen', () => {
             path: 'identity.personalityTraits',
             op: 'set',
             value: { kind: 'string', string: 'I keep my own counsel.' },
-          },
-          {
-            path: 'identity.personalityTraits',
-            op: 'add',
-            value: { kind: 'string', string: 'I am tolerant of other faiths.' },
           },
         ],
       },
@@ -1060,7 +1073,7 @@ describe('a new character', () => {
     // The scores are a question asked of a character that exists, not a field
     // on the form that creates one.
     expect(screen.queryByText(/ability scores/)).not.toBeInTheDocument()
-    expect(tabs()).toEqual(['identity', 'class', 'abilities', 'race', 'background', 'personality'])
+    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
   })
 
   it('creates the character once, with the name alone, and lands on the tab that was pressed', async () => {
@@ -1080,13 +1093,54 @@ describe('a new character', () => {
     // race one, so a screen that went where the questions are -- which is what
     // it used to do -- would be showing "A race" here instead.
     await waitFor(() => {
-      expect(current()).toBe('class')
+      expect(current()).toBe('Class')
     })
     expect(screen.queryByText('A race')).not.toBeInTheDocument()
 
     // The URL was replaced, so nothing on the built screen creates a second one.
     await user.click(tab('background'))
     expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+  })
+
+  it('does not take the page down to create the character it just named', async () => {
+    const user = setupUser()
+    // The first read of the new character is held open, because that is the
+    // only moment the behaviour exists in.
+    let arrive = () => {}
+    const until = new Promise<void>((resolve) => {
+      arrive = resolve
+    })
+    mockApi({ until })
+    renderNew(viewport)
+
+    await user.type(await screen.findByLabelText('Name'), 'Rurik')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    // Not "the write landed" -- the write lands before the navigation does, and
+    // asserting there would still be looking at the create screen. This waits
+    // for the new character's own read to be in flight, which is exactly the
+    // window the page used to disappear in.
+    await waitFor(() => {
+      expect(read.some((url) => url.includes('chr_'))).toBe(true)
+    })
+    expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+
+    // Creating changes the resource key under a screen that is not replaced,
+    // and blanking on a key change is `useResource` doing its job -- but here
+    // it tore the whole page off and rebuilt it, spinner and all, for a write
+    // that had already succeeded. It read as a reload because it looked like
+    // one. The tabs never go, and neither does the block being answered.
+    expect(screen.queryByText('Working out what is next...')).not.toBeInTheDocument()
+    expect(tabs()).toHaveLength(6)
+    expect(screen.getByText('A name')).toBeInTheDocument()
+
+    // And what replaces the block being answered is that block with an answer
+    // in it. `getAllBy`, because the trail names the character too.
+    arrive()
+    await waitFor(() => {
+      expect(screen.getAllByText('Zephyr').length).toBeGreaterThan(0)
+    })
+    expect(screen.getByText('Name')).toBeInTheDocument()
   })
 
   it('stays on identity when the name itself is confirmed', async () => {
@@ -1104,7 +1158,7 @@ describe('a new character', () => {
     await waitFor(() => {
       expect(screen.getByText('Name')).toBeInTheDocument()
     })
-    expect(current()).toBe('identity')
+    expect(current()).toBe('Identity')
   })
 
   it('posts nothing for a blank name, and says why', async () => {
@@ -1145,7 +1199,7 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     // Pressing the decided block is the change gesture: it puts the question
     // again where the answer is, rather than opening a surface elsewhere.
     await user.click(block(/Race chosen/))
@@ -1174,7 +1228,7 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     // The block reads as what was picked, not as the race it hangs off: the
     // ref names what posed the question, and the answers are the selection.
     await user.click(block(/Half Elf · Ability Bonus/))

@@ -63,36 +63,31 @@ describe('LandingPage', () => {
     }
   })
 
-  // The controls are the only way through for a visitor with neither a
-  // touchscreen nor the arrow keys, and they sit over a panel rather than
-  // beside it. 26px -- Mantine's default -- is under every published minimum
-  // for a pointer target, so the override is worth pinning.
-  it('gives the controls a pointer-sized target', () => {
+  // A desktop has the width for all three, so there is nothing to operate: a
+  // carousel there hides two panels behind an arrow and the shape of what the
+  // app is for with them.
+  it('shows all three at once on a desktop, with no carousel to work', () => {
     renderAt('desktop', <LandingPage />)
 
-    // Mantine converts the number to rem and multiplies by its scale factor, so
-    // the property holds `calc(2.75rem * var(--mantine-scale))` -- 44px at the
-    // default root size -- rather than anything parseFloat can read.
-    const size = screen
-      .getByRole('region', { name: 'What easydnd is for' })
-      .style.getPropertyValue('--carousel-control-size')
-
-    expect(size).toContain('2.75rem')
-    expect(screen.getByRole('button', { name: 'Next slide' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Previous slide' })).toBeInTheDocument()
-  })
-
-  // And not drawn at all on a phone, which is the viewport they are least use
-  // on: they cover the panel they sit over to duplicate a swipe the screen
-  // already offers. The indicators still say how many panels there are.
-  it('draws no arrows on a touchscreen', () => {
-    renderAt('mobile', <LandingPage />)
-
+    const region = screen.getByRole('region', { name: 'What easydnd is for' })
+    expect(region).not.toHaveAttribute('aria-roledescription', 'carousel')
     expect(screen.queryByRole('button', { name: 'Next slide' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Previous slide' })).not.toBeInTheDocument()
-    // The panels are still reachable -- this removes a control, not a way
-    // through.
-    expect(screen.getByRole('region', { name: 'What easydnd is for' })).toBeInTheDocument()
+    // Three panels, all of them present rather than one showing and two
+    // scrolled off.
+    expect(screen.getAllByRole('group')).toHaveLength(SLIDE_NAMES.length)
+  })
+
+  // A phone has room for one, and a swipe is the gesture it offers. No arrows
+  // there either: they cover the panel they sit over to duplicate the swipe,
+  // and the indicators still say how many panels there are.
+  it('is a carousel on a touchscreen, and draws no arrows over it', () => {
+    renderAt('mobile', <LandingPage />)
+
+    const region = screen.getByRole('region', { name: 'What easydnd is for' })
+    expect(region).toHaveAttribute('aria-roledescription', 'carousel')
+    expect(screen.queryByRole('button', { name: 'Next slide' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Previous slide' })).not.toBeInTheDocument()
   })
 
   // Only the first of the three works end to end, so none of them is a door:
@@ -124,12 +119,15 @@ describe('LandingPage', () => {
   // difference between filling the page and running underneath the footer.
   // Neither is visible to a test that only counts slides, and neither needs a
   // layout engine to detect.
-  it('sizes itself to what the header and the footer leave', () => {
-    renderAt('desktop', <LandingPage />)
+  it.each([
+    ['mobile', '--carousel-height'],
+    ['desktop', 'height'],
+  ] as const)('sizes itself at %s to what the header and the footer leave', (viewport, property) => {
+    renderAt(viewport, <LandingPage />)
 
     const height = screen
       .getByRole('region', { name: 'What easydnd is for' })
-      .style.getPropertyValue('--carousel-height')
+      .style.getPropertyValue(property)
 
     expect(height).toContain('--app-shell-header-offset')
     expect(height).toContain('--app-shell-footer-offset')

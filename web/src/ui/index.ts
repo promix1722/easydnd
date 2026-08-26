@@ -82,6 +82,7 @@ export {
   Popover,
   Select,
   Switch,
+  Textarea,
   TextInput,
   Tooltip,
 } from '@mantine/core'
