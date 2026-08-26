@@ -42,7 +42,7 @@ function renderGames(viewport: Viewport, games: GameSummary[], role: GroupRole) 
     viewport,
     withAuth(
       {},
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/games']}>
         <GamesScreen />
       </MemoryRouter>,
     ),
@@ -52,6 +52,42 @@ function renderGames(viewport: Viewport, games: GameSummary[], role: GroupRole) 
 
 afterEach(() => {
   vi.unstubAllGlobals()
+})
+
+/**
+ * One viewport, because nothing in this claim reaches a component that branches
+ * on width -- and because the generic version of it lives in `ui/Page.test.tsx`.
+ * What is under test here is this screen's own wiring: it was the one of the
+ * three list screens that replaced the whole page on a failure, so a failed
+ * list took the heading with it.
+ */
+describe('GamesScreen, when the list will not load', () => {
+  it('keeps the heading and offers the retry', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ error: { message: 'the server said no' } }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+      ),
+    )
+    renderAt(
+      'desktop',
+      withAuth(
+        {},
+        <MemoryRouter initialEntries={['/games']}>
+          <GamesScreen />
+        </MemoryRouter>,
+      ),
+    )
+
+    expect(
+      await screen.findByRole('button', { name: 'Try again' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Games' })).toBeInTheDocument()
+  })
 })
 
 describe.each(['mobile', 'desktop'] as const)('GamesScreen (%s)', (viewport) => {

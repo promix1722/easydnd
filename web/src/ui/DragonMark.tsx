@@ -1,6 +1,6 @@
 import { useId } from 'react'
 
-import { BRAND } from '@/theme/tokens'
+import { PALETTE } from '@/theme/tokens'
 
 /**
  * The red dragon badge: an angular dragon's head in profile, inside a hexagon.
@@ -35,10 +35,14 @@ import { BRAND } from '@/theme/tokens'
  * is about three units inside the frame's stroke.
  */
 
-/** The deepest step of the palette -- the red `public/favicon.svg` is drawn in. */
-const RED = BRAND[9]
-/** Parchment. A literal because `favicon.svg` cannot import a token either. */
-const CREAM = '#fff6e8'
+// Both come from the palette, and so does the favicon this mark is a cousin
+// of. The cream used to be a literal here, on the argument that
+// `public/favicon.svg` could not import a token either -- which was true
+// right up until the favicon started being generated from this same file.
+// One palette now feeds the mark, the icon set and the browser's own chrome;
+// see theme/palettes.ts and scripts/gen-icons.mjs.
+const RED = PALETTE.brand
+const CREAM = PALETTE.ink
 
 export interface DragonMarkProps {
   /**

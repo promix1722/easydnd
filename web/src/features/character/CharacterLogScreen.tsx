@@ -4,17 +4,16 @@ import { getEvents } from '@/lib/api'
 import type { Answer, CharacterEvent } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
 import {
-  Alert,
   Anchor,
   Badge,
   Button,
   Code,
   DataList,
   Group,
-  Loader,
+  Page,
+  pageState,
   Stack,
   Text,
-  Title,
 } from '@/ui'
 
 import { resolveRefNames } from './refNames'
@@ -55,94 +54,99 @@ export function CharacterLogScreen() {
     return { events, names: await resolveRefNames(events) }
   })
 
-  if (log.loading) {
+  const state = pageState(log, {
+    title: 'Could not load this log',
+    fallback: 'Unknown error',
+    onRetry: log.reload,
+  })
+
+  /*
+   * Two crumbs, not three -- `Characters / Event log`, with no character name
+   * between them.
+   *
+   * Every other detail page names the thing it is about. This one cannot, and
+   * the reason is the same one the whole screen is built on: it never asks for
+   * the sheet, because the sheet is a projection of this log and a broken
+   * projection is the exact circumstance in which somebody opens the log. The
+   * name lives on the sheet. Fetching it for a breadcrumb would reintroduce
+   * the dependency this page exists without, so the trail says less instead.
+   *
+   * `/characters/:id/build` is the asymmetry worth noting: it holds the sheet
+   * already, so it gets the full three-crumb trail.
+   */
+  const trail = [{ label: 'Event log' }]
+
+  if (state.kind !== 'ready' || log.data === null) {
     return (
-      <Group gap="xs">
-        <Loader size="sm" />
-        <Text size="sm" c="dimmed">
-          Reading the log...
-        </Text>
-      </Group>
-    )
-  }
-  if (log.error !== null || log.data === null) {
-    return (
-      <Alert color="red" title="Could not load this log">
-        <Stack gap="xs" align="flex-start">
-          <Text size="sm">{log.error ?? 'Unknown error'}</Text>
-          <Button variant="light" onClick={log.reload}>
-            Try again
-          </Button>
-        </Stack>
-      </Alert>
+      <Page
+        trail={trail}
+        state={state.kind === 'loading' ? { ...state, what: 'Reading the log...' } : state}
+      />
     )
   }
 
   const { events, names } = log.data
 
   return (
-    <Stack gap="lg">
-      <Group justify="space-between" align="flex-start">
-        <div>
-          <Title order={2}>Event log</Title>
-          <Text c="dimmed" size="sm">
-            {events.length === 1 ? '1 event' : `${events.length} events`} · the record the sheet is
-            projected from
-          </Text>
-        </div>
+    <Page
+      trail={trail}
+      subtitle={`${events.length === 1 ? '1 event' : `${events.length} events`} \u00b7 the record the sheet is projected from`}
+      actions={
         <Anchor component={Link} to={`/characters/${id}`}>
           <Button variant="subtle">Back to sheet</Button>
         </Anchor>
-      </Group>
-
-      <DataList
-        items={events}
-        getKey={(event) => String(event.seq ?? 0)}
-        empty="Nothing recorded yet."
-        columns={[
-          {
-            key: 'seq',
-            header: '#',
-            render: (event) => (
-              <Text size="sm" c="dimmed">
-                {event.seq ?? '--'}
-              </Text>
-            ),
-          },
-          {
-            key: 'event',
-            header: 'Event',
-            primary: true,
-            render: (event) => (
-              <Group gap={6}>
-                <Text size="sm" fw={500}>
-                  {eventLabel(event.type)}
+      }
+    >
+      <Stack gap="lg">
+        <DataList
+          items={events}
+          getKey={(event) => String(event.seq ?? 0)}
+          empty="Nothing recorded yet."
+          columns={[
+            {
+              key: 'seq',
+              header: '#',
+              render: (event) => (
+                <Text size="sm" c="dimmed">
+                  {event.seq ?? '--'}
                 </Text>
-                {event.level !== undefined && event.level > 0 && (
-                  <Badge size="xs" variant="light">
-                    Level {event.level}
-                  </Badge>
-                )}
-              </Group>
-            ),
-          },
-          {
-            key: 'at',
-            header: 'When',
-            render: (event) => (
-              <Text size="sm" c="dimmed">
-                {formatAt(event.at)}
-              </Text>
-            ),
-          },
-          {
-            key: 'detail',
-            header: 'Detail',
-            render: (event) => <EventDetail event={event} names={names} />,
-          },
-        ]}
-      />
-    </Stack>
+              ),
+            },
+            {
+              key: 'event',
+              header: 'Event',
+              primary: true,
+              render: (event) => (
+                <Group gap={6}>
+                  <Text size="sm" fw={500}>
+                    {eventLabel(event.type)}
+                  </Text>
+                  {event.level !== undefined && event.level > 0 && (
+                    <Badge size="xs" variant="light">
+                      Level {event.level}
+                    </Badge>
+                  )}
+                </Group>
+              ),
+            },
+            {
+              key: 'at',
+              header: 'When',
+              render: (event) => (
+                <Text size="sm" c="dimmed">
+                  {formatAt(event.at)}
+                </Text>
+              ),
+            },
+            {
+              key: 'detail',
+              header: 'Detail',
+              render: (event) => <EventDetail event={event} names={names} />,
+            },
+          ]}
+        />
+      </Stack>
+    </Page>
   )
 }
 

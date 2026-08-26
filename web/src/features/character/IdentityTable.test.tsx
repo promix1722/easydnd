@@ -32,6 +32,11 @@ function value(label: string): string {
   return screen.getByText(label).parentElement?.textContent?.replace(label, '') ?? ''
 }
 
+/** The column one field sits in: its own box, and the box holding that. */
+function column(label: string): Element | null {
+  return screen.getByText(label).parentElement?.parentElement ?? null
+}
+
 describe('the identity table', () => {
   it('answers each field under its own label', () => {
     render()
@@ -43,6 +48,43 @@ describe('the identity table', () => {
     expect(value('Subclass')).toBe('Thief')
     expect(value('Background')).toBe('Acolyte')
     expect(value('Experience')).toBe('900')
+  })
+
+  /**
+   * The pairing is the layout. A subrace is a qualification of a race and
+   * nothing on its own, so it sits under it -- at four columns and at two,
+   * which is what a flat grid of eight could not promise: there, two columns
+   * put "Class" under "Name" and "Subrace" under "Class".
+   */
+  it('puts each qualifier under the field it qualifies', () => {
+    render()
+
+    const pairs: [string, string][] = [
+      ['Name', 'Level'],
+      ['Race', 'Subrace'],
+      ['Class', 'Subclass'],
+      ['Background', 'Experience'],
+    ]
+    for (const [head, qualifier] of pairs) {
+      expect.soft(column(head)).toBe(column(qualifier))
+    }
+
+    // And four columns rather than one long one.
+    expect.soft(new Set(pairs.map(([head]) => column(head))).size).toBe(4)
+  })
+
+  /**
+   * The card is an alignment fix, not decoration: it is what puts the table's
+   * labels on the same left edge as the ability cards' and the vitals'. Pinned
+   * because the alternative -- padding the table by hand -- looks identical
+   * until the card's padding changes, and then only this one has drifted.
+   */
+  it('sits in the same card the sheet draws its numbers in', () => {
+    render()
+
+    const card = screen.getByText('Name').closest('.mantine-Card-root')
+    expect.soft(card).not.toBeNull()
+    expect.soft(card).toContainElement(screen.getByText('Experience'))
   })
 
   it('draws a field the character has not answered, rather than closing the gap', () => {

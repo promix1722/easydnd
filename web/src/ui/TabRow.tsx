@@ -33,8 +33,8 @@ export interface TabRowProps {
  * strip is what gives way, and the actions stay where they are.
  *
  * It is the first responsive primitive whose **two renderings are the same
- * markup**. `ModalSheet` and `Columns` genuinely swap components at the
- * breakpoint; this one does not need to. A `ScrollArea type="never"` is inert
+ * markup**. `ModalSheet`, `Columns` and `SectionDeck` genuinely swap
+ * components at the breakpoint; this one does not need to. A `ScrollArea type="never"` is inert
  * at a width the content fits in, so the desktop rendering is the mobile one
  * with nothing to scroll -- which means there is no second tree to keep
  * working, and a test at one width is a real test of the other.

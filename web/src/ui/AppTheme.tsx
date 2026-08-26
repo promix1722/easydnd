@@ -1,7 +1,7 @@
 import { MantineProvider } from '@mantine/core'
 import type { ReactNode } from 'react'
 
-import { theme } from './theme'
+import { cssVariables, theme } from './theme'
 
 import '@mantine/core/styles.css'
 // Carousel ships its own stylesheet; it is not part of core's. Imported here
@@ -25,7 +25,12 @@ export function AppTheme({ children, env }: { children: ReactNode; env?: 'test' 
   return (
     // Spread rather than pass through: exactOptionalPropertyTypes means
     // `env={undefined}` is not the same as omitting it.
-    <MantineProvider theme={theme} defaultColorScheme="auto" {...(env ? { env } : {})}>
+    <MantineProvider
+      theme={theme}
+      cssVariablesResolver={cssVariables}
+      defaultColorScheme="auto"
+      {...(env ? { env } : {})}
+    >
       {children}
     </MantineProvider>
   )

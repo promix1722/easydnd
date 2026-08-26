@@ -131,7 +131,7 @@ export function Vitals({ sheet }: { sheet: Sheet }) {
   return (
     <>
       {rowsOf(sheet).map((row, at) => (
-        <SimpleGrid key={at} cols={{ base: 2, sm: 3, lg: 6 }} spacing="sm">
+        <SimpleGrid key={at} cols={{ base: 2, sm: 3, lg: 6 }} spacing={{ base: 'xs', sm: 'sm' }}>
           {row.map((vital) => (
             // Spread rather than `hint={vital.hint}`: `exactOptionalPropertyTypes`
             // rejects an optional prop handed an explicit undefined.
@@ -146,7 +146,7 @@ export function Vitals({ sheet }: { sheet: Sheet }) {
 /** One headline number, in a bordered card. */
 function Stat({ label, value, hint }: Vital) {
   return (
-    <Card withBorder padding="sm" radius="md">
+    <Card withBorder padding="xs" radius="md">
       <Stack gap={0}>
         <Text size="xs" c="dimmed">
           {label}

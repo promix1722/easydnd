@@ -16,6 +16,7 @@ battle tracker: `/games` is a section in the navigation whose page says so.
 make web/deps                       # once, per worktree -- node_modules is not shared
 make web/dev                        # http://127.0.0.1:5173, proxies /v1 to :8080
 make web/check                      # typecheck, lint, layer-check, tests -- mirrors CI
+make web/icons                      # after changing PALETTE_NAME or the mark
 ```
 
 `make web/dev` proxies `/v1` to the API, so run `make run/server` alongside it
@@ -75,11 +76,18 @@ policed them.
 
 ## Three rules about writing a test here
 
-**A test runs at one viewport unless the tree branches on width.** Exactly four
-components do: `Columns`, `DataList`, `ModalSheet` and `RootShell`. Nothing else
+**A test runs at one viewport unless the tree branches on width.** Exactly six
+components do: `Columns`, `DataList`, `ModalSheet`, `SectionDeck`, `SheetBody`
+and `RootShell`.
+
+`ui/Page` is deliberately **not** a seventh, and its own test proves it rather
+than asserting it in prose: the last case there compares the two renderings byte
+for byte, the way `TabRow.test.tsx` does. The cheapest way to "fix" a future
+layout problem in a shared page component would be to reach for `useIsDesktop`,
+and that test is what goes red when somebody does. Nothing else
 can, because the suite runs without CSS -- a `SimpleGrid cols={{ base: 2, sm: 3 }}`
 renders one DOM whatever the width is -- so `describe.each(['mobile','desktop'])`
-around a tree that reaches none of those four is the same assertion run twice
+around a tree that reaches none of those six is the same assertion run twice
 against byte-identical markup. `src/ui/TabRow.test.tsx` proves the point
 directly: its last test compares the two renderings and they are equal.
 
@@ -87,8 +95,11 @@ That was 72 of the suite's 433 cases, weighted toward the slowest files --
 `BuildScreen.test.tsx` alone ran 48 cases where 26 say the same thing. Where a
 block runs at one width, the comment above it names this rule, so the next
 reader knows it was a decision. Where a block still runs at both -- the group
-screens, `ModalSheet` and `Columns` themselves, and the rows of
+screens, `ModalSheet`, `Columns` and `SectionDeck` themselves, and the rows of
 `CharacterListScreen` -- it is because the swap is what the test is about.
+`SheetBody` is there twice over: the deck it hands its sections to draws a
+different tree at each width, and the sheet itself puts the two halves of its
+first section in a different order on a phone.
 
 The criterion is what the test *presses*, not what screen it is on.
 `CharacterListScreen`'s row actions live inside `DataList`, so a test that
@@ -100,9 +111,14 @@ terms in `src/ui/ModalSheet.test.tsx`, once, rather than three more times
 here.
 
 **Render the panel, not the page, when the panel is what is under test.**
-`ProficienciesPanel.test.tsx`, `Vitals.test.tsx` and the skills-panel block of
-`CharacterSheetScreen.test.tsx` mount their component directly rather than the
-whole sheet, and keep one full-sheet test to hold the seam. A sheet test costs
+`ProficienciesPanel.test.tsx`, `Vitals.test.tsx`, `SheetBody.test.tsx` and the
+skills-panel block of `CharacterSheetScreen.test.tsx` mount their component
+directly rather than the whole sheet, and keep one full-sheet test to hold the
+seam. `SheetBody.test.tsx` is the newest of them and the clearest case: it takes
+a projection and a compendium as props, so the phone's deck is tested without a
+mocked fetch, a router or a single `findBy` -- and what is left in
+`CharacterSheetScreen.test.tsx` is the seam, which is that the screen fetches
+those two things and hands them on. A sheet test costs
 about twice a panel test, because most of the sheet's weight is the eighteen
 `ProficiencyMark`s -- each a Mantine `Tooltip`, each a floating-ui hook stack --
 and mounting the page to read one panel pays for the other seventeen sections
@@ -187,8 +203,8 @@ to a phone home screen.
 
 ```
 web/src/
-  theme/      framework-free design tokens (breakpoints, palette)
-  ui/         the design system -- the only place Mantine is imported
+  theme/      framework-free design tokens (breakpoints, the palette, the content cap)
+  ui/         the design system -- the only place Mantine is imported, and the section table
   lib/        API client, data hooks, WebAuthn plumbing and the auth context; no UI
   shell/      the chrome: RootGate picks it, RootShell picks the viewport
   features/   screens -- one directory per aggregate (characters/, groups/, ...)
@@ -231,7 +247,7 @@ Net new dependencies for the whole character feature: zero.
 
 The landing carousel is the exception that finally broke that run, and it is
 recorded rather than slipped in: `@mantine/carousel`, `embla-carousel` and
-`embla-carousel-react`, three packages for one page. Hand-rolling was the
+`embla-carousel-react`, three packages bought for one page. Hand-rolling was the
 default here and is wrong for this one thing -- a drag-and-snap carousel is
 momentum physics, pointer capture, RTL and keyboard semantics, and "it is just a
 flexbox with `scroll-snap`" stops being true the moment a thumb is involved. The
@@ -242,14 +258,35 @@ rather than a range, so the four Mantine packages now move as a unit. A
 lockfile diff that bumps `@mantine/core` is a UI-wide upgrade wearing a
 carousel's clothes, and should be reviewed as one.
 
+They are two surfaces now: the landing page, and `ui/SectionDeck` -- which is
+what the character sheet becomes on a phone. That does not re-open the decision,
+it settles it. The +10 kB is amortised over the page a visitor meets the app on
+and the page they spend the most time on, and the second use is the one that
+justifies a real carousel rather than a `scroll-snap` flexbox, because it is the
+one a thumb is actually on at a table. The peer-range warning above is
+unchanged, and is still the thing to look for in a lockfile diff.
+
+`embla-carousel` itself is now in `check-layers.mjs`'s `UI_ONLY_PACKAGES`.
+`@mantine/carousel` was always guarded by the `@mantine/` entry, but the engine
+underneath it ships its own types and nothing stopped a feature importing
+`EmblaCarouselType` directly -- the same hole `@tabler/` came through, one
+package wider.
+
 It costs something in the test suite too. embla constructs a `ResizeObserver`
 and an `IntersectionObserver` unconditionally, and jsdom implements neither, so
 `test/setup.ts` installs inert stubs. They deliberately never fire: jsdom has no
 layout, so anything they reported would be fiction, and a test that leaned on one
-would be testing the stub. The carousel is therefore asserted on its structure --
-three panels named by their own headings, in a named region, and a height
-expression that still mentions both shell offsets -- and never on which panel is
-scrolled into view.
+would be testing the stub. A carousel is therefore asserted on its structure --
+its panels named, in order, in a named region, and whatever the call site does
+about height -- and never on which panel is scrolled into view. That is why
+`LandingPage.test.tsx` pins a height expression that still mentions both shell
+offsets, and why `SectionDeck.test.tsx` pins the exact opposite: that
+`--carousel-height` is never set at all.
+
+It is also why the deck's tab strip reads React state rather than embla's
+`selectedScrollSnap()`. Pressing a tab is therefore observable in jsdom and
+swiping is not, which is the right way round: the press is the thing a test can
+honestly make a claim about.
 
 ## Folders are filing, not sharing
 
@@ -303,16 +340,125 @@ character, Invite -- all of them add a row, so all of them sit beneath the rows.
 Invite is the one that reads oddly until you see it that way: it is not a thing
 you do *to* a group, it is how a person gets added to one.
 
-The icons are inline SVG in `ui/icons.tsx` rather than an icon package -- five
-glyphs do not justify a dependency, and there is no `vite-plugin-svgr` here.
-They break `DragonMark`'s two conventions deliberately: `currentColor` so they
-take their button's colour, and `aria-hidden` because each sits beside a text
-label that already names the action.
+The icons come from `@tabler/icons-react`, re-exported one glyph at a time from
+`@/ui/index.ts` -- and that re-export list *is* the app's icon inventory. They
+sit beside a text label that already names the action, so each is `aria-hidden`
+by omission: a tabler `<svg>` carries no `<title>` and adds nothing to an
+accessible name, which is also why `getByRole('button', { name })` is unaffected
+by adding one.
 
-Every table is capped at `MAX_TABLE_WIDTH` (1024px) on desktop, set once in
-`DataList` rather than by each screen remembering to. Every table here is narrow
-content, and one spanning a 2560px monitor puts its first and last cell an eye
-movement apart.
+A **section's glyph** is drawn wherever the section is *named* -- the desktop
+navbar, the phone dropdown (its items and its trigger), and the first crumb of
+every trail -- and nowhere else. Not on buttons, not in table cells, not on the
+mobile cards.
+
+Every page is capped at `CONTENT_MAX_WIDTH` (1024px) on desktop, applied once by
+`ui/Page`. It used to be `MAX_TABLE_WIDTH` and it used to live inside
+`DataList`, where it capped tables and nothing else -- so the two detail screens
+that wanted their heading to line up with the table beneath it copied the number
+by hand, and the character sheet, which is not a table, was never capped at all.
+It is a fact about the page, so it is a layout token in `theme/tokens.ts`.
+
+## Every page is the same page
+
+Characters, Groups and Games do the same job -- a list of things you own or sit
+at, each row opening onto a detail page -- and for a while no two of them were
+built the same way. Games replaced the whole screen while loading where the
+other two drew a spinner above the table; Characters wrapped its title in a
+layout row that held nothing else; two detail screens hand-copied the content
+width onto their heading; the character sheet capped nothing. `ui/Page` is the
+one shape they now share.
+
+**The last crumb is the heading, and the whole trail is one line at one size.**
+There is no separate title line: the trail runs `Groups / Wednesday Night` with
+the page's own name last, and every part of it is drawn the same. The section's
+name used to be a heading on its list screen and a small crumb on everything
+below it -- the same word in two sizes, shrinking as you walked in -- and that
+is the thing this fixed.
+
+The heading element holds the page's name *and nothing else*, so its accessible
+name is that name rather than the whole trail; the parents beside it are a real
+`<nav aria-label="Breadcrumb">` of links. A page still has exactly one
+`role="heading"` at level 2.
+
+**The heading lines up with the navbar entry naming the same section.** A
+section is named twice on screen at once -- in the navbar, and again as the
+heading of the page it opened -- and the two sat 4px apart with glyphs of 18 and
+20px, which is close enough to read as a mistake rather than a choice. They
+share `ROW_HEIGHT` and `CHROME_INSET` from `theme/tokens.ts` and draw the same
+glyph size, so they land on one line by construction rather than by either side
+nudging itself into place. (`AppShell.Main`'s top padding has to carry
+`--app-shell-header-offset` explicitly when it is overridden: Mantine builds it
+as offset plus shell padding, and a bare number drops the offset and slides the
+page under the header.)
+
+That line is **smaller on desktop than on a phone**, which is the way round it
+sounds wrong until you see why: desktop is where it carries the most -- a
+section, a separator, a page name, a badge, an action cluster -- because the
+phone drops the section entirely. It is a responsive value, not a branch.
+
+**A section root renders no `<nav>` at all.** With an empty `trail` there is one
+crumb, it is the heading, and there is nothing above it to navigate to -- which
+is what lets "the trail replaces the title" need no special case for the three
+list screens.
+
+**Below `md`, the section is dropped from the page.** The phone's one row of
+chrome already carries a control naming the section you are in and opening the
+others, and it draws that section's glyph beside the name -- so a crumb
+repeating the word, or a list screen whose heading *is* the word, spends a 390px
+line restating what sits an inch above it. On a detail page the section crumb
+goes; on a section root the heading goes with it. Deeper crumbs stay at both
+widths, because a group on a shared character's sheet is a real parent rather
+than a restatement of the chrome.
+
+Two things to know about that. It is done with `visibleFrom` rather than a
+branch -- the first use of a responsive visibility prop in this client -- so
+`Page` still renders one tree at every width and stays off the list of four
+components that swap markup. And it has a real cost: below `md` a section root
+has no heading in the accessibility tree at all, and the thing naming it is a
+button rather than an `h2`. The alternative was printing the same word twice on
+the narrowest screen the app supports.
+
+**The current page is not repeated inside the trail.** A breadcrumb ending in a
+non-link copy of the heading directly beneath it says the same name twice to a
+screen reader. The nav is the path *to* here; the heading is here.
+
+**The section crumb is never passed by a screen.** `Page` derives it from the
+URL, so a screen cannot start its trail somewhere the navbar disagrees with.
+
+**A crumb whose name has not arrived is a `Skeleton` with a hidden "Loading".**
+An `<h2>` with no accessible name is a hole in the page, and a heading that
+appears a beat late moves everything under it. The skeleton is a `span`, because
+a `div` inside a heading is invalid markup.
+
+**`loading` and `failed` replace the body, never the header.** This is what
+retired the early returns: you still know where you are when the thing you came
+for will not load, and "Try again" sits beneath a trail rather than alone on a
+blank page. `pageState` adapts a `useResource` in one call. The loading line
+takes an override for the two screens whose word says something the generic one
+does not -- "Projecting the sheet...", "Reading the log..." -- rather than
+imposing one word everywhere or letting four drift apart again.
+
+**`Page` does not branch on viewport, and must not.** The actions wrap under the
+heading on a narrow screen because the row is allowed to wrap, and the cap is
+inert below 1024px. The list of components that genuinely swap markup at the
+breakpoint stays at four; `Page.test.tsx` pins that by comparing the two
+renderings byte for byte, the way `TabRow.test.tsx` does.
+
+### What stayed different, and why
+
+Unifying is not flattening. Four things survived because each does real work:
+
+| Kept | Why |
+| --- | --- |
+| Characters' folder filter | The section's own control, and no other section has folders. It has a named slot (`filters`) rather than being ad-hoc markup. |
+| Characters' *second* error alert | The folders request fails on its own terms. A filter that would not load is no reason to refuse to draw the characters it was going to narrow, so only the characters resource drives the page's state. |
+| Groups' `TabRow` | Members and Characters are two views of one table. |
+| Games' gate on **New game** | You can only open a game at a table you run. |
+
+Out of scope, deliberately: `/account`, `/login`, `/legal`, `/status`, the 404
+and the join flow. None is in a section, none has a trail, and `AccountScreen`
+renders without a router at all.
 
 ## Sharing is reading, and it is one component
 
@@ -340,6 +486,20 @@ that word means being signed in, right down to `SessionUser` and
 `startGuestSession` in the same flat `@/lib/api` barrel.
 
 ## Games are a section, not a corner of a group
+
+The header enforces it now. A game's trail is `Games / Thursday night`, and the
+group it is played at is a **subtitle, never a crumb** -- a trail reading
+`Groups / Wednesday Night / Thursday night` would say the opposite of this
+section and would disagree with the navbar, which lights Games. A *shared
+character* is the other way round, and consistently so: its trail is
+`Groups / <group> / <character>`, because a shared sheet really does hang off
+the group, which is what grants the read.
+
+One wrinkle, recorded because it is a gap rather than a decision: that subtitle
+points at the group without naming it, because `GameDetail` carries `group_id`
+but no `group_name` -- only `GameSummary`, which the list screen uses, does.
+Closing it means either the field on the detail response or an extra `getGroup`
+on every game page for one word.
 
 Games get their own `NAV_ITEMS` entry and live at `/games` and `/games/:id`,
 beside Characters and Groups rather than inside one.
@@ -679,6 +839,112 @@ reverses all of this on the day it works.
 
 ## The sheet decides what order things come in
 
+Six sections, in one list, in the order a player reads them: who the character
+is and the abilities everything else is derived from, the body's state, then the
+skills, the proficiencies, the traits and the gear. `features/character/SheetBody`
+is that list, and `ui/SectionDeck` draws it -- across the page on a wide screen,
+and as a deck of tabs on a phone.
+
+### On a phone the sheet is a deck, not an accordion
+
+One row of tabs under the character's name, one section on screen, and a swipe
+between them. **Nothing opens and nothing closes**, which is the change: the
+carousel decides what is visible, so a section has no shut state to be in.
+
+What it replaces is a `Columns` accordion, and the two answer different
+questions. An accordion is right for a page of two or three panels where the
+answer is usually in the first and the rest are detail -- `/status` is exactly
+that, and still uses it. A character sheet is not that shape. It is six things
+a player leafs between at a table, none of them subordinate to the others, and
+an accordion made reading one of them a gesture: open it, and possibly shut
+three others first. It also put the headline numbers -- identity, the ability
+cards, the vitals -- above the accordion where they were never reachable except
+by scrolling past them. As slides they are tabs like any other.
+
+The tab strip is `ui/TabRow`, unchanged, because six tabs do not fit across a
+390px screen and a strip that scrolls sideways is the whole of what it is. It
+scrolls away with the page rather than pinning under the header: that is one
+fewer row of chrome on a screen this app has already spent an argument buying
+back (see [Two views, one codebase](#two-views-one-codebase)), and a swipe
+changes section from anywhere on the slide, so the strip is not the only way
+through.
+
+**A slide is as tall as the tallest slide**, and a section sits at the top of
+its own rather than being stretched down it. Eighteen skill rows therefore leave
+a screen of blank space under the three rows of proficiencies. The alternative
+is to measure whichever slide is showing and size the viewport to it, and that
+is a `ResizeObserver` reading a layout -- which jsdom does not compute, so the
+suite could neither exercise it nor catch it breaking. The honest cost of that
+plus the non-sticky strip: scroll to the foot of Skills, swipe, and you are a
+long way down a mostly empty Identity with the tabs off-screen above.
+
+The tab and the panel heading are one string, written once in `SheetBody` --
+which is what [a category's word appears exactly
+once](#a-categorys-word-appears-exactly-once) asks for here. On the phone the
+heading is not drawn at all: the tab is on screen naming the section, and the
+slide repeating it underneath would be the word twice in two inches.
+
+The first tab is **`Main`**, and it is the one label here that names a place
+rather than its contents. The section holds two things -- the identity table and
+the ability cards, merged because they were the two thinnest slides on the sheet
+and neither filled a screen alone -- so a tab naming either would send a reader
+looking for the other one somewhere else, and a tab naming both is the longest
+thing in a strip of six. A place is what it actually is: the tab you are on when
+you open a sheet. Note what is *not* renamed: `Vitals` stays `Vitals`, and the
+abilities keep no mention of saves, which would put back the two-list vocabulary
+that merging the saves into the cards deleted.
+
+### What a phone spends its height on
+
+Three of the sheet's measurements are tighter on a phone than on a wide screen,
+and they are the ones a phone can afford least:
+
+- **The gap between blocks in a slide is `md`, where the wide layout stacks them
+  `lg` apart.** It only has to say "different block", and it still does, because
+  the cards *inside* a block are `xs` apart. On a wide screen the same gap
+  separates things that sit beside other things, so tightening it there buys
+  nothing anybody sees.
+- **The card grids gap at `xs` from `base` and `sm` from `sm` up** -- the ability
+  row, the two vitals rows and the identity table's own columns.
+- **Every card on the sheet is `padding="xs"`, at both widths.** This is the one
+  that is not responsive, and not for want of trying: Mantine's `Card` takes
+  `padding` as a plain spacing value where `SimpleGrid` takes a responsive one,
+  so there is no way to say "tighter on a phone" without a viewport branch in
+  three components. Four pixels a card is most of what a phone gets back here --
+  six vitals rows, an ability row and the identity table -- and on a wide screen
+  it is two pixels a side on a page that has room to spare either way. The three
+  have to move together whatever the value, because the identity table's
+  alignment above depends on all of them agreeing.
+
+None of this is assertable: the suite runs without CSS, so a spacing prop is a
+change no test can see. That is the honest reason there is nothing pinning it.
+
+**On a phone the main section leads with the ability cards, not with the
+identity table**, which is the reverse of the wide screen and the one thing on this sheet
+whose order depends on width. A wide screen shows both at once, so it reads in
+the order a sheet is written in: who the character is, then what everything
+about them is derived from. A phone shows one slide, and the first thing on the
+one you land on should be the thing reached for mid-turn -- six modifiers, not a
+background. It is swapped **in the document**, by the one `useIsDesktop` call in
+this feature, rather than with a `column-reverse` that would leave the page
+saying one order and the screen showing another. Two static blocks would survive
+that mismatch; a habit of it would not, and a test can assert a document order
+where it cannot assert a cascaded style.
+
+Two of the six -- Main, Vitals -- are `desktop: 'full'` and
+are drawn bare on a wide screen, no border and no heading, exactly as they
+always were. Their titles exist only to name a tab, which is also why the merge
+costs the wide screen nothing: two bare sections stacked and one holding both
+are the same page. The other four are `desktop: 'panel'` and land in one
+two-column grid, which is the same page the two stacked `Columns` grids drew:
+`SimpleGrid` sizes each row independently and the row gap is the `lg` the
+`Stack` between them used.
+
+Both sheet screens get this, because there is only one of them to get:
+`SheetBody` is drawn by the owner's sheet and by the one a group member opens
+for a character shared with their table, and the whole point of that split is
+that the two cannot disagree about what a sheet is.
+
 `features/character/CharacterSheetScreen` prints ability scores and saving
 throws as a sheet does -- STR, DEX, CON, INT, WIS, CHA -- and it has to impose
 that itself, because the API cannot say it. Both arrive as objects keyed by
@@ -712,11 +978,34 @@ modifier goes and still prints its save. It claims nothing it was not sent, and
 hides nothing it was.
 
 Above them, `features/character/IdentityTable` says who the character is as
-labelled pairs -- name, race, subrace, level, class, subclass, background,
-experience. The sheet used to say this in one dimmed line under the name ("Elf
-· Wizard 1"), which reads well and answers badly: a line has no room for the
-subrace or the subclass, and a reader looking for one of them has to know the
-order it was written in. **Every field is drawn even when empty**, showing
+labelled pairs, in **four columns of two**: name over level, race over subrace,
+class over subclass, background over experience. The sheet used to say this in
+one dimmed line under the name ("Elf · Wizard 1"), which reads well and answers
+badly: a line has no room for the subrace or the subclass, and a reader looking
+for one of them has to know the order it was written in.
+
+The pairing is the layout rather than a consequence of it, and the columns are
+nested for that reason rather than being eight cells in one flat grid. A subrace
+is a qualification of a race and means nothing on its own; so is a subclass of a
+class, a level of the character it belongs to, and experience of the background
+it was earned past. Flat, that pairing held at four columns and broke at two,
+where "Class" landed under "Name" and "Subrace" under "Class" -- an arrangement
+that reads as a claim about the character. Nested, it holds at four columns, at
+two and at one. **Two columns is what a phone gets**: eight one-word fields down
+a single column is most of a screen for the shortest thing on the sheet.
+
+The table is drawn in **the same card the ability scores and the vitals are**,
+and that is an alignment fix rather than decoration. A bordered card insets what
+is inside it by its border and its padding, so a bare table above a row of cards
+puts its labels that much to the left of theirs: two columns of small dimmed
+labels down one page, not lining up. The two ways to fix that are not equal.
+Padding the table by hand writes the measurement down as a number, and it is a
+number nothing keeps true -- the day the card's padding changes, the only block
+on the sheet that does not follow is this one. It has already changed once, when
+the three of them went from `padding="sm"` to `padding="xs"`. Matching the
+container is exact by construction and cannot drift.
+
+**Every field is drawn even when empty**, showing
 `--`, because "not chosen yet" is the answer to the question and a missing row
 is not -- on a half-built character the blanks are the most useful thing on the
 page. Names come from the compendium, five session-cached collections flattened
@@ -787,11 +1076,12 @@ because it is the bonus counted twice rather than more training. The mark is
 what separates the rows, and the dimming of untrained ones is a **second**,
 redundant channel: a panel distinguishing eighteen rows by a shade of grey
 reads to nobody on a monochrome print and to nobody who cannot tell the two
-greys apart. A "Hide untrained" toggle collapses to the trained rows; it starts
-showing everything, since that is the point of the panel, and is not persisted.
-It is drawn as the section's [`aside`](#two-views-one-codebase) rather than
-inside the body, which is why `CharacterSheetScreen` rather than `SkillsPanel`
-holds the flag it flips.
+greys apart. **There is no filter over the top of it**, and there used to be: a
+"Hide untrained" toggle collapsed the panel to its trained rows. It was
+answering the question the eighteen rows exist to answer -- what do I roll for a
+skill nothing trained -- by taking those rows away, and it was the only control
+on the whole sheet. The two channels above already separate the trained from the
+untrained without anything to press first.
 
 Skills stays at half width rather than spreading now that the saving throws
 have moved up into the ability cards: its rows are name, ability and bonus, and
@@ -803,6 +1093,42 @@ comma-joined paragraph at the foot of "Traits and features", which is a
 sentence to be read rather than a list to be searched, and which filed a tool a
 player rolls with beside a racial trait they never touch again. It is drawn in
 one place now, not two.
+
+**"Traits and features" and "Resources and gear" are lists for the same
+reason.** Both were the arrangement that argument was made against and kept it
+one panel longer: a dimmed label with everything under it comma-joined onto one
+line, so the twelfth trait and the first were the same visual object and finding
+one meant reading the sentence. They are rows now -- one item to a line, in
+`ProficienciesPanel`'s own grid, one column on a phone and two from `lg` where a
+panel is half the page. There is no third spelling of this on the sheet.
+
+**Every list on the sheet is marked the same way.** Skills and proficiencies are
+marked by `ui/ProficiencyMark`, whose lowest level is an empty ring; the four
+lists that have no training level to report are marked by `ui/Bullet`, which is
+that same ring at the same diameter, weight and indent, and nothing else. Two
+lists side by side whose items began at different indents would read as two
+kinds of thing, when what they are is one kind of thing with and without a
+number attached.
+
+`Bullet` is a separate component rather than `ProficiencyMark level="none"`, and
+the reason is what that component *says*: it names itself "Not proficient" and
+carries a tooltip explaining proficiency bonuses. Drawn beside "Darkvision" that
+is a false statement about a racial trait rather than a decoration, so `Bullet`
+is `aria-hidden` and says nothing at all -- the same convention every other
+inline glyph here follows when it sits beside a label that already names the
+row. What that split costs is two copies of one ring, and `Bullet.test.tsx`
+pays it: it renders both and compares the circle attribute for attribute, so
+the day one of them changes diameter the other fails rather than quietly
+drifting.
+
+The resources panel gained its labels in the same change. A class pool and a
+spell slot used to be loose lines with nothing over them, sitting above two
+labelled groups; every group is named now, so the panel is four lists rather
+than two lists after some sentences. **A group that does not apply is left out
+rather than drawn empty** -- a rage counter on a character who cannot rage is
+not a fact about them -- where a group that applies and is empty says so, which
+is why an empty backpack still draws "Empty." That is the same distinction the
+vitals row draws between `n/a` and `--`.
 
 **The bonus is printed on tools and on nothing else**, and the reason is worth
 stating because it looks arbitrary. A tool check is an ability check, but
@@ -824,6 +1150,14 @@ start of a fight; at two columns on a phone, first position is the only one
 visible without the eye travelling.
 
 ## The log has its own page, and it never asks for the sheet
+
+Its breadcrumb trail is `Characters / Event log` -- two crumbs, where every
+other detail page has three and names the thing it is about. That is the same
+rule, applied one step further: the character's name lives on the sheet, and
+fetching it for a crumb would reintroduce exactly the dependency this page
+exists without. The trail says less instead. `/characters/:id/build` is the
+asymmetry worth noting -- it already holds the sheet, so it gets the full
+`Characters / Ada / Build`.
 
 `/characters/:id/log` draws the character's event log: one row per stored
 event, in sequence, with the kind read back as prose, the time the server
@@ -1229,31 +1563,96 @@ looked wrong on screen rather than preferences:
   whole page up four pixels -- a flinch at the moment somebody first sees the
   app. Three shells sharing a corner need to share its dimensions, or the
   seam between logged-out and logged-in is visible.
-- **Nothing collapses the desktop navbar.** It had a `Burger` defaulting to
-  open, which meant the control it actually drew was a close cross, sitting
-  left of the mark and before the app's own name -- it read as a way to dismiss
-  something. A wide screen has room for a 240px navbar and no reason to hide
-  it; the viewport that cannot spare the width uses the other shell. Where a layout genuinely has to differ, it
-differs inside a `@/ui` primitive rather than at the call site:
+- **The desktop navbar narrows to a rail of glyphs.** This is a reversal: the
+  navbar used to have nothing to touch it, on the argument that a wide screen
+  has room for 240px and no reason to spend it. That was true while the content
+  was whatever width the window gave it. It stopped being true when every page
+  got capped at `CONTENT_MAX_WIDTH` -- on a 1280px laptop, 240 of navbar plus
+  1024 of content plus the shell's padding does not fit, and the thing that
+  gives way is the table you were reading.
+
+  **It narrows rather than disappears, and that is what fixes the control.** The
+  problem with a menu that vanishes is not the hiding, it is that the way back
+  has nowhere to live. Put it in the header and it crowds the wordmark -- which
+  is what the first attempt did, and what a `Burger` defaulting to open did
+  before that: it drew a close cross, left of the mark and before the app's own
+  name, so it read as a way to dismiss something. A rail always has room, so the
+  control keeps one address in both states. It costs 64px of the 240 it gives
+  back; what it buys is a navigation that never leaves the screen.
+
+  **The control sits directly under the sections, behind a rule**, and is drawn
+  as a `NavLink` like they are -- so it inherits their geometry instead of being
+  aligned to them by hand, and it is dimmed so it does not read as a fourth
+  place to go. It was at the foot of the navbar first, which is where a
+  sidebar's chrome conventionally goes; but this navbar is as tall as the window
+  and holds three items, so the control ended up hundreds of pixels below the
+  last thing anybody had looked at, and was missed.
+
+  Two numbers are pinned rather than left to the content, both because the
+  difference showed up on screen. **A row is `ROW_HEIGHT` in both states**: it
+  measures 41px with a word in it and 34px without, so collapsing used to
+  shorten every row and shunt the list upward while you watched. And **a row
+  carries an explicit radius**, because Mantine's `NavLink` ships with none --
+  square corners are barely noticeable on a 219px-wide highlight and read as a
+  cramped box on a 43px one, so the rail's active item is the same shape as the
+  menu's, just narrower.
+
+  The section glyphs earn their keep twice here -- on the rail they *are* the
+  navigation, so each keeps its name in a tooltip and in the link's accessible
+  name.
+
+  **It is not remembered.** There is no `localStorage` in this client at all,
+  and the sheet's "Hide untrained" toggle is already deliberately unpersisted --
+  a second unpersisted toggle is consistent, where a persisted one would be the
+  first stored preference here and would have to earn that. It would also be a
+  setting no page lists, which is how you get "the menu is gone" from somebody
+  who collapsed it once, a month ago.
+
+  A note for whoever reaches for `AppShell`'s `collapsed` prop: it is read only
+  when Mantine considers the layout to be in its desktop mode, and
+  `breakpoint: 'never'` opts out of having modes -- so `collapsed` silently does
+  nothing here. An earlier attempt shipped that way and passed every test in
+  `RootShell.test.tsx`, because the suite runs with `css: false` and the width
+  arrives from a generated `<style>` element. Resizing `width` is what this
+  shell does instead, and it needs no breakpoint at all.
+
+Where a layout genuinely has to differ, it differs inside a `@/ui` primitive
+rather than at the call site:
 
 | Primitive | Desktop | Mobile |
 |---|---|---|
 | `ModalSheet` | centred modal | bottom drawer |
 | `DataList` | table | labelled cards |
 | `Columns` | side-by-side panels | accordion |
+| `SectionDeck` | full-width blocks, then side-by-side panels | a tab strip over a carousel |
 | `TabRow` | tab strip, actions right | the same, scrolled sideways |
 | `BlockList` | a list of blocks, one open | the same |
 
-A `Columns` section may carry an **`aside`** -- a control belonging to the panel
-as a whole, drawn on the title's line rather than as the first row of the body.
-The skills filter is the case it was added for: as content it left a whole panel
-width of empty title bar above it. The mobile rendering is the interesting half.
-`Accordion.Control` *is* a button, so an aside nested inside it would be a
-button within a button -- invalid markup, and the outer control swallows the
-press. It is therefore a sibling of the control rather than a child, the control
-flexing and the aside keeping its width. Because the two live in different
-subtrees from the content they act on, state an aside toggles belongs to the
-screen that builds the sections, not to the panel component.
+`Columns` and `SectionDeck` are the same idea answering two different questions,
+and both are kept rather than one winning. `Columns` collapses: a section is a
+disclosure, which is right where a page has two or three panels and the answer
+is usually in the first -- `/status` is that page. `SectionDeck` leafs: nothing
+collapses, and a swipe or a tab decides what is on screen, which is right where
+the sections are peers and a reader moves between them rather than down them.
+The character sheet is the second kind; see [the sheet is a deck, not an
+accordion](#on-a-phone-the-sheet-is-a-deck-not-an-accordion).
+
+A section handed to `SectionDeck` says where it sits on a wide screen --
+`'full'` for its own bare row, `'panel'` for a bordered card in the grid -- and
+that is the primitive's whole knowledge of the screens above it. It is the same
+kind of thing as `Columns`' `cols`: a layout hint, not a fact about a character
+sheet. Consecutive `'panel'` sections share one grid, so the order of the list
+is the order of the page.
+
+Neither takes a control of its own. A section is a title and its content, and
+that is all -- there is nothing on a sheet panel to press. `ColumnsSection` used
+to carry an **`aside`**, a control belonging to the panel as a whole drawn on
+its title line, and the skills filter was the one thing that ever used it. It
+went with the filter rather than being kept as a slot nothing fills: on the
+phone accordion it needed a genuinely subtle arrangement -- `Accordion.Control`
+*is* a button, so an aside nested inside it would be a button within a button,
+invalid markup with the outer control swallowing the press -- and carrying that
+subtlety for no caller is how it comes to be wrong the day somebody needs it.
 
 `TabRow` and `BlockList` are the ones whose two renderings are **identical
 markup**. The others genuinely swap components at the breakpoint; `TabRow` is a
@@ -1287,6 +1686,98 @@ app's navigation on a phone, and `xs` is 30px, under every guideline there is.
 its own, because the three call sites that already use one rely on it and a new
 theme default would silently resize them.
 
+## The palette is one line in theme/tokens.ts
+
+The app's colour is data, in `theme/palettes.ts`, and which palette it wears is
+one constant:
+
+```ts
+export const PALETTE_NAME: PaletteName = 'dragon'
+```
+
+**It is a development tool, not a setting.** There is no picker, no environment
+variable and nothing to strip from a production build. Change the word, Vite
+repaints, and you are looking at another skin. A user never chooses one, because
+a user was never the audience: the point is to be able to try the app four ways
+while designing it without editing forty files.
+
+A `Palette` is a ten-step accent ramp, the one step that is *the* brand colour,
+the mark's light field, and two `Scheme`s of five surfaces each -- background,
+surface, text, dimmed, border. Four ship: `dragon` (the deep red the app has
+always worn, and the default), `parchment`, `midnight` and `moss`.
+
+**Every palette defines both schemes**, and that is not tidiness.
+`AppTheme` runs `defaultColorScheme="auto"`, so the app never gets to choose
+which scheme a visitor sees; one that defined only `light` would be unreadable
+to half the people who opened it.
+
+**The binding is five CSS variables, not a stylesheet.** `createTheme` takes
+colour *ramps* and has no way to say "the page's background"; `cssVariablesResolver`
+in `ui/theme.ts` is the lever, and it takes light and dark separately. Because
+those are Mantine's *own* variable names, every `Card`, `Table`, `Paper`,
+`Alert`, `Modal` and `Drawer` follows with no per-component override -- and this
+repo still has no CSS file, which only `ui/AppTheme.tsx` would have been allowed
+to import.
+
+**Nothing in the suite can assert on any of it.** Vitest runs with `css: false`
+and jsdom lays nothing out, so no test can read a computed colour. That leaves
+the data as the only surface to hold, and `theme/palettes.test.ts` holds it:
+ten valid steps, a brand colour drawn from its own ramp, both schemes complete,
+and -- the one that earns its keep -- text-on-background contrast of at least
+4.5:1 in both. That is the failure invisible to whoever makes it, because they
+were looking at the scheme they designed. Dimmed text is held to 3:1 rather than
+4.5:1 on purpose: Mantine's own default dimmed is 3.3:1 on white, and holding a
+palette to AA body text there would fail the framework's own choice.
+
+## The icons come from the palette
+
+The brand red used to be written in five places, and they had drifted:
+`tokens.ts` and `favicon.svg` said `#99051d` while `index.html` and the PWA
+manifest said `#7a1f2b`, a colour that appeared nowhere else. There is now one
+source, reached three different ways.
+
+**`vite.config.ts` and `index.html` are not generated -- they import.** The
+config is TypeScript compiled by Vite, so it imports `PALETTE` directly and the
+manifest's `theme_color` and `background_color` become expressions with nothing
+to diff. `index.html`'s `theme-color` meta is filled by a `transformIndexHtml`
+plugin in the same config, at dev *and* build; the browser paints its own chrome
+from that tag before a line of React runs, so it cannot read a token the way a
+component does. Rewriting a hand-edited config from a generator would invite a
+conflict every time either side moved; an imported value cannot drift at all.
+The plugin throws if the tag is missing, because a rewrite that quietly finds
+nothing to rewrite is not a gate.
+
+Watch the shape of that check, which is the bug it was written with: it tests
+for the tag's *presence*, not for whether the HTML changed. `String.replace`
+hands back an identical string when the value it writes is the value already
+there, so "did anything change?" reports the correct case as the missing one.
+
+**`scripts/gen-icons.mjs` reads the TypeScript.** Plain Node, no flag, no
+dependency: `.nvmrc` is 24, Node has stripped types unflagged since 22.18, and
+`tsconfig.app.json` already sets `erasableSyntaxOnly` -- so every file under
+`src/` is *already* constrained to exactly the syntax the stripper accepts.
+(`theme/tokens.ts` imports its neighbour with an explicit `.ts` extension for
+this reason, and nothing else in `src/` does; Node's ESM resolver does not guess
+at one.) The alternative was a `.js` palette beside a hand-written `.d.ts` --
+two files to keep in step, and `check-layers.mjs` only walks `.ts`/`.tsx`, so
+`theme/` would have gained a file nothing checked.
+
+It owns `public/favicon.svg` (previously hand-authored) and the four PNGs.
+`make web/icons` regenerates them; `make web/icons/check` fails on drift and is
+part of `make verify`, beside `data/srd/check`.
+
+**The check compares decoded pixels, not file bytes.** `deflateSync` is
+deterministic for a given zlib but is not promised to be stable across Node
+versions, so a byte diff would be a gate that goes red on a laptop whose Node
+differs from CI's -- failing for a reason that has nothing to do with the icons.
+Decoding is trivial because the encoder only ever writes filter type 0.
+
+**The one footgun.** The icon set is generated bytes that live in git, so
+switching `PALETTE_NAME` to look at something and switching back leaves
+`web/public` matching whichever palette you last generated, and `make verify`
+will say so. `git checkout web/public` is the way out, and the failure message
+says as much.
+
 ## Dependency rule
 
 ```
@@ -1310,30 +1801,29 @@ Types and calls in `web/src/lib/api/`, screens in
 visuals belong in `web/src/ui/`, never inline in a feature. The API's error
 envelope is decoded exactly once, into `ApiError`, by `lib/api/client.ts`.
 
-A **new top-level section** is one more entry in `shell/nav.ts`; both shells map
-over `NAV_ITEMS` and neither needs touching -- the desktop navbar and the phone
-dropdown both build themselves from it. Which entry is highlighted comes from
-`activeNavPath` in the same file -- shared, because the two shells had drifted
-and only the mobile one kept a section lit on its nested routes.
+A **new top-level section** is one more entry in `ui/sections.ts` -- a path, a
+label and a glyph. Both shells map over `SECTIONS` and neither needs touching,
+and so does every breadcrumb: the desktop navbar, the phone dropdown and the
+first crumb of every trail all build themselves from it.
 
-`navLabel` sits beside it and is the dropdown's alone. The navbar can leave
-every entry unlit where `activeNavPath` returns null -- on a character sheet,
-on `/account`, on a 404 -- because the list is still on screen saying where you
-could go. The dropdown is one control and the only thing naming the current
-place, so it falls back to the word for what the control *is*, `Menu`. The
-alternative was widening `activeNavPath` so `/characters/:id` resolved to `/`,
-which would change which navbar entry lights on desktop and undo the one
-property that function is pinned on: `/` matches only itself.
+It lives in `ui/` rather than `shell/`, where it started life as `shell/nav.ts`,
+and the move is forced: a trail begins at the section it is in, so *screens*
+need the same label and glyph the navbar draws, and `features/` may not import
+`@/shell`. `lib/` could not hold it either, being denied the icon package. `ui/`
+is the one layer both the chrome and the screens can see.
 
-**Games is the worked example, and it is a stub.** `/games` is a `NAV_ITEMS`
-entry, a route, and `routes/GamesPlaceholder.tsx` -- a page that says running a
-game is not built. There is no `features/games/`, deliberately: the real
-feature is being written elsewhere, and leaving the directory unclaimed means
-that work lands as a new directory rather than as a conflict. A visible section
-over a hidden route is the same judgement as
-[Level-up is not offered](#level-up-is-not-offered) -- the navigation is the
-shape the app is going to be, and a door that says "not built" beats both a
-missing door and one that opens onto a surface which does nothing.
+`sectionFor` decides which section a path belongs to, and a `Section` carries
+two different things for a reason. `to` is where it *links*; `owns` is what it
+*claims*. Characters is why: its list is `/`, and `/` as a prefix matches the
+entire app, so matching on `to` alone meant a character sheet lit nothing and
+the phone's dropdown fell back to the word `Menu`. Splitting the two jobs lets
+`/characters/*` belong to Characters while `/` still matches only itself -- the
+one property that function is pinned on. The trailing slash in the prefix test
+is load-bearing too: without it `/groupsfoo` answers Groups.
+
+The dropdown keeps the `Menu` fallback, because it is one control and the only
+thing naming the current place on a phone, and `/account` and `/login` belong to
+no section. It just fires far less often than it used to.
 
 Watch the names when a feature's API types meet the design system. `@/ui`
 already exports Mantine's `Group` layout primitive and every screen uses it, so

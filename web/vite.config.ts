@@ -3,6 +3,37 @@ import { defineConfig, type Plugin } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+import { PALETTE } from './src/theme/tokens.ts'
+
+/**
+ * Fills index.html's `theme-color` from the palette, at dev and at build.
+ *
+ * The browser paints its own chrome from that meta tag before a line of React
+ * runs, so it cannot read a token the way a component does -- which is how it
+ * came to hold `#7a1f2b`, a colour that matched neither the mark nor anything
+ * else in the product. A rewrite at serve time is what lets the tag stay a
+ * literal in a hand-edited file while still having exactly one source.
+ *
+ * It throws rather than passing the HTML through untouched: a rewrite that
+ * quietly finds nothing to rewrite is not a gate, it is a hope.
+ */
+function themeColour(): Plugin {
+  return {
+    name: 'easydnd:theme-colour',
+    transformIndexHtml(html) {
+      // Presence, not difference. `String.replace` hands back an identical
+      // string when the value it wrote is the value already there, so asking
+      // "did anything change?" reports the correct case as the missing one --
+      // which is exactly how this failed the first time it ran.
+      const tag = /(<meta name="theme-color" content=")[^"]*(")/
+      if (!tag.test(html)) {
+        throw new Error('index.html has no theme-color meta tag for the palette to fill')
+      }
+      return html.replace(tag, `$1${PALETTE.brand}$2`)
+    },
+  }
+}
+
 /**
  * Emits dist/version.json containing the build's commit SHA.
  *
@@ -68,6 +99,7 @@ const publicPort = publicUrl
 export default defineConfig({
   plugins: [
     react(),
+    themeColour(),
     versionManifest(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -85,8 +117,8 @@ export default defineConfig({
         name: 'easydnd - D&D character and battle tracker',
         short_name: 'easydnd',
         description: 'Create characters, level them up, and run encounters.',
-        theme_color: '#7a1f2b',
-        background_color: '#1a1b1e',
+        theme_color: PALETTE.brand,
+        background_color: PALETTE.dark.background,
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',

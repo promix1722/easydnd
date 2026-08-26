@@ -30,10 +30,10 @@ configure({ asyncUtilTimeout: 5000 })
  * and several different things here want them. Mantine's ScrollArea constructs
  * a ResizeObserver on mount, so every component built on `ui/TabRow` throws
  * before it renders a single tab, and anything that opens a `Select` fails the
- * same way from deep inside React's commit phase; embla, which drives
- * `ui/Carousel`, constructs both observers the moment a carousel mounts, so
- * every test that renders the landing page dies on a missing global. None of
- * those failures has anything to do with what is being tested.
+ * same way from deep inside React's commit phase; embla, which drives every
+ * carousel here, constructs both observers the moment one mounts, so any test
+ * that renders the landing page or a character sheet dies on a missing global.
+ * None of those failures has anything to do with what is being tested.
  *
  * They observe nothing and report nothing, deliberately. A stub that invented
  * sizes would let a test assert a layout jsdom never computed -- so a carousel

@@ -1,14 +1,5 @@
 import type { CatalogSkill, Skill } from '@/lib/api'
-import {
-  Box,
-  Button,
-  Divider,
-  Group,
-  ProficiencyMark,
-  SimpleGrid,
-  Stack,
-  Text,
-} from '@/ui'
+import { Box, Divider, Group, ProficiencyMark, SimpleGrid, Stack, Text } from '@/ui'
 
 import { signed, titleCase } from '@/domain'
 
@@ -32,6 +23,12 @@ import { signed, titleCase } from '@/domain'
  * question is "what am I good at", and the answer should not be scattered down
  * a list of things nothing trained. Alphabetical still decides ties, so within
  * each block the order is stable and searchable.
+ *
+ * There is no filter over the top of it. A "Hide untrained" toggle used to
+ * collapse the panel to its trained rows, and it was answering the question the
+ * eighteen rows exist to answer -- what do I roll for a skill nothing trained --
+ * by taking those rows away. The mark and the dimming already separate the two
+ * kinds, in two channels, without a control to press first.
  */
 
 /** Highest training first. Ties fall through to the name. */
@@ -49,39 +46,6 @@ interface Row {
   ability: string | undefined
 }
 
-/** How many skills nothing has trained. */
-function untrainedIn(skills: Record<string, Skill>): number {
-  return Object.values(skills).filter((state) => state.proficiency === 'none').length
-}
-
-export interface SkillsToggleProps {
-  skills: Record<string, Skill>
-  showing: boolean
-  onToggle: () => void
-}
-
-/**
- * The panel's filter, drawn on the title's line rather than inside the body.
- *
- * Split from the panel because it belongs to the section rather than to the
- * content -- see `ColumnsSection.aside`. The two share `skills` rather than a
- * count passed between them, so there is no way for the button to promise
- * "Show all 18" over a panel holding some other number.
- *
- * Nothing to hide means no button. A character trained in all eighteen is not
- * a case worth a control that would do nothing.
- */
-export function SkillsToggle({ skills, showing, onToggle }: SkillsToggleProps) {
-  const untrained = untrainedIn(skills)
-  if (untrained === 0) return null
-
-  return (
-    <Button variant="subtle" onClick={onToggle}>
-      {showing ? 'Hide untrained' : `Show all ${Object.keys(skills).length}`}
-    </Button>
-  )
-}
-
 export interface SkillsPanelProps {
   /** The sheet's skills, keyed by slug. Drawn exactly as they arrive. */
   skills: Record<string, Skill>
@@ -91,12 +55,9 @@ export interface SkillsPanelProps {
    * to the slug -- not a reason to refuse to draw the panel.
    */
   catalog: Map<string, CatalogSkill> | null
-  /** Whether the untrained block is drawn. Owned by the screen, because the
-   * control that flips it is drawn in the panel's header rather than here. */
-  showUntrained: boolean
 }
 
-export function SkillsPanel({ skills, catalog, showUntrained }: SkillsPanelProps) {
+export function SkillsPanel({ skills, catalog }: SkillsPanelProps) {
   const rows: Row[] = Object.entries(skills)
     .map(([slug, state]) => ({
       slug,
@@ -134,7 +95,7 @@ export function SkillsPanel({ skills, catalog, showUntrained }: SkillsPanelProps
 
       {trained.length > 0 && <SkillGrid rows={trained} />}
 
-      {showUntrained && untrained.length > 0 && (
+      {untrained.length > 0 && (
         <>
           {trained.length > 0 && <Divider />}
           <SkillGrid rows={untrained} />

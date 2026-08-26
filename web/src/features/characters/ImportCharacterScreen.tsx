@@ -11,9 +11,9 @@ import {
   Divider,
   FileInput,
   Group,
+  Page,
   Stack,
   Text,
-  Title,
 } from '@/ui'
 
 /**
@@ -52,40 +52,43 @@ export function ImportCharacterScreen() {
   }
 
   return (
-    <Stack gap="md">
-      <div>
-        <Title order={2}>Import a character</Title>
-        <Text c="dimmed" size="sm">
+    <Page
+      trail={[{ label: 'Import a character' }]}
+      subtitle={
+        <>
           Reads a sheet exported from HexSheet. Your character&apos;s numbers come across as
           they are; the choices behind them stay open for you to answer.
-        </Text>
-      </div>
+        </>
+      }
+    >
+      <Stack gap="md">
 
-      {submit.error !== null && (
-        <Alert color="red" title="That file could not be imported">
-          <Text size="sm">{submit.error}</Text>
-        </Alert>
-      )}
+        {submit.error !== null && (
+          <Alert color="red" title="That file could not be imported">
+            <Text size="sm">{submit.error}</Text>
+          </Alert>
+        )}
 
-      <FileInput
-        label="Exported sheet"
-        description="A .json file exported from HexSheet"
-        placeholder="Choose a file"
-        accept="application/json,.json"
-        value={file}
-        onChange={setFile}
-        clearable
-      />
+        <FileInput
+          label="Exported sheet"
+          description="A .json file exported from HexSheet"
+          placeholder="Choose a file"
+          accept="application/json,.json"
+          value={file}
+          onChange={setFile}
+          clearable
+        />
 
-      <Group>
-        <Button onClick={() => void onImport()} disabled={file === null} loading={submit.pending}>
-          Import
-        </Button>
-        <Button variant="subtle" onClick={() => void navigate('/characters')}>
-          Cancel
-        </Button>
-      </Group>
-    </Stack>
+        <Group>
+          <Button onClick={() => void onImport()} disabled={file === null} loading={submit.pending}>
+            Import
+          </Button>
+          <Button variant="subtle" onClick={() => void navigate('/characters')}>
+            Cancel
+          </Button>
+        </Group>
+      </Stack>
+    </Page>
   )
 }
 
@@ -102,48 +105,49 @@ function ImportedReport({
   const nothingLost = report.unresolved.length === 0 && report.skipped.length === 0
 
   return (
-    <Stack gap="md">
-      <div>
-        <Title order={2}>Imported</Title>
-        <Text c="dimmed" size="sm">
-          {nothingLost
-            ? 'Everything in the export came across.'
-            : 'Everything below did not come across. Nothing else was changed.'}
-        </Text>
-      </div>
+    <Page
+      trail={[{ label: 'Imported' }]}
+      subtitle={
+        nothingLost
+          ? 'Everything in the export came across.'
+          : 'Everything below did not come across. Nothing else was changed.'
+      }
+    >
+      <Stack gap="md">
 
-      <EntryList
-        title="Not in SRD 5.1"
-        hint="easydnd only knows what the SRD publishes, which is one background and one feat."
-        entries={report.unresolved}
-      />
-      <EntryList
-        title="Not imported"
-        hint="Real data easydnd has nowhere to put yet."
-        entries={report.skipped}
-      />
+        <EntryList
+          title="Not in SRD 5.1"
+          hint="easydnd only knows what the SRD publishes, which is one background and one feat."
+          entries={report.unresolved}
+        />
+        <EntryList
+          title="Not imported"
+          hint="Real data easydnd has nowhere to put yet."
+          entries={report.skipped}
+        />
 
-      {report.open.length > 0 && (
-        <Card withBorder padding="md">
-          <Text fw={500}>Still to decide</Text>
-          <Text size="sm" c="dimmed">
-            An import records what your character is, not what you chose, so these {report.open.length}{' '}
-            choices are still open. The build screen asks for them.
-          </Text>
-        </Card>
-      )}
+        {report.open.length > 0 && (
+          <Card withBorder padding="md">
+            <Text fw={500}>Still to decide</Text>
+            <Text size="sm" c="dimmed">
+              An import records what your character is, not what you chose, so these {report.open.length}{' '}
+              choices are still open. The build screen asks for them.
+            </Text>
+          </Card>
+        )}
 
-      <Divider />
+        <Divider />
 
-      <Group>
-        <Button onClick={() => void navigate(`/characters/${id}/build`)}>
-          Finish this character
-        </Button>
-        <Button variant="subtle" onClick={() => void navigate(`/characters/${id}`)}>
-          View the sheet
-        </Button>
-      </Group>
-    </Stack>
+        <Group>
+          <Button onClick={() => void navigate(`/characters/${id}/build`)}>
+            Finish this character
+          </Button>
+          <Button variant="subtle" onClick={() => void navigate(`/characters/${id}`)}>
+            View the sheet
+          </Button>
+        </Group>
+      </Stack>
+    </Page>
   )
 }
 

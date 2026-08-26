@@ -311,6 +311,24 @@ web/check: web/lint web/test
 web/build:
 	cd web && VITE_APP_VERSION=$(VERSION) npm run build
 
+## web/icons: regenerate the favicon and the PWA icon set from the palette
+web/icons:
+	cd web && npm run icons
+
+## web/icons/check: fail if the committed icons differ from the generator
+# Not a `diff -rq` like data/srd/check, and for a specific reason: the PNG
+# encoder's zlib output is deterministic for a given zlib but is not promised
+# to be stable across Node versions, so a byte diff would go red on a machine
+# whose Node differs from CI's -- failing for a reason that has nothing to do
+# with the icons. --check decodes and compares pixels instead. See the note in
+# web/scripts/gen-icons.mjs.
+web/icons/check:
+	@cd web && npm run icons -- --check || { \
+	  echo "ICON DRIFT: web/public does not match the palette in src/theme/tokens.ts."; \
+	  echo "  Run 'make web/icons' -- or, if you only switched PALETTE_NAME to look"; \
+	  echo "  at something, run 'git checkout web/public' and switch it back."; \
+	  exit 1; }
+
 ## web/release: build exactly what CI ships to the server
 web/release: web/build
 	tar -czf web.tar.gz -C web/dist .
@@ -355,7 +373,8 @@ tidy:
 VERIFY_JOBS ?= 2
 verify:
 	@$(MAKE) --no-print-directory -j$(VERIFY_JOBS) --output-sync=target \
-	  web/test web/build web/lint vet test/unit build/release data/srd/check fmt/check lint/layers
+	  web/test web/build web/lint vet test/unit build/release data/srd/check web/icons/check \
+	  fmt/check lint/layers
 
 ## clean: remove build artefacts
 clean:
@@ -368,4 +387,5 @@ clean:
         db/up db/down db/psql test/db \
         data/srd data/srd/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \
-        web/deps web/dev web/lint web/test web/check web/build web/release
+        web/deps web/dev web/lint web/test web/check web/build web/release \
+        web/icons web/icons/check

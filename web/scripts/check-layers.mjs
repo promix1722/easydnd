@@ -42,7 +42,13 @@ const RULES = [
   {
     dir: 'ui',
     deny: ['@/shell', '@/features', '@/routes'],
-    why: 'ui/ is the design system; it must not know about screens',
+    // react-router is permitted here, and deliberately rather than by omission:
+    // `ui/Page` builds a breadcrumb, and a crumb that is not a link is not a
+    // crumb. The vendor ban below exists because Mantine and Tabler *are* the
+    // look, and being able to swap them is the point of `@/ui`; a route is not
+    // a look, and `ui/sections.ts` has to be reachable from `features/`, which
+    // may not import `@/shell`.
+    why: 'ui/ is the design system; it must not know about screens (react-router is fine: a route is not a look)',
   },
   {
     dir: 'shell',
@@ -62,14 +68,18 @@ const RULES = [
 ]
 
 /**
- * The packages only `src/ui/` may import: the component library, and the icon
- * set it draws with. Listed separately from RULES so that a new top-level
- * directory is denied by default rather than silently exempt -- and as a list
- * rather than one name so that adding a second vendor is an edit here rather
- * than a hole. `@tabler/` arrived exactly that way: nothing denied it, so every
- * layer could have imported icons directly until it was named.
+ * The packages only `src/ui/` may import: the component library, the icon set
+ * it draws with, and the carousel engine underneath `ui/SectionDeck.tsx`.
+ * Listed separately from RULES so that a new top-level directory is denied by
+ * default rather than silently exempt -- and as a list rather than one name so
+ * that adding a second vendor is an edit here rather than a hole. `@tabler/`
+ * arrived exactly that way: nothing denied it, so every layer could have
+ * imported icons directly until it was named. `embla-carousel` was the same
+ * hole one package wider -- `@mantine/carousel` is guarded by the first entry,
+ * but the engine it wraps ships its own types and nothing stopped a feature
+ * reaching for them.
  */
-const UI_ONLY_PACKAGES = ['@mantine/', '@tabler/']
+const UI_ONLY_PACKAGES = ['@mantine/', '@tabler/', 'embla-carousel']
 const UI_ONLY_DIR = 'ui'
 
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g

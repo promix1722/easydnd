@@ -1,5 +1,4 @@
 import { screen, within } from '@testing-library/react'
-import { useState } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,10 +6,9 @@ import { bySlug } from '@/lib/api'
 import type { CatalogSkill, Sheet } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
-import { setupUser } from '@/test/user'
 
 import { CharacterSheetScreen } from './CharacterSheetScreen'
-import { SkillsPanel, SkillsToggle } from './SkillsPanel'
+import { SkillsPanel } from './SkillsPanel'
 
 /**
  * The sheet, wired to a projection whose ability keys arrive **alphabetically**
@@ -253,12 +251,13 @@ beforeEach(() => {
  * Six readings of one sheet, in one test and one mount.
  *
  * They used to be four tests at two viewports -- eight mounts of the whole
- * sheet for assertions that never touch it twice. Nothing here branches on
- * width: only `Columns`, `DataList`, `ModalSheet` and `RootShell` do, the suite
- * runs without CSS, and the saving throws moved into the ability cards
- * (CharacterSheetScreen.tsx:186), whose SimpleGrid sits above both `<Columns>`.
- * The accordion these tests were once about is covered on its own terms by
- * "is open on a phone, and collapses there too" below.
+ * sheet for assertions that never touch it twice. This whole file now runs at
+ * desktop: what branches on width is `ui/SectionDeck`, which draws the six
+ * sections `SheetBody` builds, and `SheetBody` itself, which orders the first
+ * of them two ways. Both are tested where they live -- `SectionDeck.test.tsx`
+ * and `SheetBody.test.tsx`. What is left here is the seam: that the screen
+ * fetches the projection, the prompts and the compendium and hands all three
+ * on.
  *
  * expect.soft rather than expect: six separate tests reported six separate
  * failures, and a merged test that stopped at the first would report one. The
@@ -355,34 +354,12 @@ describe('the sheet', () => {
  * ProficienciesPanel.test.tsx and Vitals.test.tsx already use for their own
  * panels. Mounting the sheet for these cost about seven times as much and
  * brought along twenty-four Mantine Tooltips no assertion here ever opens. The
- * two tests that follow keep the full sheet, because what they are about is
- * the panel being wired into it.
+ * test that follows keeps the full sheet, because what it is about is the
+ * panel being wired into it.
  */
 describe('the skills panel', () => {
-  /**
-   * The panel and its filter, wired the way CharacterSheetScreen wires them.
-   *
-   * The showing/hiding state lives in the screen rather than in the panel --
-   * the button is the section's `aside` and ends up in a different subtree
-   * from the rows it hides -- so a harness holding that one piece of state is
-   * what makes the pair testable apart from the sheet.
-   */
-  function Panel({ catalog }: { catalog: Map<string, CatalogSkill> | null }) {
-    const [showUntrained, setShowUntrained] = useState(true)
-    return (
-      <>
-        <SkillsToggle
-          skills={SKILLS}
-          showing={showUntrained}
-          onToggle={() => setShowUntrained((shown) => !shown)}
-        />
-        <SkillsPanel skills={SKILLS} catalog={catalog} showUntrained={showUntrained} />
-      </>
-    )
-  }
-
   function renderPanel(catalog: Map<string, CatalogSkill> | null = bySlug(SKILL_CATALOG)) {
-    return renderAt('desktop', <Panel catalog={catalog} />)
+    return renderAt('desktop', <SkillsPanel skills={SKILLS} catalog={catalog} />)
   }
 
   /**
@@ -461,20 +438,16 @@ describe('the skills panel', () => {
     expect.soft(names).not.toContain('Sleight Of Hand')
   })
 
-  it('collapses to the trained rows and back', async () => {
+  // All eighteen, always, with nothing to press first. A "Hide untrained"
+  // toggle used to collapse this to the trained five; drawing every skill is
+  // the point of the panel, so a control whose job was to undo that was
+  // answering the question the rows exist to answer by removing them.
+  it('draws every skill, and offers no way to hide any of them', () => {
     renderPanel()
 
-    // It starts showing everything: drawing all eighteen is the point of the
-    // panel, and the toggle is for the phone rather than a stored preference.
-    expect(skillRows()).toHaveLength(18)
-
-    const user = setupUser()
-    await user.click(screen.getByRole('button', { name: 'Hide untrained' }))
-    expect(skillRows()).toHaveLength(5)
-    expect(skillNames()).not.toContain('Arcana')
-
-    await user.click(screen.getByRole('button', { name: 'Show all 18' }))
-    expect(skillRows()).toHaveLength(18)
+    expect.soft(skillRows()).toHaveLength(18)
+    expect.soft(skillNames()).toContain('Arcana')
+    expect.soft(screen.queryAllByRole('button')).toHaveLength(0)
   })
 
   it('still draws every row when there is no compendium to name them by', () => {
@@ -490,10 +463,15 @@ describe('the skills panel', () => {
 /**
  * The panel inside the sheet.
  *
- * Everything above renders SkillsPanel on its own, so these two are what still
- * prove it is wired into the page: that the sheet puts it in the first Columns
- * section, and that a failed compendium request reaches it as a null catalogue
- * rather than as a blank sheet.
+ * Everything above renders SkillsPanel on its own, so this is what still proves
+ * it is wired into the page: that a failed compendium request reaches it as a
+ * null catalogue rather than as a blank sheet.
+ *
+ * The phone rendering used to be here too, as the one mobile test in the file.
+ * It has moved to `SheetBody.test.tsx`, which mounts the body from props rather
+ * than the screen from a mocked fetch -- the body is where the two renderings
+ * differ, and the filter reaching its rows through the deck is what that test
+ * is about.
  */
 describe('the skills panel, in the sheet', () => {
   function sheetRows(): HTMLElement[] {
@@ -504,18 +482,6 @@ describe('the skills panel, in the sheet', () => {
     if (panel === null) throw new Error('the skills panel is not on the page')
     return within(panel).getAllByRole('img', { name: /proficien|Expertise/i })
   }
-
-  // The phone is where eighteen rows costs the most and where the toggle earns
-  // its place. Skills is the first Columns section, so the accordion has it
-  // open already -- nothing to click before the panel is there.
-  it('is open on a phone, and collapses there too', async () => {
-    await renderSheet('mobile')
-
-    expect(sheetRows()).toHaveLength(18)
-
-    await setupUser().click(screen.getByRole('button', { name: 'Hide untrained' }))
-    expect(sheetRows()).toHaveLength(5)
-  })
 
   it('still draws the panel when the compendium could not be fetched', async () => {
     // A second request failing costs the ability tags and the proper names.

@@ -1,9 +1,9 @@
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 
 import type { Sheet } from '@/lib/api'
-import { getSharedSheet } from '@/lib/api'
+import { getGroup, getSharedSheet } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
-import { Alert, Anchor, Badge, Button, Group, Loader, Stack, Text, Title } from '@/ui'
+import { Badge, Page, pageState } from '@/ui'
 
 import type { Compendium } from '../character/compendium'
 import { loadCompendium } from '../character/compendium'
@@ -27,63 +27,73 @@ export function SharedSheetScreen() {
   const { data, error, loading, reload } = useResource<{
     sheet: Sheet
     compendium: Compendium
+    /**
+     * The group's name, for the middle crumb, or null when the lookup failed.
+     *
+     * Fetched here rather than threaded through the route because the trail is
+     * `Groups / <group> / <character>` and a crumb that says a group id is no
+     * better than one that says nothing. The failure is tolerated on the same
+     * bargain the owner's sheet already makes for `prompts` and the compendium:
+     * a shared sheet is worth drawing, and is not worth losing to a second
+     * request for one word. A null renders as the crumb's placeholder.
+     */
+    groupName: string | null
   }>(`shared:${character}`, async (signal) => {
-    const [sheet, compendium] = await Promise.all([
+    const [sheet, compendium, groupName] = await Promise.all([
       getSharedSheet(character, signal),
       loadCompendium(),
+      getGroup(groupId, signal).then(
+        (group) => group.name,
+        () => null,
+      ),
     ])
-    return { sheet, compendium }
+    return { sheet, compendium, groupName }
   })
 
-  if (loading) {
+  const state = pageState(
+    { data, error, loading },
+    {
+      title: 'Could not load this character',
+      fallback: 'That character is not on this table.',
+      onRetry: reload,
+    },
+  )
+
+  // The group is a crumb here, unlike on a game: a shared sheet really does
+  // hang off the group, which is what grants the read. See
+  // docs/web.md#sharing-is-reading.
+  const group = { label: data?.groupName ?? null, to: `/groups/${groupId}` }
+
+  if (state.kind !== 'ready' || data === null) {
     return (
-      <Group gap="xs">
-        <Loader size="sm" />
-        <Text size="sm" c="dimmed">
-          Projecting the sheet...
-        </Text>
-      </Group>
-    )
-  }
-  if (error !== null || data === null) {
-    return (
-      <Alert color="red" title="Could not load this character">
-        <Stack gap="xs" align="flex-start">
-          <Text size="sm">{error ?? 'That character is not on this table.'}</Text>
-          <Button variant="light" onClick={reload}>
-            Try again
-          </Button>
-        </Stack>
-      </Alert>
+      <Page
+        trail={[group, { label: null }]}
+        state={state.kind === 'loading' ? { ...state, what: 'Projecting the sheet...' } : state}
+      />
     )
   }
 
   const identity = data.sheet.identity
 
   return (
-    <Stack gap="lg">
-      <Group justify="space-between" align="flex-start">
-        <div>
-          <Group gap="xs">
-            <Title order={2}>{identity.name || 'Unnamed'}</Title>
-            <Badge variant="light">Read only</Badge>
-          </Group>
-          <Text c="dimmed" size="sm">
-            {[
-              identity.race !== undefined ? titleCase(identity.race) : null,
-              identity.background !== undefined ? titleCase(identity.background) : null,
-              classLine(identity.classes),
-            ]
-              .filter((part) => part !== null && part !== '--')
-              .join(' · ')}
-          </Text>
-        </div>
-        <Anchor component={Link} to={`/groups/${groupId}`}>
-          <Button variant="subtle">Back to the group</Button>
-        </Anchor>
-      </Group>
-
+    <Page
+      trail={[group, { label: identity.name || 'Unnamed' }]}
+      badge={<Badge variant="light">Read only</Badge>}
+      subtitle={
+        <>
+          {[
+            identity.race !== undefined ? titleCase(identity.race) : null,
+            identity.background !== undefined ? titleCase(identity.background) : null,
+            classLine(identity.classes),
+          ]
+            .filter((part) => part !== null && part !== '--')
+            .join(' · ')}
+        </>
+      }
+    >
+      {/* The way back is the trail now. The "Back to the group" button that
+          used to sit here said the same thing in a second place. */}
       <SheetBody sheet={data.sheet} compendium={data.compendium} />
-    </Stack>
+    </Page>
   )
 }

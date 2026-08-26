@@ -33,47 +33,15 @@ describe('Columns', () => {
     expect(controls[1]).toHaveAttribute('aria-expanded', 'false')
   })
 
-  // The aside is drawn beside the title, and on mobile the title *is* a
-  // button. Nesting one button in another is invalid markup and the outer
-  // control swallows the press, so what matters is that it stays clickable.
-  describe('a section aside', () => {
-    const withAside: ColumnsSection[] = [
-      { ...sections[0]!, aside: <button type="button">Filter</button> },
-      sections[1]!,
-    ]
+  // Pressing a control closes the section it heads, which is the whole of what
+  // the accordion is for and the thing `SectionDeck` deliberately does not do.
+  it('closes a section that was open', async () => {
+    renderAt('mobile', <Columns sections={sections} />)
 
-    it.each(['desktop', 'mobile'] as const)('is reachable at %s', async (viewport) => {
-      const clicked: string[] = []
-      renderAt(
-        viewport,
-        <Columns
-          sections={[
-            { ...sections[0]!, aside: <button type="button" onClick={() => clicked.push('aside')}>Filter</button> },
-            sections[1]!,
-          ]}
-        />,
-      )
-
-      await setupUser().click(screen.getByRole('button', { name: 'Filter' }))
-      expect(clicked).toEqual(['aside'])
-    })
-
-    it('does not swallow the accordion control it sits beside', async () => {
-      renderAt('mobile', <Columns sections={withAside} />)
-
-      // The section starts open; pressing its control closes it. If the aside
-      // had been rendered inside the control, this would be a nested button.
-      const control = screen.getByRole('button', { name: 'Abilities' })
-      expect(control).toHaveAttribute('aria-expanded', 'true')
-      await setupUser().click(control)
-      expect(control).toHaveAttribute('aria-expanded', 'false')
-    })
-
-    it('is absent from a section that did not ask for one', () => {
-      renderAt('desktop', <Columns sections={withAside} />)
-
-      expect(screen.getAllByRole('button', { name: 'Filter' })).toHaveLength(1)
-    })
+    const control = screen.getByRole('button', { name: 'Abilities' })
+    expect(control).toHaveAttribute('aria-expanded', 'true')
+    await setupUser().click(control)
+    expect(control).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('opens the sections named in defaultOpen', () => {

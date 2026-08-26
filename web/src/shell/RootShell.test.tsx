@@ -6,8 +6,9 @@ import { testAccount, testGuest, withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 
+import { SECTIONS } from '@/ui'
+
 import { RootShell } from './RootShell'
-import { NAV_ITEMS } from './nav'
 
 function shellAt(viewport: 'mobile' | 'desktop', at = '/') {
   const router = createMemoryRouter(
@@ -21,6 +22,9 @@ function shellAt(viewport: 'mobile' | 'desktop', at = '/') {
           // other than the first, and on a path that belongs to no section.
           { path: 'groups', element: <p>content</p> },
           { path: 'account', element: <p>content</p> },
+          // A detail page under `/`, which is the case that used to leave the
+          // navbar unlit and the phone's trigger reading "Menu".
+          { path: 'characters/:id', element: <p>content</p> },
         ],
       },
     ],
@@ -34,17 +38,68 @@ describe('RootShell', () => {
     shellAt('desktop')
 
     expect(screen.getByRole('navigation')).toBeInTheDocument()
-    for (const item of NAV_ITEMS) {
-      expect(screen.getByRole('link', { name: item.label })).toBeInTheDocument()
+    for (const section of SECTIONS) {
+      expect(screen.getByRole('link', { name: section.label })).toBeInTheDocument()
     }
   })
 
-  // The navbar has nothing to collapse it: a burger defaulting to open drew a
-  // close cross to the left of the mark, before the app's own name.
-  it('offers no control that hides the desktop navbar', () => {
+  /*
+   * The navbar narrows to a rail, and the control says which way.
+   *
+   * Asserted on the control and on the links surviving, rather than on width:
+   * the navbar is sized from a generated `<style>` element, this suite runs
+   * with `css: false`, and jsdom lays nothing out, so no test here can see how
+   * wide anything is. `aria-expanded` and the accessible names are the real
+   * semantics and the only half of this a test can reach.
+   *
+   * Know what that means before trusting this file. An earlier attempt at this
+   * -- hiding the navbar outright -- passed every assertion in it while the
+   * navbar did not move at all, because `AppShell`'s `collapsed` prop is read
+   * only in a mode `breakpoint: 'never'` opts out of. The visual half is
+   * checked by opening the page.
+   *
+   * The assertion before that was the opposite again: that nothing could touch
+   * the navbar at all. What was wrong then is still wrong and is why the
+   * control sits where it does -- a `Burger` defaulting to open drew a close
+   * cross, to the left of the mark and before the app's own name. This one
+   * lives at the foot of the thing it resizes.
+   */
+  it('narrows the desktop navbar to a rail and back', async () => {
+    const user = setupUser()
     shellAt('desktop')
 
-    expect(screen.queryByRole('button', { name: 'Toggle navigation' })).not.toBeInTheDocument()
+    const collapse = screen.getByRole('button', { name: 'Collapse navigation' })
+    expect(collapse).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(collapse)
+
+    const expand = screen.getByRole('button', { name: 'Expand navigation' })
+    expect(expand).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('button', { name: 'Collapse navigation' })).not.toBeInTheDocument()
+
+    await user.click(expand)
+    expect(screen.getByRole('button', { name: 'Collapse navigation' })).toBeInTheDocument()
+  })
+
+  // The point of a rail over a navbar that disappears: the sections are still
+  // there and still named, so nothing has to be found again to navigate.
+  it('keeps every section reachable and named on the rail', async () => {
+    const user = setupUser()
+    shellAt('desktop')
+
+    await user.click(screen.getByRole('button', { name: 'Collapse navigation' }))
+
+    for (const section of SECTIONS) {
+      expect(screen.getByRole('link', { name: section.label })).toHaveAttribute('href', section.to)
+    }
+  })
+
+  // A genuine width branch, so it belongs in the one file allowed two
+  // viewports: the phone has no navbar for a control to act on.
+  it('offers no navigation toggle on mobile', () => {
+    shellAt('mobile')
+
+    expect(screen.queryByRole('button', { name: /navigation$/ })).not.toBeInTheDocument()
   })
 
   // The bottom tab bar this replaced is gone, not hidden: a phone gets one row
@@ -64,8 +119,11 @@ describe('RootShell', () => {
 
     await user.click(screen.getByRole('button', { name: 'Characters' }))
 
-    for (const item of NAV_ITEMS) {
-      expect(screen.getByRole('menuitem', { name: item.label })).toHaveAttribute('href', item.to)
+    for (const section of SECTIONS) {
+      expect(screen.getByRole('menuitem', { name: section.label })).toHaveAttribute(
+        'href',
+        section.to,
+      )
     }
     // Exactly one row is marked as where you already are.
     expect(screen.getAllByRole('menuitem').filter((el) => el.getAttribute('aria-current'))).toEqual([
@@ -75,9 +133,12 @@ describe('RootShell', () => {
 
   // The trigger is the only thing on a phone naming the current section, so it
   // has to say something on a path that belongs to none.
+  // `/characters/chr_1` is the one that changed: the section table now owns
+  // that prefix, so a sheet names its section instead of falling back.
   it.each([
     ['/', 'Characters'],
     ['/groups', 'Groups'],
+    ['/characters/chr_1', 'Characters'],
     ['/account', 'Menu'],
   ])('labels the mobile dropdown %s as %s', (at, label) => {
     shellAt('mobile', at)
@@ -104,7 +165,7 @@ describe('RootShell', () => {
       const link = screen.getByRole('link', { name: `Account: ${testAccount.display_name}` })
       expect(link).toHaveAttribute('href', '/account')
       expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
-      expect(NAV_ITEMS.some((item) => item.to === '/account')).toBe(false)
+      expect(SECTIONS.some((section) => section.to === '/account')).toBe(false)
     },
   )
 
