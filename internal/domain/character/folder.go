@@ -35,6 +35,18 @@ type Folder struct {
 	// delete. It is what makes "a character is always somewhere" true
 	// without a nullable folder on every character.
 	Default bool
+
+	// Position orders a folder among its owner's others, lowest first.
+	//
+	// It orders the folders an owner can move and nothing else: the default
+	// folder is drawn first whatever this says, because it is the one
+	// folder an account is guaranteed to have and a list whose first entry
+	// wanders is a list nobody can point at. See FolderRepository.List.
+	//
+	// It is a plain int rather than a fraction or a linked list because
+	// Reorder rewrites the whole run at once, so there is never a gap to
+	// insert into.
+	Position int
 }
 
 // DefaultFolderName is what an account's default folder is called until its
@@ -68,9 +80,23 @@ type FolderRepository interface {
 	// *types.NotFoundError when it does not exist.
 	Get(ctx context.Context, id FolderID) (Folder, error)
 
-	// List returns every folder owned by owner, the default one first and
-	// the rest in a stable order.
+	// List returns every folder owned by owner: the default one first, then
+	// the rest by Position, with the identifier breaking a tie so the order
+	// is total rather than merely mostly-decided.
 	List(ctx context.Context, owner OwnerID) ([]Folder, error)
+
+	// Reorder sets the order of owner's folders other than the default one.
+	//
+	// It takes the whole run rather than one move, and that is what makes it
+	// safe to call twice: there is no "move up" to apply to a list that has
+	// changed underneath the caller, only a final order to assert. ids must
+	// be exactly owner's non-default folders, each appearing once.
+	//
+	// Implementations report a *types.ValidationError when the set does not
+	// match -- an id missing, one too many, one repeated, or one belonging
+	// to somebody else, which is the same thing as one this owner does not
+	// have.
+	Reorder(ctx context.Context, owner OwnerID, ids []FolderID) error
 
 	// Rename changes a folder's name. Implementations report a
 	// *types.NotFoundError when it does not exist.

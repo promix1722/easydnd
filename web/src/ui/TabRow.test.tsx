@@ -16,7 +16,7 @@ const TABS = [
 function renderRow(viewport: Viewport, value = 'class', onChange = vi.fn()) {
   const result = renderAt(
     viewport,
-    <TabRow tabs={TABS} value={value} onChange={onChange} actions={<button>Next</button>}>
+    <TabRow tabs={TABS} value={value} onChange={onChange}>
       <p>panel</p>
     </TabRow>,
   )
@@ -64,13 +64,28 @@ describe('TabRow', () => {
     expect(onChange).toHaveBeenCalledWith('race')
   })
 
-  it('keeps the actions out of the strip', () => {
+  it('holds nothing but the tabs', () => {
     renderRow(viewport)
 
-    // Next belongs to the row rather than to a tab, so it is a button beside
-    // the strip and never one of the things being scrolled past.
-    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Next' })).not.toBeInTheDocument()
+    // There is no actions slot any more: the build screen's Finish button was
+    // its only caller and it moved to `ui/Page`'s, which is where a control
+    // acting on the page's own subject belongs. A tab is a `role="tab"`, so
+    // the row holds no plain button at all.
+    expect(screen.getAllByRole('tab')).toHaveLength(TABS.length)
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
+  })
+
+  /*
+   * The fade over a half-scrolled tab is measured, and jsdom measures nothing:
+   * `scrollWidth` and `clientWidth` are both 0 there, so a strip is never
+   * overflowing and the mask is never applied. What is assertable is that
+   * absence -- and, in the last test in this file, that it is the same absence
+   * at both widths.
+   */
+  it('masks nothing while nothing is scrolled off', () => {
+    const { container } = renderRow(viewport)
+
+    expect(container.querySelector('[style*="mask-image"]')).toBeNull()
   })
 
   it('draws the panel of whichever tab is active', () => {

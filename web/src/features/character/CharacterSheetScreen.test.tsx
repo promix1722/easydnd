@@ -135,9 +135,9 @@ function jsonResponse(body: unknown, status = 200): Response {
 /**
  * The prompts a character still has outstanding.
  *
- * Two groups on purpose: the sheet shows the whole list rather than a
- * category's worth, and it is the same component the build screen's tabs draw
- * a filtered slice of.
+ * Two groups on purpose: what the sheet reads off this response is only
+ * whether it is empty, so a fixture with one prompt in one group would pass
+ * against a screen that had gone looking at the group.
  */
 const OPEN = {
   seq: 3,
@@ -296,9 +296,9 @@ it('draws the sheet in the order a player reads it', async () => {
   expect.soft(cardText('dex')).toBe('dex+316Save+5')
   expect.soft(cardText('cha')).toBe('cha-18Save-1')
 
-  // Nothing outstanding on this fixture, so the section is absent rather than
-  // present and empty.
-  expect.soft(screen.queryByText('Still to choose')).not.toBeInTheDocument()
+  // Nothing outstanding on this fixture, so the header offers no way in to the
+  // build screen. The button's presence is the whole of the message.
+  expect.soft(screen.queryByRole('link', { name: 'Answer what is left' })).not.toBeInTheDocument()
 })
 
 describe('the sheet', () => {
@@ -504,16 +504,18 @@ describe('the skills panel, in the sheet', () => {
 })
 
 describe('an unfinished character', () => {
-  it('says on the sheet what is still to choose, and offers the way in', async () => {
-    // The same choices the build screen draws, from the same response and
-    // named the same way: there is no second notion of "outstanding" for the
-    // two pages to disagree about, and no second vocabulary for it either.
+  it('offers the way in, and does not list what is left', async () => {
+    // The sheet says the character is unfinished by carrying the way to finish
+    // it, and says it in one place. What is still open is enumerated on the
+    // screen that answers it -- listing the questions above the sheet put the
+    // build screen's work on the page nobody came to build on.
     mockApi(SHEET, OPEN)
     await renderSheet('desktop')
 
-    expect(screen.getByText(/A background/)).toBeInTheDocument()
-    expect(screen.getByText(/One more language/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Answer these' })).toBeInTheDocument()
+    const answer = screen.getByRole('link', { name: 'Answer what is left' })
+    expect(answer).toHaveAttribute('href', '/characters/chr_000001/build')
+    expect(screen.queryByText(/A background/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/One more language/)).not.toBeInTheDocument()
   })
 
   it('still draws the sheet when the prompts could not be fetched', async () => {
@@ -531,6 +533,8 @@ describe('an unfinished character', () => {
     await renderSheet('desktop')
 
     expect(screen.getByRole('heading', { name: 'Zephyr' })).toBeInTheDocument()
-    expect(screen.queryByText('Still to choose')).not.toBeInTheDocument()
+    // No list of prompts means no button: a failed `/prompts` draws nothing
+    // rather than something wrong.
+    expect(screen.queryByRole('link', { name: 'Answer what is left' })).not.toBeInTheDocument()
   })
 })

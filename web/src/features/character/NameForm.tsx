@@ -1,4 +1,4 @@
-import { Button, Group, Stack, Text, TextInput } from '@/ui'
+import { Button, Group, Stack, TextInput } from '@/ui'
 
 export interface NameFormProps {
   value: string
@@ -23,6 +23,13 @@ export interface NameFormProps {
  * character that does not exist yet the draft *is* the character: clicking any
  * tab creates one from it, and a name locked inside this component would be a
  * name the screen around it could not act on.
+ *
+ * It carries no caption of any kind, like every other answering surface. The
+ * block it opens inside is headed "A name", and this used to add a heading --
+ * "What are they called?" -- and a field label under that, so the first screen
+ * anybody sees said the same thing three times. The label survives as an
+ * `aria-label`, because a field still has to be named to whoever cannot see
+ * where it sits.
  */
 export function NameForm({
   value,
@@ -36,15 +43,9 @@ export function NameForm({
 
   return (
     <Stack gap="md">
-      {/*
-        The one surface that keeps a heading of its own. The block above it is
-        headed "A name", which is what the choice is called, not what it asks
-        -- and this is the first line anybody reads in this application.
-      */}
-      <Text fw={600}>What are they called?</Text>
       <TextInput
-        label="Name"
-        placeholder="Who are they?"
+        aria-label="Name"
+        placeholder="Name"
         value={value}
         error={error}
         onChange={(event) => onValueChange(event.currentTarget.value)}

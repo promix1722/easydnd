@@ -177,6 +177,49 @@ describe('Page', () => {
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument()
   })
 
+  /*
+   * The blank line a phone used to draw above every list.
+   *
+   * A section root's heading is the section's own name, which the phone's
+   * chrome is already showing an inch above it -- so it is hidden below `md`.
+   * What that left behind was the row it sat in: `ROW_HEIGHT` of nothing plus
+   * the stack's gap, at the top of the three busiest screens in the app.
+   *
+   * The class is Mantine's own `visibleFrom`, which is why these assert a
+   * class rather than a computed height: the suite runs without CSS, so a
+   * media query is a name in the markup and nothing more. That is the same
+   * reason `Page` may not branch on width, and this does not -- what it
+   * branches on is whether there is anything left to draw.
+   */
+  const HIDDEN_ON_PHONE = '.mantine-visible-from-md'
+
+  it('leaves a section root nothing to draw on a phone', () => {
+    const { container } = renderPage('/', { trail: [] })
+
+    // The row that carries ROW_HEIGHT goes with the word that was in it, and
+    // the block that holds them with the row.
+    expect(container.querySelector('[style*="min-height"]')?.closest(HIDDEN_ON_PHONE)).not.toBeNull()
+  })
+
+  it('keeps the row where a section root has something else on it', () => {
+    const { container } = renderPage('/', { trail: [], actions: <button>New character</button> })
+
+    expect(container.querySelector('[style*="min-height"]')?.closest(HIDDEN_ON_PHONE)).toBeNull()
+    // Only the duplicated word goes. The action stays at both widths.
+    expect(
+      screen.getByRole('heading', { name: 'Characters' }).closest(HIDDEN_ON_PHONE),
+    ).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'New character' }).closest(HIDDEN_ON_PHONE)).toBeNull()
+  })
+
+  it('keeps the row on a page whose heading is its own', () => {
+    // A detail page's heading is the thing the page is about, which the chrome
+    // says nowhere. Nothing here is a restatement, so nothing here is dropped.
+    const { container } = renderPage('/characters/chr_1', { trail: [{ label: 'Ada' }] })
+
+    expect(container.querySelector('[style*="min-height"]')?.closest(HIDDEN_ON_PHONE)).toBeNull()
+  })
+
   it('renders the same markup at both viewports', () => {
     // What earns every test above the right to run once. See the note on this
     // describe block.

@@ -3,9 +3,8 @@ import { Link, useParams } from 'react-router'
 import { getPrompts, getSheet } from '@/lib/api'
 import type { Prompt, Sheet } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
-import { Alert, Anchor, Button, Page, pageState, Stack } from '@/ui'
+import { Button, Page, pageState } from '@/ui'
 
-import { OutstandingChoices } from './OutstandingChoices'
 import type { Compendium } from './compendium'
 import { loadCompendium } from './compendium'
 import { SheetBody } from './SheetBody'
@@ -76,33 +75,34 @@ export function CharacterSheetScreen() {
   return (
     <Page
       trail={[{ label: identity.name || 'Unnamed' }]}
-      actions={
-        <Anchor component={Link} to={`/characters/${id}/log`}>
-          <Button variant="subtle">Event log</Button>
-        </Anchor>
-      }
+      /*
+       * One action, and only while there is something to do with it.
+       *
+       * What was here before was a link to the event log, drawn on every sheet
+       * whether or not anybody wanted the record -- and beneath it, an alert
+       * listing every choice still open above the sheet the page is for. Both
+       * are gone: the log is not offered anywhere in this client for now (the
+       * route still serves it, and `/characters/:id/log` is still the
+       * unabridged record), and the list of what is left belongs to the screen
+       * that answers it rather than to the one that reads the character.
+       *
+       * So the header says the one thing the sheet cannot: that this character
+       * is not finished, and where finishing it happens. Its presence is the
+       * whole message, which is why there is nothing here when `/prompts` comes
+       * back empty -- and why a `/prompts` that failed (`null`, deliberately
+       * survivable) draws no button rather than a wrong one.
+       */
+      {...(outstanding.length > 0
+        ? {
+            actions: (
+              <Button component={Link} to={`/characters/${id}/build`} variant="light">
+                Answer what is left
+              </Button>
+            ),
+          }
+        : {})}
     >
-      <Stack gap="lg">
-        {/*
-          An unfinished character says so on the page it is looked at most.
-          The same `/prompts` response the build screen's tabs draw, named by the
-          same `choiceName` -- there is no second notion anywhere in this client
-          of what is still outstanding, and so no way for the sheet and the build
-          screen to disagree about it. Here it is a statement of what is left and
-          the way in is the link below; there each choice is a block that opens.
-        */}
-        {outstanding.length > 0 && (
-          <Alert color="blue" title="Still to choose">
-            <Stack gap="xs" align="flex-start">
-              <OutstandingChoices prompts={outstanding} />
-              <Anchor component={Link} to={`/characters/${id}/build`}>
-                <Button variant="light">Answer these</Button>
-              </Anchor>
-            </Stack>
-          </Alert>
-        )}
-        <SheetBody sheet={s} compendium={sheet.data.compendium} />
-      </Stack>
+      <SheetBody sheet={s} compendium={sheet.data.compendium} />
     </Page>
   )
 }

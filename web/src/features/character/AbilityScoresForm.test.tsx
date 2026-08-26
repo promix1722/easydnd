@@ -33,7 +33,7 @@ async function place(user: ReturnType<typeof setupUser>, value: string, ability:
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */
@@ -117,7 +117,7 @@ describe('the standard array', () => {
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */
@@ -158,7 +158,7 @@ function pool(): number[] {
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */
@@ -243,13 +243,16 @@ describe('point buy', () => {
 })
 
 describe('manual', () => {
+  async function openManual(user: ReturnType<typeof setupUser>) {
+    await user.click(screen.getByRole('combobox', { name: /How were the scores generated/ }))
+    await user.click(screen.getByRole('option', { name: 'Manual' }))
+  }
+
   it('is the one method where a number is typed', async () => {
     const user = setupUser()
     const onSubmit = vi.fn()
     renderAt('desktop', form({ onSubmit }))
-
-    await user.click(screen.getByRole('combobox', { name: /How were the scores generated/ }))
-    await user.click(screen.getByRole('option', { name: 'Manual' }))
+    await openManual(user)
 
     const strength = screen.getByLabelText('Strength')
     await user.clear(strength)
@@ -261,4 +264,47 @@ describe('manual', () => {
     expect(method(changes)).toBe('manual')
     expect(scored(changes, 'str')).toBe(17)
   })
+
+  it('starts at ten rather than at whatever the last method had not decided', async () => {
+    const user = setupUser()
+    const onSubmit = vi.fn()
+    renderAt('desktop', form({ onSubmit }))
+
+    // Straight from the standard array with nothing placed, which is where
+    // this used to show six zeros -- under its own minimum -- and then save
+    // six 10s, so the log and the screen disagreed about what was entered.
+    await openManual(user)
+
+    for (const ability of ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma']) {
+      expect.soft(screen.getByLabelText(ability)).toHaveValue('10')
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+    const changes = onSubmit.mock.calls[0]?.[0] as Change[]
+    expect(scored(changes, 'str')).toBe(10)
+  })
+
+  it('steps a score with the same buttons point buy uses, within 1 and 30', async () => {
+    const user = setupUser()
+    const onSubmit = vi.fn()
+    renderAt('desktop', form({ onSubmit, method: 'manual', scores: allSixAt(30) }))
+
+    // 30 is the top, so there is nothing to raise and one to lower.
+    expect(screen.getByRole('button', { name: 'Raise Strength' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Lower Strength' }))
+    expect(screen.getByLabelText('Strength')).toHaveValue('29')
+
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+    expect(scored(onSubmit.mock.calls[0]?.[0] as Change[], 'str')).toBe(29)
+  })
+
+  it('will not step below one', async () => {
+    renderAt('desktop', form({ method: 'manual', scores: allSixAt(1) }))
+    expect(screen.getByRole('button', { name: 'Lower Wisdom' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Raise Wisdom' })).toBeEnabled()
+  })
 })
+
+function allSixAt(score: number): Record<string, number> {
+  return { str: score, dex: score, con: score, int: score, wis: score, cha: score }
+}

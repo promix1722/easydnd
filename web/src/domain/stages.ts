@@ -10,7 +10,7 @@
  * Framework-free, like everything else in domain/: no React, no transport.
  */
 
-export type Stage = 'identity' | 'class' | 'race' | 'background' | 'abilities'
+export type Stage = 'identity' | 'class' | 'race' | 'background' | 'abilities' | 'personality'
 
 /**
  * Display order, which is the order a character is actually built in.
@@ -24,8 +24,21 @@ export type Stage = 'identity' | 'class' | 'race' | 'background' | 'abilities'
  * form. Race and background come after, and change nothing about the numbers
  * that has not already been decided -- a racial bonus is applied by the rules,
  * not typed in here.
+ *
+ * Personality is last, and is the only tab that asks nothing about the rules.
+ * A trait, an ideal, a bond, a flaw and an alignment are who the character is
+ * rather than what they can do, and they used to sit under background because
+ * that is which entry suggests them -- which put five questions nobody has to
+ * answer in front of the one required question on that tab.
  */
-export const STAGES = ['identity', 'class', 'abilities', 'race', 'background'] as const satisfies readonly Stage[]
+export const STAGES = [
+  'identity',
+  'class',
+  'abilities',
+  'race',
+  'background',
+  'personality',
+] as const satisfies readonly Stage[]
 
 /**
  * A stage's label, which is deliberately the stage's own word.
@@ -35,13 +48,17 @@ export const STAGES = ['identity', 'class', 'abilities', 'race', 'background'] a
  * was decided -- "Race chosen" -- and empty copy names no category at all.
  * That rule is what keeps "race" an unambiguous thing to look for on the page,
  * and it is why this table exists rather than the labels being inlined.
+ *
+ * Capitalised, because a tab is a title rather than a sentence. The word is
+ * still the category's own, which is all the rule above asks.
  */
 export const STAGE_LABELS: Record<Stage, string> = {
-  identity: 'identity',
-  class: 'class',
-  race: 'race',
-  background: 'background',
-  abilities: 'abilities',
+  identity: 'Identity',
+  class: 'Class',
+  race: 'Race',
+  background: 'Background',
+  abilities: 'Abilities',
+  personality: 'Personality',
 }
 
 const STAGE_OF_GROUP: Record<string, Stage> = {
@@ -50,6 +67,7 @@ const STAGE_OF_GROUP: Record<string, Stage> = {
   race: 'race',
   background: 'background',
   abilities: 'abilities',
+  personality: 'personality',
   // Advancement is the class story continued: which class the next level goes
   // into, the archetype it unlocks, the improvement it grants. A tab of its
   // own would split "I am a rogue" from "I am taking a third rogue level".

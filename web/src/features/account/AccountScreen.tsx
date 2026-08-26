@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { useAuth } from '@/lib/auth'
-import { Alert, Badge, Button, Card, Group, Stack, Text, Title } from '@/ui'
+import { Alert, Badge, Button, Card, Group, Page, Stack, Text, Title } from '@/ui'
 
 /**
  * Everything about how this account is reached.
@@ -22,6 +22,14 @@ import { Alert, Badge, Button, Card, Group, Stack, Text, Title } from '@/ui'
  * heading over nothing. A card with a Connect button in it, on the other hand,
  * earns its place with no rows at all -- connecting is the only recovery this
  * design has, so the offer is the content.
+ *
+ * It wears `ui/Page` like every other screen behind the sign-in, and that was
+ * a correction rather than the original: this page drew its own `Title` over
+ * its own dimmed line, so its heading was a different size from the one on the
+ * character list, started at a different height, and was capped by nothing at
+ * all on a wide monitor. `/account` belongs to no section -- see
+ * `ui/sections.ts` -- so `Page` gives it a heading and no breadcrumb, which is
+ * what it should have: the phone's chrome has no word for this place either.
  */
 export function AccountScreen() {
   const { user, providers, linkProvider, unlinkProvider, busy, error } = useAuth()
@@ -36,20 +44,13 @@ export function AccountScreen() {
   // before the click rather than after.
   if (user.anonymous) {
     return (
-      <Stack gap="lg">
-        <div>
-          <Title order={2}>Account</Title>
-          <Text c="dimmed" size="sm">
-            You are playing as a guest.
-          </Text>
-        </div>
-
+      <Page trail={TRAIL} subtitle="You are playing as a guest.">
         <Alert color="orange" title="There is no account to manage">
           A guest session has nothing behind it -- no passkey, no connected accounts, and no way to
           sign back in once it ends. To keep what you build, sign out and start again with a
           passkey or a connected account; you will be starting fresh.
         </Alert>
-      </Stack>
+      </Page>
     )
   }
 
@@ -59,135 +60,138 @@ export function AccountScreen() {
   )
 
   return (
-    <Stack gap="lg">
-      <div>
-        <Title order={2}>Account</Title>
-        <Text c="dimmed" size="sm">
-          Signed in as {user.display_name}.
-        </Text>
-      </div>
+    <Page trail={TRAIL} subtitle={`Signed in as ${user.display_name}.`}>
+      <Stack gap="lg">
+        {error ? (
+          <Alert color="red" title="That did not work">
+            {error}
+          </Alert>
+        ) : null}
 
-      {error ? (
-        <Alert color="red" title="That did not work">
-          {error}
-        </Alert>
-      ) : null}
+        {/* Nothing here adds a passkey -- an account's passkeys are the ones it
+            was created with -- so an empty card would be a heading with no rows
+            under it and no button to change that. It carries no count either:
+            the rows are immediately below it and each already wears a badge of
+            its own, which a second one in the heading only competes with. */}
+        {user.credentials.length > 0 ? (
+          <Card withBorder padding="md">
+            <Stack gap="sm">
+              <Title order={4}>Passkeys</Title>
 
-      {/* Nothing here adds a passkey -- an account's passkeys are the ones it
-          was created with -- so an empty card would be a heading with no rows
-          under it and no button to change that. It carries no count either:
-          the rows are immediately below it and each already wears a badge of
-          its own, which a second one in the heading only competes with. */}
-      {user.credentials.length > 0 ? (
-        <Card withBorder padding="md">
-          <Stack gap="sm">
-            <Title order={4}>Passkeys</Title>
+              {user.credentials.map((credential) => (
+                <Group key={credential.id} justify="space-between" wrap="nowrap">
+                  <Text size="sm" truncate>
+                    Added {formatDate(credential.created_at)}
+                  </Text>
+                  {/* A passkey that does not sync is a single point of failure
+                      for an account with no recovery path, and the only honest
+                      thing to do is say so. */}
+                  <Badge color={credential.backed_up ? 'blue' : 'orange'} variant="light">
+                    {credential.backed_up ? 'Synced' : 'This device only'}
+                  </Badge>
+                </Group>
+              ))}
+            </Stack>
+          </Card>
+        ) : null}
 
-            {user.credentials.map((credential) => (
-              <Group key={credential.id} justify="space-between" wrap="nowrap">
-                <Text size="sm" truncate>
-                  Added {formatDate(credential.created_at)}
-                </Text>
-                {/* A passkey that does not sync is a single point of failure
-                    for an account with no recovery path, and the only honest
-                    thing to do is say so. */}
-                <Badge color={credential.backed_up ? 'blue' : 'orange'} variant="light">
-                  {credential.backed_up ? 'Synced' : 'This device only'}
-                </Badge>
+        {/* Drawn whenever there is a provider connected or one left to connect,
+            which is not the same test as "has identities": a passkey-only
+            account has nothing to list and is exactly the account that most
+            needs the offer. Only a deployment that configured no provider at all
+            loses the card, because then there is neither.
+
+            This heading does keep its count, and for the one state the rows
+            cannot express: zero connected with a Connect button beside it says
+            the second way in is still missing. */}
+        {user.identities.length > 0 || unlinked.length > 0 ? (
+          <Card withBorder padding="md">
+            <Stack gap="sm">
+              <Group justify="space-between">
+                <Title order={4}>Connected accounts</Title>
+                <Badge variant="light">{user.identities.length}</Badge>
               </Group>
-            ))}
-          </Stack>
-        </Card>
-      ) : null}
 
-      {/* Drawn whenever there is a provider connected or one left to connect,
-          which is not the same test as "has identities": a passkey-only
-          account has nothing to list and is exactly the account that most
-          needs the offer. Only a deployment that configured no provider at all
-          loses the card, because then there is neither.
+              {user.identities.map((identity) => {
+                const name =
+                  providers.find((p) => p.id === identity.provider)?.name ?? identity.provider
+                const last = methods === 1
+                const key = `${identity.provider}:${identity.subject}`
 
-          This heading does keep its count, and for the one state the rows
-          cannot express: zero connected with a Connect button beside it says
-          the second way in is still missing. */}
-      {user.identities.length > 0 || unlinked.length > 0 ? (
-        <Card withBorder padding="md">
-          <Stack gap="sm">
-            <Group justify="space-between">
-              <Title order={4}>Connected accounts</Title>
-              <Badge variant="light">{user.identities.length}</Badge>
-            </Group>
+                return (
+                  <Group key={key} justify="space-between" wrap="nowrap">
+                    <div>
+                      <Text size="sm">{name}</Text>
+                      {identity.email ? (
+                        <Text c="dimmed" size="xs">
+                          {identity.email}
+                        </Text>
+                      ) : null}
+                    </div>
 
-            {user.identities.map((identity) => {
-              const name =
-                providers.find((p) => p.id === identity.provider)?.name ?? identity.provider
-              const last = methods === 1
-              const key = `${identity.provider}:${identity.subject}`
-
-              return (
-                <Group key={key} justify="space-between" wrap="nowrap">
-                  <div>
-                    <Text size="sm">{name}</Text>
-                    {identity.email ? (
-                      <Text c="dimmed" size="xs">
-                        {identity.email}
-                      </Text>
-                    ) : null}
-                  </div>
-
-                  {confirming === key ? (
-                    <Group gap="xs" wrap="nowrap">
-                      <Button variant="subtle" onClick={() => setConfirming(null)}>
-                        Cancel
-                      </Button>
+                    {confirming === key ? (
+                      <Group gap="xs" wrap="nowrap">
+                        <Button variant="subtle" onClick={() => setConfirming(null)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          color="red"
+                          loading={busy}
+                          onClick={() => {
+                            void unlinkProvider(identity.provider, identity.subject).then((ok) => {
+                              if (ok) setConfirming(null)
+                            })
+                          }}
+                        >
+                          Disconnect
+                        </Button>
+                      </Group>
+                    ) : (
                       <Button
-                        color="red"
-                        loading={busy}
-                        onClick={() => {
-                          void unlinkProvider(identity.provider, identity.subject).then((ok) => {
-                            if (ok) setConfirming(null)
-                          })
-                        }}
+                        variant="default"
+                        disabled={busy || last}
+                        // Disabled rather than hidden, with the reason attached:
+                        // a control that vanishes reads as a bug, and the reason
+                        // is the thing worth knowing.
+                        title={last ? 'This is the only way left to sign in' : undefined}
+                        onClick={() => setConfirming(key)}
                       >
                         Disconnect
                       </Button>
-                    </Group>
-                  ) : (
-                    <Button
-                      variant="default"
-                      disabled={busy || last}
-                      // Disabled rather than hidden, with the reason attached:
-                      // a control that vanishes reads as a bug, and the reason
-                      // is the thing worth knowing.
-                      title={last ? 'This is the only way left to sign in' : undefined}
-                      onClick={() => setConfirming(key)}
-                    >
-                      Disconnect
-                    </Button>
-                  )}
-                </Group>
-              )
-            })}
+                    )}
+                  </Group>
+                )
+              })}
 
-            {unlinked.length > 0 ? (
-              <Group>
-                {unlinked.map((provider) => (
-                  <Button
-                    key={provider.id}
-                    variant="default"
-                    disabled={busy}
-                    onClick={() => linkProvider(provider.id)}
-                  >
-                    Connect {provider.name}
-                  </Button>
-                ))}
-              </Group>
-            ) : null}
-          </Stack>
-        </Card>
-      ) : null}
-    </Stack>
+              {unlinked.length > 0 ? (
+                <Group>
+                  {unlinked.map((provider) => (
+                    <Button
+                      key={provider.id}
+                      variant="default"
+                      disabled={busy}
+                      onClick={() => linkProvider(provider.id)}
+                    >
+                      Connect {provider.name}
+                    </Button>
+                  ))}
+                </Group>
+              ) : null}
+            </Stack>
+          </Card>
+        ) : null}
+      </Stack>
+    </Page>
   )
 }
+
+/**
+ * The whole trail: one crumb, with no section above it.
+ *
+ * Hoisted out of the component because both returns draw it and a second
+ * literal is a second thing that can come to read differently.
+ */
+const TRAIL = [{ label: 'Account' }]
 
 /** Dates arrive as RFC 3339 and are only ever shown, never compared. */
 function formatDate(value: string): string {

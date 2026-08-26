@@ -76,9 +76,9 @@ policed them.
 
 ## Three rules about writing a test here
 
-**A test runs at one viewport unless the tree branches on width.** Exactly six
-components do: `Columns`, `DataList`, `ModalSheet`, `SectionDeck`, `SheetBody`
-and `RootShell`.
+**A test runs at one viewport unless the tree branches on width.** Exactly seven
+components do: `Columns`, `DataList`, `ModalSheet`, `SectionDeck`, `TabDeck`,
+`SheetBody` and `RootShell`.
 
 `ui/Page` is deliberately **not** a seventh, and its own test proves it rather
 than asserting it in prose: the last case there compares the two renderings byte
@@ -103,12 +103,12 @@ first section in a different order on a phone.
 
 The criterion is what the test *presses*, not what screen it is on.
 `CharacterListScreen`'s row actions live inside `DataList`, so a test that
-presses one belongs at both widths; three tests in that block pressed `Manage
-folders` in the toolbar above the list instead, and asserted a request body and
-a count of buttons in a dialog -- the same markup either way. They run at one
-width now. The dialog is a `ModalSheet` and that swap is asserted on its own
-terms in `src/ui/ModalSheet.test.tsx`, once, rather than three more times
-here.
+presses one belongs at both widths; the tests that press a folder's heading,
+its action menu or **New folder** do not -- what they assert is a request body
+or where a press navigated to, which is the same markup either way. They run at
+one width. The folder dialogs are `ModalSheet`s and that swap is asserted on
+its own terms in `src/ui/ModalSheet.test.tsx`, once, rather than several more
+times here.
 
 **Render the panel, not the page, when the panel is what is under test.**
 `ProficienciesPanel.test.tsx`, `Vitals.test.tsx`, `SheetBody.test.tsx` and the
@@ -231,13 +231,13 @@ independent lifetimes, and here one screen owns one character.
 
 The character list is now the one screen that holds two resources -- its folders
 and its characters -- which is the case that sentence used to leave open. It
-still does not need a library. The two reads are independent, the character
-read is keyed by the selected folder so changing the filter aborts the request
-in flight rather than leaving the old folder's rows under the new heading, and
-every mutation on that screen is followed by an explicit reload of the lists
-that changed. There is no cache to go stale in between. Revisit it when
-something needs a *third* component's copy of the same data to update by
-itself.
+still does not need a library. The two reads are independent and unkeyed: the
+characters read fetches *every* character once and the screen groups them by
+the folder each one carries, so a folder appearing or disappearing costs one
+reload rather than a request per shelf. Every mutation on that screen is
+followed by an explicit reload of the lists that changed, and there is no cache
+to go stale in between. Revisit it when something needs a *third* component's
+copy of the same data to update by itself.
 
 The compendium is immutable for the life of the server process, so
 `lib/api/catalog.ts` memoises each collection's *promise* for the session: two
@@ -297,11 +297,54 @@ Groups section next to it is the shared one, with people and ranks in it, and
 the two words name genuinely different things. A folder lives inside the
 Characters section and never appears in Groups.
 
-`CharacterListScreen` carries the whole feature: a `Select` filters the list to
-one folder, a **Manage folders** dialog creates, renames and deletes them, and
-each row has a menu with Move, Copy and Delete. The filter is a `Select` rather
-than tabs because it renders the same at both viewports and does not overflow
-once an account keeps more than a few folders.
+### A folder is the structure of the page, not a filter on it
+
+`CharacterListScreen` used to draw one table with a `Select` above it reading
+"All characters", a **Manage folders** dialog beside that, and a Folder column
+so the rows could be told apart once you switched back to all of them. All
+three are gone, and none of them was removed for tidiness: each was left with
+nothing to do.
+
+Every folder is now a bordered `FolderPanel` -- a heading you can collapse, its
+own table under it, and its own **New character** and **Import** beneath that.
+That change is worth four consequences:
+
+- **There is nothing to filter.** A folder you can see the edges of is not a
+  narrowing of a list; it *is* the list. The `Select` went, and `ui/Page`'s
+  `filters` slot went with it, having lost its only caller.
+- **There is nothing for the Folder column to say.** Inside a folder every row
+  would carry the same word as the heading two lines above it.
+- **`?folder=` is now a fact about where you pressed** rather than about what a
+  control was set to. Every add button carries its own folder, which is also
+  why each one is named for it -- three buttons reading "New character" is the
+  same ambiguity as a column of "Delete"s.
+- **Both resources drive the page's state.** A character carries a folder *id*,
+  so a folder listing that will not load leaves nothing to head the panels
+  with. The second, inline alert this screen used to keep for the folders
+  request went with the filter it belonged to: while a folder was a filter,
+  drawing the rows anyway was right; now there are no rows to draw.
+
+### The order is the account's, and reordering says so whole
+
+Folders are drawn in the order their owner put them in. The default folder
+leads regardless -- it is the one folder an account cannot lose, and a list
+whose first entry wanders is a list nobody can point at -- so it has no grip
+and no **Move up**/**Move down**.
+
+Reordering is `PUT /v1/folders/order` carrying **every movable folder in the
+wanted order**, not a single move. A "move this one up" applied to a listing
+that has changed since it was drawn moves the wrong folder; a complete order
+either matches what the account has or is refused, and sending it twice leaves
+the same result. That is what makes a drag safe to re-send. See
+[docs/backend.md](backend.md#folders).
+
+The drag itself is hand-rolled over the native events, the way
+`features/character/ScoreAssignment` is, and for the same two reasons: there is
+no drag library below `@/ui`, and a native drag fires on neither a touchscreen
+nor jsdom. So it is never the only way to do something -- **Move up** and
+**Move down** in each folder's menu are the real path, and the one the tests
+press. Four folder actions is also the case `@/ui` blesses a `Menu` for, rather
+than the spelled-out buttons a table row gets.
 
 ## Where a control lives says what it acts on
 
@@ -309,7 +352,13 @@ Three rules, applied to every list screen, because a control's position is the
 only thing on screen that says what it will change.
 
 **The heading line acts on the entity the page is about**, and on nothing else:
-rename, leave, delete. It is not where you add to it.
+rename, leave, delete. It is not where you add to it. The two character screens
+are the rule applied to something that is not a list: the sheet's **Answer what
+is left** and the build screen's **Finish** both act on the character, and both
+sit on the trail's line, against the right edge, drawn by `ui/Page`'s `actions`.
+Finish spent a while against the last tab instead, in a slot `TabRow` had for
+it -- which said it was a control on the tabs, and left a button competing with
+the strip for a 390px line. It is neither of those things.
 
 **A row acts on that row.** Rename and delete sit in the row whose entity they
 edit, with an icon each -- and whether they are drawn is the caller's rank at
@@ -381,6 +430,12 @@ name is that name rather than the whole trail; the parents beside it are a real
 `<nav aria-label="Breadcrumb">` of links. A page still has exactly one
 `role="heading"` at level 2.
 
+**An action is centred on the trail, not pinned to the top of its row.** The
+heading line is `ROW_HEIGHT` tall and the trail sits in the middle of it, so an
+action aligned to `flex-start` hung a few pixels above the words it belongs to
+-- little enough to look like two rows that had failed to line up rather than
+like a decision.
+
 **The heading lines up with the navbar entry naming the same section.** A
 section is named twice on screen at once -- in the navbar, and again as the
 heading of the page it opened -- and the two sat 4px apart with glyphs of 18 and
@@ -419,6 +474,16 @@ has no heading in the accessibility tree at all, and the thing naming it is a
 button rather than an `h2`. The alternative was printing the same word twice on
 the narrowest screen the app supports.
 
+**The row goes with the word, and the block goes with the row.** Hiding the
+heading alone left what it sat in: `ROW_HEIGHT` of nothing plus the stack's
+gap, above every list in the app, which on a 390px screen is the most expensive
+blank space there is. So `Page` also drops the heading row when the phone would
+find nothing on it, and the whole header block when the subtitle has gone too.
+Both are decisions about the *props* -- is there a badge, an action, a subtitle
+-- and the breakpoint stays inside `visibleFrom`, so this is still one tree.
+A section root with an action on its line keeps the row at both widths and
+loses only the duplicated word.
+
 **The current page is not repeated inside the trail.** A breadcrumb ending in a
 non-link copy of the heading directly beneath it says the same name twice to a
 screen reader. The nav is the path *to* here; the heading is here.
@@ -442,23 +507,39 @@ imposing one word everywhere or letting four drift apart again.
 **`Page` does not branch on viewport, and must not.** The actions wrap under the
 heading on a narrow screen because the row is allowed to wrap, and the cap is
 inert below 1024px. The list of components that genuinely swap markup at the
-breakpoint stays at four; `Page.test.tsx` pins that by comparing the two
+breakpoint stays at five; `Page.test.tsx` pins that by comparing the two
 renderings byte for byte, the way `TabRow.test.tsx` does.
 
 ### What stayed different, and why
 
-Unifying is not flattening. Four things survived because each does real work:
+Unifying is not flattening. Two things survived because each does real work:
 
 | Kept | Why |
 | --- | --- |
-| Characters' folder filter | The section's own control, and no other section has folders. It has a named slot (`filters`) rather than being ad-hoc markup. |
-| Characters' *second* error alert | The folders request fails on its own terms. A filter that would not load is no reason to refuse to draw the characters it was going to narrow, so only the characters resource drives the page's state. |
 | Groups' `TabRow` | Members and Characters are two views of one table. |
 | Games' gate on **New game** | You can only open a game at a table you run. |
 
-Out of scope, deliberately: `/account`, `/login`, `/legal`, `/status`, the 404
-and the join flow. None is in a section, none has a trail, and `AccountScreen`
-renders without a router at all.
+Two more used to be here and are not any more, both from Characters, and both
+because the thing they were defending went rather than because the rule caught
+up with them. The **folder filter** had a named `filters` slot on `Page`; when
+folders became the page's structure there was nothing left to filter, so the
+slot lost its only caller and was deleted. The **second error alert** existed
+because a filter that would not load was no reason to refuse to draw the rows
+it was going to narrow -- but a panel needs its folder's *name*, so now both
+resources drive the page's state and there is one alert again. See
+[A folder is the structure of the page](#a-folder-is-the-structure-of-the-page-not-a-filter-on-it).
+
+Out of scope, deliberately: `/login`, `/legal`, `/status`, the 404 and the join
+flow. None of them is in a section and none is behind the signed-in chrome.
+
+`/account` **is** in scope, and was the one screen that had drifted out of it.
+It drew its own `Title` over its own dimmed line, so the profile page's heading
+was a different size from the character list's, started at a different height,
+and was capped by nothing at all on a wide monitor. It wears `Page` now. Being
+in no section is not the same as having no shape: `sectionFor` answers null for
+`/account`, which is exactly the case `Page` already draws as a heading with no
+breadcrumb above it -- and the right one here, the phone's chrome having no
+word for this place either.
 
 ## Sharing is reading, and it is one component
 
@@ -468,9 +549,9 @@ existed for this. **Games are deliberately not a third tab**: see below.
 
 The **Characters** tab is what the group's members have shared with each other.
 Sharing grants a read and only a read, and the panel says so by what it does not
-draw: there is no edit control anywhere on it, no build link, no event log. That
-is not the client hiding things it could offer -- there is no route behind any of
-them for anybody but the owner, so a button would come back 404. The only action
+draw: there is no edit control anywhere on it, and no build link. That
+is not the client hiding something it could offer -- there is no route behind it
+for anybody but the owner, so a button would come back 404. The only action
 on somebody else's row is **Take off**, and only for a DM, because a guest's
 session ends and their character would otherwise be stuck on the table.
 
@@ -539,7 +620,7 @@ grants the read, so the URL says so.
 
 Two things on that screen are not cosmetic:
 
-- **The default folder's row has no delete control.** It is the folder an
+- **The default folder's menu has no delete control.** It is the folder an
   account is guaranteed to have, and the API refuses to delete it. Rename is
   offered, because what an account cannot lose is the folder, not its name.
 - **The delete-folder confirmation states the character count.** Deleting a
@@ -547,31 +628,96 @@ Two things on that screen are not cosmetic:
   is no undo and no backup. A dialog that only named the folder would be
   describing a smaller action than the one about to happen.
 
-New character and Import carry the selected folder through as `?folder=`, so
-whatever the list was filtered to is where the next character lands.
+New character and Import carry their own folder through as `?folder=`: there is
+a pair of them under every folder's table, so where you press is where the next
+character lands.
 
 ## The build screen is a loop, not a wizard
 
 `features/character/BuildScreen` reads `/prompts`, `/events` and `/sheet`, and
-draws five tabs. It is still a loop rather than an N-step wizard, and it has to
+draws six tabs. It is still a loop rather than an N-step wizard, and it has to
 be: prompts nest -- answering the "two skills" branch of a rogue's Expertise is
 what brings the two-skill prompt into existence -- so the total number of steps
 is not knowable until the last one is answered. The tabs are not steps. They
 are the fixed set of *categories* a question can belong to, which is the
 server's own `Prompt.Group` and not a taxonomy this client invented, in the
-order `domain/stages.ts` states: identity, class, abilities, race, background.
-Class first after the name, because it is the choice the most other choices
-hang off -- and the scores straight after it, because they are what the class
-was picked *for*: a barbarian wants the 15 in Strength, and deciding that while
-the class is still the last thing you looked at is the difference between
-building a character and filling in a form.
+order `domain/stages.ts` states: identity, class, abilities, race, background,
+personality. Class first after the name, because it is the choice the most
+other choices hang off -- and the scores straight after it, because they are
+what the class was picked *for*: a barbarian wants the 15 in Strength, and
+deciding that while the class is still the last thing you looked at is the
+difference between building a character and filling in a form. Personality is
+last and is the only tab that asks nothing about the rules -- see
+[below](#who-the-character-is-is-its-own-tab-and-its-own-words).
+
+### The tabs are a deck, so a phone can swipe between them
+
+The five tabs are `ui/TabDeck`. **On a phone** it is a strip over a carousel of
+all five panels, every one mounted, one on screen: pressing a tab scrolls the
+carousel to it and swiping the panel reports the tab it landed on, and neither
+can drive the other in a loop -- scrolling to the slide embla already holds does
+nothing, and the deck only reports a slide that is not the one the caller asked
+for.
+
+**On a wide screen there is no carousel at all**, only the strip and the panel
+that is showing. The carousel answers a phone and nothing else: there the panel
+is the biggest thing on screen and a swipe across it is the cheapest gesture
+available, where reaching back up to a 60px tab is the dearest. With a mouse the
+tabs are one click away, a drag across the page is how you select text, and
+mounting five panels to show one is five times the work for a gesture nobody
+makes. That is the branch, and it is why `TabDeck` is on the list of components
+whose two renderings differ rather than the list whose renderings match.
+
+**A press scrolls, a swipe is left alone, and anything else jumps.** Sliding
+from one tab to the next answers a press -- it shows which way you went. The
+same slide arriving unasked is the page moving while you are reading it, which
+is what a cold load of the build screen did until `TabDeck` told the two apart:
+it opens on the first unanswered category, so every load began on *identity* and
+slid sideways off it.
+
+A swipe is the third case and it took a bug to notice: embla selects the slide
+the moment the gesture decides and is still settling on to it, so a deck that
+"synced" to that selection cut its own animation short. The deck read as jumpy
+next to the sheet's, which nobody had swiped hard enough to see. It now checks
+`selectedScrollSnap()` and does nothing when the carousel is already where it is
+being asked to go.
+
+This is the same object the character sheet's phone rendering already was, and
+that is why it moved into `ui/`: five stage tabs a player leafs between are
+seven sheet sections under a different name, and two copies of a two-way embla
+sync are two copies of the one thing in it that goes subtly wrong.
+`ui/SectionDeck` is now the *desktop* half of a sheet -- where a section knows
+whether it is a bare row or a bordered panel -- and hands the phone half here.
+
+Two things follow from every panel being mounted, and both are worth knowing.
+Where a block sits is remembered per tab rather than for the screen as a whole
+(see [One block per choice](#one-block-per-choice)): with all five drawn at
+once, one shared memory would let the place a dropped answer vacated under
+*class* be claimed by whatever arrived next under *background*. And a test
+about what a tab holds has to say which tab -- `BuildScreen.test.tsx` scopes
+those queries to a slide, because a query against the whole document now sees
+all five categories at once.
+
+The deck does not swipe while the character does not exist. A tab press there
+*creates* one rather than moving anywhere, so a swipe would be a gesture the
+screen answers by refusing to move, and a deck that snaps back is worse than
+one that never gives.
+
+Keyboard focus now walks all five panels rather than stopping at the end of
+one, and the strip follows it: that is embla's own `watchFocus`, which scrolls
+a focused slide into view and emits the same `select` a swipe does. Nothing in
+`TabDeck` implements it, which is worth saying because the obvious hand-rolled
+version is a focus handler that fights the one already there.
 
 The screen opens on the first category with something required outstanding,
 and that is the whole of the help it offers: **answering does not move you**.
 A tab changes when a tab is pressed, and never on the way back from a write --
 answering one question is not a request to be asked another, and a player who
 has just chosen barbarian is usually looking at what barbarian brought with
-it. There is no Next in the tab row for the same reason: the order is the player's,
+it. That has no exception for the first answer either, which for a long time it
+did: see
+[Creating is answering the first question](#creating-is-answering-the-first-question).
+There is no Next in the tab row for the same reason: the order is the player's,
 and a control that walks the tabs in the server's order is a wizard's stride in
 a screen that is not a wizard. `Finish` sits against the last tab rather than
 across the row from it, because it is the thing to do after them.
@@ -592,14 +738,12 @@ projection time -- so it is fetched rather than computed.
 
 **Nothing can be answered before it is asked.** Every tab is freely clickable,
 because a tab is a place to look as well as a place to answer, but what can be
-answered on one is exactly what `/prompts` returned for it. Two surfaces draw
-those questions: the build tab, as blocks that open, and
-`features/character/OutstandingChoices`, which is the character sheet's
-read-only statement of what is left -- and the level-up page's, when there is
-one. Both read the same response and name it through the same
-`features/character/promptNames`, so there is deliberately no second notion of
-"outstanding" anywhere in this client, and no second vocabulary for it. What
-differs is only that one is a list of ways in and the other is a list.
+answered on one is exactly what `/prompts` returned for it. One surface draws
+those questions -- the build tab, as blocks that open -- and it is the only one
+in the client. There used to be a second: `OutstandingChoices` listed the same
+prompts above the character sheet, read-only, with a button beneath it. It is
+gone, and what replaced it is smaller than a list. See [what the sheet says
+about an unfinished character](#what-the-sheet-says-about-an-unfinished-character).
 
 **The client routes nothing.** Every stored entry carries the group of the
 prompt it answered, written by the server, so a change that invalidates an
@@ -636,18 +780,29 @@ than answer the question. Where it wants **N**, the options that were not
 picked go grey as soon as N are: the question has been answered, and an option
 that still looks pressable but does nothing reads as a broken button. What was
 picked stays live either way, because unpicking is how you undo.
-Two questions are genuinely not that shape and get a form each: a name
-(`NameForm`) and the six ability scores (`AbilityScoresForm`, below).
-`StagePanel`
-chooses between the three by the kind of the prompt, and that is the only place
-in the client mapping a prompt kind to a control -- which is what let
-`PromptCard` stay exactly as it was while two new kinds arrived.
 
-None of the three says what the question is. The block they open inside is
-headed by the choice's own name, and a surface that repeated it -- "Two more
-languages", then "Choose 2 more languages" -- would be asking twice. `NameForm`
-is the one exception, because "What are they called?" is not what its block
-says and is the first line anybody reads in this application.
+An option's **description sits under the option that was picked**, and only
+there. It used to run along the same line as the name, cut to 120 characters,
+which gave a list of six draconic ancestries six half-sentences and no whole
+one. Under the name there is room for what the compendium actually wrote, and
+under *only the picked one* the list stays a list -- the description is shown
+where it is being decided about.
+Three questions are genuinely not that shape and get a form each: a name
+(`NameForm`), the six ability scores (`AbilityScoresForm`, below) and the four
+roleplaying lines (`WrittenForm`). `StagePanel` chooses between the four by the
+kind of the prompt, and that is the only place in the client mapping a prompt
+kind to a control -- which is what let `PromptCard` stay exactly as it was
+while three new kinds arrived.
+
+None of the four says what the question is, and there is no exception. The
+block they open inside is headed by the choice's own name, and a surface that
+repeated it -- "Two more languages", then "Choose 2 more languages" -- would be
+asking twice. `NameForm` used to be the exception, on the argument that "What
+are they called?" is the first line anybody reads in this application: it
+carried that heading *and* a field label under it, so the first screen anybody
+sees said "A name", "What are they called?" and "Name", three times over one
+empty box. The block says it; the field carries an `aria-label` for whoever
+cannot see where it sits.
 
 ### One block per choice
 
@@ -674,7 +829,10 @@ the next question.
 **The list grows; it does not rearrange.** Level order decides where a block
 goes the first time it is drawn, and after that it stays there:
 `features/character/blocks` keeps a `BlockOrder` of where everything sits, and
-a key it has not seen sorts to the end. Answering a question therefore adds
+a key it has not seen sorts to the end. There is one `BlockOrder` **per tab**,
+because where a block sits is a fact about the tab it sits on and every tab is
+drawn at once now -- see [the tabs are a
+deck](#the-tabs-are-a-deck-so-a-phone-can-swipe-between-them). Answering a question therefore adds
 what the answer brought with it and moves nothing else -- and the entry that
 answers a question takes that question's own place, rather than the question
 vanishing from the middle of the list while its answer appears at the bottom.
@@ -687,6 +845,12 @@ already confirmed is followed by `useResource`'s `refresh` rather than its
 by a spinner and rebuilt underneath whoever was reading it. A refresh that
 *fails* still takes the screen down to its error, because a list quietly out
 of date is worse than one that says it could not check.
+
+The trail reads `Characters / Ada / Creation`, which is what the screen does;
+the route stays `/build`, because a URL somebody has open is not worth breaking
+over a word. The tabs are capitalised for the same reason a heading is -- a tab
+is a title, not a sentence -- and the word in each is still the category's own,
+which is all the rule below asks of it.
 
 `ui/BlockList` is the primitive underneath, wrapping Mantine's accordion so
 that feature code neither assembles one nor re-decides its variant. It mounts a
@@ -708,6 +872,36 @@ score method and all six numbers, which meant eight selections in one log entry
 and nothing a player could point at and change. The scores are an ordinary open
 choice now, answered on the abilities tab and written as their own entry.
 
+**Creating does not move you either**, and getting that right took carrying the
+intended tab across the navigation. Both `/characters/new` and
+`/characters/:id/build` render this same component, so React reuses the
+instance rather than mounting a second one -- which is why typing a name used
+to leave you looking at the class tab with nothing in the code saying
+"advance". No tab had been chosen, the reread brought the first real prompts
+back, and `firstUnfinished` answered the only question it is ever asked. So the
+tab the gesture aimed at rides across in the route's state and is taken up when
+the character the screen is looking at changes: confirming the name stays on
+identity, and pressing a tab -- which also creates the character, because
+nothing else can be answered until it exists -- goes to *that* tab rather than
+discarding it.
+
+**Nor does the page come down to make way for it.** `useResource` blanks when
+its key changes, which is right -- a different character is a different screen
+-- but creation changes the key from `build:` to `build:chr_1` underneath a
+screen that is already up, so typing a name tore the whole page off, spinner
+and all, for a write that had already succeeded. It read as a page reload
+because that is what it looked like. A `creating` flag holds the page through
+that one transition: the same chrome, the same tab, and the name still in the
+block it was typed into with its button turning, replaced a moment later by
+that block with an answer in it.
+
+Clearing that flag is fiddlier than it looks, and the comment in the code says
+why: on the render that first sees the new id, `useResource` has not reset
+itself yet and still returns the *previous* key's answer -- which for a
+character that did not exist is an empty view reading as `ready`. So "there is
+data now" is true on exactly the render where it means nothing. The flag goes
+when the id has settled and the read it started has finished.
+
 `/characters/new?folder=` carries the folder the character list was filtered to, so
 whatever the list was showing is where the next character lands. Import does the
 same. Absent, the server resolves the account's default.
@@ -726,10 +920,12 @@ looking at. It carries `?folder=` like both its neighbours.
 
 Finished means the build screen's "still to choose" panel is **empty**, not
 merely that the rules call the character complete. Seven of its prompts are
-optional -- a language and the five questions acolyte asks about who the
-character is -- and a stub that left them would have shown seven untouched rows
-to anybody opening the build screen to look at one. The only row that remains is
-the standing offer of a level.
+optional -- acolyte's language and holy symbol, and the five questions about
+who the character is -- and a stub that left them would have shown seven
+untouched rows to anybody opening the build screen to look at one. The four
+written ones are answered as changes rather than picks, which is what they are
+now; the stub is a log the build screen could have written, so it writes what
+that screen would. The only row that remains is the standing offer of a level.
 
 The gate is `import.meta.env.DEV`, not a runtime check on a version or a
 feature flag, and the difference is the point: Vite replaces it with a literal,
@@ -763,10 +959,10 @@ because there is no second gesture on this screen -- pressing the thing you
 want to deal with is the whole of it. There is no
 append-a-correction path and no Back button. The dialog names every dropped
 entry and says the questions will be waiting outstanding in their own
-categories, because they will be -- and it confirms even when nothing is
-dropped, with a green affirmative rather than a red one, so that "this costs
-nothing" is a thing the screen says rather than a thing you infer from its
-silence.
+categories, because they will be -- and it opens **only** when something would
+be lost. A change that costs nothing else is simply made, because confirming
+every change teaches players to confirm without reading, which is exactly the
+habit the one change that *does* cost something needs them not to have.
 
 An answer to a *nested* prompt -- a rogue's Expertise, a half-elf's ability
 bonuses -- cannot be re-posed directly, because the options that made it up
@@ -777,6 +973,15 @@ place from the other side: the question comes back outstanding, and
 what went was. The player is shown none of that -- the same press, the same
 outcome, a moment longer -- and it is asked about on the same rule as
 everything else: only if another answer cannot survive it.
+
+The question that comes back is also **open**. `done` takes the key of a block
+that does not exist yet, and the reread is what brings it into being; without
+that the row you pressed turned back into a shut question and wanted pressing
+again, which is the same gesture twice for one intention. The key is knowable
+in both directions: a dropped entry names the prompt it answered, and a *nested
+option's key is its inner prompt's slug*, so answering "a martial melee weapon"
+rather than the greataxe beside it says exactly which question is about to
+arrive.
 
 ### A category's word appears exactly once
 
@@ -798,7 +1003,7 @@ omission: in none of them is the number yours to pick.
 | Standard array | six printed numbers | deal them out |
 | Rolled | six numbers, 4d6 drop lowest | deal them out, or roll again |
 | Point buy | a 27-point budget | spend it |
-| Manual | an escape hatch | type anything from 1 to 30 |
+| Manual | an escape hatch | step or type anything from 1 to 30 |
 
 The two that deal out a set share `ScoreAssignment`: a pool you take from and
 six abilities to put numbers on. Dragging is the obvious gesture on a mouse and
@@ -807,18 +1012,78 @@ the keyboard and put down with a second one -- the same operation, reachable
 without a pointing device. Dropping onto a taken ability swaps the two; putting
 a number back where it came from returns it to the pool. Nothing can be
 confirmed until all six are placed, because six numbers and five decisions is
-not an answer.
+not an answer. Both halves are drawn at least 44px square: a number waiting to
+be placed used to be a badge, which is a few millimetres of target for the one
+gesture the whole surface exists for.
 
-Point buy is priced by `domain/abilities`, which is where the rule lives: 8
-costs nothing, 9 to 13 cost a point each, 14 costs two and 15 costs two more.
-The steppers refuse a raise the budget cannot afford, so the screen enforces
-the budget instead of complaining about it afterwards -- and points may be left
-unspent, because a player who wants an even spread of 13s has spent 25 and is
-finished.
+Point buy and manual share `ScoreStepper`, and only the middle of the row
+differs. Point buy's number cannot be typed over -- a score there is *bought*,
+and typing 15 into it would be taking it -- while manual's can, because ten
+presses to reach a 20 is not an escape hatch. Point buy is priced by
+`domain/abilities`, which is where the rule lives: 8 costs nothing, 9 to 13
+cost a point each, 14 costs two and 15 costs two more. The steppers refuse a
+raise the budget cannot afford, so the screen enforces the budget instead of
+complaining about it afterwards -- and points may be left unspent, because a
+player who wants an even spread of 13s has spent 25 and is finished.
+
+Manual starts at **ten**, and takes the outgoing method's numbers only when
+that method actually produced six. Switching to it from an unplaced array used
+to show six zeros -- under its own stated minimum of 1 -- because an ability
+nobody has dealt to reads as a 0, and confirming then stored six 10s. The log
+and the screen disagreed about what had been entered, with nothing on screen to
+say so.
 
 The dice live in `domain/abilities` too, and take the die as a parameter: a
 test that cannot say what was rolled can only assert that six numbers came
-back, and "between 3 and 18" is not a test of dropping the lowest.
+back, and "between 3 and 18" is not a test of dropping the lowest. The
+algorithm is the SRD's rule verbatim -- roll four d6, total the highest three,
+six times -- and SRD 5.1 has no re-roll-if-unplayable clause, so neither does
+this.
+
+### Who the character is is its own tab, and its own words
+
+`personality` is the last tab and the only one that asks nothing about the
+rules: a personality trait, an ideal, a bond, a flaw and an alignment. They are
+the *background's* questions -- it is the acolyte entry that suggests what an
+acolyte tends to believe -- and they used to sit under background for exactly
+that reason, which put five questions nobody has to answer in front of the one
+required question on that tab. A group of their own is the server's change, not
+this client's: `domain/stages.ts` gains a line, and nothing else here had to
+learn the tab exists.
+
+The four are **written, not picked**. SRD 5.1 prints eight of each and the
+compendium carries them, and the prompt used to *be* that menu -- eight options
+and no way to say anything else about a character who is yours. The state
+behind them was free text the whole time (`State.Identity.PersonalityTraits` is
+`[]string`), so what changed is only that the prompt stopped pretending
+otherwise. The suggestions are still in the compendium for anybody who wants to
+read them.
+
+That makes them the character's **inputs**, like a name and an alignment: they
+settle a value on the sheet rather than naming a catalogue entry, so each is
+written as the change that settles it -- `identity.personalityTraits set "..."`
+followed by an `add` per further line, which is how the list is stored and
+therefore how it reads back. `features/character/promptNames` holds the one
+table of kind to path to noun, from both ends: the field that writes a trait
+and the block that heads a decided one cannot come to call it two things.
+
+`WrittenForm` draws **one** field, and it is a `Textarea` rather than an input.
+Acolyte's table suggests two traits and the SRD prints eight of each, but a
+count is a fact about a *menu* -- "pick two of these eight" -- and what is
+asked now is one answer in the player's own words, which is a sentence and
+sometimes several. Nothing written is the same as not answering, and these are
+optional, so the button simply stays disabled.
+
+It is a fixed three rows rather than an autosizing one. Mantine's autosize is
+`react-textarea-autosize`, which measures through a listener jsdom has no
+element to attach -- the field could not even be focused under test -- and
+`vi.mock` is not available to paper over it. Three rows and a scrollbar is a
+smaller loss than a control the suite cannot drive.
+
+The prompt is told apart from a menu the same way the six starting scores are
+told apart from a level-up improvement: **by whether it offers anything to pick
+between**. That is the server's own statement of what may be picked here, not a
+slug this client has memorised.
 
 ### Level-up is not offered
 
@@ -845,6 +1110,26 @@ skills, the proficiencies, the traits and the gear. `features/character/SheetBod
 is that list, and `ui/SectionDeck` draws it -- across the page on a wide screen,
 and as a deck of tabs on a phone.
 
+### What the sheet says about an unfinished character
+
+One button on the heading line, reading **Answer what is left**, and only when
+`/prompts` comes back with something in it. Its presence is the whole message:
+the sheet does not enumerate what is open, because enumerating it put the build
+screen's work on the page nobody came to build on -- an alert, a list of five
+questions, and the sheet itself pushed below the fold on a phone. The screen
+that answers a question is the screen that lists it.
+
+Two things went with that list. `features/character/OutstandingChoices` had no
+other caller and is deleted rather than kept for a level-up page that does not
+exist. And the **Event log** link that used to be the sheet's only action is
+gone from the page for now -- `/characters/:id/log` still serves it, and is
+still the unabridged record, but nothing in the client links there.
+
+A `/prompts` that *failed* draws no button. The request is deliberately
+survivable -- a sheet is worth drawing with a second request down, which is the
+same bargain the compendium lookups make -- and the honest reading of "I do not
+know what is open" is to offer nothing rather than to guess.
+
 ### On a phone the sheet is a deck, not an accordion
 
 One row of tabs under the character's name, one section on screen, and a swipe
@@ -861,8 +1146,11 @@ three others first. It also put the headline numbers -- identity, the ability
 cards, the vitals -- above the accordion where they were never reachable except
 by scrolling past them. As slides they are tabs like any other.
 
-The tab strip is `ui/TabRow`, unchanged, because six tabs do not fit across a
-390px screen and a strip that scrolls sideways is the whole of what it is. It
+The strip and the carousel are `ui/TabDeck`, which the build screen's five
+stage tabs also draw -- see [the tabs are a
+deck](#the-tabs-are-a-deck-so-a-phone-can-swipe-between-them). Under it is
+`ui/TabRow`, unchanged, because six tabs do not fit across a 390px screen and a
+strip that scrolls sideways is the whole of what it is. It
 scrolls away with the page rather than pinning under the header: that is one
 fewer row of chrome on a screen this app has already spent an argument buying
 back (see [Two views, one codebase](#two-views-one-codebase)), and a swipe
@@ -1150,6 +1438,14 @@ start of a fight; at two columns on a phone, first position is the only one
 visible without the eye travelling.
 
 ## The log has its own page, and it never asks for the sheet
+
+**Nothing links to it at the moment.** The sheet's Event log button came off the
+page (see [what the sheet says about an unfinished
+character](#what-the-sheet-says-about-an-unfinished-character)), so the route is
+reached by typing it. The screen and its route are kept whole rather than
+deleted: what was wanted was one fewer control on the sheet, not the loss of the
+one page that can answer "why do I have this proficiency?" when the projection
+has gone wrong.
 
 Its breadcrumb trail is `Characters / Event log` -- two crumbs, where every
 other detail page has three and names the thing it is about. That is the same
@@ -1624,8 +1920,9 @@ rather than at the call site:
 | `ModalSheet` | centred modal | bottom drawer |
 | `DataList` | table | labelled cards |
 | `Columns` | side-by-side panels | accordion |
-| `SectionDeck` | full-width blocks, then side-by-side panels | a tab strip over a carousel |
-| `TabRow` | tab strip, actions right | the same, scrolled sideways |
+| `SectionDeck` | full-width blocks, then side-by-side panels | a `TabDeck` |
+| `TabDeck` | tab strip, and the active panel | tab strip over a carousel of every panel |
+| `TabRow` | tab strip | the same, scrolled sideways, ends faded |
 | `BlockList` | a list of blocks, one open | the same |
 
 `Columns` and `SectionDeck` are the same idea answering two different questions,
@@ -1654,11 +1951,51 @@ phone accordion it needed a genuinely subtle arrangement -- `Accordion.Control`
 invalid markup with the outer control swallowing the press -- and carrying that
 subtlety for no caller is how it comes to be wrong the day somebody needs it.
 
+`TabRow`'s **`actions`** went the same way and for the same reason, once its one
+caller -- the build screen's Finish -- moved to the heading line where it
+belonged. What that slot carried was a `flex: 0 0 auto` and a paragraph
+explaining why the strip beside it was the only thing allowed to give way. Both
+are gone with it.
+
 `TabRow` and `BlockList` are the ones whose two renderings are **identical
 markup**. The others genuinely swap components at the breakpoint; `TabRow` is a
 `ScrollArea type="never"` that is simply inert at a width the tabs fit in, so
 there is no second tree to keep working and a test at one width is a real test
-of the other. The active tab is brought into view by setting `scrollLeft`, not
+of the other. `TabDeck` was on this list for a while and is not any more -- see
+below, which is the argument for why.
+
+### A scrolling strip rests on a tab, and hides the one it cuts
+
+Two things that only matter once the tabs do not fit, which on the sheet is
+always: seven labels are 657px and a phone viewport is 369.
+
+**It rests on a tab's left edge.** Bringing the active tab into view used to
+stop the moment its *right* edge cleared the viewport, which is the least it
+could do and leaves whatever tab straddles the left edge cut in half. Landing on
+the tab's own left edge cannot leave a fragment, because a boundary is where a
+tab begins.
+
+**The rule under the tabs spans the tabs.** `Tabs.List` is a block inside the
+scroller, so it took the *viewport's* width -- 369px against 657px of tabs --
+and its bottom rule stopped a third of the way along while the tabs themselves
+overflowed it. From a scrolled position that draws as a stray dash beside the
+first tab you can see, which is what it was reported as. `width: max-content`
+makes the list as wide as what is in it.
+
+**The end that is cut is hidden, not faded.** The far end of the strip is the
+one place the first rule cannot win -- the browser clamps the scroll wherever
+the arithmetic puts it, which on the sheet's last tab is 36px into
+*Proficiencies*. A gradient across that fragment was tried at 24px and again at
+32px and failed both times for the same reason: the far half of it sits at
+80-90% opacity and reads as a word. So the mask is transparent for the
+fragment's measured width and ramps up over the 16px after it, where the next
+whole tab starts. An end resting exactly on a boundary hides nothing and keeps
+the ramp, because an edge drawn hard says the strip ends there.
+
+Both are measured from the tabs' own geometry, which is the one thing in this
+component the suite cannot press: jsdom computes no layout, so every strip there
+is 0px wide, never overflows, and never draws a mask. What the tests hold is
+that the absence is identical at both viewports. The active tab is brought into view by setting `scrollLeft`, not
 by `scrollIntoView`, which scrolls every scrollable ancestor -- it would drag
 the document as well as the strip, and jsdom does not implement it. A stack of
 bordered disclosures needs no branch either: it is right at 390px and at

@@ -37,10 +37,25 @@ export function ModalSheet({ opened, onClose, title, children, size = 'md' }: Mo
       onClose={onClose}
       title={title}
       position="bottom"
-      size="auto"
-      // Anything taller than this hides the sheet's own header behind the
-      // browser chrome on a short phone viewport.
-      styles={{ content: { maxHeight: '85dvh' } }}
+      /*
+       * The height is set here rather than with `size`, and that is a bug fix
+       * rather than a preference.
+       *
+       * `size="auto"` reads like it should hug the content and does nothing of
+       * the sort: Mantine's `getSize` turns any non-numeric size into
+       * `var(--drawer-size-<name>)`, and there is no `--drawer-size-auto` in
+       * its stylesheet. An undefined custom property is *guaranteed-invalid*,
+       * which is precisely the case where `var()` takes its fallback -- so
+       * `height: var(--drawer-height, calc(100% - ...))` resolved to 100% and
+       * every sheet on a phone opened as tall as the cap below allowed,
+       * whatever was in it. A three-line "New folder" form filled the screen.
+       *
+       * `height: auto` is an inline style, so it beats the class rule outright
+       * and needs no `!important`. The cap stays: anything taller than this
+       * hides the sheet's own header behind the browser chrome on a short
+       * phone viewport.
+       */
+      styles={{ content: { height: 'auto', maxHeight: '85dvh' } }}
     >
       {children}
     </Drawer>

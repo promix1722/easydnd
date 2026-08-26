@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { Prompt } from '@/lib/api'
+import type { Change, Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 
@@ -81,6 +81,26 @@ const SCORES: Prompt = {
   heldOnly: false,
 }
 
+/**
+ * A written question, and nothing to pick between.
+ *
+ * The empty option set is the whole of what tells this apart from a menu, and
+ * it is the server's own statement that there is nothing on offer.
+ */
+const TRAITS: Prompt = {
+  choice: {
+    prompt: 'character/personality-trait',
+    choose: 1,
+    kind: 'personality',
+    from: { kind: 'explicit' },
+  },
+  group: 'personality',
+  optional: true,
+  advances: false,
+  event: { type: 'change' },
+  heldOnly: false,
+}
+
 const NAMES = new Map([['class:rogue', 'Rogue']])
 
 function panel(
@@ -91,6 +111,8 @@ function panel(
     asking?: Asking | null
     onOpen?: (key: string | null) => void
     onNext?: () => void
+    onAnswerChanges?: (asking: Asking, changes: Change[]) => void
+    lines?: readonly string[]
   } = {},
 ) {
   return (
@@ -103,10 +125,11 @@ function panel(
       onAnswerPicks={vi.fn()}
       onNameChange={vi.fn()}
       onAnswerName={vi.fn()}
-      onAnswerChanges={vi.fn()}
+      onAnswerChanges={over.onAnswerChanges ?? vi.fn()}
       pending={false}
       fields={[]}
       {...(over.onNext ? { onNext: over.onNext } : {})}
+      {...(over.lines ? { lines: over.lines } : {})}
     />
   )
 }
@@ -114,7 +137,7 @@ function panel(
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */
@@ -218,5 +241,77 @@ describe('StagePanel', () => {
 
     rerender(panel([], []))
     expect(screen.getByText('Nothing to answer yet.')).toBeInTheDocument()
+  })
+})
+
+/**
+ * A trait is written, not picked.
+ *
+ * The SRD prints eight of each and the compendium carries them, but a trait is
+ * the one line on a sheet that is nobody's but the player's -- so the prompt
+ * arrives with nothing to choose between and the surface is a field.
+ */
+describe('the questions answered in words', () => {
+  const viewport = 'desktop'
+
+  const written = () =>
+    panel([], [TRAITS], {
+      openKey: 'open:character/personality-trait',
+      asking: { prompt: TRAITS, replaces: null },
+    })
+
+  it('offers a field rather than options, and writes what the sheet stores', async () => {
+    const user = setupUser()
+    const onAnswerChanges = vi.fn()
+    renderAt(
+      viewport,
+      panel([], [TRAITS], {
+        openKey: 'open:character/personality-trait',
+        asking: { prompt: TRAITS, replaces: null },
+        onAnswerChanges,
+      }),
+    )
+
+    // A field, and no menu: the SRD's eight suggestions are in the compendium
+    // to read, not to pick from.
+    expect(screen.queryByRole('button', { name: /sacred texts/ })).not.toBeInTheDocument()
+    const field = screen.getByLabelText('Personality trait')
+    // More than one line, because these are sentences.
+    expect(field.tagName).toBe('TEXTAREA')
+
+    await user.type(field, 'I quote sacred texts.')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    expect(onAnswerChanges.mock.calls[0]?.[1]).toEqual([
+      {
+        path: 'identity.personalityTraits',
+        op: 'set',
+        value: { kind: 'string', string: 'I quote sacred texts.' },
+      },
+    ])
+  })
+
+  it('will not answer with nothing', async () => {
+    const user = setupUser()
+    renderAt(viewport, written())
+
+    // Nothing written is the same as not answering, and this is optional --
+    // so there is nothing to confirm.
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled()
+    await user.type(screen.getByLabelText('Personality trait'), '   ')
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled()
+  })
+
+  it('starts from what is already written when the answer is being changed', () => {
+    renderAt(
+      viewport,
+      panel([], [TRAITS], {
+        openKey: 'open:character/personality-trait',
+        asking: { prompt: TRAITS, replaces: null },
+        lines: ['I quote sacred texts.'],
+      }),
+    )
+
+    expect(screen.getByLabelText('Personality trait')).toHaveValue('I quote sacred texts.')
   })
 })

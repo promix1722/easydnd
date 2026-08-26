@@ -203,6 +203,11 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// characters in it.
 			authed.GET("/folders", h.Folder.List)
 			authed.POST("/folders", h.Folder.Create)
+			// The order of the collection, not of one folder, which is
+			// why it is a path of its own and not a field on the row
+			// below it. Nothing collides: `order` is the only thing
+			// under /folders that PUT answers.
+			authed.PUT("/folders/order", h.Folder.Reorder)
 			authed.PATCH("/folders/:id", h.Folder.Rename)
 			authed.DELETE("/folders/:id", h.Folder.Delete)
 

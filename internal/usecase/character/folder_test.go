@@ -348,3 +348,95 @@ func TestListRefusesAFolderTheCallerDoesNotOwn(t *testing.T) {
 		t.Errorf("List() with another owner's folder error = %v, want a NotFoundError", err)
 	}
 }
+
+func TestReorderFoldersSetsTheListing(t *testing.T) {
+	s := newService(t)
+	ctx := context.Background()
+
+	first, err := s.CreateFolder(ctx, testOwner, "Tuesday game")
+	if err != nil {
+		t.Fatalf("CreateFolder() error = %v", err)
+	}
+	second, err := s.CreateFolder(ctx, testOwner, "Retired")
+	if err != nil {
+		t.Fatalf("CreateFolder() error = %v", err)
+	}
+
+	if err := s.ReorderFolders(ctx, testOwner, []domain.FolderID{second.ID, first.ID}); err != nil {
+		t.Fatalf("ReorderFolders() error = %v", err)
+	}
+
+	folders, err := s.Folders(ctx, testOwner)
+	if err != nil {
+		t.Fatalf("Folders() error = %v", err)
+	}
+	if len(folders) != 3 {
+		t.Fatalf("Folders() length = %d, want 3", len(folders))
+	}
+	if !folders[0].Default {
+		t.Error("Folders() first entry is not the default")
+	}
+	if folders[1].ID != second.ID || folders[2].ID != first.ID {
+		t.Errorf("Folders() order = %q,%q, want %q,%q",
+			folders[1].ID, folders[2].ID, second.ID, first.ID)
+	}
+}
+
+// The default folder leads the listing, so there is no position for it to
+// take. Naming it is a 400 rather than a 404 for the same reason deleting it
+// is: it exists, the caller owns it, and this particular folder does not move.
+func TestReorderFoldersRefusesTheDefault(t *testing.T) {
+	s := newService(t)
+	ctx := context.Background()
+
+	def, err := s.DefaultFolder(ctx, testOwner)
+	if err != nil {
+		t.Fatalf("DefaultFolder() error = %v", err)
+	}
+	other, err := s.CreateFolder(ctx, testOwner, "Tuesday game")
+	if err != nil {
+		t.Fatalf("CreateFolder() error = %v", err)
+	}
+
+	err = s.ReorderFolders(ctx, testOwner, []domain.FolderID{def.ID, other.ID})
+	var validation *types.ValidationError
+	if !errors.As(err, &validation) {
+		t.Fatalf("ReorderFolders() error = %v, want a ValidationError", err)
+	}
+}
+
+// The same 404 a move or a rename gives, and from the same choke point: a
+// folder id the caller does not own is one that, as far as they can tell,
+// does not exist.
+func TestReorderFoldersIsRefusedAnotherOwnersFolder(t *testing.T) {
+	s := newService(t)
+	ctx := context.Background()
+
+	mine, err := s.CreateFolder(ctx, testOwner, "Mine")
+	if err != nil {
+		t.Fatalf("CreateFolder() error = %v", err)
+	}
+	theirs, err := s.CreateFolder(ctx, "somebody-else", "Theirs")
+	if err != nil {
+		t.Fatalf("CreateFolder() error = %v", err)
+	}
+
+	err = s.ReorderFolders(ctx, testOwner, []domain.FolderID{mine.ID, theirs.ID})
+	if !types.IsNotFound(err) {
+		t.Errorf("ReorderFolders() error = %v, want a NotFoundError", err)
+	}
+}
+
+// An account whose only folder is the default has nothing to order, and an
+// empty body is the honest way to say so rather than an error.
+func TestReorderFoldersAcceptsNothingToOrder(t *testing.T) {
+	s := newService(t)
+	ctx := context.Background()
+
+	if _, err := s.DefaultFolder(ctx, testOwner); err != nil {
+		t.Fatalf("DefaultFolder() error = %v", err)
+	}
+	if err := s.ReorderFolders(ctx, testOwner, nil); err != nil {
+		t.Errorf("ReorderFolders() error = %v, want nil", err)
+	}
+}

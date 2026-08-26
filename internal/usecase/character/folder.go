@@ -62,6 +62,40 @@ func (s *Service) RenameFolder(
 	return s.folders.Get(ctx, id)
 }
 
+// ReorderFolders sets the order owner's folders are listed in.
+//
+// The default folder is not named and cannot be: it leads the listing, and a
+// caller that includes it is asking for something the model does not offer.
+// That refusal is a 400 rather than a 404, for the same reason deleting it is:
+// the folder exists, the caller owns it, and the honest answer is that this
+// particular folder does not move.
+//
+// Every other id goes through ownedFolder first, so a folder belonging to
+// somebody else is a 404 here exactly as it is on a move or a rename -- the
+// store would refuse it too, but as a set mismatch, and "one of these is not
+// yours" is a worse answer than the one the choke point already gives.
+func (s *Service) ReorderFolders(
+	ctx context.Context, owner domain.OwnerID, ids []domain.FolderID,
+) error {
+	for _, id := range ids {
+		folder, err := s.ownedFolder(ctx, owner, id)
+		if err != nil {
+			return err
+		}
+		if folder.Default {
+			return types.NewValidationError(
+				"%q is the default folder and is always listed first", folder.Name)
+		}
+	}
+	// Materialised before reordering for the same reason Folders does it:
+	// an account that has never listed its folders has no default yet, and
+	// the store counts one when it decides whether the set is complete.
+	if _, err := s.folders.EnsureDefault(ctx, owner); err != nil {
+		return err
+	}
+	return s.folders.Reorder(ctx, owner, ids)
+}
+
 // DeleteFolder removes a folder and every character filed in it.
 //
 // The cascade is deliberate and it is destructive: a deleted folder takes its

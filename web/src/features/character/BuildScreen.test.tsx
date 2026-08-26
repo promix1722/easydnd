@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -6,6 +6,9 @@ import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 
 import { BuildScreen } from './BuildScreen'
+
+import { STAGE_LABELS } from '@/domain'
+import type { Stage } from '@/domain'
 
 /**
  * The build screen, wired to responses in the shape the real API sends.
@@ -149,6 +152,42 @@ const LEVELLED_LOG = {
   ],
 }
 
+/**
+ * The nested prompt coming back, which is what dropping its answer is *for*.
+ *
+ * Its options came with the race, which is why it cannot be re-posed from the
+ * entry and has to be asked again by the server.
+ */
+const ABILITY_BONUS_AGAIN = {
+  seq: 2,
+  complete: false,
+  prompts: [
+    {
+      choice: {
+        prompt: 'half-elf/ability-bonus/0',
+        choose: 2,
+        kind: 'ability-bonus',
+        from: {
+          kind: 'explicit',
+          options: [
+            { key: 'dex', kind: 'ability-bonus', ability: 'dex', bonus: 1 },
+            { key: 'con', kind: 'ability-bonus', ability: 'con', bonus: 1 },
+          ],
+        },
+      },
+      source: 'race:half-elf',
+      group: 'race',
+      optional: false,
+      advances: false,
+      event: { type: 'race', ref: 'race:half-elf' },
+      heldOnly: false,
+    },
+  ],
+}
+
+/** The same log with the dropped entry gone. */
+const DROPPED_LOG = { seq: 2, events: ANSWERED_LOG.events.slice(0, 2) }
+
 /** What the server asks next once the race is settled: a different category. */
 const AFTER_RACE = { seq: 2, complete: false, prompts: [PARTWAY.prompts[1]] }
 
@@ -171,7 +210,30 @@ const ALIGNMENT = {
         kind: 'alignment',
         from: { kind: 'collection', collection: 'alignment' },
       },
-      group: 'background',
+      // Who the character is, not what their background was: the server moved
+      // this and the four written questions to a group of their own.
+      group: 'personality',
+      optional: true,
+      advances: false,
+      event: { type: 'change' },
+      heldOnly: false,
+    },
+  ],
+}
+
+/** The traits question, as the server poses it: two of them, and no options. */
+const TRAITS_OPEN = {
+  seq: 2,
+  complete: false,
+  prompts: [
+    {
+      choice: {
+        prompt: 'character/personality-trait',
+        choose: 1,
+        kind: 'personality',
+        from: { kind: 'explicit' },
+      },
+      group: 'personality',
       optional: true,
       advances: false,
       event: { type: 'change' },
@@ -198,8 +260,28 @@ const ALIGNED_LOG = {
     {
       seq: 3,
       type: 'change',
-      source: 'background',
+      source: 'personality',
       changes: [{ path: 'identity.alignment', op: 'set', value: { kind: 'slug', slug: 'neutral' } }],
+    },
+  ],
+}
+
+/** A trait written, as its own entry. */
+const TRAITED_LOG = {
+  seq: 3,
+  events: [
+    ...BACKGROUND_LOG.events,
+    {
+      seq: 3,
+      type: 'change',
+      source: 'personality',
+      changes: [
+        {
+          path: 'identity.personalityTraits',
+          op: 'set',
+          value: { kind: 'string', string: 'I quote sacred texts at every turn.' },
+        },
+      ],
     },
   ],
 }
@@ -337,9 +419,19 @@ interface Wire {
   thenEvents?: unknown
   dropped?: unknown[]
   created?: unknown
+  /**
+   * Held open until it resolves: every read after the first write waits on it.
+   *
+   * The suite's fetches otherwise settle within the same click, so a state
+   * that only exists while a request is in flight cannot be observed at all --
+   * and a test that cannot observe it passes whether or not the code is there.
+   */
+  until?: Promise<void>
 }
 
 let posted: { url: string; method: string; body: unknown }[] = []
+/** Every read the screen has started, so a test can wait for one to be in flight. */
+let read: string[] = []
 
 /**
  * Answers everything one build screen asks for.
@@ -355,6 +447,7 @@ function mockApi({
   thenEvents,
   dropped,
   created,
+  until,
 }: Wire = {}) {
   vi.stubGlobal(
     'fetch',
@@ -372,6 +465,8 @@ function mockApi({
         return jsonResponse({ seq: head, sheet: SHEET, ...(dropped ? { dropped } : {}) })
       }
       if (url.includes('/prompts')) {
+        read.push(url)
+        if (until !== undefined && posted.length > 0) await until
         return jsonResponse(then !== undefined && posted.length > 0 ? then : prompts)
       }
       if (url.includes('/events')) {
@@ -419,7 +514,34 @@ function renderNew(viewport: 'mobile' | 'desktop') {
 }
 
 const tabs = () => screen.getAllByRole('tab').map((tab) => tab.textContent ?? '')
-const tab = (name: string) => screen.getByRole('tab', { name })
+/**
+ * One tab, by the stage's own word.
+ *
+ * The label is that word capitalised -- a tab is a title, not a sentence --
+ * and `STAGE_LABELS` is the one place that says so, which is why this maps
+ * rather than every call site spelling it twice.
+ */
+const tab = (name: string) => screen.getByRole('tab', { name: STAGE_LABELS[name as Stage] })
+/** Which tab is showing, which is the one Mantine marks selected. */
+const current = () =>
+  screen.getAllByRole('tab').find((each) => each.getAttribute('aria-selected') === 'true')
+    ?.textContent ?? ''
+
+/**
+ * One tab's panel, by the same word.
+ *
+ * The tabs are a deck on a phone: every panel is a mounted slide, because the
+ * one you are swiping towards has to be drawn before you arrive at it. So a
+ * query against the whole document sees every category at once, and a test
+ * about what a *tab* holds has to say which one -- otherwise "the class tab
+ * does not show a background choice" passes for the wrong reason and keeps
+ * passing after the screen stops filtering anything at all.
+ *
+ * A slide is a `role="group"` named by its tab, which is the same handle
+ * `SectionDeck.test.tsx` uses on the sheet's own deck.
+ */
+const panel = (name: string) =>
+  within(screen.getByRole('group', { name: STAGE_LABELS[name as Stage] }))
 const writes = () => posted.filter((write) => !write.url.includes('dryRun'))
 
 /**
@@ -435,18 +557,28 @@ beforeEach(() => {
   // No resetCatalogCache and no unstubAllGlobals: src/test/setup.ts does both
   // after every test in the suite, which is where they have to be anyway.
   posted = []
+  read = []
   mockApi()
 })
 
 /**
- * One viewport. Nothing this screen draws branches on width -- only `Columns`,
- * `DataList`, `ModalSheet`, `SectionDeck`, `SheetBody` and `RootShell` do, and the suite runs without CSS,
- * so a responsive prop cannot move the DOM either. The one exception is the
- * sheet that prices a change, which is a `ModalSheet`; the two tests that open
- * it are in their own block at the foot of this file. See docs/web.md.
+ * One viewport, and it is the phone's.
+ *
+ * This screen does branch on width now -- its tabs are a `TabDeck`, which is a
+ * carousel of every panel below `md` and the active panel alone above it -- so
+ * "either width will do" stopped being true. The phone's is the one worth
+ * having: it mounts all five categories at once, which is the rendering where
+ * a question can turn up under the wrong tab, and it is a superset of what the
+ * wide one draws. That the wide one draws a strip and one panel is `TabDeck`'s
+ * own claim, tested once in `src/ui/TabDeck.test.tsx` rather than 24 more
+ * times here. See docs/web.md.
+ *
+ * The other exception is the sheet that prices a change, which is a
+ * `ModalSheet`; the two tests that open it are in their own block at the foot
+ * of this file.
  */
 describe('BuildScreen', () => {
-  const viewport = 'desktop'
+  const viewport = 'mobile'
 
   it('names the question the server said was next, and opens it when pressed', async () => {
     const user = setupUser()
@@ -495,7 +627,7 @@ describe('BuildScreen', () => {
     })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     const drawn = () => screen.getByRole('tabpanel').textContent ?? ''
     await waitFor(() => {
       expect(drawn()).toContain('A subrace')
@@ -527,11 +659,11 @@ describe('BuildScreen', () => {
 
     // The class tab has something open, so there is nothing to move on from.
     await screen.findByText('A class')
-    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
+    expect(panel('class').queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
 
     // The identity tab is finished: the name is settled and nothing is open.
     await user.click(tab('identity'))
-    await user.click(await screen.findByRole('button', { name: 'Next' }))
+    await user.click(await panel('identity').findByRole('button', { name: 'Next' }))
 
     // On to the next category with something required outstanding, which is
     // the class -- identity is where we were and abilities has nothing open.
@@ -558,7 +690,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     await user.click(block(/Two to be proficient in/))
     expect(await screen.findByRole('button', { name: /Acrobatics/ })).toBeInTheDocument()
 
@@ -577,7 +709,7 @@ describe('BuildScreen', () => {
     // hang off -- and the scores straight after it, because they are what the
     // class was picked for. Nothing is disabled, because a tab is a place to
     // look as well as a place to answer.
-    expect(tabs()).toEqual(['identity', 'class', 'abilities', 'race', 'background'])
+    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
   })
 
@@ -591,18 +723,23 @@ describe('BuildScreen', () => {
 
     // The class tab opens first: it is the first category in order with
     // something required outstanding.
-    expect.soft(await screen.findByText('A class')).toBeInTheDocument()
-    expect.soft(screen.queryByText('A background')).not.toBeInTheDocument()
+    await screen.findByText('A class')
+    expect.soft(tab('class')).toHaveAttribute('aria-selected', 'true')
+    // Each panel holds its own category's questions and no others -- which is
+    // what the server's grouping buys, and is asserted per panel because every
+    // panel is on the page at once.
+    expect.soft(panel('class').getByText('A class')).toBeInTheDocument()
+    expect.soft(panel('class').queryByText('A background')).not.toBeInTheDocument()
 
     await user.click(tab('race'))
-    expect.soft(screen.getByText(/Two to be proficient in/)).toBeInTheDocument()
-    expect.soft(screen.queryByText('A class')).not.toBeInTheDocument()
+    expect.soft(panel('race').getByText(/Two to be proficient in/)).toBeInTheDocument()
+    expect.soft(panel('race').queryByText('A class')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'identity' }))
-    expect.soft(screen.getByText('Name')).toBeInTheDocument()
+    await user.click(tab('identity'))
+    expect.soft(panel('identity').getByText('Name')).toBeInTheDocument()
     // "Nothing left here", never "nothing left in identity": the category's
     // word belongs to its tab and appears exactly once on the page.
-    expect.soft(screen.getByText('Nothing left here.')).toBeInTheDocument()
+    expect.soft(panel('identity').getByText('Nothing left here.')).toBeInTheDocument()
 
     expect.soft(posted).toHaveLength(0)
   })
@@ -612,7 +749,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     await user.click(screen.getByRole('button', { name: /Two to be proficient in/ }))
     await user.click(await screen.findByRole('button', { name: /Acrobatics/ }))
     await user.click(screen.getByRole('button', { name: /Insight/ }))
@@ -642,7 +779,7 @@ describe('BuildScreen', () => {
     mockApi({ then: AFTER_RACE })
     renderBuild(viewport)
 
-    expect(await screen.findByRole('tab', { name: 'race' })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: 'Race' })).toHaveAttribute(
       'aria-selected',
       'true',
     )
@@ -653,11 +790,19 @@ describe('BuildScreen', () => {
     // The only question left is on another tab, and the screen still does not
     // go there: answering is not a request to be moved on, and what a class
     // or a race brought with it is usually the thing you want to look at.
+    //
+    // Waited for rather than asserted absent, which is what this used to do and
+    // was the wrong assertion twice over. Every panel is mounted now, so the
+    // background question really is in the document -- on the background tab.
+    // And "not yet in the document" was only ever true until the reread landed,
+    // so the old line passed by racing the refresh it was supposed to be
+    // asserting about.
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
+      expect(panel('background').getByText('A background')).toBeInTheDocument()
     })
     expect(tab('race')).toHaveAttribute('aria-selected', 'true')
-    expect(screen.queryByText('A background')).not.toBeInTheDocument()
+    expect(panel('race').queryByText('A background')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
   })
 
   it('finishes to the sheet', async () => {
@@ -687,12 +832,12 @@ describe('BuildScreen', () => {
     expect.soft(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
     // The one prompt the server still poses is the offer of a level, which
     // this client does not offer -- so there is genuinely nothing here.
-    expect.soft(screen.getByText('Nothing left here.')).toBeInTheDocument()
+    expect.soft(panel('identity').getByText('Nothing left here.')).toBeInTheDocument()
 
     // Advancement is the class story continued, so a level that was taken
     // sits on the class tab rather than under a tab of its own.
-    await user.click(screen.getByRole('tab', { name: 'class' }))
-    expect.soft(screen.getByText('Level gained')).toBeInTheDocument()
+    await user.click(tab('class'))
+    expect.soft(panel('class').getByText('Level gained')).toBeInTheDocument()
 
     // Read-only, and the standing offer of another one is not on the page at
     // all: level-up does not work, and a question that silently does nothing
@@ -700,7 +845,7 @@ describe('BuildScreen', () => {
     // fact about the character, so it is not even a block that opens.
     expect.soft(screen.queryByRole('button', { name: /Level gained/ })).not.toBeInTheDocument()
     expect.soft(screen.queryByText(/Another level/)).not.toBeInTheDocument()
-    expect.soft(screen.getByText('Nothing left here.')).toBeInTheDocument()
+    expect.soft(panel('class').getByText('Nothing left here.')).toBeInTheDocument()
 
     // The class itself is still a choice like any other.
     expect.soft(block(/Class chosen/)).toBeInTheDocument()
@@ -711,7 +856,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     await user.click(block(/Race chosen/))
     await user.click(await screen.findByRole('button', { name: 'Dwarf' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
@@ -742,7 +887,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'identity' }))
+    await user.click(await screen.findByRole('tab', { name: 'Identity' }))
     await user.click(block(/Name/))
 
     // The field starts from the name it is changing rather than from nothing.
@@ -803,7 +948,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: { seq: 3, complete: false, prompts: [] }, events: ALIGNED_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'background' }))
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
     // It reads as what was decided rather than as the patch that recorded it.
     await user.click(block(/Alignment/))
 
@@ -819,6 +964,74 @@ describe('BuildScreen', () => {
         type: 'change',
         changes: [
           { path: 'identity.alignment', op: 'set', value: { kind: 'slug', slug: 'lawful-good' } },
+        ],
+      },
+    })
+  })
+
+  it('writes a personality trait as the change that settles it', async () => {
+    const user = setupUser()
+    mockApi({ prompts: TRAITS_OPEN, events: BACKGROUND_LOG })
+    renderBuild(viewport)
+
+    await user.click(await screen.findByRole('button', { name: /One personality trait/ }))
+    await user.type(
+      await screen.findByLabelText('Personality trait'),
+      'I quote sacred texts at every turn.',
+    )
+    await user.click(screen.getByRole('button', { name: /^confirm$/i }))
+
+    await waitFor(() => {
+      expect(posted).toHaveLength(1)
+    })
+    // No pick anywhere in it. A trait names nothing in the compendium, so what
+    // records it is the change that puts it on the sheet -- the same shape the
+    // alignment above travels in.
+    expect(posted[0]?.body).toEqual({
+      expectedSeq: 2,
+      events: [
+        {
+          type: 'change',
+          changes: [
+            {
+              path: 'identity.personalityTraits',
+              op: 'set',
+              value: { kind: 'string', string: 'I quote sacred texts at every turn.' },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('puts a written question again from the entry that settled it, starting from what it says', async () => {
+    const user = setupUser()
+    mockApi({ prompts: { seq: 3, complete: false, prompts: [] }, events: TRAITED_LOG, dropped: [] })
+    renderBuild(viewport)
+
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
+    // It reads back as what was written, both lines of it.
+    await user.click(block(/I quote sacred texts/))
+
+    const written = await screen.findByLabelText('Personality trait')
+    expect(written).toHaveValue('I quote sacred texts at every turn.')
+
+    await user.clear(written)
+    await user.type(written, 'I keep my own counsel.')
+    await user.click(screen.getByRole('button', { name: 'Change it' }))
+
+    await waitFor(() => {
+      expect(writes()).toHaveLength(1)
+    })
+    expect(writes()[0]?.body).toMatchObject({
+      event: {
+        type: 'change',
+        changes: [
+          {
+            path: 'identity.personalityTraits',
+            op: 'set',
+            value: { kind: 'string', string: 'I keep my own counsel.' },
+          },
         ],
       },
     })
@@ -882,38 +1095,109 @@ describe('BuildScreen', () => {
  * Net-new coverage: the create screen this replaced had no tests at all.
  */
 describe('a new character', () => {
-  const viewport = 'desktop'
+  // The phone's, for the reason the block above records.
+  const viewport = 'mobile'
 
   it('asks for a name and nothing else', async () => {
     renderNew(viewport)
 
     // The one block that opens itself: there is nothing behind it, and a front
     // door whose only row is shut reads as broken.
-    expect(await screen.findByText('What are they called?')).toBeInTheDocument()
+    expect(await screen.findByText('A name')).toBeInTheDocument()
     expect(screen.getByLabelText('Name')).toBeInTheDocument()
+    // Named once. The block says what the choice is, and the surface under it
+    // used to say it twice more -- a heading and a field label.
+    expect(screen.getAllByText(/^A name$/)).toHaveLength(1)
+    expect(screen.queryByText('What are they called?')).not.toBeInTheDocument()
     // The scores are a question asked of a character that exists, not a field
     // on the form that creates one.
     expect(screen.queryByText(/ability scores/)).not.toBeInTheDocument()
-    expect(tabs()).toEqual(['identity', 'class', 'abilities', 'race', 'background'])
+    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
   })
 
-  it('creates the character once, with the name alone, when a tab is clicked', async () => {
+  it('creates the character once, with the name alone, and lands on the tab that was pressed', async () => {
     const user = setupUser()
     renderNew(viewport)
 
     await user.type(await screen.findByLabelText('Name'), 'Rurik')
     await user.click(tab('class'))
 
-    await waitFor(() => {
-      expect(screen.getByText('A race')).toBeInTheDocument()
-    })
     const creates = posted.filter((write) => write.url.endsWith('/v1/characters'))
-    expect(creates).toHaveLength(1)
+    await waitFor(() => {
+      expect(creates).toHaveLength(1)
+    })
     expect(creates[0]?.body).toEqual({ name: 'Rurik' })
+
+    // Class, because class was pressed. The only prompt the server has is a
+    // race one, so a screen that went where the questions are -- which is what
+    // it used to do -- would be showing "A race" here instead.
+    await waitFor(() => {
+      expect(current()).toBe('Class')
+    })
+    expect(screen.queryByText('A race')).not.toBeInTheDocument()
 
     // The URL was replaced, so nothing on the built screen creates a second one.
     await user.click(tab('background'))
     expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+  })
+
+  it('does not take the page down to create the character it just named', async () => {
+    const user = setupUser()
+    // The first read of the new character is held open, because that is the
+    // only moment the behaviour exists in.
+    let arrive = () => {}
+    const until = new Promise<void>((resolve) => {
+      arrive = resolve
+    })
+    mockApi({ until })
+    renderNew(viewport)
+
+    await user.type(await screen.findByLabelText('Name'), 'Rurik')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    // Not "the write landed" -- the write lands before the navigation does, and
+    // asserting there would still be looking at the create screen. This waits
+    // for the new character's own read to be in flight, which is exactly the
+    // window the page used to disappear in.
+    await waitFor(() => {
+      expect(read.some((url) => url.includes('chr_'))).toBe(true)
+    })
+    expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+
+    // Creating changes the resource key under a screen that is not replaced,
+    // and blanking on a key change is `useResource` doing its job -- but here
+    // it tore the whole page off and rebuilt it, spinner and all, for a write
+    // that had already succeeded. It read as a reload because it looked like
+    // one. The tabs never go, and neither does the block being answered.
+    expect(screen.queryByText('Working out what is next...')).not.toBeInTheDocument()
+    expect(tabs()).toHaveLength(6)
+    expect(screen.getByText('A name')).toBeInTheDocument()
+
+    // And what replaces the block being answered is that block with an answer
+    // in it. `getAllBy`, because the trail names the character too.
+    arrive()
+    await waitFor(() => {
+      expect(screen.getAllByText('Zephyr').length).toBeGreaterThan(0)
+    })
+    expect(screen.getByText('Name')).toBeInTheDocument()
+  })
+
+  it('stays on identity when the name itself is confirmed', async () => {
+    const user = setupUser()
+    renderNew(viewport)
+
+    await user.type(await screen.findByLabelText('Name'), 'Rurik')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    await waitFor(() => {
+      expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+    })
+    // Answering a question is not a request to be asked another, and that rule
+    // has no exception for the first one.
+    await waitFor(() => {
+      expect(screen.getByText('Name')).toBeInTheDocument()
+    })
+    expect(current()).toBe('Identity')
   })
 
   it('posts nothing for a blank name, and says why', async () => {
@@ -954,7 +1238,7 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     // Pressing the decided block is the change gesture: it puts the question
     // again where the answer is, rather than opening a surface elsewhere.
     await user.click(block(/Race chosen/))
@@ -976,12 +1260,14 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     const user = setupUser()
     mockApi({
       prompts: PARTWAY,
+      then: ABILITY_BONUS_AGAIN,
       events: ANSWERED_LOG,
+      thenEvents: DROPPED_LOG,
       dropped: [{ seq: 3, type: 'race', ref: 'race:half-elf', source: 'race', reason: 'empty' }],
     })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'race' }))
+    await user.click(await screen.findByRole('tab', { name: 'Race' }))
     // The block reads as what was picked, not as the race it hangs off: the
     // ref names what posed the question, and the answers are the selection.
     await user.click(block(/Half Elf · Ability Bonus/))
@@ -1007,5 +1293,11 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     })
     expect(writes()[0]?.url).toContain('/events/3?expectedSeq=3')
     expect(writes()[0]?.url).not.toContain('dryRun')
+
+    // And the question that comes back is *open*. Pressing a decided block
+    // means "ask me that again", so it used to take a second press on the same
+    // row to see the options -- the same gesture, twice, for one intention.
+    const asked = await screen.findByRole('button', { name: /ability scores to raise/ })
+    expect(asked).toHaveAttribute('aria-expanded', 'true')
   })
 })

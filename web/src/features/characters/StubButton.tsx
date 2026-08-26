@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
 import { createStubCharacter } from '@/lib/api'
+import type { Folder } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { ACTION_SIZE, Button } from '@/ui'
 
@@ -26,8 +27,8 @@ export function StubButton({
   folder,
   onFailed,
 }: {
-  /** The folder the character list is filtered to, if any. */
-  folder?: string | undefined
+  /** The folder whose card this button sits in. */
+  folder: Folder
   /**
    * Reported upward, because the character list owns where errors are drawn. Must
    * be stable across renders; the character list passes a setState.
@@ -45,7 +46,7 @@ export function StubButton({
   }, [stub.error, onFailed])
 
   async function onClick() {
-    const created = await stub.run(folder)
+    const created = await stub.run(folder.id)
     if (created !== null) await navigate(`/characters/${created.id}`)
   }
 
@@ -55,6 +56,10 @@ export function StubButton({
       size={ACTION_SIZE}
       variant="default"
       loading={stub.pending}
+      // Named for its folder like the two buttons beside it: there is one of
+      // these per folder now, and three buttons all called "Stub" is the same
+      // ambiguity a column of "Delete"s would be.
+      aria-label={`Stub in ${folder.name}`}
       onClick={() => void onClick()}
     >
       Stub

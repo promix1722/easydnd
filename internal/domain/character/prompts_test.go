@@ -470,3 +470,123 @@ func TestNoAdvancePromptAtMaximumLevel(t *testing.T) {
 		t.Error("a level-20 character was offered another level")
 	}
 }
+
+// The four roleplaying questions are asked as text, in their own group.
+//
+// They used to be the SRD's d8 tables offered as options, and the state behind
+// them was free text all along -- so the menu was the compendium answering a
+// question that is nobody's but the player's. What this pins is that the
+// prompt offers nothing to pick between, which is how a client tells a
+// question it writes an answer to from a question it picks one for.
+func TestRoleplayingPromptsAreTextInTheirOwnGroup(t *testing.T) {
+	at := time.Date(2026, time.August, 26, 0, 0, 0, 0, time.UTC)
+	var log Log
+	if err := log.Append(
+		Event{Type: EventInit, At: at},
+		Event{Type: EventBackground, At: at, Ref: rules.NewRef(rules.RefBackground, "acolyte")},
+	); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+
+	got := promptsFor(t, log)
+	for _, want := range []struct {
+		id     rules.Slug
+		kind   rules.ChoiceKind
+		choose int
+	}{
+		{"character/personality-trait", rules.ChoosePersonality, 1},
+		{"character/ideal", rules.ChooseIdeal, 1},
+		{"character/bond", rules.ChooseBond, 1},
+		{"character/flaw", rules.ChooseFlaw, 1},
+	} {
+		p := find(t, got, want.id)
+		if p.Choice.Kind != want.kind {
+			t.Errorf("%s kind = %v, want %v", want.id, p.Choice.Kind, want.kind)
+		}
+		// One, whatever the background's table suggests: the count belonged to
+		// a menu, and what is asked now is one answer in the player's words.
+		if p.Choice.Choose != want.choose {
+			t.Errorf("%s chooses %d, want %d", want.id, p.Choice.Choose, want.choose)
+		}
+		if len(p.Choice.From.Options) != 0 {
+			t.Errorf("%s offers %d options; it is written, not picked",
+				want.id, len(p.Choice.From.Options))
+		}
+		if p.Group != GroupPersonality {
+			t.Errorf("%s is in group %v, want personality", want.id, p.Group)
+		}
+		if !p.Optional {
+			t.Errorf("%s is required; a character is complete without one", want.id)
+		}
+	}
+
+	// The alignment moved with them: it is who the character is, not what
+	// their background was.
+	if p := find(t, got, "character/alignment"); p.Group != GroupPersonality {
+		t.Errorf("alignment is in group %v, want personality", p.Group)
+	}
+
+	// Acolyte's own questions stayed where they were.
+	if p := find(t, got, "acolyte/language/0"); p.Group != GroupBackground {
+		t.Errorf("acolyte's language prompt is in group %v, want background", p.Group)
+	}
+}
+
+// Writing the answer is what closes the question, exactly as it is for the six
+// ability scores -- there are no picks to compare against an option set, so a
+// prompt that stayed open after being answered would be asked forever.
+func TestWritingATraitClosesItsPrompt(t *testing.T) {
+	at := time.Date(2026, time.August, 26, 0, 0, 0, 0, time.UTC)
+	var log Log
+	if err := log.Append(
+		Event{Type: EventInit, At: at},
+		Event{Type: EventBackground, At: at, Ref: rules.NewRef(rules.RefBackground, "acolyte")},
+		Event{Type: EventChange, At: at, Changes: []Change{
+			{Path: "identity.bonds", Op: OpSet, Value: StringValue("I owe the temple everything.")},
+		}},
+	); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+
+	got := promptsFor(t, log)
+	if has(got, "character/bond") {
+		t.Error("the bond is still being asked for after being written")
+	}
+	// And nothing else went with it.
+	if !has(got, "character/flaw") {
+		t.Errorf("the flaw stopped being asked too; got %v", promptIDs(got))
+	}
+
+	state, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatalf("Project() error = %v", err)
+	}
+	if got, want := state.Identity.Bonds, []string{"I owe the temple everything."}; len(got) != 1 || got[0] != want[0] {
+		t.Errorf("bonds = %v, want %v", got, want)
+	}
+}
+
+// A background chosen after the words were written does not wipe them. The
+// projector used to assign all four from the picked suggestion, which meant
+// applyBackground overwrote whatever had been typed.
+func TestChoosingABackgroundKeepsWhatWasWritten(t *testing.T) {
+	at := time.Date(2026, time.August, 26, 0, 0, 0, 0, time.UTC)
+	var log Log
+	if err := log.Append(
+		Event{Type: EventInit, At: at},
+		Event{Type: EventChange, At: at, Changes: []Change{
+			{Path: "identity.flaws", Op: OpSet, Value: StringValue("I cannot let a bet go.")},
+		}},
+		Event{Type: EventBackground, At: at, Ref: rules.NewRef(rules.RefBackground, "acolyte")},
+	); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+
+	state, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatalf("Project() error = %v", err)
+	}
+	if got := state.Identity.Flaws; len(got) != 1 || got[0] != "I cannot let a bet go." {
+		t.Errorf("flaws = %v, want the one that was written", got)
+	}
+}

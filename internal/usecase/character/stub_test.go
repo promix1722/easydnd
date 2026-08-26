@@ -34,7 +34,7 @@ func TestCreateStubBuildsTheReferenceCharacter(t *testing.T) {
 	s := newService(t)
 	c := mustCreateStub(t, s)
 
-	if got, want := c.Log.Len(), 9; got != want {
+	if got, want := c.Log.Len(), 13; got != want {
 		t.Fatalf("log length = %d, want %d", got, want)
 	}
 	if got := c.Log.Events[0].Type; got != domain.EventInit {
@@ -224,13 +224,13 @@ func TestStubOptionalAnswersReachTheSheet(t *testing.T) {
 		t.Errorf("languages = %v, want %v", got, wantLanguages)
 	}
 
-	if len(sheet.Identity.PersonalityTraits) != 2 {
-		t.Errorf("personality traits = %v, want two", sheet.Identity.PersonalityTraits)
-	}
+	// One apiece: each roleplaying question asks for one answer in the
+	// player's own words, however many the background's table suggests.
 	for _, field := range []struct {
 		name  string
 		value []string
 	}{
+		{"personality traits", sheet.Identity.PersonalityTraits},
 		{"ideals", sheet.Identity.Ideals},
 		{"bonds", sheet.Identity.Bonds},
 		{"flaws", sheet.Identity.Flaws},
@@ -298,6 +298,34 @@ func TestStubEntriesAreAttributed(t *testing.T) {
 				event.Seq, event.Source)
 		case !equipping && event.Source == domain.PromptGroupNone:
 			t.Errorf("entry %d (%v) carries no source", event.Seq, event.Type)
+		}
+	}
+
+	// The four roleplaying lines in particular. They are changes carrying no
+	// answer at all, so the only thing that can attribute them is the prompt
+	// they close -- and getting that wrong is silent: the entry saves, and the
+	// build screen simply never shows it anywhere.
+	written := map[domain.Path]bool{
+		"identity.personalityTraits": false,
+		"identity.ideals":            false,
+		"identity.bonds":             false,
+		"identity.flaws":             false,
+	}
+	for _, event := range c.Log.Events {
+		for _, change := range event.Changes {
+			if _, roleplaying := written[change.Path]; !roleplaying {
+				continue
+			}
+			written[change.Path] = true
+			if event.Source != domain.GroupPersonality {
+				t.Errorf("entry %d writes %s but is attributed to %v, want personality",
+					event.Seq, change.Path, event.Source)
+			}
+		}
+	}
+	for path, found := range written {
+		if !found {
+			t.Errorf("the stub writes no %s", path)
 		}
 	}
 }

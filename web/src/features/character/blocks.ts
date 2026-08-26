@@ -163,5 +163,17 @@ function keyForRow(row: SettledRow): string {
 }
 
 function keyForPrompt(prompt: Prompt): string {
-  return `open:${prompt.choice.prompt}`
+  return promptKey(prompt.choice.prompt)
+}
+
+/**
+ * The key an outstanding question is drawn under, named from the prompt alone.
+ *
+ * The screen needs this for a question it has not been handed yet: answering a
+ * nested option, or dropping an entry to put its question again, both make a
+ * block appear on the *next* read, and the key is what lets that block be
+ * opened the moment it arrives instead of a press later.
+ */
+export function promptKey(prompt: string): string {
+  return `open:${prompt}`
 }

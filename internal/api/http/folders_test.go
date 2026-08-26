@@ -258,6 +258,7 @@ func TestFolderRoutesRequireASession(t *testing.T) {
 	for _, tc := range []struct{ method, path string }{
 		{http.MethodGet, "/v1/folders"},
 		{http.MethodPost, "/v1/folders"},
+		{http.MethodPut, "/v1/folders/order"},
 		{http.MethodPatch, "/v1/folders/fld_000001"},
 		{http.MethodDelete, "/v1/folders/fld_000001"},
 		{http.MethodPut, "/v1/characters/chr_000001/folder"},
@@ -300,6 +301,8 @@ func TestAnotherAccountCannotReachTheFolder(t *testing.T) {
 		{"list into it", http.MethodGet, "/v1/characters?folder=" + folder.ID, nil, http.StatusNotFound},
 		{"rename it", http.MethodPatch, "/v1/folders/" + folder.ID, map[string]any{"name": "Mine"}, http.StatusNotFound},
 		{"delete it", http.MethodDelete, "/v1/folders/" + folder.ID, nil, http.StatusNotFound},
+		{"order it", http.MethodPut, "/v1/folders/order",
+			map[string]any{"folders": []string{folder.ID}}, http.StatusNotFound},
 		{"copy from it", http.MethodPost, "/v1/characters/" + character.ID + "/copy", nil, http.StatusNotFound},
 	} {
 		if rec := send(t, r, bob, tc.method, tc.path, tc.body); rec.Code != tc.wantStatus {
@@ -321,4 +324,95 @@ func TestAnotherAccountCannotReachTheFolder(t *testing.T) {
 	if len(still) != 1 || still[0].ID != bobs.ID {
 		t.Errorf("the refused move lost the character: %+v", still)
 	}
+}
+
+// The order is a PUT of the whole collection, so sending it twice says the
+// same thing -- which is what lets a client re-send a drag it is unsure landed.
+func TestReorderingFolders(t *testing.T) {
+	r, session := newFullRouter(t)
+
+	first := decode[folderapi.Folder](t,
+		send(t, r, session, http.MethodPost, "/v1/folders", map[string]any{"name": "Tuesday game"}))
+	second := decode[folderapi.Folder](t,
+		send(t, r, session, http.MethodPost, "/v1/folders", map[string]any{"name": "Retired"}))
+
+	// A new folder lands last until somebody says otherwise.
+	if got := folderNames(listFolders(t, r, session)); got != "Default,Tuesday game,Retired" {
+		t.Fatalf("folders before = %q, want Default,Tuesday game,Retired", got)
+	}
+
+	body := map[string]any{"folders": []string{second.ID, first.ID}}
+	rec := send(t, r, session, http.MethodPut, "/v1/folders/order", body)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("PUT /v1/folders/order = %d: %s", rec.Code, rec.Body)
+	}
+	if got := folderNames(listFolders(t, r, session)); got != "Default,Retired,Tuesday game" {
+		t.Errorf("folders after = %q, want Default,Retired,Tuesday game", got)
+	}
+
+	if rec := send(t, r, session, http.MethodPut, "/v1/folders/order", body); rec.Code != http.StatusNoContent {
+		t.Fatalf("PUT /v1/folders/order twice = %d: %s", rec.Code, rec.Body)
+	}
+	if got := folderNames(listFolders(t, r, session)); got != "Default,Retired,Tuesday game" {
+		t.Errorf("folders after twice = %q, want Default,Retired,Tuesday game", got)
+	}
+}
+
+// Every way of naming the wrong set, and the one that is not a set problem at
+// all: the default folder, which leads the listing and has no position to take.
+func TestReorderingFoldersRefusesAWrongSet(t *testing.T) {
+	r, session := newFullRouter(t)
+
+	def := listFolders(t, r, session)[0]
+	first := decode[folderapi.Folder](t,
+		send(t, r, session, http.MethodPost, "/v1/folders", map[string]any{"name": "Tuesday game"}))
+	second := decode[folderapi.Folder](t,
+		send(t, r, session, http.MethodPost, "/v1/folders", map[string]any{"name": "Retired"}))
+
+	for _, tc := range []struct {
+		name    string
+		folders []string
+	}{
+		{"one missing", []string{first.ID}},
+		{"one repeated", []string{first.ID, first.ID}},
+		{"the default named", []string{def.ID, first.ID, second.ID}},
+		{"none at all", []string{}},
+	} {
+		rec := send(t, r, session, http.MethodPut, "/v1/folders/order",
+			map[string]any{"folders": tc.folders})
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s = %d, want 400: %s", tc.name, rec.Code, rec.Body)
+			continue
+		}
+		if got := errorCode(t, rec); got != "validation_error" {
+			t.Errorf("%s error code = %q, want validation_error", tc.name, got)
+		}
+	}
+
+	// None of the refusals moved anything.
+	if got := folderNames(listFolders(t, r, session)); got != "Default,Tuesday game,Retired" {
+		t.Errorf("folders = %q, want the untouched Default,Tuesday game,Retired", got)
+	}
+}
+
+// An account whose only folder is the default has nothing to order, and saying
+// so is not an error.
+func TestReorderingWithNothingToOrder(t *testing.T) {
+	r, session := newFullRouter(t)
+
+	rec := send(t, r, session, http.MethodPut, "/v1/folders/order",
+		map[string]any{"folders": []string{}})
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("PUT /v1/folders/order = %d, want 204: %s", rec.Code, rec.Body)
+	}
+}
+
+// folderNames joins a listing, so an order assertion reads as one string
+// rather than as three index comparisons.
+func folderNames(folders []folderapi.Folder) string {
+	out := make([]string, 0, len(folders))
+	for _, f := range folders {
+		out = append(out, f.Name)
+	}
+	return strings.Join(out, ",")
 }

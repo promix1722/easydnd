@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 
 import {
   appendEvents,
@@ -28,7 +28,7 @@ import {
   ModalSheet,
   Page,
   Stack,
-  TabRow,
+  TabDeck,
   Text,
 } from '@/ui'
 import type { Crumb } from '@/ui'
@@ -38,10 +38,11 @@ import {
   blocksFor,
   inheritPlace,
   keyFor,
+  promptKey,
   reclaimPlace,
   settledKey,
 } from './blocks'
-import type { Asking } from './blocks'
+import type { Asking, Block, BlockOrder } from './blocks'
 import { resolveRefNames } from './refNames'
 import { settledByStage } from './settled'
 import type { SettledRow } from './settled'
@@ -82,6 +83,8 @@ interface Preview {
   event: CharacterEvent | null
   dropped: Dropped[]
   names: Map<string, string>
+  /** The block to open once this is made: see `done`. */
+  open: string | null
 }
 
 /**
@@ -111,6 +114,7 @@ interface Preview {
 export function BuildScreen() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   // The folder the character list was filtered to when New character was pressed.
   // Only /characters/new carries it; absent means the account's default, which
   // the server resolves.
@@ -133,17 +137,72 @@ export function BuildScreen() {
   const revise = useAction(replaceEvent)
   const remove = useAction(deleteEvent)
 
-  const [chosenStage, setChosenStage] = useState<Stage | null>(null)
+  const [chosenStage, setChosenStage] = useState<Stage | null>(landingStage(location.state))
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [seeded, setSeeded] = useState(false)
   const [askedOn, setAskedOn] = useState<Stage | null>(null)
   const [nameDraft, setNameDraft] = useState('')
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [preview, setPreview] = useState<Preview | null>(null)
+  const [creating, setCreating] = useState(false)
 
-  // Held once and mutated, rather than replaced: see BlockOrder. The list is
-  // redrawn by new data, never by the memory of where the old data sat.
-  const [order] = useState(blockOrder)
+  /*
+   * One order per tab, held once and mutated rather than replaced: see
+   * BlockOrder. The list is redrawn by new data, never by the memory of where
+   * the old data sat.
+   *
+   * It was a single order while a single tab was rendered. Now that every tab
+   * is a slide and all five are drawn at once, one shared order would let the
+   * place a dropped answer vacated on the class tab be claimed by whatever
+   * arrived next under background -- and where a block sits is a fact about
+   * the tab it sits on, so there is one per tab.
+   */
+  const [orders] = useState(() => new Map<Stage, BlockOrder>())
+  const orderFor = (each: Stage): BlockOrder => {
+    const held = orders.get(each)
+    if (held !== undefined) return held
+    const made = blockOrder()
+    orders.set(each, made)
+    return made
+  }
+
+  /*
+    Creation changes the URL under a screen that is not replaced.
+
+    Both routes render this component, so React reuses the instance rather than
+    mounting a second one -- which is why creating used to move the player to
+    another tab without anything in the code saying "advance". No tab had been
+    chosen, the reread brought the first real prompts back, and
+    `firstUnfinished` below answered the only question it is asked: class.
+    Typing a name is not a request to be asked about a class.
+
+    So the tab the gesture aimed at rides across in the route's state, and is
+    taken up here, when the character the screen is looking at changes. The
+    initialiser above covers the other way in -- a deep link, or a router that
+    does remount -- and neither path can be relied on alone.
+  */
+  const [shownId, setShownId] = useState(id)
+  const arriving = shownId !== id
+  if (arriving) {
+    setShownId(id)
+    setChosenStage(landingStage(location.state))
+    setOpenKey(creating ? NEW_NAME_KEY : null)
+  }
+  /*
+    The character has arrived, so this is an ordinary build screen again.
+
+    Both guards are load-bearing, and both were learned the hard way. On the
+    render that first sees the new id, `useResource` has not yet reset itself
+    -- it does that during its own render, and what it returns *this* time is
+    still the previous key's answer, which for a character that did not exist
+    is an empty view that reads as `ready`. So "there is data" is true on
+    exactly the render where it means nothing, and clearing there put the
+    spinner back a render later. And on `/characters/new` there is no read to
+    be in the middle of at all, so "not loading" is true from the moment the
+    flag is set. What has to be true is that the id has settled *and* the read
+    it started has finished.
+  */
+  if (creating && !arriving && !isNew && !build.loading) setCreating(false)
 
   const view = build.data ?? EMPTY_VIEW
   // Advancement is dropped before anything looks at it, so no tab, no list
@@ -172,14 +231,39 @@ export function BuildScreen() {
     setOpenKey(NEW_NAME_KEY)
   }
 
-  const openHere = open.filter((prompt) => stageOf(prompt.group) === stage)
   const settled = settledByStage(view)
-  // Before there is a character there is no `/prompts` response, so the
-  // identity tab poses the first question itself: see NEW_NAME_PROMPT.
-  // The order is the screen's memory of where things are, and `blocksFor`
-  // both reads it and writes to it: whatever is new keeps the place the level
-  // ordering just gave it, so the next answer moves nothing already on screen.
-  const blocks = blocksFor(settled.get(stage) ?? [], isNew ? [NEW_NAME_PROMPT] : openHere, order)
+  // While the character is being created there is no log to read yet, so the
+  // question it is being created by is still the thing on screen.
+  const posingName = isNew || creating
+  /*
+   * Every tab's blocks, not just the one on screen, because every tab is a
+   * slide and the slide you are swiping towards has to be drawn before you
+   * arrive at it.
+   *
+   * Before there is a character there is no `/prompts` response, so the
+   * identity tab poses the first question itself: see NEW_NAME_PROMPT. The
+   * others have nothing on them until there is somebody to ask about, and say
+   * so.
+   *
+   * The order is the screen's memory of where things are, and `blocksFor` both
+   * reads it and writes to it: whatever is new keeps the place the level
+   * ordering just gave it, so the next answer moves nothing already on screen.
+   */
+  const blocksByStage = new Map<Stage, Block[]>(
+    STAGES.map((each) => [
+      each,
+      blocksFor(
+        settled.get(each) ?? [],
+        posingName
+          ? each === 'identity'
+            ? [NEW_NAME_PROMPT]
+            : []
+          : open.filter((prompt) => stageOf(prompt.group) === each),
+        orderFor(each),
+      ),
+    ]),
+  )
+  const blocks = blocksByStage.get(stage) ?? []
   const opened = blocks.find((block) => block.key === openKey) ?? null
   // What the open block is asking, which is a fact about the block rather than
   // a second piece of state. A settled block whose question cannot be put
@@ -191,8 +275,17 @@ export function BuildScreen() {
         ? { prompt: opened.prompt, replaces: null }
         : askingFor(opened.row)
 
-  const done = () => {
-    setOpenKey(null)
+  /**
+   * Closing the question, and opening whatever takes its place.
+   *
+   * `open` is a key that does not exist yet: the block it names arrives with
+   * the reread this starts. Answering a nested option and dropping an entry to
+   * put its question again both leave a *new* question in the same place, and
+   * a question that arrives shut is one the player has to press a second time
+   * for no reason they could name.
+   */
+  const done = (open: string | null = null) => {
+    setOpenKey(open)
     setPreview(null)
     // Pinned to wherever the answer was given. The screen opens on the first
     // category with something to do, and that is the whole of the help it
@@ -205,8 +298,14 @@ export function BuildScreen() {
     build.refresh()
   }
 
-  /** Creates the character the identity tab is describing, and moves on. */
-  const createCharacterFromDraft = async () => {
+  /**
+   * Creates the character the identity tab is describing.
+   *
+   * `landOn` rides across the navigation in the route's state, because the
+   * navigation is what loses it: a different URL is a different mount, and the
+   * new one has no memory of which tab the gesture was aimed at.
+   */
+  const createCharacterFromDraft = async (landOn: Stage) => {
     if (create.pending) return
     if (nameDraft.trim() === '') {
       setNameError('A character needs a name to be created under.')
@@ -218,22 +317,32 @@ export function BuildScreen() {
     })
     // replace: true, because the URL of a character that does not exist is
     // not a place the Back button should return anyone to.
-    if (created) await navigate(`/characters/${created.id}/build`, { replace: true })
+    if (created) {
+      // Set before the navigation, because the navigation is what changes the
+      // resource key -- and the render that reads the new key is the one that
+      // would otherwise blank the page.
+      setCreating(true)
+      await navigate(`/characters/${created.id}/build`, {
+        replace: true,
+        state: { stage: landOn },
+      })
+    }
   }
 
   const goToStage = (next: Stage) => {
     if (next === stage) return
     // Nothing else can be answered before the character exists, so a tab click
-    // is the same gesture as pressing Next: make it, then go.
+    // is the same gesture as pressing Next: make it, then go -- to the tab that
+    // was pressed, which is the whole of what the gesture asked for.
     if (isNew) {
-      void createCharacterFromDraft()
+      void createCharacterFromDraft(next)
       return
     }
     setChosenStage(next)
   }
 
   /** Sends one appended entry, then rereads everything. */
-  const append = async (event: CharacterEvent) => {
+  const append = async (event: CharacterEvent, open: string | null) => {
     const answered = openKey
     const written = await answer.run(id, view.prompts.seq, [event])
     if (written === null) return
@@ -241,8 +350,8 @@ export function BuildScreen() {
     // A single appended event is the log's new head, so the response's seq
     // names it -- and without this the answer would appear at the bottom of
     // the list while the question it answered vanished from the middle.
-    inheritPlace(order, answered, settledKey(written.seq))
-    done()
+    inheritPlace(orderFor(stage), answered, settledKey(written.seq))
+    done(open)
   }
 
   /**
@@ -257,7 +366,7 @@ export function BuildScreen() {
    * players to confirm without reading, which is exactly the habit the one
    * change that *does* cost something needs them not to have.
    */
-  const price = async (row: SettledRow, event: CharacterEvent | null) => {
+  const price = async (row: SettledRow, event: CharacterEvent | null, open: string | null) => {
     const result =
       event === null
         ? await remove.run(id, row.seq, view.prompts.seq, true)
@@ -265,14 +374,14 @@ export function BuildScreen() {
     if (result === null) return
     const dropped = result.dropped ?? []
     if (dropped.length === 0) {
-      await write(row, event)
+      await write(row, event, open)
       return
     }
-    setPreview({ row, event, dropped, names: await resolveRefNames(dropped) })
+    setPreview({ row, event, dropped, names: await resolveRefNames(dropped), open })
   }
 
   /** Makes the change, whether it was asked about or not. */
-  const write = async (row: SettledRow, event: CharacterEvent | null) => {
+  const write = async (row: SettledRow, event: CharacterEvent | null, open: string | null) => {
     // expectedSeq is sent again, so a log that moved between the price and
     // this write is the existing sequence conflict rather than a silent
     // commit of a price that was quoted against a different log.
@@ -282,14 +391,15 @@ export function BuildScreen() {
         : await revise.run(id, row.seq, view.prompts.seq, event, false)
     if (written === null) return
     // A removal is how a question that cannot be re-posed gets asked again, so
-    // the question that comes back takes the answer's place in the list.
-    if (event === null) reclaimPlace(order, settledKey(row.seq))
-    done()
+    // the question that comes back takes the answer's place in the list -- and
+    // opens there, because being asked again is what the press meant.
+    if (event === null) reclaimPlace(orderFor(row.stage), settledKey(row.seq))
+    done(open)
   }
 
   const commit = async () => {
     if (preview === null) return
-    await write(preview.row, preview.event)
+    await write(preview.row, preview.event, preview.open)
   }
 
   /**
@@ -322,7 +432,7 @@ export function BuildScreen() {
     if (block?.kind !== 'settled') return
     const question = reask(block.row)
     if (question === null) {
-      void price(block.row, null)
+      void price(block.row, null, reaskedKey(block.row))
       return
     }
     // A rename starts from the name it is changing rather than from nothing.
@@ -330,11 +440,26 @@ export function BuildScreen() {
   }
 
   const submitEvent = (asked: Asking, event: CharacterEvent) => {
-    if (asked.replaces === null) void append(event)
-    else void price(asked.replaces, event)
+    const open = followUpKey(asked.prompt, event)
+    if (asked.replaces === null) void append(event, open)
+    else void price(asked.replaces, event, open)
   }
 
-  if (build.loading) {
+  /*
+    The whole page comes down for a first load, and only for a first load.
+
+    `useResource` blanks when its key changes, which is right -- a different
+    character is a different screen. But creation changes the key from
+    `build:` to `build:chr_1` under a screen that is already up, and taking it
+    down meant that typing a name tore the page off and rebuilt it, spinner
+    and all, for a write that had already succeeded. It read as a reload
+    because that is exactly what it looked like.
+
+    So the creating transition keeps the page: the same chrome, the same tab,
+    and the name still in the block it was typed into with its button turning.
+    What replaces it a moment later is that block with an answer in it.
+  */
+  if (build.loading && !creating) {
     return (
       <Page
         trail={buildTrail(isNew, null, id)}
@@ -356,7 +481,6 @@ export function BuildScreen() {
     )
   }
 
-  const nextStage = stageAfter(stage, open)
   const failure = create.error ?? answer.error ?? revise.error ?? remove.error
   const fields: readonly ApiFieldError[] =
     create.fields.length > 0
@@ -367,9 +491,35 @@ export function BuildScreen() {
 
   return (
     <Page
-      trail={buildTrail(isNew, title(view), id)}
+      // The draft, while the character it names is being created: the sheet
+      // that would say so is the thing still in flight, and a trail that read
+      // "Unnamed" for a moment would be naming the one fact just supplied.
+      trail={buildTrail(isNew, creating ? nameDraft.trim() : title(view), id)}
+      /*
+       * On the heading line, against the right edge, and only once there is a
+       * character to finish.
+       *
+       * It sat against the last tab for a while, which is where `TabRow` had a
+       * slot for it. Two things were wrong with that. It is not a control on
+       * the tabs -- it acts on the character, which is exactly what `Page`'s
+       * `actions` slot is for and what the sheet's own button already uses --
+       * and the tabs plus a button do not fit across 390px, so the strip that
+       * is supposed to scroll was competing with it for the width.
+       */
+      {...(posingName
+        ? {}
+        : {
+            actions: (
+              <Button
+                variant={view.prompts.complete ? 'filled' : 'light'}
+                onClick={() => void navigate(`/characters/${id}`)}
+              >
+                Finish
+              </Button>
+            ),
+          })}
       subtitle={
-        isNew
+        posingName
           ? 'A name is all it takes to start. Everything else is a question, asked once there is somebody to ask it about.'
           : view.prompts.complete
             ? 'Everything required is answered. What is left is optional -- and a level.'
@@ -391,47 +541,65 @@ export function BuildScreen() {
           </Alert>
         )}
 
-        <TabRow
-          tabs={STAGES.map((name) => ({ value: name, label: STAGE_LABELS[name] }))}
+        <TabDeck
+          // "Character build" rather than the character's name, which is
+          // already the crumb above this. A landmark renamed per character
+          // would give a screen-reader user a different table of contents on
+          // every build.
+          label="Character build"
           value={stage}
           onChange={(next) => goToStage(next as Stage)}
-          actions={
-            !isNew && (
-              <Button
-                variant={view.prompts.complete ? 'filled' : 'light'}
-                onClick={() => void navigate(`/characters/${id}`)}
-              >
-                Finish
-              </Button>
-            )
-          }
-        >
-          <StagePanel
-            blocks={blocks}
-            openKey={openKey}
-            onOpen={openBlock}
-            asking={asking}
-            names={view.names}
-
-            onAnswerPicks={(asked, picks) => submitEvent(asked, eventFor(asked.prompt, picks))}
-            onNameChange={(next) => {
-              setNameDraft(next)
-              setNameError(undefined)
-            }}
-            onAnswerName={(asked, next) => {
-              if (isNew) void createCharacterFromDraft()
-              else submitEvent(asked, initEventFor(next))
-            }}
-            onAnswerChanges={(asked, changes) =>
-              submitEvent(asked, { type: asked.prompt.event.type, changes })
+          /*
+            Not until there is a character. While one is being posed for, a tab
+            press *creates* it rather than moving anywhere, so a swipe would be
+            a gesture the screen answers by refusing to move -- and a deck that
+            snaps back is worse than one that never gives.
+          */
+          swipeable={!posingName}
+          panels={STAGES.map((each) => {
+            // Where Next goes from *this* tab, which is a fact about the tab
+            // and not about the one on screen -- every panel is mounted, so
+            // every panel's button has to be its own.
+            const after = stageAfter(each, open)
+            return {
+              value: each,
+              label: STAGE_LABELS[each],
+              content: (
+                <StagePanel
+                  blocks={blocksByStage.get(each) ?? []}
+                  openKey={openKey}
+                  onOpen={openBlock}
+                  asking={asking}
+                  names={view.names}
+                  onAnswerPicks={(asked, picks) =>
+                    submitEvent(asked, eventFor(asked.prompt, picks))
+                  }
+                  onNameChange={(next) => {
+                    setNameDraft(next)
+                    setNameError(undefined)
+                  }}
+                  onAnswerName={(asked, next) => {
+                    if (isNew) void createCharacterFromDraft('identity')
+                    else submitEvent(asked, initEventFor(next))
+                  }}
+                  onAnswerChanges={(asked, changes) =>
+                    submitEvent(asked, { type: asked.prompt.event.type, changes })
+                  }
+                  pending={
+                    creating || create.pending || answer.pending || revise.pending || remove.pending
+                  }
+                  fields={fields}
+                  {...(after === null ? {} : { onNext: () => goToStage(after) })}
+                  {...(posingName || asking?.prompt.choice.kind === 'text'
+                    ? { name: nameDraft }
+                    : {})}
+                  {...maybeScores(asking?.replaces ?? null)}
+                  {...maybeLines(asking?.replaces ?? null)}
+                />
+              ),
             }
-            pending={create.pending || answer.pending || revise.pending || remove.pending}
-            fields={fields}
-            {...(nextStage === null ? {} : { onNext: () => goToStage(nextStage) })}
-            {...(isNew || asking?.prompt.choice.kind === 'text' ? { name: nameDraft } : {})}
-            {...maybeScores(asking?.replaces ?? null)}
-          />
-        </TabRow>
+          })}
+        />
 
         {nameError !== undefined && (
           <Text size="sm" c="red">
@@ -509,15 +677,63 @@ export function BuildScreen() {
 /**
  * The trail for a build page.
  *
- * Three crumbs once there is a character -- `Characters / Ada / Build` -- and
- * two while creating one, because there is nothing yet to name. Note the
+ * Three crumbs once there is a character -- `Characters / Ada / Creation` --
+ * and two while creating one, because there is nothing yet to name. Note the
  * asymmetry with the event log, which is two crumbs even for a character that
  * exists: this screen already holds the sheet, and that one deliberately never
  * asks for it. See CharacterLogScreen.
+ *
+ * "Creation" is what the screen does, and the route stays `/build`: a URL
+ * somebody has open is not worth breaking over a word, and this file's own
+ * name is the one place the two spellings meet.
  */
 function buildTrail(isNew: boolean, name: string | null, id: string): Crumb[] {
   if (isNew) return [{ label: 'New character' }]
-  return [{ label: name, to: `/characters/${id}` }, { label: 'Build' }]
+  return [{ label: name, to: `/characters/${id}` }, { label: 'Creation' }]
+}
+
+/**
+ * The tab creation asked to land on, out of the route state it rode in on.
+ *
+ * Unknown or absent is null rather than a guess: a link somebody typed carries
+ * no state, and a state naming a tab this build does not have is a client that
+ * has moved on. Both mean "open where you would have opened anyway".
+ */
+function landingStage(state: unknown): Stage | null {
+  const named = (state as { stage?: unknown } | null)?.stage
+  return typeof named === 'string' && STAGES.includes(named as Stage) ? (named as Stage) : null
+}
+
+/**
+ * The question an answer brings with it, where it brings one.
+ *
+ * Picking a nested option -- "a martial melee weapon" rather than the greataxe
+ * beside it -- answers the prompt and poses another, and the server names the
+ * new one by the key the old one was answered with: a nested option's key *is*
+ * its inner prompt's slug. So the block that is about to arrive is knowable
+ * from the answer alone, and can be opened rather than left for a second press.
+ */
+function followUpKey(prompt: Prompt, event: CharacterEvent): string | null {
+  const nested = new Set(
+    (prompt.choice.from.options ?? [])
+      .filter((option) => option.kind === 'nested')
+      .map((option) => option.key),
+  )
+  const picked = (event.choices ?? []).flatMap((answer) => answer.picks)
+  const follows = picked.find((pick) => nested.has(pick))
+  return follows === undefined ? null : promptKey(follows)
+}
+
+/**
+ * The question a dropped entry puts back, named from the entry itself.
+ *
+ * An answer to a nested prompt cannot be re-posed directly, so opening it drops
+ * it and the server emits that prompt again -- under the slug the entry
+ * answered, which is the one thing the entry does say.
+ */
+function reaskedKey(row: SettledRow): string | null {
+  const answered = (row.event.choices ?? [])[0]?.prompt
+  return answered === undefined ? null : promptKey(answered)
 }
 
 /** How a drop reason reads, without borrowing a category's word. */
@@ -616,13 +832,27 @@ function isStage(stage: Stage | null): stage is Stage {
  * accepted it, attributed it to no prompt, and the alignment stayed unset --
  * the worst kind of failure, which is the silent one.
  */
-const INPUTS: readonly { prompt: string; path: string; kind: string; collection: string }[] = [
+const INPUTS: readonly {
+  prompt: string
+  path: string
+  kind: string
+  /** Absent where the answer is written rather than picked from a set. */
+  collection?: string
+}[] = [
   {
     prompt: 'character/alignment',
     path: 'identity.alignment',
     kind: 'alignment',
     collection: 'alignment',
   },
+  // The four the player answers in their own words. They are inputs for the
+  // same reason the alignment is -- they settle a value and name nothing in
+  // the compendium -- and they have no collection because there is nothing to
+  // choose between. See features/character/promptNames for what each is called.
+  { prompt: 'character/personality-trait', path: 'identity.personalityTraits', kind: 'personality' },
+  { prompt: 'character/ideal', path: 'identity.ideals', kind: 'ideal' },
+  { prompt: 'character/bond', path: 'identity.bonds', kind: 'bond' },
+  { prompt: 'character/flaw', path: 'identity.flaws', kind: 'flaw' },
 ]
 
 /** The prompt an entry's changes settle, where they settle one. */
@@ -638,7 +868,10 @@ function inputPrompt(input: (typeof INPUTS)[number], stage: Stage): Prompt {
       prompt: input.prompt,
       choose: 1,
       kind: input.kind,
-      from: { kind: 'collection', collection: input.collection },
+      from:
+        input.collection === undefined
+          ? { kind: 'explicit' }
+          : { kind: 'collection', collection: input.collection },
     },
     group: stage,
     optional: false,
@@ -733,6 +966,32 @@ function maybeScores(row: SettledRow | null): { scores?: Scores; method?: string
     else if (change.value.int !== undefined) scores[tail] = change.value.int
   }
   return { scores, ...(method !== undefined ? { method } : {}) }
+}
+
+/**
+ * What an entry wrote to one path, in the order it wrote it.
+ *
+ * The list is stored as a `set` followed by `add`s -- see `WrittenForm` -- so
+ * reading it back is reading the values in order, and nothing here has to know
+ * which op was which.
+ */
+function linesOf(event: CharacterEvent, path: string): string[] {
+  return (event.changes ?? [])
+    .filter((change) => change.path === path)
+    .flatMap((change) => (change.value.string === undefined ? [] : [change.value.string]))
+}
+
+/**
+ * What a settled written answer says, for the form that is changing it.
+ *
+ * Nothing at all for every other kind of entry, which is what keeps the prop
+ * off surfaces that would have no use for it.
+ */
+function maybeLines(row: SettledRow | null): { lines?: readonly string[] } {
+  if (row === null) return {}
+  const input = inputOf(row.event)
+  if (input === undefined || input.collection !== undefined) return {}
+  return { lines: linesOf(row.event, input.path) }
 }
 
 /** A name, as the entry that carries one. */

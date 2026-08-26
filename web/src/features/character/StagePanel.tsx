@@ -11,9 +11,10 @@ import type { Asking, Block } from './blocks'
 import { NameForm } from './NameForm'
 import { offersOptions } from './options'
 import { PromptCard } from './PromptCard'
-import { choiceName } from './promptNames'
+import { choiceName, writtenAs } from './promptNames'
 import { refName } from './refNames'
 import type { SettledRow } from './settled'
+import { WrittenForm } from './WrittenForm'
 
 import { collectionOfKind, kindOf, slugOf } from '@/domain'
 
@@ -44,6 +45,8 @@ export interface StagePanelProps {
   /** The scores as the log stored them -- not as the sheet projects them. */
   scores?: Scores
   method?: string
+  /** What is already written, where the open question is one that is written. */
+  lines?: readonly string[]
 }
 
 /**
@@ -86,6 +89,7 @@ export function StagePanel({
   name,
   scores,
   method,
+  lines,
 }: StagePanelProps) {
   const surface = (asked: Asking) => (
     <AnswerSurface
@@ -95,6 +99,7 @@ export function StagePanel({
       {...(name !== undefined ? { name } : {})}
       {...(scores !== undefined ? { scores } : {})}
       {...(method !== undefined ? { method } : {})}
+      {...(lines !== undefined ? { lines } : {})}
       onPicks={(picks) => onAnswerPicks(asked, picks)}
       onNameChange={onNameChange}
       onName={(next) => onAnswerName(asked, next)}
@@ -253,6 +258,10 @@ function Reasking() {
  * the six a character starts with offer none, and are a form. The option set
  * is what tells them apart, and it is the server's own answer to "what may be
  * picked here" rather than a slug this client has memorised.
+ *
+ * The four roleplaying questions are told apart the same way, and for the same
+ * reason: a trait is written rather than picked, so its prompt arrives with
+ * nothing to pick between. `writtenAs` says which path one settles.
  */
 function AnswerSurface({
   asking,
@@ -261,6 +270,7 @@ function AnswerSurface({
   name,
   scores,
   method,
+  lines,
   onPicks,
   onNameChange,
   onName,
@@ -272,6 +282,7 @@ function AnswerSurface({
   name?: string
   scores?: Scores
   method?: string
+  lines?: readonly string[]
   onPicks: (picks: string[]) => void
   onNameChange: (name: string) => void
   onName: (name: string) => void
@@ -290,6 +301,20 @@ function AnswerSurface({
         {...maybeError(fields, 'name')}
         submitLabel={submitLabel}
         onSubmit={onName}
+      />
+    )
+  }
+
+  const written = writtenAs(prompt)
+  if (written !== undefined && !offersOptions(prompt)) {
+    return (
+      <WrittenForm
+        {...(lines !== undefined ? { lines } : {})}
+        path={written.path}
+        noun={written.noun}
+        pending={pending}
+        submitLabel={submitLabel}
+        onSubmit={onChanges}
       />
     )
   }

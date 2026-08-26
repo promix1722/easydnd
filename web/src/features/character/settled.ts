@@ -1,5 +1,6 @@
 import type { Change, CharacterEvent } from '@/lib/api'
 
+import { writtenLabel } from './promptNames'
 import { refName } from './refNames'
 
 import {
@@ -120,10 +121,11 @@ function rowFor(
  * Addressed changes, read back as a decision rather than as a patch.
  *
  * The paths this client writes are worth naming: the character's name, its
- * alignment, and the six ability scores -- the three inputs. Anything else --
- * a DM's adjustment, a path a later server learned before this client did --
- * falls back to the log screen's own rendering, on the same principle
- * `eventLabel` follows: an entry drawn plainly is better than one refused.
+ * alignment, the four lines it writes about who the character is, and the six
+ * ability scores. Anything else -- a DM's adjustment, a path a later server
+ * learned before this client did -- falls back to the log screen's own
+ * rendering, on the same principle `eventLabel` follows: an entry drawn plainly
+ * is better than one refused.
  */
 function summarise(changes: readonly Change[]): { label: string; value: string } {
   const name = changes.find((change) => change.path === 'identity.name')
@@ -131,6 +133,19 @@ function summarise(changes: readonly Change[]): { label: string; value: string }
 
   const alignment = changes.find((change) => change.path === 'identity.alignment')
   if (alignment !== undefined) return { label: 'Alignment', value: formatValue(alignment.value) }
+
+  // Every line of one, joined: a trait entry may carry two, and reading back
+  // only the first would make the second invisible until the sheet.
+  const written = changes.find((change) => writtenLabel(change.path) !== undefined)
+  if (written !== undefined) {
+    return {
+      label: writtenLabel(written.path) ?? '',
+      value: changes
+        .filter((change) => change.path === written.path)
+        .map((change) => formatValue(change.value))
+        .join(' · '),
+    }
+  }
 
   const scores = new Map<string, Change>()
   for (const change of changes) {
