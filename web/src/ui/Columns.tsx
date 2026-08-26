@@ -1,4 +1,4 @@
-import { Accordion, Box, Group, Paper, SimpleGrid, Stack, Title } from '@mantine/core'
+import { Accordion, Paper, SimpleGrid, Stack, Title } from '@mantine/core'
 import type { ReactNode } from 'react'
 
 import { useIsDesktop } from './useIsDesktop'
@@ -7,17 +7,6 @@ export interface ColumnsSection {
   key: string
   title: string
   content: ReactNode
-  /**
-   * A control belonging to the section as a whole, drawn on the title's own
-   * line rather than inside the content.
-   *
-   * It is here rather than at the top of `content` because that is a
-   * different claim: something in the content is *about* the content, and a
-   * filter or a toggle is about the panel. Drawn as the first row of the body
-   * it also leaves the title line empty across a whole panel width, which is
-   * the layout this exists to avoid.
-   */
-  aside?: ReactNode
 }
 
 export interface ColumnsProps {
@@ -31,10 +20,15 @@ export interface ColumnsProps {
 /**
  * Side-by-side panels on desktop, a collapsible accordion on mobile.
  *
- * A character sheet is a dozen panels that all want to be visible at once on a
- * wide screen and would be a mile of scrolling on a phone. Collapsing is the
- * mobile answer, and putting it here keeps every sheet-shaped screen
- * consistent instead of each one inventing its own.
+ * Panels that all want to be visible at once on a wide screen would be a mile
+ * of scrolling on a phone, and collapsing is one of the two answers to that.
+ * It is the right one where a page has a few panels, the first of them is
+ * usually what was come for, and the rest are detail worth having but not worth
+ * scrolling past -- `features/status/StatusPanel.tsx` is that page.
+ *
+ * `SectionDeck` is the other answer, for the case where the sections are peers
+ * and a reader moves between them rather than down them. The character sheet
+ * used to be here and is there now; see docs/web.md.
  */
 export function Columns({ sections, cols = 2, defaultOpen }: ColumnsProps) {
   const isDesktop = useIsDesktop()
@@ -45,10 +39,7 @@ export function Columns({ sections, cols = 2, defaultOpen }: ColumnsProps) {
         {sections.map((section) => (
           <Paper key={section.key} withBorder p="md" radius="md">
             <Stack gap="sm">
-              <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
-                <Title order={4}>{section.title}</Title>
-                {section.aside}
-              </Group>
+              <Title order={4}>{section.title}</Title>
               {section.content}
             </Stack>
           </Paper>
@@ -61,21 +52,7 @@ export function Columns({ sections, cols = 2, defaultOpen }: ColumnsProps) {
     <Accordion multiple defaultValue={defaultOpen ? [...defaultOpen] : [sections[0]?.key ?? '']}>
       {sections.map((section) => (
         <Accordion.Item key={section.key} value={section.key}>
-          {/*
-            The aside sits *beside* the control, not inside it. Accordion.Control
-            is itself a button, and a button inside a button is neither valid
-            markup nor clickable -- the outer one swallows the press. Mantine's
-            own "accordion with controls" pattern is this: the control flexes,
-            the sibling keeps its width.
-          */}
-          {section.aside === undefined ? (
-            <Accordion.Control>{section.title}</Accordion.Control>
-          ) : (
-            <Group wrap="nowrap" gap={0} pr="md">
-              <Accordion.Control>{section.title}</Accordion.Control>
-              <Box style={{ flex: 'none' }}>{section.aside}</Box>
-            </Group>
-          )}
+          <Accordion.Control>{section.title}</Accordion.Control>
           <Accordion.Panel>{section.content}</Accordion.Panel>
         </Accordion.Item>
       ))}

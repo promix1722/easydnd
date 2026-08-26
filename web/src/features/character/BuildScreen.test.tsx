@@ -440,7 +440,7 @@ beforeEach(() => {
 
 /**
  * One viewport. Nothing this screen draws branches on width -- only `Columns`,
- * `DataList`, `ModalSheet` and `RootShell` do, and the suite runs without CSS,
+ * `DataList`, `ModalSheet`, `SectionDeck`, `SheetBody` and `RootShell` do, and the suite runs without CSS,
  * so a responsive prop cannot move the DOM either. The one exception is the
  * sheet that prices a change, which is a `ModalSheet`; the two tests that open
  * it are in their own block at the foot of this file. See docs/web.md.

@@ -13,10 +13,11 @@
 // layouts -- needs no Mantine import of its own, keeping the rule absolute.
 export { Accordion, AppShell, Burger, NavLink, Tabs } from '@mantine/core'
 // Its own package, and the one component here that is not core's. Re-exported
-// plainly rather than wrapped the way Columns and ModalSheet are: those exist
-// because their phone and desktop renderings share no markup, and a carousel's
-// do -- the same slides, a narrower viewport. `Carousel.Slide` rides along as a
-// static member.
+// plainly as well as wrapped: a carousel's two renderings are the same markup --
+// the same slides, a narrower viewport -- so `routes/LandingPage.tsx` draws one
+// directly. `SectionDeck` wraps it for the other reason a primitive exists here,
+// which is that its *desktop* rendering is not a carousel at all.
+// `Carousel.Slide` rides along as a static member.
 export { Carousel } from '@mantine/carousel'
 export { useDisclosure } from '@mantine/hooks'
 
@@ -88,6 +89,8 @@ export {
 // Composed, responsive-by-construction components.
 export { BlockList } from './BlockList'
 export type { BlockListItem, BlockListProps } from './BlockList'
+export { Bullet } from './Bullet'
+export type { BulletProps } from './Bullet'
 export { Columns } from './Columns'
 export type { ColumnsProps, ColumnsSection } from './Columns'
 export { ACTION_ICON_SIZE, ACTION_SIZE } from './actions'
@@ -105,6 +108,8 @@ export { pageState } from './pageState'
 export type { PageState } from './pageState'
 export { SECTIONS, sectionFor } from './sections'
 export type { Section } from './sections'
+export { SectionDeck } from './SectionDeck'
+export type { DeckSection, SectionDeckProps } from './SectionDeck'
 export { TabRow } from './TabRow'
 export type { TabRowProps, TabRowTab } from './TabRow'
 

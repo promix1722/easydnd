@@ -76,17 +76,18 @@ policed them.
 
 ## Three rules about writing a test here
 
-**A test runs at one viewport unless the tree branches on width.** Exactly four
-components do: `Columns`, `DataList`, `ModalSheet` and `RootShell`.
+**A test runs at one viewport unless the tree branches on width.** Exactly six
+components do: `Columns`, `DataList`, `ModalSheet`, `SectionDeck`, `SheetBody`
+and `RootShell`.
 
-`ui/Page` is deliberately **not** a fifth, and its own test proves it rather
+`ui/Page` is deliberately **not** a seventh, and its own test proves it rather
 than asserting it in prose: the last case there compares the two renderings byte
 for byte, the way `TabRow.test.tsx` does. The cheapest way to "fix" a future
 layout problem in a shared page component would be to reach for `useIsDesktop`,
 and that test is what goes red when somebody does. Nothing else
 can, because the suite runs without CSS -- a `SimpleGrid cols={{ base: 2, sm: 3 }}`
 renders one DOM whatever the width is -- so `describe.each(['mobile','desktop'])`
-around a tree that reaches none of those four is the same assertion run twice
+around a tree that reaches none of those six is the same assertion run twice
 against byte-identical markup. `src/ui/TabRow.test.tsx` proves the point
 directly: its last test compares the two renderings and they are equal.
 
@@ -94,8 +95,11 @@ That was 72 of the suite's 433 cases, weighted toward the slowest files --
 `BuildScreen.test.tsx` alone ran 48 cases where 26 say the same thing. Where a
 block runs at one width, the comment above it names this rule, so the next
 reader knows it was a decision. Where a block still runs at both -- the group
-screens, `ModalSheet` and `Columns` themselves, and the rows of
+screens, `ModalSheet`, `Columns` and `SectionDeck` themselves, and the rows of
 `CharacterListScreen` -- it is because the swap is what the test is about.
+`SheetBody` is there twice over: the deck it hands its sections to draws a
+different tree at each width, and the sheet itself puts the two halves of its
+first section in a different order on a phone.
 
 The criterion is what the test *presses*, not what screen it is on.
 `CharacterListScreen`'s row actions live inside `DataList`, so a test that
@@ -107,9 +111,14 @@ terms in `src/ui/ModalSheet.test.tsx`, once, rather than three more times
 here.
 
 **Render the panel, not the page, when the panel is what is under test.**
-`ProficienciesPanel.test.tsx`, `Vitals.test.tsx` and the skills-panel block of
-`CharacterSheetScreen.test.tsx` mount their component directly rather than the
-whole sheet, and keep one full-sheet test to hold the seam. A sheet test costs
+`ProficienciesPanel.test.tsx`, `Vitals.test.tsx`, `SheetBody.test.tsx` and the
+skills-panel block of `CharacterSheetScreen.test.tsx` mount their component
+directly rather than the whole sheet, and keep one full-sheet test to hold the
+seam. `SheetBody.test.tsx` is the newest of them and the clearest case: it takes
+a projection and a compendium as props, so the phone's deck is tested without a
+mocked fetch, a router or a single `findBy` -- and what is left in
+`CharacterSheetScreen.test.tsx` is the seam, which is that the screen fetches
+those two things and hands them on. A sheet test costs
 about twice a panel test, because most of the sheet's weight is the eighteen
 `ProficiencyMark`s -- each a Mantine `Tooltip`, each a floating-ui hook stack --
 and mounting the page to read one panel pays for the other seventeen sections
@@ -238,7 +247,7 @@ Net new dependencies for the whole character feature: zero.
 
 The landing carousel is the exception that finally broke that run, and it is
 recorded rather than slipped in: `@mantine/carousel`, `embla-carousel` and
-`embla-carousel-react`, three packages for one page. Hand-rolling was the
+`embla-carousel-react`, three packages bought for one page. Hand-rolling was the
 default here and is wrong for this one thing -- a drag-and-snap carousel is
 momentum physics, pointer capture, RTL and keyboard semantics, and "it is just a
 flexbox with `scroll-snap`" stops being true the moment a thumb is involved. The
@@ -249,14 +258,35 @@ rather than a range, so the four Mantine packages now move as a unit. A
 lockfile diff that bumps `@mantine/core` is a UI-wide upgrade wearing a
 carousel's clothes, and should be reviewed as one.
 
+They are two surfaces now: the landing page, and `ui/SectionDeck` -- which is
+what the character sheet becomes on a phone. That does not re-open the decision,
+it settles it. The +10 kB is amortised over the page a visitor meets the app on
+and the page they spend the most time on, and the second use is the one that
+justifies a real carousel rather than a `scroll-snap` flexbox, because it is the
+one a thumb is actually on at a table. The peer-range warning above is
+unchanged, and is still the thing to look for in a lockfile diff.
+
+`embla-carousel` itself is now in `check-layers.mjs`'s `UI_ONLY_PACKAGES`.
+`@mantine/carousel` was always guarded by the `@mantine/` entry, but the engine
+underneath it ships its own types and nothing stopped a feature importing
+`EmblaCarouselType` directly -- the same hole `@tabler/` came through, one
+package wider.
+
 It costs something in the test suite too. embla constructs a `ResizeObserver`
 and an `IntersectionObserver` unconditionally, and jsdom implements neither, so
 `test/setup.ts` installs inert stubs. They deliberately never fire: jsdom has no
 layout, so anything they reported would be fiction, and a test that leaned on one
-would be testing the stub. The carousel is therefore asserted on its structure --
-three panels named by their own headings, in a named region, and a height
-expression that still mentions both shell offsets -- and never on which panel is
-scrolled into view.
+would be testing the stub. A carousel is therefore asserted on its structure --
+its panels named, in order, in a named region, and whatever the call site does
+about height -- and never on which panel is scrolled into view. That is why
+`LandingPage.test.tsx` pins a height expression that still mentions both shell
+offsets, and why `SectionDeck.test.tsx` pins the exact opposite: that
+`--carousel-height` is never set at all.
+
+It is also why the deck's tab strip reads React state rather than embla's
+`selectedScrollSnap()`. Pressing a tab is therefore observable in jsdom and
+swiping is not, which is the right way round: the press is the thing a test can
+honestly make a claim about.
 
 ## Folders are filing, not sharing
 
@@ -809,6 +839,112 @@ reverses all of this on the day it works.
 
 ## The sheet decides what order things come in
 
+Six sections, in one list, in the order a player reads them: who the character
+is and the abilities everything else is derived from, the body's state, then the
+skills, the proficiencies, the traits and the gear. `features/character/SheetBody`
+is that list, and `ui/SectionDeck` draws it -- across the page on a wide screen,
+and as a deck of tabs on a phone.
+
+### On a phone the sheet is a deck, not an accordion
+
+One row of tabs under the character's name, one section on screen, and a swipe
+between them. **Nothing opens and nothing closes**, which is the change: the
+carousel decides what is visible, so a section has no shut state to be in.
+
+What it replaces is a `Columns` accordion, and the two answer different
+questions. An accordion is right for a page of two or three panels where the
+answer is usually in the first and the rest are detail -- `/status` is exactly
+that, and still uses it. A character sheet is not that shape. It is six things
+a player leafs between at a table, none of them subordinate to the others, and
+an accordion made reading one of them a gesture: open it, and possibly shut
+three others first. It also put the headline numbers -- identity, the ability
+cards, the vitals -- above the accordion where they were never reachable except
+by scrolling past them. As slides they are tabs like any other.
+
+The tab strip is `ui/TabRow`, unchanged, because six tabs do not fit across a
+390px screen and a strip that scrolls sideways is the whole of what it is. It
+scrolls away with the page rather than pinning under the header: that is one
+fewer row of chrome on a screen this app has already spent an argument buying
+back (see [Two views, one codebase](#two-views-one-codebase)), and a swipe
+changes section from anywhere on the slide, so the strip is not the only way
+through.
+
+**A slide is as tall as the tallest slide**, and a section sits at the top of
+its own rather than being stretched down it. Eighteen skill rows therefore leave
+a screen of blank space under the three rows of proficiencies. The alternative
+is to measure whichever slide is showing and size the viewport to it, and that
+is a `ResizeObserver` reading a layout -- which jsdom does not compute, so the
+suite could neither exercise it nor catch it breaking. The honest cost of that
+plus the non-sticky strip: scroll to the foot of Skills, swipe, and you are a
+long way down a mostly empty Identity with the tabs off-screen above.
+
+The tab and the panel heading are one string, written once in `SheetBody` --
+which is what [a category's word appears exactly
+once](#a-categorys-word-appears-exactly-once) asks for here. On the phone the
+heading is not drawn at all: the tab is on screen naming the section, and the
+slide repeating it underneath would be the word twice in two inches.
+
+The first tab is **`Main`**, and it is the one label here that names a place
+rather than its contents. The section holds two things -- the identity table and
+the ability cards, merged because they were the two thinnest slides on the sheet
+and neither filled a screen alone -- so a tab naming either would send a reader
+looking for the other one somewhere else, and a tab naming both is the longest
+thing in a strip of six. A place is what it actually is: the tab you are on when
+you open a sheet. Note what is *not* renamed: `Vitals` stays `Vitals`, and the
+abilities keep no mention of saves, which would put back the two-list vocabulary
+that merging the saves into the cards deleted.
+
+### What a phone spends its height on
+
+Three of the sheet's measurements are tighter on a phone than on a wide screen,
+and they are the ones a phone can afford least:
+
+- **The gap between blocks in a slide is `md`, where the wide layout stacks them
+  `lg` apart.** It only has to say "different block", and it still does, because
+  the cards *inside* a block are `xs` apart. On a wide screen the same gap
+  separates things that sit beside other things, so tightening it there buys
+  nothing anybody sees.
+- **The card grids gap at `xs` from `base` and `sm` from `sm` up** -- the ability
+  row, the two vitals rows and the identity table's own columns.
+- **Every card on the sheet is `padding="xs"`, at both widths.** This is the one
+  that is not responsive, and not for want of trying: Mantine's `Card` takes
+  `padding` as a plain spacing value where `SimpleGrid` takes a responsive one,
+  so there is no way to say "tighter on a phone" without a viewport branch in
+  three components. Four pixels a card is most of what a phone gets back here --
+  six vitals rows, an ability row and the identity table -- and on a wide screen
+  it is two pixels a side on a page that has room to spare either way. The three
+  have to move together whatever the value, because the identity table's
+  alignment above depends on all of them agreeing.
+
+None of this is assertable: the suite runs without CSS, so a spacing prop is a
+change no test can see. That is the honest reason there is nothing pinning it.
+
+**On a phone the main section leads with the ability cards, not with the
+identity table**, which is the reverse of the wide screen and the one thing on this sheet
+whose order depends on width. A wide screen shows both at once, so it reads in
+the order a sheet is written in: who the character is, then what everything
+about them is derived from. A phone shows one slide, and the first thing on the
+one you land on should be the thing reached for mid-turn -- six modifiers, not a
+background. It is swapped **in the document**, by the one `useIsDesktop` call in
+this feature, rather than with a `column-reverse` that would leave the page
+saying one order and the screen showing another. Two static blocks would survive
+that mismatch; a habit of it would not, and a test can assert a document order
+where it cannot assert a cascaded style.
+
+Two of the six -- Main, Vitals -- are `desktop: 'full'` and
+are drawn bare on a wide screen, no border and no heading, exactly as they
+always were. Their titles exist only to name a tab, which is also why the merge
+costs the wide screen nothing: two bare sections stacked and one holding both
+are the same page. The other four are `desktop: 'panel'` and land in one
+two-column grid, which is the same page the two stacked `Columns` grids drew:
+`SimpleGrid` sizes each row independently and the row gap is the `lg` the
+`Stack` between them used.
+
+Both sheet screens get this, because there is only one of them to get:
+`SheetBody` is drawn by the owner's sheet and by the one a group member opens
+for a character shared with their table, and the whole point of that split is
+that the two cannot disagree about what a sheet is.
+
 `features/character/CharacterSheetScreen` prints ability scores and saving
 throws as a sheet does -- STR, DEX, CON, INT, WIS, CHA -- and it has to impose
 that itself, because the API cannot say it. Both arrive as objects keyed by
@@ -842,11 +978,34 @@ modifier goes and still prints its save. It claims nothing it was not sent, and
 hides nothing it was.
 
 Above them, `features/character/IdentityTable` says who the character is as
-labelled pairs -- name, race, subrace, level, class, subclass, background,
-experience. The sheet used to say this in one dimmed line under the name ("Elf
-· Wizard 1"), which reads well and answers badly: a line has no room for the
-subrace or the subclass, and a reader looking for one of them has to know the
-order it was written in. **Every field is drawn even when empty**, showing
+labelled pairs, in **four columns of two**: name over level, race over subrace,
+class over subclass, background over experience. The sheet used to say this in
+one dimmed line under the name ("Elf · Wizard 1"), which reads well and answers
+badly: a line has no room for the subrace or the subclass, and a reader looking
+for one of them has to know the order it was written in.
+
+The pairing is the layout rather than a consequence of it, and the columns are
+nested for that reason rather than being eight cells in one flat grid. A subrace
+is a qualification of a race and means nothing on its own; so is a subclass of a
+class, a level of the character it belongs to, and experience of the background
+it was earned past. Flat, that pairing held at four columns and broke at two,
+where "Class" landed under "Name" and "Subrace" under "Class" -- an arrangement
+that reads as a claim about the character. Nested, it holds at four columns, at
+two and at one. **Two columns is what a phone gets**: eight one-word fields down
+a single column is most of a screen for the shortest thing on the sheet.
+
+The table is drawn in **the same card the ability scores and the vitals are**,
+and that is an alignment fix rather than decoration. A bordered card insets what
+is inside it by its border and its padding, so a bare table above a row of cards
+puts its labels that much to the left of theirs: two columns of small dimmed
+labels down one page, not lining up. The two ways to fix that are not equal.
+Padding the table by hand writes the measurement down as a number, and it is a
+number nothing keeps true -- the day the card's padding changes, the only block
+on the sheet that does not follow is this one. It has already changed once, when
+the three of them went from `padding="sm"` to `padding="xs"`. Matching the
+container is exact by construction and cannot drift.
+
+**Every field is drawn even when empty**, showing
 `--`, because "not chosen yet" is the answer to the question and a missing row
 is not -- on a half-built character the blanks are the most useful thing on the
 page. Names come from the compendium, five session-cached collections flattened
@@ -917,11 +1076,12 @@ because it is the bonus counted twice rather than more training. The mark is
 what separates the rows, and the dimming of untrained ones is a **second**,
 redundant channel: a panel distinguishing eighteen rows by a shade of grey
 reads to nobody on a monochrome print and to nobody who cannot tell the two
-greys apart. A "Hide untrained" toggle collapses to the trained rows; it starts
-showing everything, since that is the point of the panel, and is not persisted.
-It is drawn as the section's [`aside`](#two-views-one-codebase) rather than
-inside the body, which is why `CharacterSheetScreen` rather than `SkillsPanel`
-holds the flag it flips.
+greys apart. **There is no filter over the top of it**, and there used to be: a
+"Hide untrained" toggle collapsed the panel to its trained rows. It was
+answering the question the eighteen rows exist to answer -- what do I roll for a
+skill nothing trained -- by taking those rows away, and it was the only control
+on the whole sheet. The two channels above already separate the trained from the
+untrained without anything to press first.
 
 Skills stays at half width rather than spreading now that the saving throws
 have moved up into the ability cards: its rows are name, ability and bonus, and
@@ -933,6 +1093,42 @@ comma-joined paragraph at the foot of "Traits and features", which is a
 sentence to be read rather than a list to be searched, and which filed a tool a
 player rolls with beside a racial trait they never touch again. It is drawn in
 one place now, not two.
+
+**"Traits and features" and "Resources and gear" are lists for the same
+reason.** Both were the arrangement that argument was made against and kept it
+one panel longer: a dimmed label with everything under it comma-joined onto one
+line, so the twelfth trait and the first were the same visual object and finding
+one meant reading the sentence. They are rows now -- one item to a line, in
+`ProficienciesPanel`'s own grid, one column on a phone and two from `lg` where a
+panel is half the page. There is no third spelling of this on the sheet.
+
+**Every list on the sheet is marked the same way.** Skills and proficiencies are
+marked by `ui/ProficiencyMark`, whose lowest level is an empty ring; the four
+lists that have no training level to report are marked by `ui/Bullet`, which is
+that same ring at the same diameter, weight and indent, and nothing else. Two
+lists side by side whose items began at different indents would read as two
+kinds of thing, when what they are is one kind of thing with and without a
+number attached.
+
+`Bullet` is a separate component rather than `ProficiencyMark level="none"`, and
+the reason is what that component *says*: it names itself "Not proficient" and
+carries a tooltip explaining proficiency bonuses. Drawn beside "Darkvision" that
+is a false statement about a racial trait rather than a decoration, so `Bullet`
+is `aria-hidden` and says nothing at all -- the same convention every other
+inline glyph here follows when it sits beside a label that already names the
+row. What that split costs is two copies of one ring, and `Bullet.test.tsx`
+pays it: it renders both and compares the circle attribute for attribute, so
+the day one of them changes diameter the other fails rather than quietly
+drifting.
+
+The resources panel gained its labels in the same change. A class pool and a
+spell slot used to be loose lines with nothing over them, sitting above two
+labelled groups; every group is named now, so the panel is four lists rather
+than two lists after some sentences. **A group that does not apply is left out
+rather than drawn empty** -- a rage counter on a character who cannot rage is
+not a fact about them -- where a group that applies and is empty says so, which
+is why an empty backpack still draws "Empty." That is the same distinction the
+vitals row draws between `n/a` and `--`.
 
 **The bonus is printed on tools and on nothing else**, and the reason is worth
 stating because it looks arbitrary. A tool check is an ability check, but
@@ -1428,19 +1624,35 @@ rather than at the call site:
 | `ModalSheet` | centred modal | bottom drawer |
 | `DataList` | table | labelled cards |
 | `Columns` | side-by-side panels | accordion |
+| `SectionDeck` | full-width blocks, then side-by-side panels | a tab strip over a carousel |
 | `TabRow` | tab strip, actions right | the same, scrolled sideways |
 | `BlockList` | a list of blocks, one open | the same |
 
-A `Columns` section may carry an **`aside`** -- a control belonging to the panel
-as a whole, drawn on the title's line rather than as the first row of the body.
-The skills filter is the case it was added for: as content it left a whole panel
-width of empty title bar above it. The mobile rendering is the interesting half.
-`Accordion.Control` *is* a button, so an aside nested inside it would be a
-button within a button -- invalid markup, and the outer control swallows the
-press. It is therefore a sibling of the control rather than a child, the control
-flexing and the aside keeping its width. Because the two live in different
-subtrees from the content they act on, state an aside toggles belongs to the
-screen that builds the sections, not to the panel component.
+`Columns` and `SectionDeck` are the same idea answering two different questions,
+and both are kept rather than one winning. `Columns` collapses: a section is a
+disclosure, which is right where a page has two or three panels and the answer
+is usually in the first -- `/status` is that page. `SectionDeck` leafs: nothing
+collapses, and a swipe or a tab decides what is on screen, which is right where
+the sections are peers and a reader moves between them rather than down them.
+The character sheet is the second kind; see [the sheet is a deck, not an
+accordion](#on-a-phone-the-sheet-is-a-deck-not-an-accordion).
+
+A section handed to `SectionDeck` says where it sits on a wide screen --
+`'full'` for its own bare row, `'panel'` for a bordered card in the grid -- and
+that is the primitive's whole knowledge of the screens above it. It is the same
+kind of thing as `Columns`' `cols`: a layout hint, not a fact about a character
+sheet. Consecutive `'panel'` sections share one grid, so the order of the list
+is the order of the page.
+
+Neither takes a control of its own. A section is a title and its content, and
+that is all -- there is nothing on a sheet panel to press. `ColumnsSection` used
+to carry an **`aside`**, a control belonging to the panel as a whole drawn on
+its title line, and the skills filter was the one thing that ever used it. It
+went with the filter rather than being kept as a slot nothing fills: on the
+phone accordion it needed a genuinely subtle arrangement -- `Accordion.Control`
+*is* a button, so an aside nested inside it would be a button within a button,
+invalid markup with the outer control swallowing the press -- and carrying that
+subtlety for no caller is how it comes to be wrong the day somebody needs it.
 
 `TabRow` and `BlockList` are the ones whose two renderings are **identical
 markup**. The others genuinely swap components at the breakpoint; `TabRow` is a

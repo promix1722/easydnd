@@ -68,14 +68,18 @@ const RULES = [
 ]
 
 /**
- * The packages only `src/ui/` may import: the component library, and the icon
- * set it draws with. Listed separately from RULES so that a new top-level
- * directory is denied by default rather than silently exempt -- and as a list
- * rather than one name so that adding a second vendor is an edit here rather
- * than a hole. `@tabler/` arrived exactly that way: nothing denied it, so every
- * layer could have imported icons directly until it was named.
+ * The packages only `src/ui/` may import: the component library, the icon set
+ * it draws with, and the carousel engine underneath `ui/SectionDeck.tsx`.
+ * Listed separately from RULES so that a new top-level directory is denied by
+ * default rather than silently exempt -- and as a list rather than one name so
+ * that adding a second vendor is an edit here rather than a hole. `@tabler/`
+ * arrived exactly that way: nothing denied it, so every layer could have
+ * imported icons directly until it was named. `embla-carousel` was the same
+ * hole one package wider -- `@mantine/carousel` is guarded by the first entry,
+ * but the engine it wraps ships its own types and nothing stopped a feature
+ * reaching for them.
  */
-const UI_ONLY_PACKAGES = ['@mantine/', '@tabler/']
+const UI_ONLY_PACKAGES = ['@mantine/', '@tabler/', 'embla-carousel']
 const UI_ONLY_DIR = 'ui'
 
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g
