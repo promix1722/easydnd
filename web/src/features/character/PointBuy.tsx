@@ -1,11 +1,12 @@
-import { ActionIcon, Group, Paper, SimpleGrid, Stack, Text } from '@/ui'
+import { Group, SimpleGrid, Stack, Text } from '@/ui'
+
+import { ScoreStepper } from './ScoreStepper'
 
 import {
   ABILITY_ORDER,
   POINT_BUY_BUDGET,
   POINT_BUY_MAX,
   POINT_BUY_MIN,
-  abilityName,
   pointCost,
   pointsSpent,
 } from '@/domain'
@@ -63,39 +64,17 @@ export function PointBuy({ scores, onChange }: PointBuyProps) {
         {ABILITY_ORDER.map((ability) => {
           const score = scores[ability] ?? POINT_BUY_MIN
           return (
-            <Paper key={ability} withBorder p="sm" radius="md">
-              <Group justify="space-between" wrap="nowrap">
-                <div>
-                  <Text size="xs" c="dimmed" tt="uppercase">
-                    {abilityName(ability)}
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {pointCost(score) ?? 0} spent
-                  </Text>
-                </div>
-                <Group gap={6} wrap="nowrap">
-                  <ActionIcon
-                    variant="default"
-                    aria-label={`Lower ${abilityName(ability)}`}
-                    disabled={priceOf(ability, -1) === null}
-                    onClick={() => step(ability, -1)}
-                  >
-                    -
-                  </ActionIcon>
-                  <Text size="xl" fw={600} w={28} ta="center">
-                    {score}
-                  </Text>
-                  <ActionIcon
-                    variant="default"
-                    aria-label={`Raise ${abilityName(ability)}`}
-                    disabled={priceOf(ability, 1) === null}
-                    onClick={() => step(ability, 1)}
-                  >
-                    +
-                  </ActionIcon>
-                </Group>
-              </Group>
-            </Paper>
+            <ScoreStepper
+              key={ability}
+              ability={ability}
+              value={score}
+              note={`${pointCost(score) ?? 0} spent`}
+              canLower={priceOf(ability, -1) !== null}
+              canRaise={priceOf(ability, 1) !== null}
+              onStep={(by) => step(ability, by)}
+              min={POINT_BUY_MIN}
+              max={POINT_BUY_MAX}
+            />
           )
         })}
       </SimpleGrid>

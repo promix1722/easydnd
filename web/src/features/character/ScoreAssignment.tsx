@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { DragEvent, ReactNode } from 'react'
 
-import { Badge, Group, Paper, SimpleGrid, Stack, Text } from '@/ui'
+import { Group, Paper, SimpleGrid, Stack, Text } from '@/ui'
 
 import { ABILITY_ORDER, abilityName } from '@/domain'
 
@@ -37,6 +37,12 @@ export interface ScoreAssignmentProps {
  * first would be a rule about the widget rather than about the character. A
  * number picked up and put back down where it came from returns to the pool,
  * which is the only way to undo a placement and is the one you would try.
+ *
+ * Both halves are drawn large. A number waiting to be placed used to be a
+ * badge -- a few millimetres of target for the one gesture this whole surface
+ * exists for -- and the thing it is dragged onto has to be big enough to let
+ * go over. `TARGET` is the floor, and it is the usual one for something a
+ * thumb has to hit.
  */
 export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssignmentProps) {
   // What has been picked up and not yet put down. Null is the resting state,
@@ -106,7 +112,7 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
             <Paper
               key={ability}
               withBorder
-              p="sm"
+              p="md"
               radius="md"
               component="button"
               type="button"
@@ -117,8 +123,14 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
               }}
               onDrop={(event: DragEvent<HTMLElement>) => {
                 event.preventDefault()
+                // Anything at all can be dragged onto a page, and `Number('')`
+                // is 0 -- so without checking that the payload names one of
+                // the six places, dropping a selection of text here would deal
+                // out whichever number happens to be first.
                 const place = Number(event.dataTransfer.getData('text/plain'))
-                if (Number.isInteger(place)) put(ability, place)
+                if (Number.isInteger(place) && place >= 0 && place < values.length) {
+                  put(ability, place)
+                }
               }}
               onClick={() => {
                 if (held === null || held === place) take(ability)
@@ -131,6 +143,7 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
                 cursor: 'pointer',
                 textAlign: 'left',
                 width: '100%',
+                minHeight: TARGET * 1.5,
                 background: 'transparent',
                 borderStyle: value === undefined ? 'dashed' : 'solid',
                 ...(held !== null && held === place
@@ -163,6 +176,9 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
   )
 }
 
+/** The smallest a thing meant to be dragged, or dragged onto, is drawn. */
+const TARGET = 44
+
 function dragging(place: number) {
   return (event: DragEvent<HTMLElement>) => {
     event.dataTransfer.setData('text/plain', String(place))
@@ -183,17 +199,33 @@ function Chip({
   onDragStart: (event: DragEvent<HTMLElement>) => void
 }) {
   return (
-    <Badge
-      size="lg"
-      variant={held ? 'filled' : 'default'}
+    <Paper
+      withBorder
+      radius="md"
       component="button"
       type="button"
       draggable
       onDragStart={onDragStart}
       onClick={onClick}
-      style={{ cursor: 'grab' }}
+      data-held={held ? 'true' : undefined}
+      style={{
+        cursor: 'grab',
+        minWidth: TARGET,
+        minHeight: TARGET,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: held ? 'var(--mantine-primary-color-filled)' : 'transparent',
+        ...(held ? { borderColor: 'var(--mantine-primary-color-filled)' } : {}),
+      }}
     >
-      {label}
-    </Badge>
+      <Text
+        size="xl"
+        fw={600}
+        {...(held ? { c: 'var(--mantine-primary-color-contrast)' } : {})}
+      >
+        {label}
+      </Text>
+    </Paper>
   )
 }

@@ -149,6 +149,42 @@ const LEVELLED_LOG = {
   ],
 }
 
+/**
+ * The nested prompt coming back, which is what dropping its answer is *for*.
+ *
+ * Its options came with the race, which is why it cannot be re-posed from the
+ * entry and has to be asked again by the server.
+ */
+const ABILITY_BONUS_AGAIN = {
+  seq: 2,
+  complete: false,
+  prompts: [
+    {
+      choice: {
+        prompt: 'half-elf/ability-bonus/0',
+        choose: 2,
+        kind: 'ability-bonus',
+        from: {
+          kind: 'explicit',
+          options: [
+            { key: 'dex', kind: 'ability-bonus', ability: 'dex', bonus: 1 },
+            { key: 'con', kind: 'ability-bonus', ability: 'con', bonus: 1 },
+          ],
+        },
+      },
+      source: 'race:half-elf',
+      group: 'race',
+      optional: false,
+      advances: false,
+      event: { type: 'race', ref: 'race:half-elf' },
+      heldOnly: false,
+    },
+  ],
+}
+
+/** The same log with the dropped entry gone. */
+const DROPPED_LOG = { seq: 2, events: ANSWERED_LOG.events.slice(0, 2) }
+
 /** What the server asks next once the race is settled: a different category. */
 const AFTER_RACE = { seq: 2, complete: false, prompts: [PARTWAY.prompts[1]] }
 
@@ -171,7 +207,30 @@ const ALIGNMENT = {
         kind: 'alignment',
         from: { kind: 'collection', collection: 'alignment' },
       },
-      group: 'background',
+      // Who the character is, not what their background was: the server moved
+      // this and the four written questions to a group of their own.
+      group: 'personality',
+      optional: true,
+      advances: false,
+      event: { type: 'change' },
+      heldOnly: false,
+    },
+  ],
+}
+
+/** The traits question, as the server poses it: two of them, and no options. */
+const TRAITS_OPEN = {
+  seq: 2,
+  complete: false,
+  prompts: [
+    {
+      choice: {
+        prompt: 'character/personality-traits',
+        choose: 2,
+        kind: 'personality',
+        from: { kind: 'explicit' },
+      },
+      group: 'personality',
       optional: true,
       advances: false,
       event: { type: 'change' },
@@ -198,8 +257,33 @@ const ALIGNED_LOG = {
     {
       seq: 3,
       type: 'change',
-      source: 'background',
+      source: 'personality',
       changes: [{ path: 'identity.alignment', op: 'set', value: { kind: 'slug', slug: 'neutral' } }],
+    },
+  ],
+}
+
+/** Two traits written, as one entry: a set and an add. */
+const TRAITED_LOG = {
+  seq: 3,
+  events: [
+    ...BACKGROUND_LOG.events,
+    {
+      seq: 3,
+      type: 'change',
+      source: 'personality',
+      changes: [
+        {
+          path: 'identity.personalityTraits',
+          op: 'set',
+          value: { kind: 'string', string: 'I quote sacred texts at every turn.' },
+        },
+        {
+          path: 'identity.personalityTraits',
+          op: 'add',
+          value: { kind: 'string', string: 'I am tolerant of other faiths.' },
+        },
+      ],
     },
   ],
 }
@@ -420,6 +504,10 @@ function renderNew(viewport: 'mobile' | 'desktop') {
 
 const tabs = () => screen.getAllByRole('tab').map((tab) => tab.textContent ?? '')
 const tab = (name: string) => screen.getByRole('tab', { name })
+/** Which tab is showing, which is the one Mantine marks selected. */
+const current = () =>
+  screen.getAllByRole('tab').find((each) => each.getAttribute('aria-selected') === 'true')
+    ?.textContent ?? ''
 const writes = () => posted.filter((write) => !write.url.includes('dryRun'))
 
 /**
@@ -577,7 +665,7 @@ describe('BuildScreen', () => {
     // hang off -- and the scores straight after it, because they are what the
     // class was picked for. Nothing is disabled, because a tab is a place to
     // look as well as a place to answer.
-    expect(tabs()).toEqual(['identity', 'class', 'abilities', 'race', 'background'])
+    expect(tabs()).toEqual(['identity', 'class', 'abilities', 'race', 'background', 'personality'])
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
   })
 
@@ -803,7 +891,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: { seq: 3, complete: false, prompts: [] }, events: ALIGNED_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'background' }))
+    await user.click(await screen.findByRole('tab', { name: 'personality' }))
     // It reads as what was decided rather than as the patch that recorded it.
     await user.click(block(/Alignment/))
 
@@ -819,6 +907,80 @@ describe('BuildScreen', () => {
         type: 'change',
         changes: [
           { path: 'identity.alignment', op: 'set', value: { kind: 'slug', slug: 'lawful-good' } },
+        ],
+      },
+    })
+  })
+
+  it('writes a personality trait as the change that settles it', async () => {
+    const user = setupUser()
+    mockApi({ prompts: TRAITS_OPEN, events: BACKGROUND_LOG })
+    renderBuild(viewport)
+
+    await user.click(await screen.findByRole('button', { name: /Two personality traits/ }))
+    await user.type(
+      await screen.findByLabelText('Personality trait 1'),
+      'I quote sacred texts at every turn.',
+    )
+    await user.click(screen.getByRole('button', { name: /^confirm$/i }))
+
+    await waitFor(() => {
+      expect(posted).toHaveLength(1)
+    })
+    // No pick anywhere in it. A trait names nothing in the compendium, so what
+    // records it is the change that puts it on the sheet -- the same shape the
+    // alignment above travels in.
+    expect(posted[0]?.body).toEqual({
+      expectedSeq: 2,
+      events: [
+        {
+          type: 'change',
+          changes: [
+            {
+              path: 'identity.personalityTraits',
+              op: 'set',
+              value: { kind: 'string', string: 'I quote sacred texts at every turn.' },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('puts a written question again from the entry that settled it, starting from what it says', async () => {
+    const user = setupUser()
+    mockApi({ prompts: { seq: 3, complete: false, prompts: [] }, events: TRAITED_LOG, dropped: [] })
+    renderBuild(viewport)
+
+    await user.click(await screen.findByRole('tab', { name: 'personality' }))
+    // It reads back as what was written, both lines of it.
+    await user.click(block(/I quote sacred texts/))
+
+    const first = await screen.findByLabelText('Personality trait 1')
+    expect(first).toHaveValue('I quote sacred texts at every turn.')
+    expect(screen.getByLabelText('Personality trait 2')).toHaveValue('I am tolerant of other faiths.')
+
+    await user.clear(first)
+    await user.type(first, 'I keep my own counsel.')
+    await user.click(screen.getByRole('button', { name: 'Change it' }))
+
+    await waitFor(() => {
+      expect(writes()).toHaveLength(1)
+    })
+    expect(writes()[0]?.body).toMatchObject({
+      event: {
+        type: 'change',
+        changes: [
+          {
+            path: 'identity.personalityTraits',
+            op: 'set',
+            value: { kind: 'string', string: 'I keep my own counsel.' },
+          },
+          {
+            path: 'identity.personalityTraits',
+            op: 'add',
+            value: { kind: 'string', string: 'I am tolerant of other faiths.' },
+          },
         ],
       },
     })
@@ -889,31 +1051,60 @@ describe('a new character', () => {
 
     // The one block that opens itself: there is nothing behind it, and a front
     // door whose only row is shut reads as broken.
-    expect(await screen.findByText('What are they called?')).toBeInTheDocument()
+    expect(await screen.findByText('A name')).toBeInTheDocument()
     expect(screen.getByLabelText('Name')).toBeInTheDocument()
+    // Named once. The block says what the choice is, and the surface under it
+    // used to say it twice more -- a heading and a field label.
+    expect(screen.getAllByText(/^A name$/)).toHaveLength(1)
+    expect(screen.queryByText('What are they called?')).not.toBeInTheDocument()
     // The scores are a question asked of a character that exists, not a field
     // on the form that creates one.
     expect(screen.queryByText(/ability scores/)).not.toBeInTheDocument()
-    expect(tabs()).toEqual(['identity', 'class', 'abilities', 'race', 'background'])
+    expect(tabs()).toEqual(['identity', 'class', 'abilities', 'race', 'background', 'personality'])
   })
 
-  it('creates the character once, with the name alone, when a tab is clicked', async () => {
+  it('creates the character once, with the name alone, and lands on the tab that was pressed', async () => {
     const user = setupUser()
     renderNew(viewport)
 
     await user.type(await screen.findByLabelText('Name'), 'Rurik')
     await user.click(tab('class'))
 
-    await waitFor(() => {
-      expect(screen.getByText('A race')).toBeInTheDocument()
-    })
     const creates = posted.filter((write) => write.url.endsWith('/v1/characters'))
-    expect(creates).toHaveLength(1)
+    await waitFor(() => {
+      expect(creates).toHaveLength(1)
+    })
     expect(creates[0]?.body).toEqual({ name: 'Rurik' })
+
+    // Class, because class was pressed. The only prompt the server has is a
+    // race one, so a screen that went where the questions are -- which is what
+    // it used to do -- would be showing "A race" here instead.
+    await waitFor(() => {
+      expect(current()).toBe('class')
+    })
+    expect(screen.queryByText('A race')).not.toBeInTheDocument()
 
     // The URL was replaced, so nothing on the built screen creates a second one.
     await user.click(tab('background'))
     expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+  })
+
+  it('stays on identity when the name itself is confirmed', async () => {
+    const user = setupUser()
+    renderNew(viewport)
+
+    await user.type(await screen.findByLabelText('Name'), 'Rurik')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    await waitFor(() => {
+      expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+    })
+    // Answering a question is not a request to be asked another, and that rule
+    // has no exception for the first one.
+    await waitFor(() => {
+      expect(screen.getByText('Name')).toBeInTheDocument()
+    })
+    expect(current()).toBe('identity')
   })
 
   it('posts nothing for a blank name, and says why', async () => {
@@ -976,7 +1167,9 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     const user = setupUser()
     mockApi({
       prompts: PARTWAY,
+      then: ABILITY_BONUS_AGAIN,
       events: ANSWERED_LOG,
+      thenEvents: DROPPED_LOG,
       dropped: [{ seq: 3, type: 'race', ref: 'race:half-elf', source: 'race', reason: 'empty' }],
     })
     renderBuild(viewport)
@@ -1007,5 +1200,11 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     })
     expect(writes()[0]?.url).toContain('/events/3?expectedSeq=3')
     expect(writes()[0]?.url).not.toContain('dryRun')
+
+    // And the question that comes back is *open*. Pressing a decided block
+    // means "ask me that again", so it used to take a second press on the same
+    // row to see the options -- the same gesture, twice, for one intention.
+    const asked = await screen.findByRole('button', { name: /ability scores to raise/ })
+    expect(asked).toHaveAttribute('aria-expanded', 'true')
   })
 })

@@ -45,8 +45,10 @@ func TestStubBuildsAFullCharacter(t *testing.T) {
 	if body.ID == "" {
 		t.Error("stub returned no id")
 	}
-	// The opening entry plus the eight selections that build the character.
-	if got, want := body.Seq, 9; got != want {
+	// The opening entry plus the twelve selections that build the character --
+	// four of which are the roleplaying lines, one entry apiece like every
+	// other selection, because each is its own block on the build screen.
+	if got, want := body.Seq, 13; got != want {
 		t.Errorf("seq = %d, want %d", got, want)
 	}
 	if got, want := body.Sheet.Identity.Name, "Сахарок"; got != want {

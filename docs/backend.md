@@ -530,6 +530,25 @@ Three fields make the client mechanical rather than knowledgeable:
   rejects them. `heldOnly` inverts it for Expertise, where being proficient is
   the precondition rather than the conflict.
 
+A prompt whose option set is **explicit and empty** is a question the player
+answers in their own words. Three exist: a name, and the four roleplaying lines
+in the `personality` group -- a personality trait, an ideal, a bond and a flaw.
+SRD 5.1 prints eight of each and the compendium still carries them, but they
+are offered as prompts no longer: a trait is the one line on a sheet that is
+nobody's but the player's, and a menu of eight makes it the compendium's. The
+state behind all four was always free text (`State.Identity.PersonalityTraits`
+is a `[]string`), so what changed is that the prompt stopped pretending
+otherwise.
+
+Those four are posed the way `character/alignment` is, and for the same reason:
+there is no option set to compare an answer against, so "answered" is a
+question about the sheet rather than about the log. `promptBuilder.personality`
+emits each only while its value is unset, and the change that sets it is what
+closes it -- which is also what attributes the entry, through the same
+`closedGroup` path the six ability scores go down. The projector no longer
+seeds any of them from a picked suggestion; it used to, which meant choosing a
+background *after* writing a trait silently overwrote it.
+
 ### Writing to a character
 
 Every write states the sequence it expects the log to end at. The whole log is
@@ -541,8 +560,9 @@ round trip instead of two, and it is why the client needs no cache
 invalidation: the response *is* the invalidation.
 
 Every write also records a **`source`**: the group of the prompt the entry
-answers -- `identity`, `abilities`, `race`, `background`, `class` or `advance`,
-the same vocabulary `/prompts` groups its questions by. The **server** writes
+answers -- `identity`, `abilities`, `race`, `background`, `class`, `advance` or
+`personality`, the same vocabulary `/prompts` groups its questions by. The
+**server** writes
 it, from the prompt the event was matched against, and it is ignored if a
 request carries one. That is not distrust for its own sake: the client already
 posts what a prompt told it to post, so the server knows which prompt that was,

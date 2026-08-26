@@ -71,6 +71,41 @@ export function choiceName(prompt: Prompt): string {
   }
 }
 
+/**
+ * The four questions a player answers in their own words, and where each lands.
+ *
+ * They are the character's *inputs*, like a name and an alignment: they settle
+ * a value on the sheet rather than naming anything in the compendium, so the
+ * answer is the change that settles it and something has to say which path.
+ * That table lives here rather than beside the alignment's in `BuildScreen`
+ * because these also need a noun -- the field has to be labelled with what one
+ * of them is -- and one table with both is better than two that can disagree.
+ *
+ * `undefined` for every other kind, which is what makes this the test as well
+ * as the table.
+ */
+const WRITTEN: Record<string, { path: string; noun: string }> = {
+  personality: { path: 'identity.personalityTraits', noun: 'Personality trait' },
+  ideal: { path: 'identity.ideals', noun: 'Ideal' },
+  bond: { path: 'identity.bonds', noun: 'Bond' },
+  flaw: { path: 'identity.flaws', noun: 'Flaw' },
+}
+
+/** Where a written question's answer goes, or undefined if it is picked. */
+export function writtenAs(prompt: Prompt): { path: string; noun: string } | undefined {
+  return WRITTEN[prompt.choice.kind]
+}
+
+/**
+ * What a written answer is called, read back from the path it settled.
+ *
+ * The same table from the other end, so that the block heading a decided trait
+ * and the field that wrote it cannot come to call it two different things.
+ */
+export function writtenLabel(path: string): string | undefined {
+  return Object.values(WRITTEN).find((each) => each.path === path)?.noun
+}
+
 /** Small counts read as words; large ones read as numbers. */
 function count(n: number): string {
   return ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'][n] ?? String(n)

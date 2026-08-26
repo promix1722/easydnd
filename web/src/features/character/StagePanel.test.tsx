@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { Prompt } from '@/lib/api'
+import type { Change, Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 
@@ -81,6 +81,26 @@ const SCORES: Prompt = {
   heldOnly: false,
 }
 
+/**
+ * A written question: two traits, and nothing to pick between.
+ *
+ * The empty option set is the whole of what tells this apart from a menu, and
+ * it is the server's own statement that there is nothing on offer.
+ */
+const TRAITS: Prompt = {
+  choice: {
+    prompt: 'character/personality-traits',
+    choose: 2,
+    kind: 'personality',
+    from: { kind: 'explicit' },
+  },
+  group: 'personality',
+  optional: true,
+  advances: false,
+  event: { type: 'change' },
+  heldOnly: false,
+}
+
 const NAMES = new Map([['class:rogue', 'Rogue']])
 
 function panel(
@@ -91,6 +111,8 @@ function panel(
     asking?: Asking | null
     onOpen?: (key: string | null) => void
     onNext?: () => void
+    onAnswerChanges?: (asking: Asking, changes: Change[]) => void
+    lines?: readonly string[]
   } = {},
 ) {
   return (
@@ -103,10 +125,11 @@ function panel(
       onAnswerPicks={vi.fn()}
       onNameChange={vi.fn()}
       onAnswerName={vi.fn()}
-      onAnswerChanges={vi.fn()}
+      onAnswerChanges={over.onAnswerChanges ?? vi.fn()}
       pending={false}
       fields={[]}
       {...(over.onNext ? { onNext: over.onNext } : {})}
+      {...(over.lines ? { lines: over.lines } : {})}
     />
   )
 }
@@ -218,5 +241,87 @@ describe('StagePanel', () => {
 
     rerender(panel([], []))
     expect(screen.getByText('Nothing to answer yet.')).toBeInTheDocument()
+  })
+})
+
+/**
+ * A trait is written, not picked.
+ *
+ * The SRD prints eight of each and the compendium carries them, but a trait is
+ * the one line on a sheet that is nobody's but the player's -- so the prompt
+ * arrives with nothing to choose between and the surface is a field.
+ */
+describe('the questions answered in words', () => {
+  const viewport = 'desktop'
+
+  it('offers fields rather than options, and writes the list the sheet stores', async () => {
+    const user = setupUser()
+    const onAnswerChanges = vi.fn()
+    const asking: Asking = { prompt: TRAITS, replaces: null }
+    renderAt(
+      viewport,
+      panel([], [TRAITS], {
+        openKey: 'open:character/personality-traits',
+        asking,
+        onAnswerChanges,
+      }),
+    )
+
+    // Two fields, because the background suggests two -- and no menu.
+    await user.type(screen.getByLabelText('Personality trait 1'), 'I quote sacred texts.')
+    await user.type(screen.getByLabelText('Personality trait 2'), 'I am tolerant of other faiths.')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    const changes = onAnswerChanges.mock.calls[0]?.[1] as Change[]
+    // Set then add: that is how the list is stored, and reading it back is
+    // reading the values in order.
+    expect(changes).toEqual([
+      {
+        path: 'identity.personalityTraits',
+        op: 'set',
+        value: { kind: 'string', string: 'I quote sacred texts.' },
+      },
+      {
+        path: 'identity.personalityTraits',
+        op: 'add',
+        value: { kind: 'string', string: 'I am tolerant of other faiths.' },
+      },
+    ])
+  })
+
+  it('answers with one where two were suggested, and with none not at all', async () => {
+    const user = setupUser()
+    const onAnswerChanges = vi.fn()
+    renderAt(
+      viewport,
+      panel([], [TRAITS], {
+        openKey: 'open:character/personality-traits',
+        asking: { prompt: TRAITS, replaces: null },
+        onAnswerChanges,
+      }),
+    )
+
+    // Nothing written is the same as not answering, and the question is
+    // optional -- so there is nothing to confirm.
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled()
+
+    await user.type(screen.getByLabelText('Personality trait 1'), 'I keep my own counsel.')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    expect(onAnswerChanges.mock.calls[0]?.[1]).toHaveLength(1)
+  })
+
+  it('starts from what is already written when the answer is being changed', () => {
+    renderAt(
+      viewport,
+      panel([], [TRAITS], {
+        openKey: 'open:character/personality-traits',
+        asking: { prompt: TRAITS, replaces: null },
+        lines: ['I quote sacred texts.'],
+      }),
+    )
+
+    expect(screen.getByLabelText('Personality trait 1')).toHaveValue('I quote sacred texts.')
+    expect(screen.getByLabelText('Personality trait 2')).toHaveValue('')
   })
 })

@@ -24,6 +24,7 @@ const (
 	GroupBackground
 	GroupClass
 	GroupAdvance
+	GroupPersonality
 )
 
 var promptGroupNames = map[PromptGroup]string{
@@ -34,6 +35,10 @@ var promptGroupNames = map[PromptGroup]string{
 	GroupBackground: "background",
 	GroupClass:      "class",
 	GroupAdvance:    "advance",
+	// Who the character is, as against what they are. The background decides
+	// what they did before; this is what they are like, and it is the one
+	// group whose answers are the player's own words rather than a pick.
+	GroupPersonality: "personality",
 }
 
 // String returns the group's wire name, or "unknown" outside the enumeration.
@@ -411,10 +416,59 @@ func (b *promptBuilder) background() {
 
 	optional := optionalPrompt(base)
 	b.addChoices(background.StartingEquipmentOptions, optional)
-	b.addChoice(&background.PersonalityTraits, optional)
-	b.addChoice(&background.Ideals, optional)
-	b.addChoice(&background.Bonds, optional)
-	b.addChoice(&background.Flaws, optional)
+
+	b.personality(background)
+}
+
+// personality poses who the character is: the four roleplaying questions and
+// an alignment.
+//
+// They are the background's questions -- it is the background that suggests
+// what an acolyte tends to believe -- but they are not answers about the
+// background, which is why they are a group of their own rather than four more
+// rows under it.
+//
+// The four are asked as **text**, and the SRD's own d8 tables are not offered.
+// A trait is the one thing on a character sheet that is nobody's but the
+// player's, and a menu of eight makes it the compendium's. The state behind
+// them was always free text -- see State.Identity -- so what changes here is
+// only that the prompt stops pretending otherwise: each is answered by the
+// change that settles it, exactly as the alignment beside them is, and the
+// suggestions remain in the compendium for anybody who wants to read them.
+//
+// Each is posed only while its answer is unset. There is nothing here to
+// compare against an option set, so "answered" is a question about the sheet
+// rather than about the log -- which is the same rule the alignment follows,
+// and the reason neither of them goes through addChoice.
+func (b *promptBuilder) personality(background catalog.Background) {
+	written := func(choice rules.Choice, prompt rules.Slug, kind rules.ChoiceKind, set []string) {
+		if choice.Prompt.IsZero() || len(set) > 0 {
+			return
+		}
+		choose := choice.Choose
+		if choose < 1 {
+			choose = 1
+		}
+		b.out = append(b.out, Prompt{
+			Choice: rules.Choice{
+				Prompt: prompt,
+				Choose: choose,
+				Kind:   kind,
+				// Explicit and empty: there is nothing to pick between, and a
+				// client tells this apart from a menu by the absence of one.
+				From: rules.OptionSet{Kind: rules.OptionsExplicit},
+			},
+			Group:    GroupPersonality,
+			Optional: true,
+			Event:    PromptEvent{Type: EventChange},
+		})
+	}
+
+	id := b.state.Identity
+	written(background.PersonalityTraits, "character/personality-traits", rules.ChoosePersonality, id.PersonalityTraits)
+	written(background.Ideals, "character/ideal", rules.ChooseIdeal, id.Ideals)
+	written(background.Bonds, "character/bond", rules.ChooseBond, id.Bonds)
+	written(background.Flaws, "character/flaw", rules.ChooseFlaw, id.Flaws)
 
 	if b.state.Identity.Alignment.IsZero() {
 		b.out = append(b.out, Prompt{
@@ -424,7 +478,7 @@ func (b *promptBuilder) background() {
 				Kind:   rules.ChooseAlignment,
 				From:   rules.OptionSet{Kind: rules.OptionsFromCollection, Collection: rules.RefAlignment},
 			},
-			Group:    GroupBackground,
+			Group:    GroupPersonality,
 			Optional: true,
 			Event:    PromptEvent{Type: EventChange},
 		})

@@ -119,11 +119,12 @@ func stubEvents() []domain.Event {
 				{Prompt: "half-elf/language/0", Picks: []rules.Slug{"undercommon"}},
 			},
 		},
-		// Acolyte poses six prompts of its own and every one of them is
-		// optional, so a character can be complete with all six outstanding.
-		// They are answered anyway: "complete" and "finished" are not the same
-		// thing, and a stub with seven untouched rows under "still to choose"
-		// is a worse example of a built character than one with none.
+		// Acolyte's prompts, and the four personality ones that follow it, are
+		// every one of them optional -- so a character can be complete with all
+		// of them outstanding. They are answered anyway: "complete" and
+		// "finished" are not the same thing, and a stub with seven untouched
+		// rows under "still to choose" is a worse example of a built character
+		// than one with none.
 		//
 		// None of this is in the export -- the real character's background is
 		// Urchin, which SRD 5.1 does not publish. So these are chosen to suit
@@ -141,18 +142,55 @@ func stubEvents() []domain.Event {
 				// The prompt is the holy-symbols equipment category; an amulet
 				// is one of its three.
 				{Prompt: "acolyte/starting-equipment/0", Picks: []rules.Slug{"amulet"}},
-				{Prompt: "acolyte/personality/0", Picks: []rules.Slug{
-					"i-quote-or-misquote-sacred-texts",
-					"i-am-tolerant-or-intolerant-of",
-				}},
-				// The only ideal whose alignments include plain neutral, which
-				// is the alignment the opening entry sets. Nothing enforces
-				// that -- an answer is checked against the option set and not
-				// against the sheet -- so it is a choice, not a constraint.
-				{Prompt: "acolyte/ideal/0", Picks: []rules.Slug{"aspiration-i-seek-to-prove-myself"}},
-				{Prompt: "acolyte/bond/0", Picks: []rules.Slug{"i-owe-my-life-to-the"}},
-				{Prompt: "acolyte/flaw/0", Picks: []rules.Slug{"once-i-pick-a-goal-i"}},
 			},
+		},
+		// Who this character is, which is four sentences and an alignment.
+		//
+		// They are the acolyte's own suggestions, written out rather than
+		// picked: the four roleplaying prompts are text now, so what settles
+		// them is the change that settles them -- the same shape the alignment
+		// above travels in, and the same shape the build screen posts.
+		{
+			Type: domain.EventChange,
+			Changes: []domain.Change{
+				{
+					Path: "identity.personalityTraits", Op: domain.OpSet,
+					Value: domain.StringValue(
+						"I quote (or misquote) sacred texts and proverbs in almost every situation."),
+				},
+				{
+					Path: "identity.personalityTraits", Op: domain.OpAdd,
+					Value: domain.StringValue(
+						"I am tolerant (or intolerant) of other faiths and respect (or condemn) " +
+							"the worship of other gods."),
+				},
+			},
+		},
+		{
+			Type: domain.EventChange,
+			Changes: []domain.Change{{
+				Path: "identity.ideals", Op: domain.OpSet,
+				Value: domain.StringValue(
+					"Aspiration. I seek to prove myself worthy of my god's favor by matching " +
+						"my actions against his or her teachings."),
+			}},
+		},
+		{
+			Type: domain.EventChange,
+			Changes: []domain.Change{{
+				Path: "identity.bonds", Op: domain.OpSet,
+				Value: domain.StringValue(
+					"I owe my life to the priest who took me in when my parents died."),
+			}},
+		},
+		{
+			Type: domain.EventChange,
+			Changes: []domain.Change{{
+				Path: "identity.flaws", Op: domain.OpSet,
+				Value: domain.StringValue(
+					"Once I pick a goal, I become obsessed with it to the detriment of " +
+						"everything else in my life."),
+			}},
 		},
 		{
 			Type:  domain.EventClass,

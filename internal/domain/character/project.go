@@ -275,30 +275,11 @@ func (p *projector) applyBackground() {
 		p.state.Features = append(p.state.Features, background.Feature)
 	}
 
-	p.state.Identity.PersonalityTraits = p.textPicks(background.PersonalityTraits)
-	p.state.Identity.Ideals = p.textPicks(background.Ideals)
-	p.state.Identity.Bonds = p.textPicks(background.Bonds)
-	p.state.Identity.Flaws = p.textPicks(background.Flaws)
-}
-
-// textPicks resolves a roleplaying prompt's answers to the prose they name.
-//
-// The player may later replace any of these outright with a change event;
-// what is seeded here is the suggestion they picked.
-func (p *projector) textPicks(choice rules.Choice) []string {
-	var out []string
-	p.answers.chosen(choice, func(o rules.Option) {
-		text, ok := o.(rules.TextOption)
-		if !ok {
-			return
-		}
-		if term, found := p.cat.Terms.Get(text.Key); found {
-			out = append(out, term.Name)
-			return
-		}
-		out = append(out, text.Key.String())
-	})
-	return out
+	// Nothing here writes the roleplaying lines. They are the player's own
+	// words now, arriving as changes to identity.personalityTraits and its
+	// three siblings, and this used to *assign* them from the picked
+	// suggestion -- so choosing a background after writing them would have
+	// wiped what was written.
 }
 
 // applyClasses resolves every class the character has levels in: hit points,

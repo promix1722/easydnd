@@ -1,18 +1,18 @@
 import { useState } from 'react'
 
 import type { ApiFieldError, Change } from '@/lib/api'
-import { Button, Group, NumberInput, Select, SimpleGrid, Stack, Text } from '@/ui'
+import { Button, Group, Select, SimpleGrid, Stack, Text } from '@/ui'
 
 import { PointBuy } from './PointBuy'
 import { ScoreAssignment } from './ScoreAssignment'
 import type { Placement } from './ScoreAssignment'
+import { ScoreStepper } from './ScoreStepper'
 
 import {
   ABILITY_ORDER,
   POINT_BUY_MAX,
   POINT_BUY_MIN,
   STANDARD_ARRAY,
-  abilityName,
   rollAbilityScores,
 } from '@/domain'
 
@@ -125,7 +125,11 @@ export function AbilityScoresForm({
     } else if (next === 'point-buy') {
       setBought(allAt(POINT_BUY_MIN))
     } else {
-      setWritten(chosen())
+      // Only where the method being left actually produced six scores. An
+      // unplaced array has none, and `chosen` reports a place nobody has taken
+      // as a 0 -- so this used to open manual entry on six zeros, below its
+      // own minimum, which then saved as six 10s. Ten is where manual starts.
+      setWritten(carried(chosen()))
     }
   }
 
@@ -141,8 +145,12 @@ export function AbilityScoresForm({
     ])
   }
 
-  const errorFor = (field: string): string | undefined =>
-    fields.find((f) => f.field === field)?.message
+  // The server names a rejected score by its position in the entry --
+  // `events[0].changes[3].value` -- because that is where it found it. The
+  // form's own order is the same one it submits in, so the position is the
+  // index of the ability plus one for the method change that leads.
+  const errorFor = (at: number): string | undefined =>
+    fields.find((f) => f.field.endsWith(`.changes[${at + 1}].value`))?.message
 
   return (
     <Stack gap="md">
@@ -187,20 +195,28 @@ export function AbilityScoresForm({
           <Text size="xs" c="dimmed" mb="xs">
             Anything from 1 to 30. Racial bonuses are added by the rules, not here.
           </Text>
-          <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm">
-            {ABILITY_ORDER.map((ability) => (
-              <NumberInput
-                key={ability}
-                label={abilityName(ability)}
-                min={1}
-                max={30}
-                value={written[ability] ?? ''}
-                error={errorFor(`abilities.${ability}`)}
-                onChange={(value) =>
-                  setWritten((current) => ({ ...current, [ability]: value }))
-                }
-              />
-            ))}
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+            {ABILITY_ORDER.map((ability, at) => {
+              const score = written10(written, ability)
+              return (
+                <ScoreStepper
+                  key={ability}
+                  ability={ability}
+                  value={written[ability] ?? ''}
+                  canLower={score > MANUAL_MIN}
+                  canRaise={score < MANUAL_MAX}
+                  onStep={(by) =>
+                    setWritten((current) => ({ ...current, [ability]: score + by }))
+                  }
+                  onValueChange={(value) =>
+                    setWritten((current) => ({ ...current, [ability]: value }))
+                  }
+                  min={MANUAL_MIN}
+                  max={MANUAL_MAX}
+                  {...maybeError(errorFor(at))}
+                />
+              )
+            })}
           </SimpleGrid>
         </div>
       )}
@@ -233,8 +249,32 @@ function allAt(score: number): Scores {
   return Object.fromEntries(ABILITY_ORDER.map((ability) => [ability, score]))
 }
 
+/** What a typed score may be at all. The server bounds it identically. */
+const MANUAL_MIN = 1
+const MANUAL_MAX = 30
+
 /** What is in the manual fields, which is whatever has been typed there. */
 type Written = Record<string, number | string>
+
+/**
+ * The scores a method being left hands to manual entry, where it has any.
+ *
+ * Nothing, where any of the six is not a score -- an array with places still
+ * empty reports those as zeros, and six zeros is not a set of numbers somebody
+ * was part-way through typing. Manual starts at ten in that case, which is
+ * where it starts from nothing.
+ */
+function carried(scores: Scores): Scores {
+  const usable = ABILITY_ORDER.every((ability) => {
+    const score = scores[ability] ?? 0
+    return score >= MANUAL_MIN && score <= MANUAL_MAX
+  })
+  return usable ? { ...scores } : allAt(10)
+}
+
+function maybeError(error: string | undefined): { error?: string } {
+  return error === undefined ? {} : { error }
+}
 
 /** One typed field as a score. A field left empty is an average one. */
 function written10(written: Written, ability: string): number {

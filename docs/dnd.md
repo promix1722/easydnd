@@ -128,6 +128,16 @@ Every prompt carries a **stable id** (`fighter/starting-equipment/1`). That id i
 what a character's stored answer points at, so it must survive a data
 regeneration — otherwise reloading a character silently loses its choices.
 
+Not every question the SRD *prints* as a table is posed as one. A background's
+personality traits, ideals, bonds and flaws are d8 tables in the book and are
+carried in the catalogue as `Choice`s of text options, but a character is asked
+for them **in their own words**: the state behind them has always been free text,
+and a menu of eight makes a character's own line the compendium's. They are
+posed as prompts with an empty option set and answered by the change that
+settles them — `identity.personalityTraits` and its three siblings — which is
+the same shape an alignment and the six ability scores travel in. The tables
+remain in the compendium as suggestions to read.
+
 ### Localization
 
 Mechanics are language-neutral and prose is not, so they live in separate files:
@@ -204,8 +214,8 @@ answers keyed by prompt id, and — for `init` and `change` only — carries
 typed value.
 
 It also records a **`source`**: the group of the prompt it answers — `identity`,
-`abilities`, `race`, `background`, `class` or `advance`, the same vocabulary
-`Prompts` groups its questions by. Grouping the log is then a fact the server
+`abilities`, `race`, `background`, `class`, `advance` or `personality`, the same
+vocabulary `Prompts` groups its questions by. Grouping the log is then a fact the server
 wrote rather than something a reader infers from the type, and the difference
 is not cosmetic: a `change` event carrying six numbers and a `change` event
 carrying a DM's ruling have the same type and belong to different questions.

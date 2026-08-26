@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 
 import {
   appendEvents,
@@ -38,6 +38,7 @@ import {
   blocksFor,
   inheritPlace,
   keyFor,
+  promptKey,
   reclaimPlace,
   settledKey,
 } from './blocks'
@@ -82,6 +83,8 @@ interface Preview {
   event: CharacterEvent | null
   dropped: Dropped[]
   names: Map<string, string>
+  /** The block to open once this is made: see `done`. */
+  open: string | null
 }
 
 /**
@@ -111,6 +114,7 @@ interface Preview {
 export function BuildScreen() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   // The folder the character list was filtered to when New character was pressed.
   // Only /characters/new carries it; absent means the account's default, which
   // the server resolves.
@@ -133,7 +137,7 @@ export function BuildScreen() {
   const revise = useAction(replaceEvent)
   const remove = useAction(deleteEvent)
 
-  const [chosenStage, setChosenStage] = useState<Stage | null>(null)
+  const [chosenStage, setChosenStage] = useState<Stage | null>(landingStage(location.state))
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [seeded, setSeeded] = useState(false)
   const [askedOn, setAskedOn] = useState<Stage | null>(null)
@@ -144,6 +148,28 @@ export function BuildScreen() {
   // Held once and mutated, rather than replaced: see BlockOrder. The list is
   // redrawn by new data, never by the memory of where the old data sat.
   const [order] = useState(blockOrder)
+
+  /*
+    Creation changes the URL under a screen that is not replaced.
+
+    Both routes render this component, so React reuses the instance rather than
+    mounting a second one -- which is why creating used to move the player to
+    another tab without anything in the code saying "advance". No tab had been
+    chosen, the reread brought the first real prompts back, and
+    `firstUnfinished` below answered the only question it is asked: class.
+    Typing a name is not a request to be asked about a class.
+
+    So the tab the gesture aimed at rides across in the route's state, and is
+    taken up here, when the character the screen is looking at changes. The
+    initialiser above covers the other way in -- a deep link, or a router that
+    does remount -- and neither path can be relied on alone.
+  */
+  const [shownId, setShownId] = useState(id)
+  if (shownId !== id) {
+    setShownId(id)
+    setChosenStage(landingStage(location.state))
+    setOpenKey(null)
+  }
 
   const view = build.data ?? EMPTY_VIEW
   // Advancement is dropped before anything looks at it, so no tab, no list
@@ -191,8 +217,17 @@ export function BuildScreen() {
         ? { prompt: opened.prompt, replaces: null }
         : askingFor(opened.row)
 
-  const done = () => {
-    setOpenKey(null)
+  /**
+   * Closing the question, and opening whatever takes its place.
+   *
+   * `open` is a key that does not exist yet: the block it names arrives with
+   * the reread this starts. Answering a nested option and dropping an entry to
+   * put its question again both leave a *new* question in the same place, and
+   * a question that arrives shut is one the player has to press a second time
+   * for no reason they could name.
+   */
+  const done = (open: string | null = null) => {
+    setOpenKey(open)
     setPreview(null)
     // Pinned to wherever the answer was given. The screen opens on the first
     // category with something to do, and that is the whole of the help it
@@ -205,8 +240,14 @@ export function BuildScreen() {
     build.refresh()
   }
 
-  /** Creates the character the identity tab is describing, and moves on. */
-  const createCharacterFromDraft = async () => {
+  /**
+   * Creates the character the identity tab is describing.
+   *
+   * `landOn` rides across the navigation in the route's state, because the
+   * navigation is what loses it: a different URL is a different mount, and the
+   * new one has no memory of which tab the gesture was aimed at.
+   */
+  const createCharacterFromDraft = async (landOn: Stage) => {
     if (create.pending) return
     if (nameDraft.trim() === '') {
       setNameError('A character needs a name to be created under.')
@@ -218,22 +259,28 @@ export function BuildScreen() {
     })
     // replace: true, because the URL of a character that does not exist is
     // not a place the Back button should return anyone to.
-    if (created) await navigate(`/characters/${created.id}/build`, { replace: true })
+    if (created) {
+      await navigate(`/characters/${created.id}/build`, {
+        replace: true,
+        state: { stage: landOn },
+      })
+    }
   }
 
   const goToStage = (next: Stage) => {
     if (next === stage) return
     // Nothing else can be answered before the character exists, so a tab click
-    // is the same gesture as pressing Next: make it, then go.
+    // is the same gesture as pressing Next: make it, then go -- to the tab that
+    // was pressed, which is the whole of what the gesture asked for.
     if (isNew) {
-      void createCharacterFromDraft()
+      void createCharacterFromDraft(next)
       return
     }
     setChosenStage(next)
   }
 
   /** Sends one appended entry, then rereads everything. */
-  const append = async (event: CharacterEvent) => {
+  const append = async (event: CharacterEvent, open: string | null) => {
     const answered = openKey
     const written = await answer.run(id, view.prompts.seq, [event])
     if (written === null) return
@@ -242,7 +289,7 @@ export function BuildScreen() {
     // names it -- and without this the answer would appear at the bottom of
     // the list while the question it answered vanished from the middle.
     inheritPlace(order, answered, settledKey(written.seq))
-    done()
+    done(open)
   }
 
   /**
@@ -257,7 +304,7 @@ export function BuildScreen() {
    * players to confirm without reading, which is exactly the habit the one
    * change that *does* cost something needs them not to have.
    */
-  const price = async (row: SettledRow, event: CharacterEvent | null) => {
+  const price = async (row: SettledRow, event: CharacterEvent | null, open: string | null) => {
     const result =
       event === null
         ? await remove.run(id, row.seq, view.prompts.seq, true)
@@ -265,14 +312,14 @@ export function BuildScreen() {
     if (result === null) return
     const dropped = result.dropped ?? []
     if (dropped.length === 0) {
-      await write(row, event)
+      await write(row, event, open)
       return
     }
-    setPreview({ row, event, dropped, names: await resolveRefNames(dropped) })
+    setPreview({ row, event, dropped, names: await resolveRefNames(dropped), open })
   }
 
   /** Makes the change, whether it was asked about or not. */
-  const write = async (row: SettledRow, event: CharacterEvent | null) => {
+  const write = async (row: SettledRow, event: CharacterEvent | null, open: string | null) => {
     // expectedSeq is sent again, so a log that moved between the price and
     // this write is the existing sequence conflict rather than a silent
     // commit of a price that was quoted against a different log.
@@ -282,14 +329,15 @@ export function BuildScreen() {
         : await revise.run(id, row.seq, view.prompts.seq, event, false)
     if (written === null) return
     // A removal is how a question that cannot be re-posed gets asked again, so
-    // the question that comes back takes the answer's place in the list.
+    // the question that comes back takes the answer's place in the list -- and
+    // opens there, because being asked again is what the press meant.
     if (event === null) reclaimPlace(order, settledKey(row.seq))
-    done()
+    done(open)
   }
 
   const commit = async () => {
     if (preview === null) return
-    await write(preview.row, preview.event)
+    await write(preview.row, preview.event, preview.open)
   }
 
   /**
@@ -322,7 +370,7 @@ export function BuildScreen() {
     if (block?.kind !== 'settled') return
     const question = reask(block.row)
     if (question === null) {
-      void price(block.row, null)
+      void price(block.row, null, reaskedKey(block.row))
       return
     }
     // A rename starts from the name it is changing rather than from nothing.
@@ -330,8 +378,9 @@ export function BuildScreen() {
   }
 
   const submitEvent = (asked: Asking, event: CharacterEvent) => {
-    if (asked.replaces === null) void append(event)
-    else void price(asked.replaces, event)
+    const open = followUpKey(asked.prompt, event)
+    if (asked.replaces === null) void append(event, open)
+    else void price(asked.replaces, event, open)
   }
 
   if (build.loading) {
@@ -419,7 +468,7 @@ export function BuildScreen() {
               setNameError(undefined)
             }}
             onAnswerName={(asked, next) => {
-              if (isNew) void createCharacterFromDraft()
+              if (isNew) void createCharacterFromDraft('identity')
               else submitEvent(asked, initEventFor(next))
             }}
             onAnswerChanges={(asked, changes) =>
@@ -430,6 +479,7 @@ export function BuildScreen() {
             {...(nextStage === null ? {} : { onNext: () => goToStage(nextStage) })}
             {...(isNew || asking?.prompt.choice.kind === 'text' ? { name: nameDraft } : {})}
             {...maybeScores(asking?.replaces ?? null)}
+            {...maybeLines(asking?.replaces ?? null)}
           />
         </TabRow>
 
@@ -518,6 +568,50 @@ export function BuildScreen() {
 function buildTrail(isNew: boolean, name: string | null, id: string): Crumb[] {
   if (isNew) return [{ label: 'New character' }]
   return [{ label: name, to: `/characters/${id}` }, { label: 'Build' }]
+}
+
+/**
+ * The tab creation asked to land on, out of the route state it rode in on.
+ *
+ * Unknown or absent is null rather than a guess: a link somebody typed carries
+ * no state, and a state naming a tab this build does not have is a client that
+ * has moved on. Both mean "open where you would have opened anyway".
+ */
+function landingStage(state: unknown): Stage | null {
+  const named = (state as { stage?: unknown } | null)?.stage
+  return typeof named === 'string' && STAGES.includes(named as Stage) ? (named as Stage) : null
+}
+
+/**
+ * The question an answer brings with it, where it brings one.
+ *
+ * Picking a nested option -- "a martial melee weapon" rather than the greataxe
+ * beside it -- answers the prompt and poses another, and the server names the
+ * new one by the key the old one was answered with: a nested option's key *is*
+ * its inner prompt's slug. So the block that is about to arrive is knowable
+ * from the answer alone, and can be opened rather than left for a second press.
+ */
+function followUpKey(prompt: Prompt, event: CharacterEvent): string | null {
+  const nested = new Set(
+    (prompt.choice.from.options ?? [])
+      .filter((option) => option.kind === 'nested')
+      .map((option) => option.key),
+  )
+  const picked = (event.choices ?? []).flatMap((answer) => answer.picks)
+  const follows = picked.find((pick) => nested.has(pick))
+  return follows === undefined ? null : promptKey(follows)
+}
+
+/**
+ * The question a dropped entry puts back, named from the entry itself.
+ *
+ * An answer to a nested prompt cannot be re-posed directly, so opening it drops
+ * it and the server emits that prompt again -- under the slug the entry
+ * answered, which is the one thing the entry does say.
+ */
+function reaskedKey(row: SettledRow): string | null {
+  const answered = (row.event.choices ?? [])[0]?.prompt
+  return answered === undefined ? null : promptKey(answered)
 }
 
 /** How a drop reason reads, without borrowing a category's word. */
@@ -616,13 +710,27 @@ function isStage(stage: Stage | null): stage is Stage {
  * accepted it, attributed it to no prompt, and the alignment stayed unset --
  * the worst kind of failure, which is the silent one.
  */
-const INPUTS: readonly { prompt: string; path: string; kind: string; collection: string }[] = [
+const INPUTS: readonly {
+  prompt: string
+  path: string
+  kind: string
+  /** Absent where the answer is written rather than picked from a set. */
+  collection?: string
+}[] = [
   {
     prompt: 'character/alignment',
     path: 'identity.alignment',
     kind: 'alignment',
     collection: 'alignment',
   },
+  // The four the player answers in their own words. They are inputs for the
+  // same reason the alignment is -- they settle a value and name nothing in
+  // the compendium -- and they have no collection because there is nothing to
+  // choose between. See features/character/promptNames for what each is called.
+  { prompt: 'character/personality-traits', path: 'identity.personalityTraits', kind: 'personality' },
+  { prompt: 'character/ideal', path: 'identity.ideals', kind: 'ideal' },
+  { prompt: 'character/bond', path: 'identity.bonds', kind: 'bond' },
+  { prompt: 'character/flaw', path: 'identity.flaws', kind: 'flaw' },
 ]
 
 /** The prompt an entry's changes settle, where they settle one. */
@@ -632,13 +740,16 @@ function inputOf(event: CharacterEvent): (typeof INPUTS)[number] | undefined {
 }
 
 /** The question an input poses, so that answering it again is one mechanism. */
-function inputPrompt(input: (typeof INPUTS)[number], stage: Stage): Prompt {
+function inputPrompt(input: (typeof INPUTS)[number], stage: Stage, choose: number): Prompt {
   return {
     choice: {
       prompt: input.prompt,
-      choose: 1,
+      choose,
       kind: input.kind,
-      from: { kind: 'collection', collection: input.collection },
+      from:
+        input.collection === undefined
+          ? { kind: 'explicit' }
+          : { kind: 'collection', collection: input.collection },
     },
     group: stage,
     optional: false,
@@ -691,7 +802,12 @@ function reask(row: SettledRow): Prompt | null {
   }
   const input = inputOf(event)
   if (input !== undefined) {
-    return inputPrompt(input, row.stage)
+    // A written answer is re-posed with as many fields as it has lines, which
+    // is the only statement of "how many" left once the prompt has gone: the
+    // background's own count came with the question, and the question is
+    // answered.
+    const written = linesOf(event, input.path)
+    return inputPrompt(input, row.stage, Math.max(written.length, 1))
   }
   if (isScores(event)) {
     return {
@@ -733,6 +849,32 @@ function maybeScores(row: SettledRow | null): { scores?: Scores; method?: string
     else if (change.value.int !== undefined) scores[tail] = change.value.int
   }
   return { scores, ...(method !== undefined ? { method } : {}) }
+}
+
+/**
+ * What an entry wrote to one path, in the order it wrote it.
+ *
+ * The list is stored as a `set` followed by `add`s -- see `WrittenForm` -- so
+ * reading it back is reading the values in order, and nothing here has to know
+ * which op was which.
+ */
+function linesOf(event: CharacterEvent, path: string): string[] {
+  return (event.changes ?? [])
+    .filter((change) => change.path === path)
+    .flatMap((change) => (change.value.string === undefined ? [] : [change.value.string]))
+}
+
+/**
+ * What a settled written answer says, for the form that is changing it.
+ *
+ * Nothing at all for every other kind of entry, which is what keeps the prop
+ * off surfaces that would have no use for it.
+ */
+function maybeLines(row: SettledRow | null): { lines?: readonly string[] } {
+  if (row === null) return {}
+  const input = inputOf(row.event)
+  if (input === undefined || input.collection !== undefined) return {}
+  return { lines: linesOf(row.event, input.path) }
 }
 
 /** A name, as the entry that carries one. */

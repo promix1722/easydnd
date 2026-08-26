@@ -553,25 +553,30 @@ whatever the list was filtered to is where the next character lands.
 ## The build screen is a loop, not a wizard
 
 `features/character/BuildScreen` reads `/prompts`, `/events` and `/sheet`, and
-draws five tabs. It is still a loop rather than an N-step wizard, and it has to
+draws six tabs. It is still a loop rather than an N-step wizard, and it has to
 be: prompts nest -- answering the "two skills" branch of a rogue's Expertise is
 what brings the two-skill prompt into existence -- so the total number of steps
 is not knowable until the last one is answered. The tabs are not steps. They
 are the fixed set of *categories* a question can belong to, which is the
 server's own `Prompt.Group` and not a taxonomy this client invented, in the
-order `domain/stages.ts` states: identity, class, abilities, race, background.
-Class first after the name, because it is the choice the most other choices
-hang off -- and the scores straight after it, because they are what the class
-was picked *for*: a barbarian wants the 15 in Strength, and deciding that while
-the class is still the last thing you looked at is the difference between
-building a character and filling in a form.
+order `domain/stages.ts` states: identity, class, abilities, race, background,
+personality. Class first after the name, because it is the choice the most
+other choices hang off -- and the scores straight after it, because they are
+what the class was picked *for*: a barbarian wants the 15 in Strength, and
+deciding that while the class is still the last thing you looked at is the
+difference between building a character and filling in a form. Personality is
+last and is the only tab that asks nothing about the rules -- see
+[below](#who-the-character-is-is-its-own-tab-and-its-own-words).
 
 The screen opens on the first category with something required outstanding,
 and that is the whole of the help it offers: **answering does not move you**.
 A tab changes when a tab is pressed, and never on the way back from a write --
 answering one question is not a request to be asked another, and a player who
 has just chosen barbarian is usually looking at what barbarian brought with
-it. There is no Next in the tab row for the same reason: the order is the player's,
+it. That has no exception for the first answer either, which for a long time it
+did: see
+[Creating is answering the first question](#creating-is-answering-the-first-question).
+There is no Next in the tab row for the same reason: the order is the player's,
 and a control that walks the tabs in the server's order is a wizard's stride in
 a screen that is not a wizard. `Finish` sits against the last tab rather than
 across the row from it, because it is the thing to do after them.
@@ -636,18 +641,22 @@ than answer the question. Where it wants **N**, the options that were not
 picked go grey as soon as N are: the question has been answered, and an option
 that still looks pressable but does nothing reads as a broken button. What was
 picked stays live either way, because unpicking is how you undo.
-Two questions are genuinely not that shape and get a form each: a name
-(`NameForm`) and the six ability scores (`AbilityScoresForm`, below).
-`StagePanel`
-chooses between the three by the kind of the prompt, and that is the only place
-in the client mapping a prompt kind to a control -- which is what let
-`PromptCard` stay exactly as it was while two new kinds arrived.
+Three questions are genuinely not that shape and get a form each: a name
+(`NameForm`), the six ability scores (`AbilityScoresForm`, below) and the four
+roleplaying lines (`WrittenForm`). `StagePanel` chooses between the four by the
+kind of the prompt, and that is the only place in the client mapping a prompt
+kind to a control -- which is what let `PromptCard` stay exactly as it was
+while three new kinds arrived.
 
-None of the three says what the question is. The block they open inside is
-headed by the choice's own name, and a surface that repeated it -- "Two more
-languages", then "Choose 2 more languages" -- would be asking twice. `NameForm`
-is the one exception, because "What are they called?" is not what its block
-says and is the first line anybody reads in this application.
+None of the four says what the question is, and there is no exception. The
+block they open inside is headed by the choice's own name, and a surface that
+repeated it -- "Two more languages", then "Choose 2 more languages" -- would be
+asking twice. `NameForm` used to be the exception, on the argument that "What
+are they called?" is the first line anybody reads in this application: it
+carried that heading *and* a field label under it, so the first screen anybody
+sees said "A name", "What are they called?" and "Name", three times over one
+empty box. The block says it; the field carries an `aria-label` for whoever
+cannot see where it sits.
 
 ### One block per choice
 
@@ -708,6 +717,19 @@ score method and all six numbers, which meant eight selections in one log entry
 and nothing a player could point at and change. The scores are an ordinary open
 choice now, answered on the abilities tab and written as their own entry.
 
+**Creating does not move you either**, and getting that right took carrying the
+intended tab across the navigation. Both `/characters/new` and
+`/characters/:id/build` render this same component, so React reuses the
+instance rather than mounting a second one -- which is why typing a name used
+to leave you looking at the class tab with nothing in the code saying
+"advance". No tab had been chosen, the reread brought the first real prompts
+back, and `firstUnfinished` answered the only question it is ever asked. So the
+tab the gesture aimed at rides across in the route's state and is taken up when
+the character the screen is looking at changes: confirming the name stays on
+identity, and pressing a tab -- which also creates the character, because
+nothing else can be answered until it exists -- goes to *that* tab rather than
+discarding it.
+
 `/characters/new?folder=` carries the folder the character list was filtered to, so
 whatever the list was showing is where the next character lands. Import does the
 same. Absent, the server resolves the account's default.
@@ -726,10 +748,12 @@ looking at. It carries `?folder=` like both its neighbours.
 
 Finished means the build screen's "still to choose" panel is **empty**, not
 merely that the rules call the character complete. Seven of its prompts are
-optional -- a language and the five questions acolyte asks about who the
-character is -- and a stub that left them would have shown seven untouched rows
-to anybody opening the build screen to look at one. The only row that remains is
-the standing offer of a level.
+optional -- acolyte's language and holy symbol, and the five questions about
+who the character is -- and a stub that left them would have shown seven
+untouched rows to anybody opening the build screen to look at one. The four
+written ones are answered as changes rather than picks, which is what they are
+now; the stub is a log the build screen could have written, so it writes what
+that screen would. The only row that remains is the standing offer of a level.
 
 The gate is `import.meta.env.DEV`, not a runtime check on a version or a
 feature flag, and the difference is the point: Vite replaces it with a literal,
@@ -763,10 +787,10 @@ because there is no second gesture on this screen -- pressing the thing you
 want to deal with is the whole of it. There is no
 append-a-correction path and no Back button. The dialog names every dropped
 entry and says the questions will be waiting outstanding in their own
-categories, because they will be -- and it confirms even when nothing is
-dropped, with a green affirmative rather than a red one, so that "this costs
-nothing" is a thing the screen says rather than a thing you infer from its
-silence.
+categories, because they will be -- and it opens **only** when something would
+be lost. A change that costs nothing else is simply made, because confirming
+every change teaches players to confirm without reading, which is exactly the
+habit the one change that *does* cost something needs them not to have.
 
 An answer to a *nested* prompt -- a rogue's Expertise, a half-elf's ability
 bonuses -- cannot be re-posed directly, because the options that made it up
@@ -777,6 +801,15 @@ place from the other side: the question comes back outstanding, and
 what went was. The player is shown none of that -- the same press, the same
 outcome, a moment longer -- and it is asked about on the same rule as
 everything else: only if another answer cannot survive it.
+
+The question that comes back is also **open**. `done` takes the key of a block
+that does not exist yet, and the reread is what brings it into being; without
+that the row you pressed turned back into a shut question and wanted pressing
+again, which is the same gesture twice for one intention. The key is knowable
+in both directions: a dropped entry names the prompt it answered, and a *nested
+option's key is its inner prompt's slug*, so answering "a martial melee weapon"
+rather than the greataxe beside it says exactly which question is about to
+arrive.
 
 ### A category's word appears exactly once
 
@@ -798,7 +831,7 @@ omission: in none of them is the number yours to pick.
 | Standard array | six printed numbers | deal them out |
 | Rolled | six numbers, 4d6 drop lowest | deal them out, or roll again |
 | Point buy | a 27-point budget | spend it |
-| Manual | an escape hatch | type anything from 1 to 30 |
+| Manual | an escape hatch | step or type anything from 1 to 30 |
 
 The two that deal out a set share `ScoreAssignment`: a pool you take from and
 six abilities to put numbers on. Dragging is the obvious gesture on a mouse and
@@ -807,18 +840,70 @@ the keyboard and put down with a second one -- the same operation, reachable
 without a pointing device. Dropping onto a taken ability swaps the two; putting
 a number back where it came from returns it to the pool. Nothing can be
 confirmed until all six are placed, because six numbers and five decisions is
-not an answer.
+not an answer. Both halves are drawn at least 44px square: a number waiting to
+be placed used to be a badge, which is a few millimetres of target for the one
+gesture the whole surface exists for.
 
-Point buy is priced by `domain/abilities`, which is where the rule lives: 8
-costs nothing, 9 to 13 cost a point each, 14 costs two and 15 costs two more.
-The steppers refuse a raise the budget cannot afford, so the screen enforces
-the budget instead of complaining about it afterwards -- and points may be left
-unspent, because a player who wants an even spread of 13s has spent 25 and is
-finished.
+Point buy and manual share `ScoreStepper`, and only the middle of the row
+differs. Point buy's number cannot be typed over -- a score there is *bought*,
+and typing 15 into it would be taking it -- while manual's can, because ten
+presses to reach a 20 is not an escape hatch. Point buy is priced by
+`domain/abilities`, which is where the rule lives: 8 costs nothing, 9 to 13
+cost a point each, 14 costs two and 15 costs two more. The steppers refuse a
+raise the budget cannot afford, so the screen enforces the budget instead of
+complaining about it afterwards -- and points may be left unspent, because a
+player who wants an even spread of 13s has spent 25 and is finished.
+
+Manual starts at **ten**, and takes the outgoing method's numbers only when
+that method actually produced six. Switching to it from an unplaced array used
+to show six zeros -- under its own stated minimum of 1 -- because an ability
+nobody has dealt to reads as a 0, and confirming then stored six 10s. The log
+and the screen disagreed about what had been entered, with nothing on screen to
+say so.
 
 The dice live in `domain/abilities` too, and take the die as a parameter: a
 test that cannot say what was rolled can only assert that six numbers came
-back, and "between 3 and 18" is not a test of dropping the lowest.
+back, and "between 3 and 18" is not a test of dropping the lowest. The
+algorithm is the SRD's rule verbatim -- roll four d6, total the highest three,
+six times -- and SRD 5.1 has no re-roll-if-unplayable clause, so neither does
+this.
+
+### Who the character is is its own tab, and its own words
+
+`personality` is the last tab and the only one that asks nothing about the
+rules: a personality trait, an ideal, a bond, a flaw and an alignment. They are
+the *background's* questions -- it is the acolyte entry that suggests what an
+acolyte tends to believe -- and they used to sit under background for exactly
+that reason, which put five questions nobody has to answer in front of the one
+required question on that tab. A group of their own is the server's change, not
+this client's: `domain/stages.ts` gains a line, and nothing else here had to
+learn the tab exists.
+
+The four are **written, not picked**. SRD 5.1 prints eight of each and the
+compendium carries them, and the prompt used to *be* that menu -- eight options
+and no way to say anything else about a character who is yours. The state
+behind them was free text the whole time (`State.Identity.PersonalityTraits` is
+`[]string`), so what changed is only that the prompt stopped pretending
+otherwise. The suggestions are still in the compendium for anybody who wants to
+read them.
+
+That makes them the character's **inputs**, like a name and an alignment: they
+settle a value on the sheet rather than naming a catalogue entry, so each is
+written as the change that settles it -- `identity.personalityTraits set "..."`
+followed by an `add` per further line, which is how the list is stored and
+therefore how it reads back. `features/character/promptNames` holds the one
+table of kind to path to noun, from both ends: the field that writes a trait
+and the block that heads a decided one cannot come to call it two things.
+
+`WrittenForm` draws `choose` fields, because the background suggests two traits
+and one ideal. Blank lines are dropped rather than stored, so two suggested can
+be answered with one; nothing written at all is the same as not answering, and
+these are optional, so the button simply stays disabled.
+
+The prompt is told apart from a menu the same way the six starting scores are
+told apart from a level-up improvement: **by whether it offers anything to pick
+between**. That is the server's own statement of what may be picked here, not a
+slug this client has memorised.
 
 ### Level-up is not offered
 
