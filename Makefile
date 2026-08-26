@@ -150,8 +150,15 @@ db/psql:
 # internal/api/http's durability test before it registers. Run in parallel,
 # one wipes the other's account mid-test and the failure lands in whichever
 # package lost the race -- which is not where the problem is. One database and
-# a global TRUNCATE mean the packages have to take turns; only this target
-# pays for it, because everywhere else those tests skip.
+# a global TRUNCATE mean the packages have to take turns.
+#
+# **CI runs this target too**, and for exactly that reason. It used to run
+# `test/unit` with TEST_DATABASE_URL set, which is `go test ./...` without the
+# -p 1 -- the one combination this flag exists to prevent, and the only place
+# in the world it occurred, since on a laptop those tests skip. It failed the
+# v1.0.1 release with both packages red at once, which is what the race looks
+# like from the outside. So the rule is: anywhere TEST_DATABASE_URL is set,
+# this is the target to run.
 test/db:
 	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test -p 1 ./...
 
@@ -319,8 +326,36 @@ lint/layers:
 tidy:
 	go mod tidy
 
-## verify: everything CI checks, locally
-verify: fmt/check vet lint/layers data/srd/check test/unit build/release web/check web/build
+## verify: everything CI checks, locally -- two jobs, longest first
+# The only gate this project has, so what it costs decides whether it gets run.
+# It used to be one serial chain, which meant the Go side's time was added to
+# the frontend's rather than spent inside it. CI has always run those two as
+# separate jobs; this is the same arrangement locally.
+#
+# The order of the goals is the schedule. `make -j` starts them left to right
+# as slots come free, so `web/test` -- fifteen seconds against six for
+# everything else put together -- has to be named first. Left where it was, it
+# lands in the last slot and `verify` costs its length plus everything that ran
+# before it, which is most of what the serial version was paying for. Named
+# first, the rest of the run happens inside its shadow and `verify` costs about
+# what `web/test` costs.
+#
+# -j2 rather than a bare -j: one of those two jobs is vitest, which forks
+# `availableParallelism - 1` workers of its own, so two make jobs is already the
+# whole of a four-core machine. VERIFY_JOBS is the knob for a worktree sharing
+# the box with a neighbour.
+#
+# --output-sync=target holds each target's output and prints it whole. Without
+# it a failing assertion arrives interleaved with whatever else was mid-run,
+# which for the one gate there is would be a bad trade for the seconds. The
+# cost is that nothing prints until a target finishes.
+#
+# `web/check` is left alone: it is what a person runs by hand, and CI's frontend
+# job runs `web/lint` and `web/test` as separate steps.
+VERIFY_JOBS ?= 2
+verify:
+	@$(MAKE) --no-print-directory -j$(VERIFY_JOBS) --output-sync=target \
+	  web/test web/build web/lint vet test/unit build/release data/srd/check fmt/check lint/layers
 
 ## clean: remove build artefacts
 clean:

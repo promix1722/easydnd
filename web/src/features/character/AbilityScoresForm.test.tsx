@@ -165,6 +165,16 @@ function pool(): number[] {
 describe('point buy', () => {
   const viewport = 'desktop'
 
+  /**
+   * Drives the method `Select` over to point buy.
+   *
+   * Only the first test does this. The rest pass `method="point-buy"` instead,
+   * because the two are the same state and the `Select` is not what they are
+   * about: `AbilityScoresForm` seeds `how` from the prop and its budget from
+   * `boughtFrom(method, scores)`, which with no scores is the same six 8s
+   * `change('point-buy')` sets. Two clicks and a `Combobox` dropdown per test
+   * is a real cost across a file that already drives seventy interactions.
+   */
   async function openPointBuy(user: ReturnType<typeof setupUser>) {
     await user.click(screen.getByRole('combobox', { name: /How were the scores generated/ }))
     await user.click(screen.getByRole('option', { name: 'Point buy' }))
@@ -182,8 +192,7 @@ describe('point buy', () => {
 
   it('charges two points for the fourteenth and two more for the fifteenth', async () => {
     const user = setupUser()
-    renderAt(viewport, form())
-    await openPointBuy(user)
+    renderAt(viewport, form({ method: 'point-buy' }))
 
     const raise = screen.getByRole('button', { name: 'Raise Strength' })
     for (let i = 0; i < 5; i += 1) await user.click(raise)
@@ -200,14 +209,18 @@ describe('point buy', () => {
   })
 
   it('will not sell what the budget cannot afford', async () => {
-    const user = setupUser()
-    renderAt(viewport, form())
-    await openPointBuy(user)
-
-    for (const ability of ['Strength', 'Dexterity', 'Constitution']) {
-      const raise = screen.getByRole('button', { name: `Raise ${ability}` })
-      for (let i = 0; i < 7; i += 1) await user.click(raise)
-    }
+    // Handed the spread rather than clicking twenty-one times to reach it:
+    // every one of those scores is buyable, so `boughtFrom` keeps them and the
+    // budget is derived from them exactly as it would have been. What spending
+    // costs is the test above; what it is like to have spent it all is this
+    // one.
+    renderAt(
+      viewport,
+      form({
+        method: 'point-buy',
+        scores: { str: 15, dex: 15, con: 15, int: 8, wis: 8, cha: 8 },
+      }),
+    )
 
     // Three 15s is 27 points exactly, and the fourth ability cannot move.
     expect(screen.getByText('0 points left of 27')).toBeInTheDocument()
@@ -217,8 +230,7 @@ describe('point buy', () => {
   it('lets a spread that leaves points over be confirmed', async () => {
     const user = setupUser()
     const onSubmit = vi.fn()
-    renderAt(viewport, form({ onSubmit }))
-    await openPointBuy(user)
+    renderAt(viewport, form({ onSubmit, method: 'point-buy' }))
 
     await user.click(screen.getByRole('button', { name: 'Raise Wisdom' }))
     await user.click(screen.getByRole('button', { name: 'Confirm' }))

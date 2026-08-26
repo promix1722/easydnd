@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url'
-import { defaultExclude, defineConfig, type Plugin } from 'vitest/config'
+import { defineConfig, type Plugin } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -64,26 +64,6 @@ const publicUrl = process.env.EASYDND_WEB_PUBLIC_URL
 const publicPort = publicUrl
   ? Number(publicUrl.port) || (publicUrl.protocol === 'https:' ? 443 : 80)
   : devPort
-
-/**
- * Test files that call `vi.mock`, which only works under isolation.
- *
- * Keep it in step with reality: scripts/check-layers.mjs fails the build if a
- * file calls vi.mock and is not listed here. See the `test` block below.
- */
-const MOCKING_TESTS = ['src/features/groups/InviteSheet.test.tsx']
-
-/** What both test projects share; only isolation and the file list differ. */
-const testProject = {
-  environment: 'jsdom' as const,
-  globals: true,
-  setupFiles: ['./src/test/setup.ts'],
-  // No `css: true`: nothing in the suite reads a cascaded style. The only style
-  // assertions are on inline `element.style` -- DragonMark's width and the
-  // carousel's custom properties, both written by JS -- and Mantine emits its
-  // class names whether or not a stylesheet was ever parsed. Running
-  // @mantine/core's CSS through PostCSS and into every jsdom bought nothing.
-}
 
 export default defineConfig({
   plugins: [
@@ -172,52 +152,46 @@ export default defineConfig({
     sourcemap: true,
   },
   /**
-   * The test suite, in two projects that differ only in isolation.
+   * The test suite, in one project that isolates nothing.
    *
-   * `isolate: false` is what makes the suite fast, and it is worth a lot. With
+   * `isolate: false` is what makes it fast, and it is worth a lot. With
    * isolation on, vitest forks a process per test file and each one rebuilds
    * the whole Mantine + embla + React module graph and its own jsdom -- across
    * 48 files that was 36s spent on imports and 78s on constructing jsdoms, out
    * of 229s total. Sharing both took the run to 64s without changing a single
    * assertion. The pool is left at the default `forks` deliberately: `threads`
-   * measured no better.
+   * measured no better, and the worker count is left alone too -- vitest takes
+   * `availableParallelism - 1`, which is the right answer on every machine this
+   * runs on.
    *
-   * What it costs is the guarantee that a file starts from nothing. Two things
-   * follow from that, and both are load-bearing:
+   * What it costs is the guarantee that a file starts from nothing, and two
+   * things follow from that. Both are load-bearing:
    *
    *   - src/test/setup.ts must reset anything a file can leave in module state.
    *     Its afterEach is that list.
-   *   - `vi.mock` cannot work. A shared registry means whichever file loads a
-   *     module first decides what every later file gets, so a mock registered
-   *     by the second file arrives too late -- InviteSheet.test.tsx mocks
-   *     @/lib/clipboard, and GroupScreen.test.tsx pulls the real one in through
-   *     the component tree. Neither file is wrong; the two cannot share a
-   *     worker.
+   *   - **`vi.mock` cannot be used, by anybody.** One shared registry means
+   *     whichever file loads a module first decides what every later file gets,
+   *     so a mock registered by the second file arrives too late. It does not
+   *     fail loudly: the test gets the real module and something else breaks,
+   *     in whatever order the files happened to run. A component that needs a
+   *     dependency swapped takes it as a prop instead -- InviteSheet's
+   *     `copyLink` is the worked example -- and `npm run lint:layers` fails on
+   *     any vi.mock in src/.
    *
-   * So files that mock a module get their own project, and keep isolation.
-   * The list is checked rather than trusted: `npm run lint:layers` fails if a
-   * file calls vi.mock without being named here.
+   * There used to be a second, isolated project for the one file that mocked.
+   * BaseSequencer runs projects in name order and isolated ones first, so that
+   * single file was a serial prefix on every run: 52 files took 13.8s and all
+   * 53 took 16.3s. One optional prop bought that 2.4s back.
    */
   test: {
-    projects: [
-      {
-        extends: true,
-        test: {
-          ...testProject,
-          name: 'unit',
-          exclude: [...defaultExclude, ...MOCKING_TESTS],
-          isolate: false,
-        },
-      },
-      {
-        extends: true,
-        test: {
-          ...testProject,
-          name: 'mocking',
-          include: MOCKING_TESTS,
-          isolate: true,
-        },
-      },
-    ],
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    isolate: false,
+    // No `css: true`: nothing in the suite reads a cascaded style. The only
+    // style assertions are on inline `element.style` -- DragonMark's width and
+    // the carousel's custom properties, both written by JS -- and Mantine emits
+    // its class names whether or not a stylesheet was ever parsed. Running
+    // @mantine/core's CSS through PostCSS and into every jsdom bought nothing.
   },
 })

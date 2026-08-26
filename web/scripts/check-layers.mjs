@@ -148,18 +148,12 @@ console.log('layers clean')
  * module and the assertion fails somewhere else, in a way that depends on the
  * order the files happened to run in -- which is the worst kind of red.
  *
- * So vite.config.ts keeps a second project, with isolation, for the files that
- * mock. This makes forgetting to add one a build failure rather than a
- * Tuesday.
+ * There used to be a list of exceptions here, run as a second project with
+ * isolation on. It cost 2.4s of every run to isolate one file, because vitest
+ * schedules an isolated project ahead of everything else and nothing overlaps
+ * it. The exception is gone and so is the list: no test file mocks a module,
+ * and a component that needs a dependency swapped takes it as an argument.
  */
-const MOCKING_LIST = /const MOCKING_TESTS = \[([^\]]*)\]/s
-const declared = new Set(
-  (MOCKING_LIST.exec(readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8'))?.[1] ?? '')
-    .split(',')
-    .map((entry) => entry.trim().replace(/^['"]|['"]$/g, ''))
-    .filter(Boolean),
-)
-
 const mocking = []
 for (const file of walk(SRC)) {
   if (!/\.test\.tsx?$/.test(file)) continue
@@ -168,23 +162,23 @@ for (const file of walk(SRC)) {
   }
 }
 
-const undeclared = mocking.filter((file) => !declared.has(file))
-const stale = [...declared].filter((file) => !mocking.includes(file))
-
-if (undeclared.length > 0 || stale.length > 0) {
-  console.error('\nMOCKING TESTS OUT OF STEP WITH vite.config.ts\n')
-  for (const file of undeclared) {
+if (mocking.length > 0) {
+  console.error('\nvi.mock IS NOT AVAILABLE IN THIS SUITE\n')
+  for (const file of mocking) {
     console.error(`  ${file}`)
-    console.error("    calls vi.mock but is not in MOCKING_TESTS, so it runs without")
-    console.error('    isolation and its mock will be ignored whenever another test')
-    console.error('    file loaded the same module first.\n')
   }
-  for (const file of stale) {
-    console.error(`  ${file}`)
-    console.error('    is in MOCKING_TESTS but no longer calls vi.mock; remove it so it')
-    console.error('    stops paying for isolation it does not need.\n')
-  }
+  console.error('')
+  console.error('  The test files share one module registry, so whichever file loads a')
+  console.error('  module first decides what every later file gets and a mock registered')
+  console.error('  second is ignored -- silently, and only sometimes, depending on the')
+  console.error('  order the files ran in.')
+  console.error('')
+  console.error('  Pass the dependency in instead. InviteSheet takes an optional')
+  console.error('  `copyLink` prop that defaults to the real `copyText`, and its test')
+  console.error('  hands over a `vi.fn()`; nothing global is touched and nothing leaks')
+  console.error('  into the next file. See docs/web.md#the-test-suite-does-not-isolate-test-files.')
+  console.error('')
   process.exit(1)
 }
 
-console.log(`mocking tests isolated (${mocking.length})`)
+console.log('no vi.mock in the suite')

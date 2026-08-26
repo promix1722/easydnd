@@ -17,7 +17,7 @@ curl localhost:8080/v1/health       # {"status":"ok"}
 curl localhost:8080/v1/catalog      # the compendium's index
 curl localhost:8080/v1/characters   # {"characters":[]}
 
-make verify                         # everything CI checks, back and front
+make verify                         # everything CI checks, back and front, two jobs at once
 ```
 
 `make run/server` needs no database: `config.dev.yaml` sets no `db.url`, so it
@@ -59,6 +59,20 @@ make test/race                      # the same suite under the race detector, ~9
 make test/db                        # including the Postgres adapter (needs make db/up)
 ```
 
+**Where a database is involved, `test/db` is the only correct target**, and CI
+runs it for that reason. Three packages reach the one database and each opens by
+wiping it -- `internal/adapter/repository/postgres` for users and for groups, and
+`internal/api/http`'s durability test. `go test ./...` runs packages in parallel,
+so without `test/db`'s `-p 1` one truncates a table another has just written,
+and the failure surfaces in whichever package lost the race rather than in
+whichever caused it. Both go red at once, which is the signature to recognise.
+
+CI used to run `make test/unit` with `TEST_DATABASE_URL` set -- the one place
+that combination arose, because on a machine without the variable those tests
+skip and the race cannot happen. It failed the v1.0.1 release and cost a manual
+re-run of the whole job. The rule is in `CLAUDE.md` because it is easy to
+reintroduce: set `TEST_DATABASE_URL`, run `test/db`.
+
 `make verify` runs `test/unit`. It does **not** run `test/race`, and that is a
 deliberate trade rather than an oversight.
 
@@ -81,6 +95,31 @@ The detector moved onto the path worth taking before a `git tag` -- the point
 where a missed race would otherwise ship. **Run `make test/race` before
 tagging.** It found real races in the HTTP layer and the stores once, and
 `make test/unit` will not find the next one.
+
+### verify runs two jobs, longest first
+
+`verify` used to be a serial chain, which meant the Go side's time was added to
+the frontend's rather than spent inside it. It is now a `make -j2` over the same
+leaf targets, and **the order they are named in is the schedule**: `make -j`
+starts goals left to right as slots come free, so `web/test` -- fifteen seconds
+against six for everything else put together -- has to go first. Left at the end
+of the list it lands in the last slot and the run costs its length plus
+everything before it. Named first, the Go lane, the frontend's typecheck and the
+production build all happen inside its shadow, and `verify` costs about what
+`web/test` costs.
+
+Two jobs, not more. One of them is vitest, which forks
+`availableParallelism - 1` workers of its own, so `-j2` is already the whole of
+a four-core machine; `VERIFY_JOBS` is the knob for a worktree sharing the box.
+`--output-sync=target` holds each target's output and prints it whole, so a
+failure arrives as one block rather than interleaved with whatever else was
+mid-run -- at the cost of nothing printing until a target finishes.
+
+CI has the same two lanes, and since the pipeline was unchained it goes further:
+its six check, build and test jobs all start at once. See
+[The three checks run at once](#the-three-checks-run-at-once-and-nothing-is-cached).
+`verify` cannot copy that -- one machine, not six -- so here the lanes are two
+and the order they are named in does the scheduling.
 
 The other reason the suite is fast is that each test package shares **one**
 `catalogfile.Source`. `Source.Load` caches a converted `*catalog.Catalog` per
@@ -1368,26 +1407,27 @@ One pipeline ships the API, the SRD data and the frontend together, and it is
 |---|---|
 | push to `main` | *nothing* -- no build, no tests |
 | push a `v*` tag | gofmt, vet, tests, build, version-injection check, then deploy |
-| push a `v*-notest` tag | the same minus the Test stage -- neither suite, neither version assertion |
+| push a `v*-notest` tag | the same minus the two suites; the version assertions still run |
+| push a `ci/*` tag | everything except Deploy and Restart -- a dry run that cannot ship |
 | manual run on a `v*` tag | the same -- how you re-run a tag that failed halfway |
 | manual run on a branch | builds and tests, but will not deploy |
 
 Because nothing runs on `main`, **`make verify` locally before tagging is the
 only thing standing between a mistake and a tagged release.**
 
-`-notest` is for the release where you have just run it. The Test stage is
-about ninety seconds of a four-minute deploy, and paying it twice for the same
-checks buys nothing, so a tag named for the exemption skips both test jobs and
-ships straight from Build. Naming the tag is the whole mechanism: the workflow
-reads it off the ref, and `git tag` therefore shows for ever which releases
-went out untested.
+`-notest` is for the release where you have just run it. Paying for the same
+checks twice buys nothing, so a tag named for the exemption skips both test
+jobs. Naming the tag is the whole mechanism: the workflow reads it off the ref,
+and `git tag` therefore shows for ever which releases went out untested.
 
-What it gives up is the pair of version assertions that live in the same stage
--- that `./easydnd -version` and the bundle's `version.json` both equal the
-commit SHA. They cost seconds and they catch a silent ldflags no-op or a badly
-tarred bundle *before* the symlink swap. Without them the same mistake still
-gets caught, but by `deploy.sh`'s health gate: a rollback and a red `restart`
-job minutes later, with nothing on the run page saying why. The suffix reaches
+What it gives up is the two suites, and now nothing else. The pair of version
+assertions -- that `./easydnd -version` and the bundle's `version.json` both
+equal the commit SHA -- used to live in the Test stage and go with it. They are
+in Build now, beside the artifact each is about, so a `-notest` release still
+proves the SHA landed. That matters more than it sounds: an unfound `-X` symbol
+is a *silent* no-op, and without the assertion the same mistake still gets
+caught, but by `deploy.sh`'s health gate -- a rollback and a red `restart` job
+minutes later, with nothing on the run page saying why. The suffix reaches
 nothing else -- `VERSION` comes from `git rev-parse HEAD` and every path on the
 server is keyed by the SHA, so a `-notest` release is byte-identical to any
 other.
@@ -1426,6 +1466,64 @@ The database is the exception, and the only piece of state that does **not**
 swap with a release. That is what makes the expand-only rule above binding: a
 rollback puts the previous binary in front of the schema the failed release
 applied.
+
+### Exercising the pipeline without shipping
+
+```sh
+git tag ci/whatever && git push origin ci/whatever
+```
+
+That runs Check, Build and Test exactly as a release does and stops there.
+Nothing in the workflow was taught about it: Deploy and Restart already ask
+`startsWith(github.ref, 'refs/tags/v')`, and a `ci/` ref fails that, so they skip
+on their own.
+
+It works only because the trigger and the deploy gate stopped being the same
+condition. They both used to say "starts with `v`" -- the trigger as the glob
+`v*`, the gate as `startsWith(…, 'refs/tags/v')` -- so every tag that could
+start the pipeline could also ship from it, and there was no way to run CI on a
+tag without a release at the end of it.
+
+**A dry-run tag must not begin with `v`.** `v*` is a glob and not a version
+pattern: `vtest` and `verify` both match the trigger *and* pass the deploy gate,
+so either would ship whatever it points at to easydnd.org. `ci/` cannot be
+mistyped into that, which is the whole reason for the prefix.
+
+A dry run also gets its own concurrency lane rather than sharing `deploy`, so a
+test tag can never hold a real release in the queue behind it.
+
+What it does **not** prove is the deploy gating itself. `deploy-backend` skips
+here for the ref, not because it weighed `check-backend`'s result -- so a `ci/`
+run says nothing about whether a red Check would stop a release. Only a real
+`v*` tag exercises that clause, which is why it is worth reading rather than
+testing.
+
+### The three checks run at once, and nothing is cached
+
+Check, Build and Test are six jobs with no dependencies between them -- three
+per lane, all starting together. They used to be a chain per lane, and the chain
+cost more than its contents: the Go module graph was compiled from scratch in
+each of the three backend jobs, one after another, 31s then 38s then 39s of a
+202s release. Nothing in Check produces anything Build or Test reads. The only
+real tie was the version assertions, which needed a built artifact -- so they
+moved into the job that builds it.
+
+The one thing that arrangement costs is that **Check no longer gates anything by
+being upstream of it.** The two Deploy jobs name `check-*` in `needs` and test
+its result explicitly. They have to: their `if` already lifts the implicit
+`success()` gate so that `-notest` can work, so a missing clause there would not
+fail loudly -- it would ship a release whose gofmt, vet, layer and drift checks
+were red.
+
+**Nothing is cached, and that is not an oversight.** A GitHub Actions cache is
+readable only from the ref that wrote it or from the default branch. This
+workflow runs on `v*` tags and nothing else, so every run was a new ref: it
+missed, wrote ~120 MB under its own tag, and left it for nobody. Twenty-five
+entries and 2.9 GB had accumulated without a single read; the logs said `Cache
+is not found` on every run sampled. Switching it back on would take something
+running on `main` so the cache lands on the default branch, and by the rule at
+the top of this section nothing runs on `main`. Until that trade is made
+deliberately, `cache: false` is the honest setting and saves the upload.
 
 ### Provisioning the database
 

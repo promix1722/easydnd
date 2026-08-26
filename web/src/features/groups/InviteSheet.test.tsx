@@ -7,12 +7,12 @@ import { setupUser } from '@/test/user'
 
 import { InviteSheet } from './InviteSheet'
 
-// The helper is mocked rather than the browser API it wraps, for a practical
-// reason: userEvent installs a navigator.clipboard stub of its own, so a test
-// that poked at the real one would be measuring testing-library. What copyText
-// does with a missing clipboard is pinned in lib/clipboard.test.ts instead.
-const copyText = vi.hoisted(() => vi.fn(async () => true))
-vi.mock('@/lib/clipboard', () => ({ copyText }))
+// The component takes its clipboard as a prop, so this touches no global at
+// all: no vi.mock, and nothing for the next test file in this worker to trip
+// over. Poking the real navigator.clipboard would not work anyway -- userEvent
+// installs a stub of its own over it -- and what the real copyText does with a
+// missing clipboard is pinned in lib/clipboard.test.ts.
+const copyLink = vi.fn(async (_text: string) => true)
 
 const TOKEN = 'a.b.c'
 
@@ -31,14 +31,17 @@ function stubFetch() {
 
 /** Opens the sheet, mints a link, and hands back the copy button. */
 async function mintLink() {
-  renderAt('desktop', withAuth({}, <InviteSheet groupId="grp_1" opened onClose={() => {}} />))
+  renderAt(
+    'desktop',
+    withAuth({}, <InviteSheet groupId="grp_1" opened onClose={() => {}} copyLink={copyLink} />),
+  )
   await setupUser().click(screen.getByRole('button', { name: 'Create link' }))
   return await screen.findByRole('button', { name: 'Copy link' })
 }
 
 beforeEach(() => {
-  copyText.mockReset()
-  copyText.mockResolvedValue(true)
+  copyLink.mockReset()
+  copyLink.mockResolvedValue(true)
   stubFetch()
 })
 
@@ -70,7 +73,7 @@ describe('copying', () => {
     await setupUser().click(button)
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument())
-    expect(copyText).toHaveBeenCalledWith(expect.stringContaining(`#${TOKEN}`))
+    expect(copyLink).toHaveBeenCalledWith(expect.stringContaining(`#${TOKEN}`))
     expect(screen.queryByText('Could not reach the clipboard')).not.toBeInTheDocument()
   })
 
@@ -78,7 +81,7 @@ describe('copying', () => {
   // so outside a secure context the button stayed on "Copy link" and nothing
   // happened at all. Whatever else it does, it must never fail silently.
   it('says so, and selects the link, when it cannot copy', async () => {
-    copyText.mockResolvedValue(false)
+    copyLink.mockResolvedValue(false)
     const button = await mintLink()
     await setupUser().click(button)
 

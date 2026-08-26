@@ -20,7 +20,10 @@ make web/check                      # typecheck, lint, layer-check, tests -- mir
 
 `make web/dev` proxies `/v1` to the API, so run `make run/server` alongside it
 -- or `make dev` at the repo root, which starts both and a Postgres. `make
-verify` at the repo root runs the frontend checks and the Go ones together.
+verify` at the repo root runs the frontend checks and the Go ones together, and
+runs them **at the same time**: `web/test` is by far the longest thing in it, so
+it is started first and the Go side happens inside its shadow. See
+[backend.md](backend.md#tests).
 
 ## The test suite does not isolate test files
 
@@ -30,7 +33,13 @@ forking a fresh pair per file. Rebuilding the Mantine, embla and React module
 graph 48 times over cost 36s of imports and 78s of jsdom construction out of
 229s total; sharing both took the run to 64s without a single assertion
 changing. Passing `delay: null` to user-event (see `src/test/user.ts`) took it
-to 38s from there, and the two rules below took it to 24s.
+to 38s from there, and the two rules below took it to 24s. On a four-core
+machine, where vitest forks `availableParallelism - 1` workers of its own, the
+whole suite is about fourteen seconds.
+
+Nothing sets the worker count. vitest's own default is the right answer on
+every machine this runs on, and a number written down here would be wrong on
+the next one.
 
 What it costs is the guarantee that a test file starts from nothing, and two
 things follow from that.
@@ -39,22 +48,32 @@ things follow from that.
 unmounts the tree, resets the viewport, clears stubbed globals and empties the
 catalogue request cache -- the only module-level mutable state in `src/`. If
 you add another piece, reset it there in the same change. A test that passes
-because of what ran before it is worse than one that fails.
+because of what ran before it is worse than one that fails. It is also the only
+place those resets belong: a file that repeats one in its own hook is not safer,
+only harder to read.
 
-**`vi.mock` cannot work without isolation**, so files that use it get their own
-project. A shared registry means whichever file loads a module first decides
-what every later file sees, and a mock registered by the second file arrives
-too late. It does not fail loudly: the test gets the real module, and the
-assertion breaks somewhere else, in whatever order the files happened to run
-in. `InviteSheet.test.tsx` mocks `@/lib/clipboard`; `GroupScreen.test.tsx`
-pulls the real one in through the component tree. Neither is wrong -- they just
-cannot share a worker. So `vite.config.ts` lists the mocking files in
-`MOCKING_TESTS` and runs them as a second project with isolation on, and
-`npm run lint:layers` fails if a file calls `vi.mock` without being listed, or
-is listed without calling it. Mocking a module is not forbidden; it just has to
-say so.
+**`vi.mock` is not available, to anybody.** A shared registry means whichever
+file loads a module first decides what every later file sees, so a mock
+registered by the second file arrives too late. It does not fail loudly: the
+test gets the real module, and the assertion breaks somewhere else, in whatever
+order the files happened to run in.
 
-## Two rules about writing a test here
+**A component that needs a dependency swapped takes it as a prop.**
+`InviteSheet` is the worked example. It must show an error when the clipboard
+cannot be reached -- the bug it exists for -- so it accepts an optional
+`copyLink` that defaults to the real `copyText`, and its test hands over a
+`vi.fn()` that resolves `false`. No global is touched and nothing leaks into the
+next file in the worker. `npm run lint:layers` fails on any `vi.mock` under
+`src/`, and says this.
+
+There used to be a second, isolated vitest project for the one file that mocked,
+and a `MOCKING_TESTS` list to keep in step with it. It cost **2.4s of every
+run**: vitest schedules an isolated project ahead of everything else and nothing
+overlaps it, so 52 files took 13.8s and all 53 took 16.3s. One optional prop
+bought that back and deleted the list, the second project and the rule that
+policed them.
+
+## Three rules about writing a test here
 
 **A test runs at one viewport unless the tree branches on width.** Exactly four
 components do: `Columns`, `DataList`, `ModalSheet` and `RootShell`. Nothing else
@@ -67,9 +86,18 @@ directly: its last test compares the two renderings and they are equal.
 That was 72 of the suite's 433 cases, weighted toward the slowest files --
 `BuildScreen.test.tsx` alone ran 48 cases where 26 say the same thing. Where a
 block runs at one width, the comment above it names this rule, so the next
-reader knows it was a decision. Where a block still runs at both -- the list
-screens, the group screens, `ModalSheet` and `Columns` themselves -- it is
-because the swap is what the test is about.
+reader knows it was a decision. Where a block still runs at both -- the group
+screens, `ModalSheet` and `Columns` themselves, and the rows of
+`CharacterListScreen` -- it is because the swap is what the test is about.
+
+The criterion is what the test *presses*, not what screen it is on.
+`CharacterListScreen`'s row actions live inside `DataList`, so a test that
+presses one belongs at both widths; three tests in that block pressed `Manage
+folders` in the toolbar above the list instead, and asserted a request body and
+a count of buttons in a dialog -- the same markup either way. They run at one
+width now. The dialog is a `ModalSheet` and that swap is asserted on its own
+terms in `src/ui/ModalSheet.test.tsx`, once, rather than three more times
+here.
 
 **Render the panel, not the page, when the panel is what is under test.**
 `ProficienciesPanel.test.tsx`, `Vitals.test.tsx` and the skills-panel block of
@@ -86,6 +114,18 @@ once and asserts many times beats several that each re-mount it. Use
 instead of stopping at the first; a shared `beforeAll` render is not available,
 because `src/test/setup.ts`'s global `afterEach` unmounts between tests and
 exempting a file from that would give up the isolation rule above.
+
+**Hand a component the state, rather than driving it there, when the driving
+is not what is being tested.** `AbilityScoresForm.test.tsx` is the case: four
+point-buy tests each spent two clicks and a Mantine `Combobox` dropdown moving
+the method `Select` to a state the component takes as a prop, and one of them
+clicked `Raise` twenty-one times to reach a spread it also takes as a prop.
+`AbilityScoresForm` seeds its budget from `boughtFrom(method, scores)`, which is
+the same value `change('point-buy')` sets, so the two are the same state. One
+test still drives the `Select`, because that transition is what *it* is about;
+the rest are handed `method="point-buy"`. The rule is not "avoid interactions"
+-- it is that an interaction should be either the subject of the test or absent
+from it.
 
 The suite also does not process CSS (`css: true` is off). Nothing asserts on a
 cascaded style -- the only style assertions read inline `element.style`, which

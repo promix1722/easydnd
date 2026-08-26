@@ -22,6 +22,11 @@
 - Configuration is one YAML file (`EASYDND_CONFIG`); individual settings cannot
   be overridden from the environment. See `docs/backend.md#configuration`.
 - Deploying is a tag: `git tag -a vX.Y.Z && git push origin vX.Y.Z`. A tag
-  ending `-notest` skips CI's Test stage -- both suites and both version
-  assertions -- for a release whose `make verify` you have just run yourself.
-  See `docs/backend.md#deployment` for what that gives up.
+  ending `-notest` skips CI's Test stage -- both suites, and only the suites --
+  for a release whose `make verify` you have just run yourself. The two version
+  assertions run in Build and are never skipped. See
+  `docs/backend.md#deployment` for what that gives up.
+- **Anywhere `TEST_DATABASE_URL` is set, run `make test/db`, never
+  `make test/unit`.** The DB-touching packages TRUNCATE one shared database, so
+  they need that target's `-p 1` to take turns. Without it they wipe each other
+  and the red lands on whichever lost the race.

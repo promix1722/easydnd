@@ -1,14 +1,28 @@
 name: deploy
 
-# Check -> Build -> Test -> Deploy -> Restart, with an independent frontend and
+# {Check, Build, Test} -> Deploy -> Restart, with an independent frontend and
 # backend lane in every stage. A failure names itself: `check-frontend` red means
-# a lint or typecheck problem in web/, `test-backend` red means Go tests or a
-# broken version injection. Nothing has to be opened to learn which side broke.
+# a lint or typecheck problem in web/, `test-backend` red means the Go suite.
+# Nothing has to be opened to learn which side broke.
 #
-# Build before Test is deliberate. The two assertions that matter most can only
-# run against a built artifact -- `./easydnd -version` and the bundle's own
-# version.json must both equal the commit SHA -- so they are the Test stage's
-# whole point, one per lane.
+# The braces are the point: those three run **at once**, not in sequence. They
+# used to be a chain, and the chain cost more than everything in it -- the Go
+# module graph was compiled from scratch in all three, one after another, 31s
+# then 38s then 39s of a 202s release. Nothing in Check produces anything Build
+# or Test reads; the chain only ever expressed the order somebody wanted to read
+# the results in.
+#
+# What did tie Test to Build was one assertion each: `./easydnd -version` and the
+# bundle's own version.json must equal the commit SHA. Both now run in the job
+# that *makes* the artifact, a step after the build and before the upload, which
+# is where they always belonged -- an assertion about a build belongs beside the
+# build. Test downloads nothing.
+#
+# The price of unchaining them is that Check is no longer an ancestor of
+# anything, so it no longer gates anything for free. The Deploy jobs name it in
+# `needs` and test its result by hand. Read those two `if` blocks before touching
+# them: they already lift the implicit `success()` gate for `-notest`, so a
+# missing clause there does not fail loudly, it ships.
 #
 # The lanes stay separate all the way into releases/<sha>/ on the server. Only
 # `restart` flips the symlink, because nginx serves the frontend from inside the
@@ -17,14 +31,15 @@ name: deploy
 # mid-release, which is exactly what the public health gates exist to catch.
 #
 # The Test stage is skippable, and only by naming the tag for it: a `v*` tag
-# ending in `-notest` drops both test jobs and deploys straight from Build. It
-# is for a release whose checks were just run by hand -- `make verify` is the
-# real gate anyway, since nothing runs on main -- and it buys about ninety
-# seconds of a four-minute deploy. What it costs is spelled out at the Test
-# stage below. The suffix reaches nothing but this decision: VERSION comes from
-# `git rev-parse HEAD` and every path on the server is keyed by GITHUB_SHA, so
-# the artifact, the release directory and both health gates cannot tell a
-# `-notest` tag from any other.
+# ending in `-notest` drops both test jobs. It is for a release whose checks were
+# just run by hand -- `make verify` is the real gate anyway, since nothing runs
+# on main. What it costs is spelled out at the Test stage below, and it is less
+# than it was: the two version assertions live in Build now, so `-notest` gives
+# up the suites and keeps the checks that catch a silent ldflags no-op. The
+# suffix reaches nothing but this decision: VERSION comes from `git rev-parse
+# HEAD` and every path on the server is keyed by GITHUB_SHA, so the artifact, the
+# release directory and both health gates cannot tell a `-notest` tag from any
+# other.
 
 on:
   # TAGS ONLY. A push to main runs nothing at all -- not even the tests.
@@ -33,7 +48,24 @@ on:
   # locally with `make verify` before tagging; there is no CI on main to catch
   # what you miss.
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
+
+      # A dry run: `git tag ci/whatever && git push origin ci/whatever` runs
+      # Check, Build and Test exactly as a release does, and cannot ship.
+      #
+      # Nothing below had to be taught about it. Deploy and Restart already ask
+      # `startsWith(github.ref, 'refs/tags/v')`, which a `ci/` ref fails, so
+      # they skip on their own. That is the entire mechanism, and it works only
+      # because the trigger and the gate are no longer the same condition --
+      # until this line they both said "starts with v", so every tag that could
+      # start the pipeline could also ship from it.
+      #
+      # **The prefix must not begin with `v`.** `v*` is a glob, not a version
+      # pattern: a tag named `vtest` matches this trigger *and* passes the
+      # deploy gate, and would ship whatever it points at to easydnd.org. `ci/`
+      # cannot be mistyped into that.
+      - 'ci/*'
   workflow_dispatch:
 
 # Nothing here writes to the repository, and the deploy authenticates to the
@@ -41,8 +73,15 @@ on:
 permissions:
   contents: read
 
+# Releases take turns -- one deploy at a time, and never cancelled halfway,
+# because the thing being serialised is a symlink swap on a live server.
+#
+# A dry run gets a lane of its own, keyed by its ref. Sharing the `deploy` group
+# would let a `ci/` tag hold a real release in the queue behind it, which is a
+# poor trade for a run that ships nothing. A `workflow_dispatch` on a branch
+# lands here too, and for the same reason.
 concurrency:
-  group: deploy
+  group: ${{ startsWith(github.ref, 'refs/tags/v') && 'deploy' || format('dry-run-{0}', github.ref) }}
   cancel-in-progress: false
 
 jobs:
@@ -54,10 +93,21 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # cache: false, and not as a resignation -- the cache in this workflow
+      # never worked and could not have. A cache is readable only from the ref
+      # that wrote it or from the default branch, and this workflow runs on `v*`
+      # tags and nothing else. Every tag is a new ref, so every run missed, wrote
+      # ~120 MB under `refs/tags/vX.Y.Z`, and left it there for nobody: twenty-
+      # five entries and 2.9 GB of storage that had never once been read. The
+      # logs said `Cache is not found` on every run sampled.
+      #
+      # Turning it on again would need something to run on `main` so the cache
+      # lands on the default branch, and nothing runs on `main` by design. Until
+      # that changes this is 3-5s of upload per job for nothing.
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26'
-          cache: true
+          cache: false
 
       # The same targets `make verify` runs, so local and CI cannot drift. Two
       # are worth spelling out:
@@ -79,11 +129,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # No `cache: npm`, for the reason spelled out at check-backend: a
+      # tags-only workflow can never read back what it wrote.
       - uses: actions/setup-node@v5
         with:
           node-version-file: web/.nvmrc
-          cache: npm
-          cache-dependency-path: web/package-lock.json
       - name: deps
         run: make web/deps
       - name: typecheck, lint, layers
@@ -92,23 +142,46 @@ jobs:
   # ---------------------------------------------------------------- BUILD -----
 
   build-backend:
-    needs: check-backend
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # cache: false -- see check-backend for why it never worked here.
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26'
-          cache: true
+          cache: false
 
       # make build/release owns the ldflags, including the -X path into
       # internal/buildinfo, and derives VERSION from `git rev-parse HEAD` -- on a
       # tag checkout that is the tag's commit, i.e. GITHUB_SHA. Keeping the flags
       # in one place means CI cannot ship a binary built differently from what
-      # `make verify` produced locally. test-backend asserts the injection worked.
+      # `make verify` produced locally. The step below asserts the injection
+      # worked.
       - name: build linux/amd64 binary
         run: make build/release
+
+      # -X against a symbol the linker cannot find is a silent no-op, not an
+      # error. Unchecked, a wrong package path ships a binary reporting "dev",
+      # which fails deploy.sh's health gate, triggers a rollback and surfaces as
+      # an unexplained red deploy minutes later. Catch it before shipping.
+      #
+      # Here rather than in test-backend, where it used to live. It is an
+      # assertion about this build, the binary is on disk two lines up, and
+      # putting it here is what lets Test stop waiting for Build -- which was
+      # the whole cost of the old chain. It needs no `chmod +x` for the same
+      # reason: this file was just built, not unpacked from an artifact that
+      # dropped the bit. A `-notest` tag now keeps this check and gives up only
+      # the suites.
+      - name: binary reports this commit
+        run: |
+          got="$(./easydnd -version)"
+          if [ "$got" != "${GITHUB_SHA}" ]; then
+            echo "ldflags injection broken: got '$got', want '${GITHUB_SHA}'"
+            echo "check the -X path in the Makefile against internal/buildinfo"
+            exit 1
+          fi
+          echo "version injection ok: $got"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -120,25 +193,47 @@ jobs:
           retention-days: 7
 
   build-frontend:
-    needs: check-frontend
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # No `cache: npm`, for the reason spelled out at check-backend: a
+      # tags-only workflow can never read back what it wrote.
       - uses: actions/setup-node@v5
         with:
           node-version-file: web/.nvmrc
-          cache: npm
-          cache-dependency-path: web/package-lock.json
       - name: deps
         run: make web/deps
 
       # make web/release passes VITE_APP_VERSION=$(VERSION) and tars web/dist.
       # That variable is not optional: vite.config.ts refuses to build without
-      # it, so a bundle can never ship silently reporting "dev". test-frontend
+      # it, so a bundle can never ship silently reporting "dev". The step below
       # asserts the value actually landed in the bundle.
       - name: build and tar the bundle
         run: make web/release
+
+      # The frontend's half of the version contract, and the exact counterpart
+      # to the binary check above -- here for the same reason, an assertion
+      # about this build beside the build. vite.config.ts emits version.json
+      # into the bundle so a release can be identified from the browser, and
+      # restart reads it through the public URL; a bundle not carrying the SHA
+      # would fail the deploy minutes after this cheap check can catch it.
+      #
+      # Unpacks the archive rather than reading web/dist/version.json, and that
+      # is deliberate: proving the tarball is well formed is half of what this
+      # asserts, and it is the tarball that ships. Extracts everything rather
+      # than naming one member, because `make web/release` tars with
+      # `-C web/dist .`, so every entry is prefixed `./` and asking tar for
+      # `version.json` fails with "Not found in archive".
+      - name: bundle reports this commit
+        run: |
+          mkdir -p bundle
+          tar -xzf web.tar.gz -C bundle
+          echo "bundle version.json: $(cat bundle/version.json)"
+          grep -q "${GITHUB_SHA}" bundle/version.json || {
+            echo "bundle does not report ${GITHUB_SHA}"
+            exit 1
+          }
 
       - uses: actions/upload-artifact@v7
         with:
@@ -147,14 +242,15 @@ jobs:
           retention-days: 7
 
   # ----------------------------------------------------------------- TEST -----
-  # Skipped wholesale by a `-notest` tag, version assertions included. Those
-  # two are cheap and catch a silent ldflags no-op or a badly tarred bundle
-  # before the swap; without them the same mistake comes back minutes later as
-  # a failed health gate, an automatic rollback and a red `restart` that does
-  # not say why. That is the trade the suffix buys, so tag for it deliberately.
+  # Both jobs are skipped by a `-notest` tag, and that is now all the suffix
+  # buys. The two version assertions moved up into Build, where the artifact
+  # they are about is made, so a `-notest` release still proves the SHA landed
+  # in the binary and in the bundle. What it gives up is the suites -- for a
+  # release whose `make verify` you have just run yourself.
+  #
+  # Neither job needs its lane's Build any more. Nothing here reads an artifact.
 
   test-backend:
-    needs: build-backend
     if: ${{ !endsWith(github.ref, '-notest') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -179,13 +275,31 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+      # cache: false -- see check-backend for why it never worked here.
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26'
-          cache: true
+          cache: false
 
-      # make test/unit is `go test ./...`, which is what `make verify` runs, so
-      # local and CI cannot drift.
+      # make test/db, not make test/unit, and the difference is `-p 1`.
+      #
+      # Three packages reach the one database and each opens by wiping it --
+      # internal/adapter/repository/postgres (users, and groups), and
+      # internal/api/http's durability test. Run in parallel, one truncates the
+      # table another has just written and the red lands on whichever lost the
+      # race rather than on whichever caused it. `make test/db` exists to stop
+      # exactly that, and its comment in the Makefile is the long version.
+      #
+      # This job was running `make test/unit` -- plain `go test ./...` -- with
+      # TEST_DATABASE_URL set, which is the one place in the world that
+      # combination happens: on a laptop those tests skip and the race cannot
+      # occur. It failed the v1.0.1 release, both packages red in the same run,
+      # and cost a manual re-run of the whole job. Reproduced locally in one
+      # attempt by exporting TEST_DATABASE_URL and running `make test/unit`.
+      #
+      # The cost is that `-p 1` runs the package binaries one at a time. That is
+      # a fixed handful of seconds against an unbounded wait for somebody to
+      # notice a red release and press the button.
       #
       # No race detector, here or in `make verify`: it tripled the suite's
       # runtime and two thirds of that was the race runtime's one-second sleep
@@ -199,66 +313,23 @@ jobs:
       - name: go test, against Postgres
         env:
           TEST_DATABASE_URL: postgres://easydnd:easydnd@localhost:5432/easydnd_test?sslmode=disable
-        run: make test/unit
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: api
-
-      # -X against a symbol the linker cannot find is a silent no-op, not an
-      # error. Unchecked, a wrong package path ships a binary reporting "dev",
-      # which fails deploy.sh's health gate, triggers a rollback and surfaces as
-      # an unexplained red deploy minutes later. Catch it before shipping.
-      - name: binary reports this commit
-        run: |
-          chmod +x easydnd
-          got="$(./easydnd -version)"
-          if [ "$got" != "${GITHUB_SHA}" ]; then
-            echo "ldflags injection broken: got '$got', want '${GITHUB_SHA}'"
-            echo "check the -X path in the Makefile against internal/buildinfo"
-            exit 1
-          fi
-          echo "version injection ok: $got"
+        run: make test/db
 
   test-frontend:
-    needs: build-frontend
     if: ${{ !endsWith(github.ref, '-notest') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      # No `cache: npm`, for the reason spelled out at check-backend: a
+      # tags-only workflow can never read back what it wrote.
       - uses: actions/setup-node@v5
         with:
           node-version-file: web/.nvmrc
-          cache: npm
-          cache-dependency-path: web/package-lock.json
       - name: deps
         run: make web/deps
       - name: vitest
         run: make web/test
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: web
-
-      # The frontend's half of the version contract, and the exact counterpart to
-      # the binary check above. vite.config.ts emits version.json into the bundle
-      # so a release can be identified from the browser, and restart reads it
-      # through the public URL -- so a bundle not carrying the SHA would fail the
-      # deploy minutes after this cheap check could have caught it.
-      # Extracts the whole archive rather than naming one member: `make
-      # web/release` tars with `-C web/dist .`, so every entry is prefixed
-      # `./` and asking tar for `version.json` fails with "Not found in
-      # archive". Unpacking everything does not care how the members are named.
-      - name: bundle reports this commit
-        run: |
-          mkdir -p bundle
-          tar -xzf web.tar.gz -C bundle
-          echo "bundle version.json: $(cat bundle/version.json)"
-          grep -q "${GITHUB_SHA}" bundle/version.json || {
-            echo "bundle does not report ${GITHUB_SHA}"
-            exit 1
-          }
 
   # --------------------------------------------------------------- DEPLOY -----
   # Both lanes fill the same releases/<sha>/ and neither touches the symlink.
@@ -279,11 +350,21 @@ jobs:
   # exist, and a Test stage that ran and failed still stops the release. Only a
   # Test stage that never ran is waved through. `restart` needs the same, for
   # the same reason, one stage further down.
+  #
+  # `check-*` is in `needs` and in the `if`, and it has to be. Check used to sit
+  # upstream of Build, so `success()` gated on it without anyone saying so; now
+  # the three run side by side and it gates on nothing by itself. Because
+  # `!cancelled()` has already lifted the implicit rule, dropping the clause
+  # would not fail loudly -- it would ship a release whose gofmt, vet, layer and
+  # SRD-drift checks were red. `== 'success'` and not `!= 'failure'`, unlike the
+  # Test line: Check runs on every tag, so there is no legitimate way for it to
+  # be skipped.
 
   deploy-backend:
-    needs: [build-backend, test-backend]
+    needs: [check-backend, build-backend, test-backend]
     if: >-
       ${{ !cancelled()
+          && needs.check-backend.result == 'success'
           && needs.build-backend.result == 'success'
           && needs.test-backend.result != 'failure'
           && startsWith(github.ref, 'refs/tags/v') }}
@@ -320,9 +401,10 @@ jobs:
             "tar -xzf $REL/srd.tgz -C $REL/data && rm -f $REL/srd.tgz"
 
   deploy-frontend:
-    needs: [build-frontend, test-frontend]
+    needs: [check-frontend, build-frontend, test-frontend]
     if: >-
       ${{ !cancelled()
+          && needs.check-frontend.result == 'success'
           && needs.build-frontend.result == 'success'
           && needs.test-frontend.result != 'failure'
           && startsWith(github.ref, 'refs/tags/v') }}

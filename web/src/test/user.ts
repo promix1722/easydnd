@@ -16,9 +16,16 @@ import userEvent from '@testing-library/user-event'
  * place a timer matters -- InviteSheet's "Copied" reverting after two seconds
  * -- is asserted through waitFor either way.
  *
+ * `pointerEventsCheck: 0` is the same argument on a smaller scale. Before every
+ * pointer call user-event walks the target's ancestors through
+ * `getComputedStyle` looking for `pointer-events: none`. The suite runs with
+ * `css: true` off, so no stylesheet is ever parsed and nothing in it can
+ * declare that property -- the check cannot fail, and it is charged per click
+ * across some four hundred of them.
+ *
  * Use this rather than calling `userEvent.setup()` directly, so the reasoning
  * lives in one place instead of in fifty-seven.
  */
 export function setupUser(): ReturnType<typeof userEvent.setup> {
-  return userEvent.setup({ delay: null })
+  return userEvent.setup({ delay: null, pointerEventsCheck: 0 })
 }

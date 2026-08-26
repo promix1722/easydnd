@@ -10,6 +10,17 @@ export interface InviteSheetProps {
   groupId: string
   opened: boolean
   onClose: () => void
+  /**
+   * How the link reaches the clipboard. Defaults to the real thing.
+   *
+   * It is a prop so that a test can hand over a copy that fails, which is the
+   * case this component exists for: outside a secure context there is no
+   * clipboard, and the button must say so rather than quietly do nothing.
+   * Mocking `@/lib/clipboard` instead would need the suite to isolate this file
+   * from every other, and one optional argument is cheaper than a forked
+   * worker. Nothing in the app passes it.
+   */
+  copyLink?: (text: string) => Promise<boolean>
 }
 
 /** The link the browser is looking at, with the token in the fragment. */
@@ -24,7 +35,7 @@ function linkFor(token: string): string {
 const COPIED_FOR = 2000
 
 /** Mints a shareable link and shows it once. */
-export function InviteSheet({ groupId, opened, onClose }: InviteSheetProps) {
+export function InviteSheet({ groupId, opened, onClose, copyLink = copyText }: InviteSheetProps) {
   const [role, setRole] = useState<InvitableRole>('player')
   const [link, setLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -48,7 +59,7 @@ export function InviteSheet({ groupId, opened, onClose }: InviteSheetProps) {
 
   async function copy() {
     if (link === null) return
-    const ok = await copyText(link)
+    const ok = await copyLink(link)
     setCopied(ok)
     setCopyFailed(!ok)
     if (!ok) {
