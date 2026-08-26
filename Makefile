@@ -150,8 +150,15 @@ db/psql:
 # internal/api/http's durability test before it registers. Run in parallel,
 # one wipes the other's account mid-test and the failure lands in whichever
 # package lost the race -- which is not where the problem is. One database and
-# a global TRUNCATE mean the packages have to take turns; only this target
-# pays for it, because everywhere else those tests skip.
+# a global TRUNCATE mean the packages have to take turns.
+#
+# **CI runs this target too**, and for exactly that reason. It used to run
+# `test/unit` with TEST_DATABASE_URL set, which is `go test ./...` without the
+# -p 1 -- the one combination this flag exists to prevent, and the only place
+# in the world it occurred, since on a laptop those tests skip. It failed the
+# v1.0.1 release with both packages red at once, which is what the race looks
+# like from the outside. So the rule is: anywhere TEST_DATABASE_URL is set,
+# this is the target to run.
 test/db:
 	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test -p 1 ./...
 
