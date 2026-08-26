@@ -1,10 +1,8 @@
-import { Carousel } from '@mantine/carousel'
 import { Paper, SimpleGrid, Stack, Title } from '@mantine/core'
-import type { EmblaCarouselType } from 'embla-carousel'
 import { Fragment, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { TabRow } from './TabRow'
+import { TabDeck } from './TabDeck'
 import { useIsDesktop } from './useIsDesktop'
 
 export interface DeckSection {
@@ -62,33 +60,20 @@ export interface SectionDeckProps {
  * `Columns` stays for the pages that want the other answer -- see
  * `features/status/StatusPanel.tsx`.
  *
- * The tab strip is `TabRow`, unchanged and for the reason it exists: seven tabs
- * do not fit across 390px, and it is a `ScrollArea` that brings the active one
- * into view by `scrollLeft`. It is used here exactly as `BuildScreen` uses it,
- * one rendered panel behind a strip of tabs -- what is inside that panel is a
- * carousel rather than the tab's own content, which is the whole of the
- * novelty.
+ * The phone half is `TabDeck` and nothing else -- a strip of tabs over a
+ * carousel of the panels, kept in step with each other. It lived here first,
+ * and moved out when the build screen wanted the same gesture: five stage tabs
+ * a player leafs between is the same object as seven sheet sections, and two
+ * copies of a two-way embla sync is two copies of the one thing in it that can
+ * go subtly wrong. What is left here is the part that is actually about a
+ * sheet, which is the wide rendering below.
  *
- * A slide that is off screen is still mounted, and things on it are still
- * focusable -- the skills filter is one. Tabbing into one is embla's own
- * `watchFocus`, which is on by default: it scrolls the focused slide into view
- * and emits `select`, so the strip follows the focus rather than coming to
- * disagree with what is on screen. Nothing here has to do that itself, which is
- * worth saying because the obvious hand-rolled version is a focus handler that
- * fights the one already there.
- *
- * The carousel is deliberately given no `height`. Mantine's own default is
- * `auto`, which makes the viewport as tall as its tallest slide; a slide is
- * then aligned to the top of it rather than stretched down it, so a short
- * section keeps its own size and leaves the difference blank. Sizing the
- * viewport to whichever slide is showing would need to measure it, and jsdom
- * computes no layout -- the suite could neither exercise that nor catch it
- * breaking.
+ * So what this component *is*, is the desktop answer: `TabDeck` has no idea
+ * that a section knows where it sits on a wide screen, and no reason to.
  */
 export function SectionDeck({ label, sections, cols = 2 }: SectionDeckProps) {
   const isDesktop = useIsDesktop()
   const [active, setActive] = useState(sections[0]?.key ?? '')
-  const [embla, setEmbla] = useState<EmblaCarouselType | null>(null)
 
   if (isDesktop) {
     return <Stack gap="lg">{wideRows(sections, cols)}</Stack>
@@ -102,61 +87,25 @@ export function SectionDeck({ label, sections, cols = 2 }: SectionDeckProps) {
     : (sections[0]?.key ?? '')
 
   return (
-    <TabRow
-      tabs={sections.map((section) => ({ value: section.key, label: section.title }))}
+    <TabDeck
+      label={label}
       value={value}
-      onChange={(next) => {
-        setActive(next)
-        const index = sections.findIndex((section) => section.key === next)
-        if (index >= 0) embla?.scrollTo(index)
-      }}
-    >
-      <Carousel
-        aria-label={label}
-        slideGap="md"
-        // A phone swipes, and the tabs above are the route for everything else.
-        // Two 26px arrows sitting over the panel they cover would be a third.
-        withControls={false}
-        // The tabs already say how many sections there are and name every one
-        // of them. Dots under named tabs is the same fact twice, and the
-        // quieter half of it.
-        withIndicators={false}
-        getEmblaApi={setEmbla}
-        // The other half of the two-way sync. `setActive` to the value already
-        // held does not re-render, and `scrollTo` the index embla is already on
-        // does not scroll, so neither direction can drive the other in a loop.
-        onSlideChange={(index) => {
-          const shown = sections[index]
-          if (shown !== undefined) setActive(shown.key)
-        }}
-        // Slides are stretched to the tallest one by default, which would draw
-        // three rows of proficiencies down the height of eighteen skills.
-        styles={{ container: { alignItems: 'flex-start' } }}
-        // Not looped, unlike the landing page's. These are ordered -- the sheet
-        // decides what order things come in -- so wrapping from the last back
-        // to the first is a jump rather than a continuation.
-        emblaOptions={{ loop: false }}
-      >
-        {sections.map((section) => (
-          // Named by `aria-label` rather than the landing page's
-          // `aria-labelledby`, because there is no heading inside the slide to
-          // point at: the tab is where the section is named on screen. Both
-          // read the same `title`, so the two cannot come to disagree.
-          <Carousel.Slide key={section.key} aria-label={section.title}>
-            {/*
-              `md` where the wide layout stacks its blocks `lg` apart. A phone
-              is the viewport with the least of it to spend and the one holding
-              one section at a time, so the separation only has to be enough to
-              say "different block" -- which it still is, because the cards
-              *inside* a block are `xs` apart. The wide screen keeps `lg`: there
-              the same gap is separating things that sit beside other things,
-              and tightening it there buys nothing anybody sees.
-            */}
-            <Stack gap="md">{section.content}</Stack>
-          </Carousel.Slide>
-        ))}
-      </Carousel>
-    </TabRow>
+      onChange={setActive}
+      panels={sections.map((section) => ({
+        value: section.key,
+        label: section.title,
+        /*
+          `md` where the wide layout stacks its blocks `lg` apart. A phone is
+          the viewport with the least of it to spend and the one holding one
+          section at a time, so the separation only has to be enough to say
+          "different block" -- which it still is, because the cards *inside* a
+          block are `xs` apart. The wide screen keeps `lg`: there the same gap
+          is separating things that sit beside other things, and tightening it
+          there buys nothing anybody sees.
+        */
+        content: <Stack gap="md">{section.content}</Stack>,
+      }))}
+    />
   )
 }
 

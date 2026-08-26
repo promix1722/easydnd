@@ -89,8 +89,8 @@ export interface PageProps {
  * **It does not branch on viewport, and must not.** The actions wrap under the
  * heading on a narrow screen because the row is allowed to wrap, and the cap
  * is simply inert below 1024px. The list of components that genuinely swap
- * markup at the breakpoint stays at four -- `Columns`, `DataList`,
- * `ModalSheet` and `RootShell` -- and `Page.test.tsx` pins that by comparing
+ * markup at the breakpoint stays at five -- `Columns`, `DataList`,
+ * `ModalSheet`, `TabDeck` and `RootShell` -- and `Page.test.tsx` pins that by comparing
  * the two renderings byte for byte, the way `TabRow.test.tsx` does.
  */
 export function Page({
@@ -112,10 +112,27 @@ export function Page({
   const parents = crumbs.slice(0, -1)
   const SectionIcon = section?.icon
 
+  /*
+   * What is left of the header once the phone has dropped the section's name.
+   *
+   * Hiding the section root's heading below `md` left the row it sat in
+   * behind: `ROW_HEIGHT` of nothing, plus the stack's gap, above every list in
+   * the app -- which on a 390px screen is the most expensive blank space
+   * there is. So the row is hidden with its only occupant, and the header
+   * block with the row when the subtitle has gone too.
+   *
+   * A fact about the props rather than about the width: what these decide is
+   * whether there is anything *to* draw on a phone, and the breakpoint stays
+   * in `visibleFrom`. `Page` still renders one tree at every width.
+   */
+  const headingIsSectionOnly = parents.length === 0 && SectionIcon !== undefined
+  const rowBlankOnPhone = headingIsSectionOnly && badge === undefined && actions === undefined
+  const headerBlankOnPhone = rowBlankOnPhone && subtitle === undefined
+
   return (
     <Box maw={CONTENT_MAX_WIDTH}>
       <Stack gap="lg">
-        <Stack gap={4}>
+        <Stack gap={4} {...(headerBlankOnPhone ? { visibleFrom: DESKTOP_ONLY } : {})}>
           {/*
             The whole trail is one line, and every part of it is the same size.
 
@@ -130,13 +147,19 @@ export function Page({
           */}
           <Group
             justify="space-between"
-            align="flex-start"
+            // Centred on the trail rather than pinned to the top of the row.
+            // The heading line is `ROW_HEIGHT` tall and its text sits in the
+            // middle of that, so a `flex-start` action hung a button above the
+            // words it belongs to -- a few pixels, and enough to read as two
+            // rows that failed to line up.
+            align="center"
             wrap="wrap"
             gap="xs"
             // The same row height the navbar's entries have, so the heading and
             // the navbar entry naming the same section sit on one line. See
             // ROW_HEIGHT.
             mih={ROW_HEIGHT}
+            {...(rowBlankOnPhone ? { visibleFrom: DESKTOP_ONLY } : {})}
           >
             <Group gap="xs" align="center" wrap="wrap" mih={ROW_HEIGHT}>
               {/*

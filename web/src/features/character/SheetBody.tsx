@@ -28,11 +28,10 @@ import { abilitiesInOrder, abilityName, signed, titleCase } from '@/domain'
  *
  * Its own component because two screens draw it: its owner's, and the one a
  * group member opens for a character shared with their table. The difference
- * between those two pages is entirely in what surrounds this -- a link to the
- * event log, the list of what is still to choose -- and none of it is inside.
- * That is the point: the table sees the same sheet the owner does, drawn by the
- * same code, so the two cannot drift into disagreeing about what the character
- * is.
+ * between those two pages is entirely in what surrounds this -- the owner's
+ * way in to the questions still open -- and none of it is inside. That is the
+ * point: the table sees the same sheet the owner does, drawn by the same code,
+ * so the two cannot drift into disagreeing about what the character is.
  *
  * The whole sheet is one list of sections now, handed to `ui/SectionDeck`. On a
  * wide screen that draws what it always drew: identity, the ability cards and

@@ -41,7 +41,7 @@ function skillPrompt(overrides: Partial<Prompt> = {}): Prompt {
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */

@@ -120,6 +120,8 @@ export { SECTIONS, sectionFor } from './sections'
 export type { Section } from './sections'
 export { SectionDeck } from './SectionDeck'
 export type { DeckSection, SectionDeckProps } from './SectionDeck'
+export { TabDeck } from './TabDeck'
+export type { DeckPanel, TabDeckProps } from './TabDeck'
 export { TabRow } from './TabRow'
 export type { TabRowProps, TabRowTab } from './TabRow'
 

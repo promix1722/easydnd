@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -526,6 +526,22 @@ const tab = (name: string) => screen.getByRole('tab', { name: STAGE_LABELS[name 
 const current = () =>
   screen.getAllByRole('tab').find((each) => each.getAttribute('aria-selected') === 'true')
     ?.textContent ?? ''
+
+/**
+ * One tab's panel, by the same word.
+ *
+ * The tabs are a deck on a phone: every panel is a mounted slide, because the
+ * one you are swiping towards has to be drawn before you arrive at it. So a
+ * query against the whole document sees every category at once, and a test
+ * about what a *tab* holds has to say which one -- otherwise "the class tab
+ * does not show a background choice" passes for the wrong reason and keeps
+ * passing after the screen stops filtering anything at all.
+ *
+ * A slide is a `role="group"` named by its tab, which is the same handle
+ * `SectionDeck.test.tsx` uses on the sheet's own deck.
+ */
+const panel = (name: string) =>
+  within(screen.getByRole('group', { name: STAGE_LABELS[name as Stage] }))
 const writes = () => posted.filter((write) => !write.url.includes('dryRun'))
 
 /**
@@ -546,14 +562,23 @@ beforeEach(() => {
 })
 
 /**
- * One viewport. Nothing this screen draws branches on width -- only `Columns`,
- * `DataList`, `ModalSheet`, `SectionDeck`, `SheetBody` and `RootShell` do, and the suite runs without CSS,
- * so a responsive prop cannot move the DOM either. The one exception is the
- * sheet that prices a change, which is a `ModalSheet`; the two tests that open
- * it are in their own block at the foot of this file. See docs/web.md.
+ * One viewport, and it is the phone's.
+ *
+ * This screen does branch on width now -- its tabs are a `TabDeck`, which is a
+ * carousel of every panel below `md` and the active panel alone above it -- so
+ * "either width will do" stopped being true. The phone's is the one worth
+ * having: it mounts all five categories at once, which is the rendering where
+ * a question can turn up under the wrong tab, and it is a superset of what the
+ * wide one draws. That the wide one draws a strip and one panel is `TabDeck`'s
+ * own claim, tested once in `src/ui/TabDeck.test.tsx` rather than 24 more
+ * times here. See docs/web.md.
+ *
+ * The other exception is the sheet that prices a change, which is a
+ * `ModalSheet`; the two tests that open it are in their own block at the foot
+ * of this file.
  */
 describe('BuildScreen', () => {
-  const viewport = 'desktop'
+  const viewport = 'mobile'
 
   it('names the question the server said was next, and opens it when pressed', async () => {
     const user = setupUser()
@@ -634,11 +659,11 @@ describe('BuildScreen', () => {
 
     // The class tab has something open, so there is nothing to move on from.
     await screen.findByText('A class')
-    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
+    expect(panel('class').queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
 
     // The identity tab is finished: the name is settled and nothing is open.
     await user.click(tab('identity'))
-    await user.click(await screen.findByRole('button', { name: 'Next' }))
+    await user.click(await panel('identity').findByRole('button', { name: 'Next' }))
 
     // On to the next category with something required outstanding, which is
     // the class -- identity is where we were and abilities has nothing open.
@@ -698,18 +723,23 @@ describe('BuildScreen', () => {
 
     // The class tab opens first: it is the first category in order with
     // something required outstanding.
-    expect.soft(await screen.findByText('A class')).toBeInTheDocument()
-    expect.soft(screen.queryByText('A background')).not.toBeInTheDocument()
+    await screen.findByText('A class')
+    expect.soft(tab('class')).toHaveAttribute('aria-selected', 'true')
+    // Each panel holds its own category's questions and no others -- which is
+    // what the server's grouping buys, and is asserted per panel because every
+    // panel is on the page at once.
+    expect.soft(panel('class').getByText('A class')).toBeInTheDocument()
+    expect.soft(panel('class').queryByText('A background')).not.toBeInTheDocument()
 
     await user.click(tab('race'))
-    expect.soft(screen.getByText(/Two to be proficient in/)).toBeInTheDocument()
-    expect.soft(screen.queryByText('A class')).not.toBeInTheDocument()
+    expect.soft(panel('race').getByText(/Two to be proficient in/)).toBeInTheDocument()
+    expect.soft(panel('race').queryByText('A class')).not.toBeInTheDocument()
 
     await user.click(tab('identity'))
-    expect.soft(screen.getByText('Name')).toBeInTheDocument()
+    expect.soft(panel('identity').getByText('Name')).toBeInTheDocument()
     // "Nothing left here", never "nothing left in identity": the category's
     // word belongs to its tab and appears exactly once on the page.
-    expect.soft(screen.getByText('Nothing left here.')).toBeInTheDocument()
+    expect.soft(panel('identity').getByText('Nothing left here.')).toBeInTheDocument()
 
     expect.soft(posted).toHaveLength(0)
   })
@@ -760,11 +790,19 @@ describe('BuildScreen', () => {
     // The only question left is on another tab, and the screen still does not
     // go there: answering is not a request to be moved on, and what a class
     // or a race brought with it is usually the thing you want to look at.
+    //
+    // Waited for rather than asserted absent, which is what this used to do and
+    // was the wrong assertion twice over. Every panel is mounted now, so the
+    // background question really is in the document -- on the background tab.
+    // And "not yet in the document" was only ever true until the reread landed,
+    // so the old line passed by racing the refresh it was supposed to be
+    // asserting about.
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
+      expect(panel('background').getByText('A background')).toBeInTheDocument()
     })
     expect(tab('race')).toHaveAttribute('aria-selected', 'true')
-    expect(screen.queryByText('A background')).not.toBeInTheDocument()
+    expect(panel('race').queryByText('A background')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
   })
 
   it('finishes to the sheet', async () => {
@@ -794,12 +832,12 @@ describe('BuildScreen', () => {
     expect.soft(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
     // The one prompt the server still poses is the offer of a level, which
     // this client does not offer -- so there is genuinely nothing here.
-    expect.soft(screen.getByText('Nothing left here.')).toBeInTheDocument()
+    expect.soft(panel('identity').getByText('Nothing left here.')).toBeInTheDocument()
 
     // Advancement is the class story continued, so a level that was taken
     // sits on the class tab rather than under a tab of its own.
     await user.click(tab('class'))
-    expect.soft(screen.getByText('Level gained')).toBeInTheDocument()
+    expect.soft(panel('class').getByText('Level gained')).toBeInTheDocument()
 
     // Read-only, and the standing offer of another one is not on the page at
     // all: level-up does not work, and a question that silently does nothing
@@ -807,7 +845,7 @@ describe('BuildScreen', () => {
     // fact about the character, so it is not even a block that opens.
     expect.soft(screen.queryByRole('button', { name: /Level gained/ })).not.toBeInTheDocument()
     expect.soft(screen.queryByText(/Another level/)).not.toBeInTheDocument()
-    expect.soft(screen.getByText('Nothing left here.')).toBeInTheDocument()
+    expect.soft(panel('class').getByText('Nothing left here.')).toBeInTheDocument()
 
     // The class itself is still a choice like any other.
     expect.soft(block(/Class chosen/)).toBeInTheDocument()
@@ -1057,7 +1095,8 @@ describe('BuildScreen', () => {
  * Net-new coverage: the create screen this replaced had no tests at all.
  */
 describe('a new character', () => {
-  const viewport = 'desktop'
+  // The phone's, for the reason the block above records.
+  const viewport = 'mobile'
 
   it('asks for a name and nothing else', async () => {
     renderNew(viewport)

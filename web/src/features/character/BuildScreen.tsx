@@ -28,7 +28,7 @@ import {
   ModalSheet,
   Page,
   Stack,
-  TabRow,
+  TabDeck,
   Text,
 } from '@/ui'
 import type { Crumb } from '@/ui'
@@ -42,7 +42,7 @@ import {
   reclaimPlace,
   settledKey,
 } from './blocks'
-import type { Asking } from './blocks'
+import type { Asking, Block, BlockOrder } from './blocks'
 import { resolveRefNames } from './refNames'
 import { settledByStage } from './settled'
 import type { SettledRow } from './settled'
@@ -146,9 +146,25 @@ export function BuildScreen() {
   const [preview, setPreview] = useState<Preview | null>(null)
   const [creating, setCreating] = useState(false)
 
-  // Held once and mutated, rather than replaced: see BlockOrder. The list is
-  // redrawn by new data, never by the memory of where the old data sat.
-  const [order] = useState(blockOrder)
+  /*
+   * One order per tab, held once and mutated rather than replaced: see
+   * BlockOrder. The list is redrawn by new data, never by the memory of where
+   * the old data sat.
+   *
+   * It was a single order while a single tab was rendered. Now that every tab
+   * is a slide and all five are drawn at once, one shared order would let the
+   * place a dropped answer vacated on the class tab be claimed by whatever
+   * arrived next under background -- and where a block sits is a fact about
+   * the tab it sits on, so there is one per tab.
+   */
+  const [orders] = useState(() => new Map<Stage, BlockOrder>())
+  const orderFor = (each: Stage): BlockOrder => {
+    const held = orders.get(each)
+    if (held !== undefined) return held
+    const made = blockOrder()
+    orders.set(each, made)
+    return made
+  }
 
   /*
     Creation changes the URL under a screen that is not replaced.
@@ -215,21 +231,39 @@ export function BuildScreen() {
     setOpenKey(NEW_NAME_KEY)
   }
 
-  const openHere = open.filter((prompt) => stageOf(prompt.group) === stage)
   const settled = settledByStage(view)
-  // Before there is a character there is no `/prompts` response, so the
-  // identity tab poses the first question itself: see NEW_NAME_PROMPT.
-  // The order is the screen's memory of where things are, and `blocksFor`
-  // both reads it and writes to it: whatever is new keeps the place the level
-  // ordering just gave it, so the next answer moves nothing already on screen.
   // While the character is being created there is no log to read yet, so the
   // question it is being created by is still the thing on screen.
   const posingName = isNew || creating
-  const blocks = blocksFor(
-    settled.get(stage) ?? [],
-    posingName ? [NEW_NAME_PROMPT] : openHere,
-    order,
+  /*
+   * Every tab's blocks, not just the one on screen, because every tab is a
+   * slide and the slide you are swiping towards has to be drawn before you
+   * arrive at it.
+   *
+   * Before there is a character there is no `/prompts` response, so the
+   * identity tab poses the first question itself: see NEW_NAME_PROMPT. The
+   * others have nothing on them until there is somebody to ask about, and say
+   * so.
+   *
+   * The order is the screen's memory of where things are, and `blocksFor` both
+   * reads it and writes to it: whatever is new keeps the place the level
+   * ordering just gave it, so the next answer moves nothing already on screen.
+   */
+  const blocksByStage = new Map<Stage, Block[]>(
+    STAGES.map((each) => [
+      each,
+      blocksFor(
+        settled.get(each) ?? [],
+        posingName
+          ? each === 'identity'
+            ? [NEW_NAME_PROMPT]
+            : []
+          : open.filter((prompt) => stageOf(prompt.group) === each),
+        orderFor(each),
+      ),
+    ]),
   )
+  const blocks = blocksByStage.get(stage) ?? []
   const opened = blocks.find((block) => block.key === openKey) ?? null
   // What the open block is asking, which is a fact about the block rather than
   // a second piece of state. A settled block whose question cannot be put
@@ -316,7 +350,7 @@ export function BuildScreen() {
     // A single appended event is the log's new head, so the response's seq
     // names it -- and without this the answer would appear at the bottom of
     // the list while the question it answered vanished from the middle.
-    inheritPlace(order, answered, settledKey(written.seq))
+    inheritPlace(orderFor(stage), answered, settledKey(written.seq))
     done(open)
   }
 
@@ -359,7 +393,7 @@ export function BuildScreen() {
     // A removal is how a question that cannot be re-posed gets asked again, so
     // the question that comes back takes the answer's place in the list -- and
     // opens there, because being asked again is what the press meant.
-    if (event === null) reclaimPlace(order, settledKey(row.seq))
+    if (event === null) reclaimPlace(orderFor(row.stage), settledKey(row.seq))
     done(open)
   }
 
@@ -447,7 +481,6 @@ export function BuildScreen() {
     )
   }
 
-  const nextStage = stageAfter(stage, open)
   const failure = create.error ?? answer.error ?? revise.error ?? remove.error
   const fields: readonly ApiFieldError[] =
     create.fields.length > 0
@@ -462,6 +495,29 @@ export function BuildScreen() {
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
       trail={buildTrail(isNew, creating ? nameDraft.trim() : title(view), id)}
+      /*
+       * On the heading line, against the right edge, and only once there is a
+       * character to finish.
+       *
+       * It sat against the last tab for a while, which is where `TabRow` had a
+       * slot for it. Two things were wrong with that. It is not a control on
+       * the tabs -- it acts on the character, which is exactly what `Page`'s
+       * `actions` slot is for and what the sheet's own button already uses --
+       * and the tabs plus a button do not fit across 390px, so the strip that
+       * is supposed to scroll was competing with it for the width.
+       */
+      {...(posingName
+        ? {}
+        : {
+            actions: (
+              <Button
+                variant={view.prompts.complete ? 'filled' : 'light'}
+                onClick={() => void navigate(`/characters/${id}`)}
+              >
+                Finish
+              </Button>
+            ),
+          })}
       subtitle={
         posingName
           ? 'A name is all it takes to start. Everything else is a question, asked once there is somebody to ask it about.'
@@ -485,50 +541,65 @@ export function BuildScreen() {
           </Alert>
         )}
 
-        <TabRow
-          tabs={STAGES.map((name) => ({ value: name, label: STAGE_LABELS[name] }))}
+        <TabDeck
+          // "Character build" rather than the character's name, which is
+          // already the crumb above this. A landmark renamed per character
+          // would give a screen-reader user a different table of contents on
+          // every build.
+          label="Character build"
           value={stage}
           onChange={(next) => goToStage(next as Stage)}
-          actions={
-            !isNew && (
-              <Button
-                variant={view.prompts.complete ? 'filled' : 'light'}
-                onClick={() => void navigate(`/characters/${id}`)}
-              >
-                Finish
-              </Button>
-            )
-          }
-        >
-          <StagePanel
-            blocks={blocks}
-            openKey={openKey}
-            onOpen={openBlock}
-            asking={asking}
-            names={view.names}
-
-            onAnswerPicks={(asked, picks) => submitEvent(asked, eventFor(asked.prompt, picks))}
-            onNameChange={(next) => {
-              setNameDraft(next)
-              setNameError(undefined)
-            }}
-            onAnswerName={(asked, next) => {
-              if (isNew) void createCharacterFromDraft('identity')
-              else submitEvent(asked, initEventFor(next))
-            }}
-            onAnswerChanges={(asked, changes) =>
-              submitEvent(asked, { type: asked.prompt.event.type, changes })
+          /*
+            Not until there is a character. While one is being posed for, a tab
+            press *creates* it rather than moving anywhere, so a swipe would be
+            a gesture the screen answers by refusing to move -- and a deck that
+            snaps back is worse than one that never gives.
+          */
+          swipeable={!posingName}
+          panels={STAGES.map((each) => {
+            // Where Next goes from *this* tab, which is a fact about the tab
+            // and not about the one on screen -- every panel is mounted, so
+            // every panel's button has to be its own.
+            const after = stageAfter(each, open)
+            return {
+              value: each,
+              label: STAGE_LABELS[each],
+              content: (
+                <StagePanel
+                  blocks={blocksByStage.get(each) ?? []}
+                  openKey={openKey}
+                  onOpen={openBlock}
+                  asking={asking}
+                  names={view.names}
+                  onAnswerPicks={(asked, picks) =>
+                    submitEvent(asked, eventFor(asked.prompt, picks))
+                  }
+                  onNameChange={(next) => {
+                    setNameDraft(next)
+                    setNameError(undefined)
+                  }}
+                  onAnswerName={(asked, next) => {
+                    if (isNew) void createCharacterFromDraft('identity')
+                    else submitEvent(asked, initEventFor(next))
+                  }}
+                  onAnswerChanges={(asked, changes) =>
+                    submitEvent(asked, { type: asked.prompt.event.type, changes })
+                  }
+                  pending={
+                    creating || create.pending || answer.pending || revise.pending || remove.pending
+                  }
+                  fields={fields}
+                  {...(after === null ? {} : { onNext: () => goToStage(after) })}
+                  {...(posingName || asking?.prompt.choice.kind === 'text'
+                    ? { name: nameDraft }
+                    : {})}
+                  {...maybeScores(asking?.replaces ?? null)}
+                  {...maybeLines(asking?.replaces ?? null)}
+                />
+              ),
             }
-            pending={
-              creating || create.pending || answer.pending || revise.pending || remove.pending
-            }
-            fields={fields}
-            {...(nextStage === null ? {} : { onNext: () => goToStage(nextStage) })}
-            {...(isNew || asking?.prompt.choice.kind === 'text' ? { name: nameDraft } : {})}
-            {...maybeScores(asking?.replaces ?? null)}
-            {...maybeLines(asking?.replaces ?? null)}
-          />
-        </TabRow>
+          })}
+        />
 
         {nameError !== undefined && (
           <Text size="sm" c="red">

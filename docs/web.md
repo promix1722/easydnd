@@ -76,9 +76,9 @@ policed them.
 
 ## Three rules about writing a test here
 
-**A test runs at one viewport unless the tree branches on width.** Exactly six
-components do: `Columns`, `DataList`, `ModalSheet`, `SectionDeck`, `SheetBody`
-and `RootShell`.
+**A test runs at one viewport unless the tree branches on width.** Exactly seven
+components do: `Columns`, `DataList`, `ModalSheet`, `SectionDeck`, `TabDeck`,
+`SheetBody` and `RootShell`.
 
 `ui/Page` is deliberately **not** a seventh, and its own test proves it rather
 than asserting it in prose: the last case there compares the two renderings byte
@@ -352,7 +352,13 @@ Three rules, applied to every list screen, because a control's position is the
 only thing on screen that says what it will change.
 
 **The heading line acts on the entity the page is about**, and on nothing else:
-rename, leave, delete. It is not where you add to it.
+rename, leave, delete. It is not where you add to it. The two character screens
+are the rule applied to something that is not a list: the sheet's **Answer what
+is left** and the build screen's **Finish** both act on the character, and both
+sit on the trail's line, against the right edge, drawn by `ui/Page`'s `actions`.
+Finish spent a while against the last tab instead, in a slot `TabRow` had for
+it -- which said it was a control on the tabs, and left a button competing with
+the strip for a 390px line. It is neither of those things.
 
 **A row acts on that row.** Rename and delete sit in the row whose entity they
 edit, with an icon each -- and whether they are drawn is the caller's rank at
@@ -424,6 +430,12 @@ name is that name rather than the whole trail; the parents beside it are a real
 `<nav aria-label="Breadcrumb">` of links. A page still has exactly one
 `role="heading"` at level 2.
 
+**An action is centred on the trail, not pinned to the top of its row.** The
+heading line is `ROW_HEIGHT` tall and the trail sits in the middle of it, so an
+action aligned to `flex-start` hung a few pixels above the words it belongs to
+-- little enough to look like two rows that had failed to line up rather than
+like a decision.
+
 **The heading lines up with the navbar entry naming the same section.** A
 section is named twice on screen at once -- in the navbar, and again as the
 heading of the page it opened -- and the two sat 4px apart with glyphs of 18 and
@@ -462,6 +474,16 @@ has no heading in the accessibility tree at all, and the thing naming it is a
 button rather than an `h2`. The alternative was printing the same word twice on
 the narrowest screen the app supports.
 
+**The row goes with the word, and the block goes with the row.** Hiding the
+heading alone left what it sat in: `ROW_HEIGHT` of nothing plus the stack's
+gap, above every list in the app, which on a 390px screen is the most expensive
+blank space there is. So `Page` also drops the heading row when the phone would
+find nothing on it, and the whole header block when the subtitle has gone too.
+Both are decisions about the *props* -- is there a badge, an action, a subtitle
+-- and the breakpoint stays inside `visibleFrom`, so this is still one tree.
+A section root with an action on its line keeps the row at both widths and
+loses only the duplicated word.
+
 **The current page is not repeated inside the trail.** A breadcrumb ending in a
 non-link copy of the heading directly beneath it says the same name twice to a
 screen reader. The nav is the path *to* here; the heading is here.
@@ -485,7 +507,7 @@ imposing one word everywhere or letting four drift apart again.
 **`Page` does not branch on viewport, and must not.** The actions wrap under the
 heading on a narrow screen because the row is allowed to wrap, and the cap is
 inert below 1024px. The list of components that genuinely swap markup at the
-breakpoint stays at four; `Page.test.tsx` pins that by comparing the two
+breakpoint stays at five; `Page.test.tsx` pins that by comparing the two
 renderings byte for byte, the way `TabRow.test.tsx` does.
 
 ### What stayed different, and why
@@ -507,9 +529,17 @@ it was going to narrow -- but a panel needs its folder's *name*, so now both
 resources drive the page's state and there is one alert again. See
 [A folder is the structure of the page](#a-folder-is-the-structure-of-the-page-not-a-filter-on-it).
 
-Out of scope, deliberately: `/account`, `/login`, `/legal`, `/status`, the 404
-and the join flow. None is in a section, none has a trail, and `AccountScreen`
-renders without a router at all.
+Out of scope, deliberately: `/login`, `/legal`, `/status`, the 404 and the join
+flow. None of them is in a section and none is behind the signed-in chrome.
+
+`/account` **is** in scope, and was the one screen that had drifted out of it.
+It drew its own `Title` over its own dimmed line, so the profile page's heading
+was a different size from the character list's, started at a different height,
+and was capped by nothing at all on a wide monitor. It wears `Page` now. Being
+in no section is not the same as having no shape: `sectionFor` answers null for
+`/account`, which is exactly the case `Page` already draws as a heading with no
+breadcrumb above it -- and the right one here, the phone's chrome having no
+word for this place either.
 
 ## Sharing is reading, and it is one component
 
@@ -519,9 +549,9 @@ existed for this. **Games are deliberately not a third tab**: see below.
 
 The **Characters** tab is what the group's members have shared with each other.
 Sharing grants a read and only a read, and the panel says so by what it does not
-draw: there is no edit control anywhere on it, no build link, no event log. That
-is not the client hiding things it could offer -- there is no route behind any of
-them for anybody but the owner, so a button would come back 404. The only action
+draw: there is no edit control anywhere on it, and no build link. That
+is not the client hiding something it could offer -- there is no route behind it
+for anybody but the owner, so a button would come back 404. The only action
 on somebody else's row is **Take off**, and only for a DM, because a guest's
 session ends and their character would otherwise be stuck on the table.
 
@@ -620,6 +650,65 @@ difference between building a character and filling in a form. Personality is
 last and is the only tab that asks nothing about the rules -- see
 [below](#who-the-character-is-is-its-own-tab-and-its-own-words).
 
+### The tabs are a deck, so a phone can swipe between them
+
+The five tabs are `ui/TabDeck`. **On a phone** it is a strip over a carousel of
+all five panels, every one mounted, one on screen: pressing a tab scrolls the
+carousel to it and swiping the panel reports the tab it landed on, and neither
+can drive the other in a loop -- scrolling to the slide embla already holds does
+nothing, and the deck only reports a slide that is not the one the caller asked
+for.
+
+**On a wide screen there is no carousel at all**, only the strip and the panel
+that is showing. The carousel answers a phone and nothing else: there the panel
+is the biggest thing on screen and a swipe across it is the cheapest gesture
+available, where reaching back up to a 60px tab is the dearest. With a mouse the
+tabs are one click away, a drag across the page is how you select text, and
+mounting five panels to show one is five times the work for a gesture nobody
+makes. That is the branch, and it is why `TabDeck` is on the list of components
+whose two renderings differ rather than the list whose renderings match.
+
+**A press scrolls, a swipe is left alone, and anything else jumps.** Sliding
+from one tab to the next answers a press -- it shows which way you went. The
+same slide arriving unasked is the page moving while you are reading it, which
+is what a cold load of the build screen did until `TabDeck` told the two apart:
+it opens on the first unanswered category, so every load began on *identity* and
+slid sideways off it.
+
+A swipe is the third case and it took a bug to notice: embla selects the slide
+the moment the gesture decides and is still settling on to it, so a deck that
+"synced" to that selection cut its own animation short. The deck read as jumpy
+next to the sheet's, which nobody had swiped hard enough to see. It now checks
+`selectedScrollSnap()` and does nothing when the carousel is already where it is
+being asked to go.
+
+This is the same object the character sheet's phone rendering already was, and
+that is why it moved into `ui/`: five stage tabs a player leafs between are
+seven sheet sections under a different name, and two copies of a two-way embla
+sync are two copies of the one thing in it that goes subtly wrong.
+`ui/SectionDeck` is now the *desktop* half of a sheet -- where a section knows
+whether it is a bare row or a bordered panel -- and hands the phone half here.
+
+Two things follow from every panel being mounted, and both are worth knowing.
+Where a block sits is remembered per tab rather than for the screen as a whole
+(see [One block per choice](#one-block-per-choice)): with all five drawn at
+once, one shared memory would let the place a dropped answer vacated under
+*class* be claimed by whatever arrived next under *background*. And a test
+about what a tab holds has to say which tab -- `BuildScreen.test.tsx` scopes
+those queries to a slide, because a query against the whole document now sees
+all five categories at once.
+
+The deck does not swipe while the character does not exist. A tab press there
+*creates* one rather than moving anywhere, so a swipe would be a gesture the
+screen answers by refusing to move, and a deck that snaps back is worse than
+one that never gives.
+
+Keyboard focus now walks all five panels rather than stopping at the end of
+one, and the strip follows it: that is embla's own `watchFocus`, which scrolls
+a focused slide into view and emits the same `select` a swipe does. Nothing in
+`TabDeck` implements it, which is worth saying because the obvious hand-rolled
+version is a focus handler that fights the one already there.
+
 The screen opens on the first category with something required outstanding,
 and that is the whole of the help it offers: **answering does not move you**.
 A tab changes when a tab is pressed, and never on the way back from a write --
@@ -649,14 +738,12 @@ projection time -- so it is fetched rather than computed.
 
 **Nothing can be answered before it is asked.** Every tab is freely clickable,
 because a tab is a place to look as well as a place to answer, but what can be
-answered on one is exactly what `/prompts` returned for it. Two surfaces draw
-those questions: the build tab, as blocks that open, and
-`features/character/OutstandingChoices`, which is the character sheet's
-read-only statement of what is left -- and the level-up page's, when there is
-one. Both read the same response and name it through the same
-`features/character/promptNames`, so there is deliberately no second notion of
-"outstanding" anywhere in this client, and no second vocabulary for it. What
-differs is only that one is a list of ways in and the other is a list.
+answered on one is exactly what `/prompts` returned for it. One surface draws
+those questions -- the build tab, as blocks that open -- and it is the only one
+in the client. There used to be a second: `OutstandingChoices` listed the same
+prompts above the character sheet, read-only, with a button beneath it. It is
+gone, and what replaced it is smaller than a list. See [what the sheet says
+about an unfinished character](#what-the-sheet-says-about-an-unfinished-character).
 
 **The client routes nothing.** Every stored entry carries the group of the
 prompt it answered, written by the server, so a change that invalidates an
@@ -742,7 +829,10 @@ the next question.
 **The list grows; it does not rearrange.** Level order decides where a block
 goes the first time it is drawn, and after that it stays there:
 `features/character/blocks` keeps a `BlockOrder` of where everything sits, and
-a key it has not seen sorts to the end. Answering a question therefore adds
+a key it has not seen sorts to the end. There is one `BlockOrder` **per tab**,
+because where a block sits is a fact about the tab it sits on and every tab is
+drawn at once now -- see [the tabs are a
+deck](#the-tabs-are-a-deck-so-a-phone-can-swipe-between-them). Answering a question therefore adds
 what the answer brought with it and moves nothing else -- and the entry that
 answers a question takes that question's own place, rather than the question
 vanishing from the middle of the list while its answer appears at the bottom.
@@ -1020,6 +1110,26 @@ skills, the proficiencies, the traits and the gear. `features/character/SheetBod
 is that list, and `ui/SectionDeck` draws it -- across the page on a wide screen,
 and as a deck of tabs on a phone.
 
+### What the sheet says about an unfinished character
+
+One button on the heading line, reading **Answer what is left**, and only when
+`/prompts` comes back with something in it. Its presence is the whole message:
+the sheet does not enumerate what is open, because enumerating it put the build
+screen's work on the page nobody came to build on -- an alert, a list of five
+questions, and the sheet itself pushed below the fold on a phone. The screen
+that answers a question is the screen that lists it.
+
+Two things went with that list. `features/character/OutstandingChoices` had no
+other caller and is deleted rather than kept for a level-up page that does not
+exist. And the **Event log** link that used to be the sheet's only action is
+gone from the page for now -- `/characters/:id/log` still serves it, and is
+still the unabridged record, but nothing in the client links there.
+
+A `/prompts` that *failed* draws no button. The request is deliberately
+survivable -- a sheet is worth drawing with a second request down, which is the
+same bargain the compendium lookups make -- and the honest reading of "I do not
+know what is open" is to offer nothing rather than to guess.
+
 ### On a phone the sheet is a deck, not an accordion
 
 One row of tabs under the character's name, one section on screen, and a swipe
@@ -1036,8 +1146,11 @@ three others first. It also put the headline numbers -- identity, the ability
 cards, the vitals -- above the accordion where they were never reachable except
 by scrolling past them. As slides they are tabs like any other.
 
-The tab strip is `ui/TabRow`, unchanged, because six tabs do not fit across a
-390px screen and a strip that scrolls sideways is the whole of what it is. It
+The strip and the carousel are `ui/TabDeck`, which the build screen's five
+stage tabs also draw -- see [the tabs are a
+deck](#the-tabs-are-a-deck-so-a-phone-can-swipe-between-them). Under it is
+`ui/TabRow`, unchanged, because six tabs do not fit across a 390px screen and a
+strip that scrolls sideways is the whole of what it is. It
 scrolls away with the page rather than pinning under the header: that is one
 fewer row of chrome on a screen this app has already spent an argument buying
 back (see [Two views, one codebase](#two-views-one-codebase)), and a swipe
@@ -1325,6 +1438,14 @@ start of a fight; at two columns on a phone, first position is the only one
 visible without the eye travelling.
 
 ## The log has its own page, and it never asks for the sheet
+
+**Nothing links to it at the moment.** The sheet's Event log button came off the
+page (see [what the sheet says about an unfinished
+character](#what-the-sheet-says-about-an-unfinished-character)), so the route is
+reached by typing it. The screen and its route are kept whole rather than
+deleted: what was wanted was one fewer control on the sheet, not the loss of the
+one page that can answer "why do I have this proficiency?" when the projection
+has gone wrong.
 
 Its breadcrumb trail is `Characters / Event log` -- two crumbs, where every
 other detail page has three and names the thing it is about. That is the same
@@ -1799,8 +1920,9 @@ rather than at the call site:
 | `ModalSheet` | centred modal | bottom drawer |
 | `DataList` | table | labelled cards |
 | `Columns` | side-by-side panels | accordion |
-| `SectionDeck` | full-width blocks, then side-by-side panels | a tab strip over a carousel |
-| `TabRow` | tab strip, actions right | the same, scrolled sideways |
+| `SectionDeck` | full-width blocks, then side-by-side panels | a `TabDeck` |
+| `TabDeck` | tab strip, and the active panel | tab strip over a carousel of every panel |
+| `TabRow` | tab strip | the same, scrolled sideways, ends faded |
 | `BlockList` | a list of blocks, one open | the same |
 
 `Columns` and `SectionDeck` are the same idea answering two different questions,
@@ -1829,11 +1951,51 @@ phone accordion it needed a genuinely subtle arrangement -- `Accordion.Control`
 invalid markup with the outer control swallowing the press -- and carrying that
 subtlety for no caller is how it comes to be wrong the day somebody needs it.
 
+`TabRow`'s **`actions`** went the same way and for the same reason, once its one
+caller -- the build screen's Finish -- moved to the heading line where it
+belonged. What that slot carried was a `flex: 0 0 auto` and a paragraph
+explaining why the strip beside it was the only thing allowed to give way. Both
+are gone with it.
+
 `TabRow` and `BlockList` are the ones whose two renderings are **identical
 markup**. The others genuinely swap components at the breakpoint; `TabRow` is a
 `ScrollArea type="never"` that is simply inert at a width the tabs fit in, so
 there is no second tree to keep working and a test at one width is a real test
-of the other. The active tab is brought into view by setting `scrollLeft`, not
+of the other. `TabDeck` was on this list for a while and is not any more -- see
+below, which is the argument for why.
+
+### A scrolling strip rests on a tab, and hides the one it cuts
+
+Two things that only matter once the tabs do not fit, which on the sheet is
+always: seven labels are 657px and a phone viewport is 369.
+
+**It rests on a tab's left edge.** Bringing the active tab into view used to
+stop the moment its *right* edge cleared the viewport, which is the least it
+could do and leaves whatever tab straddles the left edge cut in half. Landing on
+the tab's own left edge cannot leave a fragment, because a boundary is where a
+tab begins.
+
+**The rule under the tabs spans the tabs.** `Tabs.List` is a block inside the
+scroller, so it took the *viewport's* width -- 369px against 657px of tabs --
+and its bottom rule stopped a third of the way along while the tabs themselves
+overflowed it. From a scrolled position that draws as a stray dash beside the
+first tab you can see, which is what it was reported as. `width: max-content`
+makes the list as wide as what is in it.
+
+**The end that is cut is hidden, not faded.** The far end of the strip is the
+one place the first rule cannot win -- the browser clamps the scroll wherever
+the arithmetic puts it, which on the sheet's last tab is 36px into
+*Proficiencies*. A gradient across that fragment was tried at 24px and again at
+32px and failed both times for the same reason: the far half of it sits at
+80-90% opacity and reads as a word. So the mask is transparent for the
+fragment's measured width and ramps up over the 16px after it, where the next
+whole tab starts. An end resting exactly on a boundary hides nothing and keeps
+the ramp, because an edge drawn hard says the strip ends there.
+
+Both are measured from the tabs' own geometry, which is the one thing in this
+component the suite cannot press: jsdom computes no layout, so every strip there
+is 0px wide, never overflows, and never draws a mask. What the tests hold is
+that the absence is identical at both viewports. The active tab is brought into view by setting `scrollLeft`, not
 by `scrollIntoView`, which scrolls every scrollable ancestor -- it would drag
 the document as well as the strip, and jsdom does not implement it. A stack of
 bordered disclosures needs no branch either: it is right at 390px and at

@@ -16,9 +16,9 @@ import { classLine, titleCase } from '@/domain'
  *
  * It draws the same `SheetBody` its owner sees, because the server renders both
  * with one converter -- the table is looking at the character, not at a summary
- * of it. What is missing is everything about changing it: no build link, no
- * event log, no outstanding choices. None of that is hidden; there is simply no
- * route behind any of it for anybody but the owner.
+ * of it. What is missing is everything about changing it: no build link, and so
+ * no way in to whatever the character has still to decide. That is not hidden;
+ * there is simply no route behind it for anybody but the owner.
  */
 export function SharedSheetScreen() {
   const { id: groupId = '', character = '' } = useParams()

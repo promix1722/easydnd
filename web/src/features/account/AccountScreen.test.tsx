@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 
 import type { SessionUser } from '@/lib/api'
 import type { AuthState } from '@/lib/auth'
@@ -31,11 +32,33 @@ function accountWith(ways: Partial<SessionUser>): SessionUser {
   return { ...testAccount, ...ways }
 }
 
+/**
+ * The screen at `/account`, inside a router.
+ *
+ * The router is not scenery: `ui/Page` reads the location to work out which
+ * section a page belongs to, and this one deliberately belongs to none -- so
+ * rendering at the real path is what proves the heading arrives without a
+ * breadcrumb above it.
+ */
 function accountAt(state: Partial<AuthState> = {}) {
-  return renderAt('desktop', withAuth(state, <AccountScreen />))
+  return renderAt(
+    'desktop',
+    <MemoryRouter initialEntries={['/account']}>{withAuth(state, <AccountScreen />)}</MemoryRouter>,
+  )
 }
 
 describe('AccountScreen', () => {
+  // The shape every screen behind the sign-in wears. This page drew its own
+  // heading over its own dimmed line for a while, at a size and a height
+  // nothing else used; `ui/Page` is what it should have been wearing, and
+  // `/account` belongs to no section so there is no trail above the name.
+  it('wears the same page shape as every other screen', () => {
+    accountAt({ user: accountWith({ credentials: [passkey] }) })
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Account' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument()
+  })
+
   // A guest has no account, so the page has no inventory to draw: one alert
   // saying so is the whole screen.
   it('tells a guest there is nothing to manage', () => {
