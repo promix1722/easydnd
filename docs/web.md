@@ -1396,8 +1396,8 @@ branches on the auth state and picks the chrome: a loader while the session is
 still unknown, `LandingShell` when anonymous, `RootShell` when signed in. At
 `/`, `routes/HomeRoute.tsx` makes the same choice about the content.
 
-Signed out, that content is three panels -- build a character, join a group,
-run an adventure -- side by side on a desktop and a carousel on a phone. Those three are the whole of what this app means
+Signed out, that content is a carousel of three panels -- build a character,
+join a group, run an adventure. Those three are the whole of what this app means
 to be, in the order you meet them, and committing to that shape before
 committing to the words for it was the cheap order to do the work in: the
 layout, the swipe and the accessible names settled first, against panels that
@@ -1419,33 +1419,27 @@ They also paid for a piece of the design to be removed. While the panels were
 empty, `slideSize` was under 100% so the neighbours peeked: three identical
 blank rectangles at full width read as one rectangle, and a swipe between them
 appeared to do nothing. A panel that says something is already distinguishable
-from the panel beside it, so the peek went and the phone's carousel shows one
-panel at a time. The border stayed, because a panel still wants an edge.
+from the panel beside it, so the peek went and the carousel shows one panel at a
+time. The border stayed, because a panel still wants an edge.
 
-**There is a carousel only where a carousel is the affordance.** This is one of
-the few places outside a `@/ui` primitive that calls `useIsDesktop`, and it asks
-what the window has room for. A phone fits one panel and offers a swipe, so
-there it is a carousel with no arrows at all: two 44px controls covering the
-panel they sit on would duplicate the gesture the screen already gives, and the
-indicators still say how many panels there are. A desktop has the width for all
-three, and there a carousel is a control asking to be *operated* in order to see
-what the window could simply have shown -- two panels behind an arrow, and the
-shape of what the app is for hidden with them. So on desktop the same three
-panels sit side by side in a `SimpleGrid`, and there is nothing to work.
+Two of Mantine's own defaults are overridden, and both for the same reason --
+they are drawn for a carousel of photographs and this is a carousel of text on
+paper. The indicators are white at `0.6` opacity, which over a pale panel on a
+pale page is invisible; an invisible indicator is worse than no indicator,
+because it says there is one panel. They are repainted in the primary colour,
+which reads under `defaultColorScheme="auto"` where white does not. And the
+controls are `44px` rather than the default `26px`: on the viewport that draws
+them they are the only way through for a visitor not using the arrow keys, they
+sit *over* a panel rather than beside it, and 26px is under every published
+minimum for a pointer target.
 
-The two renderings share their panel and nothing else, which is the test
-`ui/Columns` and `ui/ModalSheet` apply to whether a width split belongs in a
-file at all. `Panel` states its own `role="group"` and `aria-labelledby` rather
-than leaving them to the carousel, because `Carousel.Slide` would supply them on
-one viewport and nothing would on the other -- and a panel that is a named group
-at 390px and an anonymous box at 1440px is two components wearing one name.
-
-One of Mantine's defaults is still overridden, on the viewport that still has a
-carousel: the indicators are white at `0.6` opacity, drawn for a carousel of
-photographs, and over a pale panel on a pale page they are invisible -- worse
-than no indicator, because it says there is one panel. They are repainted in the
-primary colour, which reads under `defaultColorScheme="auto"` where white does
-not. The `44px` control override went with the controls.
+They are drawn on desktop **only**. This is one of the few places outside a
+`@/ui` primitive that calls `useIsDesktop`, and it asks about the *input*
+rather than the layout: a phone has no pointer, so two 44px arrows covering the
+panel they sit on would duplicate a swipe the screen already offers. Taking
+them away removes a control, not a way through -- the swipe, the arrow keys and
+the indicators all remain, and the indicators are what still say how many
+panels there are.
 
 None of the three panels is a link, and not because two of them lead nowhere --
 `/groups` is real. It is that all three live behind the sign-in boundary, so a

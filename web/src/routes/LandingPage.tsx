@@ -1,6 +1,6 @@
 import { useId } from 'react'
 
-import { Carousel, Paper, SimpleGrid, Stack, Text, Title, useIsDesktop } from '@/ui'
+import { Carousel, Paper, Stack, Text, Title, useIsDesktop } from '@/ui'
 
 /**
  * What a signed-out visitor sees at `/`: what this app is for, three panels of
@@ -28,19 +28,11 @@ import { Carousel, Paper, SimpleGrid, Stack, Text, Title, useIsDesktop } from '@
  * the app in the corner a visitor looks at to know where they are, and a mark
  * above a carousel is two heroes competing for the same glance.
  *
- * **A carousel only where a carousel is the affordance.** On a phone it is one
- * panel at a time and a swipe, which is the gesture that screen offers. A
- * desktop has the width to show all three at once, and there a carousel is a
- * control asking to be operated in order to see what a wider window could
- * simply have shown -- two panels hidden behind an arrow, and the shape of what
- * the app is for hidden with them. So the same three panels, side by side, and
- * no control at all.
- *
- * On the phone an earlier draft let the neighbours peek, because three *empty*
- * bordered rectangles at full width are indistinguishable from one and a swipe
- * appeared to do nothing. The captions are what retired that: a panel that says
- * something is already distinguishable from the panel beside it, and the peek
- * was only ever paying for the absence.
+ * One panel at a time, filling the width. An earlier draft let the neighbours
+ * peek, because three *empty* bordered rectangles at full width are
+ * indistinguishable from one and a swipe appeared to do nothing. The captions
+ * are what retired that: a panel that says something is already distinguishable
+ * from the panel beside it, and the peek was only ever paying for the absence.
  *
  * Height. The mark was optically centred: a box of the viewport less *twice*
  * the header offset, so its middle landed on `50dvh` rather than in the middle
@@ -105,74 +97,21 @@ const SLIDES: readonly Slide[] = [
   },
 ]
 
-/**
- * One panel, drawn the same whichever way the three are laid out.
- *
- * `role="group"` and the label are stated here rather than left to the
- * carousel: on a phone `Carousel.Slide` would supply them, on a desktop
- * nothing would, and a panel that is a named group on one viewport and an
- * anonymous box on the other is two components wearing one name.
- */
-function Panel({ slide, headingId }: { slide: Slide; headingId: string }) {
-  return (
-    <Paper
-      withBorder
-      radius="md"
-      h="100%"
-      p="xl"
-      role="group"
-      // Labelled *by* the heading rather than carrying a second copy of it in
-      // an `aria-label`: the words are on screen now, and two spellings of one
-      // name is how they come to disagree.
-      aria-labelledby={`${headingId}-${slide.key}`}
-    >
-      {/* Centred in the panel rather than sitting at its top, because the
-          panel is as tall as the window and text pinned to the ceiling of it
-          reads as a mistake. `maw` keeps the caption to a readable measure on
-          a wide screen. */}
-      <Stack h="100%" justify="center" align="center" gap="md">
-        <Title id={`${headingId}-${slide.key}`} order={2} ta="center">
-          {slide.title}
-        </Title>
-        <Text c="dimmed" ta="center" maw={480}>
-          {slide.caption}
-        </Text>
-      </Stack>
-    </Paper>
-  )
-}
-
 export function LandingPage() {
-  // Two of these could share a page one day -- a preview beside the real one,
+  // Two carousels could share a page one day -- a preview beside the real one,
   // say -- and duplicated heading ids would point every panel at the first.
   const headingId = useId()
 
   // One of the few places outside a @/ui primitive that asks the viewport, and
-  // it is asking what the window has room for. Three panels side by side need
-  // width; one panel and a swipe needs a touchscreen. The two renderings share
-  // their panel and nothing else, which is the same test `ui/Columns` and
-  // `ui/ModalSheet` apply to deciding whether a split belongs in this file.
-  const desktop = useIsDesktop()
-
-  if (desktop) {
-    return (
-      // Named, and a region rather than a bare grid: a landmark called "region"
-      // tells a screen reader nothing, and this is the one thing on the page.
-      <SimpleGrid
-        role="region"
-        aria-label="What easydnd is for"
-        cols={3}
-        spacing="md"
-        h={FILL_MAIN}
-      >
-        {SLIDES.map((slide) => (
-          <Panel key={slide.key} slide={slide} headingId={headingId} />
-        ))}
-      </SimpleGrid>
-    )
-  }
+  // it is asking about the input rather than the layout: the arrows are the
+  // only way through this carousel for a pointer, and a phone has no pointer.
+  // There they are two 44px controls sitting on top of the panel they are
+  // covering, duplicating the swipe that a touchscreen already offers -- so
+  // they go, and the indicators below still say how many panels there are.
+  const withControls = useIsDesktop()
 
   return (
+    // Named, because a landmark called "region" tells a screen reader nothing.
     // Mantine gives the root `role="region"` and an `aria-roledescription` of
     // "carousel" already; the name is the part only this call site knows.
     <Carousel
@@ -180,11 +119,12 @@ export function LandingPage() {
       height={FILL_MAIN}
       slideGap="md"
       withIndicators
-      // None, on the only viewport this now draws on. The arrows are two 44px
-      // controls sitting on top of the panel they cover, duplicating a swipe
-      // the touchscreen already offers -- and the indicators below still say
-      // how many panels there are.
-      withControls={false}
+      withControls={withControls}
+      // Bigger than the 26px default. On the viewport that draws them these are
+      // the only way through the carousel for anybody not using the arrow keys,
+      // they sit over a panel rather than beside it, and 26px is under every
+      // published minimum for a pointer target.
+      controlSize={44}
       styles={{
         // Mantine's indicators are white at 0.6 opacity, which is drawn for a
         // carousel of photographs. Over a pale panel on a pale page they are
@@ -199,8 +139,24 @@ export function LandingPage() {
       emblaOptions={{ loop: true }}
     >
       {SLIDES.map((slide) => (
-        <Carousel.Slide key={slide.key}>
-          <Panel slide={slide} headingId={headingId} />
+        // Labelled *by* the heading rather than carrying a second copy of it in
+        // an `aria-label`: the words are on screen now, and two spellings of
+        // one name is how they come to disagree.
+        <Carousel.Slide key={slide.key} aria-labelledby={`${headingId}-${slide.key}`}>
+          <Paper withBorder radius="md" h="100%" p="xl">
+            {/* Centred in the panel rather than sitting at its top, because the
+                panel is as tall as the window and text pinned to the ceiling of
+                it reads as a mistake. `maw` keeps the caption to a readable
+                measure on a wide screen. */}
+            <Stack h="100%" justify="center" align="center" gap="md">
+              <Title id={`${headingId}-${slide.key}`} order={2} ta="center">
+                {slide.title}
+              </Title>
+              <Text c="dimmed" ta="center" maw={480}>
+                {slide.caption}
+              </Text>
+            </Stack>
+          </Paper>
         </Carousel.Slide>
       ))}
     </Carousel>
