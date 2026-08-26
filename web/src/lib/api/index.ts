@@ -44,7 +44,7 @@ export type {
 } from './catalog'
 
 // Folders: where an account files its characters. Not a group of players.
-export { createFolder, deleteFolder, listFolders, renameFolder } from './folders'
+export { createFolder, deleteFolder, listFolders, renameFolder, reorderFolders } from './folders'
 export type { Folder } from './folders'
 
 // Characters.

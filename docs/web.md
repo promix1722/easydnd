@@ -103,12 +103,12 @@ first section in a different order on a phone.
 
 The criterion is what the test *presses*, not what screen it is on.
 `CharacterListScreen`'s row actions live inside `DataList`, so a test that
-presses one belongs at both widths; three tests in that block pressed `Manage
-folders` in the toolbar above the list instead, and asserted a request body and
-a count of buttons in a dialog -- the same markup either way. They run at one
-width now. The dialog is a `ModalSheet` and that swap is asserted on its own
-terms in `src/ui/ModalSheet.test.tsx`, once, rather than three more times
-here.
+presses one belongs at both widths; the tests that press a folder's heading,
+its action menu or **New folder** do not -- what they assert is a request body
+or where a press navigated to, which is the same markup either way. They run at
+one width. The folder dialogs are `ModalSheet`s and that swap is asserted on
+its own terms in `src/ui/ModalSheet.test.tsx`, once, rather than several more
+times here.
 
 **Render the panel, not the page, when the panel is what is under test.**
 `ProficienciesPanel.test.tsx`, `Vitals.test.tsx`, `SheetBody.test.tsx` and the
@@ -231,13 +231,13 @@ independent lifetimes, and here one screen owns one character.
 
 The character list is now the one screen that holds two resources -- its folders
 and its characters -- which is the case that sentence used to leave open. It
-still does not need a library. The two reads are independent, the character
-read is keyed by the selected folder so changing the filter aborts the request
-in flight rather than leaving the old folder's rows under the new heading, and
-every mutation on that screen is followed by an explicit reload of the lists
-that changed. There is no cache to go stale in between. Revisit it when
-something needs a *third* component's copy of the same data to update by
-itself.
+still does not need a library. The two reads are independent and unkeyed: the
+characters read fetches *every* character once and the screen groups them by
+the folder each one carries, so a folder appearing or disappearing costs one
+reload rather than a request per shelf. Every mutation on that screen is
+followed by an explicit reload of the lists that changed, and there is no cache
+to go stale in between. Revisit it when something needs a *third* component's
+copy of the same data to update by itself.
 
 The compendium is immutable for the life of the server process, so
 `lib/api/catalog.ts` memoises each collection's *promise* for the session: two
@@ -297,11 +297,54 @@ Groups section next to it is the shared one, with people and ranks in it, and
 the two words name genuinely different things. A folder lives inside the
 Characters section and never appears in Groups.
 
-`CharacterListScreen` carries the whole feature: a `Select` filters the list to
-one folder, a **Manage folders** dialog creates, renames and deletes them, and
-each row has a menu with Move, Copy and Delete. The filter is a `Select` rather
-than tabs because it renders the same at both viewports and does not overflow
-once an account keeps more than a few folders.
+### A folder is the structure of the page, not a filter on it
+
+`CharacterListScreen` used to draw one table with a `Select` above it reading
+"All characters", a **Manage folders** dialog beside that, and a Folder column
+so the rows could be told apart once you switched back to all of them. All
+three are gone, and none of them was removed for tidiness: each was left with
+nothing to do.
+
+Every folder is now a bordered `FolderPanel` -- a heading you can collapse, its
+own table under it, and its own **New character** and **Import** beneath that.
+That change is worth four consequences:
+
+- **There is nothing to filter.** A folder you can see the edges of is not a
+  narrowing of a list; it *is* the list. The `Select` went, and `ui/Page`'s
+  `filters` slot went with it, having lost its only caller.
+- **There is nothing for the Folder column to say.** Inside a folder every row
+  would carry the same word as the heading two lines above it.
+- **`?folder=` is now a fact about where you pressed** rather than about what a
+  control was set to. Every add button carries its own folder, which is also
+  why each one is named for it -- three buttons reading "New character" is the
+  same ambiguity as a column of "Delete"s.
+- **Both resources drive the page's state.** A character carries a folder *id*,
+  so a folder listing that will not load leaves nothing to head the panels
+  with. The second, inline alert this screen used to keep for the folders
+  request went with the filter it belonged to: while a folder was a filter,
+  drawing the rows anyway was right; now there are no rows to draw.
+
+### The order is the account's, and reordering says so whole
+
+Folders are drawn in the order their owner put them in. The default folder
+leads regardless -- it is the one folder an account cannot lose, and a list
+whose first entry wanders is a list nobody can point at -- so it has no grip
+and no **Move up**/**Move down**.
+
+Reordering is `PUT /v1/folders/order` carrying **every movable folder in the
+wanted order**, not a single move. A "move this one up" applied to a listing
+that has changed since it was drawn moves the wrong folder; a complete order
+either matches what the account has or is refused, and sending it twice leaves
+the same result. That is what makes a drag safe to re-send. See
+[docs/backend.md](backend.md#folders).
+
+The drag itself is hand-rolled over the native events, the way
+`features/character/ScoreAssignment` is, and for the same two reasons: there is
+no drag library below `@/ui`, and a native drag fires on neither a touchscreen
+nor jsdom. So it is never the only way to do something -- **Move up** and
+**Move down** in each folder's menu are the real path, and the one the tests
+press. Four folder actions is also the case `@/ui` blesses a `Menu` for, rather
+than the spelled-out buttons a table row gets.
 
 ## Where a control lives says what it acts on
 
@@ -447,14 +490,22 @@ renderings byte for byte, the way `TabRow.test.tsx` does.
 
 ### What stayed different, and why
 
-Unifying is not flattening. Four things survived because each does real work:
+Unifying is not flattening. Two things survived because each does real work:
 
 | Kept | Why |
 | --- | --- |
-| Characters' folder filter | The section's own control, and no other section has folders. It has a named slot (`filters`) rather than being ad-hoc markup. |
-| Characters' *second* error alert | The folders request fails on its own terms. A filter that would not load is no reason to refuse to draw the characters it was going to narrow, so only the characters resource drives the page's state. |
 | Groups' `TabRow` | Members and Characters are two views of one table. |
 | Games' gate on **New game** | You can only open a game at a table you run. |
+
+Two more used to be here and are not any more, both from Characters, and both
+because the thing they were defending went rather than because the rule caught
+up with them. The **folder filter** had a named `filters` slot on `Page`; when
+folders became the page's structure there was nothing left to filter, so the
+slot lost its only caller and was deleted. The **second error alert** existed
+because a filter that would not load was no reason to refuse to draw the rows
+it was going to narrow -- but a panel needs its folder's *name*, so now both
+resources drive the page's state and there is one alert again. See
+[A folder is the structure of the page](#a-folder-is-the-structure-of-the-page-not-a-filter-on-it).
 
 Out of scope, deliberately: `/account`, `/login`, `/legal`, `/status`, the 404
 and the join flow. None is in a section, none has a trail, and `AccountScreen`
@@ -539,7 +590,7 @@ grants the read, so the URL says so.
 
 Two things on that screen are not cosmetic:
 
-- **The default folder's row has no delete control.** It is the folder an
+- **The default folder's menu has no delete control.** It is the folder an
   account is guaranteed to have, and the API refuses to delete it. Rename is
   offered, because what an account cannot lose is the folder, not its name.
 - **The delete-folder confirmation states the character count.** Deleting a
@@ -547,8 +598,9 @@ Two things on that screen are not cosmetic:
   is no undo and no backup. A dialog that only named the folder would be
   describing a smaller action than the one about to happen.
 
-New character and Import carry the selected folder through as `?folder=`, so
-whatever the list was filtered to is where the next character lands.
+New character and Import carry their own folder through as `?folder=`: there is
+a pair of them under every folder's table, so where you press is where the next
+character lands.
 
 ## The build screen is a loop, not a wizard
 

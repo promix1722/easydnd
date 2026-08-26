@@ -285,8 +285,9 @@ that.
 | `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
 | `PUT` | `/v1/characters/{id}/folder` | file it elsewhere |
 | `POST` | `/v1/characters/{id}/copy` | duplicate it, log and all |
-| `GET` | `/v1/folders` | the account's folders, default first |
+| `GET` | `/v1/folders` | the account's folders, default first, then in their owner's order |
 | `POST` | `/v1/folders` | create: a name |
+| `PUT` | `/v1/folders/order` | the whole order: every movable folder, in sequence |
 | `PATCH` | `/v1/folders/{id}` | rename |
 | `DELETE` | `/v1/folders/{id}` | **deletes the characters in it too** |
 | `GET` | `/v1/groups` | the groups you are in, with your role in each |
@@ -709,6 +710,41 @@ holds the lock, so the store holds the invariant.
 
 The default folder can be renamed and cannot be deleted. What an account cannot
 lose is the folder, not the word on it.
+
+**The order is the account's, and the default folder is not in it.** A folder
+carries a `Position`, and `FolderRepository.List` sorts the default first, then
+by `Position`, with the identifier breaking a tie so the order is total rather
+than merely mostly-decided. The default leads whatever anybody rearranges: it
+is the one folder an account is guaranteed to have, and a list whose first entry
+wanders is a list nobody can point at. Sorting it in by name would have made
+where it lands depend on what its owner renamed it to; sorting it in by
+`Position` would make it move.
+
+A new folder lands last. That is the only position that needs no decision from
+whoever made it -- they asked for a folder, not for a place in the list.
+
+**Reordering is a `PUT` of the whole run, not a move.** `PUT /v1/folders/order`
+takes every folder the account owns *except* the default, in the order wanted.
+Three properties follow, and they are the reason for the shape:
+
+- **It is idempotent.** Sending it twice leaves the same order, so a client
+  unsure whether a drag landed can simply send it again.
+- **It cannot half-apply.** A "move this one up" arriving against a listing
+  that changed since it was drawn moves the wrong folder. A complete order
+  either matches the account's set or is refused; the store compares the two as
+  sets and rewrites every position under one write lock.
+- **It needs no version on a row.** The set comparison *is* the concurrency
+  check: an order naming a folder that has since been deleted is a set
+  mismatch, which is a 400 rather than a silent partial write.
+
+Naming the default folder is a **400**, for the same reason deleting it is: it
+exists, the caller owns it, and the honest answer is that this particular folder
+does not move. Naming somebody else's is a **404**, from the same `ownedFolder`
+choke point every move and rename goes through.
+
+The `Position` is deliberately **not** on the wire. `GET /v1/folders` already
+returns the folders in order, and a number beside a list that is already in
+order gives a client a second source of truth to disagree with the first.
 
 **Membership is a field, not an event.** `Character.Folder` sits beside
 `Character.Owner` and outside the log, because neither is a fact about the

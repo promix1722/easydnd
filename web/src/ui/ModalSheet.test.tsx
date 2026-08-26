@@ -42,6 +42,26 @@ describe('ModalSheet', () => {
     expect(document.querySelector('.mantine-Drawer-content')).toBeNull()
   })
 
+  // The regression this exists for: `size="auto"` resolved to an undefined
+  // Mantine custom property, so `height` fell through to its 100% fallback and
+  // every sheet on a phone opened as tall as the cap allowed -- a three-line
+  // form filling the screen. jsdom computes no layout, so what is asserted is
+  // the declaration itself, which is the thing that was wrong.
+  it('lets the mobile sheet hug its content', () => {
+    renderAt(
+      'mobile',
+      <ModalSheet opened onClose={noop} title="Choose a race">
+        <p>Dwarf</p>
+      </ModalSheet>,
+    )
+    const content = document.querySelector('.mantine-Drawer-content')
+    expect(content).not.toBeNull()
+    expect((content as HTMLElement).style.height).toBe('auto')
+    // And still capped, or the sheet's own header goes behind the browser
+    // chrome on a short viewport.
+    expect((content as HTMLElement).style.maxHeight).toBe('85dvh')
+  })
+
   it('renders nothing while closed', () => {
     renderAt(
       'mobile',

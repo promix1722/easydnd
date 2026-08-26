@@ -42,17 +42,6 @@ export interface PageProps {
   subtitle?: ReactNode
   /** Acts on the entity the page is about, and on nothing else. */
   actions?: ReactNode
-  /**
-   * Controls that narrow what the body shows, drawn between the header and it.
-   *
-   * Distinct from `actions` on purpose, and the distinction is the one
-   * docs/web.md already draws for every list screen: a control's position says
-   * what it changes. `actions` act on the entity the page is about; these act
-   * on what you are looking at. Only the character list has any -- its folder
-   * filter -- and a slot with one caller is still better than that caller
-   * inventing a row the other five do not have.
-   */
-  filters?: ReactNode
   /** Defaults to ready. */
   state?: PageState
   children?: ReactNode
@@ -109,7 +98,6 @@ export function Page({
   badge,
   subtitle,
   actions,
-  filters,
   state,
   children,
 }: PageProps) {
@@ -247,11 +235,6 @@ export function Page({
             </Text>
           )}
         </Stack>
-
-        {/* A sibling of the header rather than a child of it: the header's
-            crumb, heading and subtitle are one block at gap 4, and a filter row
-            tucked inside it reads as part of the title. */}
-        {filters}
 
         <Body state={state ?? READY}>{children}</Body>
       </Stack>

@@ -1,5 +1,5 @@
-import { screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
@@ -8,7 +8,7 @@ import { setupUser } from '@/test/user'
 import { CharacterListScreen } from './CharacterListScreen'
 
 /**
- * The party list, with folders.
+ * The party list, drawn as folders.
  *
  * The fetch stub answers by path rather than by call order, because this screen
  * fires two requests at once and their order is not something the screen
@@ -18,6 +18,9 @@ import { CharacterListScreen } from './CharacterListScreen'
 
 const DEFAULT_FOLDER = { id: 'fld_000001', name: 'Default', default: true }
 const CAMPAIGN = { id: 'fld_000002', name: 'Campaign', default: false }
+// A third folder, because two movable ones is the least it takes to have an
+// order at all: with one there is nothing to move it past.
+const RETIRED = { id: 'fld_000003', name: 'Retired', default: false }
 
 const STUB_ID = 'chr_000009'
 
@@ -37,7 +40,8 @@ function mockApi() {
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
-      calls.push({ url, method: init?.method ?? 'GET', body: String(init?.body ?? '') })
+      const method = init?.method ?? 'GET'
+      calls.push({ url, method, body: String(init?.body ?? '') })
 
       const json = (value: unknown, status = 200) =>
         new Response(status === 204 ? null : JSON.stringify(value), {
@@ -46,19 +50,31 @@ function mockApi() {
         })
 
       if (url.startsWith('/v1/folders')) {
-        if ((init?.method ?? 'GET') !== 'GET') return json({ ...CAMPAIGN }, 201)
-        return json({ folders: [DEFAULT_FOLDER, CAMPAIGN] })
+        if (method === 'GET') return json({ folders: [DEFAULT_FOLDER, CAMPAIGN, RETIRED] })
+        if (method === 'POST') return json({ ...CAMPAIGN }, 201)
+        if (method === 'PATCH') return json({ ...CAMPAIGN })
+        // PUT /v1/folders/order and DELETE /v1/folders/{id}.
+        return json(null, 204)
       }
       if (url.includes('/copy')) return json({ id: 'chr_000003', seq: 2, sheet: {} }, 201)
       // Ahead of the catch-all below: the stub answers with a character, not
       // the 204 every other write on this screen returns.
       if (url.includes('/v1/characters/stub')) return json({ id: STUB_ID, seq: 9, sheet: {} }, 201)
-      if ((init?.method ?? 'GET') !== 'GET') return json(null, 204)
-      if (url.includes(`folder=${CAMPAIGN.id}`)) return json({ characters: [BRAM] })
-      if (url.includes(`folder=${DEFAULT_FOLDER.id}`)) return json({ characters: [ADA] })
+      if (method !== 'GET') return json(null, 204)
       return json({ characters: [ADA, BRAM] })
     }),
   )
+}
+
+/**
+ * A destination that prints the query it was reached with.
+ *
+ * The `?folder=` is the whole assertion for the add buttons -- which folder a
+ * press files into -- and a route element that only said "new character screen"
+ * could not tell one press from another.
+ */
+function Landed({ label }: { label: string }) {
+  return <div>{`${label}${useLocation().search}`}</div>
 }
 
 function renderList(viewport: 'mobile' | 'desktop') {
@@ -67,8 +83,8 @@ function renderList(viewport: 'mobile' | 'desktop') {
     <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/" element={<CharacterListScreen />} />
-        <Route path="/characters/new" element={<div>new character screen</div>} />
-        <Route path="/characters/import" element={<div>import screen</div>} />
+        <Route path="/characters/new" element={<Landed label="new character screen" />} />
+        <Route path="/characters/import" element={<Landed label="import screen" />} />
         <Route path="/characters/:id" element={<div>character sheet</div>} />
       </Routes>
     </MemoryRouter>,
@@ -76,15 +92,30 @@ function renderList(viewport: 'mobile' | 'desktop') {
 }
 
 /**
- * The row for one character: a table row on desktop, a card on mobile. Scoping
- * to it is what keeps "Ada is in Default" from matching the word Default
- * wherever else it appears -- the filter's option list, for one.
+ * What one folder is holding, scoped to the panel it is drawn in.
+ *
+ * The panel body carries the id its heading points `aria-controls` at, which is
+ * the same handle a screen reader follows -- so a test that finds a character
+ * through it is asserting the thing the markup actually claims.
  */
-function rowOf(name: string): HTMLElement {
-  const cell = screen.getByText(name)
-  const row = cell.closest('tr, [class*="mantine-Card-root"]')
-  if (row === null) throw new Error(`no row around ${name}`)
-  return row as HTMLElement
+function folderBody(id: string): HTMLElement {
+  const body = document.getElementById(`folder-${id}`)
+  if (body === null) throw new Error(`folder ${id} is not open`)
+  return body
+}
+
+/** The header of one folder: the element a drag starts on. */
+function folderHeader(name: string): HTMLElement {
+  const toggle = screen.getByRole('button', { name: new RegExp(`(Collapse|Expand) ${name}`) })
+  const header = toggle.closest('[draggable="true"]')
+  if (header === null) throw new Error(`${name} is not draggable`)
+  return header as HTMLElement
+}
+
+/** Opens one folder's action menu and returns it. */
+async function openMenu(user: ReturnType<typeof setupUser>, name: string): Promise<HTMLElement> {
+  await user.click(screen.getByRole('button', { name: `Actions for ${name}` }))
+  return await screen.findByRole('menu')
 }
 
 /** The requests made to one path so far, newest last. */
@@ -108,15 +139,23 @@ beforeEach(() => {
 })
 
 describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewport) => {
-  it('lists every character and names the folder each is in', async () => {
+  it('draws each folder over the characters filed in it', async () => {
     renderList(viewport)
 
     expect(await screen.findByText('Ada')).toBeInTheDocument()
-    expect(screen.getByText('Bram')).toBeInTheDocument()
-    // The folder column only earns its place when the listing spans folders,
-    // which is what "All characters" is.
-    expect(within(rowOf('Ada')).getByText('Default')).toBeInTheDocument()
-    expect(within(rowOf('Bram')).getByText('Campaign')).toBeInTheDocument()
+
+    // Not "Ada is on the page and says Default beside her" -- Ada is *inside*
+    // the Default folder's panel, which is the claim the layout now makes.
+    expect(within(folderBody(DEFAULT_FOLDER.id)).getByText('Ada')).toBeInTheDocument()
+    expect(within(folderBody(CAMPAIGN.id)).getByText('Bram')).toBeInTheDocument()
+    expect(within(folderBody(CAMPAIGN.id)).queryByText('Ada')).not.toBeInTheDocument()
+
+    // An empty folder still draws, and says so.
+    expect(within(folderBody(RETIRED.id)).getByText(/Nothing in this folder yet/)).toBeInTheDocument()
+
+    // One request for every character rather than one per folder: a listing
+    // already carries the folder each row is in.
+    expect(requestsTo('/v1/characters').filter((c) => c.method === 'GET')).toHaveLength(1)
   })
 
   it('moves a character to another folder', async () => {
@@ -175,36 +214,124 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 })
 
-
 /**
  * The rest of the screen, at one width.
  *
  * The block above stays at both because `DataList` draws a table on a desktop
  * and cards on a phone, and `ModalSheet` swaps `Modal` for `Drawer` -- the row
  * actions live inside `DataList`, so anything that presses one belongs up
- * there. Nothing here touches either: what these press is the folder `Select`
- * or `Manage folders` in the toolbar above the list, and what they assert is
- * the request that went out or a count of buttons inside a dialog -- the same
- * markup at any width. The folders dialog is a `ModalSheet`, and that swap is
- * asserted on its own terms in `src/ui/ModalSheet.test.tsx` rather than three
- * more times here. See docs/web.md.
+ * there. Nothing here touches either: what these press is a folder's heading,
+ * its action menu or the New folder button, and what they assert is the request
+ * that went out or where a press navigated to -- the same markup at any width.
+ * The folder dialogs are `ModalSheet`s, and that swap is asserted on its own
+ * terms in `src/ui/ModalSheet.test.tsx` rather than several more times here.
+ * See docs/web.md.
  */
 describe('CharacterListScreen', () => {
   const viewport = 'desktop'
 
-  it('re-fetches with ?folder= when the filter changes', async () => {
+  it('collapses a folder and opens it again', async () => {
     const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByRole('combobox', { name: 'Folder' }))
-    await user.click(await screen.findByRole('option', { name: 'Campaign' }))
+    await user.click(screen.getByRole('button', { name: 'Collapse Campaign' }))
+    expect(screen.queryByText('Bram')).not.toBeInTheDocument()
+    // The count is what a collapsed folder still says about its contents.
+    expect(screen.getByRole('button', { name: 'Expand Campaign' })).toBeInTheDocument()
+    // And its neighbours did not close with it.
+    expect(screen.getByText('Ada')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Expand Campaign' }))
+    expect(await screen.findByText('Bram')).toBeInTheDocument()
+  })
+
+  // Where you press decides where the character lands. There is no filter to
+  // set first, which is the whole point of a pair of these per folder.
+  it('carries the folder its add button sits under', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'New character in Campaign' }))
+
+    expect(
+      await screen.findByText(`new character screen?folder=${CAMPAIGN.id}`),
+    ).toBeInTheDocument()
+  })
+
+  it('carries the folder its import button sits under', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'Import into Retired' }))
+
+    expect(await screen.findByText(`import screen?folder=${RETIRED.id}`)).toBeInTheDocument()
+  })
+
+  // The order goes out whole rather than as a move, so this asserts the list
+  // that was sent and not a delta.
+  it('moves a folder down and sends the whole new order', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    const menu = await openMenu(user, 'Campaign')
+    await user.click(within(menu).getByRole('menuitem', { name: 'Move down' }))
 
     await waitFor(() => {
-      expect(requestsTo(`/v1/characters?folder=${CAMPAIGN.id}`)).toHaveLength(1)
+      const sent = onlyRequestTo('/v1/folders/order', 'PUT')
+      // The default folder is not in it: it leads the listing whatever
+      // anybody moves, and the server refuses an order that names it.
+      expect(JSON.parse(sent.body)).toEqual({ folders: [RETIRED.id, CAMPAIGN.id] })
     })
-    expect(await screen.findByText('Bram')).toBeInTheDocument()
-    expect(screen.queryByText('Ada')).not.toBeInTheDocument()
+  })
+
+  // The ends of the run have nowhere to go, and the default folder never moves
+  // at all -- so neither offers the control.
+  it('offers no move past the ends, and none on the default folder', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    const first = await openMenu(user, 'Campaign')
+    expect(within(first).queryByRole('menuitem', { name: 'Move up' })).not.toBeInTheDocument()
+    expect(within(first).getByRole('menuitem', { name: 'Move down' })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+
+    const last = await openMenu(user, 'Retired')
+    expect(within(last).getByRole('menuitem', { name: 'Move up' })).toBeInTheDocument()
+    expect(within(last).queryByRole('menuitem', { name: 'Move down' })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+
+    const def = await openMenu(user, 'Default')
+    expect(within(def).queryByRole('menuitem', { name: /^Move/ })).not.toBeInTheDocument()
+  })
+
+  it('takes a folder by dragging it as well as by the menu', async () => {
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    // The mouse gesture and the menu are the same operation: this is the one
+    // a phone cannot make, which is why the menu carries it too.
+    fireEvent.dragStart(folderHeader('Retired'))
+    fireEvent.drop(folderHeader('Campaign'))
+
+    await waitFor(() => {
+      const sent = onlyRequestTo('/v1/folders/order', 'PUT')
+      expect(JSON.parse(sent.body)).toEqual({ folders: [RETIRED.id, CAMPAIGN.id] })
+    })
+  })
+
+  // The default folder leads the listing, so there is nothing to take hold of.
+  it('gives the default folder no grip', async () => {
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    expect(
+      screen.getByRole('button', { name: 'Collapse Default' }).closest('[draggable="true"]'),
+    ).toBeNull()
   })
 
   // The stub is a development convenience, and these two say it behaves like
@@ -216,7 +343,7 @@ describe('CharacterListScreen', () => {
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByRole('button', { name: 'Stub' }))
+    await user.click(screen.getByRole('button', { name: 'Stub in Default' }))
 
     // No body: what the stub makes is the server's to decide.
     const request = onlyRequestTo('/v1/characters/stub', 'POST')
@@ -226,16 +353,12 @@ describe('CharacterListScreen', () => {
     expect(await screen.findByText('character sheet')).toBeInTheDocument()
   })
 
-  it('files the stub into the folder the list is filtered to', async () => {
+  it('files the stub into the folder whose button was pressed', async () => {
     const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByRole('combobox', { name: 'Folder' }))
-    await user.click(await screen.findByRole('option', { name: 'Campaign' }))
-    await screen.findByText('Bram')
-
-    await user.click(screen.getByRole('button', { name: 'Stub' }))
+    await user.click(screen.getByRole('button', { name: 'Stub in Campaign' }))
 
     await waitFor(() => {
       onlyRequestTo(`/v1/characters/stub?folder=${CAMPAIGN.id}`, 'POST')
@@ -247,9 +370,10 @@ describe('CharacterListScreen', () => {
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
-    await user.type(await screen.findByLabelText('New folder'), 'Retired')
-    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await user.click(screen.getByRole('button', { name: 'New folder' }))
+    const dialog = await screen.findByRole('dialog')
+    await user.type(within(dialog).getByLabelText('Name'), 'Retired')
+    await user.click(within(dialog).getByRole('button', { name: 'Add' }))
 
     await waitFor(() => {
       const created = onlyRequestTo('/v1/folders', 'POST')
@@ -257,19 +381,93 @@ describe('CharacterListScreen', () => {
     })
   })
 
+  // The keys a phone's keyboard offers have to do something. These press Enter
+  // rather than the button, which is what a soft keyboard's Go sends and what
+  // nothing here answered before the dialogs became real forms.
+  it('creates a folder from the keyboard', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'New folder' }))
+    const dialog = await screen.findByRole('dialog')
+    await user.type(within(dialog).getByLabelText('Name'), 'Retired{Enter}')
+
+    await waitFor(() => {
+      const created = onlyRequestTo('/v1/folders', 'POST')
+      expect(JSON.parse(created.body)).toEqual({ name: 'Retired' })
+    })
+  })
+
+  it('renames a folder from the keyboard', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    const menu = await openMenu(user, 'Campaign')
+    await user.click(within(menu).getByRole('menuitem', { name: 'Rename' }))
+
+    const dialog = await screen.findByRole('dialog')
+    const name = within(dialog).getByLabelText('Name')
+    await user.clear(name)
+    await user.type(name, 'Tuesday game{Enter}')
+
+    await waitFor(() => {
+      const renamed = onlyRequestTo(`/v1/folders/${CAMPAIGN.id}`, 'PATCH')
+      expect(JSON.parse(renamed.body)).toEqual({ name: 'Tuesday game' })
+    })
+  })
+
+  // An empty name is refused by the server, so the form must not send one --
+  // the disabled button was the only thing saying so, and Enter went round it.
+  it('sends nothing when the name is blank', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await user.click(screen.getByRole('button', { name: 'New folder' }))
+    const dialog = await screen.findByRole('dialog')
+    await user.type(within(dialog).getByLabelText('Name'), '{Enter}')
+
+    expect(requestsTo('/v1/folders').filter((c) => c.method === 'POST')).toHaveLength(0)
+  })
+
+  it('renames a folder, the default one included', async () => {
+    const user = setupUser()
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    const menu = await openMenu(user, 'Default')
+    await user.click(within(menu).getByRole('menuitem', { name: 'Rename' }))
+
+    const dialog = await screen.findByRole('dialog')
+    const name = within(dialog).getByLabelText('Name')
+    // It opens on the name it is about to change, rather than empty.
+    expect(name).toHaveValue('Default')
+    await user.clear(name)
+    await user.type(name, 'Active')
+    await user.click(within(dialog).getByRole('button', { name: 'Rename' }))
+
+    await waitFor(() => {
+      const renamed = onlyRequestTo(`/v1/folders/${DEFAULT_FOLDER.id}`, 'PATCH')
+      expect(JSON.parse(renamed.body)).toEqual({ name: 'Active' })
+    })
+  })
+
   // The whole reason this dialog exists. Deleting a folder destroys the
-  // characters in it, so the confirmation has to say how many.
+  // characters in it, so the confirmation has to say how many -- and the count
+  // is a filter over what is already on screen rather than a third request.
   it('names the character count before deleting a folder', async () => {
     const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
-    const folders = await screen.findByRole('dialog')
-    await user.click(within(folders).getByRole('button', { name: 'Delete' }))
+    const menu = await openMenu(user, 'Campaign')
+    await user.click(within(menu).getByRole('menuitem', { name: 'Delete' }))
 
-    const confirm = await screen.findByText(/deletes the folder and the 1 character in it/i)
-    expect(confirm).toBeInTheDocument()
+    expect(
+      await screen.findByText(/deletes the folder and the 1 character in it/i),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Delete folder and 1/ }))
     await waitFor(() => {
@@ -277,17 +475,18 @@ describe('CharacterListScreen', () => {
     })
   })
 
-  // The default folder is the one an account is guaranteed to have, so it
-  // must not even offer the control.
+  // The default folder is the one an account is guaranteed to have, so it must
+  // not even offer the control.
   it('offers no delete for the default folder', async () => {
     const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByRole('button', { name: 'Manage folders' }))
-    const dialog = await screen.findByRole('dialog')
+    const def = await openMenu(user, 'Default')
+    expect(within(def).queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
 
-    expect(within(dialog).getAllByRole('button', { name: 'Rename' })).toHaveLength(2)
-    expect(within(dialog).getAllByRole('button', { name: 'Delete' })).toHaveLength(1)
+    const other = await openMenu(user, 'Campaign')
+    expect(within(other).getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument()
   })
 })

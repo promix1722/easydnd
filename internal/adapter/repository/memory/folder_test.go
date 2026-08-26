@@ -3,6 +3,7 @@ package memory_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 
@@ -212,4 +213,152 @@ func TestDeleteRemovesANonDefaultFolder(t *testing.T) {
 	if err := repo.Delete(ctx, created.ID); !types.IsNotFound(err) {
 		t.Errorf("second Delete() error = %v, want a NotFoundError", err)
 	}
+}
+
+func TestReorderRewritesTheWholeRun(t *testing.T) {
+	repo := memory.NewFolderRepository()
+	ctx := context.Background()
+
+	def, err := repo.EnsureDefault(ctx, owner)
+	if err != nil {
+		t.Fatalf("EnsureDefault() error = %v", err)
+	}
+	first, err := repo.Create(ctx, owner, "Tuesday game")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	second, err := repo.Create(ctx, owner, "Retired")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	// A new folder lands last, before anybody has said otherwise.
+	folders, err := repo.List(ctx, owner)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if got := names(folders); got != "Default,Tuesday game,Retired" {
+		t.Errorf("List() before = %q, want Default,Tuesday game,Retired", got)
+	}
+
+	if err := repo.Reorder(ctx, owner, []domain.FolderID{second.ID, first.ID}); err != nil {
+		t.Fatalf("Reorder() error = %v", err)
+	}
+
+	folders, err = repo.List(ctx, owner)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	// The default did not move, and it was never named.
+	if got := names(folders); got != "Default,Retired,Tuesday game" {
+		t.Errorf("List() after = %q, want Default,Retired,Tuesday game", got)
+	}
+	if folders[0].ID != def.ID {
+		t.Errorf("List()[0] = %q, want the default %q", folders[0].ID, def.ID)
+	}
+
+	// Sending it again is the same order, not a rotation of it: this is
+	// what lets a client re-send a drag it is unsure landed.
+	if err := repo.Reorder(ctx, owner, []domain.FolderID{second.ID, first.ID}); err != nil {
+		t.Fatalf("Reorder() twice error = %v", err)
+	}
+	folders, err = repo.List(ctx, owner)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if got := names(folders); got != "Default,Retired,Tuesday game" {
+		t.Errorf("List() after twice = %q, want Default,Retired,Tuesday game", got)
+	}
+}
+
+// The set has to match exactly. Each of these leaves a folder without a
+// decided position, which is the state List cannot render honestly.
+func TestReorderRefusesAnIncompleteOrForeignSet(t *testing.T) {
+	repo := memory.NewFolderRepository()
+	ctx := context.Background()
+
+	if _, err := repo.EnsureDefault(ctx, owner); err != nil {
+		t.Fatalf("EnsureDefault() error = %v", err)
+	}
+	first, err := repo.Create(ctx, owner, "Tuesday game")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	second, err := repo.Create(ctx, owner, "Retired")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	theirs, err := repo.Create(ctx, "usr_2", "Somebody else's")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	cases := map[string][]domain.FolderID{
+		"one missing":     {first.ID},
+		"one too many":    {first.ID, second.ID, theirs.ID},
+		"one repeated":    {first.ID, first.ID},
+		"somebody else's": {first.ID, theirs.ID},
+		"empty":           {},
+	}
+	for name, ids := range cases {
+		t.Run(name, func(t *testing.T) {
+			err := repo.Reorder(ctx, owner, ids)
+			var validation *types.ValidationError
+			if !errors.As(err, &validation) {
+				t.Fatalf("Reorder() error = %v, want a ValidationError", err)
+			}
+		})
+	}
+
+	// And none of the refusals moved anything.
+	folders, err := repo.List(ctx, owner)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if got := names(folders); got != "Default,Tuesday game,Retired" {
+		t.Errorf("List() = %q, want the untouched Default,Tuesday game,Retired", got)
+	}
+}
+
+// A folder made after a reorder goes to the end, rather than colliding with
+// whatever position it was handed at creation.
+func TestReorderThenCreatePutsTheNewFolderLast(t *testing.T) {
+	repo := memory.NewFolderRepository()
+	ctx := context.Background()
+
+	if _, err := repo.EnsureDefault(ctx, owner); err != nil {
+		t.Fatalf("EnsureDefault() error = %v", err)
+	}
+	first, err := repo.Create(ctx, owner, "Tuesday game")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	second, err := repo.Create(ctx, owner, "Retired")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if err := repo.Reorder(ctx, owner, []domain.FolderID{second.ID, first.ID}); err != nil {
+		t.Fatalf("Reorder() error = %v", err)
+	}
+	if _, err := repo.Create(ctx, owner, "New"); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	folders, err := repo.List(ctx, owner)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if got := names(folders); got != "Default,Retired,Tuesday game,New" {
+		t.Errorf("List() = %q, want Default,Retired,Tuesday game,New", got)
+	}
+}
+
+// names joins a listing's names, so an order assertion reads as one string
+// rather than as four index comparisons.
+func names(folders []domain.Folder) string {
+	out := make([]string, 0, len(folders))
+	for _, f := range folders {
+		out = append(out, f.Name)
+	}
+	return strings.Join(out, ",")
 }

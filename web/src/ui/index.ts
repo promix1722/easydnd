@@ -27,13 +27,18 @@ export { useDisclosure } from '@mantine/hooks'
 // handful the app actually draws -- rather than re-exporting the module -- is
 // also what keeps the production bundle to those instead of six thousand.
 export {
+  IconArrowDown,
+  IconArrowUp,
   IconCheck,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconCopy,
   IconDice5,
+  IconDotsVertical,
   IconFolder,
+  IconFolderPlus,
+  IconGripVertical,
   IconLogout,
   IconPencil,
   IconPlus,
@@ -85,6 +90,10 @@ export {
   Textarea,
   TextInput,
   Tooltip,
+  // A button with no look of its own, for the one place a control has to be
+  // pressable without being drawn as a control: a folder's name, which is a
+  // heading you can collapse rather than a button that says its own name.
+  UnstyledButton,
 } from '@mantine/core'
 
 // Composed, responsive-by-construction components.
