@@ -27,10 +27,13 @@ func validateName(name string) (string, error) {
 	switch {
 	case clean == "":
 		return "", types.NewFieldValidationError("a group needs a name",
-			types.FieldError{Field: "name", Rule: "required", Message: "a group needs a name"})
+			types.FieldError{Field: "name", Rule: "required", Reason: "field.group.name.required"})
 	case utf8.RuneCountInString(clean) > domain.MaxNameLen:
 		return "", types.NewFieldValidationError("that group name is too long",
-			types.FieldError{Field: "name", Rule: "max", Message: "at most 64 characters"})
+			types.FieldError{
+				Field: "name", Rule: "max",
+				Reason: "field.maxChars", Args: types.Args{"max": domain.MaxNameLen},
+			})
 	case !utf8.ValidString(clean):
 		return "", types.NewFieldValidationError("that group name is not valid text",
 			types.FieldError{Field: "name", Rule: "encoding"})

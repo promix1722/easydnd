@@ -22,7 +22,10 @@ describe('request', () => {
     await expect(request<{ version: string }>('/version')).resolves.toEqual({ version: 'abc123' })
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe('/v1/version')
+    // The locale rides on every request: the server negotiates per call and a
+    // page cannot rewrite its own Accept-Language, so a chosen language has to
+    // travel as a parameter. See src/lib/api/locale.ts.
+    expect(url).toBe('/v1/version?locale=en')
     const headers = init.headers as Record<string, string>
     expect(headers['X-Request-Id']).toMatch(/.+/)
     expect(headers.Accept).toBe('application/json')
@@ -34,9 +37,9 @@ describe('request', () => {
       vi.fn().mockResolvedValue(
         respond(422, {
           error: {
-            code: 'validation_failed',
-            message: 'name is required',
-            fields: [{ field: 'name', rule: 'required' }],
+            code: 'validation_error',
+            reason: 'field.character.name.required',
+            fields: [{ field: 'name', rule: 'required', reason: 'field.character.name.required' }],
             request_id: 'req-7',
           },
         }),
@@ -48,9 +51,15 @@ describe('request', () => {
     expect(error).toBeInstanceOf(ApiError)
     const apiError = error as ApiError
     expect(apiError.status).toBe(422)
-    expect(apiError.code).toBe('validation_failed')
-    expect(apiError.message).toBe('name is required')
-    expect(apiError.fields).toEqual([{ field: 'name', rule: 'required' }])
+    expect(apiError.code).toBe('validation_error')
+    expect(apiError.reason).toBe('field.character.name.required')
+    // Not a sentence: no prose leaves the Go side, and `Error.message` exists
+    // for a console rather than for a screen. What a person reads comes from
+    // describeError, against the catalogue.
+    expect(apiError.message).toBe('validation_error: field.character.name.required')
+    expect(apiError.fields).toEqual([
+      { field: 'name', rule: 'required', reason: 'field.character.name.required' },
+    ])
     expect(apiError.requestId).toBe('req-7')
     expect(apiError.isRetryable).toBe(false)
   })

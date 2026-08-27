@@ -139,10 +139,10 @@ func ceremonyBody(c *gin.Context) ([]byte, error) {
 		return nil, types.NewValidationError("could not read the request body")
 	}
 	if len(body) > maxCeremonyBody {
-		return nil, types.NewValidationError("request body is too large")
+		return nil, types.NewValidationError("request body is too large").Because("request.tooLarge")
 	}
 	if len(body) == 0 {
-		return nil, types.NewValidationError("request body is empty")
+		return nil, types.NewValidationError("request body is empty").Because("request.empty")
 	}
 	return body, nil
 }

@@ -28,17 +28,18 @@ func (s *Service) SetRole(
 		return err
 	}
 	if actorRole != domain.RoleOwner {
-		return types.NewAccessDeniedError("only the owner may change a member's role")
+		return types.NewAccessDeniedError("only the owner may change a member's role").
+			Because("group.ownerOnly")
 	}
 	if !role.Valid() {
 		return types.NewFieldValidationError("that is not a role",
-			types.FieldError{Field: "role", Rule: "oneof", Message: "owner, dm or player"})
+			types.FieldError{Field: "role", Rule: "oneof", Reason: "field.role.any"})
 	}
 
 	targetRole, err := s.repo.MemberRole(ctx, id, target)
 	if err != nil {
 		if types.IsNotFound(err) {
-			return types.NewNotFoundError("that person is not in this group")
+			return types.NewNotFoundError("that person is not in this group").Because("group.notAMember")
 		}
 		return err
 	}
@@ -75,7 +76,7 @@ func (s *Service) transfer(
 	ctx context.Context, id domain.ID, from, to user.ID, toRole domain.Role,
 ) error {
 	if from == to || toRole == domain.RoleOwner {
-		return types.NewValidationError("that person already owns this group")
+		return types.NewValidationError("that person already owns this group").Because("group.alreadyOwner")
 	}
 	if err := s.repo.TransferOwnership(ctx, id, from, to); err != nil {
 		return err
@@ -116,7 +117,7 @@ func (s *Service) RemoveMember(
 	targetRole, err := s.repo.MemberRole(ctx, id, target)
 	if err != nil {
 		if types.IsNotFound(err) {
-			return types.NewNotFoundError("that person is not in this group")
+			return types.NewNotFoundError("that person is not in this group").Because("group.notAMember")
 		}
 		return err
 	}

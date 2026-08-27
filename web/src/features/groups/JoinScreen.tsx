@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router'
 
 import { acceptInvite, previewInvite } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import { Alert, Button, Group, Loader, Stack, Text, Title } from '@/ui'
 
 import { clearInviteToken } from './inviteToken'
-import { ROLE_LABELS } from './roles'
+import { roleInline } from './roles'
 
 export interface JoinScreenProps {
   /**
@@ -23,6 +24,7 @@ export interface JoinScreenProps {
  * which rank, and one button.
  */
 export function JoinScreen({ token }: JoinScreenProps) {
+  const t = useT()
   const navigate = useNavigate()
   const accept = useAction(acceptInvite)
 
@@ -49,13 +51,11 @@ export function JoinScreen({ token }: JoinScreenProps) {
 
   if (token === '') {
     return (
-      <Alert color="red" title="No invitation">
+      <Alert color="red" title={t('join.missing.title')}>
         <Stack gap="xs" align="flex-start">
-          <Text size="sm">
-            That link is missing its invitation. Ask whoever sent it for a fresh one.
-          </Text>
+          <Text size="sm">{t('join.missing.detail')}</Text>
           <Button variant="light" onClick={() => void navigate('/groups')}>
-            Your groups
+            {t('join.yourGroups')}
           </Button>
         </Stack>
       </Alert>
@@ -67,7 +67,7 @@ export function JoinScreen({ token }: JoinScreenProps) {
       <Group gap="xs">
         <Loader size="sm" />
         <Text size="sm" c="dimmed">
-          Checking the invitation...
+          {t('join.checking')}
         </Text>
       </Group>
     )
@@ -75,13 +75,13 @@ export function JoinScreen({ token }: JoinScreenProps) {
 
   if (error !== null || data === null) {
     return (
-      <Alert color="red" title="That invitation is not usable">
+      <Alert color="red" title={t('join.unusable.title')}>
         <Stack gap="xs" align="flex-start">
           {/* Whatever the server said. An expired link is a 400 and never a
               401, so being here does not mean anybody has been signed out. */}
-          <Text size="sm">{error ?? 'It may have expired. Ask for a fresh link.'}</Text>
+          <Text size="sm">{error ?? t('join.unusable.detail')}</Text>
           <Button variant="light" onClick={() => void decline()}>
-            Your groups
+            {t('join.yourGroups')}
           </Button>
         </Stack>
       </Alert>
@@ -94,31 +94,31 @@ export function JoinScreen({ token }: JoinScreenProps) {
         <Title order={2}>{data.group_name}</Title>
         <Text c="dimmed" size="sm">
           {data.invited_by !== undefined && data.invited_by !== ''
-            ? `${data.invited_by} invited you to join as a ${ROLE_LABELS[data.role].toLowerCase()}.`
-            : `You have been invited to join as a ${ROLE_LABELS[data.role].toLowerCase()}.`}
+            ? t('join.invitedBy', { who: data.invited_by, role: roleInline(t, data.role) })
+            : t('join.invited', { role: roleInline(t, data.role) })}
         </Text>
       </div>
 
       {data.already_member ? (
         <Stack gap="xs" align="flex-start">
-          <Text size="sm">You are already in this group.</Text>
+          <Text size="sm">{t('join.alreadyMember')}</Text>
           <Button onClick={() => void navigate(`/groups/${data.group_id}`, { replace: true })}>
-            Open it
+            {t('join.openIt')}
           </Button>
         </Stack>
       ) : (
         <>
           {accept.error !== null && (
-            <Alert color="red" title="Could not join">
+            <Alert color="red" title={t('join.failed')}>
               {accept.error}
             </Alert>
           )}
           <Group gap="xs">
             <Button loading={accept.pending} onClick={() => void join()}>
-              Join group
+              {t('join.action')}
             </Button>
             <Button variant="default" onClick={() => void decline()}>
-              Not now
+              {t('join.notNow')}
             </Button>
           </Group>
         </>

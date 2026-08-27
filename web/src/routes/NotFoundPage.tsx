@@ -1,14 +1,17 @@
 import { Link } from 'react-router'
 
+import { useT } from '@/lib/i18n'
 import { Anchor, Stack, Text, Title } from '@/ui'
 
 export function NotFoundPage() {
+  const t = useT()
+
   return (
     <Stack gap="sm">
-      <Title order={2}>Not found</Title>
-      <Text c="dimmed">This page does not exist.</Text>
+      <Title order={2}>{t('notFound.title')}</Title>
+      <Text c="dimmed">{t('notFound.detail')}</Text>
       <Anchor component={Link} to="/">
-        Back to your characters
+        {t('notFound.back')}
       </Anchor>
     </Stack>
   )

@@ -3,7 +3,10 @@ import type { DragEvent, ReactNode } from 'react'
 
 import { Group, Paper, SimpleGrid, Stack, Text } from '@/ui'
 
-import { ABILITY_ORDER, abilityName } from '@/domain'
+import { ABILITY_ORDER } from '@/domain'
+import { useT } from '@/lib/i18n'
+
+import { abilityName } from './labels'
 
 /** Which value sits on which ability: an ability, to a place in the pool. */
 export type Placement = Record<string, number | null>
@@ -45,6 +48,7 @@ export interface ScoreAssignmentProps {
  * thumb has to hit.
  */
 export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssignmentProps) {
+  const t = useT()
   // What has been picked up and not yet put down. Null is the resting state,
   // and the only state a mouse ever sees.
   const [held, setHeld] = useState<number | null>(null)
@@ -84,7 +88,7 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
       <Group justify="space-between" align="center" wrap="nowrap">
         <Group gap={6} align="center" wrap="wrap">
           <Text size="xs" c="dimmed" tt="uppercase">
-            to place
+            {t('scores.toPlace')}
           </Text>
           {pool.map(({ value, place }) => (
             <Chip
@@ -97,7 +101,7 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
           ))}
           {pool.length === 0 && (
             <Text size="sm" c="dimmed">
-              All six placed.
+              {t('scores.allPlaced')}
             </Text>
           )}
         </Group>
@@ -152,7 +156,7 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
               }}
             >
               <Text size="xs" c="dimmed" tt="uppercase">
-                {abilityName(ability)}
+                {abilityName(t, ability)}
               </Text>
               {value === undefined ? (
                 <Text size="xl" fw={600} c="dimmed">
@@ -169,8 +173,7 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
       </SimpleGrid>
 
       <Text size="xs" c="dimmed">
-        Drag a number onto an ability, or tap it and tap where it goes. Racial bonuses are added by
-        the rules, not here.
+        {t('scores.dragHint')}
       </Text>
     </Stack>
   )

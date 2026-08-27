@@ -23,6 +23,15 @@ const LocaleQueryParam = "locale"
 // saying what it would like, and answering 406 to that is a worse experience
 // than answering in English.
 func Locale(c *gin.Context) rules.Locale {
+	// Declared here rather than at each route, because this is the function
+	// that reads the header: a response whose body depends on Accept-Language
+	// and does not say so is one a browser or an intermediary may hand to the
+	// next person in the wrong language. Nothing caches these today --
+	// deploy/nginx/easydnd.conf configures no proxy_cache and the routes are
+	// session-guarded -- so it is a latent bug rather than a live one, which
+	// is the cheapest possible moment to fix it.
+	c.Writer.Header().Add("Vary", "Accept-Language")
+
 	if requested := c.Query(LocaleQueryParam); requested != "" {
 		if locale, ok := supported(requested); ok {
 			return locale

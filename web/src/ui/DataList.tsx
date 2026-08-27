@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 
 import { useIsDesktop } from './useIsDesktop'
 
+import { useT } from '@/lib/i18n'
+
 export interface DataListColumn<T> {
   key: string
   header: string
@@ -31,12 +33,13 @@ export interface DataListProps<T> {
  * instead of shrinking it.
  */
 export function DataList<T>({ items, columns, getKey, empty, onSelect }: DataListProps<T>) {
+  const t = useT()
   const isDesktop = useIsDesktop()
 
   if (items.length === 0) {
     return (
       <Text c="dimmed" size="sm">
-        {empty ?? 'Nothing here yet.'}
+        {empty ?? t('dataList.empty')}
       </Text>
     )
   }

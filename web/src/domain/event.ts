@@ -29,36 +29,6 @@ export interface ChangeLike {
 }
 
 /**
- * The event types in internal/domain/character/event.go, read back as prose.
- *
- * Deliberately past tense and phrased from the character's side: the log is a
- * history, and "Race chosen" is what happened where "race" is only a field.
- */
-const EVENT_LABELS: Record<string, string> = {
-  init: 'Created',
-  change: 'Adjusted',
-  race: 'Race chosen',
-  subrace: 'Subrace chosen',
-  background: 'Background chosen',
-  class: 'Class chosen',
-  subclass: 'Subclass chosen',
-  level: 'Level gained',
-  feat: 'Feat taken',
-  note: 'Note',
-}
-
-/**
- * An event type as a person reads it.
- *
- * An unknown type is title-cased rather than rejected. The server may learn a
- * kind before this client does, and a log that refuses to draw the one event
- * you are trying to understand is worse than a log that draws it plainly.
- */
-export function eventLabel(type: string): string {
-  return EVENT_LABELS[type] ?? titleCase(type)
-}
-
-/**
  * Ref kinds to the catalogue collection that holds them.
  *
  * One table, two jobs: naming a reference the log stored, and finding the
@@ -134,50 +104,4 @@ export function pickLabel(pick: string): string {
   if (!pick.includes('/')) return titleCase(pick)
   const segments = meaningfulSegments(pick)
   return titleCase(segments[segments.length - 1] ?? pick)
-}
-
-/** A stored value, printed. */
-export function formatValue(value: ValueLike | undefined): string {
-  if (value === undefined) return ''
-  switch (value.kind) {
-    case 'int':
-      return String(value.int ?? 0)
-    case 'string':
-      return value.string ?? ''
-    case 'bool':
-      return value.bool === true ? 'yes' : 'no'
-    case 'slug':
-      return titleCase(value.slug ?? '')
-    case 'slugs':
-      return (value.slugs ?? []).map(titleCase).join(', ')
-    case 'dice':
-      return value.dice ?? ''
-    default:
-      return ''
-  }
-}
-
-/**
- * One change, as one line: "abilities.dex set 16".
- *
- * The path is left as the log stores it. It is an address, and prettifying it
- * would make the log harder to match against the event that produced it.
- */
-export function describeChange(change: ChangeLike): string {
-  const printed = formatValue(change.value)
-  return printed === '' ? `${change.path} ${change.op}` : `${change.path} ${change.op} ${printed}`
-}
-
-/**
- * When an event was recorded, in the reader's own timezone.
- *
- * Blank is a real case rather than a defensive one: Service.Create seeds the
- * init event without stamping At, so the first event of every character has no
- * time. An unparseable value is printed as it arrived -- losing it would hide
- * exactly the kind of bad record this page exists to show.
- */
-export function formatAt(at: string | undefined): string {
-  if (at === undefined || at === '') return '--'
-  const when = new Date(at)
-  return Number.isNaN(when.getTime()) ? at : when.toLocaleString()
 }

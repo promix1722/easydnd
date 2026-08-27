@@ -1,4 +1,6 @@
 import { Drawer, Modal } from '@mantine/core'
+
+import { useT } from '@/lib/i18n'
 import type { ReactNode } from 'react'
 
 import { useIsDesktop } from './useIsDesktop'
@@ -21,11 +23,25 @@ export interface ModalSheetProps {
  * wrapper exists rather than a pile of `visibleFrom` props at each call site.
  */
 export function ModalSheet({ opened, onClose, title, children, size = 'md' }: ModalSheetProps) {
+  const t = useT()
   const isDesktop = useIsDesktop()
+
+  // Mantine's close button ships no accessible name of its own, so without
+  // this it is a control a screen reader announces as "button" -- and the one
+  // control every sheet has. Named here rather than at each call site: there
+  // are two renderings of one component and they must not drift.
+  const close = { 'aria-label': t('common.close') }
 
   if (isDesktop) {
     return (
-      <Modal opened={opened} onClose={onClose} title={title} size={size} centered>
+      <Modal
+        opened={opened}
+        onClose={onClose}
+        title={title}
+        size={size}
+        centered
+        closeButtonProps={close}
+      >
         {children}
       </Modal>
     )
@@ -37,6 +53,7 @@ export function ModalSheet({ opened, onClose, title, children, size = 'md' }: Mo
       onClose={onClose}
       title={title}
       position="bottom"
+      closeButtonProps={close}
       /*
        * The height is set here rather than with `size`, and that is a bug fix
        * rather than a preference.

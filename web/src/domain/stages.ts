@@ -40,27 +40,6 @@ export const STAGES = [
   'personality',
 ] as const satisfies readonly Stage[]
 
-/**
- * A stage's label, which is deliberately the stage's own word.
- *
- * The word lives here and appears in exactly one place in the document: the
- * tab. A block is headed by the choice's own name -- "A race" -- or by what
- * was decided -- "Race chosen" -- and empty copy names no category at all.
- * That rule is what keeps "race" an unambiguous thing to look for on the page,
- * and it is why this table exists rather than the labels being inlined.
- *
- * Capitalised, because a tab is a title rather than a sentence. The word is
- * still the category's own, which is all the rule above asks.
- */
-export const STAGE_LABELS: Record<Stage, string> = {
-  identity: 'Identity',
-  class: 'Class',
-  race: 'Race',
-  background: 'Background',
-  abilities: 'Abilities',
-  personality: 'Personality',
-}
-
 const STAGE_OF_GROUP: Record<string, Stage> = {
   identity: 'identity',
   class: 'class',

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ApiError, describeError } from './api/errors'
+import { useT } from './i18n'
 import type { ApiFieldError } from './api/errors'
 
 export interface Action<TArgs extends unknown[], TResult> {
@@ -36,6 +37,7 @@ export interface Action<TArgs extends unknown[], TResult> {
 export function useAction<TArgs extends unknown[], TResult>(
   perform: (...args: TArgs) => Promise<TResult>,
 ): Action<TArgs, TResult> {
+  const t = useT()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fields, setFields] = useState<readonly ApiFieldError[]>([])
@@ -59,13 +61,13 @@ export function useAction<TArgs extends unknown[], TResult>(
     try {
       return await latest.current(...args)
     } catch (cause: unknown) {
-      setError(describeError(cause))
+      setError(describeError(t, cause))
       if (cause instanceof ApiError) setFields(cause.fields)
       return null
     } finally {
       setPending(false)
     }
-  }, [])
+  }, [t])
 
   return { run, pending, error, fields, reset }
 }

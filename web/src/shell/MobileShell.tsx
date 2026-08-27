@@ -1,5 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router'
 
+import { useT } from '@/lib/i18n'
+
 import {
   AppShell,
   Button,
@@ -40,6 +42,7 @@ import { Wordmark } from './Wordmark'
  */
 export function MobileShell() {
   const { pathname } = useLocation()
+  const t = useT()
 
   // Shared with the desktop navbar: see sectionFor in ui/sections.ts.
   const active = sectionFor(pathname)
@@ -58,7 +61,7 @@ export function MobileShell() {
    * matched on the link target alone and so answered "nowhere" for every
    * detail page under `/`.
    */
-  const label = active?.label ?? 'Menu'
+  const label = active ? t(active.label) : t('nav.menu')
 
   return (
     <AppShell header={{ height: HEADER_HEIGHT }} padding="sm">
@@ -117,7 +120,7 @@ export function MobileShell() {
                     />
                   }
                 >
-                  {section.label}
+                  {t(section.label)}
                 </Menu.Item>
               ))}
             </Menu.Dropdown>

@@ -12,8 +12,10 @@ import {
   moveCharacter,
   renameFolder,
   reorderFolders,
+  fieldMessage,
 } from '@/lib/api'
 import type { Folder, Summary } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
@@ -67,6 +69,7 @@ import { StubButton } from './StubButton'
  * between.
  */
 export function CharacterListScreen() {
+  const t = useT()
   const navigate = useNavigate()
 
   const folders = useResource('folders', (signal) => listFolders(signal))
@@ -97,13 +100,13 @@ export function CharacterListScreen() {
    * half-drawn version of this page worth showing.
    */
   const foldersState = pageState(folders, {
-    title: 'Could not load your folders',
-    fallback: 'Unknown error',
+    title: t('characters.foldersLoadFailed'),
+    fallback: t('error.unknown'),
     onRetry: folders.reload,
   })
   const charactersState = pageState(characters, {
-    title: 'Could not load your characters',
-    fallback: 'Unknown error',
+    title: t('characters.loadFailed'),
+    fallback: t('error.unknown'),
     onRetry: characters.reload,
   })
 
@@ -197,13 +200,13 @@ export function CharacterListScreen() {
     <Page trail={[]} state={foldersState.kind !== 'ready' ? foldersState : charactersState}>
       <Stack gap="md">
         {import.meta.env.DEV && stubError !== null && (
-          <Alert color="red" title="Could not create the stub character">
+          <Alert color="red" title={t('characters.stubFailed')}>
             <Text size="sm">{stubError}</Text>
           </Alert>
         )}
 
         {reorder.error !== null && (
-          <Alert color="red" title="Could not reorder your folders">
+          <Alert color="red" title={t('characters.reorderFailed')}>
             <Text size="sm">{reorder.error}</Text>
           </Alert>
         )}
@@ -247,7 +250,7 @@ export function CharacterListScreen() {
                   columns={[
                     {
                       key: 'name',
-                      header: 'Name',
+                      header: t('common.name'),
                       primary: true,
                       render: (character) => (
                         <Anchor component={Link} to={`/characters/${character.id}`}>
@@ -257,12 +260,12 @@ export function CharacterListScreen() {
                     },
                     {
                       key: 'level',
-                      header: 'Level',
+                      header: t('game.level'),
                       render: (character) => character.level || '--',
                     },
                     {
                       key: 'classes',
-                      header: 'Classes',
+                      header: t('characters.classes'),
                       render: (character) => classLine(character.classes),
                     },
                     // No Folder column. The card this table sits in is the
@@ -270,7 +273,7 @@ export function CharacterListScreen() {
                     // every row of it.
                     {
                       key: 'actions',
-                      header: 'Actions',
+                      header: t('characters.actions'),
                       render: (character) => (
                         <RowActions
                           character={character}
@@ -280,7 +283,7 @@ export function CharacterListScreen() {
                       ),
                     },
                   ]}
-                  empty="Nothing in this folder yet. Make one, or move one here."
+                  empty={t('characters.folderEmpty')}
                 />
 
                 <FolderAdditions
@@ -326,7 +329,7 @@ export function CharacterListScreen() {
             leftSection={<IconFolderPlus size={ACTION_ICON_SIZE} />}
             onClick={() => setAdding(true)}
           >
-            New folder
+            {t('characters.newFolder')}
           </Button>
         </Group>
       </Stack>
@@ -353,6 +356,7 @@ function RowActions({
   folders: Folder[]
   onChanged: () => void
 }) {
+  const t = useT()
   const [moving, setMoving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [target, setTarget] = useState(character.folder)
@@ -361,7 +365,7 @@ function RowActions({
   const copy = useAction(copyCharacter)
   const remove = useAction(deleteCharacter)
 
-  const label = character.name || 'this character'
+  const label = character.name || t('characters.thisCharacter')
 
   return (
     <>
@@ -376,43 +380,43 @@ function RowActions({
           size={ACTION_SIZE}
           variant="subtle"
           leftSection={<IconFolder size={ACTION_ICON_SIZE} />}
-          aria-label={`Move ${label}`}
+          aria-label={t('characters.moveNamed', { name: label })}
           onClick={() => {
             setTarget(character.folder)
             setMoving(true)
           }}
         >
-          Move
+          {t('characters.move')}
         </Button>
         <Button
           size={ACTION_SIZE}
           variant="subtle"
           leftSection={<IconCopy size={ACTION_ICON_SIZE} />}
-          aria-label={`Copy ${label}`}
+          aria-label={t('characters.copyNamed', { name: label })}
           onClick={() => {
             void copy.run(character.id).then((made) => {
               if (made !== null) onChanged()
             })
           }}
         >
-          Copy
+          {t('characters.copy')}
         </Button>
         <Button
           size={ACTION_SIZE}
           variant="subtle"
           color="red"
           leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
-          aria-label={`Delete ${label}`}
+          aria-label={t('characters.deleteNamed', { name: label })}
           onClick={() => setDeleting(true)}
         >
-          Delete
+          {t('common.delete')}
         </Button>
       </Group>
 
-      <ModalSheet opened={moving} onClose={() => setMoving(false)} title={`Move ${label}`}>
+      <ModalSheet opened={moving} onClose={() => setMoving(false)} title={t('characters.moveNamed', { name: label })}>
         <Stack gap="md">
           <Select
-            label="Folder"
+            label={t('characters.folder')}
             data={folders.map((f) => ({ value: f.id, label: f.name }))}
             value={target}
             onChange={(value) => setTarget(value ?? character.folder)}
@@ -421,7 +425,7 @@ function RowActions({
           {move.error !== null && <Alert color="red">{move.error}</Alert>}
           <Group justify="flex-end">
             <Button variant="subtle" onClick={() => setMoving(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               loading={move.pending}
@@ -435,21 +439,21 @@ function RowActions({
                 })
               }}
             >
-              Move
+              {t('characters.move')}
             </Button>
           </Group>
         </Stack>
       </ModalSheet>
 
-      <ModalSheet opened={deleting} onClose={() => setDeleting(false)} title={`Delete ${label}?`}>
+      <ModalSheet opened={deleting} onClose={() => setDeleting(false)} title={t('characters.deleteNamedTitle', { name: label })}>
         <Stack gap="md">
           <Text size="sm">
-            This deletes the character and their whole log. It cannot be undone.
+            {t('characters.deleteWarning')}
           </Text>
           {remove.error !== null && <Alert color="red">{remove.error}</Alert>}
           <Group justify="flex-end">
             <Button variant="subtle" onClick={() => setDeleting(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               color="red"
@@ -463,7 +467,7 @@ function RowActions({
                 })
               }}
             >
-              Delete
+              {t('common.delete')}
             </Button>
           </Group>
         </Stack>
@@ -482,6 +486,7 @@ function NewFolder({
   onClose: () => void
   onMade: () => void
 }) {
+  const t = useT()
   const [name, setName] = useState('')
   const create = useAction(createFolder)
 
@@ -497,7 +502,7 @@ function NewFolder({
   }
 
   return (
-    <ModalSheet opened={opened} onClose={onClose} title="New folder">
+    <ModalSheet opened={opened} onClose={onClose} title={t('characters.newFolder')}>
       {/* A real form, so the phone's keyboard offers a Go key that works. The
           alternative -- an Enter handler on the input, which
           `features/character/NameForm` still uses -- is what a desktop browser
@@ -512,24 +517,24 @@ function NewFolder({
       >
         <Stack gap="md">
           <Text c="dimmed" size="sm">
-            Where you file your characters. Only you can see them.
+            {t('characters.folderExplained')}
           </Text>
           <TextInput
-            label="Name"
-            placeholder="Campaign"
+            label={t('common.name')}
+            placeholder={t('characters.folderPlaceholder')}
             value={name}
             onChange={(event) => setName(event.currentTarget.value)}
-            error={create.fields.find((f) => f.field === 'name')?.message}
+            error={fieldMessage(t, create.fields, 'name')}
           />
           {create.error !== null && <Alert color="red">{create.error}</Alert>}
           <Group justify="flex-end">
             {/* Mantine's Button is type="button" unless told otherwise, so
                 Cancel cannot submit by sitting inside a form. */}
             <Button variant="subtle" onClick={onClose}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" loading={create.pending} disabled={name.trim() === ''}>
-              Add
+              {t('common.add')}
             </Button>
           </Group>
         </Stack>
@@ -548,6 +553,7 @@ function RenameFolder({
   onClose: () => void
   onDone: () => void
 }) {
+  const t = useT()
   const [name, setName] = useState('')
   const rename = useAction(renameFolder)
 
@@ -571,7 +577,7 @@ function RenameFolder({
   }
 
   return (
-    <ModalSheet opened={folder !== null} onClose={onClose} title="Rename folder">
+    <ModalSheet opened={folder !== null} onClose={onClose} title={t('characters.renameFolder')}>
       {/* A form for the same reason the New folder dialog is one: the key a
           soft keyboard offers has to do something. */}
       <form
@@ -582,18 +588,18 @@ function RenameFolder({
       >
         <Stack gap="md">
           <TextInput
-            label="Name"
+            label={t('common.name')}
             value={name}
             onChange={(event) => setName(event.currentTarget.value)}
-            error={rename.fields.find((f) => f.field === 'name')?.message}
+            error={fieldMessage(t, rename.fields, 'name')}
           />
           {rename.error !== null && <Alert color="red">{rename.error}</Alert>}
           <Group justify="flex-end">
             <Button variant="subtle" onClick={onClose}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" loading={rename.pending} disabled={name.trim() === ''}>
-              Rename
+              {t('common.rename')}
             </Button>
           </Group>
         </Stack>
@@ -622,13 +628,14 @@ function DeleteFolder({
   onClose: () => void
   onDone: () => void
 }) {
+  const t = useT()
   const remove = useAction(deleteFolder)
 
   return (
     <ModalSheet
       opened={folder !== null}
       onClose={onClose}
-      title={folder === null ? '' : `Delete ${folder.name}?`}
+      title={folder === null ? '' : t('characters.deleteFolderTitle', { name: folder.name })}
     >
       <Stack gap="md">
         {/* The count is the point of this dialog. Deleting a folder takes its
@@ -636,15 +643,13 @@ function DeleteFolder({
             no undo and not even a backup to go back to. */}
         <Text size="sm">
           {count === 0
-            ? 'This folder is empty. Deleting it cannot be undone.'
-            : `This deletes the folder and the ${count} character${
-                count === 1 ? '' : 's'
-              } in it, with their logs. It cannot be undone.`}
+            ? t('characters.deleteFolderEmpty')
+            : t('characters.deleteFolderWarning', { count })}
         </Text>
         {remove.error !== null && <Alert color="red">{remove.error}</Alert>}
         <Group justify="flex-end">
           <Button variant="subtle" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             color="red"
@@ -659,7 +664,7 @@ function DeleteFolder({
               })
             }}
           >
-            {count === 0 ? 'Delete folder' : `Delete folder and ${count}`}
+            {count === 0 ? t('characters.deleteFolder') : t('characters.deleteFolderAnd', { count })}
           </Button>
         </Group>
       </Stack>

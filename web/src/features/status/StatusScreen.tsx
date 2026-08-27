@@ -2,6 +2,8 @@ import { Stack, Text, Title } from '@/ui'
 
 import { StatusPanel } from './StatusPanel'
 
+import { useT } from '@/lib/i18n'
+
 /**
  * The deploy-diagnostics screen.
  *
@@ -10,12 +12,14 @@ import { StatusPanel } from './StatusPanel'
  * character features landed.
  */
 export function StatusScreen() {
+  const t = useT()
+
   return (
     <Stack gap="md">
       <div>
-        <Title order={2}>System status</Title>
+        <Title order={2}>{t('status.title')}</Title>
         <Text c="dimmed" size="sm">
-          Which release this browser is talking to, on both sides of nginx.
+          {t('status.subtitle')}
         </Text>
       </div>
       <StatusPanel />

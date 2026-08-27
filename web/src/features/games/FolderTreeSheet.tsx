@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { Folder, Summary } from '@/lib/api'
 import { listCharacters, listFolders } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
+import { useT } from '@/lib/i18n'
 import { Accordion, Button, Checkbox, Group, Loader, ModalSheet, Stack, Text } from '@/ui'
 
 import { classLine } from '@/domain'
@@ -32,6 +33,7 @@ export function FolderTreeSheet({
   onClose: () => void
   onAdd: (ids: string[]) => void
 }) {
+  const t = useT()
   const folders = useResource(opened ? 'folders' : '', (signal) => listFolders(signal))
   const characters = useResource(opened ? 'characters:mine' : '', (signal) =>
     listCharacters(undefined, signal),
@@ -52,19 +54,18 @@ export function FolderTreeSheet({
   }
 
   return (
-    <ModalSheet opened={opened} onClose={onClose} title="Add your characters">
+    <ModalSheet opened={opened} onClose={onClose} title={t('folderTree.title')}>
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
-          Seating one of your own puts it on the group&rsquo;s table too, so everybody here can
-          read it.
+          {t('folderTree.hint')}
         </Text>
 
         {loading && <Loader size="sm" />}
         {!loading && mine.length === 0 && (
           <Text size="sm">
             {characters.data === null
-              ? 'You have not made a character yet.'
-              : 'All of your characters are already at this game.'}
+              ? t('table.noCharacters')
+              : t('folderTree.allAdded')}
           </Text>
         )}
 
@@ -108,10 +109,10 @@ export function FolderTreeSheet({
 
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button disabled={picked.length === 0} loading={pending} onClick={() => onAdd(picked)}>
-            Add
+            {t('common.add')}
           </Button>
         </Group>
       </Stack>

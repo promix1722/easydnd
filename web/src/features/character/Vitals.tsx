@@ -2,6 +2,10 @@ import type { Sheet } from '@/lib/api'
 import { Card, SimpleGrid, Stack, Text } from '@/ui'
 
 import { signed, titleCase } from '@/domain'
+import { useT } from '@/lib/i18n'
+
+import { abilityAbbr, senseName, speedName } from './labels'
+import type { MessageKey, Translate } from '@/lib/i18n'
 
 /**
  * The two headline rows under the ability cards, six to a line.
@@ -32,9 +36,16 @@ import { signed, titleCase } from '@/domain'
  * a zero, because `0 ft.` is a claim.
  */
 
-/** Distances arrive as plain numbers; the model's unit is feet. */
-function feet(distance: number): string {
-  return `${distance} ft.`
+/**
+ * Distances arrive as plain numbers; the model's unit is feet.
+ *
+ * The abbreviation is a message rather than a suffix, because "ft." is English
+ * -- Russian writes "фт." -- and a unit glued on in code is a unit no
+ * translator can reach. It stays feet either way: the SRD is written in them,
+ * and converting to metres would be changing the rules rather than the words.
+ */
+function feet(t: Translate, distance: number): string {
+  return t('vitals.feet', { distance })
 }
 
 interface Vital {
@@ -51,17 +62,20 @@ interface Vital {
  * is meaning, not wrapping: a row is a subject, and six per line is what makes
  * the subject legible rather than what makes it fit.
  */
-function rowsOf(sheet: Sheet): Vital[][] {
+function rowsOf(t: Translate, sheet: Sheet): Vital[][] {
   const hitPoints = sheet.base.hitPoints
   const hitDice = (sheet.resources.hitDice ?? []).filter((pool) => pool.dice !== undefined)
 
   const body: Vital[] = [
-    { label: 'Hit points', value: `${hitPoints.current} / ${hitPoints.max}` },
-    { label: 'Temp HP', value: hitPoints.temporary ?? 0 },
-    { label: 'Hit Dice', value: hitDice.length === 0 ? '--' : hitDice.map((p) => p.dice).join(' · ') },
-    { label: 'Armor class', value: sheet.status.armorClass },
-    { label: 'Initiative', value: signed(sheet.status.initiative) },
-    { label: 'Proficiency', value: signed(sheet.status.proficiencyBonus) },
+    { label: t('vitals.hitPoints'), value: `${hitPoints.current} / ${hitPoints.max}` },
+    { label: t('vitals.tempHp'), value: hitPoints.temporary ?? 0 },
+    {
+      label: t('vitals.hitDice'),
+      value: hitDice.length === 0 ? '--' : hitDice.map((p) => p.dice).join(' · '),
+    },
+    { label: t('vitals.armorClass'), value: sheet.status.armorClass },
+    { label: t('vitals.initiative'), value: signed(sheet.status.initiative) },
+    { label: t('vitals.proficiency'), value: signed(sheet.status.proficiencyBonus) },
   ]
 
   const reach: Vital[] = []
@@ -83,21 +97,34 @@ function rowsOf(sheet: Sheet): Vital[][] {
   const casters = sheet.status.spellcasting ?? []
   if (casters.length === 0) {
     reach.push(
-      { label: 'Spell attack bonus', value: 'n/a' },
-      { label: 'Spell save DC', value: 'n/a' },
-      { label: 'Spellcasting ability', value: 'n/a' },
+      { label: t('vitals.spellAttack'), value: 'n/a' },
+      { label: t('vitals.spellSaveDc'), value: 'n/a' },
+      { label: t('vitals.spellAbility'), value: 'n/a' },
     )
   }
   for (const caster of casters) {
-    const whose = casters.length > 1 ? `${titleCase(caster.class)} ` : ''
+    // A multiclassed caster's cards are named by the class they come from, and
+    // the class goes *inside* the message rather than in front of it. Prefixing
+    // is English word order written in TypeScript: a language that puts the
+    // qualifier after the noun, or inflects it, cannot be served by a glued
+    // prefix -- so the whole label is one message with an optional class in it.
+    const whose = casters.length > 1 ? titleCase(caster.class) : ''
+    const named = (bare: MessageKey, ofClass: MessageKey) =>
+      whose === '' ? t(bare) : t(ofClass, { class: whose })
     reach.push(
-      { label: `${whose}Spell attack bonus`, value: signed(caster.attackBonus) },
-      { label: `${whose}Spell save DC`, value: caster.saveDC },
-      { label: `${whose}Spellcasting ability`, value: caster.ability.toUpperCase() },
+      {
+        label: named('vitals.spellAttack', 'vitals.spellAttackOf'),
+        value: signed(caster.attackBonus),
+      },
+      { label: named('vitals.spellSaveDc', 'vitals.spellSaveDcOf'), value: caster.saveDC },
+      {
+        label: named('vitals.spellAbility', 'vitals.spellAbilityOf'),
+        value: abilityAbbr(t, caster.ability),
+      },
     )
   }
 
-  reach.push({ label: 'Passive Perception', value: sheet.status.passivePerception })
+  reach.push({ label: t('vitals.passivePerception'), value: sheet.status.passivePerception })
 
   // Walking leads and anything else is the hint: a character with a fly speed
   // still walks, and the walking number is the one asked for.
@@ -105,10 +132,10 @@ function rowsOf(sheet: Sheet): Vital[][] {
   const walking = speeds.find((speed) => speed.kind === 'walking')
   const others = speeds.filter((speed) => speed !== walking)
   reach.push({
-    label: 'Speed',
-    value: walking === undefined ? '--' : feet(walking.distance),
+    label: t('vitals.speed'),
+    value: walking === undefined ? '--' : feet(t, walking.distance),
     ...(others.length > 0
-      ? { hint: others.map((speed) => `${speed.kind} ${feet(speed.distance)}`).join(' · ') }
+      ? { hint: others.map((s) => `${speedName(t, s.kind)} ${feet(t, s.distance)}`).join(' · ') }
       : {}),
   })
 
@@ -117,10 +144,10 @@ function rowsOf(sheet: Sheet): Vital[][] {
   const senses = sheet.base.senses ?? []
   const [first, ...rest] = senses
   reach.push({
-    label: first === undefined ? 'Vision' : titleCase(first.kind),
-    value: first === undefined ? 'Normal' : feet(first.distance),
+    label: first === undefined ? t('vitals.vision') : senseName(t, first.kind),
+    value: first === undefined ? t('vitals.normalVision') : feet(t, first.distance),
     ...(rest.length > 0
-      ? { hint: rest.map((sense) => `${titleCase(sense.kind)} ${feet(sense.distance)}`).join(' · ') }
+      ? { hint: rest.map((s) => `${senseName(t, s.kind)} ${feet(t, s.distance)}`).join(' · ') }
       : {}),
   })
 
@@ -128,9 +155,11 @@ function rowsOf(sheet: Sheet): Vital[][] {
 }
 
 export function Vitals({ sheet }: { sheet: Sheet }) {
+  const t = useT()
+
   return (
     <>
-      {rowsOf(sheet).map((row, at) => (
+      {rowsOf(t, sheet).map((row, at) => (
         <SimpleGrid key={at} cols={{ base: 2, sm: 3, lg: 6 }} spacing={{ base: 'xs', sm: 'sm' }}>
           {row.map((vital) => (
             // Spread rather than `hint={vital.hint}`: `exactOptionalPropertyTypes`

@@ -125,7 +125,7 @@ func (r *UserRepository) ByID(_ context.Context, id domain.ID) (domain.User, err
 
 	u, ok := r.items[id]
 	if !ok {
-		return domain.User{}, types.NewNotFoundError("account not found")
+		return domain.User{}, types.NewNotFoundError("account not found").Because("account.notFound")
 	}
 	return cloneUser(u), nil
 }
@@ -143,7 +143,7 @@ func (r *UserRepository) ByCredentialID(_ context.Context, credentialID []byte) 
 	if !ok {
 		// Only reachable if Create and the index ever disagree, which the
 		// all-or-nothing write above is there to prevent.
-		return domain.User{}, types.NewNotFoundError("account not found")
+		return domain.User{}, types.NewNotFoundError("account not found").Because("account.notFound")
 	}
 	return cloneUser(u), nil
 }
@@ -155,7 +155,7 @@ func (r *UserRepository) TouchCredential(_ context.Context, id domain.ID, c doma
 
 	u, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("account not found")
+		return types.NewNotFoundError("account not found").Because("account.notFound")
 	}
 	index := slices.IndexFunc(u.Credentials, func(stored domain.Credential) bool {
 		return slices.Equal(stored.ID, c.ID)
@@ -188,7 +188,7 @@ func (r *UserRepository) ByIdentity(_ context.Context, provider domain.Provider,
 	if !ok {
 		// Only reachable if a write and the index ever disagree, which the
 		// all-or-nothing writes are there to prevent.
-		return domain.User{}, types.NewNotFoundError("account not found")
+		return domain.User{}, types.NewNotFoundError("account not found").Because("account.notFound")
 	}
 	return cloneUser(u), nil
 }
@@ -200,7 +200,7 @@ func (r *UserRepository) AddIdentity(_ context.Context, id domain.ID, i domain.I
 
 	u, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("account not found")
+		return types.NewNotFoundError("account not found").Because("account.notFound")
 	}
 	// Taken by anyone at all, this account included. Re-linking a subject an
 	// account already holds would duplicate it in the slice while the index
@@ -222,7 +222,7 @@ func (r *UserRepository) TouchIdentity(_ context.Context, id domain.ID, i domain
 
 	u, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("account not found")
+		return types.NewNotFoundError("account not found").Because("account.notFound")
 	}
 	index := indexOfIdentity(u.Identities, i.Provider, i.Subject)
 	if index < 0 {
@@ -249,7 +249,7 @@ func (r *UserRepository) RemoveIdentity(_ context.Context, id domain.ID, provide
 
 	u, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("account not found")
+		return types.NewNotFoundError("account not found").Because("account.notFound")
 	}
 	index := indexOfIdentity(u.Identities, provider, subject)
 	if index < 0 {

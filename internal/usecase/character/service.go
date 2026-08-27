@@ -120,7 +120,7 @@ func validateOpening(opening NewCharacter) error {
 	if opening.Name == "" {
 		return types.NewFieldValidationError("the character could not be created",
 			types.FieldError{
-				Field: "name", Rule: "required", Message: "a character needs a name",
+				Field: "name", Rule: "required", Reason: "field.character.name.required",
 			})
 	}
 	return nil
@@ -201,7 +201,7 @@ func (s *Service) owned(
 		return domain.Character{}, err
 	}
 	if character.Owner != owner {
-		return domain.Character{}, types.NewNotFoundError("character %q", id)
+		return domain.Character{}, types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
 	return character, nil
 }

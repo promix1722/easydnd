@@ -35,10 +35,10 @@ const (
 // several ways the first is reported, because the client draws one line per
 // lost answer and the first is the one that killed it.
 type LostAnswer struct {
-	Prompt  rules.Slug
-	Picks   []rules.Slug
-	Rule    string
-	Message string
+	Prompt rules.Slug
+	Picks  []rules.Slug
+	Rule   string
+	Reason string
 }
 
 // Dropped is one entry a replacement did not leave alone.
@@ -100,8 +100,9 @@ func Revise(
 	log domain.Log, cat *catalog.Catalog, targetSeq int, replacement *domain.Event,
 ) (domain.Log, []Dropped, error) {
 	if targetSeq < 1 || targetSeq > log.LastSeq() {
-		return domain.Log{}, nil, seqError(fmt.Sprintf(
-			"the log has no entry at %d; it runs 1 to %d", targetSeq, log.LastSeq()))
+		return domain.Log{}, nil, seqError(
+			fmt.Sprintf("the log has no entry at %d; it runs 1 to %d", targetSeq, log.LastSeq()),
+			"field.seq.outOfRange")
 	}
 	// Seq 1 is replaceable, but only by another init event -- which is how a
 	// name is changed. Log.Validate already requires init to be first and to
@@ -109,11 +110,13 @@ func Revise(
 	// what it refuses is a log that could not be read back.
 	if targetSeq == 1 && (replacement == nil || replacement.Type != domain.EventInit) {
 		return domain.Log{}, nil, seqError(
-			"the opening entry can only be replaced by another init event")
+			"the opening entry can only be replaced by another init event",
+			"field.seq.initOnly")
 	}
 	if targetSeq != 1 && replacement != nil && replacement.Type == domain.EventInit {
 		return domain.Log{}, nil, seqError(
-			"an init event can only be the opening entry")
+			"an init event can only be the opening entry",
+			"field.seq.initFirst")
 	}
 
 	// The prefix is a Log rather than a bare slice, and each entry is staged
@@ -218,18 +221,18 @@ func droppedEntry(event domain.Event, reason DropReason, lost []answerLoss) Drop
 		entry := LostAnswer{Prompt: l.Answer.Prompt, Picks: l.Answer.Picks}
 		if len(l.Errors) > 0 {
 			entry.Rule = l.Errors[0].Rule
-			entry.Message = l.Errors[0].Message
+			entry.Reason = l.Errors[0].Reason
 		}
 		out.Lost = append(out.Lost, entry)
 	}
 	return out
 }
 
-// seqError reports a target that is not a replaceable position. It names seq
-// rather than the body, because the position is in the path.
-func seqError(message string) error {
-	return types.NewFieldValidationError("the entry cannot be replaced", types.FieldError{
-		Field: "seq", Rule: "range", Message: message,
+// seqError reports a target that is not a replaceable position. `message` is
+// for the log; `reason` is the key the client renders.
+func seqError(message, reason string) error {
+	return types.NewFieldValidationError(message, types.FieldError{
+		Field: "seq", Rule: "range", Reason: reason,
 	})
 }
 

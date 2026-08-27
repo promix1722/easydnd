@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 
-import { bySlug, getCollection, getEntries } from '@/lib/api'
+import { bySlug, getCollection, getEntries , describeField } from '@/lib/api'
 import type { ApiFieldError, Change, Entry, Prompt } from '@/lib/api'
+import { useT } from '@/lib/i18n'
+import type { Translate } from '@/lib/i18n'
 import { Badge, BlockList, Button, Group, Loader, Stack, Text } from '@/ui'
 import type { BlockListItem } from '@/ui'
 
@@ -91,6 +93,7 @@ export function StagePanel({
   method,
   lines,
 }: StagePanelProps) {
+  const t = useT()
   const surface = (asked: Asking) => (
     <AnswerSurface
       asking={asked}
@@ -135,12 +138,12 @@ export function StagePanel({
       <BlockList items={items} open={openKey} onOpen={onOpen} />
       {blocks.length === 0 ? (
         <Text size="sm" c="dimmed">
-          Nothing to answer yet.
+          {t('stagePanel.nothingYet')}
         </Text>
       ) : (
         nothingOpen && (
           <Text size="sm" c="dimmed">
-            Nothing left here.
+            {t('stagePanel.nothingLeft')}
           </Text>
         )
       )}
@@ -158,7 +161,7 @@ export function StagePanel({
         // happens to be open, and change width as blocks are opened and shut.
         <Group>
           <Button variant="light" onClick={onNext}>
-            Next
+            {t('stagePanel.next')}
           </Button>
         </Group>
       )}
@@ -168,6 +171,7 @@ export function StagePanel({
 
 /** What was decided, and what it was decided to be. */
 function SettledHeader({ row }: { row: SettledRow }) {
+  const t = useT()
   return (
     <div>
       <Group gap={6}>
@@ -176,7 +180,7 @@ function SettledHeader({ row }: { row: SettledRow }) {
         </Text>
         {row.level !== undefined && (
           <Badge size="xs" variant="light">
-            Level {row.level}
+            {t('block.level', { level: row.level })}
           </Badge>
         )}
       </Group>
@@ -195,10 +199,12 @@ function SettledHeader({ row }: { row: SettledRow }) {
  * questions.
  */
 function OpenHeader({ prompt, names }: { prompt: Prompt; names: ReadonlyMap<string, string> }) {
+  const t = useT()
+
   return (
     <Group gap={8} wrap="nowrap" justify="space-between" w="100%">
       <Text size="sm" fw={600} style={{ whiteSpace: 'normal', textAlign: 'left' }}>
-        {choiceName(prompt)}
+        {choiceName(t, prompt)}
         {prompt.source !== undefined && (
           <Text span size="xs" c="dimmed" fw={400}>
             {' '}
@@ -209,12 +215,12 @@ function OpenHeader({ prompt, names }: { prompt: Prompt; names: ReadonlyMap<stri
       <Group gap={6} wrap="nowrap">
         {prompt.level !== undefined && (
           <Badge size="xs" variant="light">
-            Level {prompt.level}
+            {t('block.level', { level: prompt.level })}
           </Badge>
         )}
         {prompt.optional && (
           <Badge size="xs" variant="light" color="gray">
-            optional
+            {t('block.optional')}
           </Badge>
         )}
       </Group>
@@ -233,11 +239,12 @@ function OpenHeader({ prompt, names }: { prompt: Prompt; names: ReadonlyMap<stri
  * and the reason none of them needs a button to do it.
  */
 function Reasking() {
+  const t = useT()
   return (
     <Group gap="xs">
       <Loader size="sm" />
       <Text size="sm" c="dimmed">
-        Putting that question again...
+        {t('stagePanel.reasking')}
       </Text>
     </Group>
   )
@@ -288,8 +295,9 @@ function AnswerSurface({
   onName: (name: string) => void
   onChanges: (changes: Change[]) => void
 }) {
+  const t = useT()
   const { prompt, replaces } = asking
-  const submitLabel = replaces === null ? 'Confirm' : 'Change it'
+  const submitLabel = replaces === null ? t('answer.confirm') : t('answer.changeIt')
   const { kind } = prompt.choice
 
   if (kind === 'text') {
@@ -298,7 +306,7 @@ function AnswerSurface({
         value={name ?? ''}
         onValueChange={onNameChange}
         pending={pending}
-        {...maybeError(fields, 'name')}
+        {...maybeError(t, fields, 'name')}
         submitLabel={submitLabel}
         onSubmit={onName}
       />
@@ -311,7 +319,7 @@ function AnswerSurface({
       <WrittenForm
         {...(lines !== undefined ? { lines } : {})}
         path={written.path}
-        noun={written.noun}
+        noun={t(written.noun)}
         pending={pending}
         submitLabel={submitLabel}
         onSubmit={onChanges}
@@ -335,11 +343,13 @@ function AnswerSurface({
   return <PromptWithOptions prompt={prompt} pending={pending} onAnswer={onPicks} />
 }
 
-function maybeError(fields: readonly ApiFieldError[], suffix: string): { error?: string } {
+function maybeError(
+  t: Translate,
+  fields: readonly ApiFieldError[],
+  suffix: string,
+): { error?: string } {
   const found = fields.find((field) => field.field.endsWith(suffix))
-  if (found === undefined) return {}
-  const message = found.message ?? found.rule
-  return message === undefined ? {} : { error: message }
+  return found === undefined ? {} : { error: describeField(t, found) }
 }
 
 /**

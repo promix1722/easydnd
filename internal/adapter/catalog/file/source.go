@@ -60,13 +60,17 @@ func MechanicsFiles() []string {
 	}
 }
 
-// proseFiles lists every file readBundles reads: the mechanics files, whose
+// ProseFiles lists every file readBundles reads: the mechanics files, whose
 // prose is keyed by the same slugs, plus terms.json.
 //
 // terms.json is the odd one out. It has no mechanics counterpart -- a term is
 // prose and nothing else -- so it must be listed here rather than inferred
 // from MechanicsFiles, and Catalog.Terms is built from the bundle's own keys.
-func proseFiles() []string {
+//
+// Exported because cmd/srdgen writes exactly this set, once per locale. It is
+// the same argument MechanicsFiles and the wire types make: one definition
+// that the writer and the reader share cannot drift.
+func ProseFiles() []string {
 	return append(MechanicsFiles(), FileTerms)
 }
 
@@ -314,8 +318,8 @@ func (s *Source) prose(locale rules.Locale) (bundles, error) {
 // readBundles reads every prose file for one locale. When required is false a
 // missing file or directory yields an empty bundle rather than an error.
 func (s *Source) readBundles(locale rules.Locale, required bool) (bundles, error) {
-	out := make(bundles, len(proseFiles()))
-	for _, file := range proseFiles() {
+	out := make(bundles, len(ProseFiles()))
+	for _, file := range ProseFiles() {
 		path := filepath.Join(s.dir, LocaleDir, locale.String(), file)
 		raw, err := os.ReadFile(path)
 		if err != nil {

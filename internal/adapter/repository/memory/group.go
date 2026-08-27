@@ -71,7 +71,7 @@ func (r *GroupRepository) ByID(_ context.Context, id domain.ID) (domain.Group, e
 
 	g, ok := r.groups[id]
 	if !ok {
-		return domain.Group{}, types.NewNotFoundError("group %q", id)
+		return domain.Group{}, types.NewNotFoundError("group %q", id).Because("group.notFound")
 	}
 	return g, nil
 }
@@ -107,7 +107,7 @@ func (r *GroupRepository) Members(ctx context.Context, id domain.ID) ([]domain.M
 	seats, ok := r.members[id]
 	if !ok {
 		r.mu.RUnlock()
-		return nil, types.NewNotFoundError("group %q", id)
+		return nil, types.NewNotFoundError("group %q", id).Because("group.notFound")
 	}
 	snapshot := make(map[user.ID]seat, len(seats))
 	for k, v := range seats {
@@ -168,7 +168,7 @@ func (r *GroupRepository) AddMember(
 	defer r.mu.Unlock()
 
 	if _, ok := r.groups[id]; !ok {
-		return types.NewNotFoundError("group %q", id)
+		return types.NewNotFoundError("group %q", id).Because("group.notFound")
 	}
 	if !role.Valid() || role == domain.RoleOwner {
 		// An owner is made by Create and moved by TransferOwnership. Admitting
@@ -259,7 +259,7 @@ func (r *GroupRepository) Rename(_ context.Context, id domain.ID, name string) e
 
 	g, ok := r.groups[id]
 	if !ok {
-		return types.NewNotFoundError("group %q", id)
+		return types.NewNotFoundError("group %q", id).Because("group.notFound")
 	}
 	if name == "" {
 		return types.NewValidationError("group name must not be empty")
@@ -275,7 +275,7 @@ func (r *GroupRepository) Delete(_ context.Context, id domain.ID) error {
 	defer r.mu.Unlock()
 
 	if _, ok := r.groups[id]; !ok {
-		return types.NewNotFoundError("group %q", id)
+		return types.NewNotFoundError("group %q", id).Because("group.notFound")
 	}
 	delete(r.groups, id)
 	delete(r.members, id)

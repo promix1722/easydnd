@@ -8,7 +8,21 @@ import { setupUser } from '@/test/user'
 
 import { SECTIONS } from '@/ui'
 
+import en from '@locales/en.json'
+
 import { RootShell } from './RootShell'
+
+/**
+ * What a section is called on screen.
+ *
+ * `Section.label` is a message key, because the table is a constant and the
+ * language is React state -- the chrome translates it where it draws it. These
+ * tests are about the chrome drawing every section, so they have to ask the
+ * catalogue the same question the chrome asks, rather than restating three
+ * English words that would then be free to drift from it.
+ */
+const named = (section: (typeof SECTIONS)[number]) =>
+  (en as Record<string, string>)[section.label] ?? section.label
 
 function shellAt(viewport: 'mobile' | 'desktop', at = '/') {
   const router = createMemoryRouter(
@@ -39,7 +53,7 @@ describe('RootShell', () => {
 
     expect(screen.getByRole('navigation')).toBeInTheDocument()
     for (const section of SECTIONS) {
-      expect(screen.getByRole('link', { name: section.label })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: named(section) })).toBeInTheDocument()
     }
   })
 
@@ -90,7 +104,7 @@ describe('RootShell', () => {
     await user.click(screen.getByRole('button', { name: 'Collapse navigation' }))
 
     for (const section of SECTIONS) {
-      expect(screen.getByRole('link', { name: section.label })).toHaveAttribute('href', section.to)
+      expect(screen.getByRole('link', { name: named(section) })).toHaveAttribute('href', section.to)
     }
   })
 
@@ -120,7 +134,7 @@ describe('RootShell', () => {
     await user.click(screen.getByRole('button', { name: 'Characters' }))
 
     for (const section of SECTIONS) {
-      expect(screen.getByRole('menuitem', { name: section.label })).toHaveAttribute(
+      expect(screen.getByRole('menuitem', { name: named(section) })).toHaveAttribute(
         'href',
         section.to,
       )

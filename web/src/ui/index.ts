@@ -39,6 +39,7 @@ export {
   IconFolder,
   IconFolderPlus,
   IconGripVertical,
+  IconLanguage,
   IconLogout,
   IconPencil,
   IconPlus,

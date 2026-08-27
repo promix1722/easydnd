@@ -1,4 +1,5 @@
 import { ApiError, TransportError, isApiErrorEnvelope } from './errors'
+import { requestLocale } from './locale'
 
 /**
  * Same-origin by design. nginx routes /v1/ to the Go process and / to this
@@ -33,6 +34,23 @@ function newRequestId(): string {
     return crypto.randomUUID()
   }
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
+/**
+ * Appends the chosen language to a path.
+ *
+ * Every route, not just the catalogue: a character sheet names its race by
+ * slug and resolves the word through the compendium, but prompts, the import
+ * report and the table all carry prose the server has already resolved, and
+ * `helpers.Locale` reads the parameter on all of them. Sending it everywhere
+ * is cheaper than maintaining a list of which routes speak.
+ *
+ * `?slugs=` already exists on one route, so the separator is chosen rather
+ * than assumed -- appending a second `?` produces a query the server reads as
+ * one parameter with a very strange name.
+ */
+function withLocale(path: string): string {
+  return `${path}${path.includes('?') ? '&' : '?'}locale=${requestLocale()}`
 }
 
 /**
@@ -73,7 +91,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   let response: Response
   try {
-    response = await fetch(`${BASE_URL}${path}`, init)
+    response = await fetch(`${BASE_URL}${withLocale(path)}`, init)
   } catch (cause) {
     // An aborted request is the caller's own doing, not a network fault --
     // rethrow it untouched so `signal.aborted` checks still work upstream.

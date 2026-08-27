@@ -6,6 +6,7 @@ import { listCharacters, listTable, shareCharacter, unshareCharacter } from '@/l
 import { useAction } from '@/lib/useAction'
 import { useAuth } from '@/lib/auth'
 import { useResource } from '@/lib/useResource'
+import { useT } from '@/lib/i18n'
 import {
   ACTION_ICON_SIZE,
   ACTION_SIZE,
@@ -35,6 +36,7 @@ import { classLine } from '@/domain'
  * because there is no route behind one.
  */
 export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole }) {
+  const t = useT()
   const { user } = useAuth()
   const me = user?.id ?? ''
   const canManage = atLeast(role, 'dm')
@@ -49,18 +51,18 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
       <Group gap="xs">
         <Loader size="sm" />
         <Text size="sm" c="dimmed">
-          Loading the table...
+          {t('table.loading')}
         </Text>
       </Group>
     )
   }
   if (table.error !== null || table.data === null) {
     return (
-      <Alert color="red" title="Could not load this table">
+      <Alert color="red" title={t('table.loadFailed')}>
         <Stack gap="xs" align="flex-start">
-          <Text size="sm">{table.error ?? 'Unknown error'}</Text>
+          <Text size="sm">{table.error ?? t('error.unknown')}</Text>
           <Button variant="light" onClick={table.reload}>
-            Try again
+            {t('page.retry')}
           </Button>
         </Stack>
       </Alert>
@@ -78,7 +80,7 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
   return (
     <Stack gap="md">
       {failure !== null && (
-        <Alert color="red" title="That did not work">
+        <Alert color="red" title={t('group.actionFailed')}>
           {failure}
         </Alert>
       )}
@@ -89,7 +91,7 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
         columns={[
           {
             key: 'name',
-            header: 'Character',
+            header: t('game.character'),
             primary: true,
             render: (character: TableCharacter) => (
               <Group gap="xs">
@@ -100,7 +102,7 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
                 </Anchor>
                 {character.owner_id === me && (
                   <Badge size="xs" variant="light">
-                    Yours
+                    {t('table.yours')}
                   </Badge>
                 )}
               </Group>
@@ -108,12 +110,12 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
           },
           {
             key: 'classes',
-            header: 'Class',
+            header: t('game.class'),
             render: (character: TableCharacter) => classLine(character.classes),
           },
           {
             key: 'level',
-            header: 'Level',
+            header: t('game.level'),
             render: (character: TableCharacter) => character.level,
           },
           {
@@ -131,13 +133,13 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
                   color="red"
                   onClick={() => void act(unshare.run(groupId, character.id))}
                 >
-                  Take off
+                  {t('table.takeOff')}
                 </Button>
               )
             },
           },
         ]}
-        empty="Nothing on the table yet."
+        empty={t('table.empty')}
       />
 
       {/* Under the table, on the left, like every other way of adding a row. */}
@@ -148,7 +150,7 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
           leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
           onClick={() => setSharing(true)}
         >
-          Add a character
+          {t('table.addCharacter')}
         </Button>
       </Group>
 
@@ -177,20 +179,21 @@ function ShareSheet({
   onClose: () => void
   onPick: (id: string) => void
 }) {
+  const t = useT()
   const mine = useResource(opened ? 'characters:mine' : '', (signal) =>
     listCharacters(undefined, signal),
   )
   const characters = mine.data?.characters ?? []
 
   return (
-    <ModalSheet opened={opened} onClose={onClose} title="Put a character on the table">
+    <ModalSheet opened={opened} onClose={onClose} title={t('table.putOnTable')}>
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
-          Everyone at this table will be able to read the sheet. Only you can change it.
+          {t('table.shareWarning')}
         </Text>
         {mine.loading && <Loader size="sm" />}
         {characters.length === 0 && !mine.loading && (
-          <Text size="sm">You have not made a character yet.</Text>
+          <Text size="sm">{t('table.noCharacters')}</Text>
         )}
         {characters.map((character: Summary) => {
           const shared = already.includes(character.id)
@@ -209,7 +212,7 @@ function ShareSheet({
                 loading={pending}
                 onClick={() => onPick(character.id)}
               >
-                {shared ? 'Already there' : 'Add'}
+                {shared ? t('table.alreadyThere') : t('common.add')}
               </Button>
             </Group>
           )

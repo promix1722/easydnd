@@ -214,13 +214,22 @@ function abilityCards(): HTMLElement[] {
   return screen.queryAllByTitle(ABILITY_TITLE)
 }
 
-function abilityCardSlugs(): string[] {
+/**
+ * What each ability card is headed with.
+ *
+ * The abbreviation, not the slug. The card used to print `{ability}` with
+ * `text-transform: uppercase` over it, so the document said "str" and the
+ * screen said "STR" -- which meant a screen reader heard the slug. It prints
+ * the catalogue's abbreviation now, because "Сила" does not shorten to СИЛ by
+ * uppercasing it.
+ */
+function abilityCardLabels(): string[] {
   return abilityCards().map((label) => label.textContent ?? '')
 }
 
 /** One ability's whole card: the label, the modifier, the score and the save. */
 function card(slug: string): Element | null {
-  const at = abilityCardSlugs().indexOf(slug)
+  const at = abilityCardLabels().indexOf(slug.toUpperCase())
   return abilityCards()[at]?.closest('.mantine-Card-root') ?? null
 }
 
@@ -267,12 +276,12 @@ beforeEach(() => {
 it('draws the sheet in the order a player reads it', async () => {
   await renderSheet('desktop')
 
-  expect.soft(abilityCardSlugs()).toEqual(['str', 'dex', 'con', 'int', 'wis', 'cha'])
+  expect.soft(abilityCardLabels()).toEqual(['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'])
 
   // Six different bonuses, so a save drawn on the wrong card is a wrong number
   // rather than only a wrong label. The order comes free: there is one list of
   // abilities now, not two that could disagree.
-  expect.soft(abilityCardSlugs().map(cardSave)).toEqual(['+4', '+5', '+2', '+3', '+0', '-1'])
+  expect.soft(abilityCardLabels().map(cardSave)).toEqual(['+4', '+5', '+2', '+3', '+0', '-1'])
 
   // Hit points, temporary hit points and Hit Dice are one subject read in one
   // glance, so they lead the row rather than being spread along it.
@@ -292,9 +301,9 @@ it('draws the sheet in the order a player reads it', async () => {
   // Each card prints its own modifier: paired by slug, not by position, so a
   // sheet that zipped two lists together would misreport every card after the
   // first mistake.
-  expect.soft(cardText('str')).toBe('str+418Save+4')
-  expect.soft(cardText('dex')).toBe('dex+316Save+5')
-  expect.soft(cardText('cha')).toBe('cha-18Save-1')
+  expect.soft(cardText('str')).toBe('STR+418Save+4')
+  expect.soft(cardText('dex')).toBe('DEX+316Save+5')
+  expect.soft(cardText('cha')).toBe('CHA-18Save-1')
 
   // Nothing outstanding on this fixture, so the header offers no way in to the
   // build screen. The button's presence is the whole of the message.
@@ -314,9 +323,9 @@ describe('the sheet', () => {
     })
     await renderSheet('desktop')
 
-    expect(abilityCardSlugs()).toEqual(['str', 'dex', 'con', 'int', 'wis', 'cha', 'luk'])
+    expect(abilityCardLabels()).toEqual(['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA', 'LUK'])
     // No save was projected for it, so the card prints none rather than a +0.
-    expect(cardText('luk')).toBe('luk+113')
+    expect(cardText('luk')).toBe('LUK+113')
   })
 
   it('claims no score it was not sent, and still prints the save beside it', async () => {
@@ -333,12 +342,12 @@ describe('the sheet', () => {
     })
     await renderSheet('desktop')
 
-    expect(abilityCardSlugs()).toEqual(['str', 'dex', 'con', 'int', 'wis', 'cha'])
+    expect(abilityCardLabels()).toEqual(['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'])
     // A dash rather than a "+0" that would read as a real modifier of zero.
-    expect(cardText('str')).toBe('str--\u00a0Save+4')
+    expect(cardText('str')).toBe('STR--\u00a0Save+4')
     // The modifier is kept for the rest, so a screen pairing scores with
     // modifiers by position rather than by slug would misreport all five.
-    expect(cardText('dex')).toBe('dex+316Save+5')
+    expect(cardText('dex')).toBe('DEX+316Save+5')
   })
 })
 
@@ -515,7 +524,7 @@ describe('an unfinished character', () => {
     const answer = screen.getByRole('link', { name: 'Answer what is left' })
     expect(answer).toHaveAttribute('href', '/characters/chr_000001/build')
     expect(screen.queryByText(/A background/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/One more language/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/1 more language/)).not.toBeInTheDocument()
   })
 
   it('still draws the sheet when the prompts could not be fetched', async () => {

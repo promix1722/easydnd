@@ -3,17 +3,11 @@ import type { Change, CharacterEvent } from '@/lib/api'
 import { writtenLabel } from './promptNames'
 import { refName } from './refNames'
 
-import {
-  ABILITY_ORDER,
-  abilityName,
-  describeChange,
-  eventLabel,
-  formatValue,
-  pickLabel,
-  promptLabel,
-  stageOf,
-} from '@/domain'
+import { ABILITY_ORDER, pickLabel, promptLabel, stageOf } from '@/domain'
 import type { Stage } from '@/domain'
+import type { Translate } from '@/lib/i18n'
+
+import { abilityName, describeChange, eventLabel, formatValue } from './labels'
 
 /**
  * One thing the player has already decided, and the entry that records it.
@@ -55,12 +49,12 @@ export interface SettledView {
  * `/characters/:id/log` is the unabridged record, and this screen is a
  * constructor rather than a history.
  */
-export function settledByStage(view: SettledView): Map<Stage, SettledRow[]> {
+export function settledByStage(t: Translate, view: SettledView): Map<Stage, SettledRow[]> {
   const byStage = new Map<Stage, SettledRow[]>()
   for (const event of view.events) {
     const stage = stageOf(event.source)
     if (stage === null) continue
-    const row = rowFor(event, stage, view.names)
+    const row = rowFor(t, event, stage, view.names)
     if (row === null) continue
     const rows = byStage.get(stage) ?? []
     rows.push(row)
@@ -80,6 +74,7 @@ export function settledByStage(view: SettledView): Map<Stage, SettledRow[]> {
  * the answers are the selection.
  */
 function rowFor(
+  t: Translate,
   event: CharacterEvent,
   stage: Stage,
   names: ReadonlyMap<string, string>,
@@ -104,7 +99,7 @@ function rowFor(
     return {
       seq,
       stage,
-      label: eventLabel(event.type),
+      label: eventLabel(t, event.type),
       value: refName(event.ref, names),
       ...level,
       event,
@@ -112,7 +107,7 @@ function rowFor(
   }
 
   const changes = event.changes ?? []
-  if (changes.length > 0) return { seq, stage, ...summarise(changes), ...level, event }
+  if (changes.length > 0) return { seq, stage, ...summarise(t, changes), ...level, event }
 
   return null
 }
@@ -127,22 +122,25 @@ function rowFor(
  * rendering, on the same principle `eventLabel` follows: an entry drawn plainly
  * is better than one refused.
  */
-function summarise(changes: readonly Change[]): { label: string; value: string } {
+function summarise(t: Translate, changes: readonly Change[]): { label: string; value: string } {
   const name = changes.find((change) => change.path === 'identity.name')
-  if (name !== undefined) return { label: 'Name', value: formatValue(name.value) }
+  if (name !== undefined) return { label: t('settled.name'), value: formatValue(t, name.value) }
 
   const alignment = changes.find((change) => change.path === 'identity.alignment')
-  if (alignment !== undefined) return { label: 'Alignment', value: formatValue(alignment.value) }
+  if (alignment !== undefined) {
+    return { label: t('settled.alignment'), value: formatValue(t, alignment.value) }
+  }
 
   // Every line of one, joined: a trait entry may carry two, and reading back
   // only the first would make the second invisible until the sheet.
   const written = changes.find((change) => writtenLabel(change.path) !== undefined)
   if (written !== undefined) {
+    const label = writtenLabel(written.path)
     return {
-      label: writtenLabel(written.path) ?? '',
+      label: label === undefined ? '' : t(label),
       value: changes
         .filter((change) => change.path === written.path)
-        .map((change) => formatValue(change.value))
+        .map((change) => formatValue(t, change.value))
         .join(' · '),
     }
   }
@@ -155,17 +153,22 @@ function summarise(changes: readonly Change[]): { label: string; value: string }
   if (scores.size > 0) {
     const printed = ABILITY_ORDER.flatMap((ability) => {
       const change = scores.get(ability)
-      return change === undefined ? [] : [`${abilityName(ability)} ${formatValue(change.value)}`]
+      return change === undefined
+        ? []
+        : [`${abilityName(t, ability)} ${formatValue(t, change.value)}`]
     })
     const method = scores.get('method')
     return {
-      label: 'Ability scores',
+      label: t('settled.abilityScores'),
       // formatValue title-cases a slug already, so the method reads
       // "Point Buy" rather than "point-buy".
       value:
-        printed.join(' · ') + (method === undefined ? '' : ` · ${formatValue(method.value)}`),
+        printed.join(' · ') + (method === undefined ? '' : ` · ${formatValue(t, method.value)}`),
     }
   }
 
-  return { label: eventLabel('change'), value: changes.map(describeChange).join(', ') }
+  return {
+    label: eventLabel(t, 'change'),
+    value: changes.map((change) => describeChange(t, change)).join(', '),
+  }
 }

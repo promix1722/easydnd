@@ -6,6 +6,8 @@ import {
   TransportError,
   beginLogin,
   beginRegistration,
+  describeError,
+  describeField,
   finishLogin,
   finishRegistration,
   getSession,
@@ -28,6 +30,8 @@ import {
 } from '@/lib/webauthn'
 
 import { AuthContext, type AuthState, type AuthStatus } from './state'
+import { useT } from '@/lib/i18n'
+import type { Translate } from '@/lib/i18n'
 
 /**
  * The query parameter the SSO callback lands on after a failure.
@@ -40,12 +44,12 @@ import { AuthContext, type AuthState, type AuthStatus } from './state'
  */
 const AUTH_ERROR_PARAM = 'auth_error'
 
-const AUTH_ERRORS: Record<string, string> = {
-  access_denied: 'Sign-in was cancelled.',
-  session_expired: 'Your session had expired, so you have been signed out. Sign in and try again.',
-  unknown_provider: 'That sign-in method is not available.',
-  sign_in_failed: 'That sign-in could not be completed. Please try again.',
-}
+const AUTH_ERRORS = {
+  access_denied: 'authError.accessDenied',
+  session_expired: 'authError.sessionExpired',
+  unknown_provider: 'authError.unknownProvider',
+  sign_in_failed: 'authError.signInFailed',
+} as const
 
 /**
  * Owns the answer to "who is using this app".
@@ -56,6 +60,11 @@ const AUTH_ERRORS: Record<string, string> = {
  * changes the answer.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // The words for a failure live in the catalogue, so this provider needs a
+  // translator to turn the code or the DOMException it classified into the
+  // sentence it hands to `error`. That is why `LocaleProvider` wraps this one
+  // in main.tsx and not the other way round.
+  const t = useT()
   const [status, setStatus] = useState<AuthStatus>('loading')
   const [user, setUser] = useState<SessionUser | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -121,9 +130,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // the URL: a side effect belongs after the render, not during one. It only
     // ever sets, never clears, so StrictMode's second pass -- which finds the
     // parameter already gone -- cannot wipe the message the first one found.
-    const message = takeAuthError()
+    const message = takeAuthError(t)
     // oxlint-disable-next-line react/set-state-in-effect
     if (message) setError(message)
+    // Once, on mount: it scrubs the URL, so a re-run would find nothing. `t`
+    // is stable for the life of an instance and is not a reason to read again.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -157,13 +169,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true
       } catch (cause) {
         if (!mounted.current) return false
-        setError(describeFailure(cause))
+        setError(describeFailure(t, cause))
         return false
       } finally {
         if (mounted.current) setBusy(false)
       }
     },
-    [adopt],
+    [adopt, t],
   )
 
   /**
@@ -232,13 +244,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true
       } catch (cause) {
         if (!mounted.current) return false
-        setError(describeFailure(cause))
+        setError(describeFailure(t, cause))
         return false
       } finally {
         if (mounted.current) setBusy(false)
       }
     },
-    [adopt],
+    [adopt, t],
   )
 
   const signOut = useCallback(async () => {
@@ -312,7 +324,7 @@ async function runOneCeremony(
  * knows about become words, and an unrecognised one becomes the generic
  * sentence rather than reaching the screen.
  */
-function takeAuthError(): string | null {
+function takeAuthError(t: Translate): string | null {
   if (typeof window === 'undefined') return null
 
   const url = new URL(window.location.href)
@@ -322,7 +334,8 @@ function takeAuthError(): string | null {
   url.searchParams.delete(AUTH_ERROR_PARAM)
   window.history.replaceState(null, '', url.pathname + url.search + url.hash)
 
-  return AUTH_ERRORS[code] ?? AUTH_ERRORS.sign_in_failed ?? null
+  const key = AUTH_ERRORS[code as keyof typeof AUTH_ERRORS] ?? AUTH_ERRORS.sign_in_failed
+  return t(key)
 }
 
 /** Where to come back to after the round trip through the provider. */
@@ -332,15 +345,16 @@ function currentPath(): string {
 }
 
 /** Turns anything a ceremony can throw into a sentence. */
-function describeFailure(cause: unknown): string {
+function describeFailure(t: Translate, cause: unknown): string {
   if (cause instanceof ApiError) {
-    // Field errors carry a message already written for a person. Nothing on the
-    // passkey path can raise one any more -- there is no field left to get
-    // wrong -- but unlinking a provider still can.
-    return cause.fields[0]?.message ?? cause.message
+    // A rejected field says something more specific than the envelope around
+    // it. Nothing on the passkey path can raise one any more -- there is no
+    // field left to get wrong -- but unlinking a provider still can.
+    const field = cause.fields[0]
+    return field === undefined ? describeError(t, cause) : describeField(t, field)
   }
   if (cause instanceof TransportError) {
-    return 'Could not reach the server. Check your connection and try again.'
+    return t('error.unreachable')
   }
-  return describeCeremonyFailure(cause).message
+  return t(describeCeremonyFailure(cause).reason)
 }

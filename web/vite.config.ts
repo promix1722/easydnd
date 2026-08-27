@@ -139,6 +139,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // The message catalogues, deliberately outside src/. They are content,
+      // not code: the whole point of keeping every caption in them is that
+      // translating this app never means opening a component, and a directory
+      // sitting among the layers would say the opposite.
+      '@locales': fileURLToPath(new URL('./locales', import.meta.url)),
     },
   },
   server: {

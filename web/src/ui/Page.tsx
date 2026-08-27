@@ -17,6 +17,8 @@ import { Link, useLocation } from 'react-router'
 import { CONTENT_MAX_WIDTH, ROW_HEIGHT } from '@/theme/tokens'
 
 import type { PageState } from './pageState'
+import { useT } from '@/lib/i18n'
+
 import { sectionFor } from './sections'
 
 export interface Crumb {
@@ -102,10 +104,11 @@ export function Page({
   children,
 }: PageProps) {
   const { pathname } = useLocation()
+  const t = useT()
   const section = sectionFor(pathname)
 
   const crumbs: Crumb[] = section
-    ? [{ label: section.label, to: section.to }, ...trail]
+    ? [{ label: t(section.label), to: section.to }, ...trail]
     : [...trail]
 
   const here = crumbs.at(-1)
@@ -183,7 +186,7 @@ export function Page({
               )}
 
               {parents.length > 0 && (
-                <nav aria-label="Breadcrumb">
+                <nav aria-label={t('page.breadcrumb')}>
                   <Group component="ol" gap="xs" wrap="wrap" style={LIST_RESET}>
                     {parents.map((crumb, index) => {
                       const isSection = index === 0 && SectionIcon !== undefined
@@ -295,10 +298,11 @@ const LIST_RESET = { listStyle: 'none', margin: 0, padding: 0 } as const
 
 /** A crumb's text, or a placeholder that still has a name. */
 function CrumbLabel({ label, size }: { label: string | null; size: 'sm' | 'lg' }) {
+  const t = useT()
   if (label !== null) return <>{label}</>
   return (
     <>
-      <VisuallyHidden>Loading</VisuallyHidden>
+      <VisuallyHidden>{t('page.loading')}</VisuallyHidden>
       <Skeleton
         component="span"
         width={size === 'lg' ? 220 : 90}
@@ -317,12 +321,13 @@ function CrumbLabel({ label, size }: { label: string | null; size: 'sm' | 'lg' }
  * anybody sees.
  */
 function Body({ state, children }: { state: PageState; children: ReactNode }) {
+  const t = useT()
   if (state.kind === 'loading') {
     return (
       <Group gap="xs">
         <Loader size="sm" />
         <Text size="sm" c="dimmed">
-          {state.what ?? 'Loading...'}
+          {state.what ?? t('page.loadingEllipsis')}
         </Text>
       </Group>
     )
@@ -335,7 +340,7 @@ function Body({ state, children }: { state: PageState; children: ReactNode }) {
           <Text size="sm">{state.detail}</Text>
           {state.onRetry !== undefined && (
             <Button variant="light" onClick={state.onRetry}>
-              Try again
+              {t('page.retry')}
             </Button>
           )}
         </Stack>

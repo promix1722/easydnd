@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
 import type { GroupSummary } from '@/lib/api'
-import { createGroup, deleteGroup, listGroups, removeMember, renameGroup } from '@/lib/api'
+import { fieldMessage, createGroup, deleteGroup, listGroups, removeMember, renameGroup } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
+import { useT } from '@/lib/i18n'
 import {
   ACTION_ICON_SIZE,
   ACTION_SIZE,
@@ -27,10 +28,11 @@ import {
   TextInput,
 } from '@/ui'
 
-import { atLeast, ROLE_LABELS } from './roles'
+import { atLeast, roleLabel } from './roles'
 
 /** The tables this account sits at. */
 export function GroupListScreen() {
+  const t = useT()
   const navigate = useNavigate()
   const { data, error, loading, reload } = useResource('groups', (signal) => listGroups(signal))
 
@@ -72,7 +74,11 @@ export function GroupListScreen() {
       trail={[]}
       state={pageState(
         { data, error, loading },
-        { title: 'Could not load your groups', fallback: 'Unknown error', onRetry: reload },
+        {
+          title: t('groups.list.loadFailed'),
+          fallback: t('error.unknown'),
+          onRetry: reload,
+        },
       )}
     >
       <Stack gap="md">
@@ -82,7 +88,7 @@ export function GroupListScreen() {
           columns={[
             {
               key: 'name',
-              header: 'Name',
+              header: t('common.name'),
               primary: true,
               render: (group) => (
                 <Anchor component={Link} to={`/groups/${group.id}`}>
@@ -92,8 +98,8 @@ export function GroupListScreen() {
             },
             {
               key: 'role',
-              header: 'Your role',
-              render: (group) => <Badge variant="light">{ROLE_LABELS[group.role]}</Badge>,
+              header: t('groups.yourRole'),
+              render: (group) => <Badge variant="light">{roleLabel(t, group.role)}</Badge>,
             },
             {
               key: 'actions',
@@ -112,7 +118,7 @@ export function GroupListScreen() {
                       leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
                       onClick={() => void act(leave.run(group.id, me))}
                     >
-                      Leave
+                      {t('groups.leave')}
                     </Button>
                   )}
                   {atLeast(group.role, 'dm') && (
@@ -125,7 +131,7 @@ export function GroupListScreen() {
                         setRenaming(group)
                       }}
                     >
-                      Rename
+                      {t('common.rename')}
                     </Button>
                   )}
                   {group.role === 'owner' && (
@@ -136,14 +142,14 @@ export function GroupListScreen() {
                       leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
                       onClick={() => setDeleting(group)}
                     >
-                      Delete
+                      {t('common.delete')}
                     </Button>
                   )}
                 </Group>
               ),
             },
           ]}
-          empty="No groups yet. Make one, or open an invitation link somebody sent you."
+          empty={t('groups.list.empty')}
         />
 
         {/* Under the table and to the left: adding a row belongs beneath the
@@ -156,31 +162,31 @@ export function GroupListScreen() {
             leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
             onClick={() => setCreating(true)}
           >
-            New group
+            {t('groups.new')}
           </Button>
         </Group>
 
         <ModalSheet
           opened={renaming !== null}
           onClose={() => setRenaming(null)}
-          title="Rename this group"
+          title={t('groups.renameTitle')}
         >
           <Stack gap="sm">
             <TextInput
-              label="Name"
+              label={t('common.name')}
               value={newName}
-              error={rename.fields.find((field) => field.field === 'name')?.message}
+              error={fieldMessage(t, rename.fields, 'name')}
               onChange={(event) => setNewName(event.currentTarget.value)}
               data-autofocus
             />
             {rename.error !== null && (
-              <Alert color="red" title="Could not rename it">
+              <Alert color="red" title={t('groups.renameFailed')}>
                 {rename.error}
               </Alert>
             )}
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setRenaming(null)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 loading={rename.pending}
@@ -190,7 +196,7 @@ export function GroupListScreen() {
                   if (target !== null) void act(rename.run(target.id, newName))
                 }}
               >
-                Rename
+                {t('common.rename')}
               </Button>
             </Group>
           </Stack>
@@ -199,18 +205,15 @@ export function GroupListScreen() {
         <ModalSheet
           opened={deleting !== null}
           onClose={() => setDeleting(null)}
-          title="Delete this group"
+          title={t('groups.deleteTitle')}
         >
           <Stack gap="sm">
             {/* Named in full: it takes the whole table with it, and nobody at it
                 can undo that. */}
-            <Text size="sm">
-              {deleting?.name} goes, along with everything shared with it and every game played
-              at it. The characters themselves stay yours.
-            </Text>
+            <Text size="sm">{t('groups.deleteWarning', { name: deleting?.name ?? '' })}</Text>
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setDeleting(null)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 color="red"
@@ -221,33 +224,33 @@ export function GroupListScreen() {
                   if (target !== null) void act(destroy.run(target.id))
                 }}
               >
-                Delete
+                {t('common.delete')}
               </Button>
             </Group>
           </Stack>
         </ModalSheet>
 
-        <ModalSheet opened={creating} onClose={() => setCreating(false)} title="New group">
+        <ModalSheet opened={creating} onClose={() => setCreating(false)} title={t('groups.new')}>
           <Stack gap="sm">
             <TextInput
-              label="Name"
-              placeholder="Wednesday Night"
+              label={t('common.name')}
+              placeholder={t('groups.namePlaceholder')}
               value={name}
               onChange={(event) => setName(event.currentTarget.value)}
-              error={create.fields.find((field) => field.field === 'name')?.message}
+              error={fieldMessage(t, create.fields, 'name')}
               data-autofocus
             />
             {create.error !== null && (
-              <Alert color="red" title="Could not create the group">
+              <Alert color="red" title={t('groups.createFailed')}>
                 {create.error}
               </Alert>
             )}
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setCreating(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button loading={create.pending} onClick={() => void submit()}>
-                Create
+                {t('common.create')}
               </Button>
             </Group>
           </Stack>

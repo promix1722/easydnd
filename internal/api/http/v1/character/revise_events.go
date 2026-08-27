@@ -105,7 +105,7 @@ func seqOf(c *gin.Context) (int, error) {
 	value, err := strconv.Atoi(c.Param("seq"))
 	if err != nil {
 		return 0, types.NewFieldValidationError("the entry cannot be replaced", types.FieldError{
-			Field: "seq", Rule: "format", Message: "an entry is addressed by its sequence number",
+			Field: "seq", Rule: "format", Reason: "field.seq.format",
 		})
 	}
 	return value, nil
@@ -125,7 +125,7 @@ func boolQuery(c *gin.Context, name string) (bool, error) {
 	if err != nil {
 		return false, types.NewFieldValidationError("a parameter is not a boolean",
 			types.FieldError{
-				Field: name, Rule: "format", Message: "this parameter must be true or false",
+				Field: name, Rule: "format", Reason: "field.param.boolean",
 			})
 	}
 	return value, nil
@@ -147,10 +147,10 @@ func droppedOf(dropped []charuc.Dropped) []Dropped {
 		}
 		for _, lost := range d.Lost {
 			entry.Lost = append(entry.Lost, DroppedAnswer{
-				Prompt:  lost.Prompt.String(),
-				Picks:   slugStrings(lost.Picks),
-				Rule:    lost.Rule,
-				Message: lost.Message,
+				Prompt: lost.Prompt.String(),
+				Picks:  slugStrings(lost.Picks),
+				Rule:   lost.Rule,
+				Reason: lost.Reason,
 			})
 		}
 		out = append(out, entry)

@@ -27,7 +27,7 @@ func (h *Handler) LoginBegin(c *gin.Context) {
 func (h *Handler) LoginFinish(c *gin.Context) {
 	ceremony := h.cookies.Ceremony(c)
 	if ceremony == "" {
-		helpers.FormatError(c, types.NewValidationError("no sign-in is in progress"))
+		helpers.FormatError(c, types.NewValidationError("no sign-in is in progress").Because("auth.noCeremony"))
 		return
 	}
 

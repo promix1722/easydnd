@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-
 import type { Entry, Prompt } from '@/lib/api'
+import { testT } from '@/test/i18n'
 
 import { choosableOptions } from './options'
 
@@ -27,6 +27,7 @@ describe('choosableOptions', () => {
   // the bundle has no slug, so it is named by position.
   it('uses the key the server sent, never one it computes', () => {
     const got = choosableOptions(
+      testT,
       prompt({
         choice: {
           prompt: 'rogue/starting-equipment/1',
@@ -58,6 +59,7 @@ describe('choosableOptions', () => {
 
   it('disables what the character already has', () => {
     const got = choosableOptions(
+      testT,
       prompt({
         held: ['shortsword'],
         choice: {
@@ -85,6 +87,7 @@ describe('choosableOptions', () => {
   // Expertise inverts it: doubling a proficiency requires having it.
   it('inverts the test when heldOnly is set', () => {
     const got = choosableOptions(
+      testT,
       prompt({
         heldOnly: true,
         held: ['shortsword'],
@@ -114,6 +117,7 @@ describe('choosableOptions', () => {
   // option list and an entry's own slug is its key.
   it('falls back to the loaded collection for a non-explicit set', () => {
     const got = choosableOptions(
+      testT,
       prompt({
         choice: {
           prompt: 'character/race',
@@ -129,6 +133,7 @@ describe('choosableOptions', () => {
 
   it('labels an ability bonus the way a player reads it', () => {
     const got = choosableOptions(
+      testT,
       prompt({
         choice: {
           prompt: 'half-elf/ability-bonus/0',

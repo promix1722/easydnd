@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { describeError } from './api/errors'
+import { useT } from './i18n'
 
 /**
  * A request outcome. Modelled as a union rather than three loose booleans so
@@ -41,6 +42,7 @@ export interface Resource<T> {
  * pinning it in a useCallback at every call site.
  */
 export function useResource<T>(key: string, fetcher: (signal: AbortSignal) => Promise<T>): Resource<T> {
+  const t = useT()
   const [outcome, setOutcome] = useState<Outcome<T>>({ kind: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
@@ -96,13 +98,13 @@ export function useResource<T>(key: string, fetcher: (signal: AbortSignal) => Pr
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return
-        setOutcome({ kind: 'failed', error: describeError(cause) })
+        setOutcome({ kind: 'failed', error: describeError(t, cause) })
       })
 
     return () => {
       controller.abort()
     }
-  }, [key, attempt])
+  }, [key, attempt, t])
 
   return {
     data: outcome.kind === 'ready' ? outcome.data : null,

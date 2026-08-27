@@ -34,7 +34,7 @@ func (h *Handler) RegisterBegin(c *gin.Context) {
 func (h *Handler) RegisterFinish(c *gin.Context) {
 	ceremony := h.cookies.Ceremony(c)
 	if ceremony == "" {
-		helpers.FormatError(c, types.NewValidationError("no registration is in progress"))
+		helpers.FormatError(c, types.NewValidationError("no registration is in progress").Because("auth.noCeremony"))
 		return
 	}
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-
 import type { CharacterEvent } from '@/lib/api'
+import { testT } from '@/test/i18n'
 
 import { settledByStage } from './settled'
 
@@ -50,7 +50,7 @@ const NAMES = new Map([
   ['class:rogue', 'Rogue'],
 ])
 
-const settled = () => settledByStage({ events: EVENTS, names: NAMES })
+const settled = () => settledByStage(testT, { events: EVENTS, names: NAMES })
 
 describe('settledByStage', () => {
   it('groups by the source the server wrote, not by the event type', () => {

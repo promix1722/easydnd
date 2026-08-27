@@ -163,9 +163,11 @@ func (s *Signer) parse(token, want string, now time.Time) (claims, error) {
 	if err != nil {
 		// Malformed, expired, wrong key -- all the same to the caller.
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return claims{}, types.NewUnauthenticatedError("%s token has expired", want)
+			return claims{}, types.NewUnauthenticatedError("%s token has expired", want).
+				Because("auth.tokenExpired")
 		}
-		return claims{}, types.NewUnauthenticatedError("%s token is not valid", want)
+		return claims{}, types.NewUnauthenticatedError("%s token is not valid", want).
+			Because("auth.tokenInvalid")
 	}
 
 	// Constant time only for tidiness; the kind is not a secret. What matters
@@ -216,7 +218,8 @@ func (s *Signer) VerifyInvite(token string, now time.Time) (group.Invite, error)
 		!role.Valid() || role == group.RoleOwner {
 		// Same silence as parse: a caller learns that the token is unusable
 		// and not which field gave it away.
-		return group.Invite{}, types.NewUnauthenticatedError("invite token is not valid")
+		return group.Invite{}, types.NewUnauthenticatedError("invite token is not valid").
+			Because("invite.invalid")
 	}
 	return group.Invite{
 		Group:     group.ID(parsed.Subject),

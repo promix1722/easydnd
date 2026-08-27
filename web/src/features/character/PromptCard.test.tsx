@@ -203,7 +203,7 @@ describe('PromptCard', () => {
       <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />,
     )
 
-    // The block is headed "Two to be proficient in · from Rogue". A card that
+    // The block is headed "2 to be proficient in · from Rogue". A card that
     // said "Choose 2 to be proficient in" under it would be asking twice.
     expect(screen.queryByText('Choose 2 to be proficient in')).not.toBeInTheDocument()
     expect(screen.queryByText('from Rogue')).not.toBeInTheDocument()

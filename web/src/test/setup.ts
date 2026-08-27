@@ -5,6 +5,7 @@ import { cleanup } from '@testing-library/react'
 import { configure } from '@testing-library/react'
 
 import { resetCatalogCache } from '@/lib/api'
+import { resetRequestLocale } from '@/lib/api/locale'
 import { resetViewport } from './viewport'
 
 /**
@@ -86,8 +87,15 @@ Element.prototype.scrollIntoView ??= function scrollIntoView(): void {}
  * thing standing between that and a test passing because of what ran before it.
  *
  * The list is short because there is very little module-level mutable state in
- * src/: the catalogue's in-flight request cache and the viewport width. Add to
- * it when you add to those.
+ * src/: the catalogue's in-flight request cache, the viewport width, and which
+ * language the API client is asking for. Add to it when you add to those.
+ *
+ * The language is the newest entry and the easiest to overlook, because it has
+ * two homes. `src/lib/api/locale.ts` holds the one `request()` reads, and it is
+ * reset here. The *displayed* language is not module state at all -- it lives
+ * on an i18next instance that `src/test/render.tsx` creates per render and
+ * pins to English -- which is deliberate, and is why a test that switches
+ * language cannot leak one into the next file.
  */
 afterEach(() => {
   cleanup()
@@ -96,4 +104,12 @@ afterEach(() => {
   // here means a file that forgets cannot reach the next one.
   vi.unstubAllGlobals()
   resetCatalogCache()
+  resetRequestLocale()
+  // The language detector caches a choice here. A test that switches language
+  // would otherwise hand it to the next file that autodetects.
+  try {
+    window.sessionStorage.clear()
+  } catch {
+    // A jsdom without storage is still a jsdom worth running tests in.
+  }
 })

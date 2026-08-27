@@ -11,6 +11,11 @@
  *
  *   theme -> lib -> ui -> shell -> features -> routes
  *
+ * `domain/` sits beside `theme/` at the bottom: pure rules, no framework, no
+ * transport. It holds no user-facing words either -- those live in
+ * web/locales/*.json -- so the functions there return message keys and let the
+ * caller translate.
+ *
  * Imports point left. Run with `npm run lint:layers`.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -68,8 +73,8 @@ const RULES = [
 ]
 
 /**
- * The packages only `src/ui/` may import: the component library, the icon set
- * it draws with, and the carousel engine underneath `ui/SectionDeck.tsx`.
+ * Vendors that exactly one directory may import.
+ *
  * Listed separately from RULES so that a new top-level directory is denied by
  * default rather than silently exempt -- and as a list rather than one name so
  * that adding a second vendor is an edit here rather than a hole. `@tabler/`
@@ -78,9 +83,32 @@ const RULES = [
  * hole one package wider -- `@mantine/carousel` is guarded by the first entry,
  * but the engine it wraps ships its own types and nothing stopped a feature
  * reaching for them.
+ *
+ * `dir` is a path under src/, not a layer: `lib/i18n` is a directory inside a
+ * layer, and the whole of `lib/` may not import i18next just because part of
+ * it does.
  */
-const UI_ONLY_PACKAGES = ['@mantine/', '@tabler/', 'embla-carousel']
-const UI_ONLY_DIR = 'ui'
+const VENDOR_RULES = [
+  {
+    dir: 'ui',
+    packages: ['@mantine/', '@tabler/', 'embla-carousel'],
+    why: (vendor) => `only src/ui/ may import ${vendor}*; import from '@/ui' instead (re-export it there if missing)`,
+  },
+  {
+    // The same argument as the design system, for the same reason. A translator
+    // is a vendor the whole app would otherwise reach for directly, and
+    // `useTranslation()` in sixty files is `useTranslation()` in sixty files to
+    // change. `@/lib/i18n` re-exports `useT`, which also carries the key type.
+    dir: 'lib/i18n',
+    packages: ['i18next', 'react-i18next'],
+    why: (vendor) => `only src/lib/i18n/ may import ${vendor}*; import { useT } from '@/lib/i18n' instead`,
+  },
+]
+
+/** True when `rel` names a file inside `dir` (or is `dir` itself, one level up). */
+function inDir(rel, dir) {
+  return rel === dir || rel.startsWith(dir.split('/').join(sep) + sep)
+}
 
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g
 
@@ -116,15 +144,17 @@ for (const file of walk(SRC)) {
   const specifiers = importsOf(readFileSync(file, 'utf8'))
 
   for (const specifier of specifiers) {
-    const vendor = UI_ONLY_PACKAGES.find((prefix) => specifier.startsWith(prefix))
-    if (vendor && top !== UI_ONLY_DIR) {
-      violations.push({
-        file: rel,
-        specifier,
-        why: `only src/${UI_ONLY_DIR}/ may import ${vendor}*; import from '@/ui' instead (re-export it there if missing)`,
-      })
-      continue
+    let claimed = false
+    for (const vendorRule of VENDOR_RULES) {
+      const vendor = vendorRule.packages.find((prefix) => specifier.startsWith(prefix))
+      if (!vendor) continue
+      if (!inDir(rel, vendorRule.dir)) {
+        violations.push({ file: rel, specifier, why: vendorRule.why(vendor) })
+      }
+      claimed = true
+      break
     }
+    if (claimed) continue
     if (!rule) continue
     const denied = rule.deny.find((prefix) => specifier === prefix || specifier.startsWith(prefix))
     if (denied) {

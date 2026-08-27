@@ -9,6 +9,7 @@ import {
   getPrompts,
   getSheet,
   replaceEvent,
+  describeField,
 } from '@/lib/api'
 import type {
   ApiFieldError,
@@ -18,6 +19,8 @@ import type {
   PromptsResponse,
   Sheet,
 } from '@/lib/api'
+import { useT } from '@/lib/i18n'
+import type { Translate } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
@@ -43,6 +46,7 @@ import {
   settledKey,
 } from './blocks'
 import type { Asking, Block, BlockOrder } from './blocks'
+import { eventLabel, stageLabel } from './labels'
 import { resolveRefNames } from './refNames'
 import { settledByStage } from './settled'
 import type { SettledRow } from './settled'
@@ -51,9 +55,7 @@ import type { Scores } from './AbilityScoresForm'
 
 import {
   STAGES,
-  STAGE_LABELS,
   answerable,
-  eventLabel,
   kindOf,
   pickLabel,
   promptLabel,
@@ -112,6 +114,7 @@ interface Preview {
  * own tab without this screen routing it anywhere.
  */
 export function BuildScreen() {
+  const t = useT()
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -231,7 +234,7 @@ export function BuildScreen() {
     setOpenKey(NEW_NAME_KEY)
   }
 
-  const settled = settledByStage(view)
+  const settled = settledByStage(t, view)
   // While the character is being created there is no log to read yet, so the
   // question it is being created by is still the thing on screen.
   const posingName = isNew || creating
@@ -308,7 +311,7 @@ export function BuildScreen() {
   const createCharacterFromDraft = async (landOn: Stage) => {
     if (create.pending) return
     if (nameDraft.trim() === '') {
-      setNameError('A character needs a name to be created under.')
+      setNameError(t('build.nameRequired'))
       return
     }
     const created = await create.run({
@@ -462,18 +465,18 @@ export function BuildScreen() {
   if (build.loading && !creating) {
     return (
       <Page
-        trail={buildTrail(isNew, null, id)}
-        state={{ kind: 'loading', what: 'Working out what is next...' }}
+        trail={buildTrail(t, isNew, null, id)}
+        state={{ kind: 'loading', what: t('build.loading') }}
       />
     )
   }
   if (build.error !== null) {
     return (
       <Page
-        trail={buildTrail(isNew, null, id)}
+        trail={buildTrail(t, isNew, null, id)}
         state={{
           kind: 'failed',
-          title: 'Could not load this character',
+          title: t('build.loadFailed'),
           detail: build.error,
           onRetry: build.reload,
         }}
@@ -494,7 +497,7 @@ export function BuildScreen() {
       // The draft, while the character it names is being created: the sheet
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
-      trail={buildTrail(isNew, creating ? nameDraft.trim() : title(view), id)}
+      trail={buildTrail(t, isNew, creating ? nameDraft.trim() : title(view), id)}
       /*
        * On the heading line, against the right edge, and only once there is a
        * character to finish.
@@ -514,27 +517,27 @@ export function BuildScreen() {
                 variant={view.prompts.complete ? 'filled' : 'light'}
                 onClick={() => void navigate(`/characters/${id}`)}
               >
-                Finish
+                {t('build.finish')}
               </Button>
             ),
           })}
       subtitle={
         posingName
-          ? 'A name is all it takes to start. Everything else is a question, asked once there is somebody to ask it about.'
+          ? t('build.subtitleNaming')
           : view.prompts.complete
-            ? 'Everything required is answered. What is left is optional -- and a level.'
-            : 'Answer what is open, in any order.'
+            ? t('build.subtitleComplete')
+            : t('build.subtitleOpen')
       }
     >
       <Stack gap="lg">
 
         {failure !== null && (
-          <Alert color="red" title="The server did not accept that">
+          <Alert color="red" title={t('build.rejected')}>
             <Stack gap={4}>
               <Text size="sm">{failure}</Text>
               {fields.map((field) => (
                 <Text key={field.field} size="xs" c="dimmed">
-                  {field.message ?? field.rule}
+                  {describeField(t, field)}
                 </Text>
               ))}
             </Stack>
@@ -546,7 +549,7 @@ export function BuildScreen() {
           // already the crumb above this. A landmark renamed per character
           // would give a screen-reader user a different table of contents on
           // every build.
-          label="Character build"
+          label={t('build.deckLabel')}
           value={stage}
           onChange={(next) => goToStage(next as Stage)}
           /*
@@ -563,7 +566,7 @@ export function BuildScreen() {
             const after = stageAfter(each, open)
             return {
               value: each,
-              label: STAGE_LABELS[each],
+              label: stageLabel(t, each),
               content: (
                 <StagePanel
                   blocks={blocksByStage.get(each) ?? []}
@@ -615,15 +618,14 @@ export function BuildScreen() {
         <ModalSheet
           opened={preview !== null}
           onClose={() => cancelPreview()}
-          title={preview?.event === null ? 'Put that question again?' : 'Change this?'}
+          title={preview?.event === null ? t('build.askAgainTitle') : t('build.changeTitle')}
         >
           {preview !== null && (
             <Stack gap="md">
               <Text size="sm">
-                {`${preview.dropped.length === 1 ? 'One other answer' : `${preview.dropped.length} other answers`} `}
                 {preview.event === null
-                  ? 'depend on this one and cannot survive it being asked again.'
-                  : 'depend on this and cannot survive the change.'}
+                  ? t('build.dropWarningAskAgain', { count: preview.dropped.length })
+                  : t('build.dropWarningChange', { count: preview.dropped.length })}
               </Text>
 
               {preview.dropped.length > 0 && (
@@ -632,11 +634,11 @@ export function BuildScreen() {
                     <div key={entry.seq}>
                       <Group gap={6}>
                         <Text size="sm" fw={500}>
-                          {eventLabel(entry.type)}
+                          {eventLabel(t, entry.type)}
                           {entry.ref !== undefined && `: ${preview.names.get(entry.ref) ?? entry.ref}`}
                         </Text>
                         <Badge size="xs" variant="light" color="gray">
-                          {REASONS[entry.reason] ?? entry.reason}
+                          {reasonLabel(t, entry.reason)}
                         </Badge>
                       </Group>
                       {(entry.lost ?? []).map((lost) => (
@@ -648,8 +650,7 @@ export function BuildScreen() {
                     </div>
                   ))}
                   <Text size="xs" c="dimmed">
-                    Nothing is lost that cannot be answered again: each of these becomes an open
-                    question, waiting under whichever tab it belongs to.
+                    {t('build.dropReassurance')}
                   </Text>
                 </Stack>
               )}
@@ -660,10 +661,10 @@ export function BuildScreen() {
                   loading={revise.pending || remove.pending}
                   onClick={() => void commit()}
                 >
-                  {preview.event === null ? 'Ask it again' : 'Change it'}
+                  {preview.event === null ? t('build.askAgain') : t('answer.changeIt')}
                 </Button>
                 <Button variant="subtle" onClick={() => cancelPreview()}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </Group>
             </Stack>
@@ -687,9 +688,9 @@ export function BuildScreen() {
  * somebody has open is not worth breaking over a word, and this file's own
  * name is the one place the two spellings meet.
  */
-function buildTrail(isNew: boolean, name: string | null, id: string): Crumb[] {
-  if (isNew) return [{ label: 'New character' }]
-  return [{ label: name, to: `/characters/${id}` }, { label: 'Creation' }]
+function buildTrail(t: Translate, isNew: boolean, name: string | null, id: string): Crumb[] {
+  if (isNew) return [{ label: t('characters.newCharacter') }]
+  return [{ label: name, to: `/characters/${id}` }, { label: t('build.creation') }]
 }
 
 /**
@@ -737,10 +738,16 @@ function reaskedKey(row: SettledRow): string | null {
 }
 
 /** How a drop reason reads, without borrowing a category's word. */
-const REASONS: Record<string, string> = {
-  'not-offered': 'no longer offered',
-  'answers-dropped': 'answers no longer legal',
-  empty: 'nothing left in it',
+const REASONS = {
+  'not-offered': 'build.reason.notOffered',
+  'answers-dropped': 'build.reason.answersDropped',
+  empty: 'build.reason.empty',
+} as const
+
+/** Why an entry was dropped, or the server's own word if this client is behind. */
+function reasonLabel(t: Translate, reason: string): string {
+  const key = REASONS[reason as keyof typeof REASONS]
+  return key === undefined ? reason : t(key)
 }
 
 /**

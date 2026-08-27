@@ -3,6 +3,9 @@ import { Link, useParams } from 'react-router'
 import { getEvents } from '@/lib/api'
 import type { Answer, CharacterEvent } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
+import { useLocale, useT } from '@/lib/i18n'
+
+import { describeChange, eventLabel, formatAt } from './labels'
 import {
   Anchor,
   Badge,
@@ -19,9 +22,6 @@ import {
 import { resolveRefNames } from './refNames'
 
 import {
-  describeChange,
-  eventLabel,
-  formatAt,
   kindOf,
   pickLabel,
   promptLabel,
@@ -48,6 +48,8 @@ interface LogView {
  * that fails whenever the thing it exists to diagnose fails is no use.
  */
 export function CharacterLogScreen() {
+  const t = useT()
+  const locale = useLocale()
   const { id = '' } = useParams()
   const log = useResource<LogView>(`log:${id}`, async (signal) => {
     const { events } = await getEvents(id, signal)
@@ -55,8 +57,8 @@ export function CharacterLogScreen() {
   })
 
   const state = pageState(log, {
-    title: 'Could not load this log',
-    fallback: 'Unknown error',
+    title: t('log.loadFailed'),
+    fallback: t('error.unknown'),
     onRetry: log.reload,
   })
 
@@ -74,13 +76,13 @@ export function CharacterLogScreen() {
    * `/characters/:id/build` is the asymmetry worth noting: it holds the sheet
    * already, so it gets the full three-crumb trail.
    */
-  const trail = [{ label: 'Event log' }]
+  const trail = [{ label: t('log.title') }]
 
   if (state.kind !== 'ready' || log.data === null) {
     return (
       <Page
         trail={trail}
-        state={state.kind === 'loading' ? { ...state, what: 'Reading the log...' } : state}
+        state={state.kind === 'loading' ? { ...state, what: t('log.loading') } : state}
       />
     )
   }
@@ -90,10 +92,10 @@ export function CharacterLogScreen() {
   return (
     <Page
       trail={trail}
-      subtitle={`${events.length === 1 ? '1 event' : `${events.length} events`} \u00b7 the record the sheet is projected from`}
+      subtitle={t('log.subtitle', { count: events.length })}
       actions={
         <Anchor component={Link} to={`/characters/${id}`}>
-          <Button variant="subtle">Back to sheet</Button>
+          <Button variant="subtle">{t('log.backToSheet')}</Button>
         </Anchor>
       }
     >
@@ -101,7 +103,7 @@ export function CharacterLogScreen() {
         <DataList
           items={events}
           getKey={(event) => String(event.seq ?? 0)}
-          empty="Nothing recorded yet."
+          empty={t('log.empty')}
           columns={[
             {
               key: 'seq',
@@ -114,12 +116,12 @@ export function CharacterLogScreen() {
             },
             {
               key: 'event',
-              header: 'Event',
+              header: t('log.event'),
               primary: true,
               render: (event) => (
                 <Group gap={6}>
                   <Text size="sm" fw={500}>
-                    {eventLabel(event.type)}
+                    {eventLabel(t, event.type)}
                   </Text>
                   {event.level !== undefined && event.level > 0 && (
                     <Badge size="xs" variant="light">
@@ -131,16 +133,16 @@ export function CharacterLogScreen() {
             },
             {
               key: 'at',
-              header: 'When',
+              header: t('log.when'),
               render: (event) => (
                 <Text size="sm" c="dimmed">
-                  {formatAt(event.at)}
+                  {formatAt(locale, event.at)}
                 </Text>
               ),
             },
             {
               key: 'detail',
-              header: 'Detail',
+              header: t('log.detail'),
               render: (event) => <EventDetail event={event} names={names} />,
             },
           ]}
@@ -165,6 +167,7 @@ function answersWorthShowing(choices: readonly Answer[]): Answer[] {
 }
 
 function EventDetail({ event, names }: { event: CharacterEvent; names: Map<string, string> }) {
+  const t = useT()
   const changes = event.changes ?? []
   const choices = answersWorthShowing(event.choices ?? [])
   const note = event.note ?? ''
@@ -197,7 +200,7 @@ function EventDetail({ event, names }: { event: CharacterEvent; names: Map<strin
         </div>
       ))}
       {changes.map((change, index) => (
-        <Code key={`${change.path}:${index}`}>{describeChange(change)}</Code>
+        <Code key={`${change.path}:${index}`}>{describeChange(t, change)}</Code>
       ))}
       {note !== '' && <Text size="sm">{note}</Text>}
     </Stack>

@@ -78,8 +78,11 @@ describe('LandingPage', () => {
       .style.getPropertyValue('--carousel-control-size')
 
     expect(size).toContain('2.75rem')
-    expect(screen.getByRole('button', { name: 'Next slide' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Previous slide' })).toBeInTheDocument()
+    // "Next" and "Previous" rather than Mantine's "Next slide" / "Previous
+    // slide": those are the library's own English, out of reach of the
+    // catalogue, so LandingPage names the arrows itself.
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument()
   })
 
   // And not drawn at all on a phone, which is the viewport they are least use
@@ -88,8 +91,8 @@ describe('LandingPage', () => {
   it('draws no arrows on a touchscreen', () => {
     renderAt('mobile', <LandingPage />)
 
-    expect(screen.queryByRole('button', { name: 'Next slide' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Previous slide' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument()
     // The panels are still reachable -- this removes a control, not a way
     // through.
     expect(screen.getByRole('region', { name: 'What easydnd is for' })).toBeInTheDocument()

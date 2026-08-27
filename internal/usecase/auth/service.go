@@ -485,10 +485,13 @@ func normalizeDisplayName(name string) (string, error) {
 	switch {
 	case utf8.RuneCountInString(name) < MinDisplayName:
 		return "", types.NewFieldValidationError("display name is required",
-			types.FieldError{Field: "display_name", Rule: "required", Message: "tell us what to call you"})
+			types.FieldError{Field: "display_name", Rule: "required", Reason: "field.displayName.required"})
 	case utf8.RuneCountInString(name) > MaxDisplayName:
 		return "", types.NewFieldValidationError("display name is too long",
-			types.FieldError{Field: "display_name", Rule: "max", Message: "at most 64 characters"})
+			types.FieldError{
+				Field: "display_name", Rule: "max",
+				Reason: "field.maxChars", Args: types.Args{"max": MaxDisplayName},
+			})
 	case !utf8.ValidString(name):
 		return "", types.NewFieldValidationError("display name is not valid text",
 			types.FieldError{Field: "display_name", Rule: "encoding"})

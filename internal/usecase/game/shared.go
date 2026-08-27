@@ -60,7 +60,7 @@ func (s *Service) owned(
 		return character.Character{}, err
 	}
 	if c.Owner != character.OwnerID(actor) {
-		return character.Character{}, types.NewNotFoundError("character %q", id)
+		return character.Character{}, types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
 	return c, nil
 }

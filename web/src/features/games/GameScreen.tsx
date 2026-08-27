@@ -9,7 +9,9 @@ import {
   listTable,
   removeFromGame,
   renameGame,
+  fieldMessage,
 } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
@@ -32,7 +34,7 @@ import {
   TextInput,
 } from '@/ui'
 
-import { atLeast, ROLE_LABELS } from '../groups/roles'
+import { atLeast, roleLabel } from '../groups/roles'
 import { FolderTreeSheet } from './FolderTreeSheet'
 import { PickCharactersSheet } from './PickCharactersSheet'
 
@@ -40,6 +42,7 @@ import { classLine } from '@/domain'
 
 /** One game: its name, and who is at it. */
 export function GameScreen() {
+  const t = useT()
   const { id: gameId = '' } = useParams()
   const navigate = useNavigate()
   const { data, error, loading, reload } = useResource(`game:${gameId}`, (signal) =>
@@ -64,7 +67,7 @@ export function GameScreen() {
 
   const state = pageState(
     { data, error, loading },
-    { title: 'Could not load this game', fallback: 'That game is not there.', onRetry: reload },
+    { title: t('game.loadFailed'), fallback: t('game.missing'), onRetry: reload },
   )
 
   if (state.kind !== 'ready' || data === null) {
@@ -113,7 +116,7 @@ export function GameScreen() {
   return (
     <Page
       trail={[{ label: game.name }]}
-      badge={<Badge variant="light">{ROLE_LABELS[game.role]}</Badge>}
+      badge={<Badge variant="light">{roleLabel(t, game.role)}</Badge>}
       actions={
         canManage ? (
           <>
@@ -126,7 +129,7 @@ export function GameScreen() {
                 setRenaming(true)
               }}
             >
-              Rename
+              {t('common.rename')}
             </Button>
             <Button
               size={ACTION_SIZE}
@@ -136,7 +139,7 @@ export function GameScreen() {
               loading={destroy.pending}
               onClick={() => void close()}
             >
-              Delete
+              {t('common.delete')}
             </Button>
           </>
         ) : undefined
@@ -144,7 +147,7 @@ export function GameScreen() {
     >
       <Stack gap="md">
         {failure !== null && (
-          <Alert color="red" title="That did not work">
+          <Alert color="red" title={t('group.actionFailed')}>
             {failure}
           </Alert>
         )}
@@ -155,7 +158,7 @@ export function GameScreen() {
           columns={[
             {
               key: 'name',
-              header: 'Character',
+              header: t('game.character'),
               primary: true,
               render: (character: TableCharacter) => (
                 <Anchor component={Link} to={`/groups/${game.group_id}/characters/${character.id}`}>
@@ -165,12 +168,12 @@ export function GameScreen() {
             },
             {
               key: 'classes',
-              header: 'Class',
+              header: t('game.class'),
               render: (character: TableCharacter) => classLine(character.classes),
             },
             {
               key: 'level',
-              header: 'Level',
+              header: t('game.level'),
               render: (character: TableCharacter) => character.level,
             },
             {
@@ -187,13 +190,13 @@ export function GameScreen() {
                   >
                     {/* Out of this game, not off the table: giving up a seat is
                         not taking the character back. */}
-                    Remove
+                    {t('common.remove')}
                   </Button>
                 )
               },
             },
           ]}
-          empty="Nobody is at this game yet."
+          empty={t('game.empty')}
         />
 
         {/* Under the table, on the left. Two ways in, because they are two
@@ -208,7 +211,7 @@ export function GameScreen() {
               leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
               onClick={() => setPicking('group')}
             >
-              Add character from group
+              {t('game.addFromGroup')}
             </Button>
             <Button
               size={ACTION_SIZE}
@@ -216,7 +219,7 @@ export function GameScreen() {
               leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
               onClick={() => setPicking('mine')}
             >
-              Add my characters
+              {t('game.addMine')}
             </Button>
           </Group>
         )}
@@ -224,9 +227,9 @@ export function GameScreen() {
         <PickCharactersSheet
           key={picking === 'group' ? 'group' : 'group-closed'}
           opened={picking === 'group'}
-          title="Add from the group"
-          description="Everything this group has shared. Tick as many as you want."
-          empty="Nobody has shared a character with this group yet."
+          title={t('game.addFromGroupTitle')}
+          description={t('game.pickShared')}
+          empty={t('game.nothingShared')}
           characters={seatable}
           loading={table.loading}
           pending={add.pending}
@@ -249,17 +252,17 @@ export function GameScreen() {
           }}
         />
 
-        <ModalSheet opened={renaming} onClose={() => setRenaming(false)} title="Rename this game">
+        <ModalSheet opened={renaming} onClose={() => setRenaming(false)} title={t('games.renameTitle')}>
           <Stack gap="sm">
             <TextInput
-              label="Name"
+              label={t('common.name')}
               value={name}
-              error={rename.fields.find((field) => field.field === 'name')?.message}
+              error={fieldMessage(t, rename.fields, 'name')}
               onChange={(event) => setName(event.currentTarget.value)}
             />
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setRenaming(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 loading={rename.pending}
@@ -268,7 +271,7 @@ export function GameScreen() {
                   void act(rename.run(gameId, name))
                 }}
               >
-                Rename
+                {t('common.rename')}
               </Button>
             </Group>
           </Stack>

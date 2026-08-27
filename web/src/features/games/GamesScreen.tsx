@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
 import type { GameSummary, GroupSummary } from '@/lib/api'
-import { createGame, deleteGame, listGames, listGroups, renameGame } from '@/lib/api'
+import { fieldMessage, createGame, deleteGame, listGames, listGroups, renameGame } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
@@ -36,6 +37,7 @@ import { atLeast } from '../groups/roles'
  * list rather than having to remember which table Thursday's game is at.
  */
 export function GamesScreen() {
+  const t = useT()
   const navigate = useNavigate()
   const games = useResource('games', (signal) => listGames(signal))
   // The groups are for the picker, and for deciding whether to offer one at
@@ -58,8 +60,8 @@ export function GamesScreen() {
   }
 
   const state = pageState(games, {
-    title: 'Could not load your games',
-    fallback: 'Unknown error',
+    title: t('games.loadFailed'),
+    fallback: t('error.unknown'),
     onRetry: games.reload,
   })
 
@@ -98,7 +100,7 @@ export function GamesScreen() {
           columns={[
             {
               key: 'name',
-              header: 'Game',
+              header: t('games.game'),
               primary: true,
               render: (game: GameSummary) => (
                 <Anchor component={Link} to={`/games/${game.id}`}>
@@ -108,7 +110,7 @@ export function GamesScreen() {
             },
             {
               key: 'group',
-              header: 'Group',
+              header: t('games.group'),
               render: (game: GameSummary) => (
                 <Anchor component={Link} to={`/groups/${game.group_id}`}>
                   <Text size="sm" c="dimmed">
@@ -135,7 +137,7 @@ export function GamesScreen() {
                         setRenaming(game)
                       }}
                     >
-                      Rename
+                      {t('common.rename')}
                     </Button>
                     <Button
                       size={ACTION_SIZE}
@@ -144,18 +146,14 @@ export function GamesScreen() {
                       leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
                       onClick={() => setDeleting(game)}
                     >
-                      Delete
+                      {t('common.delete')}
                     </Button>
                   </Group>
                 )
               },
             },
           ]}
-          empty={
-            tables.length > 0
-              ? 'No games yet. Open one at a table you run.'
-              : 'No games yet. A DM at one of your groups opens them.'
-          }
+          empty={tables.length > 0 ? t('games.emptyForDm') : t('games.empty')}
         />
 
         {/* Under the table, on the left. */}
@@ -170,7 +168,7 @@ export function GamesScreen() {
                 setOpening(true)
               }}
             >
-              New game
+              {t('games.new')}
             </Button>
           </Group>
         )}
@@ -178,24 +176,24 @@ export function GamesScreen() {
         <ModalSheet
           opened={renaming !== null}
           onClose={() => setRenaming(null)}
-          title="Rename this game"
+          title={t('games.renameTitle')}
         >
           <Stack gap="sm">
             <TextInput
-              label="Name"
+              label={t('common.name')}
               value={newName}
-              error={rename.fields.find((field) => field.field === 'name')?.message}
+              error={fieldMessage(t, rename.fields, 'name')}
               onChange={(event) => setNewName(event.currentTarget.value)}
               data-autofocus
             />
             {rename.error !== null && (
-              <Alert color="red" title="Could not rename it">
+              <Alert color="red" title={t('games.renameFailed')}>
                 {rename.error}
               </Alert>
             )}
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setRenaming(null)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 loading={rename.pending}
@@ -205,7 +203,7 @@ export function GamesScreen() {
                   if (target !== null) void act(rename.run(target.id, newName))
                 }}
               >
-                Rename
+                {t('common.rename')}
               </Button>
             </Group>
           </Stack>
@@ -214,16 +212,18 @@ export function GamesScreen() {
         <ModalSheet
           opened={deleting !== null}
           onClose={() => setDeleting(null)}
-          title="Delete this game"
+          title={t('games.deleteTitle')}
         >
           <Stack gap="sm">
             <Text size="sm">
-              {deleting?.name} goes. The characters stay on {deleting?.group_name}&rsquo;s table --
-              they were never the game&rsquo;s.
+              {t('games.deleteWarning', {
+                name: deleting?.name ?? '',
+                group: deleting?.group_name ?? '',
+              })}
             </Text>
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setDeleting(null)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 color="red"
@@ -234,26 +234,26 @@ export function GamesScreen() {
                   if (target !== null) void act(destroy.run(target.id))
                 }}
               >
-                Delete
+                {t('common.delete')}
               </Button>
             </Group>
           </Stack>
         </ModalSheet>
 
-        <ModalSheet opened={opening} onClose={() => setOpening(false)} title="Open a game">
+        <ModalSheet opened={opening} onClose={() => setOpening(false)} title={t('games.openTitle')}>
           <Stack gap="sm">
             <Select
-              label="Group"
+              label={t('games.group')}
               data={tables.map((g: GroupSummary) => ({ value: g.id, label: g.name }))}
               value={group}
               onChange={setGroup}
               allowDeselect={false}
             />
             <TextInput
-              label="Name"
-              placeholder="Thursday night"
+              label={t('common.name')}
+              placeholder={t('games.namePlaceholder')}
               value={name}
-              error={open.fields.find((field) => field.field === 'name')?.message}
+              error={fieldMessage(t, open.fields, 'name')}
               onChange={(event) => setName(event.currentTarget.value)}
               data-autofocus
             />
@@ -261,16 +261,16 @@ export function GamesScreen() {
                 behind the modal, where it read as a failure of the whole
                 screen rather than of the form in front of you. */}
             {open.error !== null && (
-              <Alert color="red" title="Could not open the game">
+              <Alert color="red" title={t('games.openFailed')}>
                 {open.error}
               </Alert>
             )}
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setOpening(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button loading={open.pending} onClick={() => void create()}>
-                Open
+                {t('games.open')}
               </Button>
             </Group>
           </Stack>

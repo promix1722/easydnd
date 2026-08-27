@@ -80,7 +80,7 @@ func parseSlugs(raw string) ([]string, error) {
 	if len(out) > maxSlugFilter {
 		return nil, types.NewFieldValidationError("too many slugs requested", types.FieldError{
 			Field: SlugsQueryParam, Rule: "max",
-			Message: "name at most 200 entries in one request",
+			Reason: "field.slugs.max",
 		})
 	}
 	return out, nil

@@ -1,6 +1,8 @@
 import { ActionIcon, Group, NumberInput, Paper, Stack, Text } from '@/ui'
+import { useT } from '@/lib/i18n'
 
-import { abilityName } from '@/domain'
+import { abilityName } from './labels'
+
 
 export interface ScoreStepperProps {
   ability: string
@@ -53,7 +55,8 @@ export function ScoreStepper({
   max,
   error,
 }: ScoreStepperProps) {
-  const name = abilityName(ability)
+  const t = useT()
+  const name = abilityName(t, ability)
 
   return (
     <Paper withBorder p="sm" radius="md">
@@ -72,7 +75,7 @@ export function ScoreStepper({
           <Group gap={6} wrap="nowrap">
             <ActionIcon
               variant="default"
-              aria-label={`Lower ${name}`}
+              aria-label={t('scores.lower', { name })}
               disabled={!canLower}
               onClick={() => onStep(-1)}
             >
@@ -99,7 +102,7 @@ export function ScoreStepper({
             )}
             <ActionIcon
               variant="default"
-              aria-label={`Raise ${name}`}
+              aria-label={t('scores.raise', { name })}
               disabled={!canRaise}
               onClick={() => onStep(1)}
             >

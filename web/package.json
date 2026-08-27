@@ -14,6 +14,7 @@
     "typecheck": "tsc -b",
     "lint": "oxlint --deny-warnings",
     "lint:layers": "node scripts/check-layers.mjs",
+    "check:messages": "node scripts/check-messages.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "test": "vitest"
   },
@@ -24,8 +25,10 @@
     "@tabler/icons-react": "^3.46.0",
     "embla-carousel": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
+    "i18next": "^26.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.12",
     "react-router": "^8.3.0"
   },
   "devDependencies": {

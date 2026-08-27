@@ -28,7 +28,6 @@ package hexsheet
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"time"
 
@@ -84,12 +83,12 @@ func Import(r io.Reader, cat *catalog.Catalog, at time.Time) (character.Log, Rep
 		case errors.As(err, &syntax), errors.As(err, &mismatch):
 			return character.Log{}, Report{}, types.NewFieldValidationError(
 				"this file is not a HexSheet export", types.FieldError{
-					Field: "file", Rule: "malformed", Message: err.Error(),
+					Field: "file", Rule: "malformed",
 				})
 		}
 		return character.Log{}, Report{}, types.NewFieldValidationError(
 			"the export could not be read", types.FieldError{
-				Field: "file", Rule: "unreadable", Message: err.Error(),
+				Field: "file", Rule: "unreadable",
 			})
 	}
 
@@ -117,25 +116,25 @@ func validate(doc export) error {
 	if doc.ExportedFrom != "" && doc.ExportedFrom != "HexSheet" {
 		fields = append(fields, types.FieldError{
 			Field: "exportedFrom", Rule: "unsupported",
-			Message: fmt.Sprintf("this reads %s exports, not %s", "HexSheet", doc.ExportedFrom),
+			Reason: "field.import.wrongSource", Args: types.Args{"source": doc.ExportedFrom},
 		})
 	}
 	if system := doc.Character.GameSystem; system != "" && system != "dnd5e" {
 		fields = append(fields, types.FieldError{
 			Field: "character.gameSystem", Rule: "unsupported",
-			Message: fmt.Sprintf("%q is not D&D 5e", system),
+			Reason: "field.import.wrongSystem", Args: types.Args{"system": system},
 		})
 	}
 	if ruleset := doc.Character.Ruleset; ruleset != "" && ruleset != "2014" {
 		fields = append(fields, types.FieldError{
 			Field: "character.ruleset", Rule: "unsupported",
-			Message: fmt.Sprintf("easydnd targets the 2014 rules, this export is %q", ruleset),
+			Reason: "field.import.wrongRuleset", Args: types.Args{"ruleset": ruleset},
 		})
 	}
 	if doc.Character.Name == "" {
 		fields = append(fields, types.FieldError{
 			Field: "character.name", Rule: "required",
-			Message: "the export has no character name",
+			Reason: "field.import.noName",
 		})
 	}
 

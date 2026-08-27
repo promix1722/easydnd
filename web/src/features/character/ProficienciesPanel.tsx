@@ -3,6 +3,9 @@ import { Group, ProficiencyMark, SimpleGrid, Stack, Text } from '@/ui'
 
 import { signed, titleCase } from '@/domain'
 
+import { useT } from '@/lib/i18n'
+import type { MessageKey } from '@/lib/i18n'
+
 /**
  * Everything the character is trained with that is not a skill or a save:
  * tools, weapons, armor.
@@ -37,7 +40,8 @@ const TOOLS = new Set([
 
 interface Section {
   key: string
-  title: string
+  /** A message key: the table is a constant, the language is React state. */
+  title: MessageKey
   /** Tool checks are the ones whose fixed part is the proficiency bonus. */
   bonus: boolean
   holds: (type: string | undefined) => boolean
@@ -51,12 +55,12 @@ interface Section {
  * game, which is a thing to see rather than a thing to hide.
  */
 const SECTIONS: Section[] = [
-  { key: 'tools', title: 'Tools', bonus: true, holds: (type) => type !== undefined && TOOLS.has(type) },
-  { key: 'weapons', title: 'Weapons', bonus: false, holds: (type) => type === 'weapons' },
-  { key: 'armor', title: 'Armor', bonus: false, holds: (type) => type === 'armor' },
+  { key: 'tools', title: 'proficiency.tools', bonus: true, holds: (type) => type !== undefined && TOOLS.has(type) },
+  { key: 'weapons', title: 'proficiency.weapons', bonus: false, holds: (type) => type === 'weapons' },
+  { key: 'armor', title: 'proficiency.armor', bonus: false, holds: (type) => type === 'armor' },
   {
     key: 'other',
-    title: 'Other',
+    title: 'proficiency.other',
     bonus: false,
     holds: (type) => type === undefined || !TOOLS.has(type) && type !== 'weapons' && type !== 'armor',
   },
@@ -80,6 +84,7 @@ export function ProficienciesPanel({
   catalog,
   proficiencyBonus,
 }: ProficienciesPanelProps) {
+  const t = useT()
   const rows = (proficiencies ?? [])
     .map((slug) => ({
       slug,
@@ -91,7 +96,7 @@ export function ProficienciesPanel({
   if (rows.length === 0) {
     return (
       <Text size="sm" c="dimmed">
-        None yet.
+        {t('panel.noneYet')}
       </Text>
     )
   }
@@ -105,7 +110,7 @@ export function ProficienciesPanel({
         return (
           <Stack key={section.key} gap={4}>
             <Text size="xs" c="dimmed" tt="uppercase">
-              {section.title}
+              {t(section.title)}
             </Text>
             <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md" verticalSpacing={4}>
               {held.map((row) => (

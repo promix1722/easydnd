@@ -1,6 +1,13 @@
 export { request } from './client'
 export type { RequestOptions } from './client'
-export { ApiError, TransportError, describeError, isApiErrorEnvelope } from './errors'
+export {
+  ApiError,
+  TransportError,
+  describeError,
+  describeField,
+  fieldMessage,
+  isApiErrorEnvelope,
+} from './errors'
 export type { ApiErrorBody, ApiErrorEnvelope, ApiFieldError } from './errors'
 export { getHealth, getVersion } from './system'
 export type { HealthResponse, VersionResponse } from './system'

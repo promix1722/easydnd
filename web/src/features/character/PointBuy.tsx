@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n'
 import { Group, SimpleGrid, Stack, Text } from '@/ui'
 
 import { ScoreStepper } from './ScoreStepper'
@@ -32,6 +33,7 @@ export interface PointBuyProps {
  * inventing a rule to protect them from arithmetic they can see.
  */
 export function PointBuy({ scores, onChange }: PointBuyProps) {
+  const t = useT()
   const spent = pointsSpent(ABILITY_ORDER.map((ability) => scores[ability] ?? POINT_BUY_MIN))
   const left = POINT_BUY_BUDGET - spent
 
@@ -53,10 +55,10 @@ export function PointBuy({ scores, onChange }: PointBuyProps) {
     <Stack gap="sm">
       <Group justify="space-between" align="center">
         <Text size="sm" fw={600}>
-          {left} {left === 1 ? 'point' : 'points'} left of {POINT_BUY_BUDGET}
+          {t('pointBuy.left', { count: left, budget: POINT_BUY_BUDGET })}
         </Text>
         <Text size="xs" c="dimmed">
-          9-13 cost one each · 14 costs two · 15 costs two more
+          {t('pointBuy.prices')}
         </Text>
       </Group>
 
@@ -68,7 +70,7 @@ export function PointBuy({ scores, onChange }: PointBuyProps) {
               key={ability}
               ability={ability}
               value={score}
-              note={`${pointCost(score) ?? 0} spent`}
+              note={t('pointBuy.spent', { count: pointCost(score) ?? 0 })}
               canLower={priceOf(ability, -1) !== null}
               canRaise={priceOf(ability, 1) !== null}
               onStep={(by) => step(ability, by)}
@@ -80,8 +82,7 @@ export function PointBuy({ scores, onChange }: PointBuyProps) {
       </SimpleGrid>
 
       <Text size="xs" c="dimmed">
-        Nothing starts below 8 or is bought above 15. Racial bonuses are added by the rules, not
-        here, so a 15 and a +2 is a 17 on the sheet.
+        {t('pointBuy.hint')}
       </Text>
     </Stack>
   )

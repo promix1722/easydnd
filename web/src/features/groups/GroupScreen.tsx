@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
 import type { GroupDetail, GroupMember } from '@/lib/api'
-import { deleteGroup, getGroup, removeMember, renameGroup, setMemberRole } from '@/lib/api'
+import { fieldMessage, deleteGroup, getGroup, removeMember, renameGroup, setMemberRole } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
@@ -32,10 +33,11 @@ import {
 import { TablePanel } from '../games'
 
 import { InviteSheet } from './InviteSheet'
-import { atLeast, ROLE_LABELS } from './roles'
+import { atLeast, roleLabel } from './roles'
 
 /** One table: who is at it, and what this account may do about that. */
 export function GroupScreen() {
+  const t = useT()
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -55,7 +57,7 @@ export function GroupScreen() {
 
   const state = pageState(
     { data, error, loading },
-    { title: 'Could not load this group', fallback: 'That group is not there.', onRetry: reload },
+    { title: t('group.loadFailed'), fallback: t('group.missing'), onRetry: reload },
   )
 
   // The header renders either way, which is the change: this used to replace
@@ -92,14 +94,14 @@ export function GroupScreen() {
   return (
     <Page
       trail={[{ label: group.name }]}
-      badge={<Badge variant="light">{ROLE_LABELS[group.role]}</Badge>}
+      badge={<Badge variant="light">{roleLabel(t, group.role)}</Badge>}
       actions={
         <>
           {isOwner ? (
             // Rendered and disabled rather than hidden. A control that is not
             // there teaches nothing; one that is there with a reason teaches
             // the rule the first time somebody reaches for it.
-            <Tooltip label="Make somebody else the owner first, or delete the group">
+            <Tooltip label={t('group.ownerCannotLeave')}>
               <Button
                 size={ACTION_SIZE}
                 variant="subtle"
@@ -107,7 +109,7 @@ export function GroupScreen() {
                 data-disabled
                 onClick={(event) => event.preventDefault()}
               >
-                Leave
+                {t('groups.leave')}
               </Button>
             </Tooltip>
           ) : (
@@ -118,7 +120,7 @@ export function GroupScreen() {
               loading={remove.pending}
               onClick={() => void leave()}
             >
-              Leave
+              {t('groups.leave')}
             </Button>
           )}
           {canManage && (
@@ -131,7 +133,7 @@ export function GroupScreen() {
                 setRenaming(true)
               }}
             >
-              Rename
+              {t('common.rename')}
             </Button>
           )}
           {isOwner && (
@@ -143,7 +145,7 @@ export function GroupScreen() {
               loading={destroy.pending}
               onClick={() => void close()}
             >
-              Delete
+              {t('common.delete')}
             </Button>
           )}
         </>
@@ -151,15 +153,15 @@ export function GroupScreen() {
     >
       <Stack gap="md">
         {failure !== null && (
-          <Alert color="red" title="That did not work">
+          <Alert color="red" title={t('group.actionFailed')}>
             {failure}
           </Alert>
         )}
 
         <TabRow
           tabs={[
-            { value: 'members', label: 'Members' },
-            { value: 'characters', label: 'Characters' },
+            { value: 'members', label: t('group.members') },
+            { value: 'characters', label: t('section.characters') },
           ]}
           value={tab}
           onChange={setTab}
@@ -172,20 +174,20 @@ export function GroupScreen() {
           columns={[
             {
               key: 'name',
-              header: 'Member',
+              header: t('group.member'),
               primary: true,
               render: (member) => (
                 <Group gap="xs">
-                  <Text size="sm">{member.display_name || 'Unnamed'}</Text>
+                  <Text size="sm">{member.display_name || t('group.unnamed')}</Text>
                   {member.user_id === me && (
                     <Badge size="xs" variant="light">
-                      You
+                      {t('group.you')}
                     </Badge>
                   )}
                   {member.anonymous && (
-                    <Tooltip label="A guest. Their session expires, and they cannot return to this seat.">
+                    <Tooltip label={t('group.guestExplained')}>
                       <Badge size="xs" color="gray" variant="outline">
-                        Guest
+                        {t('group.guest')}
                       </Badge>
                     </Tooltip>
                   )}
@@ -194,8 +196,8 @@ export function GroupScreen() {
             },
             {
               key: 'role',
-              header: 'Role',
-              render: (member) => ROLE_LABELS[member.role],
+              header: t('group.role'),
+              render: (member) => roleLabel(t, member.role),
             },
             {
               key: 'actions',
@@ -210,28 +212,32 @@ export function GroupScreen() {
                   <Menu position="bottom-end" withinPortal>
                     <Menu.Target>
                       <Button size={ACTION_SIZE} variant="subtle">
-                        Manage
+                        {t('group.manage')}
                       </Button>
                     </Menu.Target>
                     <Menu.Dropdown>
                       {isOwner && member.role === 'player' && (
                         <Menu.Item onClick={() => void act(change.run(group.id, member.user_id, 'dm'))}>
-                          Make DM
+                          {t('group.makeDm')}
                         </Menu.Item>
                       )}
                       {isOwner && member.role === 'dm' && (
                         <Menu.Item
                           onClick={() => void act(change.run(group.id, member.user_id, 'player'))}
                         >
-                          Make player
+                          {t('group.makePlayer')}
                         </Menu.Item>
                       )}
-                      {isOwner && <Menu.Item onClick={() => setHandover(member)}>Make owner</Menu.Item>}
+                      {isOwner && (
+                        <Menu.Item onClick={() => setHandover(member)}>
+                          {t('group.makeOwner')}
+                        </Menu.Item>
+                      )}
                       <Menu.Item
                         color="red"
                         onClick={() => void act(remove.run(group.id, member.user_id))}
                       >
-                        Remove from group
+                        {t('group.removeMember')}
                       </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
@@ -239,7 +245,7 @@ export function GroupScreen() {
               },
             },
           ]}
-          empty="Nobody here yet."
+          empty={t('group.noMembers')}
         />
           )}
           {tab === 'members' && canManage && (
@@ -250,7 +256,7 @@ export function GroupScreen() {
                 leftSection={<IconUserPlus size={ACTION_ICON_SIZE} />}
                 onClick={() => setInviting(true)}
               >
-                Invite
+                {t('group.invite')}
               </Button>
             </Group>
           )}
@@ -259,19 +265,19 @@ export function GroupScreen() {
         <ModalSheet
           opened={renaming}
           onClose={() => setRenaming(false)}
-          title="Rename this group"
+          title={t('groups.renameTitle')}
         >
           <Stack gap="sm">
             <TextInput
-              label="Name"
+              label={t('common.name')}
               value={newName}
-              error={rename.fields.find((field) => field.field === 'name')?.message}
+              error={fieldMessage(t, rename.fields, 'name')}
               onChange={(event) => setNewName(event.currentTarget.value)}
               data-autofocus
             />
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setRenaming(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 loading={rename.pending}
@@ -280,7 +286,7 @@ export function GroupScreen() {
                   void act(rename.run(group.id, newName))
                 }}
               >
-                Rename
+                {t('common.rename')}
               </Button>
             </Group>
           </Stack>
@@ -298,18 +304,17 @@ export function GroupScreen() {
         <ModalSheet
           opened={handover !== null}
           onClose={() => setHandover(null)}
-          title="Hand over this group"
+          title={t('group.handoverTitle')}
         >
           <Stack gap="sm">
             {/* Named in full, because it is the one action here that cannot be
                 undone by the person taking it. */}
             <Text size="sm">
-              {handover?.display_name} becomes the owner. You become a DM, and can then leave the
-              group. Only they will be able to hand it back.
+              {t('group.handoverWarning', { name: handover?.display_name ?? '' })}
             </Text>
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setHandover(null)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 loading={change.pending}
@@ -319,7 +324,7 @@ export function GroupScreen() {
                   if (target !== null) void act(change.run(group.id, target.user_id, 'owner'))
                 }}
               >
-                Make owner
+                {t('group.makeOwner')}
               </Button>
             </Group>
           </Stack>

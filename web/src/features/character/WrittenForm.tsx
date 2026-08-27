@@ -3,6 +3,8 @@ import { useState } from 'react'
 import type { Change } from '@/lib/api'
 import { Button, Group, Stack, Textarea } from '@/ui'
 
+import { useT } from '@/lib/i18n'
+
 export interface WrittenFormProps {
   /** What is already written, so changing it starts from what it says. */
   lines?: readonly string[]
@@ -41,6 +43,7 @@ export function WrittenForm({
   submitLabel,
   onSubmit,
 }: WrittenFormProps) {
+  const t = useT()
   const [written, setWritten] = useState(() => lines?.join('\n\n') ?? '')
 
   const kept = written.trim()
@@ -49,7 +52,7 @@ export function WrittenForm({
     <Stack gap="md">
       <Textarea
         aria-label={noun}
-        placeholder="In their own words..."
+        placeholder={t('written.placeholder')}
         // Fixed rows rather than autosize: Mantine's autosizing textarea is
         // `react-textarea-autosize`, which measures with a listener jsdom has
         // no element to attach -- so the field could not even be focused in a

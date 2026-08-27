@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n'
 import { Anchor, Stack, Text, Title } from '@/ui'
 
 import {
@@ -30,10 +31,23 @@ import {
  * to change -- see that module's note on which copy is canonical.
  */
 export function LegalScreen() {
+  const t = useT()
+
   return (
     <Stack gap="lg" maw={640}>
-      <Title order={2}>Legal</Title>
+      <Title order={2}>{t('legal.title')}</Title>
 
+      {/*
+        The two notices below stay in English, and deliberately.
+
+        The SRD 5.1 paragraph is the attribution CC-BY-4.0 requires, pinned to
+        `cmd/srdgen`'s `attribution` constant by `attribution.test.ts` -- see
+        docs/licensing.md. A translated licence notice is a different notice,
+        and this is the one place in the client where the exact words are the
+        point rather than the meaning. The MIT paragraph beside it is left in
+        English for the same reason and so the section does not read as half
+        translated.
+      */}
       <Stack gap="xs">
         <Title order={4}>easydnd</Title>
         <Text size="sm">

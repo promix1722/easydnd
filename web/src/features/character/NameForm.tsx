@@ -1,5 +1,7 @@
 import { Button, Group, Stack, TextInput } from '@/ui'
 
+import { useT } from '@/lib/i18n'
+
 export interface NameFormProps {
   value: string
   onValueChange: (value: string) => void
@@ -39,13 +41,14 @@ export function NameForm({
   submitLabel,
   onSubmit,
 }: NameFormProps) {
+  const t = useT()
   const blank = value.trim() === ''
 
   return (
     <Stack gap="md">
       <TextInput
-        aria-label="Name"
-        placeholder="Name"
+        aria-label={t('common.name')}
+        placeholder={t('common.name')}
         value={value}
         error={error}
         onChange={(event) => onValueChange(event.currentTarget.value)}

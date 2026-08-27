@@ -206,7 +206,7 @@ func (r *GameRepository) ByID(_ context.Context, id domain.ID) (domain.Game, err
 
 	g, ok := r.items[id]
 	if !ok {
-		return domain.Game{}, types.NewNotFoundError("game %q", id)
+		return domain.Game{}, types.NewNotFoundError("game %q", id).Because("game.notFound")
 	}
 	return g, nil
 }
@@ -244,7 +244,7 @@ func (r *GameRepository) Rename(_ context.Context, id domain.ID, name string) er
 
 	g, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("game %q", id)
+		return types.NewNotFoundError("game %q", id).Because("game.notFound")
 	}
 	g.Name = name
 	r.items[id] = g
@@ -257,7 +257,7 @@ func (r *GameRepository) Delete(_ context.Context, id domain.ID) error {
 	defer r.mu.Unlock()
 
 	if _, ok := r.items[id]; !ok {
-		return types.NewNotFoundError("game %q", id)
+		return types.NewNotFoundError("game %q", id).Because("game.notFound")
 	}
 	delete(r.items, id)
 	delete(r.rosters, id)
@@ -286,7 +286,7 @@ func (r *GameRepository) AddCharacters(
 	defer r.mu.Unlock()
 
 	if _, ok := r.items[id]; !ok {
-		return types.NewNotFoundError("game %q", id)
+		return types.NewNotFoundError("game %q", id).Because("game.notFound")
 	}
 	// Build the whole new roster before committing it, so a rejected batch
 	// leaves nothing half-written.
@@ -317,7 +317,7 @@ func (r *GameRepository) RemoveCharacter(
 	defer r.mu.Unlock()
 
 	if _, ok := r.items[id]; !ok {
-		return types.NewNotFoundError("game %q", id)
+		return types.NewNotFoundError("game %q", id).Because("game.notFound")
 	}
 	roster := r.rosters[id]
 	rest := slices.DeleteFunc(slices.Clone(roster), func(e domain.Entry) bool {
@@ -336,7 +336,7 @@ func (r *GameRepository) Characters(_ context.Context, id domain.ID) ([]domain.E
 	defer r.mu.RUnlock()
 
 	if _, ok := r.items[id]; !ok {
-		return nil, types.NewNotFoundError("game %q", id)
+		return nil, types.NewNotFoundError("game %q", id).Because("game.notFound")
 	}
 	return slices.Clone(r.rosters[id]), nil
 }

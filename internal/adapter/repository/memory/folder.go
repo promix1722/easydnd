@@ -62,7 +62,7 @@ func (r *FolderRepository) Get(_ context.Context, id domain.FolderID) (domain.Fo
 
 	f, ok := r.items[id]
 	if !ok {
-		return domain.Folder{}, types.NewNotFoundError("folder %q", id)
+		return domain.Folder{}, types.NewNotFoundError("folder %q", id).Because("folder.notFound")
 	}
 	return f, nil
 }
@@ -162,7 +162,7 @@ func (r *FolderRepository) Rename(_ context.Context, id domain.FolderID, name st
 
 	f, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("folder %q", id)
+		return types.NewNotFoundError("folder %q", id).Because("folder.notFound")
 	}
 	// The default folder is renameable. What an account cannot lose is the
 	// folder, not the word on it.
@@ -182,7 +182,7 @@ func (r *FolderRepository) Delete(_ context.Context, id domain.FolderID) error {
 
 	f, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("folder %q", id)
+		return types.NewNotFoundError("folder %q", id).Because("folder.notFound")
 	}
 	if f.Default {
 		return types.NewValidationError("folder %q is the default folder and cannot be deleted", id)

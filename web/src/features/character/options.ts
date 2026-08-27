@@ -1,5 +1,8 @@
 import type { Entry, Option, Prompt } from '@/lib/api'
-import { abilityName, slugOf, titleCase } from '@/domain'
+import { slugOf, titleCase } from '@/domain'
+import type { Translate } from '@/lib/i18n'
+
+import { abilityName } from './labels'
 
 /**
  * One option as a prompt renders it: a key, a label, and why it may be off.
@@ -39,7 +42,11 @@ export function offersOptions(prompt: Prompt): boolean {
  * shortbow and twenty arrows has no slug of its own, and the rule for naming
  * one lives on the server precisely so that the client cannot get it wrong.
  */
-export function choosableOptions(prompt: Prompt, entries: Map<string, Entry>): Choosable[] {
+export function choosableOptions(
+  t: Translate,
+  prompt: Prompt,
+  entries: Map<string, Entry>,
+): Choosable[] {
   const held = new Set(prompt.held ?? [])
   const set = prompt.choice.from
 
@@ -49,16 +56,16 @@ export function choosableOptions(prompt: Prompt, entries: Map<string, Entry>): C
     return [...entries.values()].map((entry) => ({
       key: entry.slug,
       label: entry.name,
-      disabled: disabledBy(prompt, held, entry.slug) !== undefined,
-      ...maybeReason(disabledBy(prompt, held, entry.slug)),
+      disabled: disabledBy(t, prompt, held, entry.slug) !== undefined,
+      ...maybeReason(disabledBy(t, prompt, held, entry.slug)),
     }))
   }
 
   return (set.options ?? []).map((option) => {
-    const reason = disabledBy(prompt, held, option.key)
+    const reason = disabledBy(t, prompt, held, option.key)
     return {
       key: option.key,
-      label: labelOf(option, entries),
+      label: labelOf(t, option, entries),
       ...maybeDetail(detailOf(option, entries)),
       disabled: reason !== undefined,
       ...maybeReason(reason),
@@ -81,12 +88,17 @@ function maybeDetail(detail: string | undefined): { detail?: string } {
  * already has, so there holding a skill is what makes it pickable; everywhere
  * else holding it means picking it would be wasted.
  */
-function disabledBy(prompt: Prompt, held: Set<string>, key: string): string | undefined {
-  if (prompt.heldOnly) return held.has(key) ? undefined : 'not proficient'
-  return held.has(key) ? 'already have' : undefined
+function disabledBy(
+  t: Translate,
+  prompt: Prompt,
+  held: Set<string>,
+  key: string,
+): string | undefined {
+  if (prompt.heldOnly) return held.has(key) ? undefined : t('option.notProficient')
+  return held.has(key) ? t('option.alreadyHave') : undefined
 }
 
-function labelOf(option: Option, entries: Map<string, Entry>): string {
+function labelOf(t: Translate, option: Option, entries: Map<string, Entry>): string {
   switch (option.kind) {
     case 'ref': {
       const slug = option.ref === undefined ? '' : slugOf(option.ref)
@@ -95,23 +107,30 @@ function labelOf(option: Option, entries: Map<string, Entry>): string {
       return option.count !== undefined && option.count > 1 ? `${name} ×${option.count}` : name
     }
     case 'nested':
-      return option.choice ? `Choose ${option.choice.choose}...` : 'Choose...'
+      return option.choice
+        ? t('option.chooseN', { count: option.choice.choose })
+        : t('option.choose')
     case 'bundle':
-      return (option.items ?? []).map((item) => labelOf(item, entries)).join(' and ')
+      // Joined with the catalogue's own word for "and": a bundle of a shortbow
+      // and twenty arrows is one option, and the conjunction between them is
+      // prose like any other.
+      return (option.items ?? [])
+        .map((item) => labelOf(t, item, entries))
+        .join(t('option.bundleJoin'))
     case 'ability-bonus':
-      return `${abilityName(option.ability ?? '')} +${option.bonus ?? 1}`
+      return `${abilityName(t, option.ability ?? '')} +${option.bonus ?? 1}`
     case 'text':
       return option.text ?? option.key
     case 'money':
-      return option.cost ? `${option.cost.amount} ${option.cost.unit}` : 'coin'
+      return option.cost ? `${option.cost.amount} ${option.cost.unit}` : t('option.coin')
     case 'damage':
-      return option.text ?? option.damage?.type ?? 'damage'
+      return option.text ?? option.damage?.type ?? t('option.damage')
     case 'size':
       return titleCase(option.size ?? '')
     case 'action':
       return option.text ?? option.key
     case 'score-minimum':
-      return `${abilityName(option.ability ?? '')} ${option.minimum ?? 0}+`
+      return `${abilityName(t, option.ability ?? '')} ${option.minimum ?? 0}+`
     default:
       return option.key
   }

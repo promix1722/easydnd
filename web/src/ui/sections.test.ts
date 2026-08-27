@@ -7,6 +7,11 @@ describe('the section table', () => {
     expect(SECTIONS.map((section) => section.to)).toEqual(['/', '/groups', '/games'])
   })
 
+  // Labels are message keys, not words -- the navbar, the tab bar and the
+  // first crumb each translate them where they draw them. Asserting the key is
+  // asserting which section was matched, which is what these tests are about;
+  // that the key resolves to a word is check-messages.mjs's job.
+  //
   // The mobile dropdown uses labels as accessible names, so two the same would
   // make a menu item impossible to address -- in a test or with a screen
   // reader.
@@ -30,16 +35,16 @@ describe('sectionFor', () => {
   it('keeps a section lit on its nested routes', () => {
     // The bug this replaced: the desktop navbar matched exactly, so opening a
     // group blanked the highlight while the mobile chrome kept it.
-    expect(sectionFor('/groups')?.label).toBe('Groups')
-    expect(sectionFor('/groups/grp_1')?.label).toBe('Groups')
-    expect(sectionFor('/groups/join')?.label).toBe('Groups')
+    expect(sectionFor('/groups')?.label).toBe('section.groups')
+    expect(sectionFor('/groups/grp_1')?.label).toBe('section.groups')
+    expect(sectionFor('/groups/join')?.label).toBe('section.groups')
   })
 
   it('lights Games on a game, not Groups', () => {
     // A game is its own section: it is played at a table but it is not
     // reached through one, and the highlight has to say so.
-    expect(sectionFor('/games')?.label).toBe('Games')
-    expect(sectionFor('/games/gam_1')?.label).toBe('Games')
+    expect(sectionFor('/games')?.label).toBe('section.games')
+    expect(sectionFor('/games/gam_1')?.label).toBe('section.games')
   })
 
   it('claims a character sheet for Characters', () => {
@@ -49,15 +54,15 @@ describe('sectionFor', () => {
     // a trail saying one thing while the navbar says nothing is the drift the
     // table exists to prevent -- so the section now owns `/characters` as well
     // as linking to `/`.
-    expect(sectionFor('/characters/abc')?.label).toBe('Characters')
-    expect(sectionFor('/characters/abc/log')?.label).toBe('Characters')
-    expect(sectionFor('/characters/new')?.label).toBe('Characters')
+    expect(sectionFor('/characters/abc')?.label).toBe('section.characters')
+    expect(sectionFor('/characters/abc/log')?.label).toBe('section.characters')
+    expect(sectionFor('/characters/new')?.label).toBe('section.characters')
   })
 
   it('does not let the root section swallow everything', () => {
     // '/' is a prefix of every path, so it is matched exactly and never as a
     // prefix. That property is what `owns` was split out to preserve.
-    expect(sectionFor('/')?.label).toBe('Characters')
+    expect(sectionFor('/')?.label).toBe('section.characters')
     expect(sectionFor('/account')).toBeNull()
     expect(sectionFor('/login')).toBeNull()
     expect(sectionFor('/nonsense')).toBeNull()

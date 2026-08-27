@@ -19,7 +19,7 @@ import (
 func (h *Handler) Me(c *gin.Context) {
 	account, ok := middleware.UserFrom(c)
 	if !ok {
-		helpers.FormatError(c, types.NewUnauthenticatedError("no session"))
+		helpers.FormatError(c, types.NewUnauthenticatedError("no session").Because("auth.noSession"))
 		return
 	}
 	c.JSON(http.StatusOK, SessionResponse{User: toWire(account)})

@@ -11,6 +11,8 @@ import { SheetBody } from './SheetBody'
 
 import { answerable } from '@/domain'
 
+import { useT } from '@/lib/i18n'
+
 /** The sheet, and what the character has not decided yet. */
 interface SheetView {
   sheet: Sheet
@@ -32,6 +34,7 @@ interface SheetView {
 
 /** The character sheet. */
 export function CharacterSheetScreen() {
+  const t = useT()
   const { id = '' } = useParams()
   const sheet = useResource<SheetView>(`sheet:${id}`, async (signal) => {
     const [projected, prompts, compendium] = await Promise.all([
@@ -50,8 +53,8 @@ export function CharacterSheetScreen() {
   })
 
   const state = pageState(sheet, {
-    title: 'Could not load this character',
-    fallback: 'Unknown error',
+    title: t('build.loadFailed'),
+    fallback: t('error.unknown'),
     onRetry: sheet.reload,
   })
 
@@ -63,7 +66,7 @@ export function CharacterSheetScreen() {
     return (
       <Page
         trail={[{ label: null }]}
-        state={state.kind === 'loading' ? { ...state, what: 'Projecting the sheet...' } : state}
+        state={state.kind === 'loading' ? { ...state, what: t('sharedSheet.loading') } : state}
       />
     )
   }
@@ -96,7 +99,7 @@ export function CharacterSheetScreen() {
         ? {
             actions: (
               <Button component={Link} to={`/characters/${id}/build`} variant="light">
-                Answer what is left
+                {t('sheet.answerWhatIsLeft')}
               </Button>
             ),
           }

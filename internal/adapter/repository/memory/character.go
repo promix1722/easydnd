@@ -67,7 +67,7 @@ func (r *CharacterRepository) Get(_ context.Context, id domain.ID) (domain.Chara
 
 	c, ok := r.items[id]
 	if !ok {
-		return domain.Character{}, types.NewNotFoundError("character %q", id)
+		return domain.Character{}, types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
 	return clone(c), nil
 }
@@ -107,7 +107,7 @@ func (r *CharacterRepository) SetFolder(
 
 	c, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("character %q", id)
+		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
 	c.Folder = folder
 	r.items[id] = c
@@ -121,7 +121,7 @@ func (r *CharacterRepository) Append(_ context.Context, id domain.ID, expectedSe
 
 	c, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("character %q", id)
+		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
 	if got := c.Log.LastSeq(); got != expectedSeq {
 		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
@@ -149,7 +149,7 @@ func (r *CharacterRepository) Truncate(_ context.Context, id domain.ID, expected
 
 	c, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("character %q", id)
+		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
 	if got := c.Log.LastSeq(); got != expectedSeq {
 		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
@@ -179,7 +179,7 @@ func (r *CharacterRepository) Rewrite(_ context.Context, id domain.ID, expectedS
 
 	c, ok := r.items[id]
 	if !ok {
-		return types.NewNotFoundError("character %q", id)
+		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
 	if got := c.Log.LastSeq(); got != expectedSeq {
 		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
@@ -200,7 +200,7 @@ func (r *CharacterRepository) Delete(_ context.Context, id domain.ID) error {
 	defer r.mu.Unlock()
 
 	if _, ok := r.items[id]; !ok {
-		return types.NewNotFoundError("character %q", id)
+		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
 	delete(r.items, id)
 	return nil

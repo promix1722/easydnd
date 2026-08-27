@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth'
+import { useT } from '@/lib/i18n'
 import { Alert, Button, Center, Loader, Stack, Text } from '@/ui'
 
 import { LandingShell } from './LandingShell'
@@ -15,11 +16,12 @@ import { RootShell } from './RootShell'
  */
 export function RootGate() {
   const { status, refresh } = useAuth()
+  const t = useT()
 
   if (status === 'loading') {
     return (
       <Center h="100dvh">
-        <Loader aria-label="Checking your session" />
+        <Loader aria-label={t('auth.checkingSession')} />
       </Center>
     )
   }
@@ -31,12 +33,10 @@ export function RootGate() {
     return (
       <Center h="100dvh" p="md">
         <Stack align="center" gap="md" maw={420}>
-          <Alert color="yellow" title="Cannot reach easydnd">
-            <Text size="sm">
-              You appear to be offline, so we could not check whether you are signed in.
-            </Text>
+          <Alert color="yellow" title={t('offline.title')}>
+            <Text size="sm">{t('offline.detail')}</Text>
           </Alert>
-          <Button onClick={() => void refresh()}>Try again</Button>
+          <Button onClick={() => void refresh()}>{t('page.retry')}</Button>
         </Stack>
       </Center>
     )
