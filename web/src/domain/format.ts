@@ -50,37 +50,16 @@ export function kindOf(ref: string): string {
  * this list instead of the response. (Skills are a different case: there are
  * eighteen of them in no traditional order, so those really are alphabetical.)
  *
- * Hardcoded rather than fetched, as are the names below. These six are the
- * one part of the compendium that cannot change -- a sixth-and-a-half ability
- * would be a different game -- so waiting on a round trip to draw six labelled
- * inputs would be a worse first screen for no benefit.
+ * Hardcoded rather than fetched. These six are the one part of the compendium
+ * that cannot change -- a sixth-and-a-half ability would be a different game
+ * -- so waiting on a round trip to draw six labelled inputs would be a worse
+ * first screen for no benefit. Their *names* are not here: a name is prose,
+ * and prose is not what this directory is for. See
+ * `features/character/labels.ts`.
  */
 export const ABILITY_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const
 
 const CANONICAL = new Set<string>(ABILITY_ORDER)
-
-/**
- * The six abilities' full names, keyed by the slug the API uses.
- *
- * Here rather than fetched for the reason above, and because "Dex +1" on a
- * button is worse than "Dexterity +1" for the sake of a round trip. The
- * catalogue's abilities collection carries the same names for anywhere that
- * needs them localized. The order these are written in carries no meaning --
- * ABILITY_ORDER is the only thing that says what comes first.
- */
-const ABILITY_NAMES: Record<string, string> = {
-  str: 'Strength',
-  dex: 'Dexterity',
-  con: 'Constitution',
-  int: 'Intelligence',
-  wis: 'Wisdom',
-  cha: 'Charisma',
-}
-
-/** An ability's full name, or the slug title-cased if it is not one. */
-export function abilityName(slug: string): string {
-  return ABILITY_NAMES[slug] ?? titleCase(slug)
-}
 
 /**
  * The entries of anything keyed by ability slug, in the canonical order.

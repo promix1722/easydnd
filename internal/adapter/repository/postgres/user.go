@@ -351,7 +351,7 @@ func requireAccount(ctx context.Context, tx pgx.Tx, id domain.ID) error {
 	err := tx.QueryRow(ctx, `SELECT true FROM users WHERE id = $1`, string(id)).Scan(&exists)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
-		return types.NewNotFoundError("account not found")
+		return types.NewNotFoundError("account not found").Because("account.notFound")
 	case err != nil:
 		return types.WrapServerError(err, "look up account")
 	}

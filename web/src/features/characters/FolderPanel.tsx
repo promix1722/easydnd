@@ -1,9 +1,9 @@
 import type { DragEvent, ReactNode } from 'react'
 
 import type { Folder } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 import {
   ACTION_ICON_SIZE,
-  ACTION_SIZE,
   Badge,
   Box,
   Button,
@@ -79,6 +79,7 @@ export function FolderPanel({
   onDragEnd,
   dropTarget = false,
 }: FolderPanelProps) {
+  const t = useT()
   const panelId = `folder-${folder.id}`
   const draggable = onDragStart !== undefined
 
@@ -149,7 +150,11 @@ export function FolderPanel({
             onClick={onToggle}
             aria-expanded={open}
             aria-controls={panelId}
-            aria-label={`${open ? 'Collapse' : 'Expand'} ${folder.name}`}
+            aria-label={
+              open
+                ? t('folders.collapse', { name: folder.name })
+                : t('folders.expand', { name: folder.name })
+            }
             style={{ flex: 1, minWidth: 0 }}
           >
             <Group gap="xs" wrap="nowrap">
@@ -169,7 +174,7 @@ export function FolderPanel({
               </Text>
               {folder.default && (
                 <Badge size="sm" variant="light">
-                  Default
+                  {t('folders.default')}
                 </Badge>
               )}
             </Group>
@@ -186,9 +191,8 @@ export function FolderPanel({
           <Menu position="bottom-end" withinPortal>
             <Menu.Target>
               <Button
-                size={ACTION_SIZE}
                 variant="subtle"
-                aria-label={`Actions for ${folder.name}`}
+                aria-label={t('list.actions', { name: folder.name })}
                 px={6}
               >
                 <IconDotsVertical size={ACTION_ICON_SIZE} />
@@ -197,7 +201,7 @@ export function FolderPanel({
             <Menu.Dropdown>
               {onMoveUp && (
                 <Menu.Item leftSection={<IconArrowUp size={ACTION_ICON_SIZE} />} onClick={onMoveUp}>
-                  Move up
+                  {t('folders.moveUp')}
                 </Menu.Item>
               )}
               {onMoveDown && (
@@ -205,11 +209,11 @@ export function FolderPanel({
                   leftSection={<IconArrowDown size={ACTION_ICON_SIZE} />}
                   onClick={onMoveDown}
                 >
-                  Move down
+                  {t('folders.moveDown')}
                 </Menu.Item>
               )}
               <Menu.Item leftSection={<IconPencil size={ACTION_ICON_SIZE} />} onClick={onRename}>
-                Rename
+                {t('common.rename')}
               </Menu.Item>
               {/* The default folder has no delete control: it is the one an
                   account is guaranteed to have. */}
@@ -219,7 +223,7 @@ export function FolderPanel({
                   leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
                   onClick={onDelete}
                 >
-                  Delete
+                  {t('common.delete')}
                 </Menu.Item>
               )}
             </Menu.Dropdown>
@@ -263,24 +267,24 @@ export function FolderAdditions({
   /** The development-only stub button, or nothing. */
   children?: ReactNode
 }) {
+  const t = useT()
+
   return (
     <Group gap="xs" mt="md">
       <Button
-        size={ACTION_SIZE}
         variant="light"
         leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
-        aria-label={`New character in ${folder.name}`}
+        aria-label={t('folders.newCharacterIn', { name: folder.name })}
         onClick={onNew}
       >
-        New character
+        {t('characters.newCharacter')}
       </Button>
       <Button
-        size={ACTION_SIZE}
         variant="default"
-        aria-label={`Import into ${folder.name}`}
+        aria-label={t('folders.importInto', { name: folder.name })}
         onClick={onImport}
       >
-        Import
+        {t('characters.import')}
       </Button>
       {children}
     </Group>

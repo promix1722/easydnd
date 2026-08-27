@@ -3,10 +3,18 @@
  *
  * The names below are the ones that actually reach users; everything else
  * falls through to a generic message rather than leaking a spec term.
+ *
+ * What comes back is a message *key*, not a sentence. This module is a
+ * classifier -- it decides which of six things went wrong -- and the words for
+ * those six live in web/locales/*.json with every other caption, so that
+ * translating the failure a person is most likely to hit does not mean editing
+ * a TypeScript file. The caller translates; `lib/auth/AuthProvider` is the one
+ * that does.
  */
+import type { MessageKey } from '@/lib/i18n'
 
 export interface CeremonyFailure {
-  message: string
+  reason: MessageKey
   /** True when the person simply backed out -- not an error worth alarming them about. */
   cancelled: boolean
   /** True when this is our misconfiguration rather than anything they did. */
@@ -15,7 +23,7 @@ export interface CeremonyFailure {
 
 export function describeCeremonyFailure(cause: unknown): CeremonyFailure {
   if (!(cause instanceof DOMException)) {
-    return { message: 'Something went wrong. Please try again.', cancelled: false, ourFault: false }
+    return { reason: 'passkey.generic', cancelled: false, ourFault: false }
   }
 
   switch (cause.name) {
@@ -23,13 +31,13 @@ export function describeCeremonyFailure(cause: unknown): CeremonyFailure {
       // The browser deliberately does not distinguish "cancelled" from "timed
       // out" from "no matching passkey", so neither can we.
       return {
-        message: 'Cancelled, or no passkey was offered. Try again when you are ready.',
+        reason: 'passkey.notAllowed',
         cancelled: true,
         ourFault: false,
       }
     case 'InvalidStateError':
       return {
-        message: 'This device already has a passkey for this account.',
+        reason: 'passkey.alreadyRegistered',
         cancelled: false,
         ourFault: false,
       }
@@ -37,20 +45,20 @@ export function describeCeremonyFailure(cause: unknown): CeremonyFailure {
       // The page origin does not match the relying party id. A person can do
       // nothing about this, and it should be loud in development.
       return {
-        message: 'Passkeys are misconfigured for this site. This is our bug, not yours.',
+        reason: 'passkey.misconfigured',
         cancelled: false,
         ourFault: true,
       }
     case 'AbortError':
-      return { message: 'The passkey prompt was closed.', cancelled: true, ourFault: false }
+      return { reason: 'passkey.closed', cancelled: true, ourFault: false }
     case 'NotSupportedError':
       return {
-        message: 'This device cannot create the kind of passkey this site needs.',
+        reason: 'passkey.unsupported',
         cancelled: false,
         ourFault: false,
       }
     default:
-      return { message: 'The passkey prompt failed. Please try again.', cancelled: false, ourFault: false }
+      return { reason: 'passkey.failed', cancelled: false, ourFault: false }
   }
 }
 

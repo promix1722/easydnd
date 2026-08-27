@@ -1,6 +1,7 @@
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '@/lib/auth'
+import { useT } from '@/lib/i18n'
 import { isPasskeySupported } from '@/lib/webauthn'
 import { Alert, Button, Card, Group, Stack, Text, Title } from '@/ui'
 
@@ -30,6 +31,7 @@ import { Alert, Button, Card, Group, Stack, Text, Title } from '@/ui'
  * somewhere.
  */
 export function LoginScreen() {
+  const t = useT()
   const { status, signInOrRegister, signInAsGuest, signInWith, providers, busy, error } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -57,29 +59,26 @@ export function LoginScreen() {
   return (
     <Stack gap="lg" maw={560} mx="auto" py="xl">
       <Stack gap="xs">
-        <Title order={2}>Log in to easydnd</Title>
+        <Title order={2}>{t('login.title')}</Title>
         <Text c="dimmed" size="sm">
-          {providers.length > 0
-            ? 'Several ways in. All but one of them keep your characters.'
-            : 'Two ways in. One of them keeps your characters; the other does not.'}
+          {providers.length > 0 ? t('login.leadWithProviders') : t('login.lead')}
         </Text>
       </Stack>
 
       {/* One alert for every flow. Whichever attempt failed most recently is
           the one worth showing, and the provider only keeps that one. */}
       {error ? (
-        <Alert color="red" title="That did not work">
+        <Alert color="red" title={t('login.failed')}>
           {error}
         </Alert>
       ) : null}
 
       {passkeys ? null : (
-        <Alert color="yellow" title="This browser cannot use passkeys">
-          Passkeys need a browser that supports them -- recent versions of Chrome, Safari, Firefox
-          and Edge all do.{' '}
+        <Alert color="yellow" title={t('login.noPasskeys.title')}>
+          {t('login.noPasskeys.detail')}{' '}
           {providers.length > 0
-            ? 'You can still sign in with a provider below, or play as a guest.'
-            : 'You can still play as a guest below.'}
+            ? t('login.noPasskeys.withProviders')
+            : t('login.noPasskeys.guestOnly')}
         </Alert>
       )}
 
@@ -92,10 +91,9 @@ export function LoginScreen() {
         <Card key={provider.id} withBorder padding="md">
           <Stack gap="sm">
             <div>
-              <Title order={4}>Continue with {provider.name}</Title>
+              <Title order={4}>{t('login.provider.title', { provider: provider.name })}</Title>
               <Text c="dimmed" size="sm">
-                Sign in with the {provider.name} account you already have. Nothing to make and
-                nothing to remember, and your characters are kept.
+                {t('login.provider.detail', { provider: provider.name })}
               </Text>
             </div>
             <Group>
@@ -103,7 +101,7 @@ export function LoginScreen() {
                   a spinner here would spin until the browser navigated away
                   and then come back on a fresh mount. */}
               <Button disabled={busy} onClick={() => signInWith(provider.id)}>
-                Continue with {provider.name}
+                {t('login.provider.title', { provider: provider.name })}
               </Button>
             </Group>
           </Stack>
@@ -121,16 +119,14 @@ export function LoginScreen() {
         <Card withBorder padding="md">
           <Stack gap="sm">
             <div>
-              <Title order={4}>Use a passkey</Title>
+              <Title order={4}>{t('login.passkey.title')}</Title>
               <Text c="dimmed" size="sm">
-                Nothing to type and no password. Your browser offers the passkey it holds for
-                easydnd, and a fingerprint, a face or a PIN unlocks it. If you do not have one yet,
-                your device makes one and that is your account -- we will pick a name for it.
+                {t('login.passkey.detail')}
               </Text>
             </div>
             <Group>
               <Button loading={busy} onClick={() => attempt(signInOrRegister)}>
-                Continue with a passkey
+                {t('login.passkey.action')}
               </Button>
             </Group>
           </Stack>
@@ -140,15 +136,15 @@ export function LoginScreen() {
       <Card withBorder padding="md">
         <Stack gap="sm">
           <div>
-            <Title order={4}>Play as a guest</Title>
+            <Title order={4}>{t('login.guest.title')}</Title>
             <Text c="dimmed" size="sm">
-              Straight in, with no account and nothing to remember.
+              {t('login.guest.detail')}
             </Text>
           </div>
 
           <Group>
             <Button variant="default" loading={busy} onClick={() => attempt(signInAsGuest)}>
-              Continue as a guest
+              {t('login.guest.action')}
             </Button>
           </Group>
         </Stack>

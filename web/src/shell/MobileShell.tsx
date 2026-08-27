@@ -1,5 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router'
 
+import { useT } from '@/lib/i18n'
+
 import {
   AppShell,
   Button,
@@ -40,6 +42,7 @@ import { Wordmark } from './Wordmark'
  */
 export function MobileShell() {
   const { pathname } = useLocation()
+  const t = useT()
 
   // Shared with the desktop navbar: see sectionFor in ui/sections.ts.
   const active = sectionFor(pathname)
@@ -58,7 +61,7 @@ export function MobileShell() {
    * matched on the link target alone and so answered "nowhere" for every
    * detail page under `/`.
    */
-  const label = active?.label ?? 'Menu'
+  const label = active ? t(active.label) : t('nav.menu')
 
   return (
     <AppShell header={{ height: HEADER_HEIGHT }} padding="sm">
@@ -68,15 +71,17 @@ export function MobileShell() {
 
           <Menu position="bottom-start" withinPortal>
             <Menu.Target>
-              {/* The one deliberate override of the theme's xs Button, and the
-                  reason is a tap target rather than taste: this is the whole of
-                  the app's navigation on a phone, and 30px is under every
-                  guideline there is. No aria-label -- the visible text is the
-                  name, and Menu.Target supplies aria-haspopup and
-                  aria-expanded on its own. */}
+              {/* This used to pass `size="sm"`, and the comment here explained
+                  that it was the one deliberate override of the theme's `xs`
+                  Button because 30px is under every guideline there is for the
+                  whole of a phone's navigation. The override is gone and the
+                  argument won: `ui/app.css` makes every control 44px below the
+                  breakpoint, so this one is thumb-sized by being ordinary.
+
+                  No aria-label -- the visible text is the name, and Menu.Target
+                  supplies aria-haspopup and aria-expanded on its own. */}
               <Button
                 variant="subtle"
-                size="sm"
                 px="xs"
                 // The section's own glyph, which is also what the desktop
                 // navbar draws beside this label. It carries more weight here
@@ -117,7 +122,7 @@ export function MobileShell() {
                     />
                   }
                 >
-                  {section.label}
+                  {t(section.label)}
                 </Menu.Item>
               ))}
             </Menu.Dropdown>

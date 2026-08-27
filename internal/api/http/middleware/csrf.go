@@ -44,7 +44,7 @@ func SameOrigin(allowedOrigins []string) gin.HandlerFunc {
 		}
 
 		if site := c.GetHeader(HeaderSecFetchSite); site != "" && site != "same-origin" {
-			helpers.FormatError(c, types.NewAccessDeniedError("cross-site request rejected"))
+			helpers.FormatError(c, types.NewAccessDeniedError("cross-site request rejected").Because("request.crossSite"))
 			return
 		}
 

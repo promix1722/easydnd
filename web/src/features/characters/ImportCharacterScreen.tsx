@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { importCharacter } from '@/lib/api'
 import type { ImportEntry, ImportReport } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
+import { useT } from '@/lib/i18n'
 import {
   Alert,
   Button,
@@ -30,6 +31,7 @@ import {
  * no prompts, so there is always something left to decide.
  */
 export function ImportCharacterScreen() {
+  const t = useT()
   const navigate = useNavigate()
   // The folder the character list was filtered to when Import was pressed.
   const [params] = useSearchParams()
@@ -53,26 +55,25 @@ export function ImportCharacterScreen() {
 
   return (
     <Page
-      trail={[{ label: 'Import a character' }]}
+      trail={[{ label: t('import.title') }]}
       subtitle={
         <>
-          Reads a sheet exported from HexSheet. Your character&apos;s numbers come across as
-          they are; the choices behind them stay open for you to answer.
+          {t('import.lead')}
         </>
       }
     >
       <Stack gap="md">
 
         {submit.error !== null && (
-          <Alert color="red" title="That file could not be imported">
+          <Alert color="red" title={t('import.failed')}>
             <Text size="sm">{submit.error}</Text>
           </Alert>
         )}
 
         <FileInput
-          label="Exported sheet"
-          description="A .json file exported from HexSheet"
-          placeholder="Choose a file"
+          label={t('import.fileLabel')}
+          description={t('import.fileHint')}
+          placeholder={t('import.filePlaceholder')}
           accept="application/json,.json"
           value={file}
           onChange={setFile}
@@ -81,10 +82,10 @@ export function ImportCharacterScreen() {
 
         <Group>
           <Button onClick={() => void onImport()} disabled={file === null} loading={submit.pending}>
-            Import
+            {t('characters.import')}
           </Button>
           <Button variant="subtle" onClick={() => void navigate('/characters')}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </Group>
       </Stack>
@@ -102,33 +103,32 @@ function ImportedReport({
   report: ImportReport
   navigate: ReturnType<typeof useNavigate>
 }) {
+  const t = useT()
   const nothingLost = report.unresolved.length === 0 && report.skipped.length === 0
 
   return (
     <Page
-      trail={[{ label: 'Imported' }]}
+      trail={[{ label: t('import.done') }]}
       subtitle={
-        nothingLost
-          ? 'Everything in the export came across.'
-          : 'Everything below did not come across. Nothing else was changed.'
+        nothingLost ? t('import.nothingLost') : t('import.somethingLost')
       }
     >
       <Stack gap="md">
 
         <EntryList
-          title="Not in SRD 5.1"
-          hint="easydnd only knows what the SRD publishes, which is one background and one feat."
+          title={t('import.notInSrd')}
+          hint={t('import.notInSrdHint')}
           entries={report.unresolved}
         />
         <EntryList
-          title="Not imported"
-          hint="Real data easydnd has nowhere to put yet."
+          title={t('import.notImported')}
+          hint={t('import.notImportedHint')}
           entries={report.skipped}
         />
 
         {report.open.length > 0 && (
           <Card withBorder padding="md">
-            <Text fw={500}>Still to decide</Text>
+            <Text fw={500}>{t('import.stillToDecide')}</Text>
             <Text size="sm" c="dimmed">
               An import records what your character is, not what you chose, so these {report.open.length}{' '}
               choices are still open. The build screen asks for them.
@@ -140,10 +140,10 @@ function ImportedReport({
 
         <Group>
           <Button onClick={() => void navigate(`/characters/${id}/build`)}>
-            Finish this character
+            {t('import.finish')}
           </Button>
           <Button variant="subtle" onClick={() => void navigate(`/characters/${id}`)}>
-            View the sheet
+            {t('import.viewSheet')}
           </Button>
         </Group>
       </Stack>

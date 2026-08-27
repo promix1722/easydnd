@@ -16,12 +16,22 @@ import {
   rollAbilityScores,
 } from '@/domain'
 
+import { describeField } from '@/lib/api'
+import { useT } from '@/lib/i18n'
+
+/**
+ * The four ways a set of six numbers comes about.
+ *
+ * Keys rather than words, built into options where the Select is drawn: the
+ * value is what the server records and never changes, the label is what a
+ * reader sees and changes with the language.
+ */
 const METHODS = [
-  { value: 'standard-array', label: 'Standard array' },
-  { value: 'point-buy', label: 'Point buy' },
-  { value: 'rolled', label: 'Rolled' },
-  { value: 'manual', label: 'Manual' },
-]
+  { value: 'standard-array', label: 'method.standardArray' },
+  { value: 'point-buy', label: 'method.pointBuy' },
+  { value: 'rolled', label: 'method.rolled' },
+  { value: 'manual', label: 'method.manual' },
+] as const
 
 /** The two methods that deal out a set of numbers rather than take them. */
 function dealsOut(method: string): boolean {
@@ -83,6 +93,7 @@ export function AbilityScoresForm({
   submitLabel,
   onSubmit,
 }: AbilityScoresFormProps) {
+  const t = useT()
   const [how, setHow] = useState(method)
   // The pool the dealing methods deal from, and where each of its numbers has
   // been put. Scores that are already stored arrive placed: they were dealt
@@ -149,15 +160,17 @@ export function AbilityScoresForm({
   // `events[0].changes[3].value` -- because that is where it found it. The
   // form's own order is the same one it submits in, so the position is the
   // index of the ability plus one for the method change that leads.
-  const errorFor = (at: number): string | undefined =>
-    fields.find((f) => f.field.endsWith(`.changes[${at + 1}].value`))?.message
+  const errorFor = (at: number): string | undefined => {
+    const found = fields.find((f) => f.field.endsWith(`.changes[${at + 1}].value`))
+    return found === undefined ? undefined : describeField(t, found)
+  }
 
   return (
     <Stack gap="md">
       <Select
-        label="How were the scores generated?"
-        description="Recorded so that coming back here reopens the right editor."
-        data={METHODS}
+        label={t('scores.methodLabel')}
+        description={t('scores.methodHint')}
+        data={METHODS.map((method) => ({ value: method.value, label: t(method.label) }))}
         value={how}
         allowDeselect={false}
         onChange={(value) => {
@@ -180,7 +193,7 @@ export function AbilityScoresForm({
                       setPlaced(nothingPlaced())
                     }}
                   >
-                    Roll again
+                    {t('scores.rollAgain')}
                   </Button>
                 ),
               }
@@ -193,7 +206,7 @@ export function AbilityScoresForm({
       {how === 'manual' && (
         <div>
           <Text size="xs" c="dimmed" mb="xs">
-            Anything from 1 to 30. Racial bonuses are added by the rules, not here.
+            {t('scores.manualHint')}
           </Text>
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
             {ABILITY_ORDER.map((ability, at) => {
@@ -223,7 +236,7 @@ export function AbilityScoresForm({
 
       <Group>
         <Button onClick={submit} loading={pending} disabled={!ready}>
-          {ready ? submitLabel : 'Place all six'}
+          {ready ? submitLabel : t('scores.placeAllSix')}
         </Button>
       </Group>
     </Stack>

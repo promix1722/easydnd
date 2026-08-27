@@ -17,6 +17,8 @@ import { Link, useLocation } from 'react-router'
 import { CONTENT_MAX_WIDTH, ROW_HEIGHT } from '@/theme/tokens'
 
 import type { PageState } from './pageState'
+import { useT } from '@/lib/i18n'
+
 import { sectionFor } from './sections'
 
 export interface Crumb {
@@ -102,10 +104,11 @@ export function Page({
   children,
 }: PageProps) {
   const { pathname } = useLocation()
+  const t = useT()
   const section = sectionFor(pathname)
 
   const crumbs: Crumb[] = section
-    ? [{ label: section.label, to: section.to }, ...trail]
+    ? [{ label: t(section.label), to: section.to }, ...trail]
     : [...trail]
 
   const here = crumbs.at(-1)
@@ -183,7 +186,7 @@ export function Page({
               )}
 
               {parents.length > 0 && (
-                <nav aria-label="Breadcrumb">
+                <nav aria-label={t('page.breadcrumb')}>
                   <Group component="ol" gap="xs" wrap="wrap" style={LIST_RESET}>
                     {parents.map((crumb, index) => {
                       const isSection = index === 0 && SectionIcon !== undefined
@@ -193,38 +196,69 @@ export function Page({
                           key={crumb.to ?? index}
                           gap="xs"
                           wrap="nowrap"
-                          /*
-                           * The section crumb is desktop-only, and its glyph
-                           * and separator go with it.
-                           *
-                           * A phone's chrome is one row whose middle control
-                           * already names the section you are in and opens the
-                           * others -- so a crumb repeating that word spends a
-                           * 390px line saying what is written directly above
-                           * it. See shell/MobileShell.tsx, where that control
-                           * now carries the section's glyph too.
-                           *
-                           * Done with `visibleFrom` rather than a branch on
-                           * purpose: `Page` renders one tree at every width,
-                           * and this keeps it that way. Deeper crumbs -- a
-                           * group on a shared character's sheet -- are real
-                           * parents rather than a restatement of the chrome,
-                           * so they stay at both widths.
-                           */
-                          {...(isSection ? { visibleFrom: DESKTOP_ONLY } : {})}
                         >
-                          {isSection && <SectionIcon size={GLYPH} aria-hidden />}
+                          {/*
+                            The section crumb is a glyph on a phone and a glyph
+                            plus its word on a desktop.
+
+                            The word goes because the phone's one row of chrome
+                            already names the section you are in, an inch above
+                            -- so spelling it out again spends a 390px line
+                            restating what is already on screen. The *way back*
+                            is not a restatement, though, and dropping the crumb
+                            entirely took it with it: from a group's page there
+                            was no way back to Groups but the browser's own. So
+                            the glyph stays and carries the link.
+
+                            Deeper crumbs -- a group on a shared character's
+                            sheet -- keep their words at both widths, because
+                            those are real parents rather than a restatement of
+                            the chrome.
+
+                            Done with `visibleFrom` rather than a branch on
+                            purpose: `Page` renders one tree at every width and
+                            this keeps it that way.
+                          */}
                           {crumb.to === undefined ? (
-                            <CrumbLabel label={crumb.label} size="lg" />
-                          ) : (
-                            <Anchor component={Link} to={crumb.to} fz={HEADING_SIZE} fw={650}>
+                            <>
+                              {isSection && <SectionIcon size={GLYPH} aria-hidden />}
                               <CrumbLabel label={crumb.label} size="lg" />
+                            </>
+                          ) : (
+                            <Anchor
+                              component={Link}
+                              to={crumb.to}
+                              fz={HEADING_SIZE}
+                              fw={650}
+                              // The word is the accessible name at both widths,
+                              // because below `md` it is not drawn and a link
+                              // whose only content is an `aria-hidden` glyph has
+                              // no name at all.
+                              {...(isSection ? { 'aria-label': crumb.label ?? undefined } : {})}
+                            >
+                              <Group gap="xs" wrap="nowrap">
+                                {isSection && <SectionIcon size={GLYPH} aria-hidden />}
+                                {isSection ? (
+                                  <Box visibleFrom={DESKTOP_ONLY}>
+                                    <CrumbLabel label={crumb.label} size="lg" />
+                                  </Box>
+                                ) : (
+                                  <CrumbLabel label={crumb.label} size="lg" />
+                                )}
+                              </Group>
                             </Anchor>
                           )}
                           {/* Decoration, not content: the list already carries
                               the nesting, and a screen reader announcing
-                              "slash" between every pair is noise. */}
-                          <Text span c="dimmed" fz={HEADING_SIZE} aria-hidden>
+                              "slash" between every pair is noise. It goes with
+                              the word it separated. */}
+                          <Text
+                            span
+                            c="dimmed"
+                            fz={HEADING_SIZE}
+                            aria-hidden
+                            {...(isSection ? { visibleFrom: DESKTOP_ONLY } : {})}
+                          >
                             /
                           </Text>
                         </Group>
@@ -295,10 +329,11 @@ const LIST_RESET = { listStyle: 'none', margin: 0, padding: 0 } as const
 
 /** A crumb's text, or a placeholder that still has a name. */
 function CrumbLabel({ label, size }: { label: string | null; size: 'sm' | 'lg' }) {
+  const t = useT()
   if (label !== null) return <>{label}</>
   return (
     <>
-      <VisuallyHidden>Loading</VisuallyHidden>
+      <VisuallyHidden>{t('page.loading')}</VisuallyHidden>
       <Skeleton
         component="span"
         width={size === 'lg' ? 220 : 90}
@@ -317,12 +352,13 @@ function CrumbLabel({ label, size }: { label: string | null; size: 'sm' | 'lg' }
  * anybody sees.
  */
 function Body({ state, children }: { state: PageState; children: ReactNode }) {
+  const t = useT()
   if (state.kind === 'loading') {
     return (
       <Group gap="xs">
         <Loader size="sm" />
         <Text size="sm" c="dimmed">
-          {state.what ?? 'Loading...'}
+          {state.what ?? t('page.loadingEllipsis')}
         </Text>
       </Group>
     )
@@ -335,7 +371,7 @@ function Body({ state, children }: { state: PageState; children: ReactNode }) {
           <Text size="sm">{state.detail}</Text>
           {state.onRetry !== undefined && (
             <Button variant="light" onClick={state.onRetry}>
-              Try again
+              {t('page.retry')}
             </Button>
           )}
         </Stack>

@@ -150,10 +150,10 @@ describe('StagePanel', () => {
     // A decided choice and an open one are the same object at two moments, so
     // they are one list -- and it reads up the levels: took rogue at 1, still
     // owes two skills at 1, gained a level at 2.
-    const blocks = screen.getAllByText(/Class chosen|Two to be proficient in|Level gained/)
+    const blocks = screen.getAllByText(/Class chosen|2 to be proficient in|Level gained/)
     expect(blocks.map((each) => each.textContent)).toEqual([
       'Class chosen',
-      'Two to be proficient in · from Rogue',
+      '2 to be proficient in · from Rogue',
       'Level gained',
     ])
   })
@@ -161,7 +161,7 @@ describe('StagePanel', () => {
   it('marks what is still wanted, and nothing that is settled', () => {
     renderAt(viewport, panel([CLASS_ROW], [SKILLS]))
 
-    const wanted = screen.getByRole('button', { name: /Two to be proficient in/ })
+    const wanted = screen.getByRole('button', { name: /2 to be proficient in/ })
     expect(wanted.closest('[data-highlighted="true"]')).not.toBeNull()
     const decided = screen.getByRole('button', { name: /Class chosen/ })
     expect(decided.closest('[data-highlighted="true"]')).toBeNull()
@@ -176,7 +176,7 @@ describe('StagePanel', () => {
     // the open choices anybody came here to make.
     expect(screen.queryByLabelText('Strength')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /Six ability scores/ }))
+    await user.click(screen.getByRole('button', { name: /6 ability scores/ }))
     expect(onOpen).toHaveBeenCalledWith('open:character/abilities')
   })
 
@@ -192,7 +192,7 @@ describe('StagePanel', () => {
     // The form is in the block, not in a card somewhere below it, and the
     // block's own header is the only place the question is put.
     const block = screen
-      .getByRole('button', { name: /Six ability scores/ })
+      .getByRole('button', { name: /6 ability scores/ })
       .closest('[data-highlighted]')
     expect(block).not.toBeNull()
     const strength = await screen.findByRole('button', { name: /Strength/ })

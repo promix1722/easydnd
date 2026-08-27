@@ -483,7 +483,11 @@ func TestARefusedNameSaysSoOnTheField(t *testing.T) {
 	if got.Field != "name" {
 		t.Errorf("field = %q, want %q", got.Field, "name")
 	}
-	if got.Message == "" {
-		t.Error("the field error carries no message, so the input shows a blank error")
+	// A key rather than a sentence: the words live in web/locales. What still
+	// has to hold is that the field carries *something* to render, or the input
+	// shows a blank error -- and `Rule` is the fallback when there is no
+	// reason of its own, so one of the two must be set.
+	if got.Reason == "" && got.Rule == "" {
+		t.Error("the field error carries neither a reason nor a rule, so the input shows nothing")
 	}
 }

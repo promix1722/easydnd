@@ -1,0 +1,38 @@
+/*
+ * The application's only stylesheet, and it holds one rule.
+ *
+ * **iOS Safari zooms the whole page when a field smaller than 16px takes
+ * focus.** Every field in this app is Mantine's `sm`, which is 14px, so every
+ * field zoomed -- you tap a rename box and the page lurches. That is a browser
+ * behaviour rather than a design choice, which is why the fix is here and not
+ * a size somebody could reasonably change.
+ *
+ * It is set as `font-size` on the input element rather than through a variable
+ * because Mantine writes `--input-fz` as an *inline* custom property from its
+ * `varsResolver`, and an inline declaration cannot be reached from a
+ * stylesheet. `.mantine-Input-input` is Mantine's static class name, which it
+ * emits for exactly this, and one rule covers all five field types -- they each
+ * render an `Input` underneath.
+ *
+ * Nothing else lives here, and that is deliberate. An earlier version of this
+ * file also grew every control to 44px below the breakpoint, on the touch-target
+ * argument. It was wrong in practice: at 390px the app is mostly controls, and
+ * inflating all of them turned a dense screen into a scroll. The sizes are back
+ * to `ui/theme.ts`'s, which is the one place they belong.
+ *
+ * `ui/AppTheme.tsx` imports Mantine's `styles.layer.css` rather than
+ * `styles.css`, so every Mantine rule sits inside `@layer mantine` and this one
+ * beats it whatever the selectors weigh. Do not add `!important`; if a rule is
+ * not landing, the layered import is what broke.
+ *
+ * The query is written as a literal rather than through
+ * `postcss-preset-mantine`'s `@mixin smaller-than`, which subtracts 0.0625em and
+ * would put this boundary a pixel away from the one `useIsDesktop` reads. It
+ * must stay byte-identical to DESKTOP_MEDIA_QUERY in `theme/tokens.ts`;
+ * `ui/theme.test.ts` checks that it is.
+ */
+@media not all and (min-width: 62em) {
+  .mantine-Input-input {
+    font-size: var(--mantine-font-size-md);
+  }
+}

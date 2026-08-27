@@ -19,7 +19,10 @@ import { ProficienciesPanel } from './ProficienciesPanel'
 import { SkillsPanel } from './SkillsPanel'
 import { Vitals } from './Vitals'
 
-import { abilitiesInOrder, abilityName, signed, titleCase } from '@/domain'
+import { abilitiesInOrder, signed, titleCase } from '@/domain'
+import { useT } from '@/lib/i18n'
+
+import { abilityAbbr, abilityName } from './labels'
 
 
 /**
@@ -66,6 +69,7 @@ export function SheetBody({
    * it in CSS and leave the page saying one order and the screen showing
    * another. Two static blocks would survive that; a habit of it does not.
    */
+  const t = useT()
   const isDesktop = useIsDesktop()
   const who = <IdentityTable identity={identity} names={names} />
   const abilities = <AbilityCards sheet={s} />
@@ -85,7 +89,7 @@ export function SheetBody({
       // place rather than its contents -- deliberately, because the section
       // holds two things and a tab that named either would send a reader
       // looking for the other one somewhere else.
-      title: 'Main',
+      title: t('sheet.main'),
       desktop: 'full',
       content: isDesktop ? (
         <>
@@ -101,19 +105,19 @@ export function SheetBody({
     },
     {
       key: 'vitals',
-      title: 'Vitals',
+      title: t('sheet.vitals'),
       desktop: 'full',
       content: <Vitals sheet={s} />,
     },
     {
       key: 'skills',
-      title: 'Skills',
+      title: t('sheet.skills'),
       desktop: 'panel',
       content: <SkillsPanel skills={s.skills} catalog={skills} />,
     },
     {
       key: 'proficiencies',
-      title: 'Proficiencies',
+      title: t('sheet.proficiencies'),
       desktop: 'panel',
       content: (
         <ProficienciesPanel
@@ -125,31 +129,31 @@ export function SheetBody({
     },
     {
       key: 'traits',
-      title: 'Traits and features',
+      title: t('sheet.traitsAndFeatures'),
       desktop: 'panel',
       content: (
         <Stack gap="sm">
           <ItemList
-            label="Traits"
+            label={t('sheet.traits')}
             items={(s.traits ?? []).map(titleCase)}
-            empty="No racial traits."
+            empty={t('sheet.noTraits')}
           />
           <ItemList
-            label="Features"
+            label={t('sheet.features')}
             items={(s.features ?? []).map(titleCase)}
-            empty="No class features."
+            empty={t('sheet.noFeatures')}
           />
           <ItemList
-            label="Languages"
+            label={t('sheet.languages')}
             items={(s.base.languages ?? []).map(titleCase)}
-            empty="None."
+            empty={t('sheet.none')}
           />
         </Stack>
       ),
     },
     {
       key: 'resources',
-      title: 'Resources and gear',
+      title: t('sheet.resourcesAndGear'),
       desktop: 'panel',
       content: (
         <Stack gap="sm">
@@ -161,7 +165,7 @@ export function SheetBody({
           */}
           {s.resources.class !== undefined && s.resources.class.length > 0 && (
             <ItemList
-              label="Resources"
+              label={t('sheet.resources')}
               items={s.resources.class.map(
                 (pool) => `${titleCase(pool.key ?? '')}: ${pool.dice ?? pool.max}`,
               )}
@@ -169,25 +173,25 @@ export function SheetBody({
           )}
           {Object.entries(s.resources.spellSlots ?? {}).length > 0 && (
             <ItemList
-              label="Spell slots"
+              label={t('sheet.spellSlots')}
               items={Object.entries(s.resources.spellSlots ?? {}).map(
-                ([level, pool]) => `Level ${level}: ${pool.max}`,
+                ([level, pool]) => t('sheet.slotLevel', { level, max: pool.max }),
               )}
             />
           )}
           <ItemList
-            label="Equipped"
+            label={t('sheet.equipped')}
             items={s.equipment.equipped.map((stack) => titleCase(stack.item ?? ''))}
-            empty="Nothing worn or wielded."
+            empty={t('sheet.nothingWorn')}
           />
           <ItemList
-            label="Carried"
+            label={t('sheet.carried')}
             items={s.equipment.backpack.map((stack) =>
               stack.count > 1
                 ? `${titleCase(stack.item ?? '')} ×${stack.count}`
                 : titleCase(stack.item ?? ''),
             )}
-            empty="Empty."
+            empty={t('sheet.empty')}
           />
         </Stack>
       ),
@@ -197,7 +201,7 @@ export function SheetBody({
   // "Character sheet" rather than the character's name: the name is already the
   // heading above this, and a landmark whose name changed per character would
   // give a screen-reader user a different table of contents on every sheet.
-  return <SectionDeck label="Character sheet" cols={2} sections={sections} />
+  return <SectionDeck label={t('sheet.label')} cols={2} sections={sections} />
 }
 
 
@@ -212,6 +216,7 @@ export function SheetBody({
  * to align.
  */
 function AbilityCards({ sheet: s }: { sheet: Sheet }) {
+  const t = useT()
   return (
     <SimpleGrid cols={{ base: 3, sm: 6 }} spacing={{ base: 'xs', sm: 'sm' }}>
       {abilitiesInOrder(abilitiesOnSheet(s)).map(([ability]) => {
@@ -221,8 +226,8 @@ function AbilityCards({ sheet: s }: { sheet: Sheet }) {
         return (
           <Card key={ability} withBorder padding="xs" radius="md">
             <Stack gap={0} align="center">
-              <Text size="xs" c="dimmed" tt="uppercase" title={abilityName(ability)}>
-                {ability}
+              <Text size="xs" c="dimmed" title={abilityName(t, ability)}>
+                {abilityAbbr(t, ability)}
               </Text>
               <Text fw={700} size="xl">
                 {modifier === undefined ? '--' : signed(modifier)}
@@ -236,7 +241,7 @@ function AbilityCards({ sheet: s }: { sheet: Sheet }) {
                 <Divider my={8} />
                 <Group gap={6} justify="center" wrap="nowrap">
                   <Text size="xs" c="dimmed">
-                    Save
+                    {t('sheet.save')}
                   </Text>
                   <ProficiencyMark level={save.proficient ? 'proficient' : 'none'} size={10} />
                   <Text size="sm" fw={500}>

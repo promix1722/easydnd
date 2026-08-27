@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import type { Entry, Prompt } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 import { Badge, Button, Group, Stack, Text } from '@/ui'
 
 import { choosableOptions } from './options'
@@ -28,6 +29,7 @@ export interface PromptCardProps {
  * then "Choose 2 more languages" -- would be asking twice.
  */
 export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardProps) {
+  const t = useT()
   const [picked, setPicked] = useState<string[]>([])
 
   // A new prompt is a new question; carrying the previous answer over would
@@ -40,7 +42,7 @@ export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardPro
     setPicked([])
   }
 
-  const options = choosableOptions(prompt, entries)
+  const options = choosableOptions(t, prompt, entries)
   const target = prompt.choice.choose
   const ready = picked.length === target
   // "Choose one" is a different question from "choose two", and the
@@ -114,19 +116,18 @@ export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardPro
         })}
         {options.length === 0 && (
           <Text size="sm" c="dimmed">
-            The compendium offers nothing here. SRD 5.1 is a starter set -- one background, one
-            feat -- so this is a gap in the data rather than in the rules.
+            {t('prompt.nothingOffered')}
           </Text>
         )}
       </Stack>
 
       <Group>
         <Button onClick={() => onAnswer(picked)} disabled={!ready} loading={pending}>
-          {ready ? 'Confirm' : `Choose ${target - picked.length} more`}
+          {ready ? t('answer.confirm') : t('prompt.chooseMore', { count: target - picked.length })}
         </Button>
         {picked.length > 0 && (
           <Button variant="subtle" onClick={() => setPicked([])}>
-            Clear
+            {t('prompt.clear')}
           </Button>
         )}
       </Group>

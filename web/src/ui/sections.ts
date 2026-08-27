@@ -1,6 +1,8 @@
 import type { Icon } from '@tabler/icons-react'
 import { IconDice5, IconShield, IconUsers } from '@tabler/icons-react'
 
+import type { MessageKey } from '@/lib/i18n'
+
 /**
  * The three sections of the app, declared once.
  *
@@ -15,7 +17,16 @@ import { IconDice5, IconShield, IconUsers } from '@tabler/icons-react'
 export interface Section {
   /** Where the section links: the navbar's entry, and the first crumb's. */
   to: string
-  label: string
+  /**
+   * What to call it -- a message key, not a word.
+   *
+   * The table is a constant and the language is React state, so this cannot
+   * hold the noun itself: it is read by the navbar, the tab bar and the first
+   * crumb of every trail, and each of those translates it where it draws it.
+   * That the three go on agreeing is the whole reason the table is here rather
+   * than copied into each of them.
+   */
+  label: MessageKey
   /** Drawn wherever the section is named, and nowhere else. */
   icon: Icon
   /**
@@ -49,9 +60,9 @@ export interface Section {
  * - **Games** is one sitting. Dice.
  */
 export const SECTIONS: readonly Section[] = [
-  { to: '/', label: 'Characters', icon: IconUsers, owns: ['/characters'] },
-  { to: '/groups', label: 'Groups', icon: IconShield, owns: ['/groups'] },
-  { to: '/games', label: 'Games', icon: IconDice5, owns: ['/games'] },
+  { to: '/', label: 'section.characters', icon: IconUsers, owns: ['/characters'] },
+  { to: '/groups', label: 'section.groups', icon: IconShield, owns: ['/groups'] },
+  { to: '/games', label: 'section.games', icon: IconDice5, owns: ['/games'] },
 ]
 
 /**

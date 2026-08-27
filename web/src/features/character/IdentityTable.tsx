@@ -2,6 +2,7 @@ import type { Identity } from '@/lib/api'
 import { Card, SimpleGrid, Stack, Text } from '@/ui'
 
 import { titleCase } from '@/domain'
+import { useT } from '@/lib/i18n'
 
 /**
  * Who the character is, as labelled pairs rather than a sentence.
@@ -36,6 +37,8 @@ export interface IdentityTableProps {
 }
 
 export function IdentityTable({ identity, names }: IdentityTableProps) {
+  const t = useT()
+
   /** The compendium's name for a slug, or the slug title-cased. */
   const named = (collection: string, slug: string | undefined): string =>
     slug === undefined || slug === ''
@@ -63,28 +66,28 @@ export function IdentityTable({ identity, names }: IdentityTableProps) {
     {
       key: 'name',
       fields: [
-        ['Name', identity.name === '' ? UNSET : identity.name],
-        ['Level', String(identity.level)],
+        [t('identity.name'), identity.name === '' ? UNSET : identity.name],
+        [t('identity.level'), String(identity.level)],
       ],
     },
     {
       key: 'race',
       fields: [
-        ['Race', named('races', identity.race)],
-        ['Subrace', named('subraces', identity.subrace)],
+        [t('identity.race'), named('races', identity.race)],
+        [t('identity.subrace'), named('subraces', identity.subrace)],
       ],
     },
     {
       key: 'class',
       fields: [
         [
-          'Class',
+          t('identity.class'),
           classes.length === 0
             ? UNSET
             : classes.map((entry) => `${named('classes', entry.class)} ${entry.level}`).join(' · '),
         ],
         [
-          'Subclass',
+          t('identity.subclass'),
           subclasses.length === 0
             ? UNSET
             : subclasses.map((entry) => named('subclasses', entry.subclass)).join(' · '),
@@ -94,8 +97,8 @@ export function IdentityTable({ identity, names }: IdentityTableProps) {
     {
       key: 'background',
       fields: [
-        ['Background', named('backgrounds', identity.background)],
-        ['Experience', String(identity.experience)],
+        [t('identity.background'), named('backgrounds', identity.background)],
+        [t('identity.experience'), String(identity.experience)],
       ],
     },
   ]

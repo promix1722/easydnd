@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import type { ClassLevel } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 import { Button, Checkbox, Group, Loader, ModalSheet, Stack, Text } from '@/ui'
 
 import { classLine } from '@/domain'
@@ -42,6 +43,7 @@ export function PickCharactersSheet({
   onClose: () => void
   onAdd: (ids: string[]) => void
 }) {
+  const t = useT()
   // The caller remounts this with a `key` per source, which is what gives a
   // fresh selection each time it opens -- what was ticked last time is not a
   // draft anybody is coming back to, and resetting it from an effect would
@@ -82,14 +84,14 @@ export function PickCharactersSheet({
 
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             disabled={picked.length === 0}
             loading={pending}
             onClick={() => onAdd(picked)}
           >
-            Add
+            {t('common.add')}
           </Button>
         </Group>
       </Stack>

@@ -142,7 +142,7 @@ func (s *Service) at(
 	role, err := s.member(ctx, actor, g.Group)
 	if err != nil {
 		if types.IsNotFound(err) {
-			return domain.Game{}, "", types.NewNotFoundError("game %q", id)
+			return domain.Game{}, "", types.NewNotFoundError("game %q", id).Because("game.notFound")
 		}
 		return domain.Game{}, "", err
 	}

@@ -147,7 +147,29 @@ and description. Adding Russian never touches a mechanics file.
 Fallback is **per key, not per entry**: a locale that has translated a spell's
 name but not its description gets the translated name and the English text. That
 partial state is what a growing locale actually looks like, so it is the case
-that has to work well. `en` is complete; `ru` is currently a scaffold.
+that has to work well. `en` is complete; every other locale is as far as
+somebody has got.
+
+Translations are an **input**, not an edit of the output:
+
+```
+data/translations/ru/spells.json   <- hand-edited, checked in
+        |  cmd/srdgen
+        v
+data/srd_5.1/i18n/ru/spells.json   <- generated, never hand-edited
+```
+
+`data/srd_5.1/` is regenerated and diffed by `make data/srd/check`, so anything
+typed into it is reverted; before the input tree existed there was nowhere to
+put a translation that survived a build. Adding a language is adding a directory
+-- `srdgen` reads whatever locales are present rather than a list in code -- and
+a slug that is not in the English bundle fails the build with the file and the
+slug named, because a mistyped key is otherwise a word nobody ever sees.
+
+The generated locale directory holds **only what has been translated**. It is
+not a merged copy of English: the loader merges at read time, and writing the
+merge out would put a megabyte of untouched English into every language's diff.
+See [data/translations/README.md](../data/translations/README.md).
 
 Rule strings like `"1 action"` and `"Up to 1 minute"` are *mechanics*, and are
 stored structured rather than as text — otherwise a Russian sheet would read

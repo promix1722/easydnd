@@ -3,8 +3,19 @@ import { useEffect, useRef, useState } from 'react'
 import type { InvitableRole } from '@/lib/api'
 import { createInvite } from '@/lib/api'
 import { copyText } from '@/lib/clipboard'
+import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
-import { Alert, Button, Group, ModalSheet, Select, Stack, Text, TextInput } from '@/ui'
+import {
+  Alert,
+  Button,
+  Group,
+  ModalSheet,
+  Select,
+  SHEET_COMBOBOX,
+  Stack,
+  Text,
+  TextInput,
+} from '@/ui'
 
 export interface InviteSheetProps {
   groupId: string
@@ -36,6 +47,7 @@ const COPIED_FOR = 2000
 
 /** Mints a shareable link and shows it once. */
 export function InviteSheet({ groupId, opened, onClose, copyLink = copyText }: InviteSheetProps) {
+  const t = useT()
   const [role, setRole] = useState<InvitableRole>('player')
   const [link, setLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -81,13 +93,14 @@ export function InviteSheet({ groupId, opened, onClose, copyLink = copyText }: I
   }
 
   return (
-    <ModalSheet opened={opened} onClose={close} title="Invite someone">
+    <ModalSheet opened={opened} onClose={close} title={t('invite.title')}>
       <Stack gap="sm">
         <Select
-          label="Join as"
+          label={t('invite.joinAs')}
+          comboboxProps={SHEET_COMBOBOX}
           data={[
-            { value: 'player', label: 'Player' },
-            { value: 'dm', label: 'DM' },
+            { value: 'player', label: t('role.player') },
+            { value: 'dm', label: t('role.dm') },
           ]}
           value={role}
           onChange={(value) => setRole((value as InvitableRole | null) ?? 'player')}
@@ -95,7 +108,7 @@ export function InviteSheet({ groupId, opened, onClose, copyLink = copyText }: I
         />
 
         {invite.error !== null && (
-          <Alert color="red" title="Could not create an invitation">
+          <Alert color="red" title={t('invite.failed')}>
             {invite.error}
           </Alert>
         )}
@@ -103,17 +116,17 @@ export function InviteSheet({ groupId, opened, onClose, copyLink = copyText }: I
         {link === null ? (
           <Group justify="flex-end">
             <Button variant="default" onClick={close}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button loading={invite.pending} onClick={() => void mint()}>
-              Create link
+              {t('invite.createLink')}
             </Button>
           </Group>
         ) : (
           <Stack gap="xs">
             <TextInput
               ref={field}
-              label="Invitation link"
+              label={t('invite.linkLabel')}
               value={link}
               readOnly
               onFocus={(event) => event.currentTarget.select()}
@@ -122,25 +135,23 @@ export function InviteSheet({ groupId, opened, onClose, copyLink = copyText }: I
                 that cannot be withdrawn is a real trade, and the person
                 sending it is the only one who can decide it is acceptable. */}
             <Text size="sm" c="dimmed">
-              Anyone with this link can join for the next 24 hours, as many times as they like. It
-              cannot be cancelled.
+              {t('invite.bargain')}
             </Text>
             {copyFailed && (
               // Copying needs a secure context, which a dev box behind a plain
               // HTTP proxy is not. Saying so beats a button that quietly does
               // nothing -- and the link is selected by now, so there is
               // something to actually do about it.
-              <Alert color="yellow" title="Could not reach the clipboard">
-                This connection does not allow copying. The link is selected -- press Ctrl+C, or
-                Cmd+C on a Mac.
+              <Alert color="yellow" title={t('invite.clipboard.title')}>
+                {t('invite.clipboard.detail')}
               </Alert>
             )}
             <Group justify="flex-end">
               <Button variant={copied ? 'light' : 'filled'} onClick={() => void copy()}>
-                {copied ? 'Copied' : 'Copy link'}
+                {copied ? t('invite.copied') : t('invite.copyLink')}
               </Button>
               <Button variant="default" onClick={close}>
-                Done
+                {t('common.done')}
               </Button>
             </Group>
           </Stack>

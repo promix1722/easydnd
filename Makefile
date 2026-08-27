@@ -292,11 +292,11 @@ web/dev:
 	          EASYDND_WEB_PUBLIC_URL=$(WEB_PUBLIC_URL) \
 	          EASYDND_API_ORIGIN=http://127.0.0.1:$(API_PORT) npm run dev
 
-## web/lint: typecheck, lint and layer-check the frontend -- no tests
+## web/lint: typecheck, lint, layer-check and message-check the frontend -- no tests
 # Split out from web/check so CI's Check stage can run static analysis without
 # paying for the test suite; the Test stage runs web/test.
 web/lint:
-	cd web && npm run typecheck && npm run lint && npm run lint:layers
+	cd web && npm run typecheck && npm run lint && npm run lint:layers && npm run check:messages
 
 ## web/test: run the frontend suite once, no watch
 web/test:

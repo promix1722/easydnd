@@ -107,7 +107,7 @@ func (h *Handler) ssoStart(c *gin.Context, linkTo *user.ID) {
 func (h *Handler) currentAccount(c *gin.Context) (user.User, error) {
 	token := h.cookies.Session(c)
 	if token == "" {
-		return user.User{}, types.NewUnauthenticatedError("no session")
+		return user.User{}, types.NewUnauthenticatedError("no session").Because("auth.noSession")
 	}
 	account, err := h.svc.Session(c.Request.Context(), token)
 	if err != nil {
@@ -234,7 +234,7 @@ type UnlinkParams struct {
 func (h *Handler) SSOUnlink(c *gin.Context) {
 	account, ok := middleware.UserFrom(c)
 	if !ok {
-		helpers.FormatError(c, types.NewUnauthenticatedError("no session"))
+		helpers.FormatError(c, types.NewUnauthenticatedError("no session").Because("auth.noSession"))
 		return
 	}
 

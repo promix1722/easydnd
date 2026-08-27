@@ -113,8 +113,12 @@ describe('the vitals row', () => {
       },
     })
 
-    expect(cards()).toContain('Cleric Spell save DC13')
-    expect(cards()).toContain('Wizard Spell save DC12')
+    // Lower-cased mid-phrase, which it was not before: the label used to be
+    // built by gluing "Cleric " in front of "Spell save DC", so the capital was
+    // an artefact of the concatenation rather than a decision. The whole label
+    // is one message now and reads as English.
+    expect(cards()).toContain('Cleric spell save DC13')
+    expect(cards()).toContain('Wizard spell save DC12')
   })
 
   it('leads the speed with walking and keeps the rest beside it', () => {
@@ -131,7 +135,10 @@ describe('the vitals row', () => {
 
     // Walking leads however the projection ordered them: a character with a
     // fly speed still walks, and walking is the number asked for.
-    expect(cards()).toContain('Speed30 ft.flying 50 ft.')
+    // "Flying", not the wire's "flying": a speed kind is a closed enum the Go
+    // model owns, so the client names it out of the catalogue rather than
+    // printing the slug. See labels.ts.
+    expect(cards()).toContain('Speed30 ft.Flying 50 ft.')
   })
 
   it('lets the sense name its own card', () => {

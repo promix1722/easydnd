@@ -366,7 +366,7 @@ func toEvent(p Event, index int) (domain.Event, []types.FieldError) {
 	eventType, ok := domain.ParseEventType(p.Type)
 	if !ok {
 		fields = append(fields, types.FieldError{
-			Field: at("type"), Rule: "unknown", Message: "no such event type",
+			Field: at("type"), Rule: "unknown", Reason: "field.event.unknownType",
 		})
 	}
 
@@ -378,7 +378,7 @@ func toEvent(p Event, index int) (domain.Event, []types.FieldError) {
 		ref, ok := rules.ParseRef(p.Ref)
 		if !ok {
 			fields = append(fields, types.FieldError{
-				Field: at("ref"), Rule: "format", Message: `a reference reads "kind:slug"`,
+				Field: at("ref"), Rule: "format", Reason: "field.ref.format",
 			})
 		}
 		out.Ref = ref
@@ -387,9 +387,9 @@ func toEvent(p Event, index int) (domain.Event, []types.FieldError) {
 	for j, a := range p.Choices {
 		if a.Prompt == "" {
 			fields = append(fields, types.FieldError{
-				Field:   at("choices[" + strconv.Itoa(j) + "].prompt"),
-				Rule:    "required",
-				Message: "an answer must name the prompt it answers",
+				Field:  at("choices[" + strconv.Itoa(j) + "].prompt"),
+				Rule:   "required",
+				Reason: "field.answer.promptRequired",
 			})
 			continue
 		}
@@ -415,19 +415,19 @@ func toChange(c Change, field string) (domain.Change, []types.FieldError) {
 	if !ok {
 		fields = append(fields, types.FieldError{
 			Field: field + ".op", Rule: "unknown",
-			Message: "an operator is set, increment, add or remove",
+			Reason: "field.change.operator",
 		})
 	}
 	if c.Path == "" {
 		fields = append(fields, types.FieldError{
-			Field: field + ".path", Rule: "required", Message: "a change must address something",
+			Field: field + ".path", Rule: "required", Reason: "field.change.pathRequired",
 		})
 	}
 
 	value, err := toValue(c.Value)
 	if err != nil {
 		fields = append(fields, types.FieldError{
-			Field: field + ".value", Rule: "kind", Message: err.Error(),
+			Field: field + ".value", Rule: "kind",
 		})
 	}
 	return domain.Change{Path: domain.Path(c.Path), Op: op, Value: value}, fields

@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 
 import { WEB_VERSION } from '@/lib/buildinfo'
+import { useT } from '@/lib/i18n'
 import { Anchor, Group, Text } from '@/ui'
 
 /** The repository. Not written down anywhere else in the client. */
@@ -34,13 +35,15 @@ const REPO_URL = 'https://github.com/promix1722/easydnd'
  * test suite need no branch here.
  */
 export function LandingFooter() {
+  const t = useT()
+
   return (
     <Group h="100%" px="md" gap="md" wrap="nowrap">
       <Anchor href={REPO_URL} target="_blank" rel="noreferrer" size="xs">
         GitHub
       </Anchor>
       <Anchor component={Link} to="/legal" size="xs">
-        Licences
+        {t('legal.licences')}
       </Anchor>
       <Text size="xs" c="dimmed" ml="auto">
         {WEB_VERSION.slice(0, 7)}

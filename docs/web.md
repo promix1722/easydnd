@@ -80,6 +80,13 @@ policed them.
 components do: `Columns`, `DataList`, `ModalSheet`, `SectionDeck`, `TabDeck`,
 `SheetBody` and `RootShell`.
 
+It stayed seven when the controls grew a per-width size, and stayed seven when
+that was reverted -- worth a sentence because "make the theme responsive" is the
+obvious wrong turn both times. Anything that must differ by width and is not a
+*layout* belongs in `ui/app.css`, so nothing branches in JavaScript and nothing
+re-renders at the breakpoint. It also means no test here can assert a rendered
+size: the suite parses no CSS and jsdom evaluates no `@media`.
+
 `ui/Page` is deliberately **not** a seventh, and its own test proves it rather
 than asserting it in prose: the last case there compares the two renderings byte
 for byte, the way `TabRow.test.tsx` does. The cheapest way to "fix" a future
@@ -202,15 +209,19 @@ directory as the binary. React 19 + TypeScript + Vite, with
 to a phone home screen.
 
 ```
+web/locales/  en.json and ru.json -- every user-facing word in the client
 web/src/
   theme/      framework-free design tokens (breakpoints, the palette, the content cap)
   ui/         the design system -- the only place Mantine is imported, and the section table
-  lib/        API client, data hooks, WebAuthn plumbing and the auth context; no UI
+  lib/        API client, data hooks, WebAuthn plumbing, the auth context and i18n; no UI
   shell/      the chrome: RootGate picks it, RootShell picks the viewport
   features/   screens -- one directory per aggregate (characters/, groups/, ...)
   routes/     the route table, one tree for both viewports
   domain/     pure display helpers; the Go model in dnd.md owns the rules
 ```
+
+`locales/` sits outside `src/` deliberately. It is content, not code -- see
+[Localization](#localization).
 
 Net new dependencies for Google sign-in: **zero**. The whole flow is a
 server-side redirect, so the button is a link and there is no Google
@@ -364,21 +375,42 @@ the strip for a 390px line. It is neither of those things.
 edit, with an icon each -- and whether they are drawn is the caller's rank at
 *that* row's table, not at whichever one happens to be first. A DM at one group
 and a player at another must not get a Delete on the second because they have
-one on the first. Row actions are spelled out rather than folded into a menu,
-and each carries its row's name as its accessible name: a column of buttons all
-called "Delete" is ambiguous to a screen reader and to a test alike.
+one on the first.
+
+**A row's actions are data, not markup.** A screen hands `ui/DataList` a
+`rowActions` list -- a label, an icon, a colour, a handler -- and `DataList`
+draws it twice: **spelled out as buttons on a desktop**, where a table has the
+room and a row's actions should be visible without opening anything, and
+**folded behind one `⋮` menu on a phone**, where they have nowhere to go. That
+split is the whole of the difference between the two renderings, and it is the
+reason the rule below is now kept by construction rather than by twenty call
+sites remembering it: each action carries its row's name as its accessible name
+("Delete Ada"), because a column of buttons all called "Delete" is ambiguous to
+a screen reader and to a test alike. Three of the eight lists used to spell that
+out by hand and five did not.
+
+It went the way `ColumnsSection`'s `aside` and `TabRow`'s `actions` went, and
+for the opposite reason: those were `ReactNode` slots that lost their callers,
+this was a `ReactNode` slot that could only ever be drawn one way. A cluster of
+`<Button>`s cannot become menu items; a list of descriptions can be either.
+
+Four is where a desktop row stops being able to lay them out and folds into the
+same menu -- the threshold `FolderPanel` had already settled on for its own
+header, and the reason it has one.
 
 **Leaving is not editing.** It comes before rename and delete rather than
 between them, because sitting in the middle of that pair reads as though it
 were one of them.
 
-Every one of these controls is drawn at `ACTION_SIZE` with an `ACTION_ICON_SIZE`
-glyph, both from `@/ui`. They are constants rather than literals because the
-sizes had already drifted once: a row's buttons were `compact-xs`, a heading's
-were the default `md`, and the icons were a mix of 14, 16 and the icon
-package's own 24 -- so the same three actions were drawn three different sizes
-depending on which screen you were looking at. Small on purpose: a table is the
-content and its controls are not.
+Every one of these controls draws an `ACTION_ICON_SIZE` glyph from `@/ui`. It is
+a constant rather than a literal because the sizes had already drifted once: the
+icons were a mix of 14, 16 and the icon package's own 24, so the same three
+actions were drawn three different sizes depending on which screen you were
+looking at.
+
+There used to be an `ACTION_SIZE` beside it, passed at every one of these call
+sites. It is gone: the size is one theme default for the whole app, so a row's
+buttons cannot drift from a heading's by being written down separately.
 
 The heading's controls are capped to `MAX_TABLE_WIDTH` too, so they land on the
 table's right edge rather than the window's -- otherwise Rename and Delete drift
@@ -457,22 +489,26 @@ crumb, it is the heading, and there is nothing above it to navigate to -- which
 is what lets "the trail replaces the title" need no special case for the three
 list screens.
 
-**Below `md`, the section is dropped from the page.** The phone's one row of
-chrome already carries a control naming the section you are in and opening the
-others, and it draws that section's glyph beside the name -- so a crumb
-repeating the word, or a list screen whose heading *is* the word, spends a 390px
-line restating what sits an inch above it. On a detail page the section crumb
-goes; on a section root the heading goes with it. Deeper crumbs stay at both
-widths, because a group on a shared character's sheet is a real parent rather
-than a restatement of the chrome.
+**Below `md`, the section's *word* is dropped -- not its crumb.** The phone's
+one row of chrome already carries a control naming the section you are in and
+opening the others, with that section's glyph beside it. So a crumb spelling the
+word out again spends a 390px line restating what sits an inch above it, and on
+a section root the heading *is* that word.
+
+The way back is not a restatement, though, and an earlier version dropped it
+along with the word: from a group's page there was no route to Groups but the
+browser's own Back button. So on a subpage the section crumb stays as **its
+glyph alone, carrying the link**, and only the word and the `/` after it are
+hidden. On a section root there is no crumb at all -- there is nothing above it
+to go back to -- which is what "not for the main menu item" means here.
 
 Two things to know about that. It is done with `visibleFrom` rather than a
-branch -- the first use of a responsive visibility prop in this client -- so
-`Page` still renders one tree at every width and stays off the list of four
-components that swap markup. And it has a real cost: below `md` a section root
-has no heading in the accessibility tree at all, and the thing naming it is a
-button rather than an `h2`. The alternative was printing the same word twice on
-the narrowest screen the app supports.
+branch, so `Page` still renders one tree at every width and stays off the list
+of components that swap markup. And the link carries an `aria-label`: below
+`md` the only thing left inside it is an `aria-hidden` glyph, and a link with no
+accessible name is a link nobody can follow. Deeper crumbs keep their words at
+both widths, because a group on a shared character's sheet is a real parent
+rather than a restatement of the chrome.
 
 **The row goes with the word, and the block goes with the row.** Hiding the
 heading alone left what it sat in: `ROW_HEIGHT` of nothing plus the stack's
@@ -631,6 +667,25 @@ Two things on that screen are not cosmetic:
 New character and Import carry their own folder through as `?folder=`: there is
 a pair of them under every folder's table, so where you press is where the next
 character lands.
+
+### A row's dialogs belong to the screen, not to the row
+
+Move, Copy and Delete used to be a `RowActions` component rendered inside a
+table cell, which owned the open/closed state of two `ModalSheet`s and rendered
+them from there. That stopped being possible when a row's actions became data:
+`ui/DataList` renders no children, so there is nowhere inside a row to put a
+dialog.
+
+It should not have been there anyway, and the reason is worth keeping. A dialog
+mounted in a table cell disappears when its row does -- and a successful **Move**
+is precisely the moment the row leaves for another folder's table. It survived
+only because the reload happened to arrive after the dialog had already closed
+itself.
+
+`useCharacterActions` is what replaced it: a hook that returns the three actions
+to hand to each folder's list and the two sheets to render once at the bottom of
+the screen, beside the folder dialogs that were already there. Copy has no
+dialog, because it asks nothing.
 
 ## The build screen is a loop, not a wizard
 
@@ -1918,12 +1973,99 @@ rather than at the call site:
 | Primitive | Desktop | Mobile |
 |---|---|---|
 | `ModalSheet` | centred modal | bottom drawer |
-| `DataList` | table | labelled cards |
+| `DataList` | table | a card: name, marks, one dimmed line of facts, a `⋮` menu |
 | `Columns` | side-by-side panels | accordion |
 | `SectionDeck` | full-width blocks, then side-by-side panels | a `TabDeck` |
 | `TabDeck` | tab strip, and the active panel | tab strip over a carousel of every panel |
 | `TabRow` | tab strip | the same, scrolled sideways, ends faded |
 | `BlockList` | a list of blocks, one open | the same |
+
+### A dropdown inside a sheet stays inside it
+
+Mantine portals a `Select`'s dropdown to `document.body`, and a `Drawer` closes
+when a tap lands on its overlay. On a phone those two facts meet: the dropdown
+is outside the sheet, so opening the invite picker closed the sheet under it and
+left the list floating against the bottom of a page it no longer belonged to.
+The two then fought, which is what the flashing was.
+
+Every `Select` inside a `ModalSheet` therefore passes `SHEET_COMBOBOX`
+(`comboboxProps={{ withinPortal: false }}`), which keeps the dropdown in the
+sheet so the tap lands where the person tapping thinks they are. It is a
+constant rather than a theme default because it is only right there: a `Select`
+on an ordinary page may sit inside something with `overflow: hidden` -- the
+build screen's carousel does -- where an un-portalled dropdown is clipped
+instead.
+
+The sheet's own height cap is `85svh` rather than `85dvh` for a neighbouring
+reason. `dvh` is defined to change as dynamic browser UI appears, and
+`interactive-widget=resizes-content` makes the soft keyboard resize the layout
+viewport too -- so a cap in `dvh` chased every one of those resizes.
+
+### A write refreshes the screen; it does not reload it
+
+`useResource` offers both, and the difference is not cosmetic -- its own doc
+comment has said so all along, and every list screen was calling the wrong one.
+
+`reload` blanks: it puts the resource back to `loading`, which on these screens
+means `ui/Page` swaps the whole body for a spinner. That is honest for a first
+load or a retry after a failure, where the screen genuinely has no answer.
+`refresh` re-fetches behind what is already drawn.
+
+Every `act()` here follows a write **the server has already confirmed**. The
+screen knows what happened; it is catching up on what else changed. Calling
+`reload` there tore the list down and rebuilt it under whoever was reading it --
+and on a phone it was worse than untidy: a row action or a bottom sheet's close
+unmounted the portal it was dispatched from mid-transition, and the page flashed.
+Renaming a group, changing somebody's rank and creating an invitation all did it.
+
+So: `reload` stays on `pageState`'s `onRetry`, which is the case it was written
+for, and every post-write path calls `refresh`.
+
+### A card is not a table row with the headers moved
+
+`DataList`'s mobile rendering used to re-label each cell: a bold line for the
+name, then `Class: --`, then `Level: 0`, then whatever the actions column
+happened to render, on a text line of its own. Every list in the app looked like
+that, and three things were wrong with it -- only the first of them cosmetic.
+
+- **It spent a 390px line on one word, repeatedly.** Two facts about a character
+  took two full rows and printed the column header twice to do it.
+- **It was invalid markup.** Each cell went inside a `<Text>`, which renders a
+  `<p>`, and nearly every name cell rendered a `<Group>` of the name and its
+  badges, which is a `<div>`. The browser closes the paragraph early, which is
+  part of why the vertical rhythm was wrong.
+- **The actions had nowhere to go.** `FolderPanel` said so in a comment long
+  before this was fixed: *"four buttons in a row is what `DataList`'s mobile
+  card rendering already cannot lay out."*
+
+What replaced it is the shape `features/characters/FolderPanel` already had, and
+which was the one list in the app that read well on a phone: a bordered `Paper`,
+a `wrap="nowrap"` row with a `flex: 1; minWidth: 0` name, marks beside it, and
+every action behind one `⋮`. Under the name goes **one dimmed line of values**,
+joined with `·` and carrying no headers at all.
+
+Four things follow, and each is a rule rather than a detail:
+
+- **A fact with nothing to say is dropped**, including the literal `--`.
+  A *table* prints two dashes for nothing, because a blank cell in a grid of
+  them reads as a rendering fault -- `domain/classLine` returns them and two
+  screens write `level || '--'` by hand. A card has no column to keep straight,
+  so it says nothing, and a character who is still being built gets their name
+  and no second line rather than "Class: -- · Level: 0".
+- **`DataList` styles the name, and the caller supplies it as a string.** Every
+  call site used to wrap its own name in `<Text size="sm">`, which is exactly
+  why the heading came out the same size as the fields under it. `text` is also
+  what names each of the row's actions.
+- **A column says where it goes on a phone.** `badge` rides beside the name,
+  because a `<Badge>` in a run of dot-separated text reads as neither; `block`
+  gets a full-width line of its own, which the event log's `Detail` needs
+  because it is a stack of `<Code>` elements rather than a value. Marks that
+  never had a column at all -- "Yours", "You", "Guest" -- are the `badges` prop
+  instead, and they ride with the name at *both* widths.
+- **A list keeps one right edge.** If any row in the list can be acted on, the
+  rows that cannot reserve the gutter anyway. Otherwise a roster whose owner row
+  has no menu runs 44px wider than its neighbours, and a ragged edge down a list
+  reads as a bug.
 
 `Columns` and `SectionDeck` are the same idea answering two different questions,
 and both are kept rather than one winning. `Columns` collapses: a section is a
@@ -2001,27 +2143,117 @@ the document as well as the strip, and jsdom does not implement it. A stack of
 bordered disclosures needs no branch either: it is right at 390px and at
 1440px, and the only difference is padding the spacing scale already handles.
 
-## One button size, in one place
+## A dialog is a form, so the keyboard's Go key works
 
-Every `Button` is `xs`, and that is set once in `ui/theme.ts` as a `defaultProps`
-override rather than passed at each call site. It used to be passed at each call
-site, and the result was three sizes: the header's "Log in" was `compact-sm` at
-26px, the `/login` page it leads to answered with four default-`sm` 36px ones,
-and the inline retry buttons sat between them at `xs`. Pressing one and landing
-on the other read as two designs, which is what a size decided fifteen times
-eventually looks like.
+Every dialog in this app that asks for a name now passes `onSubmit` to
+`ui/ModalSheet`, which wraps its children in a real `<form>` and lets the confirm
+button be a `type="submit"`.
 
-A call site may still pass `size` where it genuinely means something different --
-`defaultProps` sets a floor, not a ceiling. But the drift started with a second
-size in three files, so a new one wants a reason beyond the button looking better
-on the screen being worked on.
+This was a bug you could only find on a phone. A soft keyboard offers a Go key
+on the strength of the browser seeing a form with a submit button in it -- so in
+the eight dialogs that were a bare `TextInput` beside a `Button onClick`, you
+typed a name, pressed the obvious key, and nothing happened at all. There was no
+error and no hint; the app simply ignored you.
 
-There is exactly one such call site: the phone header's section dropdown is
-`sm`. The reason is a tap target rather than taste -- it is the whole of the
-app's navigation on a phone, and `xs` is 30px, under every guideline there is.
-`ActionIcon` keeps Mantine's own default and gets no `defaultProps` entry of
-its own, because the three call sites that already use one rely on it and a new
-theme default would silently resize them.
+Three mechanisms had grown where there should have been one. The two folder
+dialogs wrote out their own `<form>` (and so were the only two that worked),
+`features/character/NameForm` listens for Enter on the input, and the other eight
+did nothing. Putting it on the wrapper is what stops that recurring: a dialog
+opts in with one prop, and the button and the key press cannot drift apart
+because there is one handler rather than two.
+
+**A dialog with no field must not become a form.** Delete-this-group,
+hand-over-ownership and the pickers pass no `onSubmit`, and `ModalSheet` wraps
+nothing -- a stray submit in a confirmation would fire on a key press nobody
+aimed at anything. `ui/ModalSheet.test.tsx` holds both halves.
+
+`NameForm` keeps its Enter handler and is the remaining odd one out: it is not
+in a dialog, it is the first thing anybody sees on the build screen, and its
+button is the screen's own. Worth folding in the next time that screen is opened.
+
+## The keyboard resizes the page, not just the view
+
+`index.html`'s viewport meta carries `interactive-widget=resizes-content`, and
+it is there for the bottom sheet.
+
+By default a soft keyboard resizes only the *visual* viewport: the layout
+viewport stays the full height of the screen, so an element anchored to its
+bottom -- which is what `ModalSheet` becomes below `md` -- is left sitting behind
+the keyboard. Every rename and create dialog puts its field there, so typing into
+one meant typing into something you could not see. `resizes-content` shrinks the
+layout viewport instead, which puts the sheet on top of the keyboard and makes
+the `85dvh` cap mean what it says.
+
+The sheet's body also scrolls (`overflowY: 'auto'`), for the case the cap still
+bites: the New folder dialog carries a paragraph above its field, and on a short
+viewport with the keyboard up that is taller than the space left.
+
+## One button size, in one place -- and one CSS rule beside it
+
+Every `Button` is `xs`, at every width, set once in `ui/theme.ts` as a
+`defaultProps` override rather than passed at each call site. It used to be
+passed at each call site, and the result was three sizes: the header's "Log in"
+was `compact-sm` at 26px, the `/login` page it leads to answered with four
+default-`sm` 36px ones, and the inline retry buttons sat between them at `xs`.
+Pressing one and landing on the other read as two designs, which is what a size
+decided fifteen times eventually looks like.
+
+A call site may still pass `size` where it genuinely means something different.
+There is exactly one: the phone header's section dropdown is `sm`, because it is
+the whole of the app's navigation on a phone and `xs` is 30px.
+
+**`ACTION_SIZE` is gone.** It was `'xs'`, passed at some twenty call sites, and
+said exactly what the theme default already said -- so "the row-action size" and
+"the app button size" were pinned together by coincidence rather than by
+construction. `ACTION_ICON_SIZE` stays: a glyph is not a control.
+
+### The one thing a theme value could not say
+
+`ui/app.css` is the app's only stylesheet and holds a single rule: a phone's
+input text is 16px.
+
+That is a browser fact, not a size. **iOS Safari zooms the whole page when a
+field smaller than 16px takes focus**, and every field here is Mantine's `sm`,
+which is 14px -- so every rename box in the app lurched the page when you tapped
+it. It is set as `font-size` on `.mantine-Input-input` rather than through a
+variable because Mantine writes `--input-fz` as an *inline* custom property from
+its `varsResolver`, and an inline declaration cannot be reached from a
+stylesheet. One rule covers all five field types; they each render an `Input`
+underneath.
+
+`ui/AppTheme.tsx` imports Mantine's `styles.layer.css` rather than `styles.css`,
+so every Mantine rule sits inside `@layer mantine` and this one beats it whatever
+the selectors weigh -- no specificity contest, no `!important`, and no dependence
+on which file the bundler emits first. `ui/theme.test.ts` asserts no
+`!important` appears there, because one showing up is the first sign the layered
+import was swapped back. It also pins the breakpoint byte-for-byte against
+`DESKTOP_MEDIA_QUERY`, since `postcss-preset-mantine`'s `smaller-than` mixin
+would have written 61.9375em -- a pixel from where `useIsDesktop` changes its
+mind, and close enough that nothing would look wrong while one width disagreed
+with itself.
+
+**`app.css` is the only stylesheet, and `AppTheme` the only file that may import
+one.** `scripts/check-layers.mjs` enforces both. Closing that hole meant teaching
+the layer check to see side-effect imports at all: its pattern required a `from`,
+so every `import '@mantine/core/styles.css'` had been invisible to the vendor
+rule that exists to keep Mantine inside `src/ui`.
+
+### What was tried and reverted: 44px controls on a phone
+
+This file briefly grew *every* control to the 44px touch target below the
+breakpoint, with `theme.ts` naming which Mantine size each control wore and
+`app.css` saying what those names measured at each width. The argument was good
+and the result was not: at 390px this app is mostly controls -- a heading row of
+three, a tab strip, a pair of add buttons under every folder -- and inflating all
+of them turned a dense screen into a scroll. It is recorded rather than quietly
+dropped, because the touch-target argument is correct in the abstract and
+somebody will make it again.
+
+What survived is the part that was a fact rather than a judgement, which is the
+16px rule above. `TOUCH_TARGET` stays in `theme/tokens.ts` as the floor for what
+a thumb has to hit *precisely* -- `ScoreAssignment`'s drag targets, which worked
+the number out for themselves before it was a token -- and not as the size of
+every control.
 
 ## The palette is one line in theme/tokens.ts
 
@@ -2130,6 +2362,20 @@ does for the Go packages: a convention nobody can run is a convention that
 rots. The list of packages it guards lives in `scripts/check-layers.mjs` as a
 list rather than one name, because `@tabler/` arrived through the hole a single
 hard-coded `@mantine/` left open.
+
+The same rule now covers a second vendor: **only `src/lib/i18n/` may import
+`i18next` or `react-i18next`**, and everything else imports `useT` from
+`@/lib/i18n`. A translator that sixty files reach for directly is a translator
+nothing can ever replace, and the re-export is also where the key type lives.
+The guarded directory is `lib/i18n` rather than `lib`, because it is a
+directory inside a layer and the rest of `lib/` has no business importing
+i18next either.
+
+`src/domain/` sits beside `theme/` at the bottom: pure rules, no framework, no
+transport -- and now no prose. It used to hold three tables of English nouns,
+which were the one thing in that directory that could not survive a second
+language; they are message keys in `features/character/labels.ts` now, and what
+stayed behind is what is genuinely a rule.
 
 ## Adding a feature
 
@@ -2284,6 +2530,116 @@ than assuming the route is unreachable.
 
 The Go side of the same feature is in
 [backend.md](backend.md#adding-a-feature).
+
+## Localization
+
+The client speaks English and Russian. **No user-facing word appears anywhere
+under `src/`**: every caption lives in `web/locales/en.json` and
+`web/locales/ru.json`, reached by key. That is the whole design goal, and the
+reason for most of what follows -- translating this app has to mean editing a
+data file, never opening a component.
+
+```tsx
+const t = useT()
+<Title order={2}>{t('login.title')}</Title>
+<Text>{t('account.signedInAs', { name })}</Text>
+<Text>{t('choice.language', { count })}</Text>
+```
+
+**`i18next` + `react-i18next`, and only `src/lib/i18n/` may import them.**
+`npm run lint:layers` enforces that, for the reason `@/ui` exists: a vendor
+every layer may reach for is a vendor nothing can ever replace. Screens import
+`useT` from `@/lib/i18n`, which also carries the key type -- `useT` is typed
+from `en.json`, so a key the catalogue does not define will not compile.
+
+**Fallback is per key, not per file.** A Russian catalogue that has translated
+a button and not the paragraph beside it shows the button in Russian and the
+paragraph in English. That partial state is what a growing locale actually
+looks like, so it is the case that has to work well -- and it is the same rule
+the Go catalogue applies to SRD prose, described in
+[dnd.md](dnd.md#localization). `ru.json` being incomplete is never a build
+failure.
+
+**Plurals are keys, not code.** Russian has four plural forms where English has
+two, so `n === 1 ? 'x' : 'xs'` is wrong before the word order is. A plural is
+`foo_one` / `foo_other` in the catalogue, called as `t('foo', { count })`, and
+i18next picks between the forms with `Intl.PluralRules`. Russian adds `_few`
+and `_many` in its own file and nothing in `src/` changes.
+
+That is also why **counts are digits rather than words**. The build screen used
+to read "Two more languages"; it reads "2 more languages" now. A Russian
+numeral agrees in gender with the noun it counts -- два языка, две черты -- so a
+shared table of spelled numbers is the same composition bug one level down.
+
+**Nothing is glued together.** A label built as `` `${whose}Spell attack bonus` ``
+is English word order written in TypeScript: a translator handed the fragments
+cannot reorder them, because the code already did. Every such phrase is one
+message with named arguments in it.
+
+### What is not translated
+
+- **`src/features/legal/attribution.ts` and the notices on `/legal`.** The SRD
+  5.1 attribution is pinned to `cmd/srdgen`'s constant by a test, and a
+  translated licence notice is a different notice. See
+  [licensing.md](licensing.md).
+- **`index.html`'s `<title>` and `<meta description>`, and the PWA manifest.**
+  They are static, baked at build time, and stay English.
+- **Language names in the switcher.** "English" and "Русский" are what each
+  language calls itself, which is what somebody looking for one is looking for.
+
+### Choosing a language
+
+`LocaleActions` sits in the header, left of the account and sign-out controls,
+and is drawn for guests and signed-out visitors too -- somebody who cannot read
+the landing page should not have to make an account before they can.
+
+The choice is autodetected from the browser on first load and kept in
+`sessionStorage` under `easydnd.locale`. **Not on the account**, so a guest has
+one; **not in `localStorage`**, so it is this visit's business -- the same trade
+`features/groups/inviteToken.ts` makes. The consequence is worth knowing rather
+than discovering: a second tab autodetects again rather than inheriting the
+choice.
+
+Detection is fifteen hand-rolled lines in `lib/i18n/instance.ts` rather than
+`i18next-browser-languagedetector`, which was tried and removed. It left
+`i18n.language` as the raw tag, so `ru-RU` produced a locale of "ru-RU" that
+every consumer had to normalise again, and it read `sessionStorage` unguarded,
+so a private-mode browser that refuses storage threw before the app rendered.
+
+The chosen language rides on **every** API request as `?locale=`, because the
+server negotiates per request and a page cannot rewrite its own
+`Accept-Language`. `lib/api/locale.ts` holds it; `src/test/setup.ts` resets it,
+because the suite shares one module registry. The catalogue cache in
+`lib/api/catalog.ts` is keyed by locale for the same reason -- without that, a
+switch would go on serving English entries for the life of the tab.
+
+### Keeping the catalogue honest
+
+Two checks, both in `make web/lint`:
+
+- **The compiler.** `useT` is typed from `en.json`, so a key that is not in the
+  catalogue is a type error at the call site.
+- **`npm run check:messages`.** The compiler cannot see the other direction --
+  a key the catalogue defines that nothing renders any more -- and has nothing
+  to say about Russian. The script fails on an unused key and on a Russian key
+  with no English counterpart, and *reports* Russian coverage without ever
+  failing on it.
+
+### The suite renders in English
+
+Around six hundred assertions match visible copy --
+`getByRole('button', { name: 'New group' })`. They went on passing unchanged
+when the captions moved into `web/locales/`, because `src/test/render.tsx` is
+the single seam: it wraps every render in a `LocaleProvider` pinned to English.
+`renderAt(viewport, ui, 'ru')` is how a test asks for the other one.
+
+The instance is built per render rather than shared, and that is not tidiness.
+The suite runs with `isolate: false`, so a language set on a module-level
+singleton by one file would be inherited by every file that ran after it, in
+whatever order they happened to run -- which is the same hazard `vi.mock` is
+banned for. A module of pure functions that needs words takes a `Translate` as
+an argument instead; `features/character/settled.ts` and `options.ts` are the
+worked examples, and `src/test/i18n.ts` is the translator their tests hand over.
 
 ## How it ships
 

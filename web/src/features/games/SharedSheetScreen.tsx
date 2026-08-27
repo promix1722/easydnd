@@ -3,6 +3,7 @@ import { useParams } from 'react-router'
 import type { Sheet } from '@/lib/api'
 import { getGroup, getSharedSheet } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
+import { useT } from '@/lib/i18n'
 import { Badge, Page, pageState } from '@/ui'
 
 import type { Compendium } from '../character/compendium'
@@ -21,6 +22,7 @@ import { classLine, titleCase } from '@/domain'
  * there is simply no route behind it for anybody but the owner.
  */
 export function SharedSheetScreen() {
+  const t = useT()
   const { id: groupId = '', character = '' } = useParams()
   // The same compendium the owner's own sheet loads, so the two name things
   // out of one set. Both requests are session-cached.
@@ -53,8 +55,8 @@ export function SharedSheetScreen() {
   const state = pageState(
     { data, error, loading },
     {
-      title: 'Could not load this character',
-      fallback: 'That character is not on this table.',
+      title: t('sharedSheet.loadFailed'),
+      fallback: t('sharedSheet.missing'),
       onRetry: reload,
     },
   )
@@ -68,7 +70,7 @@ export function SharedSheetScreen() {
     return (
       <Page
         trail={[group, { label: null }]}
-        state={state.kind === 'loading' ? { ...state, what: 'Projecting the sheet...' } : state}
+        state={state.kind === 'loading' ? { ...state, what: t('sharedSheet.loading') } : state}
       />
     )
   }
@@ -78,7 +80,7 @@ export function SharedSheetScreen() {
   return (
     <Page
       trail={[group, { label: identity.name || 'Unnamed' }]}
-      badge={<Badge variant="light">Read only</Badge>}
+      badge={<Badge variant="light">{t('sharedSheet.readOnly')}</Badge>}
       subtitle={
         <>
           {[

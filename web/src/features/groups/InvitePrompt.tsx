@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router'
 
+import { useT } from '@/lib/i18n'
 import { Alert, Button, Stack, Text, Title } from '@/ui'
 
 /**
@@ -18,23 +19,21 @@ import { Alert, Button, Stack, Text, Title } from '@/ui'
  * read a group's name off a link is not a trade worth making for one sentence.
  */
 export function InvitePrompt({ hasToken }: { hasToken: boolean }) {
+  const t = useT()
   const location = useLocation()
 
   if (!hasToken) {
     return (
-      <Alert color="red" title="No invitation">
-        That link is missing its invitation. Ask whoever sent it for a fresh one.
-      </Alert>
+      <Alert color="red" title={t('join.missing.title')}>{t('join.missing.detail')}</Alert>
     )
   }
 
   return (
     <Stack gap="md" align="flex-start">
       <div>
-        <Title order={2}>You have been invited to a group</Title>
+        <Title order={2}>{t('invitePrompt.title')}</Title>
         <Text c="dimmed" size="sm">
-          Sign in to join it. If you have never been here before, the same button makes you an
-          account -- there is nothing to fill in.
+          {t('invitePrompt.detail')}
         </Text>
       </div>
       {/* The location rides along exactly as the header's button does, so
@@ -42,7 +41,7 @@ export function InvitePrompt({ hasToken }: { hasToken: boolean }) {
           token is saved besides -- see inviteToken.ts, because Google's round
           trip drops the fragment on the floor. */}
       <Button component={Link} to="/login" state={{ from: location }}>
-        Log in to join
+        {t('invitePrompt.action')}
       </Button>
     </Stack>
   )

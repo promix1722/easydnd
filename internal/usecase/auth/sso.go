@@ -320,7 +320,7 @@ func (s *Service) sealFlight(f flight) (string, error) {
 
 func (s *Service) openFlight(sealed string) (flight, error) {
 	if sealed == "" {
-		return flight{}, types.NewValidationError("no sign-in is in progress")
+		return flight{}, types.NewValidationError("no sign-in is in progress").Because("auth.noCeremony")
 	}
 	payload, err := s.signer.Open(sealed, s.now())
 	if err != nil {

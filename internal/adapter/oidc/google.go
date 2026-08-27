@@ -154,12 +154,13 @@ func (g *Google) Exchange(ctx context.Context, code, nonce, verifier string) (us
 	// different application from signing someone in here.
 	idToken, err := provider.Verifier(&oidc.Config{ClientID: g.cfg.ClientID}).Verify(ctx, raw)
 	if err != nil {
-		return user.Identity{}, types.NewUnauthenticatedError("google did not prove who this is")
+		return user.Identity{}, types.NewUnauthenticatedError("google did not prove who this is").Because("auth.sso.unproven")
 	}
 	// The nonce binds this token to the authorization request we started.
 	// Without it a token obtained in some other flow could be replayed here.
 	if idToken.Nonce != nonce {
-		return user.Identity{}, types.NewUnauthenticatedError("google sign-in did not match the request that started it")
+		return user.Identity{}, types.NewUnauthenticatedError("google sign-in did not match the request that started it").
+			Because("auth.sso.mismatch")
 	}
 
 	var claims struct {

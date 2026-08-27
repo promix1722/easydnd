@@ -60,13 +60,13 @@ func intQuery(c *gin.Context, name string) (int, error) {
 	raw := c.Query(name)
 	if raw == "" {
 		return 0, types.NewFieldValidationError("a required parameter is missing", types.FieldError{
-			Field: name, Rule: "required", Message: "this parameter is required",
+			Field: name, Rule: "required", Reason: "field.param.required",
 		})
 	}
 	value, err := strconv.Atoi(raw)
 	if err != nil {
 		return 0, types.NewFieldValidationError("a parameter is not a number", types.FieldError{
-			Field: name, Rule: "format", Message: "this parameter must be a whole number",
+			Field: name, Rule: "format", Reason: "field.param.integer",
 		})
 	}
 	return value, nil

@@ -4,7 +4,22 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      `interactive-widget=resizes-content` is the one part of this that is not
+      boilerplate, and it is here for the bottom sheet.
+
+      By default a soft keyboard resizes only the *visual* viewport: the layout
+      viewport stays the full height of the screen, so an element anchored to
+      its bottom -- which is what `ui/ModalSheet` becomes on a phone -- is left
+      sitting behind the keyboard. Every rename and create dialog in this app
+      put its field there, so typing into one meant typing into something you
+      could not see. `resizes-content` shrinks the layout viewport instead, so
+      the sheet lands on top of the keyboard and `dvh` means what it says.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <!-- Rewritten at dev and build time from src/theme/palettes.ts; see the
          theme-colour plugin in vite.config.ts. The literal is what the tag
          currently resolves to, kept honest so reading this file does not

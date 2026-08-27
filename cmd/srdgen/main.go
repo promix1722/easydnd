@@ -15,9 +15,16 @@
 //   - types every cross-reference as "kind:slug", using the upstream URL to
 //     tell a skill from a proficiency of the same name
 //
+// Translations are an *input*, not an edit of the output. `data/srd_5.1/` is
+// generated and `make data/srd/check` reverts anything typed into it, so a
+// translator works in `data/translations/<locale>/<collection>.json` and this
+// command merges that over the English bundle. See writeLocales.
+//
 // Usage:
 //
-//	srdgen [-in docs/reference_srd_5.1/data/5e-database-2014-en] [-out data/srd_5.1]
+//	srdgen [-in docs/reference_srd_5.1/data/5e-database-2014-en]
+//	       [-out data/srd_5.1]
+//	       [-translations data/translations]
 package main
 
 import (
@@ -27,14 +34,16 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
 const (
-	defaultIn  = "docs/reference_srd_5.1/data/5e-database-2014-en"
-	defaultOut = "data/srd_5.1"
+	defaultIn           = "docs/reference_srd_5.1/data/5e-database-2014-en"
+	defaultOut          = "data/srd_5.1"
+	defaultTranslations = "data/translations"
 )
 
 // maxWarnings bounds how much unconverted data is tolerated before the run
@@ -46,9 +55,11 @@ const maxWarnings = 0
 func main() {
 	in := flag.String("in", defaultIn, "vendored 5e-database directory")
 	out := flag.String("out", defaultOut, "output data directory")
+	translations := flag.String("translations", defaultTranslations,
+		"hand-edited translation directory, one subdirectory per locale")
 	flag.Parse()
 
-	g := newGenerator(*in, *out)
+	g := newGenerator(*in, *out, *translations)
 	if err := g.run(); err != nil {
 		fmt.Fprintf(os.Stderr, "srdgen: %v\n", err)
 		os.Exit(1)
@@ -71,8 +82,9 @@ func main() {
 
 // generator holds one conversion run.
 type generator struct {
-	inDir  string
-	outDir string
+	inDir    string
+	outDir   string
+	transDir string
 
 	// prose accumulates the English bundle for each mechanics file, keyed by
 	// that file's name so the two stay aligned by construction.
@@ -86,13 +98,14 @@ type generator struct {
 	warnings []string
 }
 
-func newGenerator(in, out string) *generator {
+func newGenerator(in, out, translations string) *generator {
 	return &generator{
-		inDir:  in,
-		outDir: out,
-		prose:  make(map[string]file.Bundle),
-		terms:  make(file.Bundle),
-		counts: make(map[string]int),
+		inDir:    in,
+		outDir:   out,
+		transDir: translations,
+		prose:    make(map[string]file.Bundle),
+		terms:    make(file.Bundle),
+		counts:   make(map[string]int),
 	}
 }
 
@@ -118,11 +131,16 @@ func (g *generator) text(key, s string) {
 
 // run performs the conversion.
 func (g *generator) run() error {
-	for _, dir := range []string{
-		g.outDir,
-		filepath.Join(g.outDir, file.LocaleDir, rules.LocaleEN.String()),
-		filepath.Join(g.outDir, file.LocaleDir, rules.LocaleRU.String()),
-	} {
+	locales, err := g.locales()
+	if err != nil {
+		return err
+	}
+
+	dirs := []string{g.outDir}
+	for _, locale := range locales {
+		dirs = append(dirs, filepath.Join(g.outDir, file.LocaleDir, locale.String()))
+	}
+	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("creating %s: %w", dir, err)
 		}
@@ -146,19 +164,7 @@ func (g *generator) run() error {
 	}
 
 	// Prose last, so a mechanics failure aborts before half-writing bundles.
-	for _, name := range file.MechanicsFiles() {
-		bundle := g.prose[name]
-		if bundle == nil {
-			bundle = file.Bundle{}
-		}
-		if err := g.write(filepath.Join(file.LocaleDir, rules.LocaleEN.String(), name), bundle); err != nil {
-			return err
-		}
-	}
-	if err := g.write(filepath.Join(file.LocaleDir, rules.LocaleEN.String(), file.FileTerms), g.terms); err != nil {
-		return err
-	}
-	if err := g.writeRussianScaffold(); err != nil {
+	if err := g.writeLocales(locales); err != nil {
 		return err
 	}
 
@@ -166,7 +172,7 @@ func (g *generator) run() error {
 		return err
 	}
 
-	return g.writeManifest()
+	return g.writeManifest(locales)
 }
 
 // attribution ships with the data rather than beside it, so the notice travels
@@ -204,62 +210,163 @@ Not legal advice. Flagged here because the project's own research notes raise it
 and easydnd.org is public.
 `
 
-// writeRussianScaffold seeds the ru locale.
-//
-// It is deliberately tiny: a handful of hand-checked translations rather than
-// a machine-translated dump. Its job is to make the per-key fallback a path
-// that real data exercises, so a regression in the merge shows up in the test
-// suite rather than in production the day someone switches language.
-func (g *generator) writeRussianScaffold() error {
-	dir := filepath.Join(file.LocaleDir, rules.LocaleRU.String())
+/*
+locales reports which languages to emit: English, plus every subdirectory of
+the translations tree that names a locale this build knows.
 
-	abilities := file.Bundle{
-		"str": {Name: "СИЛ", Fields: map[string]string{file.ProseFullName: "Сила"}},
-		"dex": {Name: "ЛОВ", Fields: map[string]string{file.ProseFullName: "Ловкость"}},
-		"con": {Name: "ТЕЛ", Fields: map[string]string{file.ProseFullName: "Телосложение"}},
-		"int": {Name: "ИНТ", Fields: map[string]string{file.ProseFullName: "Интеллект"}},
-		"wis": {Name: "МДР", Fields: map[string]string{file.ProseFullName: "Мудрость"}},
-		"cha": {Name: "ХАР", Fields: map[string]string{file.ProseFullName: "Харизма"}},
-	}
-	if err := g.write(filepath.Join(dir, file.FileAbilities), abilities); err != nil {
-		return err
-	}
+Adding a language is therefore adding a directory. Nothing here is a list of
+languages -- `rules.SupportedLocales()` says which tags are legal, the
+filesystem says which ones anybody has started, and neither is a code change
+when a translator begins.
 
-	// Only the names are translated here. Every description falls back to
-	// English key by key, which is exactly the partial state a growing locale
-	// lives in.
-	races := file.Bundle{
-		"dwarf":      {Name: "Дварф"},
-		"elf":        {Name: "Эльф"},
-		"halfling":   {Name: "Полурослик"},
-		"human":      {Name: "Человек"},
-		"dragonborn": {Name: "Драконорождённый"},
-		"gnome":      {Name: "Гном"},
-		"half-elf":   {Name: "Полуэльф"},
-		"half-orc":   {Name: "Полуорк"},
-		"tiefling":   {Name: "Тифлинг"},
-	}
-	if err := g.write(filepath.Join(dir, file.FileRaces), races); err != nil {
-		return err
+An unknown directory is a warning rather than a failure, and the distinction
+matters: a typo like `data/translations/rus/` would otherwise be a directory
+somebody fills in for a week before noticing it is never read.
+*/
+func (g *generator) locales() ([]rules.Locale, error) {
+	out := []rules.Locale{rules.DefaultLocale}
+
+	entries, err := os.ReadDir(g.transDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return out, nil
+		}
+		return nil, fmt.Errorf("reading %s: %w", g.transDir, err)
 	}
 
-	terms := file.Bundle{
-		"castingTime.action":       {Name: "1 действие"},
-		"castingTime.bonus-action": {Name: "1 бонусное действие"},
-		"castingTime.reaction":     {Name: "1 реакция"},
-		"range.self":               {Name: "На себя"},
-		"range.touch":              {Name: "Касание"},
-		"duration.instantaneous":   {Name: "Мгновенная"},
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		locale := rules.Locale(entry.Name())
+		switch {
+		case locale == rules.DefaultLocale:
+			// English is generated, never translated: the dump is already in
+			// it, so a directory here would be an edit of the source text
+			// wearing a translator's clothes.
+			g.warnf("%s: %s is the source language and is not translated",
+				g.transDir, locale)
+		case !locale.IsSupported():
+			g.warnf("%s: %q is not a locale this build knows; see rules.SupportedLocales",
+				g.transDir, entry.Name())
+		default:
+			out = append(out, locale)
+		}
 	}
-	return g.write(filepath.Join(dir, file.FileTerms), terms)
+	slices.SortFunc(out, func(a, b rules.Locale) int { return strings.Compare(a.String(), b.String()) })
+	return out, nil
 }
 
-func (g *generator) writeManifest() error {
-	locales := []string{rules.LocaleEN.String(), rules.LocaleRU.String()}
+/*
+writeLocales emits the English bundles, and each translation beside them.
+
+A translation is written as it was given -- validated, sorted and canonically
+formatted, but **not merged with English**. That is deliberate, and it took a
+wrong turn to find: merging here writes a full copy of all 960 KB of English
+prose into every locale directory, which grows the tree by about a megabyte per
+language and makes a translation diff unreadable -- every line of it English the
+translator never touched.
+
+It is also unnecessary. `internal/adapter/catalog/file` already merges per key
+at load time -- `resolve` over the preferred locale and `rules.DefaultLocale` --
+and that path is what makes a partial locale work at all. A locale directory
+holding only what somebody has actually translated is the honest shape of the
+thing, and it is the shape the loader was built for.
+
+So what this command contributes is not the merge. It is that
+`data/srd_5.1/i18n/<locale>/` stays *generated*: hand-edits there are reverted
+by `make data/srd/check`, and the file a translator edits is checked against the
+English bundle on the way through.
+*/
+func (g *generator) writeLocales(locales []rules.Locale) error {
+	english := make(map[string]file.Bundle, len(g.prose)+1)
+	for _, name := range file.MechanicsFiles() {
+		bundle := g.prose[name]
+		if bundle == nil {
+			bundle = file.Bundle{}
+		}
+		english[name] = bundle
+	}
+	english[file.FileTerms] = g.terms
+
+	for _, name := range file.ProseFiles() {
+		path := filepath.Join(file.LocaleDir, rules.DefaultLocale.String(), name)
+		if err := g.write(path, english[name]); err != nil {
+			return err
+		}
+	}
+
+	for _, locale := range locales {
+		if locale == rules.DefaultLocale {
+			continue
+		}
+		translation, err := g.translationFor(locale, english)
+		if err != nil {
+			return err
+		}
+		for _, name := range file.ProseFiles() {
+			bundle, ok := translation[name]
+			if !ok {
+				continue
+			}
+			path := filepath.Join(file.LocaleDir, locale.String(), name)
+			if err := g.write(path, bundle); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// translationFor reads one locale's hand-edited files, checking as it goes.
+//
+// A slug the English bundle does not define is a warning, and `maxWarnings` is
+// zero -- so a typo in a translation fails the build with the slug printed,
+// rather than being silently dropped into a file nothing reads. That check is
+// most of why the translations live in their own tree: it can only be made
+// against the generated English, which is the thing being translated.
+func (g *generator) translationFor(
+	locale rules.Locale, english map[string]file.Bundle,
+) (map[string]file.Bundle, error) {
+	out := make(map[string]file.Bundle, len(english))
+	if locale == rules.DefaultLocale {
+		return out, nil
+	}
+
+	dir := filepath.Join(g.transDir, locale.String())
+	for _, name := range file.ProseFiles() {
+		path := filepath.Join(dir, name)
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, fmt.Errorf("reading %s: %w", path, err)
+		}
+
+		var bundle file.Bundle
+		if err := json.Unmarshal(raw, &bundle); err != nil {
+			return nil, fmt.Errorf("parsing %s: %w", path, err)
+		}
+		for slug := range bundle {
+			if _, ok := english[name][slug]; !ok {
+				g.warnf("%s: %q is not a slug in %s", path, slug, name)
+			}
+		}
+		out[name] = bundle
+	}
+	return out, nil
+}
+
+func (g *generator) writeManifest(locales []rules.Locale) error {
+	tags := make([]string, 0, len(locales))
+	for _, locale := range locales {
+		tags = append(tags, locale.String())
+	}
 	return g.write(file.FileManifest, file.Manifest{
 		Ruleset: "2014",
 		Source:  "5e-bits/5e-database src/2014/en, vendored at " + defaultIn,
-		Locales: locales,
+		Locales: tags,
 		Counts:  g.counts,
 	})
 }

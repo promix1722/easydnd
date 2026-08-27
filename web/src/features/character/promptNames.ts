@@ -1,4 +1,5 @@
 import type { Prompt } from '@/lib/api'
+import type { MessageKey, Translate } from '@/lib/i18n'
 
 import { offersOptions } from './options'
 
@@ -7,8 +8,8 @@ import { titleCase } from '@/domain'
 /**
  * A choice named as a thing rather than asked as a question.
  *
- * "Two more languages", not "Choose 2 more languages". Both surfaces that show
- * a choice want the noun: the sheet lists what is left, and the build screen
+ * "2 more languages", not "Choose 2 more languages". Both surfaces that show a
+ * choice want the noun: the sheet lists what is left, and the build screen
  * heads each block with the choice it opens onto -- and a list of imperatives
  * reads as a list of orders whether or not you can press it.
  *
@@ -19,55 +20,75 @@ import { titleCase } from '@/domain'
  * A kind this client has not learned yet still gets a name. The server may
  * grow a kind before the browser does, and a choice you cannot see is worse
  * than a choice named plainly.
+ *
+ * # Why every branch is a whole message
+ *
+ * This file used to build its phrases out of parts: a count, then a noun, then
+ * a plural `s` chosen by `choose === 1`. Both halves of that are English
+ * grammar written in TypeScript, and neither survives translation.
+ *
+ * Russian has four plural forms where English has two -- one язык, два языка,
+ * пять языков -- so the ternary is wrong before the word order is. And the
+ * word order is wrong too: a translator handed the fragments "2" and
+ * "languages" cannot put them in the order Russian needs, because the code has
+ * already decided it. So each branch names one message and passes it a count,
+ * and the whole phrase -- numeral, noun, agreement and all -- lives in
+ * web/locales/*.json where somebody who speaks the language can write it.
+ *
+ * The counts also stopped being spelled out. "Two more languages" was better
+ * English than "2 more languages", and it is not recoverable: a Russian
+ * numeral agrees in gender with the noun it counts (два языка, две черты), so
+ * a shared table of spelled numbers is the same composition bug one level
+ * down. Digits are the honest version.
  */
-export function choiceName(prompt: Prompt): string {
+export function choiceName(t: Translate, prompt: Prompt): string {
   const { choose, kind } = prompt.choice
   switch (kind) {
     case 'race':
-      return 'A race'
+      return t('choice.race')
     case 'subrace':
-      return 'A subrace'
+      return t('choice.subrace')
     case 'background':
-      return 'A background'
+      return t('choice.background')
     case 'class':
-      return 'A class'
+      return t('choice.class')
     case 'subclass':
-      return 'An archetype'
+      return t('choice.subclass')
     case 'level':
-      return 'Another level, in one of your classes'
+      return t('choice.level')
     case 'alignment':
-      return 'An alignment'
+      return t('choice.alignment')
     case 'text':
-      return 'A name'
+      return t('choice.text')
     case 'proficiency':
       return prompt.heldOnly
-        ? `${count(choose)} to double your proficiency in`
-        : `${count(choose)} to be proficient in`
+        ? t('choice.proficiencyDouble', { count: choose })
+        : t('choice.proficiency', { count: choose })
     case 'ability-bonus':
-      return `${count(choose)} ability ${choose === 1 ? 'score' : 'scores'} to raise`
+      return t('choice.abilityBonus', { count: choose })
     // Two questions share this kind. The one that offers options is the
     // improvement a level grants; the one that offers none is the six numbers
     // a character starts with, which is a form rather than a choice of N.
     case 'ability-scores':
       return offersOptions(prompt)
-        ? 'An improvement to your scores, or a feat'
-        : `${count(choose)} ability scores`
+        ? t('choice.improvement')
+        : t('choice.abilityScores', { count: choose })
     case 'language':
-      return `${count(choose)} more ${choose === 1 ? 'language' : 'languages'}`
+      return t('choice.language', { count: choose })
     case 'equipment':
-      return 'Starting equipment'
+      return t('choice.equipment')
     case 'personality':
-      return `${count(choose)} personality ${choose === 1 ? 'trait' : 'traits'}`
+      return t('choice.personality', { count: choose })
     case 'ideal':
-      return 'An ideal'
+      return t('choice.ideal')
     case 'bond':
-      return 'A bond'
+      return t('choice.bond')
     case 'flaw':
-      return 'A flaw'
+      return t('choice.flaw')
     case 'spell':
-      return `${count(choose)} ${choose === 1 ? 'spell' : 'spells'}`
+      return t('choice.spell', { count: choose })
     default:
-      return `${count(choose)} of ${titleCase(kind)}`
+      return t('choice.unknown', { count: choose, kind: titleCase(kind) })
   }
 }
 
@@ -81,18 +102,19 @@ export function choiceName(prompt: Prompt): string {
  * because these also need a noun -- the field has to be labelled with what one
  * of them is -- and one table with both is better than two that can disagree.
  *
- * `undefined` for every other kind, which is what makes this the test as well
- * as the table.
+ * `noun` is a message key rather than the word, so the label and the heading
+ * go on agreeing in whatever language is on screen. `undefined` for every
+ * other kind, which is what makes this the test as well as the table.
  */
-const WRITTEN: Record<string, { path: string; noun: string }> = {
-  personality: { path: 'identity.personalityTraits', noun: 'Personality trait' },
-  ideal: { path: 'identity.ideals', noun: 'Ideal' },
-  bond: { path: 'identity.bonds', noun: 'Bond' },
-  flaw: { path: 'identity.flaws', noun: 'Flaw' },
+const WRITTEN: Record<string, { path: string; noun: MessageKey }> = {
+  personality: { path: 'identity.personalityTraits', noun: 'written.personalityTrait' },
+  ideal: { path: 'identity.ideals', noun: 'written.ideal' },
+  bond: { path: 'identity.bonds', noun: 'written.bond' },
+  flaw: { path: 'identity.flaws', noun: 'written.flaw' },
 }
 
 /** Where a written question's answer goes, or undefined if it is picked. */
-export function writtenAs(prompt: Prompt): { path: string; noun: string } | undefined {
+export function writtenAs(prompt: Prompt): { path: string; noun: MessageKey } | undefined {
   return WRITTEN[prompt.choice.kind]
 }
 
@@ -102,11 +124,6 @@ export function writtenAs(prompt: Prompt): { path: string; noun: string } | unde
  * The same table from the other end, so that the block heading a decided trait
  * and the field that wrote it cannot come to call it two different things.
  */
-export function writtenLabel(path: string): string | undefined {
+export function writtenLabel(path: string): MessageKey | undefined {
   return Object.values(WRITTEN).find((each) => each.path === path)?.noun
-}
-
-/** Small counts read as words; large ones read as numbers. */
-function count(n: number): string {
-  return ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'][n] ?? String(n)
 }

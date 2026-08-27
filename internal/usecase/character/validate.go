@@ -69,8 +69,7 @@ func validateEvent(
 		if _, ok := answersAnOpenPrompt(log, cat, open, event); !ok {
 			return types.NewFieldValidationError("some answers are not valid", types.FieldError{
 				Field: fmt.Sprintf("events[%d].ref", index), Rule: "not-offered",
-				Message: fmt.Sprintf(
-					"nothing is asking this character for %s", event.Ref),
+				Reason: "field.answer.notAsked",
 			})
 		}
 	}
@@ -340,13 +339,11 @@ func validateRef(cat *catalog.Catalog, event domain.Event, index int) error {
 	if event.Ref.IsZero() {
 		return types.NewFieldValidationError("some answers are not valid", types.FieldError{
 			Field: field, Rule: "required",
-			Message: fmt.Sprintf("a %s event must name a catalogue entry", event.Type),
 		})
 	}
 	if !exists(cat, event.Ref) {
 		return types.NewFieldValidationError("some answers are not valid", types.FieldError{
-			Field: field, Rule: "unknown",
-			Message: fmt.Sprintf("%s is not in the compendium", event.Ref),
+			Field: field, Rule: "unknown", Reason: "field.answer.notInCompendium",
 		})
 	}
 	return nil
@@ -410,9 +407,9 @@ func validateChanges(event domain.Event, index int) []types.FieldError {
 		}
 		if change.Value.Int < minScore || change.Value.Int > maxScore {
 			fields = append(fields, types.FieldError{
-				Field:   fmt.Sprintf("events[%d].changes[%d].value", index, i),
-				Rule:    "range",
-				Message: "an ability score must be between 1 and 30",
+				Field:  fmt.Sprintf("events[%d].changes[%d].value", index, i),
+				Rule:   "range",
+				Reason: "field.ability.range",
 			})
 		}
 	}
@@ -427,7 +424,7 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 	if !found {
 		return []types.FieldError{{
 			Field: field, Rule: "unknown",
-			Message: "this character has no such prompt open",
+			Reason: "field.answer.promptClosed",
 		}}
 	}
 
@@ -435,7 +432,8 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 	if len(answer.Picks) > prompt.Choice.Choose {
 		fields = append(fields, types.FieldError{
 			Field: field, Rule: "choose",
-			Message: fmt.Sprintf("choose %d, got %d", prompt.Choice.Choose, len(answer.Picks)),
+			Reason: "field.answer.chooseCount",
+			Args:   types.Args{"want": prompt.Choice.Choose, "got": len(answer.Picks)},
 		})
 	}
 
@@ -446,8 +444,7 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 		// the entry's own slug, and the reference check above covers it.
 		if legal != nil && !slices.Contains(legal, pick) {
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "option",
-				Message: fmt.Sprintf("%q is not one of this prompt's options", pick),
+				Field: field, Rule: "option", Reason: "field.answer.notAnOption",
 			})
 			continue
 		}
@@ -456,8 +453,7 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 		// written, whereas being proficient in Stealth twice is not a thing.
 		if seen[pick] && prompt.Choice.Kind != rules.ChooseAbilityBonus {
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "duplicate",
-				Message: fmt.Sprintf("%q is picked more than once", pick),
+				Field: field, Rule: "duplicate", Reason: "field.answer.duplicate",
 			})
 		}
 		seen[pick] = true
@@ -473,13 +469,11 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 		switch {
 		case prompt.HeldOnly && !held:
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "not-held",
-				Message: fmt.Sprintf("the character is not proficient in %q", pick),
+				Field: field, Rule: "not-held", Reason: "field.answer.notProficient",
 			})
 		case !prompt.HeldOnly && held:
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "held",
-				Message: fmt.Sprintf("the character already has %q from another source", pick),
+				Field: field, Rule: "held", Reason: "field.answer.alreadyHeld",
 			})
 		}
 	}

@@ -2,6 +2,9 @@ import { useId } from 'react'
 
 import { Carousel, Paper, Stack, Text, Title, useIsDesktop } from '@/ui'
 
+import { useT } from '@/lib/i18n'
+import type { MessageKey } from '@/lib/i18n'
+
 /**
  * What a signed-out visitor sees at `/`: what this app is for, three panels of
  * it.
@@ -65,39 +68,20 @@ const FILL_MAIN =
 interface Slide {
   /** Stable key, and the stem of the heading's id. */
   key: string
-  /** The heading, and the panel's accessible name by way of it. */
-  title: string
-  /** Sample copy. See the note above. */
-  caption: string
+  /** The heading's message key, and the panel's accessible name by way of it. */
+  title: MessageKey
+  /** Sample copy, as a key. See the note above. */
+  caption: MessageKey
 }
 
 const SLIDES: readonly Slide[] = [
-  {
-    key: 'build',
-    title: 'Build a character',
-    caption:
-      'Answer one question at a time -- race, class, background, and the skills ' +
-      'each of them opens -- and the sheet fills itself in. Every modifier, save ' +
-      'and proficiency is derived, so there is no arithmetic to get wrong.',
-  },
-  {
-    key: 'group',
-    title: 'Join a group',
-    caption:
-      'Start a table and send one invite link. Everybody who follows it lands in ' +
-      'the same group, as owner, DM or player, and each rank can do what a table ' +
-      'expects of it and no more.',
-  },
-  {
-    key: 'adventure',
-    title: 'Run an adventure',
-    caption:
-      'Roll initiative once and track the fight from there: hit points, ' +
-      'conditions, and whose turn it is, for the whole table at the same time.',
-  },
+  { key: 'build', title: 'landing.build.title', caption: 'landing.build.caption' },
+  { key: 'group', title: 'landing.group.title', caption: 'landing.group.caption' },
+  { key: 'adventure', title: 'landing.adventure.title', caption: 'landing.adventure.caption' },
 ]
 
 export function LandingPage() {
+  const t = useT()
   // Two carousels could share a page one day -- a preview beside the real one,
   // say -- and duplicated heading ids would point every panel at the first.
   const headingId = useId()
@@ -115,10 +99,15 @@ export function LandingPage() {
     // Mantine gives the root `role="region"` and an `aria-roledescription` of
     // "carousel" already; the name is the part only this call site knows.
     <Carousel
-      aria-label="What easydnd is for"
+      aria-label={t('landing.label')}
       height={FILL_MAIN}
       slideGap="md"
       withIndicators
+      // Mantine ships these as "Previous slide" / "Next slide", in English and
+      // out of reach of the catalogue. They are the arrows' only accessible
+      // name, so they are named here instead.
+      previousControlProps={{ 'aria-label': t('landing.previous') }}
+      nextControlProps={{ 'aria-label': t('landing.next') }}
       withControls={withControls}
       // Bigger than the 26px default. On the viewport that draws them these are
       // the only way through the carousel for anybody not using the arrow keys,
@@ -150,10 +139,10 @@ export function LandingPage() {
                 measure on a wide screen. */}
             <Stack h="100%" justify="center" align="center" gap="md">
               <Title id={`${headingId}-${slide.key}`} order={2} ta="center">
-                {slide.title}
+                {t(slide.title)}
               </Title>
               <Text c="dimmed" ta="center" maw={480}>
-                {slide.caption}
+                {t(slide.caption)}
               </Text>
             </Stack>
           </Paper>

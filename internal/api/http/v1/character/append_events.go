@@ -64,10 +64,12 @@ type Dropped struct {
 
 // DroppedAnswer is one answer a replacement invalidated.
 type DroppedAnswer struct {
-	Prompt  string   `json:"prompt"`
-	Picks   []string `json:"picks,omitempty"`
-	Rule    string   `json:"rule"`
-	Message string   `json:"message,omitempty"`
+	Prompt string   `json:"prompt"`
+	Picks  []string `json:"picks,omitempty"`
+	Rule   string   `json:"rule"`
+	// Reason is a message key, like the error envelope's. No prose leaves the
+	// Go side; the client owns the words. See helpers.ErrorBody.
+	Reason string `json:"reason,omitempty"`
 }
 
 // AppendEvents handles POST /v1/characters/{id}/events.

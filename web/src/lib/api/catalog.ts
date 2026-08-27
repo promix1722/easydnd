@@ -1,4 +1,5 @@
 import { request } from './client'
+import { requestLocale } from './locale'
 
 /**
  * The compendium.
@@ -140,12 +141,15 @@ export interface Spell extends Entry {
 }
 
 /**
- * Every collection is fetched at most once per session.
+ * Every collection is fetched at most once per session, per language.
  *
  * The promise is cached rather than the value, so two components mounting in
- * the same tick make one request rather than two. It is never invalidated: the
- * compendium is immutable for the life of the server process, and a new
- * release reloads the page.
+ * the same tick make one request rather than two. The compendium is immutable
+ * for the life of the server process, so nothing here expires -- but it is
+ * immutable *per locale*, and the entries carry prose the server has already
+ * resolved. Keying on the collection alone is therefore a bug with a delay
+ * on it: switch to Russian and every collection already fetched keeps
+ * answering in English, for as long as the tab stays open.
  */
 const cache = new Map<string, Promise<unknown>>()
 
@@ -162,18 +166,27 @@ function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
   return started
 }
 
-/** Clears the session cache. For tests. */
+/**
+ * Clears the session cache.
+ *
+ * Used by the tests, and by the locale provider on a language change. The key
+ * carries the locale so a switch cannot serve the wrong language, but nothing
+ * would ever evict the abandoned one -- and holding both copies of a 1.5 MB
+ * compendium to serve one of them is not a trade worth making.
+ */
 export function resetCatalogCache(): void {
   cache.clear()
 }
 
 export function getManifest(): Promise<Manifest> {
-  return cached('manifest', () => request<Manifest>('/catalog'))
+  return cached(`manifest:${requestLocale()}`, () => request<Manifest>('/catalog'))
 }
 
 /** Fetches a whole collection, typed by the caller. */
 export function getCollection<T extends Entry>(collection: string): Promise<T[]> {
-  return cached(`collection:${collection}`, () => request<T[]>(`/catalog/${collection}`))
+  return cached(`collection:${requestLocale()}:${collection}`, () =>
+    request<T[]>(`/catalog/${collection}`),
+  )
 }
 
 /**

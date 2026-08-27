@@ -1684,7 +1684,9 @@ lockstep.
    comment above it says so.
 
 Errors travel as `internal/types` values and are rendered exactly once, by
-`helpers.FormatError`. Handlers never build an error body themselves.
+`helpers.FormatError`. Handlers never build an error body themselves. **No
+prose leaves this service** -- see [Errors are keys, not
+sentences](#errors-are-keys-not-sentences).
 
 If the thing belongs to more than one person, add a sixth step: put the
 authorization in **one function in the usecase** that every read and write goes
@@ -1698,22 +1700,100 @@ another.
 The frontend side of the same feature is in
 [web.md](web.md#adding-a-feature).
 
+## Errors are keys, not sentences
+
+The error envelope carries no message:
+
+```json
+{"error":{"code":"validation_error","reason":"group.name.required","request_id":"01J…"}}
+```
+
+`code` is one of seven and decides the status. `reason` is a stable slug the
+client turns into a sentence out of `web/locales/*.json`, with `args` for
+anything that has to be interpolated. Field errors carry the same pair beside
+`field` and `rule`.
+
+The reason is why: **the words a person reads are in the language that person
+chose**, and this service has no idea what that is beyond an `Accept-Language`
+header it would then have to hold a translation table for. The client already
+holds one, for every other caption in the app.
+
+### The English is not lost
+
+It moved to the log. `types.NewValidationError("character %q is at sequence %d,
+not %d", …)` still says exactly that, and `helpers.FormatError` now logs **every**
+refusal rather than only the 5xx, tagged with the request id the browser is
+holding. So "why did that fail" is still one `grep` away, and the person who hit
+it is no longer shown a sequence number.
+
+### Most errors do not need a slug
+
+Of the couple of hundred raise sites here, most are saying something only a
+developer wants: a value kind the wire should never have carried, a ceremony
+envelope that would not decode. Those keep their English message for the log and
+answer the client with the generic sentence for their code, which is all a
+person could have done with them anyway.
+
+The ones somebody is meant to read say so, with `Because`:
+
+```go
+types.NewFieldValidationError("a group needs a name",
+	types.FieldError{Field: "name", Rule: "required"}).
+	Because("group.name.required")
+
+// A limit travels as an argument, so the two catalogues cannot drift from the
+// constant the day it changes.
+types.FieldError{Field: "name", Rule: "max"}.
+	Because("field.maxChars", types.Args{"max": domain.MaxNameLen})
+```
+
+That keeps the vocabulary a translator has to cover down to the set somebody
+actually reads -- about fifty -- and adding to it later is one call at the raise
+site rather than a schema change.
+
+**Never put an opaque id in `Args`.** "character %q not found" with `chr_9f2a`
+spliced in reads worse in every language than "that character is not there", and
+a visitor can do nothing with it. The id belongs in the log next to the request
+that mentioned it. `Args` is for things a person can act on: a length limit, a
+role name, a count.
+
+### What the client does with an unknown reason
+
+Falls back, in order: `error.<reason>`, then `error.code.<code>`. The server may
+grow a reason before the browser does, and a vaguer sentence beats a bare slug
+on screen. `lib/api/errors.ts` checks each key against the English catalogue
+before using it, so that fallback is a real branch rather than a hope.
+
 ## Changing the SRD data
 
 Never edit `data/srd_5.1/` by hand -- `make verify` regenerates it into a
 temporary directory and fails on any difference, so a hand-edit survives only
 until the next run. Change `cmd/srdgen` and run `make data/srd` instead.
 
-The generator does three things the raw dump does not:
+**A translation is not a change to the generator.** Those go in
+`data/translations/<locale>/`, which is hand-edited by design; see
+[data/translations/README.md](../data/translations/README.md) and
+[dnd.md](dnd.md#localization).
+
+The generator does four things the raw dump does not:
 
 1. **Splits mechanics from prose.** Language-neutral data lives in the directory
    root; translatable text lives under `i18n/<locale>/`, keyed by the same slug.
    A partial locale falls back to English *per key*, so a translated name with an
    untranslated description works.
-2. **Normalises rule strings.** `"1 action"`, `"90 feet"` and `"Up to 1 minute"`
+2. **Merges translations from `data/translations/`.** Each locale is a
+   subdirectory named by its language tag, and `srdgen` reads what is there
+   rather than a list in code -- so adding a language is `mkdir`, and
+   `rules.SupportedLocales()` is the only place a tag has to be legal. A slug the
+   English bundle does not define is a warning, and `maxWarnings` is zero, so a
+   typo fails the build with the file and the slug printed rather than being
+   dropped into a file nothing reads. The generated locale directory holds only
+   what was translated: the loader merges at read time, and writing the merge out
+   would put a megabyte of untouched English into every language's diff.
+3. **Normalises rule strings.** `"1 action"`, `"90 feet"` and `"Up to 1 minute"`
    are mechanics wearing prose clothing; they become structured values and are
    re-rendered per locale.
-3. **Types every cross-reference** as `kind:slug`, using the upstream URL --
+4. **Types every cross-reference** as `kind:slug`, using the upstream URL --
    `skill:acrobatics` and `proficiency:skill-acrobatics` are different things
    with confusingly similar names.
 

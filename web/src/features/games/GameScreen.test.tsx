@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { GameDetail, GroupRole } from '@/lib/api'
 import { withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
+import { rowsOffering } from '@/test/rows'
 import type { Viewport } from '@/test/viewport'
 
 import { GameScreen } from './GameScreen'
@@ -67,7 +68,9 @@ describe.each(['mobile', 'desktop'] as const)('GameScreen (%s)', (viewport) => {
     expect(screen.getByRole('button', { name: 'Add character from group' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add my characters' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument()
+    // A row's action, so it is a named button on a desktop and one item inside
+    // the row's menu on a phone -- either way, exactly one row offers it.
+    expect(rowsOffering(viewport, 'Remove')).toBe(1)
     // The blanket control is gone: seating everyone is ticking Everyone in
     // the group picker, not a second button beside it.
     expect(screen.queryByRole('button', { name: 'Add everyone' })).not.toBeInTheDocument()
@@ -87,14 +90,11 @@ describe.each(['mobile', 'desktop'] as const)('GameScreen (%s)', (viewport) => {
 
     await waitFor(() => expect(screen.getByText('Thursday night')).toBeInTheDocument())
     expect(screen.getByText('Ada')).toBeInTheDocument()
-    for (const label of [
-      'Add character from group',
-      'Add my characters',
-      'Rename',
-      'Delete',
-      'Remove',
-    ]) {
+    for (const label of ['Add character from group', 'Add my characters', 'Rename', 'Delete']) {
       expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
     }
+    // And no way to unseat anybody: a player's row carries no control at all,
+    // at either width.
+    expect(rowsOffering(viewport, 'Remove')).toBe(0)
   })
 })

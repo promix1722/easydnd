@@ -81,7 +81,7 @@ func (s *Service) member(
 	role, err := s.repo.MemberRole(ctx, id, actor)
 	if err != nil {
 		if types.IsNotFound(err) {
-			return domain.Group{}, "", types.NewNotFoundError("group %q", id)
+			return domain.Group{}, "", types.NewNotFoundError("group %q", id).Because("group.notFound")
 		}
 		return domain.Group{}, "", err
 	}

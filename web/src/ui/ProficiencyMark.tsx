@@ -1,5 +1,8 @@
 import { Tooltip } from '@mantine/core'
 
+import { useT } from '@/lib/i18n'
+import type { MessageKey } from '@/lib/i18n'
+
 /**
  * How trained a character is in one skill or save, as a single glyph.
  *
@@ -23,14 +26,14 @@ import { Tooltip } from '@mantine/core'
 export type ProficiencyLevel = 'none' | 'half' | 'proficient' | 'expertise'
 
 /** What each level is called, and what it does to the bonus. */
-const DESCRIPTIONS: Record<ProficiencyLevel, string> = {
-  none: 'Not proficient',
-  half: 'Half proficiency -- half the bonus, rounded down',
-  proficient: 'Proficient -- your proficiency bonus applies',
+const DESCRIPTIONS: Record<ProficiencyLevel, MessageKey> = {
+  none: 'proficiency.none',
+  half: 'proficiency.half',
+  proficient: 'proficiency.proficient',
   // Worded as PromptCard words the choice that grants it ("Double your
   // proficiency in ..."), so the sheet and the question that filled it in
   // describe the same thing the same way.
-  expertise: 'Expertise -- your proficiency bonus, doubled',
+  expertise: 'proficiency.expertise',
 }
 
 export interface ProficiencyMarkProps {
@@ -48,7 +51,8 @@ export interface ProficiencyMarkProps {
  * be the one thing on the row that ignored the theme.
  */
 export function ProficiencyMark({ level, size = 12 }: ProficiencyMarkProps) {
-  const description = DESCRIPTIONS[level]
+  const t = useT()
+  const description = t(DESCRIPTIONS[level])
 
   return (
     <Tooltip label={description} withArrow>

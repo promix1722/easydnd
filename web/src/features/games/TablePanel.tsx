@@ -6,9 +6,9 @@ import { listCharacters, listTable, shareCharacter, unshareCharacter } from '@/l
 import { useAction } from '@/lib/useAction'
 import { useAuth } from '@/lib/auth'
 import { useResource } from '@/lib/useResource'
+import { useT } from '@/lib/i18n'
 import {
   ACTION_ICON_SIZE,
-  ACTION_SIZE,
   Alert,
   Anchor,
   Badge,
@@ -35,6 +35,7 @@ import { classLine } from '@/domain'
  * because there is no route behind one.
  */
 export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole }) {
+  const t = useT()
   const { user } = useAuth()
   const me = user?.id ?? ''
   const canManage = atLeast(role, 'dm')
@@ -49,18 +50,18 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
       <Group gap="xs">
         <Loader size="sm" />
         <Text size="sm" c="dimmed">
-          Loading the table...
+          {t('table.loading')}
         </Text>
       </Group>
     )
   }
   if (table.error !== null || table.data === null) {
     return (
-      <Alert color="red" title="Could not load this table">
+      <Alert color="red" title={t('table.loadFailed')}>
         <Stack gap="xs" align="flex-start">
-          <Text size="sm">{table.error ?? 'Unknown error'}</Text>
+          <Text size="sm">{table.error ?? t('error.unknown')}</Text>
           <Button variant="light" onClick={table.reload}>
-            Try again
+            {t('page.retry')}
           </Button>
         </Stack>
       </Alert>
@@ -72,13 +73,13 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
 
   async function act(work: Promise<unknown | null>) {
     if ((await work) === null) return
-    table.reload()
+    table.refresh()
   }
 
   return (
     <Stack gap="md">
       {failure !== null && (
-        <Alert color="red" title="That did not work">
+        <Alert color="red" title={t('group.actionFailed')}>
           {failure}
         </Alert>
       )}
@@ -86,69 +87,74 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
       <DataList
         items={characters}
         getKey={(character) => character.id}
+        // "Yours" is a mark on the name rather than a column: no table here
+        // ever gave it a header, and it used to be hand-built inside the name
+        // cell -- which is what put a `div` inside a `<Text>`'s paragraph.
+        badges={(character: TableCharacter) =>
+          character.owner_id === me ? (
+            <Badge size="xs" variant="light">
+              {t('table.yours')}
+            </Badge>
+          ) : null
+        }
+        actions={(character: TableCharacter) =>
+          // Your own always; anybody's if you run the table, because a guest's
+          // session ends and their character would otherwise sit here with
+          // nobody able to take it down.
+          character.owner_id !== me && !canManage
+            ? []
+            : [
+                {
+                  key: 'take-off',
+                  label: t('table.takeOff'),
+                  color: 'red',
+                  onClick: () => void act(unshare.run(groupId, character.id)),
+                },
+              ]
+        }
         columns={[
           {
             key: 'name',
-            header: 'Character',
+            header: t('game.character'),
             primary: true,
+            text: (character: TableCharacter) => character.name || t('common.unnamed'),
+            // The sheet, and only the sheet. The event log is the record of its
+            // owner's decisions and is not the table's business.
+            to: (character: TableCharacter) => `/groups/${groupId}/characters/${character.id}`,
             render: (character: TableCharacter) => (
-              <Group gap="xs">
-                {/* The sheet, and only the sheet. The event log is the record
-                    of its owner's decisions and is not the table's business. */}
-                <Anchor component={Link} to={`/groups/${groupId}/characters/${character.id}`}>
-                  <Text size="sm">{character.name || 'Unnamed'}</Text>
-                </Anchor>
-                {character.owner_id === me && (
-                  <Badge size="xs" variant="light">
-                    Yours
-                  </Badge>
-                )}
-              </Group>
+              <Anchor component={Link} to={`/groups/${groupId}/characters/${character.id}`}>
+                <Text size="sm">{character.name || t('common.unnamed')}</Text>
+              </Anchor>
             ),
           },
           {
             key: 'classes',
-            header: 'Class',
+            header: t('game.class'),
+            // `classLine` answers "--" for a character with no class yet, which
+            // is right for a table cell and is exactly what the card drops.
             render: (character: TableCharacter) => classLine(character.classes),
           },
           {
             key: 'level',
-            header: 'Level',
-            render: (character: TableCharacter) => character.level,
-          },
-          {
-            key: 'actions',
-            header: '',
-            render: (character: TableCharacter) => {
-              // Your own always; anybody's if you run the table, because a
-              // guest's session ends and their character would otherwise sit
-              // here with nobody able to take it down.
-              if (character.owner_id !== me && !canManage) return null
-              return (
-                <Button
-                  size={ACTION_SIZE}
-                  variant="subtle"
-                  color="red"
-                  onClick={() => void act(unshare.run(groupId, character.id))}
-                >
-                  Take off
-                </Button>
-              )
-            },
+            header: t('game.level'),
+            // `|| null` rather than the bare number: a character still being
+            // built is level 0, and "Level 0" is not a fact worth a line on a
+            // phone. The table keeps drawing the zero, where a blank cell in a
+            // column of numbers would read as a fault.
+            render: (character: TableCharacter) => character.level || null,
           },
         ]}
-        empty="Nothing on the table yet."
+        empty={t('table.empty')}
       />
 
       {/* Under the table, on the left, like every other way of adding a row. */}
       <Group>
         <Button
-          size={ACTION_SIZE}
           variant="light"
           leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
           onClick={() => setSharing(true)}
         >
-          Add a character
+          {t('table.addCharacter')}
         </Button>
       </Group>
 
@@ -177,39 +183,39 @@ function ShareSheet({
   onClose: () => void
   onPick: (id: string) => void
 }) {
+  const t = useT()
   const mine = useResource(opened ? 'characters:mine' : '', (signal) =>
     listCharacters(undefined, signal),
   )
   const characters = mine.data?.characters ?? []
 
   return (
-    <ModalSheet opened={opened} onClose={onClose} title="Put a character on the table">
+    <ModalSheet opened={opened} onClose={onClose} title={t('table.putOnTable')}>
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
-          Everyone at this table will be able to read the sheet. Only you can change it.
+          {t('table.shareWarning')}
         </Text>
         {mine.loading && <Loader size="sm" />}
         {characters.length === 0 && !mine.loading && (
-          <Text size="sm">You have not made a character yet.</Text>
+          <Text size="sm">{t('table.noCharacters')}</Text>
         )}
         {characters.map((character: Summary) => {
           const shared = already.includes(character.id)
           return (
             <Group key={character.id} justify="space-between">
               <div>
-                <Text size="sm">{character.name || 'Unnamed'}</Text>
+                <Text size="sm">{character.name || t('common.unnamed')}</Text>
                 <Text size="xs" c="dimmed">
                   {classLine(character.classes)}
                 </Text>
               </div>
               <Button
-                size="compact-sm"
                 variant="light"
                 disabled={shared}
                 loading={pending}
                 onClick={() => onPick(character.id)}
               >
-                {shared ? 'Already there' : 'Add'}
+                {shared ? t('table.alreadyThere') : t('common.add')}
               </Button>
             </Group>
           )

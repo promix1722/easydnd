@@ -3,6 +3,10 @@ import { Box, Divider, Group, ProficiencyMark, SimpleGrid, Stack, Text } from '@
 
 import { signed, titleCase } from '@/domain'
 
+import { useT } from '@/lib/i18n'
+
+import { abilityAbbr } from './labels'
+
 /**
  * The skills panel: every skill in the game, trained ones first.
  *
@@ -58,6 +62,7 @@ export interface SkillsPanelProps {
 }
 
 export function SkillsPanel({ skills, catalog }: SkillsPanelProps) {
+  const t = useT()
   const rows: Row[] = Object.entries(skills)
     .map(([slug, state]) => ({
       slug,
@@ -80,7 +85,7 @@ export function SkillsPanel({ skills, catalog }: SkillsPanelProps) {
   if (rows.length === 0) {
     return (
       <Text size="sm" c="dimmed">
-        None yet.
+        {t('panel.noneYet')}
       </Text>
     )
   }
@@ -89,8 +94,10 @@ export function SkillsPanel({ skills, catalog }: SkillsPanelProps) {
     <Stack gap="xs">
       <Text size="xs" c="dimmed">
         {trained.length === 0
-          ? 'Nothing trained yet'
-          : `${trained.length} proficient${doubled > 0 ? ` · ${doubled} with expertise` : ''}`}
+          ? t('skills.noneTrained')
+          : doubled > 0
+            ? t('skills.proficientWithExpertise', { count: trained.length, doubled })
+            : t('skills.proficient', { count: trained.length })}
       </Text>
 
       {trained.length > 0 && <SkillGrid rows={trained} />}
@@ -121,6 +128,7 @@ function SkillGrid({ rows }: { rows: Row[] }) {
 }
 
 function SkillRow({ row }: { row: Row }) {
+  const t = useT()
   const untrained = row.state.proficiency === 'none'
   // Dimming is the *second* channel, not the first: the mark's shape already
   // separates the four levels, so the panel still reads on a monochrome print
@@ -143,13 +151,11 @@ function SkillRow({ row }: { row: Row }) {
       </Group>
       <Group gap={8} wrap="nowrap">
         {row.ability !== undefined && (
-          // Uppercased in the text rather than by `tt`, unlike the saving
-          // throws. Those are the only other place printing a bare ability
-          // slug, and leaving both lowercase would make eighteen skill rows
-          // indistinguishable from the six saves to anything reading the
-          // document rather than looking at it.
+          // The abbreviation, from the catalogue rather than from the slug:
+          // "Strength" shortens to STR and "Сила" does not shorten to СИЛ, so
+          // the short form is a translation like any other. See labels.ts.
           <Text size="xs" c="dimmed">
-            {row.ability.toUpperCase()}
+            {abilityAbbr(t, row.ability)}
           </Text>
         )}
         <Text size="sm" fw={500} c={color}>

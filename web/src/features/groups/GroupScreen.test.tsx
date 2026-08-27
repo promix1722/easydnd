@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { GroupDetail, GroupRole } from '@/lib/api'
 import { testAccount, withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
+import { rowActionLabels } from '@/test/rows'
 import type { Viewport } from '@/test/viewport'
 
 import { GroupScreen } from './GroupScreen'
@@ -100,8 +101,30 @@ describe.each(['mobile', 'desktop'] as const)('GroupScreen (%s)', (viewport) => 
     await waitFor(() => expect(screen.getByText('Wednesday Night')).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: 'Invite' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Manage' })).not.toBeInTheDocument()
+    // A player manages nobody, so no row on the roster carries a control at
+    // all. This used to look for a button reading "Manage"; that button is
+    // gone -- a member's actions are now `ui/DataList`'s own, which is the same
+    // control every other list in the app draws -- so the assertion has to name
+    // what actually would be there.
+    expect(screen.queryByRole('button', { name: /^Actions for / })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Leave' })).toBeInTheDocument()
+  })
+
+  it('offers an owner the whole of what they may do to a member', async () => {
+    renderGroup(viewport, groupAs('owner'))
+
+    await waitFor(() => expect(screen.getByText('Devon')).toBeInTheDocument())
+
+    // The owner is nobody's to unseat, including their own: Alice is the owner
+    // here, so her row offers nothing at either width.
+    expect(await rowActionLabels(viewport, 'Alice')).toEqual([])
+
+    // Devon is a DM, so the rank offered is the one they are not.
+    expect(await rowActionLabels(viewport, 'Devon')).toEqual([
+      'Make player',
+      'Make owner',
+      'Remove from group',
+    ])
   })
 
   it('marks a guest in the roster', async () => {

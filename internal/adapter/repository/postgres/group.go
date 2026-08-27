@@ -91,7 +91,7 @@ func (r *GroupRepository) ByID(ctx context.Context, id domain.ID) (domain.Group,
 	).Scan(&g.ID, &g.Name, &g.CreatedBy, &g.CreatedAt)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
-		return domain.Group{}, types.NewNotFoundError("group %q", id)
+		return domain.Group{}, types.NewNotFoundError("group %q", id).Because("group.notFound")
 	case err != nil:
 		return domain.Group{}, types.WrapServerError(err, "load group")
 	}
@@ -158,7 +158,7 @@ func (r *GroupRepository) Members(ctx context.Context, id domain.ID) ([]domain.M
 	// roster cannot mean "a group with nobody in it" -- it means there is no
 	// such group. That saves a second query on the common path.
 	if len(out) == 0 {
-		return nil, types.NewNotFoundError("group %q", id)
+		return nil, types.NewNotFoundError("group %q", id).Because("group.notFound")
 	}
 	return out, nil
 }
@@ -194,7 +194,7 @@ func (r *GroupRepository) AddMember(
 	case isUniqueViolation(err, constraintGroupMembersPK):
 		return types.NewValidationError("%q is already in group %q", u, id)
 	case isForeignKeyViolation(err, constraintGroupMembersGroupFK):
-		return types.NewNotFoundError("group %q", id)
+		return types.NewNotFoundError("group %q", id).Because("group.notFound")
 	case err != nil:
 		// A violation of the users foreign key lands here on purpose. It means
 		// the usecase did not materialise the row a guest needs, which is a
@@ -326,7 +326,7 @@ func (r *GroupRepository) Rename(ctx context.Context, id domain.ID, name string)
 		return types.WrapServerError(err, "rename group")
 	}
 	if tag.RowsAffected() == 0 {
-		return types.NewNotFoundError("group %q", id)
+		return types.NewNotFoundError("group %q", id).Because("group.notFound")
 	}
 	return nil
 }
@@ -338,7 +338,7 @@ func (r *GroupRepository) Delete(ctx context.Context, id domain.ID) error {
 		return types.WrapServerError(err, "delete group")
 	}
 	if tag.RowsAffected() == 0 {
-		return types.NewNotFoundError("group %q", id)
+		return types.NewNotFoundError("group %q", id).Because("group.notFound")
 	}
 	return nil
 }

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
 import { useAuth } from '@/lib/auth'
+import { formatDate, useLocale, useT } from '@/lib/i18n'
+import type { Translate } from '@/lib/i18n'
 import { Alert, Badge, Button, Card, Group, Page, Stack, Text, Title } from '@/ui'
 
 /**
@@ -32,6 +34,8 @@ import { Alert, Badge, Button, Card, Group, Page, Stack, Text, Title } from '@/u
  * what it should have: the phone's chrome has no word for this place either.
  */
 export function AccountScreen() {
+  const t = useT()
+  const locale = useLocale()
   const { user, providers, linkProvider, unlinkProvider, busy, error } = useAuth()
   const [confirming, setConfirming] = useState<string | null>(null)
 
@@ -44,11 +48,9 @@ export function AccountScreen() {
   // before the click rather than after.
   if (user.anonymous) {
     return (
-      <Page trail={TRAIL} subtitle="You are playing as a guest.">
-        <Alert color="orange" title="There is no account to manage">
-          A guest session has nothing behind it -- no passkey, no connected accounts, and no way to
-          sign back in once it ends. To keep what you build, sign out and start again with a
-          passkey or a connected account; you will be starting fresh.
+      <Page trail={trail(t)} subtitle={t('account.asGuest')}>
+        <Alert color="orange" title={t('account.noAccount')}>
+          {t('account.noAccountDetail')}
         </Alert>
       </Page>
     )
@@ -60,10 +62,10 @@ export function AccountScreen() {
   )
 
   return (
-    <Page trail={TRAIL} subtitle={`Signed in as ${user.display_name}.`}>
+    <Page trail={trail(t)} subtitle={t('account.signedInAs', { name: user.display_name })}>
       <Stack gap="lg">
         {error ? (
-          <Alert color="red" title="That did not work">
+          <Alert color="red" title={t('group.actionFailed')}>
             {error}
           </Alert>
         ) : null}
@@ -76,18 +78,18 @@ export function AccountScreen() {
         {user.credentials.length > 0 ? (
           <Card withBorder padding="md">
             <Stack gap="sm">
-              <Title order={4}>Passkeys</Title>
+              <Title order={4}>{t('account.passkeys')}</Title>
 
               {user.credentials.map((credential) => (
                 <Group key={credential.id} justify="space-between" wrap="nowrap">
                   <Text size="sm" truncate>
-                    Added {formatDate(credential.created_at)}
+                    {t('account.added', { when: added(locale, credential.created_at, t) })}
                   </Text>
                   {/* A passkey that does not sync is a single point of failure
                       for an account with no recovery path, and the only honest
                       thing to do is say so. */}
                   <Badge color={credential.backed_up ? 'blue' : 'orange'} variant="light">
-                    {credential.backed_up ? 'Synced' : 'This device only'}
+                    {credential.backed_up ? t('account.synced') : t('account.deviceOnly')}
                   </Badge>
                 </Group>
               ))}
@@ -108,7 +110,7 @@ export function AccountScreen() {
           <Card withBorder padding="md">
             <Stack gap="sm">
               <Group justify="space-between">
-                <Title order={4}>Connected accounts</Title>
+                <Title order={4}>{t('account.connected')}</Title>
                 <Badge variant="light">{user.identities.length}</Badge>
               </Group>
 
@@ -132,7 +134,7 @@ export function AccountScreen() {
                     {confirming === key ? (
                       <Group gap="xs" wrap="nowrap">
                         <Button variant="subtle" onClick={() => setConfirming(null)}>
-                          Cancel
+                          {t('common.cancel')}
                         </Button>
                         <Button
                           color="red"
@@ -143,7 +145,7 @@ export function AccountScreen() {
                             })
                           }}
                         >
-                          Disconnect
+                          {t('account.disconnect')}
                         </Button>
                       </Group>
                     ) : (
@@ -153,10 +155,10 @@ export function AccountScreen() {
                         // Disabled rather than hidden, with the reason attached:
                         // a control that vanishes reads as a bug, and the reason
                         // is the thing worth knowing.
-                        title={last ? 'This is the only way left to sign in' : undefined}
+                        title={last ? t('account.onlyWayIn') : undefined}
                         onClick={() => setConfirming(key)}
                       >
-                        Disconnect
+                        {t('account.disconnect')}
                       </Button>
                     )}
                   </Group>
@@ -172,7 +174,7 @@ export function AccountScreen() {
                       disabled={busy}
                       onClick={() => linkProvider(provider.id)}
                     >
-                      Connect {provider.name}
+                      {t('account.connect', { provider: provider.name })}
                     </Button>
                   ))}
                 </Group>
@@ -191,10 +193,17 @@ export function AccountScreen() {
  * Hoisted out of the component because both returns draw it and a second
  * literal is a second thing that can come to read differently.
  */
-const TRAIL = [{ label: 'Account' }]
+function trail(t: Translate) {
+  return [{ label: t('account.title') }]
+}
 
-/** Dates arrive as RFC 3339 and are only ever shown, never compared. */
-function formatDate(value: string): string {
+/**
+ * Dates arrive as RFC 3339 and are only ever shown, never compared.
+ *
+ * In the app's locale rather than the browser's: a visitor who switched
+ * easydnd to Russian should not read Russian captions above English dates.
+ */
+function added(locale: string, value: string, t: Translate): string {
   const at = new Date(value)
-  return Number.isNaN(at.getTime()) ? 'recently' : at.toLocaleDateString()
+  return Number.isNaN(at.getTime()) ? t('account.recently') : formatDate(value, locale)
 }

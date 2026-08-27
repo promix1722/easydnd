@@ -246,7 +246,7 @@ func (s *Service) ownedFolder(
 		return domain.Folder{}, err
 	}
 	if folder.Owner != owner {
-		return domain.Folder{}, types.NewNotFoundError("folder %q", id)
+		return domain.Folder{}, types.NewNotFoundError("folder %q", id).Because("folder.notFound")
 	}
 	return folder, nil
 }
@@ -257,14 +257,14 @@ func validateFolderName(name string) (string, error) {
 	if name == "" {
 		return "", types.NewFieldValidationError("the folder could not be saved",
 			types.FieldError{
-				Field: "name", Rule: "required", Message: "a folder needs a name",
+				Field: "name", Rule: "required", Reason: "field.folder.name.required",
 			})
 	}
 	if utf8.RuneCountInString(name) > maxFolderNameLen {
 		return "", types.NewFieldValidationError("the folder could not be saved",
 			types.FieldError{
 				Field: "name", Rule: "length",
-				Message: "a folder's name must be 120 characters or fewer",
+				Reason: "field.maxChars", Args: types.Args{"max": maxFolderNameLen},
 			})
 	}
 	return name, nil

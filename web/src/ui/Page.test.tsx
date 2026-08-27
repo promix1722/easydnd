@@ -212,6 +212,33 @@ describe('Page', () => {
     expect(screen.getByRole('button', { name: 'New character' }).closest(HIDDEN_ON_PHONE)).toBeNull()
   })
 
+  it('keeps the way back on a phone, as the section glyph alone', () => {
+    // The word is the restatement, not the link. Dropping the whole crumb took
+    // the only way back to the section with it -- from a group's page there was
+    // nothing but the browser's own Back button.
+    renderPage('/groups/grp_1', { trail: [{ label: 'Wednesday Night' }] })
+
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    const back = within(trail).getByRole('link', { name: 'Groups' })
+    expect(back).toHaveAttribute('href', '/groups')
+    // Named at both widths by `aria-label`, because below `md` the only thing
+    // left inside the link is an `aria-hidden` glyph.
+    expect(back).toHaveAttribute('aria-label', 'Groups')
+    // The word and its separator are what the phone drops.
+    expect(back.querySelector(HIDDEN_ON_PHONE)?.textContent).toBe('Groups')
+  })
+
+  it('keeps a deeper crumb whole, because it is a parent rather than a restatement', () => {
+    renderPage('/groups/grp_1/characters/chr_1', {
+      trail: [{ label: 'Wednesday Night', to: '/groups/grp_1' }, { label: 'Ada' }],
+    })
+
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    const parent = within(trail).getByRole('link', { name: 'Wednesday Night' })
+    expect(parent.closest(HIDDEN_ON_PHONE)).toBeNull()
+    expect(parent.querySelector(HIDDEN_ON_PHONE)).toBeNull()
+  })
+
   it('keeps the row on a page whose heading is its own', () => {
     // A detail page's heading is the thing the page is about, which the chrome
     // says nowhere. Nothing here is a restatement, so nothing here is dropped.

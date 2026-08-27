@@ -11,6 +11,8 @@ import {
 import { AuthProvider } from './AuthProvider'
 import { useAuth } from './state'
 import { setupUser } from '@/test/user'
+import { apiPath } from '@/test/api'
+import { createI18n, LocaleProvider } from '@/lib/i18n'
 
 function respond(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -53,11 +55,22 @@ function Probe() {
   )
 }
 
+/**
+ * The provider under test, inside a language.
+ *
+ * `AuthProvider` turns an auth code or a WebAuthn DOMException into a sentence,
+ * and the sentences live in web/locales -- so it needs a translator in context
+ * the same way a screen does. Pinned to English, for the reason
+ * `src/test/render.tsx` pins it: the assertions below are written against
+ * English copy.
+ */
 function renderProvider() {
   return render(
-    <AuthProvider>
-      <Probe />
-    </AuthProvider>,
+    <LocaleProvider i18n={createI18n('en')}>
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>
+    </LocaleProvider>,
   )
 }
 
@@ -127,7 +140,7 @@ describe('AuthProvider', () => {
     // sign-in providers exist, and a bare call count would turn adding any
     // future bootstrap request into a failure here.
     const sessionCalls = fetchMock.mock.calls.filter(
-      ([url]) => (url as string) === '/v1/auth/me',
+      ([url]) => apiPath(url as string) === '/v1/auth/me',
     )
     expect(sessionCalls).toHaveLength(1)
 
@@ -199,7 +212,7 @@ describe('AuthProvider', () => {
   // at all, so a deployment that configured none must produce none.
   it('exposes the providers the server offers', async () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
-      if (url === '/v1/auth/providers') {
+      if (apiPath(url) === '/v1/auth/providers') {
         return Promise.resolve(respond(200, { providers: [{ id: 'google', name: 'Google' }] }))
       }
       return Promise.resolve(respond(401, { error: { code: 'unauthenticated', message: 'no' } }))
@@ -214,7 +227,7 @@ describe('AuthProvider', () => {
   // passkey, so a failing provider list is not allowed to break the bootstrap.
   it('survives a failing provider list', async () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
-      if (url === '/v1/auth/providers') return Promise.reject(new TypeError('network down'))
+      if (apiPath(url) === '/v1/auth/providers') return Promise.reject(new TypeError('network down'))
       return Promise.resolve(respond(200, { user: account }))
     })
     vi.stubGlobal('fetch', fetchMock)

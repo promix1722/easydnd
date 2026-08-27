@@ -1,0 +1,11 @@
+{
+  "dragonborn": { "name": "Драконорождённый" },
+  "dwarf": { "name": "Дварф" },
+  "elf": { "name": "Эльф" },
+  "gnome": { "name": "Гном" },
+  "half-elf": { "name": "Полуэльф" },
+  "half-orc": { "name": "Полуорк" },
+  "halfling": { "name": "Полурослик" },
+  "human": { "name": "Человек" },
+  "tiefling": { "name": "Тифлинг" }
+}

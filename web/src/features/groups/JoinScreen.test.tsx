@@ -88,7 +88,7 @@ describe('JoinScreen', () => {
 describe('a stale link', () => {
   it('reports the problem instead of signing anybody out', async () => {
     stubFetch(
-      { error: { code: 'validation_error', message: 'this invitation link is not valid, or it has expired' } },
+      { error: { code: 'validation_error', reason: 'invite.invalid' } },
       400,
     )
     renderJoin('desktop')
@@ -96,6 +96,7 @@ describe('a stale link', () => {
     await waitFor(() =>
       expect(screen.getByText('That invitation is not usable')).toBeInTheDocument(),
     )
+    // The words are the client's now -- the server sent only `invite.invalid`.
     expect(screen.getByText(/not valid, or it has expired/)).toBeInTheDocument()
     // Still signed in, so the way back into the app is offered.
     expect(screen.getByRole('button', { name: 'Your groups' })).toBeInTheDocument()

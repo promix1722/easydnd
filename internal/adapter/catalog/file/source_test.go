@@ -2,6 +2,8 @@ package file_test
 
 import (
 	"context"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -228,11 +230,40 @@ func TestClassLevelResources(t *testing.T) {
 	}
 }
 
-// A partially translated locale must fall back key by key, not entry by entry:
-// a translated name with an untranslated description is the normal state of a
-// growing locale.
+/*
+A partially translated locale must fall back key by key, not entry by entry: a
+translated name with an untranslated description is the normal state of a
+growing locale.
+
+Against a fixture rather than the shipped data, and that is the whole point of
+the rewrite. This test used to assert that `dwarf` was "Дварф" and `acid-arrow`
+was still "Acid Arrow" -- which held only while `data/srd_5.1/i18n/ru/` happened
+to contain races and not spells. It would have gone red on the day somebody
+translated a spell, reporting a broken fallback when what had actually happened
+was progress.
+
+So the locale state is built here: a copy of the real compendium with a Russian
+bundle this test wrote. Everything below is then a statement about the *merge*,
+which is the thing that has to keep working, and none of it is a statement about
+how much of the SRD anybody has got through.
+*/
 func TestLocaleFallsBackPerKey(t *testing.T) {
-	ru := load(t, rules.LocaleRU)
+	dir := copyData(t)
+
+	// One entry, one field. `dwarf` keeps its English age and size prose;
+	// every other race, and every other collection, is untranslated.
+	writeBundle(t, filepath.Join(dir, file.LocaleDir, "ru", "races.json"), `{
+		"dwarf": {"name": "ТЕСТ-ДВАРФ"}
+	}`)
+
+	ru, err := file.NewSource(dir).Load(context.Background(), rules.LocaleRU)
+	if err != nil {
+		t.Fatalf("Load(ru) error = %v", err)
+	}
+	en, err := file.NewSource(dir).Load(context.Background(), rules.LocaleEN)
+	if err != nil {
+		t.Fatalf("Load(en) error = %v", err)
+	}
 
 	if ru.Locale() != rules.LocaleRU {
 		t.Errorf("Locale() = %q, want %q", ru.Locale(), rules.LocaleRU)
@@ -242,30 +273,82 @@ func TestLocaleFallsBackPerKey(t *testing.T) {
 	if !ok {
 		t.Fatal("dwarf not found in ru")
 	}
-	if dwarf.Name != "Дварф" {
-		t.Errorf("dwarf name = %q, want the Russian translation", dwarf.Name)
+	if dwarf.Name != "ТЕСТ-ДВАРФ" {
+		t.Errorf("dwarf name = %q, want the translation this test wrote", dwarf.Name)
 	}
-	// The age paragraph has no Russian translation, so it must still be
-	// present in English rather than empty.
+	// The same entry, a key the translation did not touch.
 	if len(dwarf.AgeDesc) == 0 {
 		t.Error("dwarf age text is empty; an untranslated key must fall back to English")
 	}
 
-	// Spells have no Russian bundle at all, so the whole collection falls
-	// back. That must not leave names blank.
+	// A sibling entry in the same translated file.
+	elf, ok := ru.Races.Get("elf")
+	if !ok {
+		t.Fatal("elf not found in ru")
+	}
+	if enElf, _ := en.Races.Get("elf"); elf.Name != enElf.Name {
+		t.Errorf("elf name = %q, want the English %q", elf.Name, enElf.Name)
+	}
+
+	// A collection with no Russian bundle at all: the whole file falls back,
+	// and that must not leave names blank.
 	spell, ok := ru.Spells.Get("acid-arrow")
 	if !ok {
 		t.Fatal("acid-arrow not found in ru")
 	}
-	if spell.Name != "Acid Arrow" {
-		t.Errorf("acid-arrow name = %q, want the English fallback", spell.Name)
+	if enSpell, _ := en.Spells.Get("acid-arrow"); spell.Name != enSpell.Name {
+		t.Errorf("acid-arrow name = %q, want the English %q", spell.Name, enSpell.Name)
 	}
 
-	// Counts must match the English catalogue: falling back must never drop
-	// an entry.
-	en := load(t, rules.LocaleEN)
+	// Counts must match: falling back must never drop an entry.
 	if ru.Spells.Len() != en.Spells.Len() {
-		t.Errorf("ru spells = %d, en spells = %d; fallback must not drop entries", ru.Spells.Len(), en.Spells.Len())
+		t.Errorf("ru spells = %d, en spells = %d; fallback must not drop entries",
+			ru.Spells.Len(), en.Spells.Len())
+	}
+	if ru.Races.Len() != en.Races.Len() {
+		t.Errorf("ru races = %d, en races = %d; fallback must not drop entries",
+			ru.Races.Len(), en.Races.Len())
+	}
+}
+
+// copyData clones the shipped compendium into a directory this test owns, so a
+// test can put a locale into a state the repository is not in.
+func copyData(t *testing.T) string {
+	t.Helper()
+	dst := t.TempDir()
+	src := dataDir()
+
+	err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, raw, 0o644)
+	})
+	if err != nil {
+		t.Fatalf("copying %s: %v", src, err)
+	}
+	return dst
+}
+
+func writeBundle(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("creating %s: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
 	}
 }
 

@@ -33,7 +33,7 @@ func RequireSession(auth Authenticator, cookies helpers.CookieOptions) gin.Handl
 	return func(c *gin.Context) {
 		token := cookies.Session(c)
 		if token == "" {
-			helpers.FormatError(c, types.NewUnauthenticatedError("no session"))
+			helpers.FormatError(c, types.NewUnauthenticatedError("no session").Because("auth.noSession"))
 			return
 		}
 

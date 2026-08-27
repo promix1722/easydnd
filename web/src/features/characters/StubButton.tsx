@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router'
 import { createStubCharacter } from '@/lib/api'
 import type { Folder } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
-import { ACTION_SIZE, Button } from '@/ui'
+import { useT } from '@/lib/i18n'
+import { Button } from '@/ui'
 
 /**
  * Makes the reference character in one press: a finished level-3 half-elf
@@ -35,6 +36,7 @@ export function StubButton({
    */
   onFailed: (message: string | null) => void
 }) {
+  const t = useT()
   const navigate = useNavigate()
   const stub = useAction(createStubCharacter)
 
@@ -53,16 +55,15 @@ export function StubButton({
   return (
     // Sized with the row of add-controls it sits in, not on its own terms.
     <Button
-      size={ACTION_SIZE}
       variant="default"
       loading={stub.pending}
       // Named for its folder like the two buttons beside it: there is one of
       // these per folder now, and three buttons all called "Stub" is the same
       // ambiguity a column of "Delete"s would be.
-      aria-label={`Stub in ${folder.name}`}
+      aria-label={t('folders.stubIn', { name: folder.name })}
       onClick={() => void onClick()}
     >
-      Stub
+      {t('characters.stub')}
     </Button>
   )
 }

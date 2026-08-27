@@ -58,7 +58,7 @@ func (s *Service) Invite(
 	// give somebody else's table away.
 	if role != domain.RoleDM && role != domain.RolePlayer {
 		return Invitation{}, types.NewFieldValidationError("that is not a role you can invite somebody as",
-			types.FieldError{Field: "role", Rule: "oneof", Message: "dm or player"})
+			types.FieldError{Field: "role", Rule: "oneof", Reason: "field.role.invitable"})
 	}
 
 	now := s.now()
@@ -154,7 +154,8 @@ func (s *Service) openInvite(
 		// the auth usecase, in the other direction.
 		if types.IsUnauthenticated(err) {
 			return domain.Invite{}, domain.Group{},
-				types.NewValidationError("this invitation link is not valid, or it has expired")
+				types.NewValidationError("this invitation link is not valid, or it has expired").
+					Because("invite.invalid")
 		}
 		return domain.Invite{}, domain.Group{}, err
 	}
@@ -162,7 +163,8 @@ func (s *Service) openInvite(
 	if err != nil {
 		if types.IsNotFound(err) {
 			return domain.Invite{}, domain.Group{},
-				types.NewNotFoundError("that invitation is for a group that no longer exists")
+				types.NewNotFoundError("that invitation is for a group that no longer exists").
+					Because("invite.groupGone")
 		}
 		return domain.Invite{}, domain.Group{}, err
 	}

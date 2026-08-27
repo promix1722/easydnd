@@ -1,5 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router'
 
+import { useT } from '@/lib/i18n'
+
 import {
   AppShell,
   CHROME_INSET,
@@ -103,8 +105,9 @@ export function DesktopShell() {
   const { pathname } = useLocation()
   const [opened, { toggle }] = useDisclosure(true)
 
+  const t = useT()
   const active = sectionFor(pathname)
-  const label = opened ? 'Collapse navigation' : 'Expand navigation'
+  const label = opened ? t('nav.collapse') : t('nav.expand')
 
   return (
     <AppShell
@@ -135,8 +138,8 @@ export function DesktopShell() {
               // On the rail the glyph is the whole control, so the section's
               // name has to survive as the link's accessible name -- otherwise
               // the navigation reads as three unlabelled links.
-              aria-label={section.label}
-              {...(opened ? { label: section.label } : {})}
+              aria-label={t(section.label)}
+              {...(opened ? { label: t(section.label) } : {})}
               leftSection={<section.icon size={18} />}
               active={active?.to === section.to}
               styles={rowStyles(opened)}
@@ -148,7 +151,7 @@ export function DesktopShell() {
           return opened ? (
             link
           ) : (
-            <Tooltip key={section.to} label={section.label} position="right" withArrow>
+            <Tooltip key={section.to} label={t(section.label)} position="right" withArrow>
               {link}
             </Tooltip>
           )
@@ -209,6 +212,7 @@ function ControlRow({
   controls: string
   label: string
 }) {
+  const t = useT()
   const row = (
     <NavLink
       component="button"
@@ -217,7 +221,7 @@ function ControlRow({
       aria-expanded={opened}
       aria-controls={controls}
       leftSection={opened ? <IconChevronLeft size={18} /> : <IconChevronRight size={18} />}
-      {...(opened ? { label: 'Collapse' } : {})}
+      {...(opened ? { label: t('nav.collapseShort') } : {})}
       styles={{
         ...rowStyles(opened),
         root: { ...rowStyles(opened).root, color: 'var(--mantine-color-dimmed)' },

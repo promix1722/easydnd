@@ -105,7 +105,7 @@ func (s *Service) member(
 	role, err := s.groups.MemberRole(ctx, id, actor)
 	if err != nil {
 		if types.IsNotFound(err) {
-			return "", types.NewNotFoundError("group %q", id)
+			return "", types.NewNotFoundError("group %q", id).Because("group.notFound")
 		}
 		return "", err
 	}
@@ -146,7 +146,7 @@ func (s *Service) readable(
 			return character.Character{}, err
 		}
 	}
-	return character.Character{}, types.NewNotFoundError("character %q", id)
+	return character.Character{}, types.NewNotFoundError("character %q", id).Because("character.notFound")
 }
 
 // Sheet projects a character the actor is allowed to read.

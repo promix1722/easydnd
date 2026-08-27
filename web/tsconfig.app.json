@@ -9,6 +9,7 @@
     "module": "esnext",
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "allowArbitraryExtensions": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -36,8 +37,9 @@
     /* No baseUrl: it is deprecated in TS 6, and paths resolve relative to this
        file without it. */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@locales/*": ["./locales/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "locales"]
 }

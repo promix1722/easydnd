@@ -7,8 +7,11 @@ import { setupUser } from '@/test/user'
 
 import { BuildScreen } from './BuildScreen'
 
-import { STAGE_LABELS } from '@/domain'
 import type { Stage } from '@/domain'
+import { apiPath } from '@/test/api'
+import { testT } from '@/test/i18n'
+
+import { stageLabel } from './labels'
 
 /**
  * The build screen, wired to responses in the shape the real API sends.
@@ -456,7 +459,7 @@ function mockApi({
       const method = init?.method ?? 'GET'
       if (method !== 'GET') {
         posted.push({ url, method, body: JSON.parse(String(init?.body ?? '{}')) })
-        if (url.endsWith('/v1/characters')) {
+        if (apiPath(url) === '/v1/characters') {
           return jsonResponse(created ?? { id: 'chr_000009', seq: 1, sheet: SHEET })
         }
         // The log's new head, which for a single appended event names that
@@ -518,10 +521,10 @@ const tabs = () => screen.getAllByRole('tab').map((tab) => tab.textContent ?? ''
  * One tab, by the stage's own word.
  *
  * The label is that word capitalised -- a tab is a title, not a sentence --
- * and `STAGE_LABELS` is the one place that says so, which is why this maps
+ * and the stage table is the one place that says so, which is why this maps
  * rather than every call site spelling it twice.
  */
-const tab = (name: string) => screen.getByRole('tab', { name: STAGE_LABELS[name as Stage] })
+const tab = (name: string) => screen.getByRole('tab', { name: stageLabel(testT, name as Stage) })
 /** Which tab is showing, which is the one Mantine marks selected. */
 const current = () =>
   screen.getAllByRole('tab').find((each) => each.getAttribute('aria-selected') === 'true')
@@ -541,7 +544,7 @@ const current = () =>
  * `SectionDeck.test.tsx` uses on the sheet's own deck.
  */
 const panel = (name: string) =>
-  within(screen.getByRole('group', { name: STAGE_LABELS[name as Stage] }))
+  within(screen.getByRole('group', { name: stageLabel(testT, name as Stage) }))
 const writes = () => posted.filter((write) => !write.url.includes('dryRun'))
 
 /**
@@ -633,8 +636,8 @@ describe('BuildScreen', () => {
       expect(drawn()).toContain('A subrace')
     })
     const before = drawn()
-    expect(before.indexOf('Race chosen')).toBeLessThan(before.indexOf('One more language'))
-    expect(before.indexOf('One more language')).toBeLessThan(before.indexOf('A subrace'))
+    expect(before.indexOf('Race chosen')).toBeLessThan(before.indexOf('1 more language'))
+    expect(before.indexOf('1 more language')).toBeLessThan(before.indexOf('A subrace'))
 
     await user.click(screen.getByRole('button', { name: /A subrace/ }))
     await user.click(await screen.findByRole('button', { name: 'Hill Dwarf' }))
@@ -647,8 +650,8 @@ describe('BuildScreen', () => {
     // The answer is where the question was -- under the language, not promoted
     // above it because entries sort before questions -- and what the subrace
     // brought with it is at the bottom. Nothing else moved.
-    expect(after.indexOf('Race chosen')).toBeLessThan(after.indexOf('One more language'))
-    expect(after.indexOf('One more language')).toBeLessThan(after.indexOf('Subrace chosen'))
+    expect(after.indexOf('Race chosen')).toBeLessThan(after.indexOf('1 more language'))
+    expect(after.indexOf('1 more language')).toBeLessThan(after.indexOf('Subrace chosen'))
     expect(after.indexOf('Subrace chosen')).toBeLessThan(after.indexOf('to be proficient in'))
   })
 
@@ -691,7 +694,7 @@ describe('BuildScreen', () => {
     renderBuild(viewport)
 
     await user.click(await screen.findByRole('tab', { name: 'Race' }))
-    await user.click(block(/Two to be proficient in/))
+    await user.click(block(/2 to be proficient in/))
     expect(await screen.findByRole('button', { name: /Acrobatics/ })).toBeInTheDocument()
 
     // A different tab is a different question, so the one in hand is dropped
@@ -732,7 +735,7 @@ describe('BuildScreen', () => {
     expect.soft(panel('class').queryByText('A background')).not.toBeInTheDocument()
 
     await user.click(tab('race'))
-    expect.soft(panel('race').getByText(/Two to be proficient in/)).toBeInTheDocument()
+    expect.soft(panel('race').getByText(/2 to be proficient in/)).toBeInTheDocument()
     expect.soft(panel('race').queryByText('A class')).not.toBeInTheDocument()
 
     await user.click(tab('identity'))
@@ -750,7 +753,7 @@ describe('BuildScreen', () => {
     renderBuild(viewport)
 
     await user.click(await screen.findByRole('tab', { name: 'Race' }))
-    await user.click(screen.getByRole('button', { name: /Two to be proficient in/ }))
+    await user.click(screen.getByRole('button', { name: /2 to be proficient in/ }))
     await user.click(await screen.findByRole('button', { name: /Acrobatics/ }))
     await user.click(screen.getByRole('button', { name: /Insight/ }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
@@ -974,7 +977,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: TRAITS_OPEN, events: BACKGROUND_LOG })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /One personality trait/ }))
+    await user.click(await screen.findByRole('button', { name: /1 personality trait/ }))
     await user.type(
       await screen.findByLabelText('Personality trait'),
       'I quote sacred texts at every turn.',
@@ -1044,7 +1047,7 @@ describe('BuildScreen', () => {
 
     // The scores are an ordinary open choice now, not a field on a create
     // form, which is what gives them an entry to point at and change.
-    await user.click(await screen.findByRole('button', { name: /Six ability scores/ }))
+    await user.click(await screen.findByRole('button', { name: /6 ability scores/ }))
     expect(tab('abilities')).toHaveAttribute('aria-selected', 'true')
 
     // The array is dealt out rather than typed: six printed numbers, and the
@@ -1122,7 +1125,7 @@ describe('a new character', () => {
     await user.type(await screen.findByLabelText('Name'), 'Rurik')
     await user.click(tab('class'))
 
-    const creates = posted.filter((write) => write.url.endsWith('/v1/characters'))
+    const creates = posted.filter((write) => apiPath(write.url) === '/v1/characters')
     await waitFor(() => {
       expect(creates).toHaveLength(1)
     })
@@ -1138,7 +1141,7 @@ describe('a new character', () => {
 
     // The URL was replaced, so nothing on the built screen creates a second one.
     await user.click(tab('background'))
-    expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+    expect(posted.filter((write) => apiPath(write.url) === '/v1/characters')).toHaveLength(1)
   })
 
   it('does not take the page down to create the character it just named', async () => {
@@ -1162,7 +1165,7 @@ describe('a new character', () => {
     await waitFor(() => {
       expect(read.some((url) => url.includes('chr_'))).toBe(true)
     })
-    expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+    expect(posted.filter((write) => apiPath(write.url) === '/v1/characters')).toHaveLength(1)
 
     // Creating changes the resource key under a screen that is not replaced,
     // and blanking on a key change is `useResource` doing its job -- but here
@@ -1190,7 +1193,7 @@ describe('a new character', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
     await waitFor(() => {
-      expect(posted.filter((write) => write.url.endsWith('/v1/characters'))).toHaveLength(1)
+      expect(posted.filter((write) => apiPath(write.url) === '/v1/characters')).toHaveLength(1)
     })
     // Answering a question is not a request to be asked another, and that rule
     // has no exception for the first one.

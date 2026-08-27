@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
 import type { GroupSummary } from '@/lib/api'
-import { createGroup, deleteGroup, listGroups, removeMember, renameGroup } from '@/lib/api'
+import { fieldMessage, createGroup, deleteGroup, listGroups, removeMember, renameGroup } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
+import { useT } from '@/lib/i18n'
 import {
   ACTION_ICON_SIZE,
-  ACTION_SIZE,
   Alert,
   Anchor,
   Badge,
@@ -27,12 +27,13 @@ import {
   TextInput,
 } from '@/ui'
 
-import { atLeast, ROLE_LABELS } from './roles'
+import { atLeast, roleLabel } from './roles'
 
 /** The tables this account sits at. */
 export function GroupListScreen() {
+  const t = useT()
   const navigate = useNavigate()
-  const { data, error, loading, reload } = useResource('groups', (signal) => listGroups(signal))
+  const { data, error, loading, reload, refresh } = useResource('groups', (signal) => listGroups(signal))
 
   const { user } = useAuth()
   const me = user?.id ?? ''
@@ -49,7 +50,7 @@ export function GroupListScreen() {
 
   async function act(work: Promise<unknown | null>) {
     if ((await work) === null) return
-    reload()
+    refresh()
   }
 
   const groups = data?.groups ?? []
@@ -72,18 +73,64 @@ export function GroupListScreen() {
       trail={[]}
       state={pageState(
         { data, error, loading },
-        { title: 'Could not load your groups', fallback: 'Unknown error', onRetry: reload },
+        {
+          title: t('groups.list.loadFailed'),
+          fallback: t('error.unknown'),
+          onRetry: reload,
+        },
       )}
     >
       <Stack gap="md">
         <DataList
           items={groups}
           getKey={(group) => group.id}
+          actions={(group) => [
+            // Leaving comes first: it is not an edit of the group, and putting
+            // it between Rename and Delete reads as though it were one of them.
+            // The owner cannot walk away from their own table, and nobody else
+            // may delete it, so each rank gets exactly one of these two.
+            ...(group.role !== 'owner'
+              ? [
+                  {
+                    key: 'leave',
+                    label: t('groups.leave'),
+                    icon: <IconLogout size={ACTION_ICON_SIZE} />,
+                    onClick: () => void act(leave.run(group.id, me)),
+                  },
+                ]
+              : []),
+            ...(atLeast(group.role, 'dm')
+              ? [
+                  {
+                    key: 'rename',
+                    label: t('common.rename'),
+                    icon: <IconPencil size={ACTION_ICON_SIZE} />,
+                    onClick: () => {
+                      setNewName(group.name)
+                      setRenaming(group)
+                    },
+                  },
+                ]
+              : []),
+            ...(group.role === 'owner'
+              ? [
+                  {
+                    key: 'delete',
+                    label: t('common.delete'),
+                    color: 'red' as const,
+                    icon: <IconTrash size={ACTION_ICON_SIZE} />,
+                    onClick: () => setDeleting(group),
+                  },
+                ]
+              : []),
+          ]}
           columns={[
             {
               key: 'name',
-              header: 'Name',
+              header: t('common.name'),
               primary: true,
+              text: (group) => group.name,
+              to: (group) => `/groups/${group.id}`,
               render: (group) => (
                 <Anchor component={Link} to={`/groups/${group.id}`}>
                   {group.name}
@@ -92,58 +139,14 @@ export function GroupListScreen() {
             },
             {
               key: 'role',
-              header: 'Your role',
-              render: (group) => <Badge variant="light">{ROLE_LABELS[group.role]}</Badge>,
-            },
-            {
-              key: 'actions',
-              header: '',
-              render: (group) => (
-                <Group gap="xs" justify="flex-end" wrap="nowrap">
-                  {/* Leaving comes first: it is not an edit of the group, and
-                      putting it between Rename and Delete reads as though it
-                      were one of them. The owner cannot walk away from their
-                      own table, and nobody else may delete it, so each rank
-                      gets exactly one of these two. */}
-                  {group.role !== 'owner' && (
-                    <Button
-                      size={ACTION_SIZE}
-                      variant="subtle"
-                      leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
-                      onClick={() => void act(leave.run(group.id, me))}
-                    >
-                      Leave
-                    </Button>
-                  )}
-                  {atLeast(group.role, 'dm') && (
-                    <Button
-                      size={ACTION_SIZE}
-                      variant="subtle"
-                      leftSection={<IconPencil size={ACTION_ICON_SIZE} />}
-                      onClick={() => {
-                        setNewName(group.name)
-                        setRenaming(group)
-                      }}
-                    >
-                      Rename
-                    </Button>
-                  )}
-                  {group.role === 'owner' && (
-                    <Button
-                      size={ACTION_SIZE}
-                      variant="subtle"
-                      color="red"
-                      leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
-                      onClick={() => setDeleting(group)}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </Group>
-              ),
+              header: t('groups.yourRole'),
+              // A badge, so it rides beside the name rather than joining the
+              // dimmed run of facts, where it would read as neither.
+              slot: 'badge',
+              render: (group) => <Badge variant="light">{roleLabel(t, group.role)}</Badge>,
             },
           ]}
-          empty="No groups yet. Make one, or open an invitation link somebody sent you."
+          empty={t('groups.list.empty')}
         />
 
         {/* Under the table and to the left: adding a row belongs beneath the
@@ -151,46 +154,43 @@ export function GroupListScreen() {
             about what you can put in it. */}
         <Group>
           <Button
-            size={ACTION_SIZE}
             variant="light"
             leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
             onClick={() => setCreating(true)}
           >
-            New group
+            {t('groups.new')}
           </Button>
         </Group>
 
         <ModalSheet
           opened={renaming !== null}
           onClose={() => setRenaming(null)}
-          title="Rename this group"
+          title={t('groups.renameTitle')}
+          onSubmit={() => {
+            const target = renaming
+            setRenaming(null)
+            if (target !== null) void act(rename.run(target.id, newName))
+          }}
         >
           <Stack gap="sm">
             <TextInput
-              label="Name"
+              label={t('common.name')}
               value={newName}
-              error={rename.fields.find((field) => field.field === 'name')?.message}
+              error={fieldMessage(t, rename.fields, 'name')}
               onChange={(event) => setNewName(event.currentTarget.value)}
               data-autofocus
             />
             {rename.error !== null && (
-              <Alert color="red" title="Could not rename it">
+              <Alert color="red" title={t('groups.renameFailed')}>
                 {rename.error}
               </Alert>
             )}
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setRenaming(null)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
-              <Button
-                loading={rename.pending}
-                onClick={() => {
-                  const target = renaming
-                  setRenaming(null)
-                  if (target !== null) void act(rename.run(target.id, newName))
-                }}
-              >
-                Rename
+              <Button type="submit" loading={rename.pending}>
+                {t('common.rename')}
               </Button>
             </Group>
           </Stack>
@@ -199,18 +199,15 @@ export function GroupListScreen() {
         <ModalSheet
           opened={deleting !== null}
           onClose={() => setDeleting(null)}
-          title="Delete this group"
+          title={t('groups.deleteTitle')}
         >
           <Stack gap="sm">
             {/* Named in full: it takes the whole table with it, and nobody at it
                 can undo that. */}
-            <Text size="sm">
-              {deleting?.name} goes, along with everything shared with it and every game played
-              at it. The characters themselves stay yours.
-            </Text>
+            <Text size="sm">{t('groups.deleteWarning', { name: deleting?.name ?? '' })}</Text>
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setDeleting(null)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 color="red"
@@ -221,33 +218,38 @@ export function GroupListScreen() {
                   if (target !== null) void act(destroy.run(target.id))
                 }}
               >
-                Delete
+                {t('common.delete')}
               </Button>
             </Group>
           </Stack>
         </ModalSheet>
 
-        <ModalSheet opened={creating} onClose={() => setCreating(false)} title="New group">
+        <ModalSheet
+          opened={creating}
+          onClose={() => setCreating(false)}
+          title={t('groups.new')}
+          onSubmit={() => void submit()}
+        >
           <Stack gap="sm">
             <TextInput
-              label="Name"
-              placeholder="Wednesday Night"
+              label={t('common.name')}
+              placeholder={t('groups.namePlaceholder')}
               value={name}
               onChange={(event) => setName(event.currentTarget.value)}
-              error={create.fields.find((field) => field.field === 'name')?.message}
+              error={fieldMessage(t, create.fields, 'name')}
               data-autofocus
             />
             {create.error !== null && (
-              <Alert color="red" title="Could not create the group">
+              <Alert color="red" title={t('groups.createFailed')}>
                 {create.error}
               </Alert>
             )}
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setCreating(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
-              <Button loading={create.pending} onClick={() => void submit()}>
-                Create
+              <Button type="submit" loading={create.pending}>
+                {t('common.create')}
               </Button>
             </Group>
           </Stack>

@@ -12,13 +12,14 @@ import {
   moveCharacter,
   renameFolder,
   reorderFolders,
+  fieldMessage,
 } from '@/lib/api'
 import type { Folder, Summary } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
   ACTION_ICON_SIZE,
-  ACTION_SIZE,
   Alert,
   Anchor,
   Box,
@@ -33,9 +34,11 @@ import {
   Page,
   pageState,
   Select,
+  SHEET_COMBOBOX,
   Stack,
   Text,
   TextInput,
+  type RowAction,
 } from '@/ui'
 
 import { FolderAdditions, FolderPanel } from './FolderPanel'
@@ -67,6 +70,7 @@ import { StubButton } from './StubButton'
  * between.
  */
 export function CharacterListScreen() {
+  const t = useT()
   const navigate = useNavigate()
 
   const folders = useResource('folders', (signal) => listFolders(signal))
@@ -81,8 +85,8 @@ export function CharacterListScreen() {
   const rows = characters.data?.characters ?? []
 
   const reloadAll = () => {
-    folders.reload()
-    characters.reload()
+    folders.refresh()
+    characters.refresh()
   }
 
   /*
@@ -97,13 +101,13 @@ export function CharacterListScreen() {
    * half-drawn version of this page worth showing.
    */
   const foldersState = pageState(folders, {
-    title: 'Could not load your folders',
-    fallback: 'Unknown error',
+    title: t('characters.foldersLoadFailed'),
+    fallback: t('error.unknown'),
     onRetry: folders.reload,
   })
   const charactersState = pageState(characters, {
-    title: 'Could not load your characters',
-    fallback: 'Unknown error',
+    title: t('characters.loadFailed'),
+    fallback: t('error.unknown'),
     onRetry: characters.reload,
   })
 
@@ -120,6 +124,11 @@ export function CharacterListScreen() {
   const [doomed, setDoomed] = useState<Folder | null>(null)
   const [adding, setAdding] = useState(false)
 
+  // A row's three actions and the two dialogs two of them open. They live here
+  // rather than in the row because `DataList` renders no children -- see the
+  // hook.
+  const { actionsFor, sheets } = useCharacterActions(folderList, reloadAll)
+
   const reorder = useAction(reorderFolders)
 
   // The folders that can move, in the order they are drawn. The default is not
@@ -130,7 +139,7 @@ export function CharacterListScreen() {
   /** Sends a whole new order, then reloads. There is no optimistic list. */
   const commit = (ids: readonly string[]) => {
     void reorder.run(ids).then((done) => {
-      if (done !== null) folders.reload()
+      if (done !== null) folders.refresh()
     })
   }
 
@@ -197,13 +206,13 @@ export function CharacterListScreen() {
     <Page trail={[]} state={foldersState.kind !== 'ready' ? foldersState : charactersState}>
       <Stack gap="md">
         {import.meta.env.DEV && stubError !== null && (
-          <Alert color="red" title="Could not create the stub character">
+          <Alert color="red" title={t('characters.stubFailed')}>
             <Text size="sm">{stubError}</Text>
           </Alert>
         )}
 
         {reorder.error !== null && (
-          <Alert color="red" title="Could not reorder your folders">
+          <Alert color="red" title={t('characters.reorderFailed')}>
             <Text size="sm">{reorder.error}</Text>
           </Alert>
         )}
@@ -244,43 +253,39 @@ export function CharacterListScreen() {
                 <DataList
                   items={inFolder}
                   getKey={(character) => character.id}
+                  actions={actionsFor}
                   columns={[
                     {
                       key: 'name',
-                      header: 'Name',
+                      header: t('common.name'),
                       primary: true,
+                      text: (character) => character.name || t('common.unnamed'),
+                      to: (character) => `/characters/${character.id}`,
                       render: (character) => (
                         <Anchor component={Link} to={`/characters/${character.id}`}>
-                          {character.name || 'Unnamed'}
+                          {character.name || t('common.unnamed')}
                         </Anchor>
                       ),
                     },
                     {
                       key: 'level',
-                      header: 'Level',
-                      render: (character) => character.level || '--',
+                      header: t('game.level'),
+                      // The table prints "--" for an unbuilt character, because
+                      // a blank cell in a column of numbers reads as a fault.
+                      // The card has no column to keep straight, so it says
+                      // nothing at all -- which is what `null` asks for.
+                      render: (character) => character.level || null,
                     },
                     {
                       key: 'classes',
-                      header: 'Classes',
+                      header: t('characters.classes'),
                       render: (character) => classLine(character.classes),
                     },
                     // No Folder column. The card this table sits in is the
                     // folder, so the column would write the same word down
                     // every row of it.
-                    {
-                      key: 'actions',
-                      header: 'Actions',
-                      render: (character) => (
-                        <RowActions
-                          character={character}
-                          folders={folderList}
-                          onChanged={reloadAll}
-                        />
-                      ),
-                    },
                   ]}
-                  empty="Nothing in this folder yet. Make one, or move one here."
+                  empty={t('characters.folderEmpty')}
                 />
 
                 <FolderAdditions
@@ -321,15 +326,16 @@ export function CharacterListScreen() {
             the list of folders, so it sits below the list of folders. */}
         <Group gap="xs">
           <Button
-            size={ACTION_SIZE}
             variant="default"
             leftSection={<IconFolderPlus size={ACTION_ICON_SIZE} />}
             onClick={() => setAdding(true)}
           >
-            New folder
+            {t('characters.newFolder')}
           </Button>
         </Group>
       </Stack>
+
+      {sheets}
 
       <NewFolder opened={adding} onClose={() => setAdding(false)} onMade={reloadAll} />
       <RenameFolder folder={renaming} onClose={() => setRenaming(null)} onDone={reloadAll} />
@@ -343,133 +349,145 @@ export function CharacterListScreen() {
   )
 }
 
-/** Move, copy and delete for one row. */
-function RowActions({
-  character,
-  folders,
-  onChanged,
-}: {
-  character: Summary
-  folders: Folder[]
-  onChanged: () => void
-}) {
-  const [moving, setMoving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [target, setTarget] = useState(character.folder)
+/**
+ * What a character's row can be made to do, and the dialogs two of those three
+ * need.
+ *
+ * A hook rather than a component, and that is forced rather than preferred:
+ * `DataList` takes a row's actions as *data* and renders no children of its
+ * own, so a `ModalSheet` can no longer live inside the row that opens it. It
+ * never should have -- a dialog mounted in a table cell is a dialog that
+ * disappears when its row does, and the reload that follows a move is exactly
+ * the moment the row moves to another folder's table.
+ *
+ * So the state and the sheets belong to the screen, which is where every other
+ * dialog on this page already lives, and this returns both halves: the actions
+ * to hand to each folder's list, and the sheets to render once at the bottom.
+ *
+ * Copy has no dialog because it asks nothing -- it makes a second character and
+ * reloads. Only the two that need an answer get one.
+ */
+function useCharacterActions(folders: Folder[], onChanged: () => void) {
+  const t = useT()
+  const [moving, setMoving] = useState<Summary | null>(null)
+  const [target, setTarget] = useState('')
+  const [deleting, setDeleting] = useState<Summary | null>(null)
 
   const move = useAction(moveCharacter)
   const copy = useAction(copyCharacter)
   const remove = useAction(deleteCharacter)
 
-  const label = character.name || 'this character'
+  // Every action carries its row's name, which `DataList` appends: a list of
+  // these is otherwise a column of buttons all called "Delete", ambiguous to a
+  // screen reader and to a test alike.
+  const actionsFor = (character: Summary): RowAction[] => [
+    {
+      key: 'move',
+      label: t('characters.move'),
+      icon: <IconFolder size={ACTION_ICON_SIZE} />,
+      onClick: () => {
+        setTarget(character.folder)
+        setMoving(character)
+      },
+    },
+    {
+      key: 'copy',
+      label: t('characters.copy'),
+      icon: <IconCopy size={ACTION_ICON_SIZE} />,
+      onClick: () => {
+        void copy.run(character.id).then((made) => {
+          if (made !== null) onChanged()
+        })
+      },
+    },
+    {
+      key: 'delete',
+      label: t('common.delete'),
+      color: 'red' as const,
+      icon: <IconTrash size={ACTION_ICON_SIZE} />,
+      onClick: () => setDeleting(character),
+    },
+  ]
 
-  return (
+  const movingLabel = moving === null ? '' : moving.name || t('characters.thisCharacter')
+  const deletingLabel = deleting === null ? '' : deleting.name || t('characters.thisCharacter')
+
+  const sheets = (
     <>
-      {/* Spelled out rather than folded into a menu, so a row's actions read
-          the same way every other table's do -- and so that what you can do to
-          a character is visible without opening anything.
-          Each carries the row's name as its accessible name: a table of these
-          is otherwise a column of buttons all called "Delete", which is
-          ambiguous to a screen reader and to a test alike. */}
-      <Group gap="xs" wrap="nowrap">
-        <Button
-          size={ACTION_SIZE}
-          variant="subtle"
-          leftSection={<IconFolder size={ACTION_ICON_SIZE} />}
-          aria-label={`Move ${label}`}
-          onClick={() => {
-            setTarget(character.folder)
-            setMoving(true)
-          }}
-        >
-          Move
-        </Button>
-        <Button
-          size={ACTION_SIZE}
-          variant="subtle"
-          leftSection={<IconCopy size={ACTION_ICON_SIZE} />}
-          aria-label={`Copy ${label}`}
-          onClick={() => {
-            void copy.run(character.id).then((made) => {
-              if (made !== null) onChanged()
-            })
-          }}
-        >
-          Copy
-        </Button>
-        <Button
-          size={ACTION_SIZE}
-          variant="subtle"
-          color="red"
-          leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
-          aria-label={`Delete ${label}`}
-          onClick={() => setDeleting(true)}
-        >
-          Delete
-        </Button>
-      </Group>
-
-      <ModalSheet opened={moving} onClose={() => setMoving(false)} title={`Move ${label}`}>
+      <ModalSheet
+        opened={moving !== null}
+        onClose={() => setMoving(null)}
+        title={t('characters.moveNamed', { name: movingLabel })}
+      >
         <Stack gap="md">
           <Select
-            label="Folder"
+            label={t('characters.folder')}
+            comboboxProps={SHEET_COMBOBOX}
             data={folders.map((f) => ({ value: f.id, label: f.name }))}
             value={target}
-            onChange={(value) => setTarget(value ?? character.folder)}
+            onChange={(value) => setTarget(value ?? target)}
             allowDeselect={false}
           />
           {move.error !== null && <Alert color="red">{move.error}</Alert>}
           <Group justify="flex-end">
-            <Button variant="subtle" onClick={() => setMoving(false)}>
-              Cancel
+            <Button variant="subtle" onClick={() => setMoving(null)}>
+              {t('common.cancel')}
             </Button>
             <Button
               loading={move.pending}
-              disabled={target === character.folder}
+              disabled={moving === null || target === moving.folder}
               onClick={() => {
-                void move.run(character.id, target).then((ok) => {
+                if (moving === null) return
+                void move.run(moving.id, target).then((ok) => {
                   if (ok !== null) {
-                    setMoving(false)
+                    setMoving(null)
                     onChanged()
                   }
                 })
               }}
             >
-              Move
+              {t('characters.move')}
             </Button>
           </Group>
         </Stack>
       </ModalSheet>
 
-      <ModalSheet opened={deleting} onClose={() => setDeleting(false)} title={`Delete ${label}?`}>
+      <ModalSheet
+        opened={deleting !== null}
+        onClose={() => setDeleting(null)}
+        title={t('characters.deleteNamedTitle', { name: deletingLabel })}
+      >
         <Stack gap="md">
           <Text size="sm">
-            This deletes the character and their whole log. It cannot be undone.
+            {t('characters.deleteWarning')}
           </Text>
           {remove.error !== null && <Alert color="red">{remove.error}</Alert>}
           <Group justify="flex-end">
-            <Button variant="subtle" onClick={() => setDeleting(false)}>
-              Cancel
+            <Button variant="subtle" onClick={() => setDeleting(null)}>
+              {t('common.cancel')}
             </Button>
             <Button
               color="red"
               loading={remove.pending}
               onClick={() => {
-                void remove.run(character.id).then((ok) => {
+                if (deleting === null) return
+                void remove.run(deleting.id).then((ok) => {
                   if (ok !== null) {
-                    setDeleting(false)
+                    setDeleting(null)
                     onChanged()
                   }
                 })
               }}
             >
-              Delete
+              {t('common.delete')}
             </Button>
           </Group>
         </Stack>
       </ModalSheet>
     </>
   )
+
+  return { actionsFor, sheets }
 }
 
 /** The New folder button's dialog. */
@@ -482,6 +500,7 @@ function NewFolder({
   onClose: () => void
   onMade: () => void
 }) {
+  const t = useT()
   const [name, setName] = useState('')
   const create = useAction(createFolder)
 
@@ -497,43 +516,35 @@ function NewFolder({
   }
 
   return (
-    <ModalSheet opened={opened} onClose={onClose} title="New folder">
-      {/* A real form, so the phone's keyboard offers a Go key that works. The
-          alternative -- an Enter handler on the input, which
-          `features/character/NameForm` still uses -- is what a desktop browser
-          needs and what a soft keyboard's action key is not obliged to send.
-          One `onSubmit` also means the button and the key press cannot drift
-          apart, which is the bug that gets shipped when they are two handlers. */}
-      <form
-        onSubmit={(event) => {
-          event.preventDefault()
-          submit()
-        }}
-      >
-        <Stack gap="md">
-          <Text c="dimmed" size="sm">
-            Where you file your characters. Only you can see them.
-          </Text>
-          <TextInput
-            label="Name"
-            placeholder="Campaign"
-            value={name}
-            onChange={(event) => setName(event.currentTarget.value)}
-            error={create.fields.find((f) => f.field === 'name')?.message}
-          />
-          {create.error !== null && <Alert color="red">{create.error}</Alert>}
-          <Group justify="flex-end">
-            {/* Mantine's Button is type="button" unless told otherwise, so
-                Cancel cannot submit by sitting inside a form. */}
-            <Button variant="subtle" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={create.pending} disabled={name.trim() === ''}>
-              Add
-            </Button>
-          </Group>
-        </Stack>
-      </form>
+    // `onSubmit` on the sheet rather than a `<form>` written out here. This
+    // dialog and its sibling below were the only two in the app that had one,
+    // which is why they were the only two whose Go key worked; `ui/ModalSheet`
+    // now wraps every dialog that asks for it, so the eight that were missing
+    // it cannot drift back.
+    <ModalSheet opened={opened} onClose={onClose} title={t('characters.newFolder')} onSubmit={submit}>
+      <Stack gap="md">
+        <Text c="dimmed" size="sm">
+          {t('characters.folderExplained')}
+        </Text>
+        <TextInput
+          label={t('common.name')}
+          placeholder={t('characters.folderPlaceholder')}
+          value={name}
+          onChange={(event) => setName(event.currentTarget.value)}
+          error={fieldMessage(t, create.fields, 'name')}
+        />
+        {create.error !== null && <Alert color="red">{create.error}</Alert>}
+        <Group justify="flex-end">
+          {/* Mantine's Button is type="button" unless told otherwise, so
+              Cancel cannot submit by sitting inside a form. */}
+          <Button variant="subtle" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" loading={create.pending} disabled={name.trim() === ''}>
+            {t('common.add')}
+          </Button>
+        </Group>
+      </Stack>
     </ModalSheet>
   )
 }
@@ -548,6 +559,7 @@ function RenameFolder({
   onClose: () => void
   onDone: () => void
 }) {
+  const t = useT()
   const [name, setName] = useState('')
   const rename = useAction(renameFolder)
 
@@ -571,33 +583,29 @@ function RenameFolder({
   }
 
   return (
-    <ModalSheet opened={folder !== null} onClose={onClose} title="Rename folder">
-      {/* A form for the same reason the New folder dialog is one: the key a
-          soft keyboard offers has to do something. */}
-      <form
-        onSubmit={(event) => {
-          event.preventDefault()
-          submit()
-        }}
-      >
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            value={name}
-            onChange={(event) => setName(event.currentTarget.value)}
-            error={rename.fields.find((f) => f.field === 'name')?.message}
-          />
-          {rename.error !== null && <Alert color="red">{rename.error}</Alert>}
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={rename.pending} disabled={name.trim() === ''}>
-              Rename
-            </Button>
-          </Group>
-        </Stack>
-      </form>
+    <ModalSheet
+      opened={folder !== null}
+      onClose={onClose}
+      title={t('characters.renameFolder')}
+      onSubmit={submit}
+    >
+      <Stack gap="md">
+        <TextInput
+          label={t('common.name')}
+          value={name}
+          onChange={(event) => setName(event.currentTarget.value)}
+          error={fieldMessage(t, rename.fields, 'name')}
+        />
+        {rename.error !== null && <Alert color="red">{rename.error}</Alert>}
+        <Group justify="flex-end">
+          <Button variant="subtle" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" loading={rename.pending} disabled={name.trim() === ''}>
+            {t('common.rename')}
+          </Button>
+        </Group>
+      </Stack>
     </ModalSheet>
   )
 }
@@ -622,13 +630,14 @@ function DeleteFolder({
   onClose: () => void
   onDone: () => void
 }) {
+  const t = useT()
   const remove = useAction(deleteFolder)
 
   return (
     <ModalSheet
       opened={folder !== null}
       onClose={onClose}
-      title={folder === null ? '' : `Delete ${folder.name}?`}
+      title={folder === null ? '' : t('characters.deleteFolderTitle', { name: folder.name })}
     >
       <Stack gap="md">
         {/* The count is the point of this dialog. Deleting a folder takes its
@@ -636,15 +645,13 @@ function DeleteFolder({
             no undo and not even a backup to go back to. */}
         <Text size="sm">
           {count === 0
-            ? 'This folder is empty. Deleting it cannot be undone.'
-            : `This deletes the folder and the ${count} character${
-                count === 1 ? '' : 's'
-              } in it, with their logs. It cannot be undone.`}
+            ? t('characters.deleteFolderEmpty')
+            : t('characters.deleteFolderWarning', { count })}
         </Text>
         {remove.error !== null && <Alert color="red">{remove.error}</Alert>}
         <Group justify="flex-end">
           <Button variant="subtle" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             color="red"
@@ -659,7 +666,7 @@ function DeleteFolder({
               })
             }}
           >
-            {count === 0 ? 'Delete folder' : `Delete folder and ${count}`}
+            {count === 0 ? t('characters.deleteFolder') : t('characters.deleteFolderAnd', { count })}
           </Button>
         </Group>
       </Stack>
