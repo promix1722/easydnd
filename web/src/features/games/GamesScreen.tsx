@@ -8,7 +8,6 @@ import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
   ACTION_ICON_SIZE,
-  ACTION_SIZE,
   Alert,
   Anchor,
   Button,
@@ -21,6 +20,7 @@ import {
   Page,
   pageState,
   Select,
+  SHEET_COMBOBOX,
   Stack,
   Text,
   TextInput,
@@ -56,7 +56,7 @@ export function GamesScreen() {
 
   async function act(work: Promise<unknown | null>) {
     if ((await work) === null) return
-    games.reload()
+    games.refresh()
   }
 
   const state = pageState(games, {
@@ -97,11 +97,37 @@ export function GamesScreen() {
         <DataList
           items={games.data.games}
           getKey={(game) => game.id}
+          actions={(game: GameSummary) =>
+            // Each row edits its own game and nothing else. Whether you may is
+            // your rank at *that* table, which the row already carries.
+            canManage(game.group_id)
+              ? [
+                  {
+                    key: 'rename',
+                    label: t('common.rename'),
+                    icon: <IconPencil size={ACTION_ICON_SIZE} />,
+                    onClick: () => {
+                      setNewName(game.name)
+                      setRenaming(game)
+                    },
+                  },
+                  {
+                    key: 'delete',
+                    label: t('common.delete'),
+                    color: 'red' as const,
+                    icon: <IconTrash size={ACTION_ICON_SIZE} />,
+                    onClick: () => setDeleting(game),
+                  },
+                ]
+              : []
+          }
           columns={[
             {
               key: 'name',
               header: t('games.game'),
               primary: true,
+              text: (game: GameSummary) => game.name,
+              to: (game: GameSummary) => `/games/${game.id}`,
               render: (game: GameSummary) => (
                 <Anchor component={Link} to={`/games/${game.id}`}>
                   <Text size="sm">{game.name}</Text>
@@ -111,46 +137,14 @@ export function GamesScreen() {
             {
               key: 'group',
               header: t('games.group'),
+              // The one meta value in the app that is a link rather than a
+              // fact: somebody who plays at three tables tells their Thursdays
+              // apart by it, and it is the way back to the group.
               render: (game: GameSummary) => (
-                <Anchor component={Link} to={`/groups/${game.group_id}`}>
-                  <Text size="sm" c="dimmed">
-                    {game.group_name}
-                  </Text>
+                <Anchor component={Link} to={`/groups/${game.group_id}`} size="sm">
+                  {game.group_name}
                 </Anchor>
               ),
-            },
-            {
-              key: 'actions',
-              header: '',
-              render: (game: GameSummary) => {
-                // Each row edits its own game and nothing else. Whether you may
-                // is your rank at *that* table, which the row already carries.
-                if (!canManage(game.group_id)) return null
-                return (
-                  <Group gap="xs" justify="flex-end" wrap="nowrap">
-                    <Button
-                      size={ACTION_SIZE}
-                      variant="subtle"
-                      leftSection={<IconPencil size={ACTION_ICON_SIZE} />}
-                      onClick={() => {
-                        setNewName(game.name)
-                        setRenaming(game)
-                      }}
-                    >
-                      {t('common.rename')}
-                    </Button>
-                    <Button
-                      size={ACTION_SIZE}
-                      variant="subtle"
-                      color="red"
-                      leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
-                      onClick={() => setDeleting(game)}
-                    >
-                      {t('common.delete')}
-                    </Button>
-                  </Group>
-                )
-              },
             },
           ]}
           empty={tables.length > 0 ? t('games.emptyForDm') : t('games.empty')}
@@ -160,7 +154,6 @@ export function GamesScreen() {
         {tables.length > 0 && (
           <Group>
             <Button
-              size={ACTION_SIZE}
               variant="light"
               leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
               onClick={() => {
@@ -177,6 +170,11 @@ export function GamesScreen() {
           opened={renaming !== null}
           onClose={() => setRenaming(null)}
           title={t('games.renameTitle')}
+          onSubmit={() => {
+            const target = renaming
+            setRenaming(null)
+            if (target !== null) void act(rename.run(target.id, newName))
+          }}
         >
           <Stack gap="sm">
             <TextInput
@@ -195,14 +193,7 @@ export function GamesScreen() {
               <Button variant="default" onClick={() => setRenaming(null)}>
                 {t('common.cancel')}
               </Button>
-              <Button
-                loading={rename.pending}
-                onClick={() => {
-                  const target = renaming
-                  setRenaming(null)
-                  if (target !== null) void act(rename.run(target.id, newName))
-                }}
-              >
+              <Button type="submit" loading={rename.pending}>
                 {t('common.rename')}
               </Button>
             </Group>
@@ -240,10 +231,16 @@ export function GamesScreen() {
           </Stack>
         </ModalSheet>
 
-        <ModalSheet opened={opening} onClose={() => setOpening(false)} title={t('games.openTitle')}>
+        <ModalSheet
+          opened={opening}
+          onClose={() => setOpening(false)}
+          title={t('games.openTitle')}
+          onSubmit={() => void create()}
+        >
           <Stack gap="sm">
             <Select
               label={t('games.group')}
+              comboboxProps={SHEET_COMBOBOX}
               data={tables.map((g: GroupSummary) => ({ value: g.id, label: g.name }))}
               value={group}
               onChange={setGroup}
@@ -269,7 +266,7 @@ export function GamesScreen() {
               <Button variant="default" onClick={() => setOpening(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button loading={open.pending} onClick={() => void create()}>
+              <Button type="submit" loading={open.pending}>
                 {t('games.open')}
               </Button>
             </Group>

@@ -110,7 +110,34 @@ function inDir(rel, dir) {
   return rel === dir || rel.startsWith(dir.split('/').join(sep) + sep)
 }
 
+/**
+ * The one file allowed to pull in a stylesheet, and the only one that ever
+ * should be.
+ *
+ * `src/ui/app.css` decides how big a control is at each width, and it can only
+ * be the last word on that if it is also the *only* word: a second stylesheet
+ * anywhere would be an unlayered rule of equal weight whose winner is decided
+ * by whichever the bundler emitted last. Naming the importer rather than the
+ * directory is deliberate -- `ui/` is where the design system is assembled,
+ * but `AppTheme` is where it is switched on, and a stylesheet imported by a
+ * component would load only when that component happens to be mounted.
+ */
+const STYLESHEET_IMPORTER = join('ui', 'AppTheme.tsx')
+
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g
+
+/**
+ * A side-effect import -- `import './app.css'` -- which the rule above cannot
+ * see, because it requires a `from`.
+ *
+ * That was a real hole rather than a theoretical one: every `import
+ * '@mantine/core/styles.css'` in this repo was invisible to the vendor rule,
+ * so the one thing `VENDOR_RULES` exists to stop was reachable from any
+ * layer as long as you wanted it for its side effect. It is a separate pattern
+ * rather than a wider version of the first because a side-effect import has no
+ * binding, so nothing downstream of here can treat the two alike.
+ */
+const SIDE_EFFECT_RE = /(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g
 
 function* walk(dir) {
   for (const entry of readdirSync(dir)) {
@@ -129,6 +156,9 @@ function importsOf(source) {
     const specifier = match[1] ?? match[2]
     if (specifier) found.push(specifier)
   }
+  for (const match of source.matchAll(SIDE_EFFECT_RE)) {
+    if (match[1]) found.push(match[1])
+  }
   return found
 }
 
@@ -144,6 +174,17 @@ for (const file of walk(SRC)) {
   const specifiers = importsOf(readFileSync(file, 'utf8'))
 
   for (const specifier of specifiers) {
+    // Before the vendor rules, because a stylesheet is not a vendor package and
+    // the reason it is restricted is different: `src/ui/app.css` can only be the
+    // last word on what it says if it is also the only word.
+    if (/\.css$/.test(specifier) && rel !== STYLESHEET_IMPORTER) {
+      violations.push({
+        file: rel,
+        specifier,
+        why: `only src/${STYLESHEET_IMPORTER} may import a stylesheet; see src/ui/app.css for why there is exactly one`,
+      })
+      continue
+    }
     let claimed = false
     for (const vendorRule of VENDOR_RULES) {
       const vendor = vendorRule.packages.find((prefix) => specifier.startsWith(prefix))

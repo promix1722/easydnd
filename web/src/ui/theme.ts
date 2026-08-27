@@ -20,8 +20,16 @@ export const theme: MantineThemeOverride = createTheme({
     // One button size for the whole app, decided here rather than at each call
     // site -- which is how the header's way in ended up 26px and the /login
     // page it leads to answered with 36px ones. A call site may still pass
-    // `size` when it genuinely means something different; none does today, and
-    // a second size appearing in three files is exactly how the drift started.
+    // `size` when it genuinely means something different; the phone header's
+    // section dropdown is the one that does.
+    //
+    // It is one size at *every* width. A version of this briefly gave phones
+    // 44px controls on the touch-target argument, with the numbers in
+    // `./app.css`; at 390px the app is mostly controls and inflating all of
+    // them cost more in scrolling than it bought in accuracy. What survived
+    // from that is the one thing that was a browser fact rather than a
+    // judgement: a field's text is 16px on a phone, or iOS Safari zooms the
+    // page. See `./app.css`.
     Button: Button.extend({ defaultProps: { size: 'xs' } }),
   },
 })
@@ -40,8 +48,13 @@ export const theme: MantineThemeOverride = createTheme({
  * is the whole reason this is five lines instead of a stylesheet. Every
  * `Card`, `Table`, `Paper`, `Alert`, `Modal` and `Drawer` in the app already
  * reads them, so a palette reaches all of them without a single per-component
- * override -- and without this repo gaining its first CSS file, which only
- * `ui/AppTheme.tsx` would have been allowed to import anyway.
+ * override.
+ *
+ * That argument used to end "-- and without this repo gaining its first CSS
+ * file". It has one now, `./app.css`, and it is one rule long: a browser
+ * behaviour that no theme value can express. The distinction still holds --
+ * values belong here, and the stylesheet is for the things that are not
+ * values.
  */
 export const cssVariables: CSSVariablesResolver = () => ({
   // Empty on purpose: every one of the five is scheme-dependent, which is

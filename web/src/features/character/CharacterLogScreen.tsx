@@ -104,6 +104,16 @@ export function CharacterLogScreen() {
           items={events}
           getKey={(event) => String(event.seq ?? 0)}
           empty={t('log.empty')}
+          // A mark on the row rather than part of its name, which is what lets
+          // it ride beside the name at both widths without being built inside
+          // the cell that draws it.
+          badges={(event) =>
+            event.level !== undefined && event.level > 0 ? (
+              <Badge size="xs" variant="light">
+                {t('block.level', { level: event.level })}
+              </Badge>
+            ) : null
+          }
           columns={[
             {
               key: 'seq',
@@ -118,17 +128,13 @@ export function CharacterLogScreen() {
               key: 'event',
               header: t('log.event'),
               primary: true,
+              // The log is a record rather than a way in: an entry opens onto
+              // nothing, so there is no `to`.
+              text: (event) => eventLabel(t, event.type),
               render: (event) => (
-                <Group gap={6}>
-                  <Text size="sm" fw={500}>
-                    {eventLabel(t, event.type)}
-                  </Text>
-                  {event.level !== undefined && event.level > 0 && (
-                    <Badge size="xs" variant="light">
-                      Level {event.level}
-                    </Badge>
-                  )}
-                </Group>
+                <Text size="sm" fw={500}>
+                  {eventLabel(t, event.type)}
+                </Text>
               ),
             },
             {
@@ -143,6 +149,11 @@ export function CharacterLogScreen() {
             {
               key: 'detail',
               header: t('log.detail'),
+              // The one column in the app that is not a value. `EventDetail` is
+              // a stack of `<Code>` lines and labelled answers, so it gets a
+              // full-width line of its own on a phone rather than being joined
+              // to the others with a middle dot.
+              slot: 'block',
               render: (event) => <EventDetail event={event} names={names} />,
             },
           ]}

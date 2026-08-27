@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
+import { pressRowAction } from '@/test/rows'
 import { setupUser } from '@/test/user'
 
 import { CharacterListScreen } from './CharacterListScreen'
@@ -163,7 +164,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByRole('button', { name: 'Move Ada' }))
+    await pressRowAction(viewport, 'Ada', 'Move')
 
     const dialog = await screen.findByRole('dialog')
     await user.click(within(dialog).getByRole('combobox', { name: 'Folder' }))
@@ -177,11 +178,10 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
   })
 
   it('copies a character', async () => {
-    const user = setupUser()
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByRole('button', { name: 'Copy Ada' }))
+    await pressRowAction(viewport, 'Ada', 'Copy')
 
     await waitFor(() => {
       onlyRequestTo(`/v1/characters/${ADA.id}/copy`, 'POST')
@@ -197,7 +197,7 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     renderList(viewport)
     await screen.findByText('Ada')
 
-    await user.click(screen.getByRole('button', { name: 'Delete Ada' }))
+    await pressRowAction(viewport, 'Ada', 'Delete')
 
     // Nothing has been sent yet: the dialog is the point.
     expect(requestsTo(`/v1/characters/${ADA.id}`).filter((c) => c.method === 'DELETE')).toHaveLength(

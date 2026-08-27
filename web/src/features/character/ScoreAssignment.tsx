@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { DragEvent, ReactNode } from 'react'
 
-import { Group, Paper, SimpleGrid, Stack, Text } from '@/ui'
+import { Group, Paper, SimpleGrid, Stack, Text, TOUCH_TARGET } from '@/ui'
 
 import { ABILITY_ORDER } from '@/domain'
 import { useT } from '@/lib/i18n'
@@ -147,7 +147,7 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
                 cursor: 'pointer',
                 textAlign: 'left',
                 width: '100%',
-                minHeight: TARGET * 1.5,
+                minHeight: TOUCH_TARGET * 1.5,
                 background: 'transparent',
                 borderStyle: value === undefined ? 'dashed' : 'solid',
                 ...(held !== null && held === place
@@ -178,9 +178,6 @@ export function ScoreAssignment({ values, placed, onPlace, action }: ScoreAssign
     </Stack>
   )
 }
-
-/** The smallest a thing meant to be dragged, or dragged onto, is drawn. */
-const TARGET = 44
 
 function dragging(place: number) {
   return (event: DragEvent<HTMLElement>) => {
@@ -213,8 +210,8 @@ function Chip({
       data-held={held ? 'true' : undefined}
       style={{
         cursor: 'grab',
-        minWidth: TARGET,
-        minHeight: TARGET,
+        minWidth: TOUCH_TARGET,
+        minHeight: TOUCH_TARGET,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

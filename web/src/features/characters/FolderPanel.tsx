@@ -4,7 +4,6 @@ import type { Folder } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import {
   ACTION_ICON_SIZE,
-  ACTION_SIZE,
   Badge,
   Box,
   Button,
@@ -192,9 +191,8 @@ export function FolderPanel({
           <Menu position="bottom-end" withinPortal>
             <Menu.Target>
               <Button
-                size={ACTION_SIZE}
                 variant="subtle"
-                aria-label={t('folders.actions', { name: folder.name })}
+                aria-label={t('list.actions', { name: folder.name })}
                 px={6}
               >
                 <IconDotsVertical size={ACTION_ICON_SIZE} />
@@ -274,7 +272,6 @@ export function FolderAdditions({
   return (
     <Group gap="xs" mt="md">
       <Button
-        size={ACTION_SIZE}
         variant="light"
         leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
         aria-label={t('folders.newCharacterIn', { name: folder.name })}
@@ -283,7 +280,6 @@ export function FolderAdditions({
         {t('characters.newCharacter')}
       </Button>
       <Button
-        size={ACTION_SIZE}
         variant="default"
         aria-label={t('folders.importInto', { name: folder.name })}
         onClick={onImport}

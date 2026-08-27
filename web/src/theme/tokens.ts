@@ -91,4 +91,19 @@ export const ROW_HEIGHT = 41
  */
 export const CHROME_INSET = 10
 
+/**
+ * The smallest a thing meant to be touched is drawn.
+ *
+ * The number every platform guideline agrees on, and it arrived here the way
+ * good numbers do: `features/character/ScoreAssignment` worked it out for
+ * itself, as a file-local `TARGET`, because the one gesture that surface exists
+ * for was a few millimetres of badge.
+ *
+ * It is a floor for the things a thumb has to hit *precisely* -- a drag target,
+ * a drop zone -- and deliberately not the size of every control. Making it so
+ * was tried: at 390px this app is mostly controls, and inflating all of them
+ * cost more in scrolling than it bought in accuracy.
+ */
+export const TOUCH_TARGET = 44
+
 export const RADIUS_DEFAULT = 'md'

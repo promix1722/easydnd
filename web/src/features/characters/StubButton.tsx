@@ -5,7 +5,7 @@ import { createStubCharacter } from '@/lib/api'
 import type { Folder } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { useT } from '@/lib/i18n'
-import { ACTION_SIZE, Button } from '@/ui'
+import { Button } from '@/ui'
 
 /**
  * Makes the reference character in one press: a finished level-3 half-elf
@@ -55,7 +55,6 @@ export function StubButton({
   return (
     // Sized with the row of add-controls it sits in, not on its own terms.
     <Button
-      size={ACTION_SIZE}
       variant="default"
       loading={stub.pending}
       // Named for its folder like the two buttons beside it: there is one of

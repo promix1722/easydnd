@@ -104,9 +104,9 @@ export { Bullet } from './Bullet'
 export type { BulletProps } from './Bullet'
 export { Columns } from './Columns'
 export type { ColumnsProps, ColumnsSection } from './Columns'
-export { ACTION_ICON_SIZE, ACTION_SIZE } from './actions'
+export { ACTION_ICON_SIZE, SHEET_COMBOBOX } from './actions'
 export { DataList } from './DataList'
-export type { DataListColumn, DataListProps } from './DataList'
+export type { ColumnSlot, DataListColumn, DataListProps, RowAction } from './DataList'
 export { DragonMark } from './DragonMark'
 export type { DragonMarkProps } from './DragonMark'
 export { ModalSheet } from './ModalSheet'
@@ -132,7 +132,7 @@ export { useIsDesktop } from './useIsDesktop'
 
 // The content cap, re-exported so a screen has one import surface for the
 // design system rather than reaching past it into @/theme for one number.
-export { CHROME_INSET, CONTENT_MAX_WIDTH, ROW_HEIGHT } from '@/theme/tokens'
+export { CHROME_INSET, CONTENT_MAX_WIDTH, ROW_HEIGHT, TOUCH_TARGET } from '@/theme/tokens'
 
 // Theme + provider, so main.tsx never imports Mantine either.
 export { AppTheme } from './AppTheme'

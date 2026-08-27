@@ -9,7 +9,6 @@ import { useResource } from '@/lib/useResource'
 import { useT } from '@/lib/i18n'
 import {
   ACTION_ICON_SIZE,
-  ACTION_SIZE,
   Alert,
   Anchor,
   Badge,
@@ -34,7 +33,7 @@ import { atLeast, roleLabel } from './roles'
 export function GroupListScreen() {
   const t = useT()
   const navigate = useNavigate()
-  const { data, error, loading, reload } = useResource('groups', (signal) => listGroups(signal))
+  const { data, error, loading, reload, refresh } = useResource('groups', (signal) => listGroups(signal))
 
   const { user } = useAuth()
   const me = user?.id ?? ''
@@ -51,7 +50,7 @@ export function GroupListScreen() {
 
   async function act(work: Promise<unknown | null>) {
     if ((await work) === null) return
-    reload()
+    refresh()
   }
 
   const groups = data?.groups ?? []
@@ -85,11 +84,53 @@ export function GroupListScreen() {
         <DataList
           items={groups}
           getKey={(group) => group.id}
+          actions={(group) => [
+            // Leaving comes first: it is not an edit of the group, and putting
+            // it between Rename and Delete reads as though it were one of them.
+            // The owner cannot walk away from their own table, and nobody else
+            // may delete it, so each rank gets exactly one of these two.
+            ...(group.role !== 'owner'
+              ? [
+                  {
+                    key: 'leave',
+                    label: t('groups.leave'),
+                    icon: <IconLogout size={ACTION_ICON_SIZE} />,
+                    onClick: () => void act(leave.run(group.id, me)),
+                  },
+                ]
+              : []),
+            ...(atLeast(group.role, 'dm')
+              ? [
+                  {
+                    key: 'rename',
+                    label: t('common.rename'),
+                    icon: <IconPencil size={ACTION_ICON_SIZE} />,
+                    onClick: () => {
+                      setNewName(group.name)
+                      setRenaming(group)
+                    },
+                  },
+                ]
+              : []),
+            ...(group.role === 'owner'
+              ? [
+                  {
+                    key: 'delete',
+                    label: t('common.delete'),
+                    color: 'red' as const,
+                    icon: <IconTrash size={ACTION_ICON_SIZE} />,
+                    onClick: () => setDeleting(group),
+                  },
+                ]
+              : []),
+          ]}
           columns={[
             {
               key: 'name',
               header: t('common.name'),
               primary: true,
+              text: (group) => group.name,
+              to: (group) => `/groups/${group.id}`,
               render: (group) => (
                 <Anchor component={Link} to={`/groups/${group.id}`}>
                   {group.name}
@@ -99,54 +140,10 @@ export function GroupListScreen() {
             {
               key: 'role',
               header: t('groups.yourRole'),
+              // A badge, so it rides beside the name rather than joining the
+              // dimmed run of facts, where it would read as neither.
+              slot: 'badge',
               render: (group) => <Badge variant="light">{roleLabel(t, group.role)}</Badge>,
-            },
-            {
-              key: 'actions',
-              header: '',
-              render: (group) => (
-                <Group gap="xs" justify="flex-end" wrap="nowrap">
-                  {/* Leaving comes first: it is not an edit of the group, and
-                      putting it between Rename and Delete reads as though it
-                      were one of them. The owner cannot walk away from their
-                      own table, and nobody else may delete it, so each rank
-                      gets exactly one of these two. */}
-                  {group.role !== 'owner' && (
-                    <Button
-                      size={ACTION_SIZE}
-                      variant="subtle"
-                      leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
-                      onClick={() => void act(leave.run(group.id, me))}
-                    >
-                      {t('groups.leave')}
-                    </Button>
-                  )}
-                  {atLeast(group.role, 'dm') && (
-                    <Button
-                      size={ACTION_SIZE}
-                      variant="subtle"
-                      leftSection={<IconPencil size={ACTION_ICON_SIZE} />}
-                      onClick={() => {
-                        setNewName(group.name)
-                        setRenaming(group)
-                      }}
-                    >
-                      {t('common.rename')}
-                    </Button>
-                  )}
-                  {group.role === 'owner' && (
-                    <Button
-                      size={ACTION_SIZE}
-                      variant="subtle"
-                      color="red"
-                      leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
-                      onClick={() => setDeleting(group)}
-                    >
-                      {t('common.delete')}
-                    </Button>
-                  )}
-                </Group>
-              ),
             },
           ]}
           empty={t('groups.list.empty')}
@@ -157,7 +154,6 @@ export function GroupListScreen() {
             about what you can put in it. */}
         <Group>
           <Button
-            size={ACTION_SIZE}
             variant="light"
             leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
             onClick={() => setCreating(true)}
@@ -170,6 +166,11 @@ export function GroupListScreen() {
           opened={renaming !== null}
           onClose={() => setRenaming(null)}
           title={t('groups.renameTitle')}
+          onSubmit={() => {
+            const target = renaming
+            setRenaming(null)
+            if (target !== null) void act(rename.run(target.id, newName))
+          }}
         >
           <Stack gap="sm">
             <TextInput
@@ -188,14 +189,7 @@ export function GroupListScreen() {
               <Button variant="default" onClick={() => setRenaming(null)}>
                 {t('common.cancel')}
               </Button>
-              <Button
-                loading={rename.pending}
-                onClick={() => {
-                  const target = renaming
-                  setRenaming(null)
-                  if (target !== null) void act(rename.run(target.id, newName))
-                }}
-              >
+              <Button type="submit" loading={rename.pending}>
                 {t('common.rename')}
               </Button>
             </Group>
@@ -230,7 +224,12 @@ export function GroupListScreen() {
           </Stack>
         </ModalSheet>
 
-        <ModalSheet opened={creating} onClose={() => setCreating(false)} title={t('groups.new')}>
+        <ModalSheet
+          opened={creating}
+          onClose={() => setCreating(false)}
+          title={t('groups.new')}
+          onSubmit={() => void submit()}
+        >
           <Stack gap="sm">
             <TextInput
               label={t('common.name')}
@@ -249,7 +248,7 @@ export function GroupListScreen() {
               <Button variant="default" onClick={() => setCreating(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button loading={create.pending} onClick={() => void submit()}>
+              <Button type="submit" loading={create.pending}>
                 {t('common.create')}
               </Button>
             </Group>

@@ -5,7 +5,17 @@ import { createInvite } from '@/lib/api'
 import { copyText } from '@/lib/clipboard'
 import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
-import { Alert, Button, Group, ModalSheet, Select, Stack, Text, TextInput } from '@/ui'
+import {
+  Alert,
+  Button,
+  Group,
+  ModalSheet,
+  Select,
+  SHEET_COMBOBOX,
+  Stack,
+  Text,
+  TextInput,
+} from '@/ui'
 
 export interface InviteSheetProps {
   groupId: string
@@ -87,6 +97,7 @@ export function InviteSheet({ groupId, opened, onClose, copyLink = copyText }: I
       <Stack gap="sm">
         <Select
           label={t('invite.joinAs')}
+          comboboxProps={SHEET_COMBOBOX}
           data={[
             { value: 'player', label: t('role.player') },
             { value: 'dm', label: t('role.dm') },

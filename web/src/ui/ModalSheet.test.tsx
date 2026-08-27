@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { ModalSheet } from './ModalSheet'
 
@@ -59,7 +60,45 @@ describe('ModalSheet', () => {
     expect((content as HTMLElement).style.height).toBe('auto')
     // And still capped, or the sheet's own header goes behind the browser
     // chrome on a short viewport.
-    expect((content as HTMLElement).style.maxHeight).toBe('85dvh')
+    expect((content as HTMLElement).style.maxHeight).toBe('85svh')
+  })
+
+  /**
+   * The bug this pair exists for: on a phone, the keyboard's Go key did
+   * nothing in eight of the app's eleven dialogs, because they were a field
+   * beside a button rather than a form. A browser offers that key on the
+   * strength of seeing a form with a submit in it, so nothing short of a real
+   * `<form>` brings it back.
+   */
+  describe('submitting', () => {
+    it.each(['mobile', 'desktop'] as const)('submits on the key, at %s', async (viewport) => {
+      const onSubmit = vi.fn()
+      renderAt(
+        viewport,
+        <ModalSheet opened onClose={noop} title="New group" onSubmit={onSubmit}>
+          <input aria-label="Name" />
+          <button type="submit">Create</button>
+        </ModalSheet>,
+      )
+
+      // Enter in a field is what a soft keyboard's Go key sends, and it only
+      // submits when the field is inside a form with a submit button.
+      await setupUser().type(screen.getByLabelText('Name'), 'Wednesday{Enter}')
+      expect(onSubmit).toHaveBeenCalledTimes(1)
+    })
+
+    it('wraps nothing in a form when the dialog is not one', () => {
+      renderAt(
+        'mobile',
+        <ModalSheet opened onClose={noop} title="Delete this group">
+          <p>This cannot be undone.</p>
+        </ModalSheet>,
+      )
+
+      // A confirmation has no field and must not become a form: a stray submit
+      // there would fire on a key press nobody aimed at anything.
+      expect(document.querySelector('form')).toBeNull()
+    })
   })
 
   it('renders nothing while closed', () => {

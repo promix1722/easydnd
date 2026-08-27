@@ -16,7 +16,6 @@ import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
   ACTION_ICON_SIZE,
-  ACTION_SIZE,
   Alert,
   Anchor,
   Badge,
@@ -45,7 +44,7 @@ export function GameScreen() {
   const t = useT()
   const { id: gameId = '' } = useParams()
   const navigate = useNavigate()
-  const { data, error, loading, reload } = useResource(`game:${gameId}`, (signal) =>
+  const { data, error, loading, reload, refresh } = useResource(`game:${gameId}`, (signal) =>
     getGame(gameId, signal),
   )
 
@@ -80,7 +79,7 @@ export function GameScreen() {
 
   async function act(work: Promise<unknown | null>) {
     if ((await work) === null) return
-    reload()
+    refresh()
   }
 
   // Already-seated characters are not offered again: adding one twice is a
@@ -121,7 +120,6 @@ export function GameScreen() {
         canManage ? (
           <>
             <Button
-              size={ACTION_SIZE}
               variant="subtle"
               leftSection={<IconPencil size={ACTION_ICON_SIZE} />}
               onClick={() => {
@@ -132,7 +130,6 @@ export function GameScreen() {
               {t('common.rename')}
             </Button>
             <Button
-              size={ACTION_SIZE}
               color="red"
               variant="subtle"
               leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
@@ -155,14 +152,31 @@ export function GameScreen() {
         <DataList
           items={game.characters}
           getKey={(character) => character.id}
+          actions={(character: TableCharacter) =>
+            canManage
+              ? [
+                  {
+                    key: 'remove',
+                    // Out of this game, not off the table: giving up a seat is
+                    // not taking the character back.
+                    label: t('common.remove'),
+                    color: 'red' as const,
+                    onClick: () => void act(drop.run(gameId, character.id)),
+                  },
+                ]
+              : []
+          }
           columns={[
             {
               key: 'name',
               header: t('game.character'),
               primary: true,
+              text: (character: TableCharacter) => character.name || t('common.unnamed'),
+              to: (character: TableCharacter) =>
+                `/groups/${game.group_id}/characters/${character.id}`,
               render: (character: TableCharacter) => (
                 <Anchor component={Link} to={`/groups/${game.group_id}/characters/${character.id}`}>
-                  <Text size="sm">{character.name || 'Unnamed'}</Text>
+                  <Text size="sm">{character.name || t('common.unnamed')}</Text>
                 </Anchor>
               ),
             },
@@ -174,26 +188,7 @@ export function GameScreen() {
             {
               key: 'level',
               header: t('game.level'),
-              render: (character: TableCharacter) => character.level,
-            },
-            {
-              key: 'actions',
-              header: '',
-              render: (character: TableCharacter) => {
-                if (!canManage) return null
-                return (
-                  <Button
-                    size={ACTION_SIZE}
-                    variant="subtle"
-                    color="red"
-                    onClick={() => void act(drop.run(gameId, character.id))}
-                  >
-                    {/* Out of this game, not off the table: giving up a seat is
-                        not taking the character back. */}
-                    {t('common.remove')}
-                  </Button>
-                )
-              },
+              render: (character: TableCharacter) => character.level || null,
             },
           ]}
           empty={t('game.empty')}
@@ -206,7 +201,6 @@ export function GameScreen() {
         {canManage && (
           <Group>
             <Button
-              size={ACTION_SIZE}
               variant="light"
               leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
               onClick={() => setPicking('group')}
@@ -214,7 +208,6 @@ export function GameScreen() {
               {t('game.addFromGroup')}
             </Button>
             <Button
-              size={ACTION_SIZE}
               variant="light"
               leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
               onClick={() => setPicking('mine')}
@@ -252,7 +245,15 @@ export function GameScreen() {
           }}
         />
 
-        <ModalSheet opened={renaming} onClose={() => setRenaming(false)} title={t('games.renameTitle')}>
+        <ModalSheet
+          opened={renaming}
+          onClose={() => setRenaming(false)}
+          title={t('games.renameTitle')}
+          onSubmit={() => {
+            setRenaming(false)
+            void act(rename.run(gameId, name))
+          }}
+        >
           <Stack gap="sm">
             <TextInput
               label={t('common.name')}
@@ -264,13 +265,7 @@ export function GameScreen() {
               <Button variant="default" onClick={() => setRenaming(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button
-                loading={rename.pending}
-                onClick={() => {
-                  setRenaming(false)
-                  void act(rename.run(gameId, name))
-                }}
-              >
+              <Button type="submit" loading={rename.pending}>
                 {t('common.rename')}
               </Button>
             </Group>

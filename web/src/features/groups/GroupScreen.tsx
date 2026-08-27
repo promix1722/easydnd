@@ -9,7 +9,6 @@ import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
   ACTION_ICON_SIZE,
-  ACTION_SIZE,
   Alert,
   Badge,
   Button,
@@ -19,7 +18,6 @@ import {
   IconPencil,
   IconTrash,
   IconUserPlus,
-  Menu,
   ModalSheet,
   Page,
   pageState,
@@ -41,7 +39,7 @@ export function GroupScreen() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { data, error, loading, reload } = useResource(`group:${id}`, (signal) =>
+  const { data, error, loading, reload, refresh } = useResource(`group:${id}`, (signal) =>
     getGroup(id, signal),
   )
 
@@ -76,7 +74,7 @@ export function GroupScreen() {
 
   async function act(work: Promise<unknown | null>) {
     if ((await work) === null) return
-    reload()
+    refresh()
   }
 
   async function leave() {
@@ -103,7 +101,6 @@ export function GroupScreen() {
             // the rule the first time somebody reaches for it.
             <Tooltip label={t('group.ownerCannotLeave')}>
               <Button
-                size={ACTION_SIZE}
                 variant="subtle"
                 leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
                 data-disabled
@@ -114,7 +111,6 @@ export function GroupScreen() {
             </Tooltip>
           ) : (
             <Button
-              size={ACTION_SIZE}
               variant="subtle"
               leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
               loading={remove.pending}
@@ -125,7 +121,6 @@ export function GroupScreen() {
           )}
           {canManage && (
             <Button
-              size={ACTION_SIZE}
               variant="subtle"
               leftSection={<IconPencil size={ACTION_ICON_SIZE} />}
               onClick={() => {
@@ -138,7 +133,6 @@ export function GroupScreen() {
           )}
           {isOwner && (
             <Button
-              size={ACTION_SIZE}
               color="red"
               variant="subtle"
               leftSection={<IconTrash size={ACTION_ICON_SIZE} />}
@@ -171,78 +165,75 @@ export function GroupScreen() {
         <DataList
           items={group.members}
           getKey={(member) => member.user_id}
+          badges={(member: GroupMember) => (
+            <>
+              {member.user_id === me && (
+                <Badge size="xs" variant="light">
+                  {t('group.you')}
+                </Badge>
+              )}
+              {member.anonymous && (
+                <Tooltip label={t('group.guestExplained')}>
+                  <Badge size="xs" color="gray" variant="outline">
+                    {t('group.guest')}
+                  </Badge>
+                </Tooltip>
+              )}
+            </>
+          )}
+          actions={(member: GroupMember) => {
+            // The owner is nobody's to unseat, including their own, and a
+            // player manages no one. The server enforces all of this; the point
+            // of repeating it here is to not offer a button that is going to
+            // come back 403.
+            if (member.role === 'owner' || member.user_id === me || !canManage) return []
+            return [
+              ...(isOwner && member.role === 'player'
+                ? [
+                    {
+                      key: 'promote',
+                      label: t('group.makeDm'),
+                      onClick: () => void act(change.run(group.id, member.user_id, 'dm')),
+                    },
+                  ]
+                : []),
+              ...(isOwner && member.role === 'dm'
+                ? [
+                    {
+                      key: 'demote',
+                      label: t('group.makePlayer'),
+                      onClick: () => void act(change.run(group.id, member.user_id, 'player')),
+                    },
+                  ]
+                : []),
+              ...(isOwner
+                ? [{ key: 'handover', label: t('group.makeOwner'), onClick: () => setHandover(member) }]
+                : []),
+              {
+                key: 'remove',
+                label: t('group.removeMember'),
+                color: 'red' as const,
+                onClick: () => void act(remove.run(group.id, member.user_id)),
+              },
+            ]
+          }}
           columns={[
             {
               key: 'name',
               header: t('group.member'),
               primary: true,
-              render: (member) => (
-                <Group gap="xs">
-                  <Text size="sm">{member.display_name || t('group.unnamed')}</Text>
-                  {member.user_id === me && (
-                    <Badge size="xs" variant="light">
-                      {t('group.you')}
-                    </Badge>
-                  )}
-                  {member.anonymous && (
-                    <Tooltip label={t('group.guestExplained')}>
-                      <Badge size="xs" color="gray" variant="outline">
-                        {t('group.guest')}
-                      </Badge>
-                    </Tooltip>
-                  )}
-                </Group>
+              // No `to`: a member is not a page. The name is the row's identity
+              // and the label every action here is announced with, which is why
+              // it is a string rather than only markup.
+              text: (member: GroupMember) => member.display_name || t('common.unnamed'),
+              render: (member: GroupMember) => (
+                <Text size="sm">{member.display_name || t('common.unnamed')}</Text>
               ),
             },
             {
               key: 'role',
               header: t('group.role'),
-              render: (member) => roleLabel(t, member.role),
-            },
-            {
-              key: 'actions',
-              header: '',
-              render: (member) => {
-                // The owner is nobody's to unseat, including their own, and a
-                // player manages no one. The server enforces all of this; the
-                // point of repeating it here is to not offer a button that is
-                // going to come back 403.
-                if (member.role === 'owner' || member.user_id === me || !canManage) return null
-                return (
-                  <Menu position="bottom-end" withinPortal>
-                    <Menu.Target>
-                      <Button size={ACTION_SIZE} variant="subtle">
-                        {t('group.manage')}
-                      </Button>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                      {isOwner && member.role === 'player' && (
-                        <Menu.Item onClick={() => void act(change.run(group.id, member.user_id, 'dm'))}>
-                          {t('group.makeDm')}
-                        </Menu.Item>
-                      )}
-                      {isOwner && member.role === 'dm' && (
-                        <Menu.Item
-                          onClick={() => void act(change.run(group.id, member.user_id, 'player'))}
-                        >
-                          {t('group.makePlayer')}
-                        </Menu.Item>
-                      )}
-                      {isOwner && (
-                        <Menu.Item onClick={() => setHandover(member)}>
-                          {t('group.makeOwner')}
-                        </Menu.Item>
-                      )}
-                      <Menu.Item
-                        color="red"
-                        onClick={() => void act(remove.run(group.id, member.user_id))}
-                      >
-                        {t('group.removeMember')}
-                      </Menu.Item>
-                    </Menu.Dropdown>
-                  </Menu>
-                )
-              },
+              render: (member: GroupMember) => roleLabel(t, member.role),
             },
           ]}
           empty={t('group.noMembers')}
@@ -251,7 +242,6 @@ export function GroupScreen() {
           {tab === 'members' && canManage && (
             <Group mt="md">
               <Button
-                size={ACTION_SIZE}
                 variant="light"
                 leftSection={<IconUserPlus size={ACTION_ICON_SIZE} />}
                 onClick={() => setInviting(true)}
@@ -266,6 +256,10 @@ export function GroupScreen() {
           opened={renaming}
           onClose={() => setRenaming(false)}
           title={t('groups.renameTitle')}
+          onSubmit={() => {
+            setRenaming(false)
+            void act(rename.run(group.id, newName))
+          }}
         >
           <Stack gap="sm">
             <TextInput
@@ -279,13 +273,7 @@ export function GroupScreen() {
               <Button variant="default" onClick={() => setRenaming(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button
-                loading={rename.pending}
-                onClick={() => {
-                  setRenaming(false)
-                  void act(rename.run(group.id, newName))
-                }}
-              >
+              <Button type="submit" loading={rename.pending}>
                 {t('common.rename')}
               </Button>
             </Group>
@@ -297,7 +285,7 @@ export function GroupScreen() {
           opened={inviting}
           onClose={() => {
             setInviting(false)
-            reload()
+            refresh()
           }}
         />
 

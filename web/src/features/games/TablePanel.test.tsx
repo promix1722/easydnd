@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { GroupRole, TableCharacter } from '@/lib/api'
 import { testAccount, withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
+import { rowsOffering } from '@/test/rows'
 import type { Viewport } from '@/test/viewport'
 
 import { TablePanel } from './TablePanel'
@@ -77,8 +78,8 @@ describe.each(['mobile', 'desktop'] as const)('TablePanel (%s)', (viewport) => {
     renderTable(viewport, 'player', [mine, theirs])
 
     await waitFor(() => expect(screen.getByText('Ada')).toBeInTheDocument())
-    // One "Take off" button, for the one character that is theirs.
-    expect(screen.getAllByRole('button', { name: 'Take off' })).toHaveLength(1)
+    // One row offers it, for the one character that is theirs.
+    expect(rowsOffering(viewport, 'Take off')).toBe(1)
   })
 
   it('says the table is empty exactly once, and counts nothing above it', async () => {
@@ -107,6 +108,6 @@ describe.each(['mobile', 'desktop'] as const)('TablePanel (%s)', (viewport) => {
     await waitFor(() => expect(screen.getByText('Ada')).toBeInTheDocument())
     // A guest's session ends and their character would otherwise be stuck
     // there, so a DM may take down either.
-    expect(screen.getAllByRole('button', { name: 'Take off' })).toHaveLength(2)
+    expect(rowsOffering(viewport, 'Take off')).toBe(2)
   })
 })
