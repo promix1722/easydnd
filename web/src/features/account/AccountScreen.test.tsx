@@ -59,12 +59,11 @@ describe('AccountScreen', () => {
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument()
   })
 
-  // A guest has no account, so the page has no inventory to draw: one alert
-  // saying so is the whole screen.
+  // A guest has no account, so the page has no inventory to draw: the subtitle
+  // saying what this session is is the whole screen.
   it('tells a guest there is nothing to manage', () => {
     accountAt({ user: testGuest })
 
-    expect(screen.getByText('There is no account to manage')).toBeInTheDocument()
     expect(screen.getByText('You are playing as a guest.')).toBeInTheDocument()
     expect(screen.queryByText('Passkeys')).not.toBeInTheDocument()
     expect(screen.queryByText('Connected accounts')).not.toBeInTheDocument()

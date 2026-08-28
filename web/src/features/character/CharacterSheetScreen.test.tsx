@@ -305,9 +305,10 @@ it('draws the sheet in the order a player reads it', async () => {
   expect.soft(cardText('dex')).toBe('DEX+316Save+5')
   expect.soft(cardText('cha')).toBe('CHA-18Save-1')
 
-  // Nothing outstanding on this fixture, so the header offers no way in to the
-  // build screen. The button's presence is the whole of the message.
-  expect.soft(screen.queryByRole('link', { name: 'Answer what is left' })).not.toBeInTheDocument()
+  // Edit is on every sheet; nothing outstanding on this fixture, so the mark
+  // that says the character is unfinished is not.
+  expect.soft(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument()
+  expect.soft(screen.queryByText('Unfinished')).not.toBeInTheDocument()
 })
 
 describe('the sheet', () => {
@@ -513,15 +514,16 @@ describe('the skills panel, in the sheet', () => {
 })
 
 describe('an unfinished character', () => {
-  it('offers the way in, and does not list what is left', async () => {
-    // The sheet says the character is unfinished by carrying the way to finish
-    // it, and says it in one place. What is still open is enumerated on the
-    // screen that answers it -- listing the questions above the sheet put the
-    // build screen's work on the page nobody came to build on.
+  it('is marked unfinished, and does not list what is left', async () => {
+    // The sheet says the character is unfinished with a mark on its name, and
+    // says it in one place. What is still open is enumerated on the screen
+    // that answers it -- listing the questions above the sheet put the build
+    // screen's work on the page nobody came to build on.
     mockApi(SHEET, OPEN)
     await renderSheet('desktop')
 
-    const answer = screen.getByRole('link', { name: 'Answer what is left' })
+    expect(screen.getByText('Unfinished')).toBeInTheDocument()
+    const answer = screen.getByRole('link', { name: 'Edit' })
     expect(answer).toHaveAttribute('href', '/characters/chr_000001/build')
     expect(screen.queryByText(/A background/)).not.toBeInTheDocument()
     expect(screen.queryByText(/1 more language/)).not.toBeInTheDocument()
@@ -542,8 +544,10 @@ describe('an unfinished character', () => {
     await renderSheet('desktop')
 
     expect(screen.getByRole('heading', { name: 'Zephyr' })).toBeInTheDocument()
-    // No list of prompts means no button: a failed `/prompts` draws nothing
-    // rather than something wrong.
-    expect(screen.queryByRole('link', { name: 'Answer what is left' })).not.toBeInTheDocument()
+    // No list of prompts means no mark: a failed `/prompts` says nothing about
+    // whether the character is finished rather than guessing. Edit does not
+    // depend on that answer and is still there.
+    expect(screen.queryByText('Unfinished')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument()
   })
 })

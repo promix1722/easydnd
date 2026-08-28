@@ -260,16 +260,6 @@ describe('CharacterListScreen', () => {
     ).toBeInTheDocument()
   })
 
-  it('carries the folder its import button sits under', async () => {
-    const user = setupUser()
-    renderList(viewport)
-    await screen.findByText('Ada')
-
-    await user.click(screen.getByRole('button', { name: 'Import into Retired' }))
-
-    expect(await screen.findByText(`import screen?folder=${RETIRED.id}`)).toBeInTheDocument()
-  })
-
   // The order goes out whole rather than as a move, so this asserts the list
   // that was sent and not a delta.
   it('moves a folder down and sends the whole new order', async () => {

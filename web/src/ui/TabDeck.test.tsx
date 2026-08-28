@@ -5,6 +5,7 @@ import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
 import { setupUser } from '@/test/user'
 
+import { NO_SWIPE, swipeAllowedFrom } from './swipe'
 import { TabDeck } from './TabDeck'
 import type { DeckPanel } from './TabDeck'
 
@@ -87,6 +88,26 @@ describe('TabDeck', () => {
         const slide = screen.getByRole('group', { name: panel.label })
         expect.soft(within(slide).getByText(INSIDE[panel.value] ?? '')).toBeInTheDocument()
       }
+    })
+  })
+
+  // Embla owns the gesture in a browser and jsdom draws no carousel to press,
+  // so the rule it is given is tested rather than the swipe. What it protects:
+  // a surface whose whole interaction is a tap that may drift a few pixels --
+  // see features/character/ScoreAssignment -- where a drag both scrolls the
+  // deck and swallows the click that was about to land.
+  describe('what a swipe may start from', () => {
+    it('leaves a marked surface, and everything inside it, alone', () => {
+      const marked = document.createElement('div')
+      marked.setAttribute(NO_SWIPE, 'true')
+      const button = document.createElement('button')
+      marked.append(button)
+
+      expect.soft(swipeAllowedFrom(marked)).toBe(false)
+      expect.soft(swipeAllowedFrom(button)).toBe(false)
+      expect.soft(swipeAllowedFrom(document.createElement('div'))).toBe(true)
+      // A gesture with no element under it is the deck's, as it was before.
+      expect.soft(swipeAllowedFrom(null)).toBe(true)
     })
   })
 

@@ -244,26 +244,26 @@ export function FolderPanel({
 }
 
 /**
- * The two ways of adding a character, under the folder they will land in.
+ * The way of adding a character, under the folder it will land in.
  *
  * Under the table and on the left, like every other way of adding a row -- but
  * once per folder now rather than once per page, which is what makes the
- * `?folder=` on each of them a fact about where you pressed rather than about
- * what a filter happened to be set to.
+ * `?folder=` a fact about where you pressed rather than about what a filter
+ * happened to be set to.
  *
- * Both carry the folder's name as their accessible name. Three folders each
- * with a button reading "New character" is exactly the ambiguity the row-action
- * rule already forbids a column of "Delete"s.
+ * It carries the folder's name as its accessible name. Three folders each with
+ * a button reading "New character" is exactly the ambiguity the row-action rule
+ * already forbids a column of "Delete"s.
+ *
+ * Import is not offered here for now; the screen and its route still exist.
  */
 export function FolderAdditions({
   folder,
   onNew,
-  onImport,
   children,
 }: {
   folder: Folder
   onNew: () => void
-  onImport: () => void
   /** The development-only stub button, or nothing. */
   children?: ReactNode
 }) {
@@ -278,13 +278,6 @@ export function FolderAdditions({
         onClick={onNew}
       >
         {t('characters.newCharacter')}
-      </Button>
-      <Button
-        variant="default"
-        aria-label={t('folders.importInto', { name: folder.name })}
-        onClick={onImport}
-      >
-        {t('characters.import')}
       </Button>
       {children}
     </Group>

@@ -740,9 +740,6 @@ describe('BuildScreen', () => {
 
     await user.click(tab('identity'))
     expect.soft(panel('identity').getByText('Name')).toBeInTheDocument()
-    // "Nothing left here", never "nothing left in identity": the category's
-    // word belongs to its tab and appears exactly once on the page.
-    expect.soft(panel('identity').getByText('Nothing left here.')).toBeInTheDocument()
 
     expect.soft(posted).toHaveLength(0)
   })
@@ -833,9 +830,6 @@ describe('BuildScreen', () => {
     const finish = await screen.findByRole('button', { name: 'Finish' })
     expect.soft(finish).toHaveAttribute('data-variant', 'filled')
     expect.soft(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
-    // The one prompt the server still poses is the offer of a level, which
-    // this client does not offer -- so there is genuinely nothing here.
-    expect.soft(panel('identity').getByText('Nothing left here.')).toBeInTheDocument()
 
     // Advancement is the class story continued, so a level that was taken
     // sits on the class tab rather than under a tab of its own.
@@ -848,7 +842,6 @@ describe('BuildScreen', () => {
     // fact about the character, so it is not even a block that opens.
     expect.soft(screen.queryByRole('button', { name: /Level gained/ })).not.toBeInTheDocument()
     expect.soft(screen.queryByText(/Another level/)).not.toBeInTheDocument()
-    expect.soft(panel('class').getByText('Nothing left here.')).toBeInTheDocument()
 
     // The class itself is still a choice like any other.
     expect.soft(block(/Class chosen/)).toBeInTheDocument()

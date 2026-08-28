@@ -40,6 +40,24 @@ export interface PageProps {
   trail: readonly Crumb[]
   /** Beside the heading: a rank, "Read only". */
   badge?: ReactNode
+  /**
+   * Acts on the entity too, but sits with the trail rather than against the
+   * right edge -- for the one control that reads as part of where you are
+   * ("Leave", on a group) rather than as something done to what you are
+   * looking at.
+   */
+  lead?: ReactNode
+  /**
+   * That the phone's one row of chrome already carries this page's name.
+   *
+   * A section root gets this for free -- `Page` knows the section from the URL,
+   * and the chrome's selector is showing that very word -- and `/account` is
+   * the one page that needs to say so: it belongs to no section, and the
+   * selector names it anyway because it is a row in the menu it opens. Below
+   * `md` the heading is then the same word twice on a 390px screen, so it goes
+   * the way a section root's does.
+   */
+  namedByChrome?: boolean
   /** One dimmed line beneath the heading. */
   subtitle?: ReactNode
   /** Acts on the entity the page is about, and on nothing else. */
@@ -98,6 +116,8 @@ export interface PageProps {
 export function Page({
   trail,
   badge,
+  lead,
+  namedByChrome,
   subtitle,
   actions,
   state,
@@ -128,8 +148,10 @@ export function Page({
    * whether there is anything *to* draw on a phone, and the breakpoint stays
    * in `visibleFrom`. `Page` still renders one tree at every width.
    */
-  const headingIsSectionOnly = parents.length === 0 && SectionIcon !== undefined
-  const rowBlankOnPhone = headingIsSectionOnly && badge === undefined && actions === undefined
+  const headingIsSectionOnly =
+    parents.length === 0 && (SectionIcon !== undefined || namedByChrome === true)
+  const rowBlankOnPhone =
+    headingIsSectionOnly && badge === undefined && lead === undefined && actions === undefined
   const headerBlankOnPhone = rowBlankOnPhone && subtitle === undefined
 
   return (
@@ -169,16 +191,18 @@ export function Page({
                 A section root's heading *is* the section's name, so on a phone
                 it is the same word the chrome's selector is already showing an
                 inch above it -- the duplication this hides, for the same reason
-                the section crumb is hidden on a detail page.
+                the section crumb is hidden on a detail page. `/account` asks
+                for the same treatment with `namedByChrome`, being the one page
+                outside the sections that the selector still names.
 
                 The cost is real and worth stating: below `md` these pages have
                 no heading in the accessibility tree, and the control that names
                 them is a button rather than an `h2`. The alternative was
                 printing the word twice on a 390px screen.
               */}
-              {parents.length === 0 && SectionIcon !== undefined && (
+              {headingIsSectionOnly && (
                 <Group gap="xs" align="center" wrap="nowrap" visibleFrom={DESKTOP_ONLY}>
-                  <SectionIcon size={GLYPH} aria-hidden />
+                  {SectionIcon !== undefined && <SectionIcon size={GLYPH} aria-hidden />}
                   <Title order={2} fz={HEADING_SIZE}>
                     {here === undefined ? null : <CrumbLabel label={here.label} size="lg" />}
                   </Title>
@@ -272,12 +296,13 @@ export function Page({
                   accessible name is that name -- not the whole trail. Drawn here
                   for every page except a section root, which draws its own
                   above so that the phone can drop it. */}
-              {!(parents.length === 0 && SectionIcon !== undefined) && (
+              {!headingIsSectionOnly && (
                 <Title order={2} fz={HEADING_SIZE}>
                   {here === undefined ? null : <CrumbLabel label={here.label} size="lg" />}
                 </Title>
               )}
               {badge}
+              {lead}
             </Group>
             {actions !== undefined && (
               <Group gap="xs" wrap="nowrap">

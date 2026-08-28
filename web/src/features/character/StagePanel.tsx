@@ -140,13 +140,7 @@ export function StagePanel({
         <Text size="sm" c="dimmed">
           {t('stagePanel.nothingYet')}
         </Text>
-      ) : (
-        nothingOpen && (
-          <Text size="sm" c="dimmed">
-            {t('stagePanel.nothingLeft')}
-          </Text>
-        )
-      )}
+      ) : null}
       {/*
         Under the list, and only once the list has nothing left to answer. It
         is not navigation -- the tabs are, and they are always there -- it is

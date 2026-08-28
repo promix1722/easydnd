@@ -89,6 +89,15 @@ export interface DataListProps<T> {
   badges?: (item: T) => ReactNode
   /** Every action on the row. An empty array draws no control at all. */
   actions?: (item: T) => readonly RowAction[]
+  /**
+   * Draw the actions behind the menu at every width, not only on a phone.
+   *
+   * For a table whose rows are the page's subject rather than its plumbing:
+   * three buttons on every character makes the list read as a control panel,
+   * and the folder above it already carries its own actions behind the same
+   * glyph.
+   */
+  menuActions?: boolean
   empty?: ReactNode
 }
 
@@ -112,7 +121,15 @@ export interface DataListProps<T> {
  * should be visible without opening anything, and a wide screen has the room.
  * A phone does not, which is the whole of the difference.
  */
-export function DataList<T>({ items, columns, getKey, badges, actions, empty }: DataListProps<T>) {
+export function DataList<T>({
+  items,
+  columns,
+  getKey,
+  badges,
+  actions,
+  menuActions,
+  empty,
+}: DataListProps<T>) {
   const t = useT()
   const isDesktop = useIsDesktop()
 
@@ -177,6 +194,7 @@ export function DataList<T>({ items, columns, getKey, badges, actions, empty }: 
                     <DesktopActions
                       actions={actions(item)}
                       name={primary?.primary === true ? primary.text(item) : ''}
+                      menu={menuActions === true}
                     />
                   </Table.Td>
                 )}
@@ -320,12 +338,20 @@ function saysSomething(value: ReactNode): boolean {
 }
 
 /** Spelled out, because a wide screen has room and a table's actions should be visible. */
-function DesktopActions({ actions, name }: { actions: readonly RowAction[]; name: string }) {
+function DesktopActions({
+  actions,
+  name,
+  menu,
+}: {
+  actions: readonly RowAction[]
+  name: string
+  menu: boolean
+}) {
   const t = useT()
   if (actions.length === 0) return null
   // Four is where a row stops being able to lay them out -- the same threshold
   // `FolderPanel` settled on for its own header, and the reason it has a menu.
-  if (actions.length > 3) return <RowMenu actions={actions} name={name} />
+  if (menu || actions.length > 3) return <RowMenu actions={actions} name={name} />
 
   return (
     <Group gap="xs" justify="flex-end" wrap="nowrap">

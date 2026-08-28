@@ -9,6 +9,7 @@ import {
   Group,
   IconChevronLeft,
   IconChevronRight,
+  IconUserCircle,
   InstallButton,
   NavLink,
   ROW_HEIGHT,
@@ -120,13 +121,9 @@ export function DesktopShell() {
       <AppShell.Header>
         <Group h="100%" px="md" gap="sm">
           <Wordmark />
-          {/* The account lives in the corner that names the account, beside
-              the control that ends the session -- not in the navbar, which
-              lists the parts of the app rather than who is using it. Shared
-              with the phone header rather than written twice here: see
-              ./AccountActions.tsx, which is also where the reasoning for two
-              icons over a name and a button lives. */}
-          <InstallButton />
+          {/* The language and the way out. The way *in* to the account is in
+              the navbar below, under the rule -- see ./AccountActions.tsx.
+              Shared with the phone header rather than written twice here. */}
           <AccountActions />
         </Group>
       </AppShell.Header>
@@ -161,20 +158,29 @@ export function DesktopShell() {
         })}
 
         {/*
-          Directly under the sections, not at the foot of the navbar.
+          The two rows that are not sections: the account, and the control that
+          resizes this navbar. Directly under the sections and under a rule, not
+          at the foot of the navbar.
 
-          It sat at the bottom first, which is where a sidebar's chrome
-          conventionally goes -- but this navbar is as tall as the window and
-          holds three items, so the control ended up eight hundred pixels below
-          the last thing anybody had looked at, and was missed. A rule separates
-          it from the sections so it still reads as chrome rather than a fourth
-          place to go.
+          The collapse control sat at the bottom first, which is where a
+          sidebar's chrome conventionally goes -- but this navbar is as tall as
+          the window and holds three items, so it ended up eight hundred pixels
+          below the last thing anybody had looked at, and was missed. The rule
+          is what keeps both of these reading as chrome rather than as a fourth
+          and fifth place to go.
 
-          Drawn as a `NavLink` like the sections themselves, so it inherits
-          their geometry exactly instead of being aligned to them by hand, and
-          dimmed so it does not compete with the navigation above it.
+          The account is here rather than in the header because a corner glyph
+          could only name itself when hovered, while a navbar row has a word. It
+          is still not a section: `SECTIONS` does not know about it and no trail
+          starts here, which is what keeps the list of places to go three long.
+
+          Both are `NavLink`s like the sections themselves, so they inherit that
+          geometry exactly instead of being aligned to it by hand -- and the
+          collapse control is dimmed, so it does not compete with the two things
+          above it that go somewhere.
         */}
         <Divider my="xs" />
+        <AccountRow opened={opened} active={pathname === '/account'} />
         <ControlRow
           opened={opened}
           onToggle={toggle}
@@ -199,7 +205,39 @@ export function DesktopShell() {
       >
         <Outlet />
       </AppShell.Main>
+
+      {/* Outside the header and outside the navbar, because it places itself:
+          the bottom left corner, which here is the foot of a navbar that keeps
+          its list at the top. See ui/InstallAction.tsx. */}
+      <InstallButton />
     </AppShell>
+  )
+}
+
+/** The way in to the account, drawn as one more row in the navbar. */
+function AccountRow({ opened, active }: { opened: boolean; active: boolean }) {
+  const t = useT()
+  const label = t('account.action')
+  const row = (
+    <NavLink
+      component={Link}
+      to="/account"
+      // On the rail the glyph is the whole control, exactly as it is for a
+      // section: without this the navigation ends in an unlabelled link.
+      aria-label={label}
+      {...(opened ? { label } : {})}
+      leftSection={<IconUserCircle size={18} />}
+      active={active}
+      styles={rowStyles(opened)}
+    />
+  )
+
+  return opened ? (
+    row
+  ) : (
+    <Tooltip label={label} position="right" withArrow>
+      {row}
+    </Tooltip>
   )
 }
 

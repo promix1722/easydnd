@@ -31,7 +31,11 @@ import { Alert, Badge, Button, Card, Group, Page, Stack, Text, Title } from '@/u
  * character list, started at a different height, and was capped by nothing at
  * all on a wide monitor. `/account` belongs to no section -- see
  * `ui/sections.ts` -- so `Page` gives it a heading and no breadcrumb, which is
- * what it should have: the phone's chrome has no word for this place either.
+ * what it should have. It passes `namedByChrome` with it: the phone's chrome
+ * *does* have a word for this place, the account being a row in the menu that
+ * selector opens, so below `md` the heading would be that word twice on a 390px
+ * screen. It is dropped there exactly as a section root's is, and a desktop is
+ * unchanged -- same heading, same 1024px cap as every other page.
  */
 export function AccountScreen() {
   const t = useT()
@@ -43,17 +47,15 @@ export function AccountScreen() {
 
   // A guest has no account: nothing to inventory, nothing to connect, and
   // nothing that would survive the session anyway. Offering "Connect Google"
-  // here would be offering to link a provider to a record that does not
-  // exist -- the server would refuse it, and the honest answer is to say so
-  // before the click rather than after.
+  // here would be offering to link a provider to a record that does not exist,
+  // and the server would refuse it -- so the page draws none of it.
+  //
+  // What it does not do any more is explain itself. The subtitle says what this
+  // session is, and an alert under it spelling out what a guest session lacks
+  // was a page scolding somebody for the way they chose to come in, on the one
+  // screen where there is nothing they can do about it.
   if (user.anonymous) {
-    return (
-      <Page trail={trail(t)} subtitle={t('account.asGuest')}>
-        <Alert color="orange" title={t('account.noAccount')}>
-          {t('account.noAccountDetail')}
-        </Alert>
-      </Page>
-    )
+    return <Page trail={trail(t)} namedByChrome subtitle={t('account.asGuest')} />
   }
 
   const methods = user.credentials.length + user.identities.length
@@ -62,7 +64,7 @@ export function AccountScreen() {
   )
 
   return (
-    <Page trail={trail(t)} subtitle={t('account.signedInAs', { name: user.display_name })}>
+    <Page trail={trail(t)} namedByChrome>
       <Stack gap="lg">
         {error ? (
           <Alert color="red" title={t('group.actionFailed')}>

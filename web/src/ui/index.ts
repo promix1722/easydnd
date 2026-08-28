@@ -64,6 +64,10 @@ export {
   Group,
   Loader,
   Paper,
+  // For the one thing that must escape its container: a dragged number, drawn
+  // at the pointer. `position: fixed` is relative to the nearest transformed
+  // ancestor, and a carousel's track is transformed on every frame.
+  Portal,
   ScrollArea,
   SimpleGrid,
   Skeleton,
@@ -104,6 +108,8 @@ export { Bullet } from './Bullet'
 export type { BulletProps } from './Bullet'
 export { Columns } from './Columns'
 export type { ColumnsProps, ColumnsSection } from './Columns'
+export { D20Roll } from './D20'
+export type { D20RollProps } from './D20'
 export { ACTION_ICON_SIZE, SHEET_COMBOBOX } from './actions'
 export { DataList } from './DataList'
 export type { ColumnSlot, DataListColumn, DataListProps, RowAction } from './DataList'
@@ -123,6 +129,7 @@ export { Page } from './Page'
 export type { Crumb, PageProps } from './Page'
 export { pageState } from './pageState'
 export type { PageState } from './pageState'
+export { NO_SWIPE } from './swipe'
 export { SECTIONS, sectionFor } from './sections'
 export type { Section } from './sections'
 export { SectionDeck } from './SectionDeck'

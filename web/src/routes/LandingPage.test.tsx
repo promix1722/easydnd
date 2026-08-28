@@ -7,6 +7,9 @@ import { LandingPage } from './LandingPage'
 
 const SLIDE_NAMES = ['Build a character', 'Join a group', 'Run an adventure']
 
+/** The fourth panel, which only a phone is offered. */
+const DICE_SLIDE = 'Roll a d20'
+
 /**
  * The page carries no copy yet, so its accessible names are the whole of what
  * there is to pin -- which is the point of putting them there rather than
@@ -102,7 +105,12 @@ describe('LandingPage', () => {
   // a carousel where one panel navigates and two do not teaches the wrong
   // thing about the app. The header's "Log in" is the only control, and the
   // captions describe rather than invite.
-  it('offers nothing to press on the slides themselves', () => {
+  //
+  // Scoped to the three that describe, which is what it was always about: the
+  // claim is that no panel is a *door*, not that no panel does anything. The
+  // die is a thing you drag rather than a link, and it leads nowhere. It is
+  // asserted on separately below.
+  it('offers nothing to press on the slides that describe the app', () => {
     renderAt('desktop', <LandingPage />)
 
     for (const name of SLIDE_NAMES) {
@@ -110,6 +118,58 @@ describe('LandingPage', () => {
       expect(slide.querySelector('a')).toBeNull()
       expect(slide.querySelector('button')).toBeNull()
     }
+  })
+
+  /*
+   * The die is a thumb toy, so it is drawn where there are thumbs.
+   *
+   * On a pointer it would be a large ornament on the page where a visitor is
+   * deciding whether to sign up, competing with the three panels that say what
+   * the app is for. The three are unchanged on both viewports, which is the
+   * other half of the claim -- this adds a panel rather than replacing one.
+   */
+  it('offers a die on a phone and not on a pointer', () => {
+    renderAt('mobile', <LandingPage />)
+
+    expect(screen.getByRole('group', { name: DICE_SLIDE })).toBeInTheDocument()
+  })
+
+  it('draws no die on a wide screen', () => {
+    renderAt('desktop', <LandingPage />)
+
+    expect(screen.queryByRole('group', { name: DICE_SLIDE })).not.toBeInTheDocument()
+  })
+
+  /*
+   * It goes after the three, not among them: the panels are the app's pitch in
+   * the order you meet it, and a toy wedged into that sequence would interrupt
+   * an argument to offer a distraction.
+   *
+   * Asserted on the panels rather than on headings, because the die has no
+   * heading -- it carries no words at all, which is the point of it. Its name
+   * comes from an `aria-label`, the one panel where that is allowed, so this
+   * doubles as the check that the label is still there: lose it and the panel
+   * goes back to announcing itself as "slide 4 of 4".
+   */
+  it('puts the die last, behind the three that describe the app', () => {
+    renderAt('mobile', <LandingPage />)
+
+    const panels = screen.getAllByRole('group').map((panel) => panel.getAttribute('aria-label'))
+    expect(panels[panels.length - 1]).toBe(DICE_SLIDE)
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    expect(headings).toEqual(SLIDE_NAMES)
+  })
+
+  // The panel is the die and nothing else. Both strings were on it a moment
+  // ago and their absence is the requirement, not an accident of layout.
+  it('writes nothing at all on the die panel', () => {
+    renderAt('mobile', <LandingPage />)
+
+    const panel = screen.getByRole('group', { name: DICE_SLIDE })
+
+    expect(panel).not.toHaveTextContent('Roll a d20')
+    expect(panel).not.toHaveTextContent('Twenty sides')
   })
 
   // The hero mark moved off this page: the header wordmark already names the

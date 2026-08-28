@@ -39,6 +39,8 @@ function shellAt(viewport: 'mobile' | 'desktop', at = '/') {
           // A detail page under `/`, which is the case that used to leave the
           // navbar unlit and the phone's trigger reading "Menu".
           { path: 'characters/:id', element: <p>content</p> },
+          // The one page this menu links to that is not a section.
+          { path: 'roll', element: <p>content</p> },
         ],
       },
     ],
@@ -145,15 +147,73 @@ describe('RootShell', () => {
     ])
   })
 
-  // The trigger is the only thing on a phone naming the current section, so it
-  // has to say something on a path that belongs to none.
-  // `/characters/chr_1` is the one that changed: the section table now owns
-  // that prefix, so a sheet names its section instead of falling back.
+
+  /*
+   * The die is a page, not a dialog.
+   *
+   * It was a full-screen dialog first and that was wrong twice: it covered the
+   * header, so the menu you opened it from was unreachable until you dismissed
+   * it, and cutting it back to sit below the header still left it needing a
+   * close button -- a second way out of a place you can already leave through
+   * the menu. As a link there is nothing to dismiss and every other section
+   * stays one press away, which is what this pins.
+   */
+  it('reaches the die as a page, leaving the menu intact', async () => {
+    const user = setupUser()
+    shellAt('mobile')
+
+    await user.click(screen.getByRole('button', { name: 'Characters' }))
+
+    const die = screen.getByRole('menuitem', { name: 'Roll the dice' })
+    expect(die).toHaveAttribute('href', '/roll')
+
+    // No dialog anywhere: nothing opened over the page, so there is nothing to
+    // close and the header was never covered.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  // Once you are on it, the die is marked as where you are in exactly the way
+  // a section is: the trigger takes its name and its glyph, and the row in the
+  // menu carries the tick.
+  it('marks the die as the current place while you are on it', async () => {
+    const user = setupUser()
+    shellAt('mobile', '/roll')
+
+    await user.click(screen.getByRole('button', { name: 'Roll the dice' }))
+
+    expect(screen.getAllByRole('menuitem').filter((el) => el.getAttribute('aria-current'))).toEqual([
+      screen.getByRole('menuitem', { name: 'Roll the dice' }),
+    ])
+  })
+
+  // `/roll` is a page but not a *section*: it owns no paths, lights nothing in
+  // the navbar and the desktop chrome never offers it. The section table is
+  // what both shells map over, so staying out of it is the whole mechanism.
+  it('keeps the die out of the section table and off the desktop rail', () => {
+    expect(SECTIONS.some((section) => section.to === '/roll')).toBe(false)
+
+    shellAt('desktop')
+    expect(screen.queryByRole('link', { name: 'Roll the dice' })).not.toBeInTheDocument()
+  })
+
+  /*
+   * The trigger is the only thing on a phone naming where you are, so it has
+   * to say something everywhere -- and the fallback is the *last* resort, not
+   * a default.
+   *
+   * `/characters/chr_1` was the first correction: the section table owns that
+   * prefix, so a sheet names its section instead of falling back. `/roll` and
+   * `/account` are the others and are not sections at all -- they are pages
+   * this very menu links to by name, so answering "Menu" on either names a
+   * page after the control you reached it through. The fallback is for a path
+   * the menu cannot reach: a 404, `/legal`.
+   */
   it.each([
     ['/', 'Characters'],
     ['/groups', 'Groups'],
     ['/characters/chr_1', 'Characters'],
-    ['/account', 'Menu'],
+    ['/roll', 'Roll the dice'],
+    ['/account', 'Account'],
   ])('labels the mobile dropdown %s as %s', (at, label) => {
     shellAt('mobile', at)
 
@@ -166,22 +226,31 @@ describe('RootShell', () => {
     expect(screen.getByRole('link', { name: 'Groups' })).toHaveAttribute('data-active', 'true')
   })
 
-  // The account is who is looking, not a section of the app: it belongs beside
-  // the control that ends the session, and nowhere in the navigation. It is an
-  // icon at both viewports now, so the name it used to print is its accessible
-  // name -- the header still says whose session this is when asked, it just no
-  // longer spends a phone's narrowest row saying so unprompted.
-  it.each(['desktop', 'mobile'] as const)(
-    'links the account icon to /account from the %s header',
-    (viewport) => {
-      shellAt(viewport)
+  // The account is in the navigation at both widths -- the navbar's own row on
+  // a desktop, a row under the rule in the dropdown on a phone -- and is still
+  // not a section: nothing about it comes from SECTIONS, and no trail starts
+  // there. Signing out stays in the header, because it is not somewhere to go.
+  it('links to /account from the desktop navbar', () => {
+    shellAt('desktop')
 
-      const link = screen.getByRole('link', { name: `Account: ${testAccount.display_name}` })
-      expect(link).toHaveAttribute('href', '/account')
-      expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
-      expect(SECTIONS.some((section) => section.to === '/account')).toBe(false)
-    },
-  )
+    expect(screen.getByRole('link', { name: 'Account' })).toHaveAttribute('href', '/account')
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(SECTIONS.some((section) => section.to === '/account')).toBe(false)
+  })
+
+  it('links to /account from the mobile dropdown', async () => {
+    const user = setupUser()
+    shellAt('mobile')
+
+    // Not in the header: the row holds the mark, where you are, and the way
+    // out, and the account is behind the same control the sections are.
+    expect(screen.queryByRole('link', { name: 'Account' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Characters' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Account' })).toHaveAttribute('href', '/account')
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+  })
 
   // The point of the change: the name is a label, not chrome. getByText does
   // not match an aria-label, which is exactly the property being asserted.

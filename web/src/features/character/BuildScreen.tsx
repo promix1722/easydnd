@@ -465,7 +465,7 @@ export function BuildScreen() {
   if (build.loading && !creating) {
     return (
       <Page
-        trail={buildTrail(t, isNew, null, id)}
+        trail={buildTrail(t, isNew, null)}
         state={{ kind: 'loading', what: t('build.loading') }}
       />
     )
@@ -473,7 +473,7 @@ export function BuildScreen() {
   if (build.error !== null) {
     return (
       <Page
-        trail={buildTrail(t, isNew, null, id)}
+        trail={buildTrail(t, isNew, null)}
         state={{
           kind: 'failed',
           title: t('build.loadFailed'),
@@ -497,7 +497,7 @@ export function BuildScreen() {
       // The draft, while the character it names is being created: the sheet
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
-      trail={buildTrail(t, isNew, creating ? nameDraft.trim() : title(view), id)}
+      trail={buildTrail(t, isNew, creating ? nameDraft.trim() : title(view))}
       /*
        * On the heading line, against the right edge, and only once there is a
        * character to finish.
@@ -521,13 +521,9 @@ export function BuildScreen() {
               </Button>
             ),
           })}
-      subtitle={
-        posingName
-          ? t('build.subtitleNaming')
-          : view.prompts.complete
-            ? t('build.subtitleComplete')
-            : t('build.subtitleOpen')
-      }
+      {...(!posingName && view.prompts.complete
+        ? { subtitle: t('build.subtitleComplete') }
+        : {})}
     >
       <Stack gap="lg">
 
@@ -678,19 +674,15 @@ export function BuildScreen() {
 /**
  * The trail for a build page.
  *
- * Three crumbs once there is a character -- `Characters / Ada / Creation` --
- * and two while creating one, because there is nothing yet to name. Note the
- * asymmetry with the event log, which is two crumbs even for a character that
- * exists: this screen already holds the sheet, and that one deliberately never
- * asks for it. See CharacterLogScreen.
- *
- * "Creation" is what the screen does, and the route stays `/build`: a URL
- * somebody has open is not worth breaking over a word, and this file's own
- * name is the one place the two spellings meet.
+ * Two crumbs either way: the character's name, or "New character" while there
+ * is nothing yet to name. It used to end in a third reading "Creation", which
+ * said what the screen does -- but the heading of a screen full of questions
+ * is not asked what it is, and the word cost a line on a 390px trail to say
+ * something the questions underneath it were already saying.
  */
-function buildTrail(t: Translate, isNew: boolean, name: string | null, id: string): Crumb[] {
+function buildTrail(t: Translate, isNew: boolean, name: string | null): Crumb[] {
   if (isNew) return [{ label: t('characters.newCharacter') }]
-  return [{ label: name, to: `/characters/${id}` }, { label: t('build.creation') }]
+  return [{ label: name }]
 }
 
 /**

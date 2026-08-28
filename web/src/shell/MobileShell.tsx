@@ -8,15 +8,40 @@ import {
   Group,
   IconCheck,
   IconChevronDown,
+  IconDice5,
+  IconUserCircle,
   InstallButton,
   Menu,
   SECTIONS,
   sectionFor,
 } from '@/ui'
+import type { Section } from '@/ui'
 
 import { AccountActions } from './AccountActions'
 import { HEADER_BOX, SAFE_BOTTOM, SAFE_TOP } from './chrome'
 import { Wordmark } from './Wordmark'
+
+
+/**
+ * The two entries in this menu that are not sections.
+ *
+ * Each is shaped like a `Section` so that the trigger, the glyph and the tick
+ * can all treat it as one without a second code path -- and each is kept *out*
+ * of `SECTIONS`, which is what stops either starting a breadcrumb. `owns` is
+ * empty because neither owns anything beneath it.
+ *
+ * They differ in where else they appear. The die is a phone's, and the desktop
+ * rail does not offer it at all; the account is on both, and the rail draws its
+ * own row for it -- see `./DesktopShell.tsx`.
+ */
+const DIE: Section = { to: '/roll', label: 'dice.roll', icon: IconDice5, owns: [] }
+
+const ACCOUNT: Section = {
+  to: '/account',
+  label: 'account.action',
+  icon: IconUserCircle,
+  owns: [],
+}
 
 /**
  * Narrow-screen chrome: one row, holding everything.
@@ -31,9 +56,11 @@ import { Wordmark } from './Wordmark'
  * dropdown collapses every section into one control that costs the same
  * whether there are two of them or six, which a tab bar does not.
  *
- * So the row is: the mark, the section you are in, and the account. The word
- * "easydnd" is gone from it -- see `./Wordmark.tsx` -- and the account is two
- * icons -- see `./AccountActions.tsx`.
+ * So the row is: the mark, the section you are in, and the way out. The word
+ * "easydnd" is gone from it -- see `./Wordmark.tsx` -- and so is the way in to
+ * the account, which is a row in this dropdown now: one control on a 390px row
+ * is cheaper than a second glyph beside it, and a menu can spell out in a word
+ * what a glyph in a corner could only say when hovered.
  *
  * `AppShell.Footer` is now unused here. That matters beyond this file: the
  * landing chrome's footer carries the SRD 5.1 attribution's way in, and the
@@ -49,20 +76,33 @@ export function MobileShell() {
   const active = sectionFor(pathname)
 
   /*
+   * What the trigger is naming, which is not always a section.
+   *
+   * The die is a page like any other once you are on it, and so is the
+   * account: both are rows in this very menu, so the control that says where
+   * you are has to name them there. Without this it falls through to the word
+   * "Menu" -- correct for a 404, where there genuinely is no name to give, and
+   * simply wrong on a page this menu links to by name.
+   */
+  const onDie = pathname === DIE.to
+  const onAccount = pathname === ACCOUNT.to
+  const current = active ?? (onDie ? DIE : onAccount ? ACCOUNT : null)
+
+  /*
    * What the trigger reads.
    *
-   * The desktop navbar can leave every entry unlit -- on `/account`, on a 404
-   * -- because the list is still on screen saying where you could go. This has
-   * no such luxury: it is one control, it is the only thing naming the current
-   * place, and a button with no label is a button nobody presses. So the
-   * fallback is the word for what the control *is*.
+   * The desktop navbar can leave every entry unlit -- on a 404 -- because the
+   * list is still on screen saying where you could go. This has no such luxury:
+   * it is one control, it is the only thing naming the current place, and a
+   * button with no label is a button nobody presses. So the fallback is the
+   * word for what the control *is*.
    *
-   * It fires far less often than it used to. `sectionFor` now knows that a
-   * character sheet belongs to Characters, where the old `activeNavPath`
-   * matched on the link target alone and so answered "nowhere" for every
-   * detail page under `/`.
+   * The fallback fires far less often than it used to. `sectionFor` knows that
+   * a character sheet belongs to Characters, where the old `activeNavPath`
+   * matched on the link target alone and so answered "nowhere" for every detail
+   * page under `/`.
    */
-  const label = active ? t(active.label) : t('nav.menu')
+  const label = current ? t(current.label) : t('nav.menu')
 
   return (
     <AppShell
@@ -99,7 +139,7 @@ export function MobileShell() {
                 // so the glyph is the section's mark on the page, not
                 // decoration. Absent on a path in no section, where the label
                 // falls back to "Menu" and there is no glyph to draw.
-                {...(active ? { leftSection: <active.icon size={16} /> } : {})}
+                {...(current ? { leftSection: <current.icon size={16} /> } : {})}
                 rightSection={<IconChevronDown size={16} />}
               >
                 {label}
@@ -133,10 +173,46 @@ export function MobileShell() {
                   {t(section.label)}
                 </Menu.Item>
               ))}
+
+              {/* Below the divider because it is not a section. It has a page
+                  of its own -- `/roll` -- but it owns no other paths, lights
+                  nothing, and the desktop navbar never offers it: the die is a
+                  phone's. A link rather than a button for the same reason the
+                  three above are links, and because that is what makes the
+                  back gesture take you off the die and not out of the app. */}
+              <Menu.Divider />
+              <Menu.Item
+                component={Link}
+                to={DIE.to}
+                aria-current={onDie ? 'page' : undefined}
+                leftSection={<DIE.icon size={16} />}
+                // Ticked when you are on it, exactly as a section is. Hidden
+                // rather than absent for the same alignment reason.
+                rightSection={
+                  <IconCheck size={16} style={{ visibility: onDie ? 'visible' : 'hidden' }} />
+                }
+              >
+                {t(DIE.label)}
+              </Menu.Item>
+
+              {/* Under the same rule, and for the same reason as the die: the
+                  account is who is looking rather than a part of the app, so it
+                  is in this menu but not in the list above it. Ticked like its
+                  neighbour, since being on it is the same kind of fact. */}
+              <Menu.Item
+                component={Link}
+                to={ACCOUNT.to}
+                aria-current={onAccount ? 'page' : undefined}
+                leftSection={<ACCOUNT.icon size={16} />}
+                rightSection={
+                  <IconCheck size={16} style={{ visibility: onAccount ? 'visible' : 'hidden' }} />
+                }
+              >
+                {t(ACCOUNT.label)}
+              </Menu.Item>
             </Menu.Dropdown>
           </Menu>
 
-          <InstallButton />
           <AccountActions />
         </Group>
       </AppShell.Header>
@@ -144,6 +220,12 @@ export function MobileShell() {
       <AppShell.Main>
         <Outlet />
       </AppShell.Main>
+
+      {/* Outside the header, because it places itself: the bottom left corner,
+          clear of a 390px row that already holds four controls. See
+          ui/InstallAction.tsx. */}
+      <InstallButton />
+
     </AppShell>
   )
 }

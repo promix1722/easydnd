@@ -87,11 +87,19 @@ const RULES = [
  * `dir` is a path under src/, not a layer: `lib/i18n` is a directory inside a
  * layer, and the whole of `lib/` may not import i18next just because part of
  * it does.
+ *
+ * `three` and `cannon-es` are the newest entries and the most important ones
+ * to hold, because they are by far the largest thing this app depends on. They
+ * are reachable from exactly one file -- `ui/D20Scene.tsx`, which is loaded
+ * dynamically and must stay that way. A feature importing either directly
+ * would pull a hundred and eighty kilobytes into the main bundle without
+ * anything failing, which is precisely the silent kind of regression this
+ * check exists to make loud.
  */
 const VENDOR_RULES = [
   {
     dir: 'ui',
-    packages: ['@mantine/', '@tabler/', 'embla-carousel'],
+    packages: ['@mantine/', '@tabler/', 'embla-carousel', 'three', 'cannon-es'],
     why: (vendor) => `only src/ui/ may import ${vendor}*; import from '@/ui' instead (re-export it there if missing)`,
   },
   {

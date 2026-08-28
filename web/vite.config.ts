@@ -128,6 +128,22 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        /*
+         * The die's 3D scene is the one chunk deliberately left out of the
+         * precache, and leaving it out is what makes it a lazy chunk at all.
+         *
+         * `ui/D20.tsx` goes to some trouble not to fetch three.js until
+         * somebody actually swipes to the die -- but the service worker's job
+         * is to download everything up front, so on a first visit it would
+         * have pulled the whole 180 kB in the background regardless and made
+         * that trouble pointless. The pattern matches Rollup's hashed name for
+         * the chunk; `manualChunks` below names it, so the two move together.
+         *
+         * The cost is that a die thrown for the first time offline does not
+         * work. That is the correct trade: an offline visitor who never opens
+         * the die should not have paid for it.
+         */
+        globIgnores: ['**/d20-scene-*.js'],
         // Navigations to /v1/ are the API's, not the router's. This is load
         // bearing rather than tidy: the Google sign-in return is a top-level
         // navigation to /v1/auth/sso/:provider/callback, and without this the
@@ -220,6 +236,26 @@ export default defineConfig({
     // minified chunk offsets, and the release that produced them is pruned
     // after five deploys.
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        /*
+         * One named chunk, so the service worker can be told to skip it.
+         *
+         * Rollup would split `ui/D20Scene.tsx` out on its own anyway -- it is
+         * behind a dynamic `import()` -- but it would name it after the module
+         * and the name would drift with a rename. `globIgnores` above matches
+         * on this name, and a precache pattern that silently stops matching is
+         * exactly the kind of regression nothing fails on: the die would keep
+         * working, and every visitor would quietly download three.js again.
+         */
+        manualChunks(id) {
+          if (id.includes('/three/') || id.includes('/cannon-es/') || id.includes('D20Scene')) {
+            return 'd20-scene'
+          }
+          return undefined
+        },
+      },
+    },
   },
   /**
    * The test suite, in one project that isolates nothing.

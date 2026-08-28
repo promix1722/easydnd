@@ -201,6 +201,22 @@ describe('Page', () => {
     expect(container.querySelector('[style*="min-height"]')?.closest(HIDDEN_ON_PHONE)).not.toBeNull()
   })
 
+  it('drops the heading of a page the phone chrome names, though it is no section', () => {
+    // `/account`: the selector in the phone's header reads "Account", because
+    // the account is a row in the menu it opens. The page's own heading is then
+    // the same word an inch below it.
+    const { container } = renderPage('/account', {
+      trail: [{ label: 'Account' }],
+      namedByChrome: true,
+    })
+
+    expect.soft(container.querySelector('[style*="min-height"]')?.closest(HIDDEN_ON_PHONE)).not.toBeNull()
+    // Still an h2 on a desktop, with no glyph -- it has no section to draw one
+    // from -- and still no breadcrumb, because nothing is above it.
+    expect.soft(screen.getByRole('heading', { level: 2, name: 'Account' })).toBeInTheDocument()
+    expect.soft(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument()
+  })
+
   it('keeps the row where a section root has something else on it', () => {
     const { container } = renderPage('/', { trail: [], actions: <button>New character</button> })
 

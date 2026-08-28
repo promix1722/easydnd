@@ -52,7 +52,7 @@ describe('interpolation', () => {
   const en = createI18n('en')
 
   it('substitutes named values', () => {
-    expect(en.t('account.signedInAs', { name: 'Ada' })).toBe('Signed in as Ada.')
+    expect(en.t('folders.newCharacterIn', { name: 'Retired' })).toBe('New character in Retired')
   })
 
   // React escapes what it renders, so i18next escaping as well would double-

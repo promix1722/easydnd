@@ -36,8 +36,11 @@ export async function pressRowAction(
   label: string,
 ): Promise<void> {
   const user = setupUser()
-  if (viewport === 'desktop') {
-    await user.click(screen.getByRole('button', { name: rowActionName(label, row) }))
+  // A desktop row draws its actions as buttons unless the list asked for the
+  // menu, which is the same control the phone draws -- so fall through.
+  const button = screen.queryByRole('button', { name: rowActionName(label, row) })
+  if (viewport === 'desktop' && button !== null) {
+    await user.click(button)
     return
   }
   await user.click(screen.getByRole('button', { name: `Actions for ${row}` }))
