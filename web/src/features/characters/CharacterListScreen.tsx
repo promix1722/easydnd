@@ -254,6 +254,7 @@ export function CharacterListScreen() {
                   items={inFolder}
                   getKey={(character) => character.id}
                   actions={actionsFor}
+                  menuActions
                   columns={[
                     {
                       key: 'name',
@@ -291,7 +292,6 @@ export function CharacterListScreen() {
                 <FolderAdditions
                   folder={folder}
                   onNew={() => void navigate(`/characters/new?folder=${folder.id}`)}
-                  onImport={() => void navigate(`/characters/import?folder=${folder.id}`)}
                 >
                   {/* Development only, and absent from a production bundle
                       rather than hidden in one: Vite replaces

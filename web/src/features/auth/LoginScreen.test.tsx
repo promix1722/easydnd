@@ -103,8 +103,11 @@ describe('LoginScreen', () => {
     loginAt()
 
     expect(screen.getByRole('button', { name: 'Continue as a guest' })).toBeInTheDocument()
+    // The card is absent and nothing is said about why: what is left on the
+    // page is what this browser can do, and an alert about an option nobody
+    // was offered explains a hole the visitor cannot see.
     expect(screen.queryByRole('button', { name: /passkey/i })).not.toBeInTheDocument()
-    expect(screen.getByText(/This browser cannot use passkeys/i)).toBeInTheDocument()
+    expect(screen.queryByText(/passkey/i)).not.toBeInTheDocument()
   })
 
   // The header records where the visitor was, which is what replaces the old

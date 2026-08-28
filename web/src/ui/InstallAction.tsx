@@ -1,11 +1,13 @@
 import { useState } from 'react'
 
-import { Button, List, Stack, Text } from '@mantine/core'
+import { Box, Button, List, Stack, Text } from '@mantine/core'
 import { IconDownload } from '@tabler/icons-react'
 
 import { useT } from '@/lib/i18n'
 
 import { ModalSheet } from './ModalSheet'
+
+import { CHROME_INSET } from '@/theme/tokens'
 
 import type { InstallOffer } from '@/lib/install'
 
@@ -24,8 +26,19 @@ export interface InstallActionProps {
  * nothing to dismiss, so nothing has to be remembered -- which is what keeps
  * this out of the argument about there being no localStorage in this client.
  *
+ * **It owns its own place: the bottom left corner, at every width.** It sat in
+ * the header, which is the row that says where you are and how to leave, and
+ * this is neither -- it is an offer, and an offer belongs out of the way of the
+ * work. The corner is also the only spot that is free in all three chromes: the
+ * phone's header is one row of four controls at 390px, the desktop navbar keeps
+ * its list at the top, and the landing footer already has three things in it.
+ *
+ * `position: fixed`, so where it is mounted does not matter and no shell has to
+ * arrange it -- and low enough in the stack to sit under a dialog, since an
+ * offer that floats over the sheet it opened is worse than no offer.
+ *
  * Nothing is drawn unless there is something to offer. Already installed, or a
- * browser that cannot, and the header is exactly as it was.
+ * browser that cannot, and the corner is empty.
  *
  * iOS gets the same button and a different answer behind it, because iOS has no
  * install API at all -- no event to wait for, nothing to call. Every install
@@ -41,13 +54,28 @@ export function InstallAction({ offer, onInstall }: InstallActionProps) {
 
   return (
     <>
-      <Button
-        variant="subtle"
-        leftSection={<IconDownload size={16} />}
-        onClick={offer === 'ios' ? () => setShowing(true) : onInstall}
+      <Box
+        style={{
+          position: 'fixed',
+          // The strip a home indicator covers, spelled out rather than
+          // imported: `shell/chrome.ts` owns the pair for the two bars, and
+          // `@/ui` may not import `@/shell`. The fallback inside `env()` is
+          // load-bearing -- see the note there.
+          bottom: `calc(${CHROME_INSET}px + env(safe-area-inset-bottom, 0px))`,
+          left: `calc(${CHROME_INSET}px + env(safe-area-inset-left, 0px))`,
+          zIndex: 100,
+        }}
       >
-        {t('install.action')}
-      </Button>
+        <Button
+          // Drawn rather than dissolved: this floats over whatever is behind
+          // it, and `subtle` over a table is a word with no edges.
+          variant="default"
+          leftSection={<IconDownload size={16} />}
+          onClick={offer === 'ios' ? () => setShowing(true) : onInstall}
+        >
+          {t('install.action')}
+        </Button>
+      </Box>
 
       <ModalSheet
         opened={showing}

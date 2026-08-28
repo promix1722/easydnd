@@ -3,6 +3,7 @@ import type { EmblaCarouselType } from 'embla-carousel'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
+import { swipeAllowedFrom } from './swipe'
 import { TabRow } from './TabRow'
 import { useIsDesktop } from './useIsDesktop'
 
@@ -162,7 +163,12 @@ export function TabDeck({
         // Not looped. These are ordered -- a sheet and a build both decide what
         // order things come in -- so wrapping from the last back to the first
         // is a jump rather than a continuation.
-        emblaOptions={{ loop: false, watchDrag: swipeable }}
+        // A predicate rather than `true`: see NO_SWIPE. `false` still means
+        // a deck that does not drag at all, which is a different question.
+        emblaOptions={{
+          loop: false,
+          watchDrag: swipeable ? (_, event) => swipeAllowedFrom(event.target) : false,
+        }}
       >
         {panels.map((panel) => (
           // Named by `aria-label` rather than by `aria-labelledby`, because

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '@/lib/auth'
@@ -29,6 +30,11 @@ import { Alert, Button, Card, Group, Stack, Text, Title } from '@/ui'
  * Guest sits last because it is the only one that keeps nothing. It stays on
  * the page without WebAuthn, so a browser that lacks passkeys still leads
  * somewhere.
+ *
+ * A browser with no WebAuthn is told nothing about it. The passkey card simply
+ * is not there, and what is left -- a provider, a guest -- is what that browser
+ * can actually do: an alert explaining an option nobody was offered is a page
+ * apologising for itself before it has been asked anything.
  */
 export function LoginScreen() {
   const t = useT()
@@ -36,6 +42,12 @@ export function LoginScreen() {
   const navigate = useNavigate()
   const location = useLocation()
   const passkeys = isPasskeySupported()
+  // Which button was pressed. `busy` is one flag for every flow -- there is
+  // only ever one attempt in the air -- so a spinner bound to it directly spun
+  // on all three at once, and the guest button appeared to be signing in while
+  // the passkey picker was open. The flag says an attempt is running; this says
+  // whose, and the two together are what a button needs to know.
+  const [pressed, setPressed] = useState<'passkey' | 'guest' | null>(null)
 
   // Whoever sent us here recorded where they were, so signing in returns them
   // to the deep link they arrived on rather than dropping them at the root.
@@ -50,7 +62,8 @@ export function LoginScreen() {
   // would mean a "Log in" screen rendered inside the signed-in shell.
   if (status === 'authenticated') return <Navigate to="/" replace />
 
-  const attempt = (run: () => Promise<boolean>) => {
+  const attempt = (which: 'passkey' | 'guest', run: () => Promise<boolean>) => {
+    setPressed(which)
     void run().then((ok) => {
       if (ok) void navigate(from, { replace: true })
     })
@@ -58,12 +71,7 @@ export function LoginScreen() {
 
   return (
     <Stack gap="lg" maw={560} mx="auto" py="xl">
-      <Stack gap="xs">
-        <Title order={2}>{t('login.title')}</Title>
-        <Text c="dimmed" size="sm">
-          {providers.length > 0 ? t('login.leadWithProviders') : t('login.lead')}
-        </Text>
-      </Stack>
+      <Title order={2}>{t('login.title')}</Title>
 
       {/* One alert for every flow. Whichever attempt failed most recently is
           the one worth showing, and the provider only keeps that one. */}
@@ -72,15 +80,6 @@ export function LoginScreen() {
           {error}
         </Alert>
       ) : null}
-
-      {passkeys ? null : (
-        <Alert color="yellow" title={t('login.noPasskeys.title')}>
-          {t('login.noPasskeys.detail')}{' '}
-          {providers.length > 0
-            ? t('login.noPasskeys.withProviders')
-            : t('login.noPasskeys.guestOnly')}
-        </Alert>
-      )}
 
       {/* First, and one card per provider. It signs in and signs up in a
           single press: the provider has already established who this is, so
@@ -125,7 +124,11 @@ export function LoginScreen() {
               </Text>
             </div>
             <Group>
-              <Button loading={busy} onClick={() => attempt(signInOrRegister)}>
+              <Button
+                loading={busy && pressed === 'passkey'}
+                disabled={busy && pressed !== 'passkey'}
+                onClick={() => attempt('passkey', signInOrRegister)}
+              >
                 {t('login.passkey.action')}
               </Button>
             </Group>
@@ -143,7 +146,12 @@ export function LoginScreen() {
           </div>
 
           <Group>
-            <Button variant="default" loading={busy} onClick={() => attempt(signInAsGuest)}>
+            <Button
+              variant="default"
+              loading={busy && pressed === 'guest'}
+              disabled={busy && pressed !== 'guest'}
+              onClick={() => attempt('guest', signInAsGuest)}
+            >
               {t('login.guest.action')}
             </Button>
           </Group>

@@ -93,32 +93,36 @@ export function GroupScreen() {
     <Page
       trail={[{ label: group.name }]}
       badge={<Badge variant="light">{roleLabel(t, group.role)}</Badge>}
-      actions={
-        <>
-          {isOwner ? (
-            // Rendered and disabled rather than hidden. A control that is not
-            // there teaches nothing; one that is there with a reason teaches
-            // the rule the first time somebody reaches for it.
-            <Tooltip label={t('group.ownerCannotLeave')}>
-              <Button
-                variant="subtle"
-                leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
-                data-disabled
-                onClick={(event) => event.preventDefault()}
-              >
-                {t('groups.leave')}
-              </Button>
-            </Tooltip>
-          ) : (
+      // Beside the trail rather than in the actions cluster: leaving is a fact
+      // about your standing here, not something done to the group.
+      lead={
+        isOwner ? (
+          // Rendered and disabled rather than hidden. A control that is not
+          // there teaches nothing; one that is there with a reason teaches
+          // the rule the first time somebody reaches for it.
+          <Tooltip label={t('group.ownerCannotLeave')}>
             <Button
               variant="subtle"
               leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
-              loading={remove.pending}
-              onClick={() => void leave()}
+              data-disabled
+              onClick={(event) => event.preventDefault()}
             >
               {t('groups.leave')}
             </Button>
-          )}
+          </Tooltip>
+        ) : (
+          <Button
+            variant="subtle"
+            leftSection={<IconLogout size={ACTION_ICON_SIZE} />}
+            loading={remove.pending}
+            onClick={() => void leave()}
+          >
+            {t('groups.leave')}
+          </Button>
+        )
+      }
+      actions={
+        <>
           {canManage && (
             <Button
               variant="subtle"

@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router'
 import { getPrompts, getSheet } from '@/lib/api'
 import type { Prompt, Sheet } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
-import { Button, Page, pageState } from '@/ui'
+import { Badge, Button, Page, pageState } from '@/ui'
 
 import type { Compendium } from './compendium'
 import { loadCompendium } from './compendium'
@@ -79,8 +79,22 @@ export function CharacterSheetScreen() {
     <Page
       trail={[{ label: identity.name || 'Unnamed' }]}
       /*
-       * One action, and only while there is something to do with it.
+       * A mark, and only while the character is unfinished.
        *
+       * The button used to carry that message by appearing and disappearing,
+       * which made one control mean two things: a way in to the build screen,
+       * and the news that there is work left. They are separate facts, so the
+       * news is a badge on the name -- where a rank or "Read only" already
+       * goes -- and the way in is a button that is always there.
+       *
+       * A `/prompts` that failed is `null`, deliberately survivable, and draws
+       * no badge: silence is the right answer to a question that could not be
+       * asked, where "unfinished" would be a guess.
+       */
+      {...(outstanding.length > 0
+        ? { badge: <Badge variant="light">{t('sheet.unfinished')}</Badge> }
+        : {})}
+      /*
        * What was here before was a link to the event log, drawn on every sheet
        * whether or not anybody wanted the record -- and beneath it, an alert
        * listing every choice still open above the sheet the page is for. Both
@@ -88,22 +102,12 @@ export function CharacterSheetScreen() {
        * route still serves it, and `/characters/:id/log` is still the
        * unabridged record), and the list of what is left belongs to the screen
        * that answers it rather than to the one that reads the character.
-       *
-       * So the header says the one thing the sheet cannot: that this character
-       * is not finished, and where finishing it happens. Its presence is the
-       * whole message, which is why there is nothing here when `/prompts` comes
-       * back empty -- and why a `/prompts` that failed (`null`, deliberately
-       * survivable) draws no button rather than a wrong one.
        */
-      {...(outstanding.length > 0
-        ? {
-            actions: (
-              <Button component={Link} to={`/characters/${id}/build`} variant="light">
-                {t('sheet.answerWhatIsLeft')}
-              </Button>
-            ),
-          }
-        : {})}
+      actions={
+        <Button component={Link} to={`/characters/${id}/build`} variant="light">
+          {t('common.edit')}
+        </Button>
+      }
     >
       <SheetBody sheet={s} compendium={sheet.data.compendium} />
     </Page>

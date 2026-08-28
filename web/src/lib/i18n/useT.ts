@@ -18,7 +18,7 @@ import en from '@locales/en.json'
  * ```tsx
  * const t = useT()
  * <Title>{t('auth.login.title')}</Title>
- * <Text>{t('account.signedInAs', { name })}</Text>
+ * <Text>{t('folders.newCharacterIn', { name })}</Text>
  * <Text>{t('groups.memberCount', { count })}</Text>
  * ```
  */

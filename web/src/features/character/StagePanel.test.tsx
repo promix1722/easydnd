@@ -232,14 +232,17 @@ describe('StagePanel', () => {
     expect(onNext).toHaveBeenCalled()
   })
 
-  it('names no category when there is nothing left, or nothing yet', () => {
+  it('names no category when there is nothing yet, and says nothing once it is all answered', () => {
     const { rerender } = renderAt(viewport, panel([CLASS_ROW], []))
 
-    // Never "nothing left in class": the category's word lives in its tab and
-    // appears exactly once on the page.
-    expect(screen.getByText('Nothing left here.')).toBeInTheDocument()
+    // A tab with every question answered says nothing at all: the blocks are
+    // still there to read, and a line announcing their absence was announcing
+    // something that is not absent.
+    expect(screen.queryByText(/Nothing/)).not.toBeInTheDocument()
 
     rerender(panel([], []))
+    // Never "nothing to answer in class": the category's word lives in its
+    // tab and appears exactly once on the page.
     expect(screen.getByText('Nothing to answer yet.')).toBeInTheDocument()
   })
 })

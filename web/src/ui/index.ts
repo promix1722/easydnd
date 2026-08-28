@@ -64,6 +64,10 @@ export {
   Group,
   Loader,
   Paper,
+  // For the one thing that must escape its container: a dragged number, drawn
+  // at the pointer. `position: fixed` is relative to the nearest transformed
+  // ancestor, and a carousel's track is transformed on every frame.
+  Portal,
   ScrollArea,
   SimpleGrid,
   Skeleton,
@@ -125,6 +129,7 @@ export { Page } from './Page'
 export type { Crumb, PageProps } from './Page'
 export { pageState } from './pageState'
 export type { PageState } from './pageState'
+export { NO_SWIPE } from './swipe'
 export { SECTIONS, sectionFor } from './sections'
 export type { Section } from './sections'
 export { SectionDeck } from './SectionDeck'

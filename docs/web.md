@@ -572,7 +572,9 @@ three are gone, and none of them was removed for tidiness: each was left with
 nothing to do.
 
 Every folder is now a bordered `FolderPanel` -- a heading you can collapse, its
-own table under it, and its own **New character** and **Import** beneath that.
+own table under it, and its own **New character** beneath that. (**Import** sat
+beside it and is withheld for now; `ImportCharacterScreen` and its route are
+untouched, so putting the button back is one line in `FolderAdditions`.)
 That change is worth four consequences:
 
 - **There is nothing to filter.** A folder you can see the edges of is not a
@@ -618,10 +620,14 @@ Three rules, applied to every list screen, because a control's position is the
 only thing on screen that says what it will change.
 
 **The heading line acts on the entity the page is about**, and on nothing else:
-rename, leave, delete. It is not where you add to it. The two character screens
-are the rule applied to something that is not a list: the sheet's **Answer what
-is left** and the build screen's **Finish** both act on the character, and both
-sit on the trail's line, against the right edge, drawn by `ui/Page`'s `actions`.
+rename, delete -- and, in `Page`'s **`lead`** slot beside the trail rather than
+against the right edge, **Leave**. That one is not a thing done to the group so
+much as a statement about your standing in it, and it reads as part of where you
+are; `lead` exists for that and has one caller. It is not where you add to it.
+The two character screens are the rule applied to something that is not a list:
+the sheet's **Edit** and the build screen's **Finish** both act on the
+character, and both sit on the trail's line, against the right edge, drawn by
+`ui/Page`'s `actions`.
 Finish spent a while against the last tab instead, in a slot `TabRow` had for
 it -- which said it was a control on the tabs, and left a button competing with
 the strip for a 390px line. It is neither of those things.
@@ -636,8 +642,12 @@ one on the first.
 `rowActions` list -- a label, an icon, a colour, a handler -- and `DataList`
 draws it twice: **spelled out as buttons on a desktop**, where a table has the
 room and a row's actions should be visible without opening anything, and
-**folded behind one `⋮` menu on a phone**, where they have nowhere to go. That
-split is the whole of the difference between the two renderings, and it is the
+**folded behind one `⋮` menu on a phone**, where they have nowhere to go. A list
+may ask for the menu at both widths with **`menuActions`**, and the character
+list does: three buttons on every row made a shelf of characters read as a
+control panel, and the folder above them already carries its own actions behind
+the same glyph. That split is the whole of the difference between the two
+renderings, and it is the
 reason the rule below is now kept by construction rather than by twenty call
 sites remembering it: each action carries its row's name as its accessible name
 ("Delete Ada"), because a column of buttons all called "Delete" is ambiguous to
@@ -765,6 +775,14 @@ accessible name is a link nobody can follow. Deeper crumbs keep their words at
 both widths, because a group on a shared character's sheet is a real parent
 rather than a restatement of the chrome.
 
+**A page the chrome names drops its heading below `md`**, and a section root is
+the usual case: `Page` knows the section from the URL and the phone's selector
+is showing that very word. `/account` is the exception that needed saying out
+loud -- it belongs to no section, and the selector names it anyway because the
+account is a row in the menu it opens -- so it passes **`namedByChrome`** and
+gets the same treatment. A desktop is untouched by either: same `h2`, same
+1024px cap, same starting height as every other page.
+
 **The row goes with the word, and the block goes with the row.** Hiding the
 heading alone left what it sat in: `ROW_HEIGHT` of nothing plus the stack's
 gap, above every list in the app, which on a 390px screen is the most expensive
@@ -797,9 +815,12 @@ imposing one word everywhere or letting four drift apart again.
 
 **`Page` does not branch on viewport, and must not.** The actions wrap under the
 heading on a narrow screen because the row is allowed to wrap, and the cap is
-inert below 1024px. The list of components that genuinely swap markup at the
-breakpoint stays at five; `Page.test.tsx` pins that by comparing the two
-renderings byte for byte, the way `TabRow.test.tsx` does.
+inert below 1024px. `Page.test.tsx` pins that by comparing the two renderings
+byte for byte, the way `TabRow.test.tsx` does. What may branch on the width is
+the handful of components that genuinely have to -- `Columns`, `DataList`,
+`ModalSheet`, `SectionDeck`, `TabDeck`, `RootShell` and `SheetBody`.
+`ScoreAssignment` was briefly one of them and is not: its gesture is the same at
+every width now.
 
 ### What stayed different, and why
 
@@ -919,9 +940,8 @@ Two things on that screen are not cosmetic:
   is no undo and no backup. A dialog that only named the folder would be
   describing a smaller action than the one about to happen.
 
-New character and Import carry their own folder through as `?folder=`: there is
-a pair of them under every folder's table, so where you press is where the next
-character lands.
+New character carries its own folder through as `?folder=`: there is one under
+every folder's table, so where you press is where the next character lands.
 
 ### A row's dialogs belong to the screen, not to the row
 
@@ -1156,9 +1176,11 @@ by a spinner and rebuilt underneath whoever was reading it. A refresh that
 *fails* still takes the screen down to its error, because a list quietly out
 of date is worse than one that says it could not check.
 
-The trail reads `Characters / Ada / Creation`, which is what the screen does;
-the route stays `/build`, because a URL somebody has open is not worth breaking
-over a word. The tabs are capitalised for the same reason a heading is -- a tab
+The trail reads `Characters / Ada`, and ends there. It used to carry a third
+crumb naming what the screen does -- "Creation" -- which a screen full of
+questions was not being asked, and which cost a line of a 390px trail to say it.
+The route stays `/build` either way, because a URL somebody has open is not
+worth breaking over a word. The tabs are capitalised for the same reason a heading is -- a tab
 is a title, not a sentence -- and the word in each is still the category's own,
 which is all the rule below asks of it.
 
@@ -1213,12 +1235,14 @@ data now" is true on exactly the render where it means nothing. The flag goes
 when the id has settled and the read it started has finished.
 
 `/characters/new?folder=` carries the folder the character list was filtered to, so
-whatever the list was showing is where the next character lands. Import does the
-same. Absent, the server resolves the account's default.
+whatever the list was showing is where the next character lands. Import did the
+same while its button was offered. Absent, the server resolves the account's
+default.
 
-### The Stub button is a development build's third button
+### The Stub button is a development build's second button
 
-Beside Import there is a **Stub**, and it is there only in a development build.
+Beside New character there is a **Stub**, and it is there only in a development
+build.
 It posts to `/v1/characters/stub` and lands on a finished level-3 rogue -- the
 character in `docs/reference_hexsheet/` -- so that working on the sheet, the log
 page or the character list does not begin with a walk through five tabs.
@@ -1226,7 +1250,7 @@ page or the character list does not begin with a walk through five tabs.
 It goes to **the sheet**, and that is the one place it differs from Import,
 which goes to the build screen. An import answers no prompts, so there is always
 something left to decide; a stub is finished, so the sheet is the thing worth
-looking at. It carries `?folder=` like both its neighbours.
+looking at. It carries `?folder=` like its neighbour.
 
 Finished means the build screen's "still to choose" panel is **empty**, not
 merely that the rules call the character complete. Seven of its prompts are
@@ -1296,9 +1320,12 @@ arrive.
 ### A category's word appears exactly once
 
 In its tab. A block is headed by the choice's own name -- "A race" -- or by
-what was decided -- "Race chosen" -- and never by the category alone, and empty
-copy is "Nothing left here" rather than "nothing left in race". It is a small
-rule with a large payoff: `getByText('race')` means one thing on this page, and
+what was decided -- "Race chosen" -- and never by the category alone, and the
+one line a tab with nothing to ask still prints is "Nothing to answer yet"
+rather than "nothing to answer in race". (A tab whose questions are all
+*answered* prints nothing: the blocks are still there to read, so a line
+announcing their absence was announcing something that is not absent.) It is a
+small rule with a large payoff: `getByText('race')` means one thing on this page, and
 a test that breaks does so for the reason it says.
 
 ### The method decides what there is to do about the scores
@@ -1316,15 +1343,64 @@ omission: in none of them is the number yours to pick.
 | Manual | an escape hatch | step or type anything from 1 to 30 |
 
 The two that deal out a set share `ScoreAssignment`: a pool you take from and
-six abilities to put numbers on. Dragging is the obvious gesture on a mouse and
-does not exist on a phone, so a number can equally be picked up with a tap or
-the keyboard and put down with a second one -- the same operation, reachable
-without a pointing device. Dropping onto a taken ability swaps the two; putting
-a number back where it came from returns it to the pool. Nothing can be
-confirmed until all six are placed, because six numbers and five decisions is
-not an answer. Both halves are drawn at least 44px square: a number waiting to
-be placed used to be a badge, which is a few millimetres of target for the one
-gesture the whole surface exists for.
+six abilities to put numbers on. Two gestures, one operation: drag a number, or
+tap it and tap where it goes. The tap is not a fallback -- it is the keyboard's
+path and the one a screen reader can follow, since every half of the surface is
+a real `<button>`.
+
+**The drag is pointer events, not HTML5 drag-and-drop**, and that is what makes
+it a gesture a finger can make. `draggable` + `dragstart` is a mouse protocol
+that no mobile browser fires for touch, so for as long as this surface used it,
+the instruction "drag a number onto an ability" did nothing whatsoever on the
+device the app is used on at a table -- and there is one implementation now
+rather than two, because a single pointer API covers finger, mouse and stylus.
+Three things the native protocol did for free are done here instead: the drop
+target is found with `elementFromPoint` over a `data-ability` attribute, the
+gesture is held with `setPointerCapture` so events keep arriving once the finger
+has left what it started on, and `touch-action: none` on anything you can pick
+up stops the browser scrolling the page and cancelling the drag on the first
+millimetre. A press that never travels `DRAG_THRESHOLD` is not a drag at all and
+falls through to the click, which is what keeps the tap exact.
+`features/character/scoreDrag` holds the arithmetic and the lookup, in its own
+module because a file that exports a component may export nothing else without
+losing fast refresh.
+
+The carousel had to be told to keep its hands off first, which is what
+`ui/swipe.ts`'s **`NO_SWIPE`** is for. Embla takes the pointer down on any
+element that is not a field, and from a few pixels of sideways drift it both
+scrolls the deck and swallows the `click` that was about to land -- so on a
+phone a drag towards Strength swiped to the next tab, and even a tap on a 44px
+square pressed with a thumb often did nothing at all. `TabDeck` passes
+`watchDrag` a predicate instead of `true`, and a surface marked with the
+attribute keeps its own gestures: the deck is still swiped from anywhere else on
+the slide, and the tabs never stopped working. `ScoreAssignment` marks the whole
+surface rather than each control, because the drift that has to be tolerated
+happens between a press and its release and the release is not always over what
+was pressed.
+
+The number follows the pointer as a ghost, and it is drawn in a `Portal` for a
+reason worth writing down: `position: fixed` is positioned against the nearest
+*transformed* ancestor rather than against the viewport, and the carousel's
+track is translated on every frame. Drawn in place it was laid out against that
+track and clipped by its overflow -- the drag landed and nothing appeared to
+move. For the same class of reason the gesture's state is read from the render
+its handler was made in rather than through a `setState` updater: an updater
+must be pure, placing a number is not, and StrictMode invokes it twice to prove
+the point.
+
+The suite drives the drag by hand, with `document.elementFromPoint` stubbed:
+jsdom computes no layout, so the browser's one contribution to the gesture is
+the one thing a test has to supply. The threshold, the swap and the click that
+must not undo the drop are the real code.
+
+Dropping onto a taken ability swaps the two. **Dropping one anywhere that is not
+an ability returns it to the pool** -- undoing a placement is half of dealing six
+numbers out, and its only gesture used to be tapping the number and tapping it
+again, which is not what anybody tries on a surface that says "drag". Tapping a
+placed number twice still works. Nothing can be confirmed until all six are placed,
+because six numbers and five decisions is not an answer. Both halves are drawn
+at least 44px square: a number waiting to be placed used to be a badge, which is
+a few millimetres of target for the one gesture the whole surface exists for.
 
 Point buy and manual share `ScoreStepper`, and only the middle of the row
 differs. Point buy's number cannot be typed over -- a score there is *bought*,
@@ -1422,12 +1498,18 @@ and as a deck of tabs on a phone.
 
 ### What the sheet says about an unfinished character
 
-One button on the heading line, reading **Answer what is left**, and only when
-`/prompts` comes back with something in it. Its presence is the whole message:
-the sheet does not enumerate what is open, because enumerating it put the build
-screen's work on the page nobody came to build on -- an alert, a list of five
-questions, and the sheet itself pushed below the fold on a phone. The screen
-that answers a question is the screen that lists it.
+A badge on the name reading **Unfinished**, and only when `/prompts` comes back
+with something in it. The badge is the whole message: the sheet does not
+enumerate what is open, because enumerating it put the build screen's work on
+the page nobody came to build on -- an alert, a list of five questions, and the
+sheet itself pushed below the fold on a phone. The screen that answers a
+question is the screen that lists it.
+
+The mark used to be the *button*, which appeared and disappeared with the same
+prompts. That made one control say two things -- here is the way in, and there
+is work left -- so a finished character had no way back to the build screen at
+all. **Edit** is on every sheet now, and the news is a badge, where a rank and
+"Read only" already go.
 
 Two things went with that list. `features/character/OutstandingChoices` had no
 other caller and is deleted rather than kept for a level-up page that does not
@@ -1435,10 +1517,11 @@ exist. And the **Event log** link that used to be the sheet's only action is
 gone from the page for now -- `/characters/:id/log` still serves it, and is
 still the unabridged record, but nothing in the client links there.
 
-A `/prompts` that *failed* draws no button. The request is deliberately
+A `/prompts` that *failed* draws no badge. The request is deliberately
 survivable -- a sheet is worth drawing with a second request down, which is the
 same bargain the compendium lookups make -- and the honest reading of "I do not
-know what is open" is to offer nothing rather than to guess.
+know what is open" is to say nothing rather than to guess. Edit does not depend
+on that answer and is drawn either way.
 
 ### On a phone the sheet is a deck, not an accordion
 
@@ -2000,9 +2083,10 @@ three panels into a couple of hundred pixels. That floor is the old
 bare `max(...)`, which would be split on its spaces and mangled.
 
 The "this browser cannot use passkeys" warning went with the copy rather than
-being kept. `features/auth/LoginScreen.tsx` renders the same alert on `/login`,
-where the guest button that still works actually lives; a second copy on the
-landing page would only be a sentence read twice on the way to the same place.
+being kept, and `/login` no longer carries one either: the passkey card is
+simply absent there, and what is left on the page -- a provider, a guest -- is
+what that browser can actually do. An alert explaining an option nobody was
+offered apologises for a hole the visitor cannot see.
 
 ### The footer says whose this is
 
@@ -2044,7 +2128,10 @@ flips, the same route renders its real content.
 
 The one navigation in the whole flow is deliberate. There are three ways in and
 choosing between them needs room to say what each costs, so they live on
-`/login` rather than in a header corner. Three, not four: signing in with a
+`/login` rather than in a header corner. The page opens straight on the cards:
+the lead sentence that used to count the ways in ("Two ways in. One of them
+keeps your characters; the other does not.") was counting cards the visitor can
+see, and each of them already says what it costs. Three, not four: signing in with a
 passkey and signing up with one are one button -- see
 [One button means both halves](#one-button-means-both-halves) -- and the display
 name that sign-up used to ask for was the last text this client ever collected.
@@ -2762,34 +2849,46 @@ told it has no passkeys, and a deployment with no provider configured is not
 told so under a heading of its own. The exception is the account that most
 needs it -- a passkey-only account has nothing to list, and still gets the
 connect card, because connecting is the whole of its recovery. A guest gets
-neither, only the alert saying there is no account behind the session. It is
-reached from the header,
-not from `shell/nav.ts`: the navigation lists the parts of the app, and the
-account is who is looking at them, so both shells put the way in at the top
-right beside the button that ends the session.
+neither, and no longer gets an alert about it either: the subtitle says the
+session is a guest's, and a paragraph under it listing what a guest session
+lacks was the page scolding somebody for the way they came in, on the one screen
+where there is nothing they can do about it.
 
-**The account is two icons**, built once in `shell/AccountActions.tsx` and used
-by both signed-in shells -- a profile mark linking to `/account`, and the one
-that ends the session.
+**The way in is a row in the navigation, and it is still not a section.** The
+desktop navbar draws it under the same rule that separates the collapse control
+from the sections; the phone's dropdown draws it under a `Menu.Divider` at the
+bottom of the same list. Nothing about it comes from `ui/sections.ts`: no trail
+starts at `/account`, `sectionFor` answers null there, and the phone's trigger
+still falls back to `Menu` -- the list of *places* stays three long.
+
+It was a glyph in the header's top-right corner before that, on the reasoning
+that the navigation lists the parts of the app while the account is who is
+looking at them. That reading is still true and is exactly why the row sits
+below the rule rather than among the sections -- but a corner glyph can only
+name itself when hovered, and it was the third one in a corner that already had
+two. A menu row has a word.
+
+**What stayed in the corner is the way out**, built once in
+`shell/AccountActions.tsx` and used by both signed-in shells, beside the
+language: signing out is not somewhere to go, so it is not in a list of places.
 
 It was a display name and a text button, and the name *was* the link, on the
-reasoning that the header has to say whose session this is and that a button
-labelled "Account" beside the account's own name said it twice. The first half
-of that still holds; what broke it is the phone. A display name is arbitrary
-length in the narrowest row this app has, sharing it with a mark, the word
-"easydnd" and a button reading "End guest session" -- and the thing that
-overflowed first was the control that ends the session.
+reasoning that the header has to say whose session this is. What broke that is
+the phone. A display name is arbitrary length in the narrowest row this app has,
+sharing it with a mark, the word "easydnd" and a button reading "End guest
+session" -- and the thing that overflowed first was the control that ends the
+session.
 
-So the name moved out of the header's *text* and into the controls' accessible
-names and tooltips: `Account: Alice` and `Sign out`, or `End guest session` for
-a guest. The header still says whose session this is; it says it on demand
-rather than spending a phone's chrome on it unprompted. The cost is real and
-worth naming rather than glossing: a sighted visitor now hovers the mark, or
-opens the page it leads to, which names the account at its top. The empty-name
-fallback survives as plain `Account`, since a control with no accessible name
-is a control nobody can find, and a null user renders neither -- the pair is
-right-pushed, so the header ends in the way out whether or not there is an
-account to link to.
+So the name moved out of the header's *text* and into the control's accessible
+name and tooltip: `Sign out`, or `End guest session` for a guest. The header
+ends in the way out whether or not there is an account behind the session.
+
+The cost is worth naming rather than glossing, because it has since grown: the
+display name is now printed **nowhere in the client**. `/account` used to carry
+it in its subtitle and no longer does -- what the page is for is the inventory
+of ways in, and a line naming the account above it was a label on a page you
+reached by pressing the account's own row. The server still knows the name and
+`GET /v1/auth/me` still sends it; nothing draws it.
 
 A tooltip cannot be the name. Mantine's wires `aria-describedby`, and only
 while it is open; the label is not in the DOM at all when it is closed. So the
@@ -2840,7 +2939,7 @@ data file, never opening a component.
 ```tsx
 const t = useT()
 <Title order={2}>{t('login.title')}</Title>
-<Text>{t('account.signedInAs', { name })}</Text>
+<Text>{t('folders.newCharacterIn', { name })}</Text>
 <Text>{t('choice.language', { count })}</Text>
 ```
 
@@ -2965,7 +3064,16 @@ to dismiss, so nothing has to be remembered, and the rule about there being no
 `localStorage` here stays where it is.
 
 It renders `null` unless there is something to offer, so an installed app and a
-browser that cannot install both get the header exactly as it was.
+browser that cannot install both get the chrome exactly as it was.
+
+**It places itself, in the bottom left corner, at every width.** It sat in the
+header for a while, which is the row that says where you are and how to leave --
+and an offer is neither. The corner is also the one spot free in all three
+chromes: a phone's header is four controls across 390px, the desktop navbar
+keeps its list at the top, and the landing footer already carries three things.
+Because it is `position: fixed` no shell has to arrange it; each simply mounts
+it beside its bars. Its `z-index` deliberately sits under a dialog's, since an
+offer floating over the sheet it opened is worse than no offer at all.
 
 Three answers, kept as a string because `useSyncExternalStore` compares
 snapshots by identity and an object rebuilt per call re-renders for ever:

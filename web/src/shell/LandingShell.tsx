@@ -40,7 +40,6 @@ export function LandingShell() {
         <Group h="100%" px="md" gap="sm">
           <Wordmark />
           <Group gap="sm" ml="auto">
-            <InstallButton />
             <SignInActions />
           </Group>
         </Group>
@@ -53,6 +52,10 @@ export function LandingShell() {
       <AppShell.Footer>
         <LandingFooter />
       </AppShell.Footer>
+
+      {/* Outside every bar, because it places itself: the bottom left corner.
+          See ui/InstallAction.tsx. */}
+      <InstallButton />
     </AppShell>
   )
 }

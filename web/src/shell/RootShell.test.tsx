@@ -202,19 +202,18 @@ describe('RootShell', () => {
    * a default.
    *
    * `/characters/chr_1` was the first correction: the section table owns that
-   * prefix, so a sheet names its section instead of falling back. `/roll` is
-   * the second and is not a section at all -- it is a page this very menu
-   * links to by name, so answering "Menu" there names a page after the control
-   * you reached it through. `/account` is the case that must still fall back:
-   * it is genuinely outside the navigation, and inventing a name for it would
-   * put a fourth entry in a menu that has three.
+   * prefix, so a sheet names its section instead of falling back. `/roll` and
+   * `/account` are the others and are not sections at all -- they are pages
+   * this very menu links to by name, so answering "Menu" on either names a
+   * page after the control you reached it through. The fallback is for a path
+   * the menu cannot reach: a 404, `/legal`.
    */
   it.each([
     ['/', 'Characters'],
     ['/groups', 'Groups'],
     ['/characters/chr_1', 'Characters'],
     ['/roll', 'Roll the dice'],
-    ['/account', 'Menu'],
+    ['/account', 'Account'],
   ])('labels the mobile dropdown %s as %s', (at, label) => {
     shellAt('mobile', at)
 
@@ -227,22 +226,31 @@ describe('RootShell', () => {
     expect(screen.getByRole('link', { name: 'Groups' })).toHaveAttribute('data-active', 'true')
   })
 
-  // The account is who is looking, not a section of the app: it belongs beside
-  // the control that ends the session, and nowhere in the navigation. It is an
-  // icon at both viewports now, so the name it used to print is its accessible
-  // name -- the header still says whose session this is when asked, it just no
-  // longer spends a phone's narrowest row saying so unprompted.
-  it.each(['desktop', 'mobile'] as const)(
-    'links the account icon to /account from the %s header',
-    (viewport) => {
-      shellAt(viewport)
+  // The account is in the navigation at both widths -- the navbar's own row on
+  // a desktop, a row under the rule in the dropdown on a phone -- and is still
+  // not a section: nothing about it comes from SECTIONS, and no trail starts
+  // there. Signing out stays in the header, because it is not somewhere to go.
+  it('links to /account from the desktop navbar', () => {
+    shellAt('desktop')
 
-      const link = screen.getByRole('link', { name: `Account: ${testAccount.display_name}` })
-      expect(link).toHaveAttribute('href', '/account')
-      expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
-      expect(SECTIONS.some((section) => section.to === '/account')).toBe(false)
-    },
-  )
+    expect(screen.getByRole('link', { name: 'Account' })).toHaveAttribute('href', '/account')
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(SECTIONS.some((section) => section.to === '/account')).toBe(false)
+  })
+
+  it('links to /account from the mobile dropdown', async () => {
+    const user = setupUser()
+    shellAt('mobile')
+
+    // Not in the header: the row holds the mark, where you are, and the way
+    // out, and the account is behind the same control the sections are.
+    expect(screen.queryByRole('link', { name: 'Account' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Characters' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Account' })).toHaveAttribute('href', '/account')
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+  })
 
   // The point of the change: the name is a label, not chrome. getByText does
   // not match an aria-label, which is exactly the property being asserted.

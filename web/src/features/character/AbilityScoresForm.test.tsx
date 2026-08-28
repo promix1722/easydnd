@@ -84,13 +84,75 @@ describe('the standard array', () => {
     expect(slot(/Strength/)).toHaveAccessibleName(/8/)
   })
 
-  it('takes a number by dragging it as well as by tapping it', async () => {
+  /*
+   * The drag, driven by hand.
+   *
+   * It is pointer events now rather than HTML5 drag-and-drop, which is what
+   * makes it a gesture a finger can make -- see `ScoreAssignment`. Two things
+   * jsdom lacks have to be stood in for: `elementFromPoint`, which needs
+   * layout, and `setPointerCapture`, which the component already calls
+   * optionally for this reason.
+   *
+   * The stub answers with whatever the drag is meant to be over, which is the
+   * one fact the browser would have supplied. Everything else -- the threshold,
+   * the swap, the click that must not undo the drop -- is the real code.
+   */
+  function dragTo(value: string, ability: RegExp) {
+    const target = slot(ability)
+    const from = chip(value)
+    document.elementFromPoint = () => target
+
+    fireEvent.pointerDown(from, { clientX: 0, clientY: 0, pointerId: 1 })
+    fireEvent.pointerMove(from, { clientX: 40, clientY: 40, pointerId: 1 })
+    fireEvent.pointerUp(from, { clientX: 40, clientY: 40, pointerId: 1 })
+    // A real gesture ends in a click on whatever it started on; the component
+    // has to swallow exactly this one, or the number is picked straight back up.
+    fireEvent.click(from)
+  }
+
+  it('takes a number by dragging it as well as by tapping it', () => {
     renderAt(viewport, form())
 
-    // The mouse gesture and the tap gesture are the same operation: this is
-    // the one a phone cannot make.
-    fireEvent.drop(slot(/Wisdom/), { dataTransfer: { getData: () => '0' } })
+    dragTo('15', /Wisdom/)
 
+    expect(slot(/Wisdom/)).toHaveAccessibleName(/15/)
+    expect(screen.queryByRole('button', { name: '15' })).not.toBeInTheDocument()
+  })
+
+  it('puts a number back in the pool when it is dragged off the grid', () => {
+    renderAt(viewport, form())
+
+    dragTo('15', /Strength/)
+    expect(slot(/Strength/)).toHaveAccessibleName(/15/)
+
+    // Let go over nothing: the hint text, the gap between two cards, the page.
+    const from = slot(/Strength/)
+    document.elementFromPoint = () => null
+    fireEvent.pointerDown(from, { clientX: 0, clientY: 0, pointerId: 1 })
+    fireEvent.pointerMove(from, { clientX: 0, clientY: 300, pointerId: 1 })
+    fireEvent.pointerUp(from, { clientX: 0, clientY: 300, pointerId: 1 })
+    fireEvent.click(from)
+
+    expect(slot(/Strength/)).toHaveAccessibleName(/--/)
+    expect(chip('15')).toBeInTheDocument()
+  })
+
+  it('leaves a press that does not travel to the tap gesture', () => {
+    renderAt(viewport, form())
+
+    const target = slot(/Wisdom/)
+    document.elementFromPoint = () => target
+    const from = chip('15')
+
+    // Two pixels is a thumb on a button, not a drag. The drop is not taken,
+    // and the click that follows is not swallowed -- it picks the number up.
+    fireEvent.pointerDown(from, { clientX: 0, clientY: 0, pointerId: 1 })
+    fireEvent.pointerMove(from, { clientX: 2, clientY: 0, pointerId: 1 })
+    fireEvent.pointerUp(from, { clientX: 2, clientY: 0, pointerId: 1 })
+    fireEvent.click(from)
+
+    expect(slot(/Wisdom/)).toHaveAccessibleName(/--/)
+    fireEvent.click(slot(/Wisdom/))
     expect(slot(/Wisdom/)).toHaveAccessibleName(/15/)
   })
 
