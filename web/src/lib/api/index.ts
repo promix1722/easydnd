@@ -9,8 +9,8 @@ export {
   isApiErrorEnvelope,
 } from './errors'
 export type { ApiErrorBody, ApiErrorEnvelope, ApiFieldError } from './errors'
-export { getHealth, getVersion } from './system'
-export type { HealthResponse, VersionResponse } from './system'
+export { getVersion } from './system'
+export type { VersionResponse } from './system'
 // Sign-in.
 export {
   beginLogin,

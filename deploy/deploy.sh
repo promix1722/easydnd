@@ -1,7 +1,13 @@
 #!/bin/bash
 # Activate a release: unpack the frontend, atomic symlink swap, restart under supervisor,
 # health-gate, roll back on failure. Runs on the server as the `deploy` user.
-# Argument: the release id (git SHA).
+# Argument: the release directory name (git SHA).
+#
+# The directory name and the release identifier are two different things now.
+# Directories stay keyed by commit SHA, because that is unique per build and
+# cannot collide when a tag is moved; the identifier the binary reports is the
+# tag (v1.0.4). So the health gate cannot be derived from the argument -- it is
+# read from releases/<sha>/VERSION, which the deploy workflow writes.
 #
 # The binary and the frontend live in the same releases/<sha> directory and are swapped by the
 # same symlink, so nginx and supervisor always agree on which release is live and a rollback
@@ -60,6 +66,31 @@ if [ -f "$NEW/web.tar.gz" ]; then
 fi
 [ -f "$NEW/web/index.html" ] || { echo "no frontend at $NEW/web/index.html"; exit 1; }
 
+# The release identifier, which is what the health gate below looks for. It is
+# required rather than defaulted: a release whose VERSION file never arrived
+# would fall back to the directory name, fail the gate for a reason that has
+# nothing to do with the binary, and roll back with a misleading message.
+[ -f "$NEW/VERSION" ] || {
+    echo "no release id at $NEW/VERSION -- the deploy workflow writes it beside the binary"
+    exit 1
+}
+
+# The identifier a given release reports, recorded with the release because it
+# can no longer be derived from the directory name.
+#
+# The fallback is for rollback targets that predate this file. Every release
+# built under the old scheme reported its own directory name, so the basename
+# is exactly right for those and wrong for nothing -- and the first deploy
+# after this change has precisely such a release behind it.
+version_of() {
+    if [ -f "$1/VERSION" ]; then
+        tr -d '[:space:]' < "$1/VERSION"
+    else
+        basename "$1"
+    fi
+}
+VERSION="$(version_of "$NEW")"
+
 PREV=""
 if [ -L "$LINK" ]; then PREV="$(readlink -f "$LINK")"; fi
 
@@ -74,9 +105,15 @@ restart() {
     sudo /usr/bin/supervisorctl restart easydnd || true
 }
 
+# Matches the JSON field rather than searching the body for the identifier
+# loose. Two reasons, both of which arrived with tags: `v1.0.4` is a substring
+# of `v1.0.40`, so a bare match would call a release healthy that is not; and
+# grep reads its pattern as a regex, in which `.` matches anything -- so -F,
+# without which `v1.0.4` would be satisfied by `v1X0Y4`.
 health() {
+    local want="\"version\":\"$1\""
     for _ in $(seq 1 15); do
-        if curl -fsS -m 3 "http://127.0.0.1:$PORT/v1/version" 2>/dev/null | grep -q "$1"; then
+        if curl -fsS -m 3 "http://127.0.0.1:$PORT/v1/version" 2>/dev/null | grep -qF "$want"; then
             return 0
         fi
         sleep 1
@@ -84,14 +121,14 @@ health() {
     return 1
 }
 
-echo "activating $SHA (previous: ${PREV:-none})"
+echo "activating $VERSION from $SHA (previous: ${PREV:-none})"
 swap "$NEW"
 restart
 
-if health "$SHA"; then
-    echo "healthy: $SHA"
+if health "$VERSION"; then
+    echo "healthy: $VERSION"
 else
-    echo "health check failed for $SHA" >&2
+    echo "health check failed for $VERSION (release $SHA)" >&2
     # Only the binary is required of a rollback target. The release preceding
     # the frontend rollout has no web/ at all, and rolling back to a working
     # API with no site still beats staying on a release that serves neither.
@@ -99,7 +136,7 @@ else
         echo "rolling back to $PREV" >&2
         swap "$PREV"
         restart
-        if health "$(basename "$PREV")"; then
+        if health "$(version_of "$PREV")"; then
             echo "rollback healthy - site is up on the previous release" >&2
         else
             echo "ROLLBACK ALSO UNHEALTHY - service is down" >&2

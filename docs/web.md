@@ -201,12 +201,45 @@ sign-in screen draws no passkey card. That is the designed degradation, not a
 bug -- the guest session is the way in, and `lib/api/client.ts` already falls
 back off `crypto.randomUUID` so `X-Request-Id` is still sent.
 
+### `make preview` is the only secure origin
+
+The dev server cannot show you the PWA at all, for two independent reasons.
+Its origin is not secure, as above; and it has no service worker, because
+`devOptions.enabled` is false in `vite.config.ts` -- a worker there would
+shadow the module graph and serve stale chunks after every edit. So
+`beforeinstallprompt` never fires, `ui/InstallAction` never draws, the update
+dialog never triggers and passkeys are unavailable.
+
+`make preview` answers all of it by being a different thing rather than a
+better dev server:
+
+- It serves **the built bundle**, not a development approximation of it --
+  `make web/build` first, then the real `web/dist` with its real service
+  worker and precache. No Vite, and so **no HMR**: restart to rebuild.
+- **The Go binary serves both halves.** `-web web/dist` puts the bundle behind
+  the same process that answers `/v1` (`internal/api/http/static.go`), so there
+  is one origin and no proxy between them. The flag is development-only and
+  unset in production, where nginx serves the bundle and owns the caching
+  policy this deliberately does not reproduce.
+- It listens on a **fixed 8090**, reached at `https://hton.cloud:8890`, where
+  nginx terminates TLS with the real certificate the host already has. That is
+  what makes it a secure context.
+
+The nginx side is not in this repo -- it is the machine's, shared with whatever
+else runs on that host -- and it is one server block in
+`/etc/nginx/conf.d/z-dev-ports.conf` proxying `8890` to `127.0.0.1:8090`.
+
+**One port means one preview at a time**, across every worktree. That is the
+trade for not spending ten certificates and ten ports on something used to
+check a release rather than to work in.
+
 ## Layout
 
 A single responsive SPA in `web/`, served by nginx from the same release
 directory as the binary. React 19 + TypeScript + Vite, with
 [Mantine][mantine] as the component library and a PWA manifest so it installs
-to a phone home screen.
+to a phone home screen. It also ships a service worker, which matters more than
+it sounds -- see "Two caches decide what a returning visitor sees".
 
 ```
 web/locales/  en.json and ru.json -- every user-facing word in the client
@@ -565,7 +598,7 @@ it was going to narrow -- but a panel needs its folder's *name*, so now both
 resources drive the page's state and there is one alert again. See
 [A folder is the structure of the page](#a-folder-is-the-structure-of-the-page-not-a-filter-on-it).
 
-Out of scope, deliberately: `/login`, `/legal`, `/status`, the 404 and the join
+Out of scope, deliberately: `/login`, `/legal`, the 404 and the join
 flow. None of them is in a section and none is behind the signed-in chrome.
 
 `/account` **is** in scope, and was the one screen that had drifted out of it.
@@ -1193,8 +1226,8 @@ carousel decides what is visible, so a section has no shut state to be in.
 
 What it replaces is a `Columns` accordion, and the two answer different
 questions. An accordion is right for a page of two or three panels where the
-answer is usually in the first and the rest are detail -- `/status` is exactly
-that, and still uses it. A character sheet is not that shape. It is six things
+answer is usually in the first and the rest are detail. A character sheet is
+not that shape. It is six things
 a player leafs between at a table, none of them subordinate to the others, and
 an accordion made reading one of them a gesture: open it, and possibly shut
 three others first. It also put the headline numbers -- identity, the ability
@@ -1731,10 +1764,10 @@ navigate to -- and two links to static documents are not the app's navigation.
 The `<footer>` that `AppShell.Footer` renders supplies `contentinfo`, which is
 the landmark this content actually wants.
 
-The version is the short SHA as plain text. `/status` is where a version is a
-*diagnostic*: the full SHA, beside the API's, to be compared against it. Here it
-is provenance, in a form that fits a 390px footer, and linking it would promise
-a page for an arbitrary commit that nothing serves.
+The version is the release identifier as plain text: a tag on a release, a
+short commit SHA on anything else. It is provenance rather than a diagnostic,
+and it links nowhere -- there is nowhere for it to lead, and linking it would
+promise a page for an arbitrary commit that nothing serves.
 
 The cost is worth stating rather than pretending away: the signed-in shells have
 no footer, so an account holder -- the person actually reading SRD-derived
@@ -2070,7 +2103,7 @@ Four things follow, and each is a rule rather than a detail:
 `Columns` and `SectionDeck` are the same idea answering two different questions,
 and both are kept rather than one winning. `Columns` collapses: a section is a
 disclosure, which is right where a page has two or three panels and the answer
-is usually in the first -- `/status` is that page. `SectionDeck` leafs: nothing
+is usually in the first. `SectionDeck` leafs: nothing
 collapses, and a swipe or a tab decides what is on screen, which is right where
 the sections are peers and a reader moves between them rather than down them.
 The character sheet is the second kind; see [the sheet is a deck, not an
@@ -2510,18 +2543,18 @@ signed out, the character list signed in. It carries nothing else -- system
 status is a deploy question rather than something either audience came to `/` to
 read.
 
-`/status` answers that question, and it is one of two routes outside `RootGate`
-entirely: it renders in `LandingShell` for everybody, signed in or out. Public
-because needing to sign in to check whether a deploy landed would be backwards;
-outside the signed-in chrome and absent from `shell/nav.ts` because it is a
-diagnostic rather than a part of the app to navigate around. The landing header
-offers a signed-in visitor the way back rather than a second invitation to sign
-in.
+There used to be a `/status` page answering it, showing the bundle's version
+beside the API's. It was removed: the comparison it existed to show is now made
+by the client itself on every response, and a page nobody opened is worse than
+no page. `curl`ing `/version.json` against `/v1/version` is what remains, and it
+is what the deploy pipeline was doing all along.
 
-`/legal` is the other, on adjacent grounds: needing an account to read the
-licence of the material you are being shown would be backwards in the same way.
-It is a document rather than a section, so it stays out of `shell/nav.ts` too,
-and it is reached from the footer the landing chrome carries.
+`/legal` is the one route outside `RootGate` entirely: it renders in
+`LandingShell` for everybody, signed in or out, because needing an account to
+read the licence of the material you are being shown would be backwards. It is a
+document rather than a section, so it stays out of `shell/nav.ts`, and it is
+reached from the footer the landing chrome carries. The landing header offers a
+signed-in visitor the way back rather than a second invitation to sign in.
 
 Routes added under `/` render inside `RootGate`, so they are only reached when
 somebody is signed in. A route that must stay public -- `/login`, which would be
@@ -2583,7 +2616,18 @@ message with named arguments in it.
   translated licence notice is a different notice. See
   [licensing.md](licensing.md).
 - **`index.html`'s `<title>` and `<meta description>`, and the PWA manifest.**
-  They are static, baked at build time, and stay English.
+  They are static, baked at build time, and stay English. This is not a
+  preference: the browser and the OS read all three *before* the bundle is
+  parsed -- they are what the install dialog, the home-screen label and the
+  browser tab are drawn from -- so nothing in `src/` could swap them per
+  locale whatever machinery existed there.
+- **The product's name.** `easydnd.org` is a name, not a word: it is what
+  people type, what the certificate says and what an issue is filed against.
+  Translating it would produce a product nobody can find.
+
+Each of those carries an `i18n-exempt` comment in the source naming its
+reason. Grep for it before extracting strings: a marked string is one to
+leave exactly where it is.
 - **Language names in the switcher.** "English" and "Русский" are what each
   language calls itself, which is what somebody looking for one is looking for.
 
@@ -2641,6 +2685,180 @@ banned for. A module of pure functions that needs words takes a `Translate` as
 an argument instead; `features/character/settled.ts` and `options.ts` are the
 worked examples, and `src/test/i18n.ts` is the translator their tests hand over.
 
+## Offering the install, and clearing the notch
+
+The app has been installable since the first commit and said so to nobody. On
+HTTPS Chrome offers its own omnibox install icon regardless; on iOS nothing
+appears at all, because iOS has no install API and never has. `ui/InstallAction`
+is the offer, and `lib/install` is the one bit of state behind it.
+
+**A button, not a banner**, and that is [web.dev's guidance][promote] rather
+than taste: *"Don't show banners on initial page load or out of context"*, and
+*"keep promotions outside of the flow of your user journeys"*. It also settles a
+question this client would otherwise have had to answer -- a button has nothing
+to dismiss, so nothing has to be remembered, and the rule about there being no
+`localStorage` here stays where it is.
+
+It renders `null` unless there is something to offer, so an installed app and a
+browser that cannot install both get the header exactly as it was.
+
+Three answers, kept as a string because `useSyncExternalStore` compares
+snapshots by identity and an object rebuilt per call re-renders for ever:
+
+| | |
+| --- | --- |
+| `'none'` | already standalone, or nothing on offer |
+| `'prompt'` | Chrome fired `beforeinstallprompt` and we kept the event |
+| `'ios'` | an iOS device, where there is no event to keep |
+
+`lib/install/state.ts` registers its listeners **at import time**, unlike
+`lib/version`, whose store is only ever written by an explicit call.
+`beforeinstallprompt` fires early and is never replayed, so a listener attached
+after React mounts has already missed it. It is also `preventDefault`ed, or the
+viewport carries two offers of the same thing. The event is single use:
+`prompt()` must come from a user gesture and cannot be called twice, so the
+button calls `install()` directly and the offer drops to `'none'` afterwards
+either way.
+
+**iOS gets the same button and a different thing behind it.** There is nothing
+to call, so the button opens a sheet naming the two taps -- Share, then Add to
+Home Screen. Not a Safari check: since iOS 16.4 those same taps install from
+Chrome, Edge and Firefox, so "is this iOS" is the whole question, and the
+iPadOS-13-and-later case that reports itself as a Macintosh is the only wrinkle.
+
+### The notch is the other half of viewport-fit=cover
+
+`index.html` has always said `viewport-fit=cover`, which tells iOS to hand the
+page the whole display -- including the strip under the status bar and the one
+under the home indicator. The matching half, `env(safe-area-inset-*)`, was used
+nowhere, so the header simply sat beneath the notch. In a browser tab Safari's
+own chrome covers it and nothing looks wrong; installed, it is the first thing
+anybody sees. Shipping an install button without this would have been an
+invitation to a broken header.
+
+`shell/chrome.ts` carries the tokens and the three shells apply them, the way
+`HEADER_HEIGHT` already solved the same class of problem -- there are no CSS
+files in this repo and there is not about to be one. `HEADER_BOX` grows the bar
+upward so it paints behind the status bar, while `paddingTop: SAFE_TOP` on the
+same element keeps the row of controls where it was. The `0px` fallbacks in
+those `env()` calls are load-bearing: an `env()` a browser does not know is
+invalid, and an invalid value inside `calc()` poisons the declaration, so the
+header would lose its height rather than gain nothing.
+
+**None of this can be exercised in `make web/dev`.** `beforeinstallprompt` needs
+a registered service worker and a secure context, and the dev server has neither
+-- see `devOptions` below. A production build reached over `localhost` is the
+only way to see the button; the notch needs a real device, because Chrome's
+device emulation does not simulate the insets.
+
+[promote]: https://web.dev/articles/promote-install
+
+## Two caches decide what a returning visitor sees
+
+Neither of them is the browser's, and the whole of this section is about not
+being surprised by that.
+
+A build produces a service worker. `vite-plugin-pwa` generates it from the
+config in `web/vite.config.ts`; there is no `sw.js` in the repo and no
+`manifest.webmanifest` either. It precaches the whole bundle, `index.html`
+included, and answers every navigation out of that precache through a Workbox
+`NavigationRoute`. So for a returning visitor -- and for every installed app --
+**nginx's `no-cache` on `/index.html` decides nothing.** It applies to a first
+visit and to the worker's own update fetches, and that is all.
+
+That has one consequence worth stating on its own, because it is the difference
+between this working and appearing to work: **`location.reload()` does not
+reload onto a new release.** It is answered from the precache with the page it
+was already showing. Getting past that is what `src/lib/version/reload.ts` is
+for.
+
+### The dialog is blocking, and that is the design
+
+`src/lib/version` watches for a deploy. Two signals feed it:
+
+- **Every API response carries `X-App-Version`.** `lib/api/client.ts` compares
+  it against `WEB_VERSION` at the one point every request passes through, so any
+  request the app was going to make anyway is the check. No interval, no traffic
+  that exists only to ask. It is read before the ok/not-ok branch, because a
+  client running against a newer API is exactly the one whose requests start
+  failing.
+- **An explicit check when the tab becomes visible, or the network returns.**
+  The first signal can never fire for a tab nobody is touching, and that is not
+  an edge case: a desktop tab left open overnight, a mobile tab the OS froze and
+  thawed a day later, an installed app resumed from the switcher. These are the
+  app's only lifecycle listeners.
+
+The answer latches. Once a newer release is known, this tab stays stale until it
+reloads -- a response held in an HTTP cache can name a release that stopped
+being deployed some time ago, and unlatching on one of those would dismiss a
+dialog somebody was reading.
+
+`ui/UpdateRequired` then blocks the app until it is reloaded. No dismiss, no
+"later". A dismissible banner leaves someone talking to a newer API with older
+code, which is the failure the whole mechanism exists to prevent, and the
+failure is quiet: requests succeed until one does not, and the one that does not
+is usually a save. Between interrupting someone and losing their character
+sheet, this interrupts.
+
+There is no exemption for any route, and the cost is worth naming. If nginx ever
+serves a stale `index.html`, reloading does not fix it and the dialog has no way
+out -- the app is unusable until the server is. `/status` used to be the page
+you could still reach to see the two versions disagreeing, and it was removed;
+diagnose that case with `curl https://easydnd.org/version.json` against
+`/v1/version`, which is what the deploy pipeline does anyway.
+
+### Why registerType is 'prompt'
+
+It was `'autoUpdate'`, and that was half a mechanism rather than a choice.
+`'autoUpdate'` sets `skipWaiting` and `clientsClaim` in the generated worker,
+but nothing here imports `virtual:pwa-register`, so `injectRegister` fell back
+to `'script'` and the emitted `registerSW.js` was a bare `register()` call with
+no update listener in it. A deploy then did this: the new worker installed,
+skipped waiting, claimed tabs that were still running the previous release's
+JavaScript, and `cleanupOutdatedCaches()` deleted the precache holding the
+chunks those tabs would ask for next. Nothing reloaded them.
+
+`'prompt'` leaves `skipWaiting` off, so a new worker waits instead of seizing
+live tabs, and Workbox's template emits a `message` listener for
+`{type: 'SKIP_WAITING'}`. `reload.ts` calls `registration.update()`, sends that
+message to the waiting worker, and reloads on `controllerchange` -- with a
+five-second fallback, because the button has to do something even if the worker
+is wedged. It is written against `navigator.serviceWorker` rather than
+`virtual:pwa-register` so that it stays ordinary TypeScript: the virtual module
+resolves only through the plugin, which would make it a build-time dependency of
+every test that touches the file.
+
+The worker is disabled in `make web/dev` (`devOptions.enabled: false`) -- it
+would otherwise shadow the dev server's module graph and serve stale chunks
+after every edit. So **none of this runs in the dev server**, and a dev bundle
+reports `WEB_VERSION === 'dev'`, which the watch ignores outright. Without that
+guard every `make dev` session would open the dialog on its first request, since
+the API it proxies to reports a real identifier.
+
+### One caching rule, applied twice
+
+Stated once here and enforced in `deploy/nginx/easydnd.conf`:
+
+> A URL whose contents can change is never cached without revalidation. A URL
+> whose contents can never change is cached forever. There is no middle.
+
+| Served | Policy | Why |
+|---|---|---|
+| `/assets/*` | `immutable`, one year | Vite content-hashes them; the URL cannot change meaning |
+| `/workbox-<hash>.js` and its map | `immutable`, one year | Hashed too, but emitted at the bundle root, so the rule above does not reach it |
+| `/icons/*`, `/favicon.svg` | `no-cache` | Fixed filenames, bytes generated from the palette |
+| `index.html`, `version.json`, `sw.js`, `registerSW.js`, `manifest.webmanifest` | `no-cache` | Stable URLs whose contents change every release |
+| `/v1/version` | `no-store`, set by Go | Answers "which release is live"; an answer that can be held is not one |
+
+The icons were the one violation: `max-age=2592000` with no revalidation on a
+filename that never changes, so a palette change was invisible to a returning
+browser for up to thirty days. Installed clients never saw it, because Workbox
+refetches every revisioned precache entry with `cache: 'reload'` -- which is
+precisely why it went unnoticed.
+
+`manifest.webmanifest` had no rule at all, and stock nginx `mime.types` has no
+`webmanifest` entry, so it was served as `application/octet-stream`.
+
 ## How it ships
 
 The frontend is not deployed on its own: a tag push builds a `web.tar.gz` that
@@ -2656,7 +2874,13 @@ Two things about that are the frontend's to keep working:
    `dist/version.json`, which the deploy workflow reads through the public URL
    to prove nginx is serving this release rather than a cached `index.html`. An
    unset variable would be a silent no-op, so `web/vite.config.ts` refuses to
-   build without it.
+   build without it. The value is a tag on a release and a short commit SHA
+   anywhere else, decided by `deploy/release-version.sh` and passed in by
+   `make web/build` -- and by `make web/dev`, so a dev session reports its
+   commit rather than the word "dev"; it must equal what the binary reports, or the update
+   dialog above would fire against a version that disagrees with it for reasons
+   that have nothing to do with a deploy. See
+   [backend.md](backend.md#what-a-release-is-called-and-where-it-lives).
 2. **A bad bundle goes live silently.** The API-side health gate cannot see the
    frontend, so `deploy.sh` checks the bundle exists *before* the symlink swap.
    Without that, a bundle that unpacked badly would go live as a blank site and

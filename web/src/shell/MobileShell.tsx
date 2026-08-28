@@ -8,13 +8,14 @@ import {
   Group,
   IconCheck,
   IconChevronDown,
+  InstallButton,
   Menu,
   SECTIONS,
   sectionFor,
 } from '@/ui'
 
 import { AccountActions } from './AccountActions'
-import { HEADER_HEIGHT } from './chrome'
+import { HEADER_BOX, SAFE_BOTTOM, SAFE_TOP } from './chrome'
 import { Wordmark } from './Wordmark'
 
 /**
@@ -64,7 +65,14 @@ export function MobileShell() {
   const label = active ? t(active.label) : t('nav.menu')
 
   return (
-    <AppShell header={{ height: HEADER_HEIGHT }} padding="sm">
+    <AppShell
+      header={{ height: HEADER_BOX }}
+      padding="sm"
+      // The phone is the viewport this matters on: launched from a home
+      // screen there is no browser chrome over the notch, and none under the
+      // home indicator either. See ./chrome.ts.
+      styles={{ header: { paddingTop: SAFE_TOP }, main: { paddingBottom: SAFE_BOTTOM } }}
+    >
       <AppShell.Header>
         <Group h="100%" px="md" gap={4} wrap="nowrap">
           <Wordmark caption={false} />
@@ -128,6 +136,7 @@ export function MobileShell() {
             </Menu.Dropdown>
           </Menu>
 
+          <InstallButton />
           <AccountActions />
         </Group>
       </AppShell.Header>

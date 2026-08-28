@@ -58,7 +58,6 @@ export interface SectionDeckProps {
  * tabs say what there is and where you are.
  *
  * `Columns` stays for the pages that want the other answer -- see
- * `features/status/StatusPanel.tsx`.
  *
  * The phone half is `TabDeck` and nothing else -- a strip of tabs over a
  * carousel of the panels, kept in step with each other. It lived here first,

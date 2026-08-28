@@ -69,7 +69,7 @@ describe('LandingShell', () => {
     expect(footer).toHaveTextContent('dev')
   })
 
-  // The footer is the logged-out chrome's, so it follows /status and /legal in
+  // The footer is the logged-out chrome's, so it follows /legal in
   // rather than disappearing for somebody who is already signed in.
   it('keeps the footer for a signed-in visitor on this chrome', () => {
     landingAt({ status: 'authenticated' })
@@ -92,7 +92,7 @@ describe('LandingShell', () => {
     expect(screen.getByText('the login page')).toBeInTheDocument()
   })
 
-  // /status wears this chrome for everybody, so a signed-in visitor can land
+  // /legal wears this chrome for everybody, so a signed-in visitor can land
   // here. Inviting them to sign in again would be a lie, and no control at all
   // would strand them outside the app.
   it('offers the way back to somebody already signed in', () => {

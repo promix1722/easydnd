@@ -36,10 +36,14 @@ name: deploy
 # on main. What it costs is spelled out at the Test stage below, and it is less
 # than it was: the two version assertions live in Build now, so `-notest` gives
 # up the suites and keeps the checks that catch a silent ldflags no-op. The
-# suffix reaches nothing but this decision: VERSION comes from `git rev-parse
-# HEAD` and every path on the server is keyed by GITHUB_SHA, so the artifact, the
-# release directory and both health gates cannot tell a `-notest` tag from any
-# other.
+# suffix reaches one further thing, and only in what a release calls itself: the
+# identifier is the tag, so `v1.0.4-notest` ships reporting `v1.0.4-notest`. That
+# is left alone rather than trimmed back to `v1.0.4`. A release that skipped its
+# suites should say so wherever anyone reads its version, and two releases that
+# both answered `v1.0.4` while being built from different decisions would be
+# worse than an ugly string. Every path on the server is still keyed by
+# GITHUB_SHA, so the artifact and the release directory cannot tell a `-notest`
+# tag from any other.
 
 on:
   # TAGS ONLY. A push to main runs nothing at all -- not even the tests.
@@ -152,14 +156,19 @@ jobs:
           go-version: '1.26'
           cache: false
 
+      # The release identifier, from the one script that decides it. Exported
+      # rather than left to the Makefile's own default because that default
+      # asks git, and a shallow CI checkout cannot be relied on to carry the
+      # tags -- see deploy/release-version.sh.
+      - name: release identifier
+        run: echo "RELEASE_VERSION=$(./deploy/release-version.sh)" >> "$GITHUB_ENV"
+
       # make build/release owns the ldflags, including the -X path into
-      # internal/buildinfo, and derives VERSION from `git rev-parse HEAD` -- on a
-      # tag checkout that is the tag's commit, i.e. GITHUB_SHA. Keeping the flags
-      # in one place means CI cannot ship a binary built differently from what
-      # `make verify` produced locally. The step below asserts the injection
-      # worked.
+      # internal/buildinfo. Keeping the flags in one place means CI cannot ship
+      # a binary built differently from what `make verify` produced locally.
+      # The step below asserts the injection worked.
       - name: build linux/amd64 binary
-        run: make build/release
+        run: make build/release VERSION="${RELEASE_VERSION}"
 
       # -X against a symbol the linker cannot find is a silent no-op, not an
       # error. Unchecked, a wrong package path ships a binary reporting "dev",
@@ -173,11 +182,11 @@ jobs:
       # reason: this file was just built, not unpacked from an artifact that
       # dropped the bit. A `-notest` tag now keeps this check and gives up only
       # the suites.
-      - name: binary reports this commit
+      - name: binary reports this release
         run: |
           got="$(./easydnd -version)"
-          if [ "$got" != "${GITHUB_SHA}" ]; then
-            echo "ldflags injection broken: got '$got', want '${GITHUB_SHA}'"
+          if [ "$got" != "${RELEASE_VERSION}" ]; then
+            echo "ldflags injection broken: got '$got', want '${RELEASE_VERSION}'"
             echo "check the -X path in the Makefile against internal/buildinfo"
             exit 1
           fi
@@ -205,19 +214,26 @@ jobs:
       - name: deps
         run: make web/deps
 
+      # The same identifier the binary gets, from the same script. The two
+      # halves of a release must report the same string or the client's update
+      # check compares a bundle against an API that disagrees with it.
+      - name: release identifier
+        run: echo "RELEASE_VERSION=$(./deploy/release-version.sh)" >> "$GITHUB_ENV"
+
       # make web/release passes VITE_APP_VERSION=$(VERSION) and tars web/dist.
       # That variable is not optional: vite.config.ts refuses to build without
       # it, so a bundle can never ship silently reporting "dev". The step below
       # asserts the value actually landed in the bundle.
       - name: build and tar the bundle
-        run: make web/release
+        run: make web/release VERSION="${RELEASE_VERSION}"
 
       # The frontend's half of the version contract, and the exact counterpart
       # to the binary check above -- here for the same reason, an assertion
       # about this build beside the build. vite.config.ts emits version.json
       # into the bundle so a release can be identified from the browser, and
-      # restart reads it through the public URL; a bundle not carrying the SHA
-      # would fail the deploy minutes after this cheap check can catch it.
+      # restart reads it through the public URL; a bundle not carrying the
+      # identifier would fail the deploy minutes after this cheap check can
+      # catch it.
       #
       # Unpacks the archive rather than reading web/dist/version.json, and that
       # is deliberate: proving the tarball is well formed is half of what this
@@ -225,13 +241,19 @@ jobs:
       # than naming one member, because `make web/release` tars with
       # `-C web/dist .`, so every entry is prefixed `./` and asking tar for
       # `version.json` fails with "Not found in archive".
-      - name: bundle reports this commit
+      #
+      # Matches the JSON field with -F rather than grepping the body for the
+      # identifier loose. Both halves of that matter now that the identifier is
+      # a tag: `v1.0.4` is a substring of `v1.0.40`, and to grep-as-regex the
+      # `.` in it matches any character at all. deploy/deploy.sh's health gate
+      # is anchored the same way, for the same reason.
+      - name: bundle reports this release
         run: |
           mkdir -p bundle
           tar -xzf web.tar.gz -C bundle
           echo "bundle version.json: $(cat bundle/version.json)"
-          grep -q "${GITHUB_SHA}" bundle/version.json || {
-            echo "bundle does not report ${GITHUB_SHA}"
+          grep -qF "\"version\":\"${RELEASE_VERSION}\"" bundle/version.json || {
+            echo "bundle does not report ${RELEASE_VERSION}"
             exit 1
           }
 
@@ -338,8 +360,10 @@ jobs:
   # Shipping still needs a v* tag ref. workflow_dispatch survives as a way to
   # re-run a tag that failed halfway (select the tag as the ref); dispatching
   # from a branch checks, builds and tests but cannot ship. GITHUB_SHA on a tag
-  # push is the commit the tag points at, so the SHA-keyed release directory
-  # and deploy.sh's health gate are unaffected.
+  # push is the commit the tag points at, so the SHA-keyed release directory is
+  # unaffected. The health gate no longer reads that directory name: it reads
+  # the VERSION file shipped into it below, because what a release calls itself
+  # and where it lives are two different things now.
   #
   # The rest of the `if` is what makes `-notest` work. A job's implicit gate is
   # `success()`, which in a job context means "nothing in my ancestry was
@@ -381,6 +405,9 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
+      - name: release identifier
+        run: echo "RELEASE_VERSION=$(./deploy/release-version.sh)" >> "$GITHUB_ENV"
+
       - name: ship the binary, deploy.sh and the compendium
         env:
           HOST: ${{ secrets.SSH_HOST }}
@@ -391,6 +418,16 @@ jobs:
           ssh -i ~/.ssh/id_deploy "deploy@$HOST" "mkdir -p $REL/data /opt/easydnd/bin"
           scp -i ~/.ssh/id_deploy easydnd "deploy@$HOST:$REL/easydnd"
           scp -i ~/.ssh/id_deploy deploy/deploy.sh "deploy@$HOST:/opt/easydnd/bin/deploy.sh"
+
+          # What this release calls itself, recorded beside the binary that
+          # says it. The directory is named by commit SHA and the binary
+          # reports a tag, so deploy.sh cannot derive one from the other -- and
+          # it needs the identifier twice: once to gate this release, and once
+          # more to gate whatever it rolls back to. Piped rather than
+          # interpolated into the remote command, so no quoting of ours has to
+          # survive a second round of shell parsing on the far side.
+          printf '%s\n' "${RELEASE_VERSION}" \
+            | ssh -i ~/.ssh/id_deploy "deploy@$HOST" "cat > $REL/VERSION"
 
           # The SRD data is ~1.7 MB across 50-odd files in nested directories.
           # One tar beats fifty scp round trips, and lands the tree atomically
@@ -466,7 +503,9 @@ jobs:
           {
             echo "### Shipped without the Test stage"
             echo
-            echo "Tag \`${GITHUB_REF_NAME}\` ends in \`-notest\`: neither suite ran, and neither version assertion did."
+            echo "Tag \`${GITHUB_REF_NAME}\` ends in \`-notest\`: neither suite ran."
+            echo
+            echo "Both version assertions still ran -- they live in Build, beside the artifacts they are about."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/checkout@v7
@@ -476,9 +515,16 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
+      - name: release identifier
+        run: echo "RELEASE_VERSION=$(./deploy/release-version.sh)" >> "$GITHUB_ENV"
+
       # The single point where a release goes live, which is what keeps
       # deploy.sh's rollback a meaningful undo: pre-swap checks, atomic symlink
       # swap, supervisor restart, health gate, rollback on failure, prune.
+      #
+      # Still handed the SHA: the argument names the release *directory*, which
+      # is keyed by commit and always was. deploy.sh reads what the release
+      # calls itself from the VERSION file deploy-backend wrote beside it.
       - name: swap, restart, health gate, rollback
         env:
           HOST: ${{ secrets.SSH_HOST }}
@@ -486,31 +532,37 @@ jobs:
           ssh -i ~/.ssh/id_deploy "deploy@$HOST" \
             "chmod +x /opt/easydnd/bin/deploy.sh && /opt/easydnd/bin/deploy.sh ${GITHUB_SHA}"
 
-      - name: verify the public API serves this build
+      #
+      # Anchored on the JSON field, like deploy.sh's gate and the bundle
+      # assertion in Build: a tag is a substring of longer tags, and a regex
+      # match would read the dots in it as wildcards.
+      - name: verify the public API serves this release
         run: |
+          want="\"version\":\"${RELEASE_VERSION}\""
           for i in $(seq 1 15); do
             body=$(curl -fsS -m 5 https://easydnd.org/v1/version || true)
-            case "$body" in
-              *"${GITHUB_SHA}"*) echo "api live: $body"; exit 0 ;;
-            esac
+            if printf '%s' "$body" | grep -qF "$want"; then
+              echo "api live: $body"; exit 0
+            fi
             sleep 2
           done
-          echo "public /v1/version did not report ${GITHUB_SHA}"; exit 1
+          echo "public /v1/version did not report ${RELEASE_VERSION}"; exit 1
 
       # Separate from the API check because they fail for different reasons and
       # the fix differs: a stale bundle here means nginx is serving a cached
       # index.html or its root is not following the current symlink, which the
       # API check cannot see.
-      - name: verify the public site serves this build
+      - name: verify the public site serves this release
         run: |
+          want="\"version\":\"${RELEASE_VERSION}\""
           for i in $(seq 1 15); do
             body=$(curl -fsS -m 5 https://easydnd.org/version.json || true)
-            case "$body" in
-              *"${GITHUB_SHA}"*) echo "web live: $body"; exit 0 ;;
-            esac
+            if printf '%s' "$body" | grep -qF "$want"; then
+              echo "web live: $body"; exit 0
+            fi
             sleep 2
           done
-          echo "public /version.json did not report ${GITHUB_SHA}"; exit 1
+          echo "public /version.json did not report ${RELEASE_VERSION}"; exit 1
 
       # Strictly redundant -- a missing auth.session_secret fails config.Load,
       # so the process would never start and the version gate above would have

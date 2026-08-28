@@ -1,8 +1,8 @@
 import { Outlet } from 'react-router'
 
-import { AppShell, Group } from '@/ui'
+import { AppShell, Group, InstallButton } from '@/ui'
 
-import { HEADER_HEIGHT } from './chrome'
+import { HEADER_BOX, SAFE_BOTTOM, SAFE_TOP } from './chrome'
 import { LandingFooter } from './LandingFooter'
 import { SignInActions } from './SignInActions'
 import { Wordmark } from './Wordmark'
@@ -28,11 +28,19 @@ import { Wordmark } from './Wordmark'
  */
 export function LandingShell() {
   return (
-    <AppShell header={{ height: HEADER_HEIGHT }} footer={{ height: 48 }} padding="lg">
+    <AppShell
+      header={{ height: HEADER_BOX }}
+      footer={{ height: `calc(48px + ${SAFE_BOTTOM})` }}
+      padding="lg"
+      // The bars grow into the strips the hardware covers and paint there;
+      // their contents stay where they were. See ./chrome.ts.
+      styles={{ header: { paddingTop: SAFE_TOP }, footer: { paddingBottom: SAFE_BOTTOM } }}
+    >
       <AppShell.Header>
         <Group h="100%" px="md" gap="sm">
           <Wordmark />
           <Group gap="sm" ml="auto">
+            <InstallButton />
             <SignInActions />
           </Group>
         </Group>

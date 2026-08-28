@@ -24,7 +24,7 @@ export interface ColumnsProps {
  * of scrolling on a phone, and collapsing is one of the two answers to that.
  * It is the right one where a page has a few panels, the first of them is
  * usually what was come for, and the rest are detail worth having but not worth
- * scrolling past -- `features/status/StatusPanel.tsx` is that page.
+ * scrolling past.
  *
  * `SectionDeck` is the other answer, for the case where the sections are peers
  * and a reader moves between them rather than down them. The character sheet

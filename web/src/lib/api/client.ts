@@ -1,3 +1,9 @@
+// Imported from the module rather than from @/lib/version's barrel, and it has
+// to be: the barrel also exports the hook, which imports @/lib/api, which is
+// this file. The state module imports nothing from here, so this direction is
+// the only one that stays acyclic.
+import { noteReleaseHeader } from '@/lib/version/state'
+
 import { ApiError, TransportError, isApiErrorEnvelope } from './errors'
 import { requestLocale } from './locale'
 
@@ -100,6 +106,13 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       cause,
     })
   }
+
+  // Every response says which release answered it, so this is where a tab
+  // finds out it is running code from one that is no longer deployed. Before
+  // the ok/not-ok branch below on purpose: a client running against a newer API
+  // is exactly the client whose requests start failing, so reading the header
+  // only on success would lose it at the moment it matters.
+  noteReleaseHeader(response)
 
   const text = await response.text()
   const payload: unknown = text === '' ? undefined : safeParse(text)

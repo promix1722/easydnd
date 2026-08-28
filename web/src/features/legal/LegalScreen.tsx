@@ -18,7 +18,7 @@ import {
  *
  * Public, and outside `RootGate` -- a licence notice you have to sign in to
  * read is not a notice. It wears `LandingShell` for everybody, the same
- * arrangement `/status` has and for a related reason: it is not a section of
+ * arrangement it has, and for this reason: it is not a section of
  * the app to navigate around, so it is absent from `shell/nav.ts` too.
  *
  * Two headings rather than one list, because the split is the whole point: the

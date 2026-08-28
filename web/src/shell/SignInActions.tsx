@@ -36,7 +36,7 @@ export function SignInActions() {
   // Nothing to offer on the page this button leads to.
   if (location.pathname === '/login') return language
 
-  // This chrome is normally the logged-out one, but /status wears it for
+  // This chrome is normally the logged-out one, but /legal wears it for
   // everybody -- so somebody who is already signed in needs the way back to
   // the app rather than an invitation to sign in again.
   if (status === 'authenticated') {

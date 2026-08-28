@@ -178,6 +178,7 @@ func newTestRouterOver(
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		System:        system.New(testVersion),
+		Version:       testVersion,
 		Auth:          authapi.New(svc, cookies),
 		Authenticator: svc,
 	})

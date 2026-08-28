@@ -12,7 +12,7 @@ import { LandingPage } from './LandingPage'
  *
  * System status is deliberately not on it. "Which release am I talking to" is
  * a deploy question rather than something either audience came here to read,
- * so it lives on `/status` alone.
+ * so it is not shown here.
  *
  * Nor is the guest notice. What a guest session costs belongs where a guest
  * goes to find out about their account -- `/account` says it, and the header

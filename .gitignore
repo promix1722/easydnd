@@ -38,3 +38,6 @@ local.mk
 .idea/
 .vscode/
 .DS_Store
+
+# Written by `make config/preview`; see the preview target.
+config.preview.yaml

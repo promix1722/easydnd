@@ -26,13 +26,16 @@ const REPO_URL = 'https://github.com/promix1722/easydnd'
  * `AppShell.Footer` renders a `<footer>`, so this announces itself as
  * `contentinfo`, which is the landmark it actually is.
  *
- * The version is text rather than a link to `/status`. Reading which build you
- * are on is a glance; going to the diagnostic that compares it against the
- * API's is a decision, and the footer of a landing page is not where somebody
- * makes it. Abbreviated, too: `/status` is where the full SHA belongs, beside
- * the API's to be compared against it, and forty characters would be most of a
- * 390px footer. `'dev'.slice(0, 7)` is still `'dev'`, so the dev server and the
- * test suite need no branch here.
+ * The version is text rather than a link. Reading which build you are on is a
+ * glance, and there is nowhere for it to lead: the page that used to compare it
+ * against the API's was removed.
+ *
+ * It used to be truncated to seven characters, and that had to go with the
+ * release identifier. Abbreviating was right when this was a forty-character
+ * SHA that would have taken most of a 390px footer; against a tag it is
+ * corruption -- `v10.20.30` would render as `v10.20.`, and a `-notest` release
+ * would quietly stop saying so. The identifier is already short by
+ * construction. See `deploy/release-version.sh`.
  */
 export function LandingFooter() {
   const t = useT()
@@ -46,7 +49,7 @@ export function LandingFooter() {
         {t('legal.licences')}
       </Anchor>
       <Text size="xs" c="dimmed" ml="auto">
-        {WEB_VERSION.slice(0, 7)}
+        {WEB_VERSION}
       </Text>
     </Group>
   )
