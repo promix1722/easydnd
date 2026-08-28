@@ -310,6 +310,228 @@ justifies a real carousel rather than a `scroll-snap` flexbox, because it is the
 one a thumb is actually on at a table. The peer-range warning above is
 unchanged, and is still the thing to look for in a lockfile diff.
 
+## The die is real 3D, and it is paid for in one chunk
+
+`ui/D20Scene.tsx` draws a genuine icosahedron with three.js and throws it
+around a cannon-es physics world. It is by a wide margin the largest thing this
+app depends on -- **158 kB gzipped**, against the 10 kB the landing carousel
+cost and which was, until now, the whole of this project's dependency budget.
+That is a sixteen-fold jump and it was made deliberately, so the reasoning is
+here rather than in a commit message.
+
+**What was tried first, and why it was not enough.** The die began as twenty
+`clip-path` triangles placed with `matrix3d` and tumbled with the Web
+Animations API -- about half a kilobyte, no GPU context, and geometrically
+correct: an icosahedron is convex, so back-face culling alone gives exact
+occlusion with no depth sorting. It read as flat. Static per-face shading
+cannot fake a specular highlight travelling across a facet, and that highlight
+is most of what tells an eye it is looking at a solid rather than a hexagon
+with lines on it. The approach was sound and the result was not, which is worth
+recording because the arithmetic still says the cheap version should have
+worked.
+
+**What the size actually buys**, beyond looking right: real lighting and a
+contact shadow, and -- the part that changed the interaction -- a die you throw
+rather than a die you trigger. See below.
+
+**The cost is contained rather than accepted.** Three separate mechanisms keep
+three.js out of the main bundle, and all three are load-bearing:
+
+1. `ui/D20.tsx` -- the half that always ships -- reaches the scene through a
+   `lazy(() => import('./D20Scene'))` and mounts it on an **intersection**, not
+   on mount. The die is the fourth panel of a carousel; embla mounts all four,
+   but only the panel you have swiped to is on screen. Swipe to the die and it
+   fetches. Never swipe and it never does.
+2. `vite.config.ts` gives the chunk a stable name through `manualChunks` and
+   then names that chunk in workbox's `globIgnores`. Without this the service
+   worker would have precached it on first visit -- it globs `**/*.js` -- and
+   every visitor would have downloaded three.js in the background regardless
+   of step 1. This is the step that is easy to miss and silent when wrong.
+3. `scripts/check-layers.mjs` lists `three` and `cannon-es` as `ui/`-only
+   vendors, so a feature cannot import either directly and quietly undo the
+   split.
+
+The measured result: `index-*.js` is 260 kB gzipped and contains no three.js at
+all; `d20-scene-*.js` is 158 kB and is not in the precache manifest. Both are
+worth re-checking after a dependency bump, because nothing fails if they merge.
+
+The trade this makes is that a die thrown for the first time *offline* does not
+work. That is the right way round: a visitor who never opens the die should not
+have paid for it.
+
+### The throw decides the number
+
+Nothing is predetermined. The die is given the velocity your thumb gave it, the
+simulation runs, and whichever face is up when it stops is the answer --
+read back by `faceUp` in `ui/d20Geometry.ts`. A die that landed on a number
+chosen before it left your hand is theatre, and a gentle flick that still spins
+wildly to reach its target is theatre you can feel.
+
+The honest consequence is that a practised thumb has some influence over the
+result, exactly as it does with a real die on a real table. That is charming
+for a toy and disqualifying for a roll that matters. **If this ever becomes the
+app's actual roller** -- a d20 against a DC with a character sheet behind it --
+the number has to come from `domain/dice.ts` and the physics be demoted to an
+animation of a result already decided. The reduced-motion path is already that
+shape, so the change has somewhere to start.
+
+Two things the physics needs that are not obvious: the die is thrown into a
+closed box of six invisible planes, because an enthusiastic thumb will
+otherwise fling it out of frame; and a throw that has not come to rest within
+four and a half seconds is placed flat and read, because a die wedged against a
+wall would otherwise report a number no face is actually showing.
+
+### The die is a page, not a dialog
+
+`/roll` is a route, rendered by `features/dice/DiceScreen.tsx` inside the
+ordinary phone chrome. It was a full-screen dialog first, and the dialog was
+wrong twice over. It covered the header, so the menu you had opened the die
+from was unreachable until you dismissed it. Cutting it back to sit *below* the
+header fixed that and left it half-drawn over the page beneath, still carrying
+a close button -- a second way out of a place you can already leave through the
+menu, and one more thing on a panel that is supposed to hold nothing but a die.
+
+A page needs none of it. The chrome is simply there, every section is one press
+away, the back gesture takes you off the die rather than out of the app, and
+leaving is navigating instead of dismissing.
+
+It is a page but **not a section**. `/roll` is absent from `ui/sections.ts`, so
+it owns no other paths, lights nothing in the navbar and starts no breadcrumb
+-- and the desktop rail never offers it, because the section table is what both
+shells map over and the die is a phone's. `shell/MobileShell.tsx` links to it
+directly, below a divider, as the one entry in that menu that is not a section.
+
+Being outside the table does not mean being nameless, though, and that
+distinction cost a round. The phone's trigger is the only thing on screen
+saying where you are, and it takes its label from `sectionFor` -- which answers
+nothing for `/roll`, so the control fell through to the word "Menu" on a page
+that this very menu links to *by name*. Naming a page after the control you
+reached it through is worse than the fallback existing at all. So `MobileShell`
+holds a one-entry `DIE` constant shaped like a `Section`, and the trigger, the
+glyph and the tick all read `active ?? die`, with no second code path. The
+fallback stays where it belongs: `/account` and a 404 have genuinely no name to
+give, and inventing one would put a fourth entry in a menu that has three.
+
+The screen uses no `ui/Page`. That primitive exists to put a breadcrumb and a
+title above a screen, and this screen wants neither -- see below. It sizes
+itself to what the header leaves with the same `AppShell` custom properties
+`routes/LandingPage.tsx` uses, including the same `calc(...)` wrapper, because
+Mantine's `rem()` mangles a bare `max(`.
+
+### You read the die, not a caption
+
+The camera looks **straight down**, and there is no visible text anywhere in
+the component -- no instruction, no printed result. Those two facts are one
+decision: from directly above, the number that landed is simply the one facing
+you, exactly as it is on a table, and a caption printing it again would be the
+app reading the dice for you.
+
+Three things follow, and each is easy to undo by accident:
+
+- **The camera needs `camera.up`.** Looking straight down makes the up vector
+  parallel to the view direction, and `lookAt` then has no way to resolve the
+  roll -- the scene arrives empty rather than wrong, which is a confusing way
+  to fail.
+- **The key light is well off the camera axis.** Directly overhead it would
+  put the die's shadow exactly underneath the die, where a top-down camera
+  cannot see it -- and the shadow is most of what gives the die a floor to sit
+  on rather than a hole to hover over.
+- **The scene has no size of its own.** It measures its container with a
+  `ResizeObserver` and builds the camera from the result, because both of its
+  homes are a box somebody else decided the shape of. A fixed square floated
+  small and off-centre in a tall carousel slide with the panel empty around it.
+  The camera height is derived so that `VISIBLE_HALF` die radii fit across the
+  panel's *narrow* side, which keeps the die the same apparent size whatever
+  shape the panel is -- and the physics walls are then placed at exactly the
+  edges of what that camera can see, inset by one radius, so the die bounces
+  off the sides of the picture instead of half-vanishing behind them.
+- **The live region is now the die's whole accessible surface.** The number is
+  painted into a WebGL canvas, which is opaque to assistive technology by
+  construction, so the `VisuallyHidden` announcement in `ui/D20.tsx` is not a
+  duplicate of something on screen -- it is the only channel carrying the
+  result. For the same reason the scene's container is `role="button"` and
+  focusable with an Enter/Space handler: every other way of throwing the die is
+  pointer input, and a die you can only throw with a thumb is a die some people
+  cannot throw at all.
+
+### The die you can pick up
+
+Pressing does not throw. It picks the die up: while a finger is down the body
+goes **kinematic** -- gravity stops applying and the walls stop pushing back --
+and its position is set from the pointer every frame, so the die simply follows
+your hand. Letting go returns it to dynamic and hands it the velocity your hand
+had, from the last few samples of the drag rather than the whole of it: what
+the hand was doing at the moment of release is the fling, and averaging in the
+slow start of a long drag flattens every throw towards nothing.
+
+The die moves by the drag's **delta**, not to the finger. Snapping it under the
+pointer is simpler and was the first draft, but pressing anywhere in a tall
+panel then teleports the die across the screen before you have moved at all.
+Tracking the offset means a press picks the die up wherever it happens to be.
+
+Mapping screen to world is similar triangles rather than a raycast, because the
+camera looks straight down: the picture is a known width per unit of distance,
+and the held plane is a known distance away. Screen up is world -z -- that is
+what `camera.up` was set to -- so the vertical axis is negated on the way in.
+
+A release with no speed behind it still throws, from a random direction. A die
+that could be picked up and put down again would be a control that did nothing.
+
+### Killing the tail of a throw
+
+The last phase of a throw is the part nobody watches. The die has visibly
+finished, and then spends another second nudging itself a few degrees at a time
+until the rest test agrees -- which reads as lag, not as physics.
+
+Raising gravity does not fix it, and that is worth knowing before trying:
+a nearly-stationary die is barely falling, so the tail is governed by damping
+and restitution rather than by weight.
+
+What works is a threshold, and it is what lets the two halves of the throw want
+opposite things. The die is *meant* to be bouncy -- restitution is `0.62` so it
+visibly caroms off the walls -- and bounciness is exactly what produces a long
+tail of diminishing hops. So above `SETTLING_SPEED_SQ` the die is still being
+thrown and damping is almost nothing; the moment it drops below, damping goes
+up twentyfold and the die commits. Tuning either half is a matter of moving
+that one number rather than trading the bounce against the wait.
+
+One CSS property is doing more work than it looks: the canvas carries
+`touch-action: none`. Without it the landing carousel reads a drag across the
+die as a swipe between panels, so throwing the die turns the page instead.
+
+### The geometry is derived, shared, and the only part that is unit-tested
+
+`ui/d20Geometry.ts` holds the solid and imports nothing -- no three, no cannon,
+no React. Three consumers have to agree about it exactly: the rendered mesh,
+the physics collider standing in for it, and the reader that decides which face
+landed up. A collider that disagreed with its mesh by one flipped winding is a
+die that visibly bounces off nothing.
+
+Twelve golden-ratio vertices; a face is any three of them one edge apart; the
+scan finds exactly twenty, which is its own proof. Two properties are fixed
+afterwards and both are the kind of bug that does not look like one:
+
+- **Winding.** Each triple is reordered to be counter-clockwise seen from
+  outside. Neither consumer checks: three would cull the face as a backface,
+  and cannon would compute an inward normal and let the die fall through the
+  floor it is standing on.
+- **Numbering.** Opposite faces sum to 21, as on a real die, and 6 and 9 are
+  underlined in the texture, because on a solid that lands in any orientation
+  there is nothing else to tell them apart.
+
+`d20Geometry.test.ts` is where the real coverage is, and it is all pure
+arithmetic: every vertex in exactly five faces, every face wound outward, every
+value used once with antipodes summing to 21, and -- the one that matters most
+-- all twenty faces rotated upward in turn and read back, which is what stands
+between the player and a reader that is out by one face. None of it needs a
+GPU. `D20.test.tsx` pins only that the heavy chunk stays unloaded, because a
+WebGL die is untestable in jsdom and asserting on a mock of one would be
+asserting on the mock.
+
+The numerals are drawn to a canvas at load rather than shipped as an image:
+no binary asset to generate, commit and keep in step with the palette -- the
+argument `scripts/gen-icons.mjs` exists to make, minus the file.
+
 `embla-carousel` itself is now in `check-layers.mjs`'s `UI_ONLY_PACKAGES`.
 `@mantine/carousel` was always guarded by the `@mantine/` entry, but the engine
 underneath it ships its own types and nothing stopped a feature importing
@@ -1710,6 +1932,42 @@ they were going. What the old copy promised about the rules and level-up is
 still either invisible until you are inside or better said on `/login`, which is
 one press away and has room to say what each way in costs.
 
+### A fourth panel, on a phone, that you can press
+
+There is a fourth panel below the breakpoint: a d20 you can pick up and throw
+-- grab it, fling it, and it caroms off the edges of the panel and settles on a
+number. It is the only thing on this page that does anything, and that is the
+argument for it.
+
+**The panel carries no words.** No heading, no caption -- the die fills it edge
+to edge and is the whole of it. That makes it the one slide that cannot be
+named by a heading it does not have, so it is named by an `aria-label`: the
+exact exception the "label panels by their own heading" rule was written
+against. It is allowed here for the reason the rule exists to protect. That
+rule guards against two spellings of one name drifting apart, and there is no
+second spelling on a panel with nothing written on it.
+Every section of the app is behind sign-in, so a curious visitor has nothing to
+try -- and a die is the one piece of this product that works with no account,
+no character and no table. It is a toy and not a preview: it rolls, it says
+what it rolled, and it keeps nothing.
+
+Phone only, and for the same *kind* of reason the arrows are pointer only --
+this asks about the input, not the layout. A die is a thumb toy. On a desktop
+it would be a large ornament clicked with a mouse, on the page where somebody
+is deciding whether to sign up, competing for that decision with the three
+panels that say what the app is for.
+
+It goes last rather than among the three. The panels are the app's pitch in the
+order you meet it, and a toy wedged into that sequence interrupts an argument
+to offer a distraction. `LandingPage.test.tsx` pins the order on a phone for
+that reason, and pins the die's absence on a wide screen.
+
+One existing test changed shape rather than being deleted: `offers nothing to
+press on the slides themselves` is now `... on the slides that describe the
+app`. Its claim was that no panel is a *door* -- a carousel where one panel
+navigates and two do not teaches the wrong thing -- and a die leads nowhere, so
+the claim survives intact on the three it was written about.
+
 Each panel is named by its own heading, through `aria-labelledby`, rather than
 carrying a second copy of the words in an `aria-label`. While the panels were
 empty the label was all there was, and a slide that announces itself as "slide 2
@@ -2555,6 +2813,13 @@ read the licence of the material you are being shown would be backwards. It is a
 document rather than a section, so it stays out of `shell/nav.ts`, and it is
 reached from the footer the landing chrome carries. The landing header offers a
 signed-in visitor the way back rather than a second invitation to sign in.
+
+`/roll` is a third of the same kind, private rather than public: a page that is
+a die and nothing else. Out of the section table for the same reason the two
+above are -- it owns no paths, lights nothing and starts no trail -- and
+reached only from the phone menu, below a divider, because the die is a
+thumb's. See [The die is a page, not a
+dialog](#the-die-is-a-page-not-a-dialog).
 
 Routes added under `/` render inside `RootGate`, so they are only reached when
 somebody is signed in. A route that must stay public -- `/login`, which would be

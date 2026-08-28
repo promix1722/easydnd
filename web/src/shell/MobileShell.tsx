@@ -8,11 +8,13 @@ import {
   Group,
   IconCheck,
   IconChevronDown,
+  IconDice5,
   InstallButton,
   Menu,
   SECTIONS,
   sectionFor,
 } from '@/ui'
+import type { Section } from '@/ui'
 
 import { AccountActions } from './AccountActions'
 import { HEADER_BOX, SAFE_BOTTOM, SAFE_TOP } from './chrome'
@@ -41,12 +43,35 @@ import { Wordmark } from './Wordmark'
  * owned the only slot. It no longer does. Nothing fills it yet -- see
  * docs/licensing.md#known-gaps, where that gap is recorded as open.
  */
+/**
+ * The one entry in this menu that is not a section.
+ *
+ * Shaped like a `Section` so that the trigger, the glyph and the tick can all
+ * treat it as one without a second code path -- and kept *out* of `SECTIONS`,
+ * which is what stops the desktop rail offering it and stops it starting a
+ * breadcrumb. `owns` is empty because it owns nothing: `/roll` is one page and
+ * has nothing beneath it.
+ */
+const DIE: Section = { to: '/roll', label: 'dice.roll', icon: IconDice5, owns: [] }
+
 export function MobileShell() {
   const { pathname } = useLocation()
   const t = useT()
 
   // Shared with the desktop navbar: see sectionFor in ui/sections.ts.
   const active = sectionFor(pathname)
+
+  /*
+   * What the trigger is naming, which is not always a section.
+   *
+   * The die is a page like any other once you are on it, so the control that
+   * is supposed to say where you are has to say "Roll the dice" there. Without
+   * this it falls through to the word "Menu" -- correct for `/account` and a
+   * 404, where there genuinely is no name to give, and simply wrong on a page
+   * this menu links to by name.
+   */
+  const onDie = pathname === DIE.to
+  const current = active ?? (onDie ? DIE : null)
 
   /*
    * What the trigger reads.
@@ -62,7 +87,7 @@ export function MobileShell() {
    * matched on the link target alone and so answered "nowhere" for every
    * detail page under `/`.
    */
-  const label = active ? t(active.label) : t('nav.menu')
+  const label = current ? t(current.label) : t('nav.menu')
 
   return (
     <AppShell
@@ -99,7 +124,7 @@ export function MobileShell() {
                 // so the glyph is the section's mark on the page, not
                 // decoration. Absent on a path in no section, where the label
                 // falls back to "Menu" and there is no glyph to draw.
-                {...(active ? { leftSection: <active.icon size={16} /> } : {})}
+                {...(current ? { leftSection: <current.icon size={16} /> } : {})}
                 rightSection={<IconChevronDown size={16} />}
               >
                 {label}
@@ -133,6 +158,27 @@ export function MobileShell() {
                   {t(section.label)}
                 </Menu.Item>
               ))}
+
+              {/* Below the divider because it is not a section. It has a page
+                  of its own -- `/roll` -- but it owns no other paths, lights
+                  nothing, and the desktop navbar never offers it: the die is a
+                  phone's. A link rather than a button for the same reason the
+                  three above are links, and because that is what makes the
+                  back gesture take you off the die and not out of the app. */}
+              <Menu.Divider />
+              <Menu.Item
+                component={Link}
+                to={DIE.to}
+                aria-current={onDie ? 'page' : undefined}
+                leftSection={<DIE.icon size={16} />}
+                // Ticked when you are on it, exactly as a section is. Hidden
+                // rather than absent for the same alignment reason.
+                rightSection={
+                  <IconCheck size={16} style={{ visibility: onDie ? 'visible' : 'hidden' }} />
+                }
+              >
+                {t(DIE.label)}
+              </Menu.Item>
             </Menu.Dropdown>
           </Menu>
 
@@ -144,6 +190,7 @@ export function MobileShell() {
       <AppShell.Main>
         <Outlet />
       </AppShell.Main>
+
     </AppShell>
   )
 }

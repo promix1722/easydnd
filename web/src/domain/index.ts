@@ -10,6 +10,7 @@ export {
 } from './abilities'
 export { classLine } from './classLine'
 export type { ClassLevel } from './classLine'
+export { D20_FACES, d20 } from './dice'
 export { collectionOfKind, pickLabel, promptLabel } from './event'
 export type { ChangeLike, ValueLike } from './event'
 export { STAGES, answerable, stageOf } from './stages'

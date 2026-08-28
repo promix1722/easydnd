@@ -4,6 +4,7 @@ import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
 import { BuildScreen, CharacterLogScreen, CharacterSheetScreen } from '@/features/character'
 import { ImportCharacterScreen } from '@/features/characters'
+import { DiceScreen } from '@/features/dice'
 import { GameScreen, GamesScreen, SharedSheetScreen } from '@/features/games'
 import { GroupListScreen, GroupScreen } from '@/features/groups'
 import { LegalScreen } from '@/features/legal'
@@ -166,6 +167,25 @@ export const router = createBrowserRouter([
         element: (
           <Private>
             <AccountScreen />
+          </Private>
+        ),
+      },
+
+      /*
+       * A die, as a page.
+       *
+       * Deliberately absent from `ui/sections.ts`: it is not a section of the
+       * app, it owns no other paths and it lights nothing in the desktop
+       * navbar, which never offers it -- the die is a phone's, and
+       * `shell/MobileShell.tsx` is the only chrome that links here. Private
+       * only because the menu that reaches it is; the signed-out visitor has
+       * their own die on the landing page.
+       */
+      {
+        path: 'roll',
+        element: (
+          <Private>
+            <DiceScreen />
           </Private>
         ),
       },

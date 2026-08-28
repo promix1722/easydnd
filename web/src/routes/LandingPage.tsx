@@ -1,6 +1,6 @@
 import { useId } from 'react'
 
-import { Carousel, Paper, Stack, Text, Title, useIsDesktop } from '@/ui'
+import { Carousel, D20Roll, Paper, Stack, Text, Title, useIsDesktop } from '@/ui'
 
 import { useT } from '@/lib/i18n'
 import type { MessageKey } from '@/lib/i18n'
@@ -70,8 +70,13 @@ interface Slide {
   key: string
   /** The heading's message key, and the panel's accessible name by way of it. */
   title: MessageKey
-  /** Sample copy, as a key. See the note above. */
-  caption: MessageKey
+  /**
+   * Sample copy, as a key. See the note above.
+   *
+   * Absent on the die, which is the one panel that carries no words at all --
+   * see `DICE_SLIDE`.
+   */
+  caption?: MessageKey
 }
 
 const SLIDES: readonly Slide[] = [
@@ -79,6 +84,27 @@ const SLIDES: readonly Slide[] = [
   { key: 'group', title: 'landing.group.title', caption: 'landing.group.caption' },
   { key: 'adventure', title: 'landing.adventure.title', caption: 'landing.adventure.caption' },
 ]
+
+/**
+ * A fourth panel, on a phone only, and the only thing on this page you can
+ * press.
+ *
+ * The three above describe; this one does something, which is the whole
+ * argument for it. Every section of the app is behind sign-in, so a visitor
+ * who is curious has nothing to try -- and a die is the one piece of this
+ * product that works with no account, no character and no table. It is a toy
+ * rather than a feature: it rolls, it says what it rolled, and it keeps
+ * nothing.
+ *
+ * Phone only because it is a *thumb* toy. On a desktop it would be a large
+ * ornament you click with a mouse, on the page where a visitor is deciding
+ * whether to sign up, and the three panels that say what the app is for should
+ * not have to share that decision with a fidget.
+ */
+const DICE_SLIDE: Slide = {
+  key: 'roll',
+  title: 'landing.roll.title',
+}
 
 export function LandingPage() {
   const t = useT()
@@ -93,6 +119,10 @@ export function LandingPage() {
   // covering, duplicating the swipe that a touchscreen already offers -- so
   // they go, and the indicators below still say how many panels there are.
   const withControls = useIsDesktop()
+
+  // The same viewport answer, used for the other thing this page varies. See
+  // DICE_SLIDE above for why the die is a phone's and not a pointer's.
+  const slides = withControls ? SLIDES : [...SLIDES, DICE_SLIDE]
 
   return (
     // Named, because a landmark called "region" tells a screen reader nothing.
@@ -127,27 +157,48 @@ export function LandingPage() {
       // steps -- so a dead end at either edge would only be a dead end.
       emblaOptions={{ loop: true }}
     >
-      {SLIDES.map((slide) => (
-        // Labelled *by* the heading rather than carrying a second copy of it in
-        // an `aria-label`: the words are on screen now, and two spellings of
-        // one name is how they come to disagree.
-        <Carousel.Slide key={slide.key} aria-labelledby={`${headingId}-${slide.key}`}>
-          <Paper withBorder radius="md" h="100%" p="xl">
-            {/* Centred in the panel rather than sitting at its top, because the
-                panel is as tall as the window and text pinned to the ceiling of
-                it reads as a mistake. `maw` keeps the caption to a readable
-                measure on a wide screen. */}
-            <Stack h="100%" justify="center" align="center" gap="md">
-              <Title id={`${headingId}-${slide.key}`} order={2} ta="center">
-                {t(slide.title)}
-              </Title>
-              <Text c="dimmed" ta="center" maw={480}>
-                {t(slide.caption)}
-              </Text>
-            </Stack>
-          </Paper>
-        </Carousel.Slide>
-      ))}
+      {slides.map((slide) => {
+        // The die is the one panel with nothing written on it, so it is the
+        // one panel that cannot be named by a heading it does not have. An
+        // `aria-label` is the exception the rule was written against -- two
+        // spellings of one name is how they come to disagree -- and it is
+        // allowed here precisely because there is no second spelling: nothing
+        // about this panel is on screen to disagree with.
+        const bare = slide.key === DICE_SLIDE.key
+
+        return (
+          <Carousel.Slide
+            key={slide.key}
+            {...(bare
+              ? { 'aria-label': t(slide.title) }
+              : { 'aria-labelledby': `${headingId}-${slide.key}` })}
+          >
+            {/* No padding and clipped on the die's panel: the scene sizes
+                itself to this box exactly, and a canvas that overflowed its
+                slide would sit on top of the panel beside it. */}
+            <Paper withBorder radius="md" h="100%" p={bare ? 0 : 'xl'} style={{ overflow: 'hidden' }}>
+              {bare ? (
+                <D20Roll />
+              ) : (
+                /* Centred in the panel rather than sitting at its top, because
+                   the panel is as tall as the window and text pinned to the
+                   ceiling of it reads as a mistake. `maw` keeps the caption to
+                   a readable measure on a wide screen. */
+                <Stack h="100%" justify="center" align="center" gap="md">
+                  <Title id={`${headingId}-${slide.key}`} order={2} ta="center">
+                    {t(slide.title)}
+                  </Title>
+                  {slide.caption ? (
+                    <Text c="dimmed" ta="center" maw={480}>
+                      {t(slide.caption)}
+                    </Text>
+                  ) : null}
+                </Stack>
+              )}
+            </Paper>
+          </Carousel.Slide>
+        )
+      })}
     </Carousel>
   )
 }
