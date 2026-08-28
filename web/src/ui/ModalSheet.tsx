@@ -30,6 +30,15 @@ export interface ModalSheetProps {
    * invite sheet's read-only link.
    */
   onSubmit?: () => void
+  /**
+   * Whether the dialog can be dismissed without answering it.
+   *
+   * False removes the close button and stops Escape and a click outside from
+   * closing it, so the only way out is a control inside. For dialogs that are
+   * not a question -- UpdateRequired is the one, where dismissing would leave
+   * the tab running code the server has stopped serving.
+   */
+  dismissible?: boolean
 }
 
 /**
@@ -47,6 +56,7 @@ export function ModalSheet({
   children,
   size = 'md',
   onSubmit,
+  dismissible = true,
 }: ModalSheetProps) {
   const t = useT()
   const isDesktop = useIsDesktop()
@@ -56,6 +66,13 @@ export function ModalSheet({
   // control every sheet has. Named here rather than at each call site: there
   // are two renderings of one component and they must not drift.
   const close = { 'aria-label': t('common.close') }
+
+  // Spread into both renderings so the three settings cannot drift apart,
+  // and so the dismissible case keeps passing nothing at all -- Mantine's
+  // own defaults are the dismissible ones.
+  const locked = dismissible
+    ? {}
+    : { withCloseButton: false, closeOnEscape: false, closeOnClickOutside: false }
 
   // A real `<form>`, not a keydown handler: the Go key exists because the
   // browser can see a form with a submit button in it, and no amount of
@@ -83,6 +100,7 @@ export function ModalSheet({
         size={size}
         centered
         closeButtonProps={close}
+        {...locked}
       >
         {body}
       </Modal>
@@ -96,6 +114,7 @@ export function ModalSheet({
       title={title}
       position="bottom"
       closeButtonProps={close}
+      {...locked}
       /*
        * The height is set here rather than with `size`, and that is a bug fix
        * rather than a preference.

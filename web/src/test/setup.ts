@@ -6,6 +6,8 @@ import { configure } from '@testing-library/react'
 
 import { resetCatalogCache } from '@/lib/api'
 import { resetRequestLocale } from '@/lib/api/locale'
+import { resetInstallOffer } from '@/lib/install'
+import { resetReleaseWatch } from '@/lib/version'
 import { resetViewport } from './viewport'
 
 /**
@@ -87,15 +89,15 @@ Element.prototype.scrollIntoView ??= function scrollIntoView(): void {}
  * thing standing between that and a test passing because of what ran before it.
  *
  * The list is short because there is very little module-level mutable state in
- * src/: the catalogue's in-flight request cache, the viewport width, and which
- * language the API client is asking for. Add to it when you add to those.
+ * src/: the catalogue's in-flight request cache, the viewport width, which
+ * language the API client is asking for, the release watch and the install
+ * offer. Add to it when you add to those.
  *
- * The language is the newest entry and the easiest to overlook, because it has
- * two homes. `src/lib/api/locale.ts` holds the one `request()` reads, and it is
- * reset here. The *displayed* language is not module state at all -- it lives
- * on an i18next instance that `src/test/render.tsx` creates per render and
- * pins to English -- which is deliberate, and is why a test that switches
- * language cannot leak one into the next file.
+ * The language has two homes. `src/lib/api/locale.ts` holds the one `request()`
+ * reads, and it is reset here. The *displayed* language is not module state at
+ * all -- it lives on an i18next instance that `src/test/render.tsx` creates per
+ * render and pins to English -- which is deliberate, and is why a test that
+ * switches language cannot leak one into the next file.
  */
 afterEach(() => {
   cleanup()
@@ -105,6 +107,13 @@ afterEach(() => {
   vi.unstubAllGlobals()
   resetCatalogCache()
   resetRequestLocale()
+  // Latches on the first mismatch and never unlatches by itself, so without
+  // this one test noticing a deploy would open the update dialog over every
+  // test that ran after it.
+  resetReleaseWatch()
+  // Its listeners are registered at import time and outlive a test file, so
+  // without this an install offer captured by one leaks into the next.
+  resetInstallOffer()
   // The language detector caches a choice here. A test that switches language
   // would otherwise hand it to the next file that autodetects.
   try {

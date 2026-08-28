@@ -60,11 +60,23 @@ type App struct {
 	pool *pgxpool.Pool
 }
 
+// Options carries what the command line decides rather than the config file.
+//
+// One field so far, and it is a struct rather than a fourth parameter because
+// the alternative is renaming every call site the next time something is added
+// -- and because `New(ctx, cfg, log, "")` at the only call site says nothing
+// about what the empty string means.
+type Options struct {
+	// WebDir serves a built frontend bundle alongside the API. Development
+	// only; see internal/api/http/static.go.
+	WebDir string
+}
+
 // New builds the application graph.
 //
 // ctx bounds the work that can block: connecting to the database and applying
 // migrations. A Ctrl-C during a slow connection should abort rather than hang.
-func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error) {
+func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options) (*App, error) {
 	// Must happen before any engine is constructed. In debug mode gin prints
 	// its route table and a warning banner straight to stdout, which corrupts
 	// a JSON log stream that something downstream is parsing.
@@ -201,6 +213,8 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 	// stood here was waiting for.
 	router, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		System:        system.New(buildinfo.Version),
+		Version:       buildinfo.Version,
+		WebDir:        opts.WebDir,
 		Auth:          authapi.New(authService, helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}),
 		Authenticator: authService,
 		Catalog:       catalogapi.New(catalogSource, log.With("handler", "catalog")),

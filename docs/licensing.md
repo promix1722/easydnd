@@ -86,8 +86,8 @@ Recorded rather than quietly carried:
   notice and the SRD 5.1 attribution in full, reached from a footer in
   `web/src/shell/LandingShell.tsx` -- so the older and larger gap, that nothing
   user-visible on easydnd.org displayed the notice at all, is closed. What
-  remains is that the footer is on the *landing* chrome alone: `/`, `/login`,
-  `/status` and `/legal`. A signed-in visitor, who is the one actually reading
+  remains is that the footer is on the *landing* chrome alone: `/`, `/login`
+  and `/legal`. A signed-in visitor, who is the one actually reading
   SRD-derived material on a character sheet, has no link to it from anywhere.
   This used to be a layout that forbade it: `MobileShell` spent its only
   `AppShell.Footer` slot on the tab bar. That bar became a dropdown in the

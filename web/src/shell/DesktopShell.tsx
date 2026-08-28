@@ -9,6 +9,7 @@ import {
   Group,
   IconChevronLeft,
   IconChevronRight,
+  InstallButton,
   NavLink,
   ROW_HEIGHT,
   SECTIONS,
@@ -18,7 +19,7 @@ import {
 } from '@/ui'
 
 import { AccountActions } from './AccountActions'
-import { HEADER_HEIGHT } from './chrome'
+import { HEADER_BOX, SAFE_TOP } from './chrome'
 import { Wordmark } from './Wordmark'
 
 /** The id the rail's control points `aria-controls` at. */
@@ -111,7 +112,8 @@ export function DesktopShell() {
 
   return (
     <AppShell
-      header={{ height: HEADER_HEIGHT }}
+      header={{ height: HEADER_BOX }}
+      styles={{ header: { paddingTop: SAFE_TOP } }}
       navbar={{ width: opened ? NAVBAR_WIDTH : RAIL_WIDTH, breakpoint: 'never' }}
       padding="lg"
     >
@@ -124,6 +126,7 @@ export function DesktopShell() {
               with the phone header rather than written twice here: see
               ./AccountActions.tsx, which is also where the reasoning for two
               icons over a name and a button lives. */}
+          <InstallButton />
           <AccountActions />
         </Group>
       </AppShell.Header>

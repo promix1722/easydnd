@@ -34,6 +34,11 @@ func run() error {
 		"run a schema migration and exit: `up`, `status` or `down`")
 	migrateForce := flag.Bool("migrate-force", false,
 		"permit a destructive -migrate in production")
+	// Development only, and a flag rather than a config key so that it cannot
+	// be switched on by editing a YAML file on the server. `make preview` is
+	// the caller; see internal/api/http/static.go for why it exists.
+	webDir := flag.String("web", "",
+		"serve a built frontend bundle from this directory (development)")
 	flag.Parse()
 
 	// Deliberately before config.Load: CI asserts `./easydnd -version` equals
@@ -70,7 +75,7 @@ func run() error {
 		return migrate(ctx, cfg, log, *migrateCmd, *migrateForce)
 	}
 
-	a, err := app.New(ctx, cfg, log)
+	a, err := app.New(ctx, cfg, log, app.Options{WebDir: *webDir})
 	if err != nil {
 		return fmt.Errorf("build app: %w", err)
 	}

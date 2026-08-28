@@ -43,6 +43,16 @@
   for a release whose `make verify` you have just run yourself. The two version
   assertions run in Build and are never skipped. See
   `docs/backend.md#deployment` for what that gives up.
+- **`deploy/release-version.sh` is the only place that decides what a release is
+  called** -- the tag when the deploy pipeline builds it, a short SHA for
+  everything else, a local build of that same tagged commit included. The
+  `Makefile` and every job in the deploy workflow call it, because the binary,
+  the bundle and the four gates on them all compare that one string. A release
+  still *lives* in a directory named by commit SHA; the two are deliberately
+  different, and `deploy.sh` bridges them through `releases/<sha>/VERSION`.
+- **`deploy/nginx/easydnd.conf` is not applied by a deploy.** It carries the
+  whole HTTP caching policy and the live copy is installed by hand; changing it
+  here and tagging a release changes nothing on the server.
 - **Anywhere `TEST_DATABASE_URL` is set, run `make test/db`, never
   `make test/unit`.** The DB-touching packages TRUNCATE one shared database, so
   they need that target's `-p 1` to take turns. Without it they wipe each other

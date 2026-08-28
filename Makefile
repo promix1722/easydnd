@@ -7,8 +7,13 @@ BIN_DIR     := bin
 SRD_DIR     := data/srd_5.1
 DEV_CONFIG  := config.dev.yaml
 
-# Keep in lockstep with the build step in .github/workflows/deploy.yml.
-VERSION     ?= $(shell git rev-parse HEAD 2>/dev/null || echo dev)
+# The release identifier: the tag on a tagged commit, a short SHA anywhere
+# else. Delegated to a script rather than spelled out here because CI needs the
+# same answer, and the comment that used to say "keep in lockstep with the
+# build step in deploy.yml" was an instruction to a human where a shared file
+# does the job. Invoked through `bash` so that a lost execute bit -- an export,
+# a fresh clone on a filesystem that drops it -- cannot break every build.
+VERSION     ?= $(shell bash deploy/release-version.sh)
 VERSION_PKG := $(MODULE)/internal/buildinfo
 LDFLAGS     := -s -w -X $(VERSION_PKG).Version=$(VERSION)
 
@@ -73,6 +78,21 @@ TEST_DATABASE_URL ?= postgres://easydnd:easydnd@127.0.0.1:$(PG_PORT)/easydnd?ssl
 # Gitignored, never edited by hand -- edit config.dev.yaml, or make a
 # config.local.yaml, instead.
 DEV_RUN_CONFIG := config.dev-run.yaml
+
+# `make preview`: the built bundle and the API on one origin, behind TLS.
+#
+# Fixed ports rather than a slot, and outside the 808x slot range so they
+# collide with no worktree. nginx maps 8890 -> 8090 with the real hton.cloud
+# certificate, which is what makes this a secure context -- and a secure
+# context is the whole point: service workers, the install prompt and passkeys
+# are all unavailable on the plain-HTTP 888x ports.
+#
+# One pair of ports means ONE PREVIEW AT A TIME across every worktree. That is
+# deliberate; a preview is a verification pass, not somewhere to live.
+PREVIEW_PORT        := 8090
+PREVIEW_PUBLIC_PORT := 8890
+PREVIEW_CONFIG      := config.preview.yaml
+PREVIEW_URL         := $(if $(PUBLIC_HOST),https://$(PUBLIC_HOST):$(PREVIEW_PUBLIC_PORT),https://localhost:$(PREVIEW_PUBLIC_PORT))
 
 .DEFAULT_GOAL := help
 
@@ -179,6 +199,42 @@ config/dev:
 	   $(if $(DEV_DB_URL),printf 'db:\n  url: %s\n' '$(DEV_DB_URL)';) } > $(DEV_RUN_CONFIG)
 	@chmod 600 $(DEV_RUN_CONFIG)
 	@echo "wrote $(DEV_RUN_CONFIG)"
+
+## config/preview: write the config `make preview` runs the API with
+# Same shape as config/dev and a different pair of answers: one port, because
+# Go is serving the bundle as well as the API, and an https origin, because
+# middleware.SameOrigin compares auth.rp_origins against the browser's Origin
+# byte for byte and the browser will say https here.
+config/preview:
+	@{ printf 'env: development\n'; \
+	   printf 'log:\n  format: text\n  level: debug\n'; \
+	   printf 'http:\n  port: "%s"\n' '$(PREVIEW_PORT)'; \
+	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - %s\n' '$(RP_ID)' '$(PREVIEW_URL)'; \
+	   printf 'db:\n  url: %s\n' '$(TEST_DATABASE_URL)'; } > $(PREVIEW_CONFIG)
+	@chmod 600 $(PREVIEW_CONFIG)
+	@echo "wrote $(PREVIEW_CONFIG)"
+
+## preview: serve the BUILT bundle and the API on one TLS origin, for PWA testing
+# What the dev server cannot do. `make web/dev` has no service worker at all
+# (devOptions.enabled is false in vite.config.ts, so a worker cannot shadow the
+# module graph), and its origin is plain HTTP, so `beforeinstallprompt` never
+# fires and passkeys are unavailable. This target answers both: it serves the
+# real production bundle, and it does it behind the TLS port.
+#
+# No Vite, and so no HMR: the whole point is to exercise the artifact that
+# ships rather than a development approximation of it. Rebuild by restarting.
+#
+# Needs the 8890 server block in /etc/nginx/conf.d/z-dev-ports.conf; see
+# docs/web.md.
+preview:
+	@go run ./cmd/devslot claim $(DEVSLOT_FLAGS) >/dev/null
+	@$(MAKE) preview/up
+
+preview/up: db/up web/build config/preview
+	@echo "preview  $(PREVIEW_URL)  (127.0.0.1:$(PREVIEW_PORT))"; \
+	 trap 'exit 0' INT TERM; \
+	 trap '$(MAKE) --no-print-directory db/down' EXIT; \
+	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(PREVIEW_CONFIG) -web web/dist
 
 ## run/db: run the API in development mode against this worktree's Postgres
 # config.local.yaml wins if you have made one (it is gitignored), which is the
@@ -287,9 +343,23 @@ web/deps:
 	cd web && npm ci
 
 ## web/dev: run the Vite dev server; it proxies /v1 to this worktree's API
+# VITE_APP_VERSION is passed here as well as to web/build, and it has to be the
+# same $(VERSION) the API alongside it was built with. Two reasons.
+#
+# The footer would otherwise read "dev", which is not a version -- it cannot be
+# matched against a bug report or against what the API says. Now it reads this
+# commit, which is the honest answer for a dev build.
+#
+# And the two halves must agree, or `make dev` would open the update dialog on
+# its first request: the client compares its own version against the one the
+# API stamps on every response, and disagreeing is the entire trigger. Both
+# come from $(VERSION) in the same checkout, so they do. Running `make web/dev`
+# against an API left over from another commit will show the dialog, and that
+# is correct rather than a bug -- the bundle really is out of step with it.
 web/dev:
 	cd web && EASYDND_WEB_PORT=$(WEB_PORT) \
 	          EASYDND_WEB_PUBLIC_URL=$(WEB_PUBLIC_URL) \
+	          VITE_APP_VERSION=$(VERSION) \
 	          EASYDND_API_ORIGIN=http://127.0.0.1:$(API_PORT) npm run dev
 
 ## web/lint: typecheck, lint, layer-check and message-check the frontend -- no tests
@@ -380,10 +450,12 @@ verify:
 clean:
 # Not .dev-slot: that is this worktree's identity, and deleting it would move
 # the address you reach it on.
-	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist $(DEV_RUN_CONFIG)
+	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist \
+	       $(DEV_RUN_CONFIG) $(PREVIEW_CONFIG)
 
 .PHONY: help build/server build/release run/server run/db test/unit test/race test/cover \
         dev dev/up dev/down slots ports config/dev \
+        preview preview/up config/preview \
         db/up db/down db/psql test/db \
         data/srd data/srd/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \

@@ -51,9 +51,60 @@ func TestVersionServesInjectedValue(t *testing.T) {
 		t.Errorf("version = %q, want %q", body.Version, testVersion)
 	}
 
-	// deploy.sh does a raw substring grep rather than a JSON parse.
-	if !strings.Contains(rec.Body.String(), testVersion) {
-		t.Errorf("response body %q does not contain the raw version", rec.Body.String())
+	// deploy.sh matches this literal rather than parsing JSON, so the exact
+	// bytes encoding/json produces are the contract -- the field name, the
+	// quoting, and no space after the colon. The match is anchored on the
+	// field because the release identifier is a tag now: a bare grep for
+	// "v1.0.4" would also be satisfied by "v1.0.40".
+	want := `"version":"` + testVersion + `"`
+	if !strings.Contains(rec.Body.String(), want) {
+		t.Errorf("response body %q does not contain %s", rec.Body.String(), want)
+	}
+}
+
+// TestVersionIsNotCacheable pins the other half of the deploy contract. This
+// endpoint answers "which release is live", and both of its readers -- the
+// deploy gate and a browser deciding whether to reload -- are misled by an
+// answer that was allowed to be held somewhere.
+func TestVersionIsNotCacheable(t *testing.T) {
+	rec := do(t, newTestRouter(t), http.MethodGet, "/v1/version", nil)
+
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q, want %q", got, "no-store")
+	}
+}
+
+// TestEveryResponseCarriesTheAppVersion pins the header a browser uses to
+// notice it is running code from a release that is no longer deployed.
+//
+// The error cases are the point rather than padding: a client running against
+// a newer API is exactly the client whose requests start failing, so a header
+// present only on success would go missing at the moment it is needed. The 404
+// also proves the middleware is global -- NoRoute is outside every group.
+func TestEveryResponseCarriesTheAppVersion(t *testing.T) {
+	r := newTestRouter(t)
+
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		status int
+	}{
+		{"ok", http.MethodGet, "/v1/health", http.StatusOK},
+		{"unauthenticated", http.MethodGet, "/v1/auth/me", http.StatusUnauthorized},
+		{"no route", http.MethodGet, "/v1/nothing-here", http.StatusNotFound},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := do(t, r, tc.method, tc.path, nil)
+			if rec.Code != tc.status {
+				t.Fatalf("status = %d, want %d", rec.Code, tc.status)
+			}
+			if got := rec.Header().Get(middleware.HeaderAppVersion); got != testVersion {
+				t.Errorf("%s = %q, want %q", middleware.HeaderAppVersion, got, testVersion)
+			}
+		})
 	}
 }
 

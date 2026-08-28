@@ -102,20 +102,53 @@ export default defineConfig({
     themeColour(),
     versionManifest(),
     VitePWA({
-      registerType: 'autoUpdate',
+      /**
+       * 'prompt', not 'autoUpdate', and the difference is not a preference.
+       *
+       * 'autoUpdate' sets skipWaiting and clientsClaim in the generated worker.
+       * That was half a mechanism: nothing here imports `virtual:pwa-register`,
+       * so injectRegister fell back to 'script' and the emitted registerSW.js
+       * was a bare register() call with no update listener in it. A deploy then
+       * did this -- the new worker installed, skipped waiting, claimed tabs
+       * that were still running the previous release's JavaScript, and
+       * cleanupOutdatedCaches deleted the precache holding the chunks those
+       * tabs would ask for next. Nothing reloaded them.
+       *
+       * 'prompt' leaves skipWaiting off, so a new worker waits instead of
+       * seizing live tabs, and workbox's template then emits a `message`
+       * listener for {type: 'SKIP_WAITING'}. src/lib/version/reload.ts sends that
+       * message when someone presses the button in the update dialog, which is
+       * what makes the reload that follows land on the new release. See
+       * docs/web.md, "Two caches decide what a returning visitor sees".
+       */
+      registerType: 'prompt',
       // The service worker would otherwise shadow the dev server's module
       // graph and serve stale chunks after every edit.
       devOptions: { enabled: false },
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        // version.json must never be answered from cache: the deploy pipeline
-        // reads it through the public URL to prove which release is live.
+        // Navigations to /v1/ are the API's, not the router's. This is load
+        // bearing rather than tidy: the Google sign-in return is a top-level
+        // navigation to /v1/auth/sso/:provider/callback, and without this the
+        // worker would answer it with index.html and sign-in would break for
+        // every installed client.
+        //
+        // version.json needs no rule here. It is not precached -- `json` is
+        // absent from globPatterns above -- and no runtime caching route
+        // exists, so it always reaches the network.
         navigateFallbackDenylist: [/^\/v1\//],
       },
       manifest: {
-        name: 'easydnd - D&D character and battle tracker',
-        short_name: 'easydnd',
+        // i18n-exempt (whole block): the manifest is built once and read by the
+        // OS before a line of JS runs, so it cannot be swapped per locale by
+        // anything in src/. `easydnd.org` is the product's name rather than a
+        // word, and is never translated -- see docs/web.md, "Text that is
+        // never translated".
+        name: 'easydnd.org - D&D character and battle tracker',
+        // Android truncates the home-screen label at roughly 12 characters,
+        // which this just fits.
+        short_name: 'easydnd.org',
         description: 'Create characters, level them up, and run encounters.',
         theme_color: PALETTE.brand,
         background_color: PALETTE.dark.background,

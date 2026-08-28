@@ -204,10 +204,13 @@ own -- see [web.md](web.md#one-dev-server-per-worktree).
 Two consequences of reaching the app over plain HTTP on a name that is not
 `localhost`, both by design rather than breakage:
 
-- **Passkeys are unavailable.** WebAuthn requires a secure context, so
-  `window.PublicKeyCredential` is undefined and the sign-in page draws no
-  passkey card at all. The guest session is the way in. Passkeys still work at
-  `http://localhost:{port}`, which browsers treat as secure.
+- **Passkeys are unavailable on the `888x` ports.** WebAuthn requires a secure
+  context, so `window.PublicKeyCredential` is undefined and the sign-in page
+  draws no passkey card at all. The guest session is the way in. They do work at
+  `http://localhost:{port}`, which browsers treat as secure, and they work in
+  `make preview` -- see [web.md](web.md#make-preview-is-the-only-secure-origin),
+  which exists because service workers and the install prompt are blocked by
+  this same rule.
 - **`env: development` is doing real work.** It is what clears the cookie
   `Secure` flag and the `__Host-` prefix; a production-mode cookie would never
   be sent over such a connection. The generated config always sets it.
@@ -267,7 +270,7 @@ that.
 | Method | Path | Returns |
 |---|---|---|
 | `GET` | `/v1/health` | liveness |
-| `GET` | `/v1/version` | the release SHA -- a deploy contract, see below |
+| `GET` | `/v1/version` | the release identifier -- a deploy contract, see below |
 | `GET` | `/v1/catalog` | the compendium's index: ruleset, locales, collections and counts |
 | `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it |
 | `GET` | `/v1/characters` | summaries |
@@ -1478,15 +1481,19 @@ and `git tag` therefore shows for ever which releases went out untested.
 
 What it gives up is the two suites, and now nothing else. The pair of version
 assertions -- that `./easydnd -version` and the bundle's `version.json` both
-equal the commit SHA -- used to live in the Test stage and go with it. They are
+report this release -- used to live in the Test stage and go with it. They are
 in Build now, beside the artifact each is about, so a `-notest` release still
-proves the SHA landed. That matters more than it sounds: an unfound `-X` symbol
-is a *silent* no-op, and without the assertion the same mistake still gets
-caught, but by `deploy.sh`'s health gate -- a rollback and a red `restart` job
-minutes later, with nothing on the run page saying why. The suffix reaches
-nothing else -- `VERSION` comes from `git rev-parse HEAD` and every path on the
-server is keyed by the SHA, so a `-notest` release is byte-identical to any
-other.
+proves the identifier landed. That matters more than it sounds: an unfound `-X`
+symbol is a *silent* no-op, and without the assertion the same mistake still
+gets caught, but by `deploy.sh`'s health gate -- a rollback and a red `restart`
+job minutes later, with nothing on the run page saying why.
+
+The suffix reaches one further thing, and only in what the release calls itself:
+the identifier is the tag, so `v1.0.4-notest` ships reporting `v1.0.4-notest`.
+Left alone rather than trimmed back, because a release that skipped its suites
+should say so wherever anyone reads its version. Every path on the server is
+still keyed by the SHA, so a `-notest` release is byte-identical to any other
+where it is stored.
 
 To release:
 
@@ -1505,7 +1512,8 @@ releases.
 /opt/easydnd/releases/<sha>/easydnd        supervisor runs this
 /opt/easydnd/releases/<sha>/data/srd_5.1/  the API reads this at startup
 /opt/easydnd/releases/<sha>/web/           nginx serves this
-/opt/easydnd/current -> releases/<sha>     all three follow this symlink
+/opt/easydnd/releases/<sha>/VERSION        what this release calls itself
+/opt/easydnd/current -> releases/<sha>     all four follow this symlink
 ```
 
 A release is therefore a **directory, not a file** -- the compendium is read
@@ -1632,7 +1640,12 @@ say:
   health gate times out, and the release rolls back. It is written that way in
   the committed copy for exactly that reason.
 - `deploy/nginx/easydnd.conf` -- the routing: `/v1/` to the Go process,
-  everything else to the bundle with an SPA fallback.
+  everything else to the bundle with an SPA fallback, plus the whole of the
+  HTTP caching policy. Its cache rules changed with the release-identifier
+  work -- `/icons/`, `/manifest.webmanifest`, `/favicon.svg`, the Workbox
+  runtime chunk and the source maps -- and **a tag deploy does not carry any of
+  that**. The live copy has to be replaced by hand or the new rules are simply
+  not in effect, silently, with nothing failing to say so.
 
 > **Apply the nginx config before the first tagged deploy carrying a
 > frontend.** Until nginx serves `/opt/easydnd/current/web`, the workflow's
@@ -1642,29 +1655,97 @@ say:
 > to the `easydnd` group and *restarting* nginx; see the header of
 > `deploy/nginx/easydnd.conf`.
 
-Releases are keyed by commit SHA, not by tag: on a tag push `GITHUB_SHA` is the
-commit the tag points at, so `/v1/version`, `releases/<sha>/` and the health
-gate all work unchanged. Tagging a commit already on `main` re-runs the build --
-the tag is the deploy trigger, not a shortcut past CI.
+### What a release is called, and where it lives
 
-Three contracts tie the code to that pipeline. All are easy to break silently:
+Two different things, and keeping them apart is what makes the rest of this
+section work.
 
-1. **`GET /v1/version` must contain the raw commit SHA.** `deploy.sh` gates a
-   release with `curl … | grep -q "$SHA"` and the workflow substring-matches the
-   public endpoint. Neither parses JSON, so never truncate the SHA or prefix it.
+**A release is named by its tag; being in the pipeline is what earns one.**
+`deploy/release-version.sh` is the only place that decides: a `refs/tags/v*`
+push reports its tag (`v1.0.4`), and **everything else reports a short commit
+SHA** -- a `ci/*` dry run, a `workflow_dispatch` from a branch, `make dev`,
+`make verify`, a hand-run `make build/release`. One script, called by the
+`VERSION` variable in the `Makefile` and by every job in the workflow that needs
+the answer, because the binary, the bundle and the four checks on them all
+compare this string and a second opinion would be a bug rather than a nuance.
+
+It deliberately does **not** ask `git describe` whether the local commit happens
+to carry a tag. Building `v1.0.4`'s commit on a laptop reports `c15fdec`, not
+`v1.0.4`, and that is the point: the working tree may differ from the tag,
+nothing has been through CI, and a build that answers `v1.0.4` while being none
+of the things a release is makes every later bug report ambiguous. `GITHUB_REF`
+is how the script knows the difference. It also sidesteps the fact that a CI
+checkout is shallow and cannot be relied on to have the tags at all.
+
+So a dev build says what it honestly is -- the commit it came from. `make dev`
+passes the same value to the Vite dev server, so the footer reads `c15fdec`
+rather than the word "dev", and the bundle and the API it talks to agree. They
+have to agree: disagreeing is exactly what opens the update dialog.
+
+A `v*-notest` tag reports itself in full, `-notest` and all. That is deliberate:
+a release that skipped its suites should say so wherever anyone reads its
+version.
+
+**A release lives in a directory named by commit SHA.** `releases/<sha>/`, as it
+always has. A tag can be moved; a commit cannot, so the SHA is what guarantees
+two builds never land on top of each other. On a tag push `GITHUB_SHA` is the
+commit the tag points at, so nothing about the directory layout changed.
+
+Because those two are no longer the same string, `deploy.sh` cannot derive the
+one from the other, and it needs the identifier twice -- once for the release it
+is activating and once for whatever it rolls back to. So the deploy job writes
+`releases/<sha>/VERSION` beside the binary, and `deploy.sh` reads it. Releases
+built before this existed fall back to their directory name, which is exactly
+what those binaries report.
+
+Tagging a commit already on `main` re-runs the build -- the tag is the deploy
+trigger, not a shortcut past CI.
+
+### Three contracts
+
+All are easy to break silently:
+
+1. **`GET /v1/version` must contain the literal `"version":"<release>"`.**
+   `deploy.sh` gates a release by matching that string and the workflow matches
+   the public endpoint the same way. Neither parses JSON, so the field name, the
+   quoting and the absence of a space after the colon are all part of the
+   contract -- which is what `encoding/json` emits.
+
+   The match is anchored on the field, and with `grep -F`, because both matter
+   once the identifier is a tag: `v1.0.4` is a substring of `v1.0.40`, and to a
+   regex the `.` in it matches any character at all. A loose match would call a
+   release healthy that is not.
 2. **The build version is injected into `internal/buildinfo.Version`.** `-X`
    against a symbol the linker cannot find is a *silent no-op*, so the workflow
-   asserts `./easydnd -version` equals `$GITHUB_SHA` immediately after building.
-   Without that check a wrong package path ships a binary reporting `dev`, fails
-   the health gate, and rolls back with no obvious cause.
+   asserts `./easydnd -version` equals the identifier immediately after
+   building. Without that check a wrong package path ships a binary reporting
+   `dev`, fails the health gate, and rolls back with no obvious cause.
 3. **The frontend build must be given `VITE_APP_VERSION`.** It writes
    `dist/version.json`, which the workflow reads through the public URL to
    prove nginx is serving this release rather than a cached `index.html`. An
    unset variable is the same silent no-op as a wrong `-X` path, so
    `web/vite.config.ts` refuses to build without it.
 
-Keep the `-X` path in `.github/workflows/deploy.yml` and in the `Makefile` in
-lockstep.
+Keep the `-X` path in the `Makefile` in step with `internal/buildinfo`.
+
+### Every response says which release answered it
+
+`middleware.AppVersion` puts the identifier on every response as
+`X-App-Version`, from the global chain rather than from a route -- so it lands
+on a 401 and on the 404 from `NoRoute` as readily as on a success.
+
+It is there for the browser, not for us. A tab that has been open since before a
+deploy is running code that no longer exists on the server, and the header is
+how it finds out without polling for it: the client compares it against the
+version baked into its own bundle at the single point every request passes
+through, so any request it was going to make anyway is the check. See
+`docs/web.md`, "Two caches decide what a returning visitor sees".
+
+`/v1/version` itself is `no-store`. It answers "which release is live", an
+answer that can be held is not an answer to that question, and it has two
+readers -- the deploy gate and the browser -- who would both be misled by a
+stale one. It carried no cache header at any layer until that was noticed, and
+was safe only because nginx happens to have no `proxy_cache`.
 
 ## Adding a feature
 

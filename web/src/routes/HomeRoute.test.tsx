@@ -84,7 +84,7 @@ describe('HomeRoute', () => {
     expect(screen.queryByText(/You are playing as a guest/i)).not.toBeInTheDocument()
   })
 
-  // System status is a deploy diagnostic and lives on /status alone, so
+  // System status is a deploy diagnostic and has no page at all, so
   // neither face of the home page carries it.
   it('leaves system status to its own page', () => {
     const { unmount } = homeAt({ status: 'anonymous' })

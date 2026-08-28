@@ -43,6 +43,17 @@ type Handlers struct {
 	// the same object Auth is built over; the router takes it separately
 	// because middleware and handler need different halves of it.
 	Authenticator middleware.Authenticator
+	// Version is the release identifier, stamped onto every response by
+	// middleware.AppVersion. It is the same string System serves at
+	// /v1/version, taken separately for the same reason as Authenticator: a
+	// middleware and a handler need it, and neither should reach through the
+	// other to get it.
+	Version string
+	// WebDir is a built frontend bundle to serve alongside the API, or "" for
+	// the normal case where something else does. Development only -- see
+	// ./static.go and `make preview`. Empty in production, where nginx serves
+	// the bundle and this whole path is unreachable.
+	WebDir string
 }
 
 // NewRouter builds the engine and declares the complete route table. Keeping
@@ -62,14 +73,32 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 	r.HandleMethodNotAllowed = true
 
 	// Order matters: RequestID runs first so that Recovery and the access log
-	// can both reach the request-scoped logger it installs.
+	// can both reach the request-scoped logger it installs. AppVersion sits
+	// with them rather than on a route because a stale client's evidence
+	// arrives on error responses as readily as on successful ones -- including
+	// the 404 from NoRoute below, which is outside every group.
 	r.Use(
 		middleware.RequestID(log),
+		middleware.AppVersion(h.Version),
 		middleware.Recovery(),
 		middleware.RequestLogger(),
 	)
 
+	// The API's 404, and -- only when a bundle was named -- the SPA fallback.
+	//
+	// The order is the whole of the correctness here. A /v1 path keeps the
+	// error envelope whatever else is mounted, because a client that got
+	// index.html and a 200 where it expected an envelope would fail to parse it
+	// somewhere far away from the cause.
+	site := http.Handler(nil)
+	if h.WebDir != "" {
+		site = staticSite(h.WebDir)
+	}
 	r.NoRoute(func(c *gin.Context) {
+		if site != nil && !isAPIPath(c.Request.URL.Path) {
+			site.ServeHTTP(c.Writer, c.Request)
+			return
+		}
 		helpers.FormatError(c, types.NewNotFoundError("no route for %s %s",
 			c.Request.Method, c.Request.URL.Path))
 	})
@@ -83,8 +112,15 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 	v1 := r.Group("/v1", middleware.SameOrigin(cfg.Auth.RPOrigins))
 	{
 		// DEPLOY-CRITICAL: deploy/deploy.sh polls /v1/version for the release
-		// SHA and rolls the release back if it does not appear.
-		v1.GET("/version", h.System.Version)
+		// identifier and rolls the release back if it does not appear.
+		//
+		// NoStore because this endpoint answers "which release is live", and
+		// an answer that can be held is not an answer to that question. It has
+		// two readers who would both be misled by a stale one: the deploy
+		// gate, and a browser checking whether it needs to reload. It carried
+		// no cache header at any layer until now, and was safe only because
+		// nginx happens to have no proxy_cache configured.
+		v1.GET("/version", middleware.NoStore(), h.System.Version)
 		v1.GET("/health", h.System.Health)
 
 		// Sign-in. NoStore because these bodies say who someone is.
