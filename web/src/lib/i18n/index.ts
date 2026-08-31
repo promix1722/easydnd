@@ -13,7 +13,7 @@
 export { LocaleProvider } from './LocaleProvider'
 export { useLocale, useSetLocale } from './useLocale'
 export { createI18n } from './instance'
-export { DEFAULT_LOCALE, LOCALES, LOCALE_NAMES, localeOf } from './locales'
+export { DEFAULT_LOCALE, LOCALES, LOCALE_FLAGS, LOCALE_NAMES, localeOf } from './locales'
 export type { Locale } from './locales'
 export { useT } from './useT'
 export type { Translate } from './useT'

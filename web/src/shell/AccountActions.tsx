@@ -1,6 +1,6 @@
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
-import { ActionIcon, Group, IconLogout, Tooltip } from '@/ui'
+import { ActionIcon, Group, IconLogout, InstallButton, Tooltip } from '@/ui'
 
 import { LocaleActions } from './LocaleActions'
 
@@ -42,9 +42,11 @@ export function AccountActions() {
     // Pushed right together, so the header still ends in the way out whether
     // or not there is an account to link to.
     <Group gap="xs" ml="auto" wrap="nowrap">
-      {/* Language first, then the way out. It is the one control here that is
-          not about this session -- somebody signed out needs it too, which is
-          why SignInActions draws it as well. */}
+      {/* The install offer, then the language, then the way out. The first
+          two are the ones that are not about this session -- somebody signed
+          out needs both, which is why SignInActions draws them as well.
+          Usually nothing is drawn for the install: see ui/InstallAction.tsx. */}
+      <InstallButton />
       <LocaleActions />
       <Tooltip label={signOutLabel} withArrow>
         <ActionIcon variant="subtle" aria-label={signOutLabel} onClick={() => void signOut()}>

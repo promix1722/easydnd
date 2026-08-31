@@ -1,9 +1,22 @@
 import { useId } from 'react'
 
-import { Carousel, D20Roll, Paper, Stack, Text, Title, useIsDesktop } from '@/ui'
+import {
+  Box,
+  Carousel,
+  D20Roll,
+  Paper,
+  Stack,
+  Text,
+  Title,
+  useIsDesktop,
+} from '@/ui'
 
 import { useT } from '@/lib/i18n'
 import type { MessageKey } from '@/lib/i18n'
+
+import ship from '@/assets/landing-ship.webp'
+import valley from '@/assets/landing-valley.webp'
+import volcano from '@/assets/landing-volcano.webp'
 
 /**
  * What a signed-out visitor sees at `/`: what this app is for, three panels of
@@ -17,14 +30,18 @@ import type { MessageKey } from '@/lib/i18n'
  * the only control here, in the corner `shell/SignInActions.tsx` keeps it, and
  * it carries the visitor where they were going.
  *
- * The captions below are **sample copy**, and deliberately so. They are here to
- * settle the shape -- how long a line runs before it wraps badly on a phone,
- * how a heading and a sentence sit together in a panel that has to fill the
- * window -- rather than to be the words this page ships with. Two of them
- * describe what the app does; the third, `Run an adventure`, describes intent,
- * because the battle tracker is not built. That is the one to keep honest,
- * because a landing page that promises it is the only thing on easydnd.org
- * that would.
+ * The captions are the page's own copy now, replacing the sample text that held
+ * the shape while the layout was settled. Two of them describe what the app
+ * does; the third, `Run sessions`, describes intent -- the battle tracker is not
+ * built -- which makes it the one to keep honest, because a landing page that
+ * promises it is the only thing on easydnd.org that would.
+ *
+ * That third caption also spends a word the rest of this project spends
+ * elsewhere: a *session* here is being signed in, and a sitting at a table is a
+ * **game** (see the README). The landing copy is aimed at somebody who has
+ * neither, and to them "session" reads as the evening they are being sold, so
+ * the words differ on purpose. Nothing inside the app follows it -- the
+ * navigation, the routes and every string behind sign-in still say Games.
  *
  * The hero mark that used to be this page is gone. `ui/DragonMark.tsx` still
  * exists and is still the app's hero art, but the header wordmark already names
@@ -73,16 +90,100 @@ interface Slide {
   /**
    * Sample copy, as a key. See the note above.
    *
-   * Absent on the die, which is the one panel that carries no words at all --
-   * see `DICE_SLIDE`.
+   * Absent on the die, which carries its heading and nothing else -- there is
+   * nothing to say about a toy that pressing it does not say. See `DICE_SLIDE`.
    */
   caption?: MessageKey
+  /**
+   * The panel's own picture, filling it behind the words.
+   *
+   * One per panel rather than one behind the whole carousel: the art belongs to
+   * the thing the panel is about, so it travels with the panel as you swipe. A
+   * panel without one is drawn exactly as it was; all three have one now, and
+   * the die -- which is a phone's -- keeps its canvas instead.
+   *
+   * Decorative, and so unnamed: the heading says what the panel is, and a
+   * screen reader stopping to describe the scenery would be reading out the
+   * wallpaper.
+   *
+   * ponytail: one size, 1920 wide, ~250KB of WebP, served to a phone as well.
+   * A `<picture>` with a narrow variant is the upgrade if the landing page's
+   * transfer size ever shows up as a complaint.
+   */
+  image?: string
+  /**
+   * Which way round the words go on this picture.
+   *
+   * A photograph is neither light nor dark, and the three here are not even the
+   * same kind of picture: the valley is green and white, the ship blue and
+   * white, the volcano red and black. So the pair is chosen per picture rather
+   * than derived from the colour scheme -- `onLight` is black in a white halo,
+   * `onDark` is white in a black one. See `INK`.
+   *
+   * Only meaningful with an `image`; a panel without one keeps the theme's own
+   * colours, which is what a panel on the page background should have.
+   */
+  ink?: keyof typeof INK
 }
 
+/**
+ * The two ways a word can sit on a photograph, and there are only two.
+ *
+ * A halo rather than a wash over the picture: the art was put there to be seen,
+ * and a sheet of translucent white over it is not a photograph any more. The
+ * glow is on the letters, so it is as wide as the letters and nothing else is
+ * touched.
+ *
+ * Three stops rather than one, tight to loose: the tight pair is what actually
+ * separates a stroke from a busy background -- a lava flow is high-frequency,
+ * and a single soft shadow washes across it without ever getting dark enough at
+ * the edge of a letter. The loose one carries the group of words as a block.
+ *
+ * ponytail: two variants, picked by eye per picture. Darkening the photograph
+ * instead was tried on the valley and reverted -- the picture is what the panel
+ * is for. A fourth photograph gets whichever of the two suits it; the upgrade,
+ * if that ever stops working, is sampling the image where the text lands rather
+ * than a third entry here.
+ */
+const INK = {
+  onLight: {
+    color: 'var(--mantine-color-black)',
+    textShadow:
+      '0 0 2px var(--mantine-color-white), 0 0 6px var(--mantine-color-white), 0 0 18px var(--mantine-color-white)',
+  },
+  onDark: {
+    color: 'var(--mantine-color-white)',
+    textShadow:
+      '0 0 2px var(--mantine-color-black), 0 0 6px var(--mantine-color-black), 0 0 18px var(--mantine-color-black)',
+  },
+} as const
+
 const SLIDES: readonly Slide[] = [
-  { key: 'build', title: 'landing.build.title', caption: 'landing.build.caption' },
-  { key: 'group', title: 'landing.group.title', caption: 'landing.group.caption' },
-  { key: 'adventure', title: 'landing.adventure.title', caption: 'landing.adventure.caption' },
+  // Green and white, and white words on it: the same answer as the volcano,
+  // because a halo dark enough to read against holds over a sunlit meadow too.
+  {
+    key: 'build',
+    title: 'landing.build.title',
+    caption: 'landing.build.caption',
+    image: valley,
+    ink: 'onDark',
+  },
+  // Blue and white, and the same answer.
+  {
+    key: 'group',
+    title: 'landing.group.title',
+    caption: 'landing.group.caption',
+    image: ship,
+    ink: 'onLight',
+  },
+  // Red and black: the one picture that wants the other way round.
+  {
+    key: 'adventure',
+    title: 'landing.adventure.title',
+    caption: 'landing.adventure.caption',
+    image: volcano,
+    ink: 'onDark',
+  },
 ]
 
 /**
@@ -158,41 +259,160 @@ export function LandingPage() {
       emblaOptions={{ loop: true }}
     >
       {slides.map((slide) => {
-        // The die is the one panel with nothing written on it, so it is the
-        // one panel that cannot be named by a heading it does not have. An
-        // `aria-label` is the exception the rule was written against -- two
-        // spellings of one name is how they come to disagree -- and it is
-        // allowed here precisely because there is no second spelling: nothing
-        // about this panel is on screen to disagree with.
+        // The die's panel is the one that is a toy rather than a sentence: a
+        // heading and then the die itself, no caption under it. It used to
+        // carry no words at all and borrow its name from an `aria-label`; now
+        // that the heading is on screen it is named the way every other panel
+        // is, by the words a visitor can see.
         const bare = slide.key === DICE_SLIDE.key
 
         return (
-          <Carousel.Slide
-            key={slide.key}
-            {...(bare
-              ? { 'aria-label': t(slide.title) }
-              : { 'aria-labelledby': `${headingId}-${slide.key}` })}
-          >
-            {/* No padding and clipped on the die's panel: the scene sizes
-                itself to this box exactly, and a canvas that overflowed its
-                slide would sit on top of the panel beside it. */}
-            <Paper withBorder radius="md" h="100%" p={bare ? 0 : 'xl'} style={{ overflow: 'hidden' }}>
+          <Carousel.Slide key={slide.key} aria-labelledby={`${headingId}-${slide.key}`}>
+            {/* The picture fills the panel, `cover`, and nothing is laid over
+                it: no wash, no tint, no blur -- the contrast is on the letters,
+                see `INK`.
+
+                No padding on the panel itself, at either width. The words carry
+                their own inset, which is what makes the quarter below a quarter
+                of the *panel* rather than a quarter of whatever is left inside
+                its padding -- a phone's panel and a laptop's would otherwise
+                start their text at two different fractions. The die needs the
+                same thing for a different reason: its scene sizes itself to the
+                box it is given, and a canvas that overflowed the slide would
+                sit on top of the panel beside it. */}
+            <Paper
+              withBorder
+              radius="md"
+              h="100%"
+              p={0}
+              style={{
+                overflow: 'hidden',
+                ...(slide.image === undefined
+                  ? {}
+                  : {
+                      backgroundImage: `url(${slide.image})`,
+                      backgroundSize: 'cover',
+                      // Pinned to the top edge rather than centred. `cover` on a
+                      // panel taller than the picture's aspect crops what does
+                      // not fit, and centring takes that crop off both ends --
+                      // which is the right default for a photograph nobody
+                      // composed for this box, and the wrong one for these,
+                      // which are framed to be read from the top down.
+                      backgroundPosition: 'top center',
+                    }),
+              }}
+            >
               {bare ? (
-                <D20Roll />
-              ) : (
-                /* Centred in the panel rather than sitting at its top, because
-                   the panel is as tall as the window and text pinned to the
-                   ceiling of it reads as a mistake. `maw` keeps the caption to
-                   a readable measure on a wide screen. */
-                <Stack h="100%" justify="center" align="center" gap="md">
-                  <Title id={`${headingId}-${slide.key}`} order={2} ta="center">
+                /* The scene takes the whole panel and the heading floats over
+                   it, so the die rolls behind its own name rather than in the
+                   box underneath it. Stacking the two cost the die the height of
+                   a heading on the one viewport where the panel is narrowest,
+                   and a d20 with less room to travel in is a duller throw.
+
+                   `pointerEvents: 'none'` is what makes this safe rather than
+                   clever: the die is grabbed and flung with pointer events on
+                   the canvas, and a heading that swallowed a `pointerdown`
+                   would be a dead strip across the top of the toy. */
+                <Box h="100%" style={{ position: 'relative' }}>
+                  <D20Roll />
+                  <Title
+                    id={`${headingId}-${slide.key}`}
+                    order={2}
+                    ta="center"
+                    pt="md"
+                    px="md"
+                    style={{
+                      position: 'absolute',
+                      insetInline: 0,
+                      top: 0,
+                      pointerEvents: 'none',
+                    }}
+                  >
                     {t(slide.title)}
                   </Title>
-                  {slide.caption ? (
-                    <Text c="dimmed" ta="center" maw={480}>
-                      {t(slide.caption)}
-                    </Text>
-                  ) : null}
+                </Box>
+              ) : (
+                /* On a wide screen the words start a quarter of the way down
+                   the panel and a third of the way across it -- rather than dead
+                   centre, which puts them over the middle of the picture, which
+                   is where a photograph's subject is. The two fractions differ
+                   because they are answering different things: the horizontal
+                   one is about where the subject stands in these photographs,
+                   the vertical one about a block that grows downward from its
+                   heading and should not end up sitting in the lower half.
+
+                   On a phone the same spacer is a sixth. The panel there is a
+                   tall column holding one block, so a quarter of it is a
+                   screenful of picture above the first line -- and the top edge
+                   itself, which this tried before, leaves the heading nothing to
+                   sit against.
+
+                   The spacer above is a *fixed* quarter of the panel, so every
+                   heading in the carousel starts on one line whatever the
+                   caption under it does. Sharing the leftover space in a 1:2
+                   ratio, which is what this did first, measures from the middle
+                   of a block whose height is the length of its own caption --
+                   so the three headings sat at three different heights and the
+                   words jumped as you swiped. `flex-basis` in percent is read
+                   against the panel's height here, unlike a percentage padding,
+                   which resolves against width even when it is `padding-top`.
+
+                   Below the breakpoint the block spans the panel: a third of
+                   390px is not a margin, it is a column too narrow to set type
+                   in. The inset it keeps is its own, so the quarter above is
+                   measured against the whole panel at every width. */
+                <Stack
+                  h="100%"
+                  gap={0}
+                  // The colour and the halo the picture asks for -- see `INK`
+                  // and the per-slide `ink` above. Set on the stack rather than
+                  // on each line, which is also what stops `Text`'s `dimmed`
+                  // grey from surviving into a place it cannot be read (see the
+                  // caption below), and what keeps heading and caption in one
+                  // treatment instead of two that drift.
+                  {...(slide.image === undefined ? {} : { style: INK[slide.ink ?? 'onLight'] })}
+                >
+                  {/* A quarter on a wide screen, a sixth on a phone. The
+                      fraction is smaller there because the panel is a tall
+                      column holding one block of words: the same quarter is a
+                      screenful of picture before the first line, while the top
+                      edge itself leaves the heading nothing to sit against. */}
+                  <Box style={{ flex: `0 0 ${withControls ? 25 : 100 / 6}%` }} />
+
+                  <Box px={withControls ? 'xl' : 'md'} style={{ display: 'flex' }}>
+                    {withControls ? <Box style={{ flex: 1 }} /> : null}
+
+                    <Stack
+                      gap="md"
+                      style={{ flex: withControls ? '0 1 480px' : 1, minWidth: 0 }}
+                    >
+                      {/* Ranged left, which is the same edge the justified
+                          caption starts on -- a centred heading over a block
+                          with two straight sides reads as a heading belonging
+                          to something else. */}
+                      <Title id={`${headingId}-${slide.key}`} order={2}>
+                        {t(slide.title)}
+                      </Title>
+                      {/* Dimmed only where there is nothing behind it. Over a
+                          picture the caption inherits the stack's ink, because
+                          grey on a photograph is the thing that could not be
+                          read.
+
+                          Ranged left, on the heading's own edge. Justified is
+                          what this was, and it cost more than it bought at this
+                          measure: even hyphenated, four or five words to a line
+                          means the spaces stretch visibly and no two lines set
+                          the same colour -- worse over a photograph, where every
+                          gap shows a different piece of picture. */}
+                      {slide.caption ? (
+                        <Text {...(slide.image === undefined ? { c: 'dimmed' } : {})}>
+                          {t(slide.caption)}
+                        </Text>
+                      ) : null}
+                    </Stack>
+
+                    {withControls ? <Box style={{ flex: 2 }} /> : null}
+                  </Box>
                 </Stack>
               )}
             </Paper>

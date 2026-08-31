@@ -20,12 +20,13 @@ import {
   IconUserPlus,
   ModalSheet,
   Page,
-  pageState,
+  Panel,
   Stack,
   TabRow,
   Text,
   TextInput,
   Tooltip,
+  pageState,
 } from '@/ui'
 
 import { TablePanel } from '../games'
@@ -149,179 +150,181 @@ export function GroupScreen() {
         </>
       }
     >
-      <Stack gap="md">
-        {failure !== null && (
-          <Alert color="red" title={t('group.actionFailed')}>
-            {failure}
-          </Alert>
-        )}
+      <Panel>
+        <Stack gap="md">
+          {failure !== null && (
+            <Alert color="red" title={t('group.actionFailed')}>
+              {failure}
+            </Alert>
+          )}
 
-        <TabRow
-          tabs={[
-            { value: 'members', label: t('group.members') },
-            { value: 'characters', label: t('section.characters') },
-          ]}
-          value={tab}
-          onChange={setTab}
-        >
-          {tab === 'characters' && <TablePanel groupId={group.id} role={group.role} />}
-          {tab === 'members' && (
-        <DataList
-          items={group.members}
-          getKey={(member) => member.user_id}
-          badges={(member: GroupMember) => (
-            <>
-              {member.user_id === me && (
-                <Badge size="xs" variant="light">
-                  {t('group.you')}
-                </Badge>
-              )}
-              {member.anonymous && (
-                <Tooltip label={t('group.guestExplained')}>
-                  <Badge size="xs" color="gray" variant="outline">
-                    {t('group.guest')}
+          <TabRow
+            tabs={[
+              { value: 'members', label: t('group.members') },
+              { value: 'characters', label: t('section.characters') },
+            ]}
+            value={tab}
+            onChange={setTab}
+          >
+            {tab === 'characters' && <TablePanel groupId={group.id} role={group.role} />}
+            {tab === 'members' && (
+          <DataList
+            items={group.members}
+            getKey={(member) => member.user_id}
+            badges={(member: GroupMember) => (
+              <>
+                {member.user_id === me && (
+                  <Badge size="xs" variant="light">
+                    {t('group.you')}
                   </Badge>
-                </Tooltip>
-              )}
-            </>
-          )}
-          actions={(member: GroupMember) => {
-            // The owner is nobody's to unseat, including their own, and a
-            // player manages no one. The server enforces all of this; the point
-            // of repeating it here is to not offer a button that is going to
-            // come back 403.
-            if (member.role === 'owner' || member.user_id === me || !canManage) return []
-            return [
-              ...(isOwner && member.role === 'player'
-                ? [
-                    {
-                      key: 'promote',
-                      label: t('group.makeDm'),
-                      onClick: () => void act(change.run(group.id, member.user_id, 'dm')),
-                    },
-                  ]
-                : []),
-              ...(isOwner && member.role === 'dm'
-                ? [
-                    {
-                      key: 'demote',
-                      label: t('group.makePlayer'),
-                      onClick: () => void act(change.run(group.id, member.user_id, 'player')),
-                    },
-                  ]
-                : []),
-              ...(isOwner
-                ? [{ key: 'handover', label: t('group.makeOwner'), onClick: () => setHandover(member) }]
-                : []),
+                )}
+                {member.anonymous && (
+                  <Tooltip label={t('group.guestExplained')}>
+                    <Badge size="xs" color="gray" variant="outline">
+                      {t('group.guest')}
+                    </Badge>
+                  </Tooltip>
+                )}
+              </>
+            )}
+            actions={(member: GroupMember) => {
+              // The owner is nobody's to unseat, including their own, and a
+              // player manages no one. The server enforces all of this; the point
+              // of repeating it here is to not offer a button that is going to
+              // come back 403.
+              if (member.role === 'owner' || member.user_id === me || !canManage) return []
+              return [
+                ...(isOwner && member.role === 'player'
+                  ? [
+                      {
+                        key: 'promote',
+                        label: t('group.makeDm'),
+                        onClick: () => void act(change.run(group.id, member.user_id, 'dm')),
+                      },
+                    ]
+                  : []),
+                ...(isOwner && member.role === 'dm'
+                  ? [
+                      {
+                        key: 'demote',
+                        label: t('group.makePlayer'),
+                        onClick: () => void act(change.run(group.id, member.user_id, 'player')),
+                      },
+                    ]
+                  : []),
+                ...(isOwner
+                  ? [{ key: 'handover', label: t('group.makeOwner'), onClick: () => setHandover(member) }]
+                  : []),
+                {
+                  key: 'remove',
+                  label: t('group.removeMember'),
+                  color: 'red' as const,
+                  onClick: () => void act(remove.run(group.id, member.user_id)),
+                },
+              ]
+            }}
+            columns={[
               {
-                key: 'remove',
-                label: t('group.removeMember'),
-                color: 'red' as const,
-                onClick: () => void act(remove.run(group.id, member.user_id)),
+                key: 'name',
+                header: t('group.member'),
+                primary: true,
+                // No `to`: a member is not a page. The name is the row's identity
+                // and the label every action here is announced with, which is why
+                // it is a string rather than only markup.
+                text: (member: GroupMember) => member.display_name || t('common.unnamed'),
+                render: (member: GroupMember) => (
+                  <Text size="sm">{member.display_name || t('common.unnamed')}</Text>
+                ),
               },
-            ]
-          }}
-          columns={[
-            {
-              key: 'name',
-              header: t('group.member'),
-              primary: true,
-              // No `to`: a member is not a page. The name is the row's identity
-              // and the label every action here is announced with, which is why
-              // it is a string rather than only markup.
-              text: (member: GroupMember) => member.display_name || t('common.unnamed'),
-              render: (member: GroupMember) => (
-                <Text size="sm">{member.display_name || t('common.unnamed')}</Text>
-              ),
-            },
-            {
-              key: 'role',
-              header: t('group.role'),
-              render: (member: GroupMember) => roleLabel(t, member.role),
-            },
-          ]}
-          empty={t('group.noMembers')}
-        />
-          )}
-          {tab === 'members' && canManage && (
-            <Group mt="md">
-              <Button
-                variant="light"
-                leftSection={<IconUserPlus size={ACTION_ICON_SIZE} />}
-                onClick={() => setInviting(true)}
-              >
-                {t('group.invite')}
-              </Button>
-            </Group>
-          )}
-        </TabRow>
+              {
+                key: 'role',
+                header: t('group.role'),
+                render: (member: GroupMember) => roleLabel(t, member.role),
+              },
+            ]}
+            empty={t('group.noMembers')}
+          />
+            )}
+            {tab === 'members' && canManage && (
+              <Group mt="md">
+                <Button
+                  variant="light"
+                  leftSection={<IconUserPlus size={ACTION_ICON_SIZE} />}
+                  onClick={() => setInviting(true)}
+                >
+                  {t('group.invite')}
+                </Button>
+              </Group>
+            )}
+          </TabRow>
 
-        <ModalSheet
-          opened={renaming}
-          onClose={() => setRenaming(false)}
-          title={t('groups.renameTitle')}
-          onSubmit={() => {
-            setRenaming(false)
-            void act(rename.run(group.id, newName))
-          }}
-        >
-          <Stack gap="sm">
-            <TextInput
-              label={t('common.name')}
-              value={newName}
-              error={fieldMessage(t, rename.fields, 'name')}
-              onChange={(event) => setNewName(event.currentTarget.value)}
-              data-autofocus
-            />
-            <Group justify="flex-end">
-              <Button variant="default" onClick={() => setRenaming(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" loading={rename.pending}>
-                {t('common.rename')}
-              </Button>
-            </Group>
-          </Stack>
-        </ModalSheet>
+          <ModalSheet
+            opened={renaming}
+            onClose={() => setRenaming(false)}
+            title={t('groups.renameTitle')}
+            onSubmit={() => {
+              setRenaming(false)
+              void act(rename.run(group.id, newName))
+            }}
+          >
+            <Stack gap="sm">
+              <TextInput
+                label={t('common.name')}
+                value={newName}
+                error={fieldMessage(t, rename.fields, 'name')}
+                onChange={(event) => setNewName(event.currentTarget.value)}
+                data-autofocus
+              />
+              <Group justify="flex-end">
+                <Button variant="default" onClick={() => setRenaming(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" loading={rename.pending}>
+                  {t('common.rename')}
+                </Button>
+              </Group>
+            </Stack>
+          </ModalSheet>
 
-        <InviteSheet
-          groupId={group.id}
-          opened={inviting}
-          onClose={() => {
-            setInviting(false)
-            refresh()
-          }}
-        />
+          <InviteSheet
+            groupId={group.id}
+            opened={inviting}
+            onClose={() => {
+              setInviting(false)
+              refresh()
+            }}
+          />
 
-        <ModalSheet
-          opened={handover !== null}
-          onClose={() => setHandover(null)}
-          title={t('group.handoverTitle')}
-        >
-          <Stack gap="sm">
-            {/* Named in full, because it is the one action here that cannot be
-                undone by the person taking it. */}
-            <Text size="sm">
-              {t('group.handoverWarning', { name: handover?.display_name ?? '' })}
-            </Text>
-            <Group justify="flex-end">
-              <Button variant="default" onClick={() => setHandover(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                loading={change.pending}
-                onClick={() => {
-                  const target = handover
-                  setHandover(null)
-                  if (target !== null) void act(change.run(group.id, target.user_id, 'owner'))
-                }}
-              >
-                {t('group.makeOwner')}
-              </Button>
-            </Group>
-          </Stack>
-        </ModalSheet>
-      </Stack>
+          <ModalSheet
+            opened={handover !== null}
+            onClose={() => setHandover(null)}
+            title={t('group.handoverTitle')}
+          >
+            <Stack gap="sm">
+              {/* Named in full, because it is the one action here that cannot be
+                  undone by the person taking it. */}
+              <Text size="sm">
+                {t('group.handoverWarning', { name: handover?.display_name ?? '' })}
+              </Text>
+              <Group justify="flex-end">
+                <Button variant="default" onClick={() => setHandover(null)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  loading={change.pending}
+                  onClick={() => {
+                    const target = handover
+                    setHandover(null)
+                    if (target !== null) void act(change.run(group.id, target.user_id, 'owner'))
+                  }}
+                >
+                  {t('group.makeOwner')}
+                </Button>
+              </Group>
+            </Stack>
+          </ModalSheet>
+        </Stack>
+      </Panel>
     </Page>
   )
 }

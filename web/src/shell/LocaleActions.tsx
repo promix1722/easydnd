@@ -1,4 +1,4 @@
-import { LOCALE_NAMES, LOCALES, useLocale, useSetLocale, useT } from '@/lib/i18n'
+import { LOCALE_FLAGS, LOCALE_NAMES, LOCALES, useLocale, useSetLocale, useT } from '@/lib/i18n'
 import { ActionIcon, IconCheck, IconLanguage, Menu, Tooltip } from '@/ui'
 
 /**
@@ -8,6 +8,10 @@ import { ActionIcon, IconCheck, IconLanguage, Menu, Tooltip } from '@/ui'
  * signed in, signed out, and as a guest -- which is the whole point of not
  * storing the choice on an account. A visitor who cannot read the landing page
  * cannot be asked to make an account first in order to be able to.
+ *
+ * Each row in the menu carries its country's flag beside the name. It is
+ * decoration and `aria-hidden`: the name is what identifies the language, and a
+ * flag would be the wrong thing to identify one by -- see `LOCALE_FLAGS`.
  *
  * A glyph rather than the two words, for the same reason the account and the
  * way out are glyphs: on a 390px phone this row already carries a wordmark, a
@@ -44,6 +48,9 @@ export function LocaleActions() {
           <Menu.Item
             key={each}
             onClick={() => setLocale(each)}
+            // The flag is decoration beside the name, not the label -- see
+            // LOCALE_FLAGS. Emoji rather than an icon, so it costs nothing.
+            leftSection={<span aria-hidden>{LOCALE_FLAGS[each]}</span>}
             // The tick is hidden rather than absent on the languages that are
             // not current, so the names stay in one column as you move down
             // the menu. Same trick as the section dropdown in MobileShell.

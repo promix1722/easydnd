@@ -79,6 +79,25 @@ describe('d20 geometry', () => {
     expect(new Set(centres).size).toBe(D20_FACES)
   })
 
+  /*
+   * The other winding, and the one that has no renderer-side symptom at all: a
+   * face's three corners map onto its cell in the atlas, and if that map
+   * reverses orientation the numeral is drawn mirrored -- correct place,
+   * correct size, backwards. The die looked right in every test and wrong in
+   * the hand.
+   *
+   * `v` runs downward, so it is flipped here to compare against a face's own
+   * winding, which is counter-clockwise seen from outside.
+   */
+  it('maps each cell the same way round as the face, so numerals are not mirrored', () => {
+    for (let index = 0; index < D20_FACES; index++) {
+      const [a, b, c] = atlasUV(index)
+      const area = -(b![0] - a![0]) * (c![1] - a![1]) + (b![1] - a![1]) * (c![0] - a![0])
+
+      expect(area).toBeGreaterThan(0)
+    }
+  })
+
   describe('faceUp', () => {
     // The identity quaternion leaves the die as built, so whichever face is
     // already pointing at +y is the answer -- and it must be a real face,

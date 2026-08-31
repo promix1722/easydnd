@@ -27,10 +27,11 @@ import {
   IconTrash,
   ModalSheet,
   Page,
-  pageState,
+  Panel,
   Stack,
   Text,
   TextInput,
+  pageState,
 } from '@/ui'
 
 import { atLeast, roleLabel } from '../groups/roles'
@@ -142,136 +143,138 @@ export function GameScreen() {
         ) : undefined
       }
     >
-      <Stack gap="md">
-        {failure !== null && (
-          <Alert color="red" title={t('group.actionFailed')}>
-            {failure}
-          </Alert>
-        )}
+      <Panel>
+        <Stack gap="md">
+          {failure !== null && (
+            <Alert color="red" title={t('group.actionFailed')}>
+              {failure}
+            </Alert>
+          )}
 
-        <DataList
-          items={game.characters}
-          getKey={(character) => character.id}
-          actions={(character: TableCharacter) =>
-            canManage
-              ? [
-                  {
-                    key: 'remove',
-                    // Out of this game, not off the table: giving up a seat is
-                    // not taking the character back.
-                    label: t('common.remove'),
-                    color: 'red' as const,
-                    onClick: () => void act(drop.run(gameId, character.id)),
-                  },
-                ]
-              : []
-          }
-          columns={[
-            {
-              key: 'name',
-              header: t('game.character'),
-              primary: true,
-              text: (character: TableCharacter) => character.name || t('common.unnamed'),
-              to: (character: TableCharacter) =>
-                `/groups/${game.group_id}/characters/${character.id}`,
-              render: (character: TableCharacter) => (
-                <Anchor component={Link} to={`/groups/${game.group_id}/characters/${character.id}`}>
-                  <Text size="sm">{character.name || t('common.unnamed')}</Text>
-                </Anchor>
-              ),
-            },
-            {
-              key: 'classes',
-              header: t('game.class'),
-              render: (character: TableCharacter) => classLine(character.classes),
-            },
-            {
-              key: 'level',
-              header: t('game.level'),
-              render: (character: TableCharacter) => character.level || null,
-            },
-          ]}
-          empty={t('game.empty')}
-        />
+          <DataList
+            items={game.characters}
+            getKey={(character) => character.id}
+            actions={(character: TableCharacter) =>
+              canManage
+                ? [
+                    {
+                      key: 'remove',
+                      // Out of this game, not off the table: giving up a seat is
+                      // not taking the character back.
+                      label: t('common.remove'),
+                      color: 'red' as const,
+                      onClick: () => void act(drop.run(gameId, character.id)),
+                    },
+                  ]
+                : []
+            }
+            columns={[
+              {
+                key: 'name',
+                header: t('game.character'),
+                primary: true,
+                text: (character: TableCharacter) => character.name || t('common.unnamed'),
+                to: (character: TableCharacter) =>
+                  `/groups/${game.group_id}/characters/${character.id}`,
+                render: (character: TableCharacter) => (
+                  <Anchor component={Link} to={`/groups/${game.group_id}/characters/${character.id}`}>
+                    <Text size="sm">{character.name || t('common.unnamed')}</Text>
+                  </Anchor>
+                ),
+              },
+              {
+                key: 'classes',
+                header: t('game.class'),
+                render: (character: TableCharacter) => classLine(character.classes),
+              },
+              {
+                key: 'level',
+                header: t('game.level'),
+                render: (character: TableCharacter) => character.level || null,
+              },
+            ]}
+            empty={t('game.empty')}
+          />
 
-        {/* Under the table, on the left. Two ways in, because they are two
-            different questions: one picks from what a group already shares, the
-            other from your own characters, which land on this game's table by
-            being seated. */}
-        {canManage && (
-          <Group>
-            <Button
-              variant="light"
-              leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
-              onClick={() => setPicking('group')}
-            >
-              {t('game.addFromGroup')}
-            </Button>
-            <Button
-              variant="light"
-              leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
-              onClick={() => setPicking('mine')}
-            >
-              {t('game.addMine')}
-            </Button>
-          </Group>
-        )}
-
-        <PickCharactersSheet
-          key={picking === 'group' ? 'group' : 'group-closed'}
-          opened={picking === 'group'}
-          title={t('game.addFromGroupTitle')}
-          description={t('game.pickShared')}
-          empty={t('game.nothingShared')}
-          characters={seatable}
-          loading={table.loading}
-          pending={add.pending}
-          onClose={() => setPicking(null)}
-          onAdd={(ids) => {
-            setPicking(null)
-            void act(add.run(gameId, ids))
-          }}
-        />
-
-        <FolderTreeSheet
-          key={picking === 'mine' ? 'mine' : 'mine-closed'}
-          opened={picking === 'mine'}
-          seated={seated}
-          pending={add.pending}
-          onClose={() => setPicking(null)}
-          onAdd={(ids) => {
-            setPicking(null)
-            void act(add.run(gameId, ids))
-          }}
-        />
-
-        <ModalSheet
-          opened={renaming}
-          onClose={() => setRenaming(false)}
-          title={t('games.renameTitle')}
-          onSubmit={() => {
-            setRenaming(false)
-            void act(rename.run(gameId, name))
-          }}
-        >
-          <Stack gap="sm">
-            <TextInput
-              label={t('common.name')}
-              value={name}
-              error={fieldMessage(t, rename.fields, 'name')}
-              onChange={(event) => setName(event.currentTarget.value)}
-            />
-            <Group justify="flex-end">
-              <Button variant="default" onClick={() => setRenaming(false)}>
-                {t('common.cancel')}
+          {/* Under the table, on the left. Two ways in, because they are two
+              different questions: one picks from what a group already shares, the
+              other from your own characters, which land on this game's table by
+              being seated. */}
+          {canManage && (
+            <Group>
+              <Button
+                variant="light"
+                leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
+                onClick={() => setPicking('group')}
+              >
+                {t('game.addFromGroup')}
               </Button>
-              <Button type="submit" loading={rename.pending}>
-                {t('common.rename')}
+              <Button
+                variant="light"
+                leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
+                onClick={() => setPicking('mine')}
+              >
+                {t('game.addMine')}
               </Button>
             </Group>
-          </Stack>
-        </ModalSheet>
-      </Stack>
+          )}
+
+          <PickCharactersSheet
+            key={picking === 'group' ? 'group' : 'group-closed'}
+            opened={picking === 'group'}
+            title={t('game.addFromGroupTitle')}
+            description={t('game.pickShared')}
+            empty={t('game.nothingShared')}
+            characters={seatable}
+            loading={table.loading}
+            pending={add.pending}
+            onClose={() => setPicking(null)}
+            onAdd={(ids) => {
+              setPicking(null)
+              void act(add.run(gameId, ids))
+            }}
+          />
+
+          <FolderTreeSheet
+            key={picking === 'mine' ? 'mine' : 'mine-closed'}
+            opened={picking === 'mine'}
+            seated={seated}
+            pending={add.pending}
+            onClose={() => setPicking(null)}
+            onAdd={(ids) => {
+              setPicking(null)
+              void act(add.run(gameId, ids))
+            }}
+          />
+
+          <ModalSheet
+            opened={renaming}
+            onClose={() => setRenaming(false)}
+            title={t('games.renameTitle')}
+            onSubmit={() => {
+              setRenaming(false)
+              void act(rename.run(gameId, name))
+            }}
+          >
+            <Stack gap="sm">
+              <TextInput
+                label={t('common.name')}
+                value={name}
+                error={fieldMessage(t, rename.fields, 'name')}
+                onChange={(event) => setName(event.currentTarget.value)}
+              />
+              <Group justify="flex-end">
+                <Button variant="default" onClick={() => setRenaming(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" loading={rename.pending}>
+                  {t('common.rename')}
+                </Button>
+              </Group>
+            </Stack>
+          </ModalSheet>
+        </Stack>
+      </Panel>
     </Page>
   )
 }
