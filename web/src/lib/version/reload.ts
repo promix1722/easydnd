@@ -61,10 +61,8 @@ export async function reloadOntoDeployedRelease(
   window.setTimeout(once, TAKEOVER_TIMEOUT_MS)
 
   // Fetches sw.js and installs it if the bytes differ. nginx serves that file
-  // no-cache, so the check is a real one rather than a cache hit. The spec has
-  // this resolve once the install job is done, so `waiting` is populated by the
-  // time we read it -- and if a browser ever disagrees, the timeout above is
-  // the answer rather than a second wait for `statechange`.
+  // no-cache -- and so does the preview server, `internal/api/http/static.go` --
+  // so the check is a real one rather than a cache hit.
   try {
     await registration.update()
   } catch {
@@ -72,8 +70,20 @@ export async function reloadOntoDeployedRelease(
     // worker waiting from an earlier check, and the timeout covers the rest.
   }
 
-  if (registration.waiting) {
-    registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+  // `update()` resolving does NOT mean the new worker is installed, and this
+  // file used to claim it did. The promise settles once the script has been
+  // fetched and the install *job* is running, so `waiting` is empty and
+  // `installing` is the worker that matters. Reading only `waiting` therefore
+  // fell straight through to the plain reload below -- fired, in one captured
+  // trace, four milliseconds after the new worker began precaching -- and the
+  // old worker was still in control, so it answered the navigation from its own
+  // precache with the very page the dialog was complaining about. The dialog
+  // came back, and the press appeared to do nothing. That is the whole of the
+  // "you have to press it twice" bug: the second press worked because by then
+  // the first press's install had finished.
+  const skippable = registration.waiting ?? (await installed(registration.installing))
+  if (skippable) {
+    skippable.postMessage({ type: 'SKIP_WAITING' })
     return
   }
 
@@ -81,4 +91,27 @@ export async function reloadOntoDeployedRelease(
   // this tab was told by a response that arrived before the bundle changed.
   // A plain reload is the whole remedy.
   once()
+}
+
+/**
+ * Waits for a worker that is installing to reach `installed`, where it can be
+ * told to skip waiting.
+ *
+ * Resolves with nothing for every other ending, and each of them is a case
+ * where there is no waiting worker to talk to: `redundant` is an install that
+ * failed, and `activating`/`activated` is a worker that took over on its own --
+ * which happens when nothing was controlling the page. The caller reloads
+ * plainly in both, and the timeout it armed covers an install that never
+ * finishes at all.
+ */
+function installed(worker: ServiceWorker | null): Promise<ServiceWorker | null> {
+  if (!worker) return Promise.resolve(null)
+  if (worker.state === 'installed') return Promise.resolve(worker)
+
+  return new Promise((resolve) => {
+    worker.addEventListener('statechange', () => {
+      if (worker.state === 'installed') resolve(worker)
+      else if (worker.state !== 'installing') resolve(null)
+    })
+  })
 }

@@ -164,8 +164,13 @@ export function DataList<T>({
               {columns.map((column) => (
                 <Table.Th key={column.key}>{column.header}</Table.Th>
               ))}
-              {/* Headerless by design: a column of buttons needs no title. */}
-              {anyActions && <Table.Th />}
+              {/* Headerless by design: a column of buttons needs no title.
+                  `w={1}` collapses it to its content -- the browser gives a
+                  1px column the least it can and hands the slack to the
+                  columns that have something to say -- so the control ends up
+                  against the right edge of the panel, under the folder's own
+                  menu glyph rather than adrift in the middle of the row. */}
+              {anyActions && <Table.Th w={1} />}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -190,7 +195,7 @@ export function DataList<T>({
                   </Table.Td>
                 ))}
                 {anyActions && (
-                  <Table.Td>
+                  <Table.Td w={1} ta="right">
                     <DesktopActions
                       actions={actions(item)}
                       name={primary?.primary === true ? primary.text(item) : ''}

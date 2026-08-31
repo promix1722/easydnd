@@ -131,6 +131,16 @@ export const ATLAS_ROWS = 4
  * `texture.flipY = false`: agreeing with the 2D drawing API is worth more than
  * agreeing with three's default, because the numerals are drawn with `fillText`
  * and read wrong if the two disagree.
+ *
+ * **The base runs left before right, and that is the whole of whether a numeral
+ * reads or is mirrored.** A face is wound counter-clockwise seen from outside,
+ * so the three corners of the cell have to be listed counter-clockwise *as a
+ * human sees the image* -- and because `v` points down, that is apex, then
+ * bottom-left, then bottom-right. Listing the base the other way round is an
+ * orientation-reversing map: every triangle lands in the right place, at the
+ * right size, with its number printed backwards. `d20Geometry.test.ts` pins the
+ * sign, because a mirrored 7 is the kind of wrong that only a person looking at
+ * the die can see.
  */
 export function atlasUV(faceIndex: number): [number, number][] {
   const column = faceIndex % ATLAS_COLUMNS
@@ -140,8 +150,8 @@ export function atlasUV(faceIndex: number): [number, number][] {
   // Apex up, base down, inset so the numeral never touches a cell edge.
   const local: [number, number][] = [
     [0.5, 0.06],
-    [0.95, 0.94],
     [0.05, 0.94],
+    [0.95, 0.94],
   ]
   return local.map(([u, v]) => [column * w + u * w, row * h + v * h])
 }

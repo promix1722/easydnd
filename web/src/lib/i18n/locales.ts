@@ -25,6 +25,23 @@ export const LOCALE_NAMES: Record<Locale, string> = {
   ru: 'Русский',
 }
 
+/**
+ * A flag beside each name in the switcher's menu.
+ *
+ * A language is not a country and the mapping is a lie in the general case --
+ * English is not Britain's alone -- but with two entries in a dropdown the flag
+ * is a colour to aim at rather than a claim, and the name beside it is what
+ * actually says which language it is.
+ *
+ * ponytail: emoji, not artwork. Windows ships no flag glyphs, so Chrome there
+ * draws the two-letter code instead of a picture -- legible, and still the
+ * right pair of letters. Swap for inline SVG only if that becomes a complaint.
+ */
+export const LOCALE_FLAGS: Record<Locale, string> = {
+  en: '\u{1F1EC}\u{1F1E7}',
+  ru: '\u{1F1F7}\u{1F1FA}',
+}
+
 /** Narrows a language tag to one this client has a catalogue for. */
 function isLocale(tag: string): tag is Locale {
   return (LOCALES as readonly string[]).includes(tag)

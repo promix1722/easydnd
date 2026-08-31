@@ -10,12 +10,12 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconUserCircle,
-  InstallButton,
   NavLink,
   ROW_HEIGHT,
   SECTIONS,
   sectionFor,
   Tooltip,
+  backdropFor,
   useDisclosure,
 } from '@/ui'
 
@@ -198,18 +198,18 @@ export function DesktopShell() {
           padding as `header-offset + shell-padding`, so overriding `pt` with a
           bare number drops the offset and slides the whole page up underneath
           the header. */}
+      {/* The picture behind the page, everywhere but the die -- see
+          ui/backdrop.ts. Neither the header nor the navbar takes it: they are
+          chrome over the content, and one photograph running under all three
+          would make them one surface. */}
       <AppShell.Main
         style={{
+          ...backdropFor(pathname),
           paddingTop: `calc(var(--app-shell-header-offset, 0rem) + ${CHROME_INSET}px)`,
         }}
       >
         <Outlet />
       </AppShell.Main>
-
-      {/* Outside the header and outside the navbar, because it places itself:
-          the bottom left corner, which here is the foot of a navbar that keeps
-          its list at the top. See ui/InstallAction.tsx. */}
-      <InstallButton />
     </AppShell>
   )
 }

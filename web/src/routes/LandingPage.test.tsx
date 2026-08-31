@@ -5,7 +5,7 @@ import { renderAt } from '@/test/render'
 
 import { LandingPage } from './LandingPage'
 
-const SLIDE_NAMES = ['Build a character', 'Join a group', 'Run an adventure']
+const SLIDE_NAMES = ['Build a character', 'Join a group', 'Run sessions']
 
 /** The fourth panel, which only a phone is offered. */
 const DICE_SLIDE = 'Roll a d20'
@@ -145,30 +145,31 @@ describe('LandingPage', () => {
    * the order you meet it, and a toy wedged into that sequence would interrupt
    * an argument to offer a distraction.
    *
-   * Asserted on the panels rather than on headings, because the die has no
-   * heading -- it carries no words at all, which is the point of it. Its name
-   * comes from an `aria-label`, the one panel where that is allowed, so this
-   * doubles as the check that the label is still there: lose it and the panel
-   * goes back to announcing itself as "slide 4 of 4".
+   * The die has a heading of its own now, so it belongs in this list rather
+   * than being checked apart from it -- which is also the check that it is
+   * named by what is on screen: lose the heading and the panel goes back to
+   * announcing itself as "slide 4 of 4".
    */
   it('puts the die last, behind the three that describe the app', () => {
     renderAt('mobile', <LandingPage />)
 
-    const panels = screen.getAllByRole('group').map((panel) => panel.getAttribute('aria-label'))
-    expect(panels[panels.length - 1]).toBe(DICE_SLIDE)
-
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(headings).toEqual(SLIDE_NAMES)
+    expect(headings).toEqual([...SLIDE_NAMES, DICE_SLIDE])
+
+    const panels = screen.getAllByRole('group')
+    expect(panels[panels.length - 1]).toBe(screen.getByRole('group', { name: DICE_SLIDE }))
   })
 
-  // The panel is the die and nothing else. Both strings were on it a moment
-  // ago and their absence is the requirement, not an accident of layout.
-  it('writes nothing at all on the die panel', () => {
+  // A heading and the die, and nothing else: the panel says what pressing it
+  // does and then lets it be pressed. The caption's absence is the requirement
+  // rather than an accident of layout -- there is nothing to say about a toy
+  // that throwing it does not say.
+  it('writes its name on the die panel and no more', () => {
     renderAt('mobile', <LandingPage />)
 
     const panel = screen.getByRole('group', { name: DICE_SLIDE })
 
-    expect(panel).not.toHaveTextContent('Roll a d20')
+    expect(screen.getByRole('heading', { level: 2, name: DICE_SLIDE })).toBeInTheDocument()
     expect(panel).not.toHaveTextContent('Twenty sides')
   })
 

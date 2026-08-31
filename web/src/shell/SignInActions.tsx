@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router'
 
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
-import { Button } from '@/ui'
+import { Button, InstallButton } from '@/ui'
 
 import { LocaleActions } from './LocaleActions'
 
@@ -27,14 +27,21 @@ export function SignInActions() {
   const { status } = useAuth()
   const t = useT()
 
-  // The language switcher is drawn whatever the button below decides, and on
+  // The two controls that are drawn whatever the button below decides, and on
   // /login too. Somebody choosing how to sign in is reading the most words
   // this app shows anybody, and being unable to read them in their own
-  // language until after they have an account is the wrong way round.
-  const language = <LocaleActions />
+  // language until after they have an account is the wrong way round. The
+  // install offer keeps the corner it has in the signed-in header, and usually
+  // draws nothing at all -- see ui/InstallAction.tsx.
+  const corner = (
+    <>
+      <InstallButton />
+      <LocaleActions />
+    </>
+  )
 
   // Nothing to offer on the page this button leads to.
-  if (location.pathname === '/login') return language
+  if (location.pathname === '/login') return corner
 
   // This chrome is normally the logged-out one, but /legal wears it for
   // everybody -- so somebody who is already signed in needs the way back to
@@ -42,7 +49,7 @@ export function SignInActions() {
   if (status === 'authenticated') {
     return (
       <>
-        {language}
+        {corner}
         <Button component={Link} to="/" variant="subtle">
           {t('auth.backToApp')}
         </Button>
@@ -52,11 +59,11 @@ export function SignInActions() {
 
   // Mid-check or offline: we do not know which of the two to offer, and
   // guessing "sign in" would tell a signed-in visitor they are not.
-  if (status !== 'anonymous') return language
+  if (status !== 'anonymous') return corner
 
   return (
     <>
-      {language}
+      {corner}
       {/* The current location rides along so that signing in returns the
           visitor to the deep link they arrived on. This is what replaces the
           old "the URL never changes" property, now that the way in is a page

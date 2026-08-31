@@ -18,12 +18,13 @@ import {
   IconTrash,
   ModalSheet,
   Page,
-  pageState,
-  Select,
+  Panel,
   SHEET_COMBOBOX,
+  Select,
   Stack,
   Text,
   TextInput,
+  pageState,
 } from '@/ui'
 
 import { atLeast } from '../groups/roles'
@@ -93,186 +94,188 @@ export function GamesScreen() {
 
   return (
     <Page trail={[]}>
-      <Stack gap="md">
-        <DataList
-          items={games.data.games}
-          getKey={(game) => game.id}
-          actions={(game: GameSummary) =>
-            // Each row edits its own game and nothing else. Whether you may is
-            // your rank at *that* table, which the row already carries.
-            canManage(game.group_id)
-              ? [
-                  {
-                    key: 'rename',
-                    label: t('common.rename'),
-                    icon: <IconPencil size={ACTION_ICON_SIZE} />,
-                    onClick: () => {
-                      setNewName(game.name)
-                      setRenaming(game)
+      <Panel>
+        <Stack gap="md">
+          <DataList
+            items={games.data.games}
+            getKey={(game) => game.id}
+            actions={(game: GameSummary) =>
+              // Each row edits its own game and nothing else. Whether you may is
+              // your rank at *that* table, which the row already carries.
+              canManage(game.group_id)
+                ? [
+                    {
+                      key: 'rename',
+                      label: t('common.rename'),
+                      icon: <IconPencil size={ACTION_ICON_SIZE} />,
+                      onClick: () => {
+                        setNewName(game.name)
+                        setRenaming(game)
+                      },
                     },
-                  },
-                  {
-                    key: 'delete',
-                    label: t('common.delete'),
-                    color: 'red' as const,
-                    icon: <IconTrash size={ACTION_ICON_SIZE} />,
-                    onClick: () => setDeleting(game),
-                  },
-                ]
-              : []
-          }
-          columns={[
-            {
-              key: 'name',
-              header: t('games.game'),
-              primary: true,
-              text: (game: GameSummary) => game.name,
-              to: (game: GameSummary) => `/games/${game.id}`,
-              render: (game: GameSummary) => (
-                <Anchor component={Link} to={`/games/${game.id}`}>
-                  <Text size="sm">{game.name}</Text>
-                </Anchor>
-              ),
-            },
-            {
-              key: 'group',
-              header: t('games.group'),
-              // The one meta value in the app that is a link rather than a
-              // fact: somebody who plays at three tables tells their Thursdays
-              // apart by it, and it is the way back to the group.
-              render: (game: GameSummary) => (
-                <Anchor component={Link} to={`/groups/${game.group_id}`} size="sm">
-                  {game.group_name}
-                </Anchor>
-              ),
-            },
-          ]}
-          empty={tables.length > 0 ? t('games.emptyForDm') : t('games.empty')}
-        />
+                    {
+                      key: 'delete',
+                      label: t('common.delete'),
+                      color: 'red' as const,
+                      icon: <IconTrash size={ACTION_ICON_SIZE} />,
+                      onClick: () => setDeleting(game),
+                    },
+                  ]
+                : []
+            }
+            columns={[
+              {
+                key: 'name',
+                header: t('games.game'),
+                primary: true,
+                text: (game: GameSummary) => game.name,
+                to: (game: GameSummary) => `/games/${game.id}`,
+                render: (game: GameSummary) => (
+                  <Anchor component={Link} to={`/games/${game.id}`}>
+                    <Text size="sm">{game.name}</Text>
+                  </Anchor>
+                ),
+              },
+              {
+                key: 'group',
+                header: t('games.group'),
+                // The one meta value in the app that is a link rather than a
+                // fact: somebody who plays at three tables tells their Thursdays
+                // apart by it, and it is the way back to the group.
+                render: (game: GameSummary) => (
+                  <Anchor component={Link} to={`/groups/${game.group_id}`} size="sm">
+                    {game.group_name}
+                  </Anchor>
+                ),
+              },
+            ]}
+            empty={tables.length > 0 ? t('games.emptyForDm') : t('games.empty')}
+          />
 
-        {/* Under the table, on the left. */}
-        {tables.length > 0 && (
-          <Group>
-            <Button
-              variant="light"
-              leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
-              onClick={() => {
-                setGroup(tables[0]?.id ?? null)
-                setOpening(true)
-              }}
-            >
-              {t('games.new')}
-            </Button>
-          </Group>
-        )}
-
-        <ModalSheet
-          opened={renaming !== null}
-          onClose={() => setRenaming(null)}
-          title={t('games.renameTitle')}
-          onSubmit={() => {
-            const target = renaming
-            setRenaming(null)
-            if (target !== null) void act(rename.run(target.id, newName))
-          }}
-        >
-          <Stack gap="sm">
-            <TextInput
-              label={t('common.name')}
-              value={newName}
-              error={fieldMessage(t, rename.fields, 'name')}
-              onChange={(event) => setNewName(event.currentTarget.value)}
-              data-autofocus
-            />
-            {rename.error !== null && (
-              <Alert color="red" title={t('games.renameFailed')}>
-                {rename.error}
-              </Alert>
-            )}
-            <Group justify="flex-end">
-              <Button variant="default" onClick={() => setRenaming(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" loading={rename.pending}>
-                {t('common.rename')}
-              </Button>
-            </Group>
-          </Stack>
-        </ModalSheet>
-
-        <ModalSheet
-          opened={deleting !== null}
-          onClose={() => setDeleting(null)}
-          title={t('games.deleteTitle')}
-        >
-          <Stack gap="sm">
-            <Text size="sm">
-              {t('games.deleteWarning', {
-                name: deleting?.name ?? '',
-                group: deleting?.group_name ?? '',
-              })}
-            </Text>
-            <Group justify="flex-end">
-              <Button variant="default" onClick={() => setDeleting(null)}>
-                {t('common.cancel')}
-              </Button>
+          {/* Under the table, on the left. */}
+          {tables.length > 0 && (
+            <Group>
               <Button
-                color="red"
-                loading={destroy.pending}
+                variant="light"
+                leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
                 onClick={() => {
-                  const target = deleting
-                  setDeleting(null)
-                  if (target !== null) void act(destroy.run(target.id))
+                  setGroup(tables[0]?.id ?? null)
+                  setOpening(true)
                 }}
               >
-                {t('common.delete')}
+                {t('games.new')}
               </Button>
             </Group>
-          </Stack>
-        </ModalSheet>
+          )}
 
-        <ModalSheet
-          opened={opening}
-          onClose={() => setOpening(false)}
-          title={t('games.openTitle')}
-          onSubmit={() => void create()}
-        >
-          <Stack gap="sm">
-            <Select
-              label={t('games.group')}
-              comboboxProps={SHEET_COMBOBOX}
-              data={tables.map((g: GroupSummary) => ({ value: g.id, label: g.name }))}
-              value={group}
-              onChange={setGroup}
-              allowDeselect={false}
-            />
-            <TextInput
-              label={t('common.name')}
-              placeholder={t('games.namePlaceholder')}
-              value={name}
-              error={fieldMessage(t, open.fields, 'name')}
-              onChange={(event) => setName(event.currentTarget.value)}
-              data-autofocus
-            />
-            {/* Inside the dialog that caused it. Raised to the page it sat
-                behind the modal, where it read as a failure of the whole
-                screen rather than of the form in front of you. */}
-            {open.error !== null && (
-              <Alert color="red" title={t('games.openFailed')}>
-                {open.error}
-              </Alert>
-            )}
-            <Group justify="flex-end">
-              <Button variant="default" onClick={() => setOpening(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" loading={open.pending}>
-                {t('games.open')}
-              </Button>
-            </Group>
-          </Stack>
-        </ModalSheet>
-      </Stack>
+          <ModalSheet
+            opened={renaming !== null}
+            onClose={() => setRenaming(null)}
+            title={t('games.renameTitle')}
+            onSubmit={() => {
+              const target = renaming
+              setRenaming(null)
+              if (target !== null) void act(rename.run(target.id, newName))
+            }}
+          >
+            <Stack gap="sm">
+              <TextInput
+                label={t('common.name')}
+                value={newName}
+                error={fieldMessage(t, rename.fields, 'name')}
+                onChange={(event) => setNewName(event.currentTarget.value)}
+                data-autofocus
+              />
+              {rename.error !== null && (
+                <Alert color="red" title={t('games.renameFailed')}>
+                  {rename.error}
+                </Alert>
+              )}
+              <Group justify="flex-end">
+                <Button variant="default" onClick={() => setRenaming(null)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" loading={rename.pending}>
+                  {t('common.rename')}
+                </Button>
+              </Group>
+            </Stack>
+          </ModalSheet>
+
+          <ModalSheet
+            opened={deleting !== null}
+            onClose={() => setDeleting(null)}
+            title={t('games.deleteTitle')}
+          >
+            <Stack gap="sm">
+              <Text size="sm">
+                {t('games.deleteWarning', {
+                  name: deleting?.name ?? '',
+                  group: deleting?.group_name ?? '',
+                })}
+              </Text>
+              <Group justify="flex-end">
+                <Button variant="default" onClick={() => setDeleting(null)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  color="red"
+                  loading={destroy.pending}
+                  onClick={() => {
+                    const target = deleting
+                    setDeleting(null)
+                    if (target !== null) void act(destroy.run(target.id))
+                  }}
+                >
+                  {t('common.delete')}
+                </Button>
+              </Group>
+            </Stack>
+          </ModalSheet>
+
+          <ModalSheet
+            opened={opening}
+            onClose={() => setOpening(false)}
+            title={t('games.openTitle')}
+            onSubmit={() => void create()}
+          >
+            <Stack gap="sm">
+              <Select
+                label={t('games.group')}
+                comboboxProps={SHEET_COMBOBOX}
+                data={tables.map((g: GroupSummary) => ({ value: g.id, label: g.name }))}
+                value={group}
+                onChange={setGroup}
+                allowDeselect={false}
+              />
+              <TextInput
+                label={t('common.name')}
+                placeholder={t('games.namePlaceholder')}
+                value={name}
+                error={fieldMessage(t, open.fields, 'name')}
+                onChange={(event) => setName(event.currentTarget.value)}
+                data-autofocus
+              />
+              {/* Inside the dialog that caused it. Raised to the page it sat
+                  behind the modal, where it read as a failure of the whole
+                  screen rather than of the form in front of you. */}
+              {open.error !== null && (
+                <Alert color="red" title={t('games.openFailed')}>
+                  {open.error}
+                </Alert>
+              )}
+              <Group justify="flex-end">
+                <Button variant="default" onClick={() => setOpening(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" loading={open.pending}>
+                  {t('games.open')}
+                </Button>
+              </Group>
+            </Stack>
+          </ModalSheet>
+        </Stack>
+      </Panel>
     </Page>
   )
 }

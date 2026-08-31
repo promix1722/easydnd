@@ -213,6 +213,12 @@ dialog never triggers and passkeys are unavailable.
 `make preview` answers all of it by being a different thing rather than a
 better dev server:
 
+Both of the update path's real bugs were found here rather than in production,
+which is the argument for having it: the browser reusing a cached `sw.js`, and
+the reload firing before the new worker had installed. See
+[Why registerType is 'prompt'](#why-registertype-is-prompt).
+
+
 - It serves **the built bundle**, not a development approximation of it --
   `make web/build` first, then the real `web/dist` with its real service
   worker and precache. No Vite, and so **no HMR**: restart to rebuild.
@@ -220,7 +226,21 @@ better dev server:
   the same process that answers `/v1` (`internal/api/http/static.go`), so there
   is one origin and no proxy between them. The flag is development-only and
   unset in production, where nginx serves the bundle and owns the caching
-  policy this deliberately does not reproduce.
+  policy this deliberately does not reproduce -- except for one rule it cannot
+  do without. Served with a `Last-Modified` and no `Cache-Control`, `sw.js` is
+  open to *heuristic* freshness, and a browser reusing it means
+  `registration.update()` installs nothing, the update dialog's reload has no
+  new worker to wait for, and the old worker answers the navigation from its own
+  precache: the same page, and the dialog a second time. So `staticSite` says
+  `no-cache` on everything and `immutable` on the content-hashed names, which is
+  the shape of the nginx blocks for `/sw.js` and `/assets/`. Its SPA fallback
+  stops at
+  `/assets/`, which nginx answers `=404`: those names carry a content hash, so a
+  request for one that is gone is a page built against an older bundle, and
+  answering it with `index.html` gives a module script an HTML body and a MIME
+  type error that names nothing that went wrong. Restarting a preview rebuilds
+  the bundle under any tab still holding the last one, so this is the failure a
+  preview hits most.
 - It listens on a **fixed 8090**, reached at `https://hton.cloud:8890`, where
   nginx terminates TLS with the real certificate the host already has. That is
   what makes it a secure context.
@@ -531,6 +551,17 @@ asserting on the mock.
 The numerals are drawn to a canvas at load rather than shipped as an image:
 no binary asset to generate, commit and keep in step with the palette -- the
 argument `scripts/gen-icons.mjs` exists to make, minus the file.
+
+That canvas is a 5x4 atlas, and each face maps onto one cell through `atlasUV`
+-- a mapping with a second winding to get right, quite apart from the one the
+mesh and the collider share. A face is wound counter-clockwise seen from
+outside, so its three corners have to be listed counter-clockwise *as a human
+sees the image*; `v` runs downward, so that order is apex, bottom-left,
+bottom-right. Listed the other way round the map reverses orientation and every
+numeral is drawn mirrored -- right place, right size, backwards, and invisible
+to a suite that can only check where triangles are. `d20Geometry.test.ts` pins
+the sign of that area now, which is the only thing standing between the die and
+a backwards 7.
 
 `embla-carousel` itself is now in `check-layers.mjs`'s `UI_ONLY_PACKAGES`.
 `@mantine/carousel` was always guarded by the `@mantine/` entry, but the engine
@@ -1969,12 +2000,17 @@ committing to the words for it was the cheap order to do the work in: the
 layout, the swipe and the accessible names settled first, against panels that
 were literally empty, and the copy arrived after.
 
-The captions in `routes/LandingPage.tsx` are **sample copy** and are marked as
-such where they live: the right length and the right shape, not the words this
-page ships with. Two of them describe what the app does; `Run an adventure`
-describes intent, because the battle tracker is not built. That is the one to
-keep honest -- a landing page promising it would be the only thing on
-easydnd.org that did.
+The captions in `routes/LandingPage.tsx` are the page's own copy now; the sample
+text they replaced had done its job, which was to hold the shape while the layout
+was settled. Two of them describe what the app does; `Run sessions` describes
+intent, because the battle tracker is not built. That is the one to keep honest
+-- a landing page promising it would be the only thing on easydnd.org that did.
+
+It is also the one place in the project that uses **session** for a sitting at a
+table. Everywhere else that is a *game*, and a session is being signed in -- the
+distinction the README draws and the app's own navigation keeps. The landing page
+is read by somebody who has neither, and to them "session" is the evening being
+described; the word stops at the sign-in boundary.
 
 Those three panels are also the three sections a signed-in visitor gets, and
 since `/games` joined the navigation the third has somewhere to lead. What is
@@ -2022,13 +2058,18 @@ There is a fourth panel below the breakpoint: a d20 you can pick up and throw
 number. It is the only thing on this page that does anything, and that is the
 argument for it.
 
-**The panel carries no words.** No heading, no caption -- the die fills it edge
-to edge and is the whole of it. That makes it the one slide that cannot be
-named by a heading it does not have, so it is named by an `aria-label`: the
-exact exception the "label panels by their own heading" rule was written
-against. It is allowed here for the reason the rule exists to protect. That
-rule guards against two spellings of one name drifting apart, and there is no
-second spelling on a panel with nothing written on it.
+**The panel carries its heading and no caption.** The scene takes the whole panel
+and the heading floats over it, so the die rolls behind its own name; there is
+nothing to say about a toy that throwing it does not say. Stacking the two -- the
+first arrangement -- cost the die a heading's height on the one viewport where
+the panel is narrowest, and a d20 with less room to travel is a duller throw. The
+heading is `pointer-events: none`, without which it would be a dead strip across
+the top of a toy that is grabbed and flung with pointer events on the canvas. It carried no words at all for a while, and was named
+by an `aria-label` for exactly that reason -- the one exception to "label a panel
+by its own heading" this page allowed. The exception is gone with the emptiness:
+a panel whose name is on screen is named the way the other three are, and the
+padding is on the heading rather than on the panel so the scene still reaches the
+edges it bounces off.
 Every section of the app is behind sign-in, so a curious visitor has nothing to
 try -- and a die is the one piece of this product that works with no account,
 no character and no table. It is a toy and not a preview: it rolls, it says
@@ -2060,6 +2101,145 @@ the accessibility contract the mark used to hold up -- moved, not dropped -- and
 `LandingPage.test.tsx` pins the wiring and not merely the name, because an id
 that stops resolving turns every panel back into "Carousel slide" without
 failing a test that only looked one up.
+
+### A sheet for the content to sit on
+
+The pattern is a background, so anything laid straight onto it competes with it:
+a table's header rule and its row separators are hairlines, and hairlines are the
+first thing a busy ground eats. `ui/Panel` is the answer -- the `Paper` the
+character list's folders have always used, generalised so a screen asks for one
+by name instead of spelling out three props. It fills with
+`--mantine-color-body`, so the pattern stops at its border in both colour schemes
+with nothing said about either.
+
+Five screens take one: the group list, the game list, a group's tabs, a game's
+roster, and the whole of character creation. What stays outside it is the page's
+heading, trail and actions -- they say where you are, and where you are is not
+part of what you are looking at, which is also why this is not something `ui/Page`
+does for every screen.
+
+### The pattern behind every page
+
+`ui/backdrop.ts` tiles a sheet of hand-drawn marginalia -- dice, swords, scrolls,
+a dragon -- behind the main box of all three chromes, washed down to almost
+nothing. Before it the app was flat theme colour everywhere except the landing
+carousel, so signing in was a cut from three photographs to a blank sheet.
+
+A photograph was tried here first and is the wrong kind of picture for the job:
+it has a subject, and a subject behind a table of characters competes with it. A
+pattern has none. It is texture, it repeats, and one 170KB tile serves every page
+at every size -- where a photograph has to cover a viewport.
+
+The wash is `--mantine-color-body` at 88% via `color-mix`, not a pair of `rgba()`
+literals, and that is what makes one declaration serve both colour schemes: the
+variable is white in the light one and near-black in the dark, so the drawing is
+lightened or darkened towards whichever page it sits on and every foreground
+colour keeps the contrast it was chosen against. In the dark scheme it inverts --
+dark lines on a ground a shade lighter than the page -- which is the same drawing
+and reads the same way. The tile is 1024px square drawn at 512, small enough to
+read as texture rather than illustration.
+
+It goes on `AppShell.Main` only. The header and the desktop navbar keep their own
+flat grounds: they are chrome sitting over the content, and one sheet of pattern
+running under all three would read as one surface. `backdropFor` is the opt-out,
+and `/roll` is the only page that takes it -- the die's screen is already a scene
+of its own, and a drawing behind a lit floor is two pictures in one box, the same
+argument that keeps the landing carousel's fourth panel free of art.
+
+The landing page is the other exception, and it belongs to the *chrome* rather
+than to the path: `/` is the carousel signed out and the character list signed
+in, and only the first does without a backdrop -- it is three photographs
+already. So `shell/LandingShell.tsx` makes that call, while `backdropFor` carries
+the die's. The character list takes the pattern like every other page, and so do
+`/login` and `/legal`, which wear the landing chrome.
+
+`background-attachment` is `scroll` rather than `fixed`: iOS Safari sizes a fixed
+background against the document rather than the viewport, and a repeating tile
+has no framing to hold still anyway.
+
+### The art in the panels
+
+Each panel is filled by a photograph of its own -- `src/assets/landing-valley.webp`
+behind "Build a character", `landing-ship.webp` behind the group,
+`landing-volcano.webp` behind the adventure. One picture per panel rather than
+one behind the carousel, because the art belongs to the thing the panel is about
+and should travel with it as you swipe. The die keeps its own background -- its
+scene is a canvas, and a photograph behind that is two pictures in one box.
+
+**Nothing is laid over the picture. The contrast is on the letters instead.** A
+scrim was tried first and is exactly what the art is for -- a photograph behind a
+sheet of translucent white is not a photograph. What replaced it is a halo: each
+panel's words carry a three-stop `text-shadow` in the opposite colour, which is
+as wide as the letters and touches nothing else. The stops run tight to loose,
+because the tight pair is what separates a stroke from a busy background (a lava
+flow is high-frequency, and one soft shadow washes across it without ever getting
+dark at the edge of a letter) while the loose one carries the block of words.
+
+There are two variants and a panel names the one its picture wants -- `INK`,
+selected by each slide's `ink`. `onDark` is white in a black halo and is what the
+valley and the volcano take; `onLight` is black in a white halo, for the ship.
+Chosen per picture rather than derived from the colour scheme, because a
+photograph is neither light nor dark, and these are not even the same kind of
+picture.
+
+Darkening the photograph under the words was tried on the valley and reverted.
+It is the opposite trade -- the words are left alone and the picture pays -- and
+the picture is what the panel is for. The halo stays: it is as wide as the
+letters and the photograph is untouched everywhere else.
+
+The pair is set once on the stack, which is also what keeps the caption's usual
+`dimmed` grey -- unreadable over any of them -- off the panels that have a
+picture. It stays on the ones that do not.
+
+**Where the words sit on the picture.** The block starts a quarter of the way
+down the panel, and on a wide screen a third of the way across it: dead centre
+puts a paragraph over the middle of the photograph, which is where its subject
+is. The two fractions differ because they answer different questions -- the
+horizontal one is about where the subject stands in these pictures, the vertical
+one about a block that grows downward from its heading and should not end up in
+the lower half.
+
+The vertical quarter is a *fixed* `flex-basis: 25%` spacer above the block, which
+is what puts every heading in the carousel on one line. The panel carries no
+padding of its own at either width -- the words hold their own inset instead --
+so that quarter is a quarter of the panel rather than a quarter of what is left
+inside its padding, which is not the same fraction on a phone as on a laptop.
+
+Below the breakpoint the spacer is a sixth instead. A phone's panel is a tall
+column holding one block of text, so a quarter of it is a screenful of picture
+before the first line -- and the top edge itself, which this tried in between,
+leaves the heading nothing to sit against. Sharing the leftover
+space between two flexible spacers -- the first attempt -- measures from the
+middle of a block whose height is the length of its own caption, so the three
+headings sat at three heights and jumped as you swiped. `flex-basis` in percent
+is read against the panel's height, unlike a percentage padding, which resolves
+against width even when it is `padding-top`. The horizontal third is still a 1:2
+pair of flexible spacers, where nothing has to line up between panels. Below the
+breakpoint the block spans the panel instead -- a third of 390px is not a margin,
+it is a column too narrow to set type in.
+
+Caption and heading are both ranged left, on one edge. The caption was justified
+for a while, hyphenated by `documentElement.lang` (which `LocaleProvider` keeps
+current), and it cost more than it bought: at four or five words to a line the
+word spaces stretch visibly, no two lines set the same colour, and over a
+photograph every gap shows a different piece of picture. A ragged right edge is
+the cheaper thing to look at. The heading was centred before that, which read as
+a heading belonging to something else. A fourth photograph takes whichever
+variant suits it; the upgrade, if two ever stop being enough, is sampling the
+image rather than adding a third.
+
+Each is `cover` and pinned to the **top** edge, not centred: the panel is taller
+than the pictures' aspect at most sizes, so something is always cropped, and
+these three are framed to be read downward from the top. Centring, the default
+worth having for a photograph nobody composed for this box, takes the crop off
+both ends instead.
+
+Both files are 1920px wide WebP, around a quarter of a megabyte each, imported
+rather than dropped in `public/` so Vite content-hashes them and the immutable
+cache rule in `deploy/nginx/easydnd.conf` applies. One size for every viewport;
+a `<picture>` with a narrow variant is the upgrade if transfer size on a phone
+ever becomes a complaint. The art is decorative and carries no accessible name:
+the headings say what the page is.
 
 The dragon mark went with the emptiness. The old `Center` existed because a lone
 mark on a blank page should read as optically centred against the *window* --
@@ -3001,6 +3181,12 @@ leave exactly where it is.
 and is drawn for guests and signed-out visitors too -- somebody who cannot read
 the landing page should not have to make an account before they can.
 
+Each row in its menu carries a flag emoji beside the name (`LOCALE_FLAGS` in
+`lib/i18n/locales.ts`). A language is not a country, so the flag is `aria-hidden`
+decoration and the name it sits beside is what actually identifies the row.
+Emoji rather than artwork: Windows ships no flag glyphs, so Chrome there draws
+the two-letter code instead -- still the right pair of letters.
+
 The choice is autodetected from the browser on first load and kept in
 `sessionStorage` under `easydnd.locale`. **Not on the account**, so a guest has
 one; **not in `localStorage`**, so it is this visit's business -- the same trade
@@ -3066,14 +3252,20 @@ to dismiss, so nothing has to be remembered, and the rule about there being no
 It renders `null` unless there is something to offer, so an installed app and a
 browser that cannot install both get the chrome exactly as it was.
 
-**It places itself, in the bottom left corner, at every width.** It sat in the
-header for a while, which is the row that says where you are and how to leave --
-and an offer is neither. The corner is also the one spot free in all three
-chromes: a phone's header is four controls across 390px, the desktop navbar
-keeps its list at the top, and the landing footer already carries three things.
-Because it is `position: fixed` no shell has to arrange it; each simply mounts
-it beside its bars. Its `z-index` deliberately sits under a dialog's, since an
-offer floating over the sheet it opened is worse than no offer at all.
+**It is a glyph in the header, left of the language.** It spent a while
+floating in the bottom left corner, `position: fixed`, on the argument that an
+offer does not belong in the row that says where you are and how to leave. What
+that bought was a control sitting on top of the page's own content at every
+width -- over the foot of a table, over the landing footer -- which is worse
+than being one more glyph in the corner the rest of the chrome already shares.
+So no shell mounts it any more: `shell/AccountActions` draws it for the two
+signed-in chromes and `shell/SignInActions` for the landing one, in both cases
+immediately before the language.
+
+**Icon only**, for the same reason the language and the way out are icons: on a
+390px row the word "Install" is width this offer has not earned. It survives as
+the control's `aria-label` and as its tooltip, so nothing is lost to a screen
+reader.
 
 Three answers, kept as a string because `useSyncExternalStore` compares
 snapshots by identity and an object rebuilt per call re-renders for ever:
@@ -3196,7 +3388,27 @@ live tabs, and Workbox's template emits a `message` listener for
 `{type: 'SKIP_WAITING'}`. `reload.ts` calls `registration.update()`, sends that
 message to the waiting worker, and reloads on `controllerchange` -- with a
 five-second fallback, because the button has to do something even if the worker
-is wedged. It is written against `navigator.serviceWorker` rather than
+is wedged.
+
+**`update()` resolving is not the install finishing**, and reading that wrong is
+what made the dialog's button need pressing twice. The promise settles once the
+script has been fetched and the install job is running: `registration.waiting` is
+empty and `registration.installing` is the worker that matters. Reading only
+`waiting` fell through to the plain reload -- four milliseconds after the new
+worker began precaching, in the trace that found this -- and the old worker,
+still in control, answered the navigation from its own precache with the same
+page the dialog was complaining about. The second press worked because the first
+press's install had finished by then. `reload.ts` now waits for an installing
+worker to reach `installed` before sending `SKIP_WAITING`, and treats
+`redundant`, `activating` and `activated` as "nothing to skip" -- a plain reload,
+which is right for each of them. `reload.test.ts` pins the ordering.
+
+That trace also showed the preview server answering the worker's precache fetch
+of `/index.html` with a 301 to `./`: both `http.FileServer` and `http.ServeFile`
+redirect that name. Every install spent a redirect on it and stored a response
+marked `redirected`, which a browser may refuse to hand to a navigation. nginx
+serves the file, so `internal/api/http/static.go` opens it and hands it to
+`ServeContent` instead. It is written against `navigator.serviceWorker` rather than
 `virtual:pwa-register` so that it stays ordinary TypeScript: the virtual module
 resolves only through the plugin, which would make it a build-time dependency of
 every test that touches the file.

@@ -10,9 +10,9 @@ import {
   IconChevronDown,
   IconDice5,
   IconUserCircle,
-  InstallButton,
   Menu,
   SECTIONS,
+  backdropFor,
   sectionFor,
 } from '@/ui'
 import type { Section } from '@/ui'
@@ -217,14 +217,12 @@ export function MobileShell() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Main>
+      {/* The picture behind the page, everywhere but the die -- see
+          ui/backdrop.ts. Not behind this header: chrome keeps its own flat
+          ground. */}
+      <AppShell.Main style={backdropFor(pathname)}>
         <Outlet />
       </AppShell.Main>
-
-      {/* Outside the header, because it places itself: the bottom left corner,
-          clear of a 390px row that already holds four controls. See
-          ui/InstallAction.tsx. */}
-      <InstallButton />
 
     </AppShell>
   )

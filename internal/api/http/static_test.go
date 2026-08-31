@@ -91,6 +91,70 @@ func TestWithoutABundleNothingChanges(t *testing.T) {
 	}
 }
 
+// TestAMissingAssetIs404NotTheIndex pins the divergence that produced a
+// misleading error rather than a missing file.
+//
+// Names under /assets/ carry a content hash, so a request for one that is gone
+// is a page built against an older bundle -- a tab left open across a rebuild.
+// Answering it with index.html hands a `<script type="module">` an HTML body,
+// and the browser reports a MIME type error naming neither the stale page nor
+// the missing chunk. nginx answers `=404` here; so does this.
+func TestAMissingAssetIs404NotTheIndex(t *testing.T) {
+	r := routerServing(t, bundle(t))
+
+	rec := do(t, r, http.MethodGet, "/assets/index-gone.js", nil)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("GET a vanished asset = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+	if body := rec.Body.String(); strings.Contains(body, "<!doctype html") {
+		t.Errorf("body = %q, want anything but the index", body)
+	}
+
+	// The asset that is there is still served, and still as itself.
+	rec = do(t, r, http.MethodGet, "/assets/index-abc.js", nil)
+	if rec.Code != http.StatusOK {
+		t.Errorf("GET a real asset = %d, want %d", rec.Code, http.StatusOK)
+	}
+}
+
+// TestTheBundleSaysHowLongItKeeps covers the half of production's caching policy
+// this server has to carry: without it a browser is free to reuse sw.js on
+// heuristic freshness, and the update dialog's reload finds no new worker to
+// wait for and comes back to the same page.
+func TestTheBundleSaysHowLongItKeeps(t *testing.T) {
+	r := routerServing(t, bundle(t))
+
+	for path, want := range map[string]string{
+		"/":                    "no-cache",
+		"/index.html":          "no-cache",
+		"/sw.js":               "no-cache",
+		"/characters":          "no-cache", // a deep link, answered by the index
+		"/assets/index-abc.js": "public, max-age=31536000, immutable",
+		"/workbox-abc123.js":   "public, max-age=31536000, immutable",
+	} {
+		rec := do(t, r, http.MethodGet, path, nil)
+		if got := rec.Header().Get("Cache-Control"); got != want {
+			t.Errorf("GET %s Cache-Control = %q, want %q", path, got, want)
+		}
+	}
+}
+
+// TestIndexHtmlIsServedRatherThanRedirected pins the other thing the service
+// worker's install depends on: it precaches /index.html by that name, and
+// net/http's helpers answer it with a 301 to ./, so the install spent a
+// redirect and stored a response marked `redirected`. nginx serves the file.
+func TestIndexHtmlIsServedRatherThanRedirected(t *testing.T) {
+	r := routerServing(t, bundle(t))
+
+	rec := do(t, r, http.MethodGet, "/index.html", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /index.html = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if !strings.Contains(rec.Body.String(), "<!doctype html") {
+		t.Errorf("body = %q, want the index", rec.Body.String())
+	}
+}
+
 // TestAPIPathsNeverGetTheBundle is the one worth having.
 //
 // A fallback that answered /v1 with index.html would hand the client 200 and

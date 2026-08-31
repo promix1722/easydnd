@@ -141,6 +141,9 @@ export type { TabRowProps, TabRowTab } from './TabRow'
 
 // Viewport access, for the shell and for components whose two renderings share
 // no markup. Prefer the primitives above.
+export { PAGE_BACKDROP, backdropFor } from './backdrop'
+export { Panel } from './Panel'
+export type { PanelProps } from './Panel'
 export { useIsDesktop } from './useIsDesktop'
 
 // The content cap, re-exported so a screen has one import surface for the

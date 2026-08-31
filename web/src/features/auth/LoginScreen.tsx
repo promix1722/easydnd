@@ -70,7 +70,12 @@ export function LoginScreen() {
   }
 
   return (
-    <Stack gap="lg" maw={560} mx="auto" py="xl">
+    // No padding at the top: the shell already sets its own around the main
+    // box, and `py` added a second helping of it under the header -- enough on
+    // a phone to push the first card most of the way down the screen. The
+    // bottom keeps its inset, where nothing else provides one and the last card
+    // would otherwise sit on the edge of the viewport.
+    <Stack gap="lg" maw={560} mx="auto" pb="xl">
       <Title order={2}>{t('login.title')}</Title>
 
       {/* One alert for every flow. Whichever attempt failed most recently is

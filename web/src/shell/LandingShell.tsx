@@ -1,6 +1,6 @@
-import { Outlet } from 'react-router'
+import { Outlet, useLocation } from 'react-router'
 
-import { AppShell, Group, InstallButton } from '@/ui'
+import { AppShell, Group, backdropFor } from '@/ui'
 
 import { HEADER_BOX, SAFE_BOTTOM, SAFE_TOP } from './chrome'
 import { LandingFooter } from './LandingFooter'
@@ -27,6 +27,8 @@ import { Wordmark } from './Wordmark'
  * against a number repeated in two files.
  */
 export function LandingShell() {
+  const { pathname } = useLocation()
+
   return (
     <AppShell
       header={{ height: HEADER_BOX }}
@@ -45,17 +47,22 @@ export function LandingShell() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Main>
+      {/* The picture behind /login and /legal -- see ui/backdrop.ts -- and not
+          behind the landing page itself, which is three photographs already.
+          A washed-out fourth one showing through the gap between two panels is
+          the page arguing with itself.
+
+          Only in this chrome. `/` is the character list once you are signed in,
+          and that page takes the picture like every other -- so the exception
+          belongs to the landing page rather than to the path, and cannot live
+          in `backdropFor` beside the die's. */}
+      <AppShell.Main style={pathname === '/' ? undefined : backdropFor(pathname)}>
         <Outlet />
       </AppShell.Main>
 
       <AppShell.Footer>
         <LandingFooter />
       </AppShell.Footer>
-
-      {/* Outside every bar, because it places itself: the bottom left corner.
-          See ui/InstallAction.tsx. */}
-      <InstallButton />
     </AppShell>
   )
 }

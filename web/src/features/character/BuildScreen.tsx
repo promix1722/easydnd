@@ -23,17 +23,7 @@ import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
-import {
-  Alert,
-  Badge,
-  Button,
-  Group,
-  ModalSheet,
-  Page,
-  Stack,
-  TabDeck,
-  Text,
-} from '@/ui'
+import { Alert, Badge, Button, Group, ModalSheet, Page, Panel, Stack, TabDeck, Text } from '@/ui'
 import type { Crumb } from '@/ui'
 
 import {
@@ -525,148 +515,150 @@ export function BuildScreen() {
         ? { subtitle: t('build.subtitleComplete') }
         : {})}
     >
-      <Stack gap="lg">
+      <Panel>
+        <Stack gap="lg">
 
-        {failure !== null && (
-          <Alert color="red" title={t('build.rejected')}>
-            <Stack gap={4}>
-              <Text size="sm">{failure}</Text>
-              {fields.map((field) => (
-                <Text key={field.field} size="xs" c="dimmed">
-                  {describeField(t, field)}
-                </Text>
-              ))}
-            </Stack>
-          </Alert>
-        )}
-
-        <TabDeck
-          // "Character build" rather than the character's name, which is
-          // already the crumb above this. A landmark renamed per character
-          // would give a screen-reader user a different table of contents on
-          // every build.
-          label={t('build.deckLabel')}
-          value={stage}
-          onChange={(next) => goToStage(next as Stage)}
-          /*
-            Not until there is a character. While one is being posed for, a tab
-            press *creates* it rather than moving anywhere, so a swipe would be
-            a gesture the screen answers by refusing to move -- and a deck that
-            snaps back is worse than one that never gives.
-          */
-          swipeable={!posingName}
-          panels={STAGES.map((each) => {
-            // Where Next goes from *this* tab, which is a fact about the tab
-            // and not about the one on screen -- every panel is mounted, so
-            // every panel's button has to be its own.
-            const after = stageAfter(each, open)
-            return {
-              value: each,
-              label: stageLabel(t, each),
-              content: (
-                <StagePanel
-                  blocks={blocksByStage.get(each) ?? []}
-                  openKey={openKey}
-                  onOpen={openBlock}
-                  asking={asking}
-                  names={view.names}
-                  onAnswerPicks={(asked, picks) =>
-                    submitEvent(asked, eventFor(asked.prompt, picks))
-                  }
-                  onNameChange={(next) => {
-                    setNameDraft(next)
-                    setNameError(undefined)
-                  }}
-                  onAnswerName={(asked, next) => {
-                    if (isNew) void createCharacterFromDraft('identity')
-                    else submitEvent(asked, initEventFor(next))
-                  }}
-                  onAnswerChanges={(asked, changes) =>
-                    submitEvent(asked, { type: asked.prompt.event.type, changes })
-                  }
-                  pending={
-                    creating || create.pending || answer.pending || revise.pending || remove.pending
-                  }
-                  fields={fields}
-                  {...(after === null ? {} : { onNext: () => goToStage(after) })}
-                  {...(posingName || asking?.prompt.choice.kind === 'text'
-                    ? { name: nameDraft }
-                    : {})}
-                  {...maybeScores(asking?.replaces ?? null)}
-                  {...maybeLines(asking?.replaces ?? null)}
-                />
-              ),
-            }
-          })}
-        />
-
-        {nameError !== undefined && (
-          <Text size="sm" c="red">
-            {nameError}
-          </Text>
-        )}
-
-        {/*
-          Only ever open because something would be lost. A change that costs
-          nothing else is simply made -- see `price` -- so this dialog means one
-          thing and never cries wolf.
-        */}
-        <ModalSheet
-          opened={preview !== null}
-          onClose={() => cancelPreview()}
-          title={preview?.event === null ? t('build.askAgainTitle') : t('build.changeTitle')}
-        >
-          {preview !== null && (
-            <Stack gap="md">
-              <Text size="sm">
-                {preview.event === null
-                  ? t('build.dropWarningAskAgain', { count: preview.dropped.length })
-                  : t('build.dropWarningChange', { count: preview.dropped.length })}
-              </Text>
-
-              {preview.dropped.length > 0 && (
-                <Stack gap="xs">
-                  {preview.dropped.map((entry) => (
-                    <div key={entry.seq}>
-                      <Group gap={6}>
-                        <Text size="sm" fw={500}>
-                          {eventLabel(t, entry.type)}
-                          {entry.ref !== undefined && `: ${preview.names.get(entry.ref) ?? entry.ref}`}
-                        </Text>
-                        <Badge size="xs" variant="light" color="gray">
-                          {reasonLabel(t, entry.reason)}
-                        </Badge>
-                      </Group>
-                      {(entry.lost ?? []).map((lost) => (
-                        <Text key={lost.prompt} size="xs" c="dimmed">
-                          {promptLabel(lost.prompt)}
-                          {lost.picks !== undefined && `: ${lost.picks.map(pickLabel).join(', ')}`}
-                        </Text>
-                      ))}
-                    </div>
-                  ))}
-                  <Text size="xs" c="dimmed">
-                    {t('build.dropReassurance')}
+          {failure !== null && (
+            <Alert color="red" title={t('build.rejected')}>
+              <Stack gap={4}>
+                <Text size="sm">{failure}</Text>
+                {fields.map((field) => (
+                  <Text key={field.field} size="xs" c="dimmed">
+                    {describeField(t, field)}
                   </Text>
-                </Stack>
-              )}
-
-              <Group>
-                <Button
-                  color="red"
-                  loading={revise.pending || remove.pending}
-                  onClick={() => void commit()}
-                >
-                  {preview.event === null ? t('build.askAgain') : t('answer.changeIt')}
-                </Button>
-                <Button variant="subtle" onClick={() => cancelPreview()}>
-                  {t('common.cancel')}
-                </Button>
-              </Group>
-            </Stack>
+                ))}
+              </Stack>
+            </Alert>
           )}
-          </ModalSheet>
-      </Stack>
+
+          <TabDeck
+            // "Character build" rather than the character's name, which is
+            // already the crumb above this. A landmark renamed per character
+            // would give a screen-reader user a different table of contents on
+            // every build.
+            label={t('build.deckLabel')}
+            value={stage}
+            onChange={(next) => goToStage(next as Stage)}
+            /*
+              Not until there is a character. While one is being posed for, a tab
+              press *creates* it rather than moving anywhere, so a swipe would be
+              a gesture the screen answers by refusing to move -- and a deck that
+              snaps back is worse than one that never gives.
+            */
+            swipeable={!posingName}
+            panels={STAGES.map((each) => {
+              // Where Next goes from *this* tab, which is a fact about the tab
+              // and not about the one on screen -- every panel is mounted, so
+              // every panel's button has to be its own.
+              const after = stageAfter(each, open)
+              return {
+                value: each,
+                label: stageLabel(t, each),
+                content: (
+                  <StagePanel
+                    blocks={blocksByStage.get(each) ?? []}
+                    openKey={openKey}
+                    onOpen={openBlock}
+                    asking={asking}
+                    names={view.names}
+                    onAnswerPicks={(asked, picks) =>
+                      submitEvent(asked, eventFor(asked.prompt, picks))
+                    }
+                    onNameChange={(next) => {
+                      setNameDraft(next)
+                      setNameError(undefined)
+                    }}
+                    onAnswerName={(asked, next) => {
+                      if (isNew) void createCharacterFromDraft('identity')
+                      else submitEvent(asked, initEventFor(next))
+                    }}
+                    onAnswerChanges={(asked, changes) =>
+                      submitEvent(asked, { type: asked.prompt.event.type, changes })
+                    }
+                    pending={
+                      creating || create.pending || answer.pending || revise.pending || remove.pending
+                    }
+                    fields={fields}
+                    {...(after === null ? {} : { onNext: () => goToStage(after) })}
+                    {...(posingName || asking?.prompt.choice.kind === 'text'
+                      ? { name: nameDraft }
+                      : {})}
+                    {...maybeScores(asking?.replaces ?? null)}
+                    {...maybeLines(asking?.replaces ?? null)}
+                  />
+                ),
+              }
+            })}
+          />
+
+          {nameError !== undefined && (
+            <Text size="sm" c="red">
+              {nameError}
+            </Text>
+          )}
+
+          {/*
+            Only ever open because something would be lost. A change that costs
+            nothing else is simply made -- see `price` -- so this dialog means one
+            thing and never cries wolf.
+          */}
+          <ModalSheet
+            opened={preview !== null}
+            onClose={() => cancelPreview()}
+            title={preview?.event === null ? t('build.askAgainTitle') : t('build.changeTitle')}
+          >
+            {preview !== null && (
+              <Stack gap="md">
+                <Text size="sm">
+                  {preview.event === null
+                    ? t('build.dropWarningAskAgain', { count: preview.dropped.length })
+                    : t('build.dropWarningChange', { count: preview.dropped.length })}
+                </Text>
+
+                {preview.dropped.length > 0 && (
+                  <Stack gap="xs">
+                    {preview.dropped.map((entry) => (
+                      <div key={entry.seq}>
+                        <Group gap={6}>
+                          <Text size="sm" fw={500}>
+                            {eventLabel(t, entry.type)}
+                            {entry.ref !== undefined && `: ${preview.names.get(entry.ref) ?? entry.ref}`}
+                          </Text>
+                          <Badge size="xs" variant="light" color="gray">
+                            {reasonLabel(t, entry.reason)}
+                          </Badge>
+                        </Group>
+                        {(entry.lost ?? []).map((lost) => (
+                          <Text key={lost.prompt} size="xs" c="dimmed">
+                            {promptLabel(lost.prompt)}
+                            {lost.picks !== undefined && `: ${lost.picks.map(pickLabel).join(', ')}`}
+                          </Text>
+                        ))}
+                      </div>
+                    ))}
+                    <Text size="xs" c="dimmed">
+                      {t('build.dropReassurance')}
+                    </Text>
+                  </Stack>
+                )}
+
+                <Group>
+                  <Button
+                    color="red"
+                    loading={revise.pending || remove.pending}
+                    onClick={() => void commit()}
+                  >
+                    {preview.event === null ? t('build.askAgain') : t('answer.changeIt')}
+                  </Button>
+                  <Button variant="subtle" onClick={() => cancelPreview()}>
+                    {t('common.cancel')}
+                  </Button>
+                </Group>
+              </Stack>
+            )}
+            </ModalSheet>
+        </Stack>
+      </Panel>
     </Page>
   )
 }

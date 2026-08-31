@@ -1,13 +1,11 @@
 import { useState } from 'react'
 
-import { Box, Button, List, Stack, Text } from '@mantine/core'
+import { ActionIcon, List, Stack, Text, Tooltip } from '@mantine/core'
 import { IconDownload } from '@tabler/icons-react'
 
 import { useT } from '@/lib/i18n'
 
 import { ModalSheet } from './ModalSheet'
-
-import { CHROME_INSET } from '@/theme/tokens'
 
 import type { InstallOffer } from '@/lib/install'
 
@@ -26,19 +24,18 @@ export interface InstallActionProps {
  * nothing to dismiss, so nothing has to be remembered -- which is what keeps
  * this out of the argument about there being no localStorage in this client.
  *
- * **It owns its own place: the bottom left corner, at every width.** It sat in
- * the header, which is the row that says where you are and how to leave, and
- * this is neither -- it is an offer, and an offer belongs out of the way of the
- * work. The corner is also the only spot that is free in all three chromes: the
- * phone's header is one row of four controls at 390px, the desktop navbar keeps
- * its list at the top, and the landing footer already has three things in it.
- *
- * `position: fixed`, so where it is mounted does not matter and no shell has to
- * arrange it -- and low enough in the stack to sit under a dialog, since an
- * offer that floats over the sheet it opened is worse than no offer.
+ * **It is a glyph in the header, left of the language.** It spent a while
+ * floating in the bottom left corner, `position: fixed`, on the argument that
+ * an offer does not belong in the row that says where you are and how to leave.
+ * What that cost was a control sitting on top of the page's own content at
+ * every width -- over the foot of a table, over the landing footer -- which is
+ * worse than being one more glyph in the corner the rest of the chrome already
+ * shares. Icon only, for the same reason the language and the way out are
+ * icons: the word is the accessible name and the tooltip, not a chunk of a
+ * 390px row.
  *
  * Nothing is drawn unless there is something to offer. Already installed, or a
- * browser that cannot, and the corner is empty.
+ * browser that cannot, and the corner is exactly as it was.
  *
  * iOS gets the same button and a different answer behind it, because iOS has no
  * install API at all -- no event to wait for, nothing to call. Every install
@@ -52,30 +49,20 @@ export function InstallAction({ offer, onInstall }: InstallActionProps) {
 
   if (offer === 'none') return null
 
+  const label = t('install.action')
+
   return (
     <>
-      <Box
-        style={{
-          position: 'fixed',
-          // The strip a home indicator covers, spelled out rather than
-          // imported: `shell/chrome.ts` owns the pair for the two bars, and
-          // `@/ui` may not import `@/shell`. The fallback inside `env()` is
-          // load-bearing -- see the note there.
-          bottom: `calc(${CHROME_INSET}px + env(safe-area-inset-bottom, 0px))`,
-          left: `calc(${CHROME_INSET}px + env(safe-area-inset-left, 0px))`,
-          zIndex: 100,
-        }}
-      >
-        <Button
-          // Drawn rather than dissolved: this floats over whatever is behind
-          // it, and `subtle` over a table is a word with no edges.
-          variant="default"
-          leftSection={<IconDownload size={16} />}
+      {/* Tooltip wraps the control, same shape as LocaleActions. */}
+      <Tooltip label={label} withArrow>
+        <ActionIcon
+          variant="subtle"
+          aria-label={label}
           onClick={offer === 'ios' ? () => setShowing(true) : onInstall}
         >
-          {t('install.action')}
-        </Button>
-      </Box>
+          <IconDownload size={20} />
+        </ActionIcon>
+      </Tooltip>
 
       <ModalSheet
         opened={showing}
