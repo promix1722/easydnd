@@ -398,7 +398,7 @@ export function LandingPage() {
                           caption starts on -- a centred heading over a block
                           with two straight sides reads as a heading belonging
                           to something else. */}
-                      <Title id={`${headingId}-${slide.key}`} order={2}>
+                      <Title id={`${headingId}-${slide.key}`} order={slide.key === 'build' ? 1 : 2}>
                         {t(slide.title)}
                       </Title>
                       {/* Dimmed only where there is nothing behind it. Over a

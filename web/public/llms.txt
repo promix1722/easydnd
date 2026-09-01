@@ -1,0 +1,14 @@
+# easydnd.org
+
+> easydnd.org is a web application for Dungeons & Dragons 5th Edition using the 2014 rules and SRD 5.1.
+
+Players can build D&D 5e characters step by step, manage groups and shared characters, and run game sessions with encounter order, initiative, hit points, conditions, and turns. Interactive character, group, and session data requires a user session and is not public web content.
+
+## Public pages
+
+- [easydnd.org](https://easydnd.org/): Product overview and entry point.
+- [Legal and SRD attribution](https://easydnd.org/legal): Licensing and attribution for the application and SRD material.
+
+## Language
+
+The canonical public landing page is in English. The application interface also supports Russian, but there is no separate canonical Russian URL.

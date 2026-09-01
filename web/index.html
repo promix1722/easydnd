@@ -25,12 +25,100 @@
          currently resolves to, kept honest so reading this file does not
          mislead. -->
     <meta name="theme-color" content="#99051d" />
-    <meta name="description" content="Create D&amp;D characters, level them up, and run encounters." />
+    <meta
+      name="description"
+      content="Build D&amp;D 5e characters, organize groups, and run sessions with initiative, hit points, conditions, and turns. Built for the 2014 rules and SRD 5.1."
+    />
+    <meta
+      name="robots"
+      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+    />
+    <link rel="canonical" href="https://easydnd.org/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="easydnd.org" />
+    <meta property="og:url" content="https://easydnd.org/" />
+    <meta
+      property="og:title"
+      content="easydnd.org — D&amp;D 5e Character Builder &amp; Session Manager"
+    />
+    <meta
+      property="og:description"
+      content="Build D&amp;D 5e characters, organize groups, and run sessions with initiative, hit points, conditions, and turns. Built for the 2014 rules and SRD 5.1."
+    />
+    <meta property="og:image" content="https://easydnd.org/icons/icon-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="The easydnd red dragon mark" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta
+      name="twitter:title"
+      content="easydnd.org — D&amp;D 5e Character Builder &amp; Session Manager"
+    />
+    <meta
+      name="twitter:description"
+      content="Build D&amp;D 5e characters, organize groups, and run sessions with initiative, hit points, conditions, and turns. Built for the 2014 rules and SRD 5.1."
+    />
+    <meta name="twitter:image" content="https://easydnd.org/icons/icon-512.png" />
+    <meta name="twitter:image:alt" content="The easydnd red dragon mark" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "easydnd.org",
+        "url": "https://easydnd.org/",
+        "description": "Build D&D 5e characters, organize groups, and run sessions with initiative, hit points, conditions, and turns. Built for the 2014 rules and SRD 5.1.",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Any",
+        "inLanguage": "en",
+        "image": "https://easydnd.org/icons/icon-512.png",
+        "featureList": [
+          "D&D 5e character creation",
+          "Group management and character sharing",
+          "Session management with initiative, hit points, conditions, and turns",
+          "2014 rules and SRD 5.1"
+        ]
+      }
+    </script>
     <!-- i18n-exempt: the product's name, and read before any JS runs. -->
-    <title>easydnd.org</title>
+    <title>easydnd.org — D&amp;D 5e Character Builder &amp; Session Manager</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      The English landing copy is present before JavaScript runs so search
+      engines, link unfurlers and text-only agents do not receive an empty app
+      shell. React replaces this node's children after it resolves the session;
+      the signed-out landing page says the same things from locales/en.json.
+    -->
+    <div id="root">
+      <main>
+        <h1>Build a D&amp;D character</h1>
+        <p>
+          Create your character step by step. Choose a race, class, background,
+          and skills — easydnd takes care of the character sheet and calculations.
+        </p>
+        <section>
+          <h2>Join a group</h2>
+          <p>
+            Bring players together with an invite link. Add your characters,
+            choose your roles, and start playing together.
+          </p>
+        </section>
+        <section>
+          <h2>Run sessions</h2>
+          <p>
+            Keep everything you need to play in one place. Manage encounters,
+            initiative, hit points, conditions, and turns.
+          </p>
+        </section>
+        <nav aria-label="Public pages">
+          <a href="/login">Log in</a>
+          <a href="/legal">Legal and SRD attribution</a>
+        </nav>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

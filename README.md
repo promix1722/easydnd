@@ -57,5 +57,5 @@ private shelf for its own characters, shared with nobody.
 | [docs/dnd.md](docs/dnd.md) | The game model: catalogue entities, the event-sourced character, and the SRD terminology the code follows |
 | [docs/backend.md](docs/backend.md) | The Go service: layout, layer rules, configuration, deployment |
 | [docs/web.md](docs/web.md) | The browser client: layout, layer rules, how it ships |
+| [docs/seo.md](docs/seo.md) | Search-engine and answer-engine discovery, submission, and monitoring |
 | [docs/licensing.md](docs/licensing.md) | MIT for the project's own code, and the SRD 5.1 attribution the data carries |
-
