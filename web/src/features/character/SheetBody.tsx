@@ -22,7 +22,7 @@ import { Vitals } from './Vitals'
 import { abilitiesInOrder, signed, titleCase } from '@/domain'
 import { useT } from '@/lib/i18n'
 
-import { abilityAbbr, abilityName } from './labels'
+import { abilityAbbr, abilityName, resourceName } from './labels'
 
 
 /**
@@ -73,6 +73,8 @@ export function SheetBody({
   const isDesktop = useIsDesktop()
   const who = <IdentityTable identity={identity} names={names} />
   const abilities = <AbilityCards sheet={s} />
+  const named = (collection: string, slug: string) =>
+    names?.get(`${collection}:${slug}`) ?? titleCase(slug)
 
   const sections: DeckSection[] = [
     {
@@ -135,17 +137,17 @@ export function SheetBody({
         <Stack gap="sm">
           <ItemList
             label={t('sheet.traits')}
-            items={(s.traits ?? []).map(titleCase)}
+            items={(s.traits ?? []).map((slug) => named('traits', slug))}
             empty={t('sheet.noTraits')}
           />
           <ItemList
             label={t('sheet.features')}
-            items={(s.features ?? []).map(titleCase)}
+            items={(s.features ?? []).map((slug) => named('features', slug))}
             empty={t('sheet.noFeatures')}
           />
           <ItemList
             label={t('sheet.languages')}
-            items={(s.base.languages ?? []).map(titleCase)}
+            items={(s.base.languages ?? []).map((slug) => named('languages', slug))}
             empty={t('sheet.none')}
           />
         </Stack>
@@ -167,7 +169,7 @@ export function SheetBody({
             <ItemList
               label={t('sheet.resources')}
               items={s.resources.class.map(
-                (pool) => `${titleCase(pool.key ?? '')}: ${pool.dice ?? pool.max}`,
+                (pool) => `${resourceName(t, pool.key ?? '')}: ${pool.dice ?? pool.max}`,
               )}
             />
           )}
@@ -181,15 +183,15 @@ export function SheetBody({
           )}
           <ItemList
             label={t('sheet.equipped')}
-            items={s.equipment.equipped.map((stack) => titleCase(stack.item ?? ''))}
+            items={s.equipment.equipped.map((stack) => named('equipment', stack.item ?? ''))}
             empty={t('sheet.nothingWorn')}
           />
           <ItemList
             label={t('sheet.carried')}
             items={s.equipment.backpack.map((stack) =>
               stack.count > 1
-                ? `${titleCase(stack.item ?? '')} ×${stack.count}`
-                : titleCase(stack.item ?? ''),
+                ? `${named('equipment', stack.item ?? '')} ×${stack.count}`
+                : named('equipment', stack.item ?? ''),
             )}
             empty={t('sheet.empty')}
           />

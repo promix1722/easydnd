@@ -118,20 +118,15 @@ func RogueLog(t *testing.T) Log {
 				{Prompt: "rogue/proficiency/0", Picks: []rules.Slug{
 					"skill-deception", "skill-persuasion", "skill-sleight-of-hand", "skill-stealth",
 				}},
-				// Expertise is "choose 1 of: two skills, or one skill plus
-				// thieves' tools". Answering the outer prompt names the
-				// branch by its own prompt id; the branch then carries the
-				// skills.
+				// Expertise: two of the skills the rogue is proficient in,
+				// asked as one list by oneList.
 				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
-					"rogue-expertise-1/expertise/0/0",
-				}},
-				{Prompt: "rogue-expertise-1/expertise/0/0", Picks: []rules.Slug{
 					"skill-persuasion", "skill-stealth",
 				}},
 				{Prompt: "rogue/starting-equipment/0", Picks: []rules.Slug{"rapier"}},
 				// The shortbow-and-arrows bundle has no slug of its own, so
-				// it is named by position.
-				{Prompt: "rogue/starting-equipment/1", Picks: []rules.Slug{"#0"}},
+				// it is named by what is in it.
+				{Prompt: "rogue/starting-equipment/1", Picks: []rules.Slug{"shortbow+arrow"}},
 				{Prompt: "rogue/starting-equipment/2", Picks: []rules.Slug{"burglars-pack"}},
 			},
 		},

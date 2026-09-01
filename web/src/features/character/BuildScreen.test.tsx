@@ -35,7 +35,6 @@ const RACE_PROMPT = {
       },
       group: 'race',
       optional: false,
-      advances: false,
       event: { type: 'race' },
       heldOnly: false,
     },
@@ -85,7 +84,6 @@ const PARTWAY = {
       source: 'race:half-elf',
       group: 'race',
       optional: false,
-      advances: false,
       event: { type: 'race', ref: 'race:half-elf' },
       heldOnly: false,
     },
@@ -98,7 +96,6 @@ const PARTWAY = {
       },
       group: 'background',
       optional: false,
-      advances: false,
       event: { type: 'background' },
       heldOnly: false,
     },
@@ -111,7 +108,6 @@ const PARTWAY = {
       },
       group: 'class',
       optional: false,
-      advances: false,
       event: { type: 'class', level: 1 },
       heldOnly: false,
     },
@@ -151,7 +147,7 @@ const LEVELLED_LOG = {
     { seq: 2, type: 'race', source: 'race', ref: 'race:half-elf' },
     { seq: 3, type: 'background', source: 'background', ref: 'background:acolyte' },
     { seq: 4, type: 'class', source: 'class', ref: 'class:rogue', level: 1 },
-    { seq: 5, type: 'level', source: 'advance', ref: 'class:rogue', level: 2 },
+    { seq: 5, type: 'level', source: 'class', ref: 'class:rogue', level: 2 },
   ],
 }
 
@@ -181,7 +177,6 @@ const ABILITY_BONUS_AGAIN = {
       source: 'race:half-elf',
       group: 'race',
       optional: false,
-      advances: false,
       event: { type: 'race', ref: 'race:half-elf' },
       heldOnly: false,
     },
@@ -217,7 +212,6 @@ const ALIGNMENT = {
       // this and the four written questions to a group of their own.
       group: 'personality',
       optional: true,
-      advances: false,
       event: { type: 'change' },
       heldOnly: false,
     },
@@ -238,7 +232,6 @@ const TRAITS_OPEN = {
       },
       group: 'personality',
       optional: true,
-      advances: false,
       event: { type: 'change' },
       heldOnly: false,
     },
@@ -311,7 +304,6 @@ const LANGUAGE_PROMPT = {
   source: 'race:half-elf',
   group: 'race',
   optional: false,
-  advances: false,
   event: { type: 'race', ref: 'race:half-elf' },
   heldOnly: false,
 }
@@ -325,7 +317,6 @@ const SUBRACE_PROMPT = {
   },
   group: 'race',
   optional: false,
-  advances: false,
   event: { type: 'subrace' },
   heldOnly: false,
 }
@@ -340,7 +331,6 @@ const DWARF_SKILL_PROMPT = {
   source: 'subrace:hill-dwarf',
   group: 'race',
   optional: false,
-  advances: false,
   event: { type: 'subrace', ref: 'subrace:hill-dwarf' },
   heldOnly: false,
 }
@@ -358,26 +348,8 @@ const SUBRACED_LOG = {
   ],
 }
 
-/** Nothing required left: the only prompt is the standing offer of a level. */
-const FINISHED = {
-  seq: 5,
-  complete: true,
-  prompts: [
-    {
-      choice: {
-        prompt: 'character/level',
-        choose: 1,
-        kind: 'level',
-        from: { kind: 'collection', collection: 'class' },
-      },
-      group: 'advance',
-      optional: true,
-      advances: true,
-      event: { type: 'level' },
-      heldOnly: false,
-    },
-  ],
-}
+/** Nothing left to answer: a character at the level they declared. */
+const FINISHED = { seq: 5, complete: true, prompts: [] }
 
 /** The six scores as their own open question, answered from the abilities tab. */
 const UNSCORED = {
@@ -393,7 +365,6 @@ const UNSCORED = {
       },
       group: 'abilities',
       optional: false,
-      advances: false,
       event: { type: 'change' },
       heldOnly: false,
     },
@@ -414,6 +385,7 @@ const SHEET = {
 }
 
 interface Wire {
+  sheet?: unknown
   prompts?: unknown
   /** What `/prompts` answers once something has been written. */
   then?: unknown
@@ -444,6 +416,7 @@ let read: string[] = []
  * loading state and every test in the file times out saying nothing useful.
  */
 function mockApi({
+  sheet,
   prompts = RACE_PROMPT,
   then,
   events = LOG_JUST_CREATED,
@@ -475,7 +448,7 @@ function mockApi({
       if (url.includes('/events')) {
         return jsonResponse(thenEvents !== undefined && posted.length > 0 ? thenEvents : events)
       }
-      if (url.includes('/sheet')) return jsonResponse(SHEET)
+      if (url.includes('/sheet')) return jsonResponse(sheet ?? SHEET)
       if (url.includes('/catalog/races')) return jsonResponse(RACES)
       if (url.includes('/catalog/subraces')) return jsonResponse(SUBRACES)
       if (url.includes('/catalog/alignments')) return jsonResponse(ALIGNMENTS)
@@ -597,6 +570,56 @@ describe('BuildScreen', () => {
     // Options come from the collection the prompt named.
     expect(await screen.findByRole('button', { name: 'Half-Elf' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Dwarf' })).toBeInTheDocument()
+  })
+
+  /*
+   * Declaring a level is the whole of taking it. The server makes the
+   * declaration the character's level and poses what those levels open; the
+   * screen draws them like any other question, and nothing here asks or
+   * answers which class a level went into.
+   */
+  it('draws what a declared level opens, and asks no class question', async () => {
+    mockApi({
+      sheet: {
+        ...SHEET,
+        identity: {
+          name: 'Zephyr',
+          level: 3,
+          desiredLevel: 3,
+          classes: [{ class: 'rogue', level: 3 }],
+        },
+      },
+      prompts: {
+        seq: 5,
+        complete: false,
+        prompts: [
+          {
+            choice: {
+              prompt: 'rogue/subclass',
+              choose: 1,
+              kind: 'subclass',
+              from: {
+                kind: 'explicit',
+                options: [{ key: 'thief', kind: 'ref', ref: 'subclass:thief', count: 1 }],
+              },
+            },
+            group: 'class',
+            level: 3,
+            optional: false,
+            event: { type: 'subclass', level: 3 },
+            heldOnly: false,
+          },
+        ],
+      },
+    })
+    renderBuild(viewport)
+
+    // The archetype the third level made due, filed under that level.
+    expect(await screen.findByRole('button', { name: /An archetype/ })).toBeInTheDocument()
+    expect(screen.getByText('Level 3')).toBeInTheDocument()
+    // And nothing at all was written on the way here: a declared level is not
+    // a question the screen answers on the player's behalf.
+    expect(writes()).toHaveLength(0)
   })
 
   it('posts the event the prompt specified, not one it decided on', async () => {
@@ -819,7 +842,7 @@ describe('BuildScreen', () => {
   // bottom row offers, and what the class tab says about the level it took.
   // Neither writes anything, so re-mounting to ask the second question would
   // buy nothing. expect.soft so a failure in the first still reports the rest.
-  it('offers Finish, and shows a level already taken as a fact rather than an offer', async () => {
+  it('offers Finish, and a level already taken as a statement', async () => {
     const user = setupUser()
     mockApi({ prompts: FINISHED, events: LEVELLED_LOG })
     renderBuild(viewport)
@@ -836,11 +859,11 @@ describe('BuildScreen', () => {
     await user.click(tab('class'))
     expect.soft(panel('class').getByText('Level gained')).toBeInTheDocument()
 
-    // Read-only, and the standing offer of another one is not on the page at
-    // all: level-up does not work, and a question that silently does nothing
-    // is worse than a question that is not asked. A level that was taken is a
-    // fact about the character, so it is not even a block that opens.
-    expect.soft(screen.queryByRole('button', { name: /Level gained/ })).not.toBeInTheDocument()
+    // And it does not open. A level is a fact about the character, not a
+    // control: with one class there was never a question about which class it
+    // went into, and nothing on this page offers another level -- levelling
+    // up is raising the desired level on the identity tab.
+    expect.soft(panel('class').queryByRole('button', { name: /Level gained/ })).not.toBeInTheDocument()
     expect.soft(screen.queryByText(/Another level/)).not.toBeInTheDocument()
 
     // The class itself is still a choice like any other.
@@ -1094,21 +1117,88 @@ describe('a new character', () => {
   // The phone's, for the reason the block above records.
   const viewport = 'mobile'
 
-  it('asks for a name and nothing else', async () => {
+  it('shows the whole of identity, and answers only the question that creates', async () => {
     renderNew(viewport)
+
+    // All three, in the order they are asked, so the page says up front what
+    // it wants rather than growing two rows the moment a name is confirmed.
+    expect(await screen.findByText('A name')).toBeInTheDocument()
+    expect(screen.getByText('The rules to play by')).toBeInTheDocument()
+    expect(screen.getByText('Level')).toBeInTheDocument()
 
     // The one block that opens itself: there is nothing behind it, and a front
     // door whose only row is shut reads as broken.
-    expect(await screen.findByText('A name')).toBeInTheDocument()
     expect(screen.getByLabelText('Name')).toBeInTheDocument()
     // Named once. The block says what the choice is, and the surface under it
     // used to say it twice more -- a heading and a field label.
     expect(screen.getAllByText(/^A name$/)).toHaveLength(1)
     expect(screen.queryByText('What are they called?')).not.toBeInTheDocument()
+
+    // The other two have nothing to open: there is no character to answer
+    // them against until the name creates one, so they are statements of what
+    // is coming rather than controls that would fail.
+    expect(screen.queryByRole('button', { name: /The rules to play by/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Level$/ })).not.toBeInTheDocument()
+
     // The scores are a question asked of a character that exists, not a field
     // on the form that creates one.
     expect(screen.queryByText(/ability scores/)).not.toBeInTheDocument()
     expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
+  })
+
+  it('keeps the name where its question was when the character is created', async () => {
+    const user = setupUser()
+    // What the server poses the moment the character exists: the two identity
+    // questions that were drawn under the name a moment ago.
+    mockApi({
+      then: {
+        seq: 1,
+        complete: false,
+        prompts: [
+          {
+            choice: {
+              prompt: 'character/ruleset',
+              choose: 1,
+              kind: 'text',
+              from: { kind: 'explicit' },
+            },
+            group: 'identity',
+            optional: false,
+            event: { type: 'change' },
+            heldOnly: false,
+          },
+          {
+            choice: {
+              prompt: 'character/desired-level',
+              choose: 1,
+              kind: 'level',
+              from: { kind: 'explicit' },
+            },
+            group: 'identity',
+            optional: false,
+            event: { type: 'change' },
+            heldOnly: false,
+          },
+        ],
+      },
+    })
+    renderNew(viewport)
+
+    await user.type(await screen.findByLabelText('Name'), 'Zephyr')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    // The answered name stays at the top, where the question that asked for
+    // it was. It is a new key -- the entry, not the prompt -- so without its
+    // question's place it would go to the end of the list, and confirming a
+    // name would drop the one row the player was looking at below two others.
+    await waitFor(() => {
+      expect(panel('identity').getByText('Zephyr')).toBeInTheDocument()
+    })
+    const rows = panel('identity')
+      .getAllByRole('button')
+      .map((each) => each.textContent ?? '')
+    expect(rows[0]).toMatch(/Zephyr/)
+    expect(rows[1]).toMatch(/The rules to play by/)
   })
 
   it('creates the character once, with the name alone, and lands on the tab that was pressed', async () => {
@@ -1293,7 +1383,7 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     // And the question that comes back is *open*. Pressing a decided block
     // means "ask me that again", so it used to take a second press on the same
     // row to see the options -- the same gesture, twice, for one intention.
-    const asked = await screen.findByRole('button', { name: /ability scores to raise/ })
+    const asked = await screen.findByRole('button', { name: /points to raise your scores/ })
     expect(asked).toHaveAttribute('aria-expanded', 'true')
   })
 })

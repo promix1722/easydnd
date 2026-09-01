@@ -34,6 +34,7 @@ export {
   getEntries,
   getManifest,
   resetCatalogCache,
+  searchSpells,
 } from './catalog'
 export type {
   Choice,
@@ -46,8 +47,12 @@ export type {
   OptionSet,
   Proficiency as CatalogProficiency,
   Race,
+  RuleValue,
   Skill as CatalogSkill,
   Spell,
+  SpellComponents,
+  SpellPage,
+  SpellSearch,
 } from './catalog'
 
 // Folders: where an account files its characters. Not a group of players.

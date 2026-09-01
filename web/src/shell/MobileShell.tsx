@@ -12,7 +12,7 @@ import {
   IconUserCircle,
   Menu,
   SECTIONS,
-  backdropFor,
+  PAGE_BACKDROP,
   sectionFor,
 } from '@/ui'
 import type { Section } from '@/ui'
@@ -217,10 +217,10 @@ export function MobileShell() {
         </Group>
       </AppShell.Header>
 
-      {/* The picture behind the page, everywhere but the die -- see
+      {/* The picture behind the page, on every one of them -- see
           ui/backdrop.ts. Not behind this header: chrome keeps its own flat
           ground. */}
-      <AppShell.Main style={backdropFor(pathname)}>
+      <AppShell.Main style={PAGE_BACKDROP}>
         <Outlet />
       </AppShell.Main>
 

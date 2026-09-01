@@ -93,14 +93,27 @@ export function promptLabel(prompt: string): string {
   return segments.map(titleCase).join(' \u00b7 ')
 }
 
+/** What joins the parts of a composed option key: see rules.OptionKey. */
+const BUNDLE_JOIN = '+'
+
 /**
  * One pick, as a person reads it.
  *
- * A pick is the *key* an option is named by, which is usually a slug but is a
- * path when the option was itself another prompt. In that case the nested
- * answer follows in the same event, so naming the branch is enough.
+ * A pick is the *key* an option is named by. Most are a plain slug. An option
+ * granting several things at once is named by all of them -- a shortbow and
+ * twenty arrows is "shortbow+arrow" -- and reads back as its parts, which is
+ * what the composed key is for: the log row says what was taken rather than
+ * naming a position nobody can resolve. The count is not in the key, so it is
+ * not in the label either; the sheet is where twenty arrows are counted.
+ *
+ * A branch that lists its options inline has no name of its own and falls
+ * back to its prompt, which is a path. There the last meaningful segment is
+ * the branch, and the answer it opened follows in the same entry anyway.
  */
 export function pickLabel(pick: string): string {
+  if (pick.includes(BUNDLE_JOIN)) {
+    return pick.split(BUNDLE_JOIN).map(pickLabel).join(', ')
+  }
   if (!pick.includes('/')) return titleCase(pick)
   const segments = meaningfulSegments(pick)
   return titleCase(segments[segments.length - 1] ?? pick)

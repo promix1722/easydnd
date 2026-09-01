@@ -108,7 +108,7 @@ func TestOptionKeysAreTotalAndUniquePerPrompt(t *testing.T) {
 		}
 		seen := make(map[rules.Slug]int, len(choice.From.Options))
 		for i, option := range choice.From.Options {
-			key := rules.OptionKey(option, i)
+			key := rules.OptionKey(option)
 			if key.IsZero() {
 				t.Errorf("prompt %q option %d (%T) has no key", choice.Prompt, i, option)
 				continue
@@ -152,9 +152,10 @@ func TestRogueBundleAndNestedPromptsAreAnswerable(t *testing.T) {
 	if len(keys) == 0 {
 		t.Fatal("rogue/starting-equipment/1 has no option keys")
 	}
-	// The shortbow-and-arrows bundle has no slug of its own.
-	if keys[0] != "#0" {
-		t.Errorf("bundle option key = %q, want #0", keys[0])
+	// The shortbow-and-arrows bundle has no slug of its own, so it is named
+	// by what is in it.
+	if keys[0] != "shortbow+arrow" {
+		t.Errorf("bundle option key = %q, want shortbow+arrow", keys[0])
 	}
 
 	expertise, ok := c.Features.Get("rogue-expertise-1")
@@ -163,13 +164,18 @@ func TestRogueBundleAndNestedPromptsAreAnswerable(t *testing.T) {
 	}
 	// Expertise is "choose 1 of: two skills, or one skill plus thieves'
 	// tools" -- a nested choice against a bundle that contains one. Both
-	// branches must be nameable, and the bundle has no slug of its own.
+	// branches must be nameable. Neither draws from a category or a
+	// collection -- the skills are listed inline -- so each falls back to its
+	// own prompt, and the bundle composes that with the tools beside it.
 	outer := expertise.Specific.ExpertiseOptions
 	if outer == nil {
 		t.Fatal("rogue-expertise-1 has no expertise options")
 	}
 	inner := rules.OptionKeys(outer.From)
-	want := []rules.Slug{"rogue-expertise-1/expertise/0/0", "#1"}
+	want := []rules.Slug{
+		"rogue-expertise-1/expertise/0/0",
+		"rogue-expertise-1/expertise/0/1/0+thieves-tools",
+	}
 	if len(inner) != len(want) {
 		t.Fatalf("expertise option keys = %v, want %v", inner, want)
 	}

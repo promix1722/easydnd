@@ -627,6 +627,7 @@ func (c *conv) spell(w Spell, b Bundle) catalog.Spell {
 	p := prose(w.Slug, b)
 	s := catalog.Spell{
 		Entry:         entry(w.Slug, b),
+		Source:        rules.Slug(w.Source),
 		Level:         w.Level,
 		School:        rules.Slug(w.School),
 		CastingTime:   c.castingTime(w.CastingTime),

@@ -1,6 +1,9 @@
 package rules
 
-import "strconv"
+import (
+	"fmt"
+	"strings"
+)
 
 // OptionKey returns the slug a character's stored Answer uses to name one
 // option of a Choice.
@@ -13,19 +16,31 @@ import "strconv"
 // Without a total function over Option, half the SRD's prompts would be
 // unanswerable.
 //
-// The result must be stable across a catalogue regeneration, for the same
-// reason Choice.Prompt must be: a character's answers point at these strings,
-// and an answer that no longer resolves is a choice the character silently
-// loses. Where an option has no identity of its own the key is positional,
-// which is safe for the same reason the prompt ids already are -- prompt ids
-// such as "rogue/starting-equipment/1" are themselves positional, and
-// make data/srd/check fails on any reordering of the generated data.
+// Every key is derived from what the option *is*, never from where it sits.
+// The bundle above is "shortbow+arrow". That is what makes a stored answer
+// legible where it is read back -- a log row, a support question, a hand-
+// written fixture -- rather than a "#0" that means nothing without the option
+// list beside it. It is also what makes an answer *editable*: a person can
+// write one and be right.
+//
+// It used to be positional where an option had no identity, and the argument
+// for that was stability across a catalogue regeneration. Deriving the key
+// from the contents is strictly better on exactly that ground: reordering a
+// class's equipment options no longer renames anybody's stored answer, where
+// a positional key changed under them.
+//
+// What position *did* guarantee is uniqueness within a set, and a derived key
+// cannot. That guarantee moved to a check over the whole compendium -- see
+// TestEveryOptionSetHasUniqueKeys -- which fails the build rather than
+// letting FindOption resolve the wrong option in silence. The index parameter
+// is gone with it: with no position in scope, this function cannot quietly
+// fall back to one.
 //
 // Prompts emits these and Project resolves them, so both must call this
 // function rather than each deriving a key of its own: two implementations of
 // "which option is this?" is two chances to disagree, and the disagreement
 // would surface as a proficiency that silently vanishes.
-func OptionKey(o Option, index int) Slug {
+func OptionKey(o Option) Slug {
 	switch opt := o.(type) {
 	case RefOption:
 		return opt.Ref.Slug
@@ -37,30 +52,73 @@ func OptionKey(o Option, index int) Slug {
 		// and what the sheet already stores.
 		return opt.Ability.Slug()
 	case NestedOption:
-		// A nested choice already has a stable, unique id: its own prompt.
-		// Answering the outer prompt with it is what lets the inner prompt
-		// appear, which is how the rogue's Expertise works.
-		return opt.Choice.Prompt
+		// What the branch draws from, which is the only thing about a nested
+		// choice a player could recognise: "martial-weapons", "skills",
+		// "feat". Its prompt id would do as an identifier and did, but a
+		// prompt id is a path -- "fighter/starting-equipment/1/0/0" -- and a
+		// path in an answer is the same unreadable thing as a position.
+		return nestedKey(opt.Choice)
+	case BundleOption:
+		return bundleKey(opt)
 	case SizeOption:
 		return Slug(opt.Size.String())
 	case ActionOption:
-		if opt.Key != "" {
-			return opt.Key
-		}
+		return opt.Key
 	case DamageOption:
 		// Draconic ancestry distinguishes its options by the prose naming the
-		// dragon, not by the damage type -- two ancestries share a type.
+		// dragon where it has it; the damage type names the rest, and is what
+		// the SRD's own table is keyed on.
 		if opt.Notes != "" {
 			return opt.Notes
 		}
+		return opt.Damage.Type
+	case MoneyOption:
+		return Slug(fmt.Sprintf("%d-%s", opt.Coins.Amount, opt.Coins.Unit))
+	case ScoreMinimumOption:
+		return Slug(fmt.Sprintf("%s-%d", opt.Ability.Slug(), opt.Minimum))
 	}
-	return positionalKey(index)
+	return ""
 }
 
-// positionalKey names an option that has no identity of its own: a bundle, a
-// pouch of gold, a multiclassing score minimum. The "#" prefix cannot collide
-// with a real slug, which is lower-kebab.
-func positionalKey(index int) Slug { return Slug("#" + strconv.Itoa(index)) }
+// bundleJoin separates the parts of a bundle's key. It is not a character any
+// slug contains, so a composed key can always be read back apart.
+const bundleJoin = "+"
+
+// bundleKey names several things granted together by the things themselves:
+// a shortbow and twenty arrows is "shortbow+arrow". The count is deliberately
+// not in it -- a bundle is identified by what is in it, and "twenty" is a fact
+// about the arrows rather than about which option this is.
+func bundleKey(opt BundleOption) Slug {
+	parts := make([]string, 0, len(opt.Items))
+	for _, item := range opt.Items {
+		if key := OptionKey(item); key != "" {
+			parts = append(parts, key.String())
+		}
+	}
+	return Slug(strings.Join(parts, bundleJoin))
+}
+
+// nestedKey names a branch by the pool its answers come from: the equipment
+// category, or the collection. "A martial weapon and a shield" is
+// "martial-weapons+shield", which is the branch as the rules describe it.
+//
+// A branch that lists its options inline has no pool to name, and there is
+// nothing in the option list that names it either -- the monk's "one artisan's
+// tool or one musical instrument" is two inline lists of the same kind, and
+// the words that tell them apart are in SRD prose the compendium does not
+// carry. Those fall back to the branch's own prompt, which is unique by
+// construction (TestPromptIDsAreGloballyUnique) and stable across a
+// regeneration. It is the one identifier here that is not a name, and it is
+// the honest answer to "what else would you call it?".
+func nestedKey(c Choice) Slug {
+	if c.From.Category != "" {
+		return c.From.Category
+	}
+	if c.From.Collection != RefNone {
+		return Slug(c.From.Collection.String())
+	}
+	return c.Prompt
+}
 
 // OptionKeys returns the keys of every option in a set, in order.
 //
@@ -72,8 +130,8 @@ func OptionKeys(set OptionSet) []Slug {
 		return nil
 	}
 	out := make([]Slug, 0, len(set.Options))
-	for i, option := range set.Options {
-		out = append(out, OptionKey(option, i))
+	for _, option := range set.Options {
+		out = append(out, OptionKey(option))
 	}
 	return out
 }
@@ -82,8 +140,8 @@ func OptionKeys(set OptionSet) []Slug {
 // was found. It is the inverse of OptionKey and the only way Project should
 // resolve a stored answer.
 func FindOption(set OptionSet, key Slug) (Option, bool) {
-	for i, option := range set.Options {
-		if OptionKey(option, i) == key {
+	for _, option := range set.Options {
+		if OptionKey(option) == key {
 			return option, true
 		}
 	}

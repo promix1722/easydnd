@@ -75,6 +75,19 @@ const SHEET: Sheet = {
 /** Nothing named, which falls every name back to a title-cased slug. */
 const NO_COMPENDIUM: Compendium = { names: null, skills: null, proficiencies: null }
 
+/** Distinct names prove these sections consult the catalogue, not titleCase. */
+const NAMED_COMPENDIUM: Compendium = {
+  ...NO_COMPENDIUM,
+  names: new Map([
+    ['traits:darkvision', 'Night Sight'],
+    ['features:sneak-attack', 'Surprise Strike'],
+    ['languages:common', 'Trade Tongue'],
+    ['equipment:leather-armor', 'Hide Jerkin'],
+    ['equipment:thieves-tools', 'Locksmith Kit'],
+    ['equipment:crossbow-bolt', 'Quarrel'],
+  ]),
+}
+
 /**
  * The six sections, in the order the sheet decides things come in: who the
  * character is and what everything else is derived from, the body's state, then
@@ -201,6 +214,31 @@ describe('the panels that were sentences', () => {
 
     expect.soft(under('Equipped')).toEqual(['Leather Armor'])
     expect.soft(under('Carried')).toEqual(['Thieves Tools', 'Crossbow Bolt ×20'])
+  })
+
+  it('uses localized catalogue names and a localized class-resource label', () => {
+    renderAt(
+      'desktop',
+      <SheetBody
+        sheet={{
+          ...SHEET,
+          resources: { class: [{ key: 'channel-divinity-charges', max: 2 }] },
+        }}
+        compendium={NAMED_COMPENDIUM}
+      />,
+    )
+
+    for (const name of [
+      'Night Sight',
+      'Surprise Strike',
+      'Trade Tongue',
+      'Hide Jerkin',
+      'Locksmith Kit',
+      'Quarrel ×20',
+      'Channel Divinity Uses: 2',
+    ]) {
+      expect.soft(screen.getByText(name)).toBeInTheDocument()
+    }
   })
 
   // A group with nothing in it still says so, because "nothing worn" is the

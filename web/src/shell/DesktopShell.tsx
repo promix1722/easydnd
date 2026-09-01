@@ -15,7 +15,7 @@ import {
   SECTIONS,
   sectionFor,
   Tooltip,
-  backdropFor,
+  PAGE_BACKDROP,
   useDisclosure,
 } from '@/ui'
 
@@ -198,13 +198,13 @@ export function DesktopShell() {
           padding as `header-offset + shell-padding`, so overriding `pt` with a
           bare number drops the offset and slides the whole page up underneath
           the header. */}
-      {/* The picture behind the page, everywhere but the die -- see
+      {/* The picture behind the page, on every one of them -- see
           ui/backdrop.ts. Neither the header nor the navbar takes it: they are
           chrome over the content, and one photograph running under all three
           would make them one surface. */}
       <AppShell.Main
         style={{
-          ...backdropFor(pathname),
+          ...PAGE_BACKDROP,
           paddingTop: `calc(var(--app-shell-header-offset, 0rem) + ${CHROME_INSET}px)`,
         }}
       >

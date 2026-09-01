@@ -2,6 +2,7 @@ package character
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +22,17 @@ func promptIDs(prompts []Prompt) []rules.Slug {
 	out := make([]rules.Slug, 0, len(prompts))
 	for _, p := range prompts {
 		out = append(out, p.Choice.Prompt)
+	}
+	return out
+}
+
+// required is every prompt a character cannot be finished without.
+func required(prompts []Prompt) []rules.Slug {
+	var out []rules.Slug
+	for _, p := range prompts {
+		if !p.Optional {
+			out = append(out, p.Choice.Prompt)
+		}
 	}
 	return out
 }
@@ -73,8 +85,24 @@ func TestPromptsAdvanceAsAnswersArrive(t *testing.T) {
 	}
 
 	mustAppend(Event{Type: EventInit, At: at})
+	// The identity stage is three questions: who they are, under which rules,
+	// and to what level. All three are required, and they come in that order.
+	if got := firstRequired(promptsFor(t, log)); got != "character/ruleset" {
+		t.Fatalf("after init, first required = %q, want character/ruleset", got)
+	}
+
+	mustAppend(Event{Type: EventChange, At: at, Changes: []Change{
+		{Path: "identity.ruleset", Op: OpSet, Value: SlugValue("2014")},
+	}})
+	if got := firstRequired(promptsFor(t, log)); got != "character/desired-level" {
+		t.Fatalf("after the ruleset, first required = %q, want character/desired-level", got)
+	}
+
+	mustAppend(Event{Type: EventChange, At: at, Changes: []Change{
+		{Path: "identity.desiredLevel", Op: OpSet, Value: IntValue(1)},
+	}})
 	if got := firstRequired(promptsFor(t, log)); got != "character/abilities" {
-		t.Fatalf("after init, first required = %q, want character/abilities", got)
+		t.Fatalf("after the desired level, first required = %q, want character/abilities", got)
 	}
 
 	mustAppend(Event{Type: EventChange, At: at, Changes: []Change{
@@ -137,66 +165,154 @@ func TestPromptsAdvanceAsAnswersArrive(t *testing.T) {
 	}
 }
 
-// The nested-prompt fixed point: a choice inside a choice does not exist
-// until its parent is answered. This is what the rogue's Expertise needs, and
-// what makes a step counter impossible.
+// The nested-prompt fixed point: a choice inside a choice does not exist until
+// its parent is answered. The client resolves a branch inside the card that
+// offered it, posting both answers in one event -- which only works because
+// the second prompt does not exist until the first answer lands.
+//
+// The monk's tools are the case now that oneList flattens Expertise: "one
+// artisan's tool or one musical instrument" is two branches over different
+// pools and stays a real question about which branch you are in.
 func TestAnsweringAPromptOpensItsNestedPrompt(t *testing.T) {
-	log := RogueLog(t)
+	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
+	branch := func(picks ...rules.Slug) Log {
+		t.Helper()
+		var log Log
+		class := Event{Type: EventClass, At: at, Ref: rules.NewRef(rules.RefClass, "monk"), Level: 1}
+		if len(picks) > 0 {
+			class.Choices = []Answer{{Prompt: "monk/proficiency/1", Picks: picks}}
+		}
+		if err := log.Append(Event{Type: EventInit, At: at}, class); err != nil {
+			t.Fatalf("Append() error = %v", err)
+		}
+		return log
+	}
 
-	got := promptsFor(t, log)
-	if has(got, "rogue-expertise-1/expertise/0") {
-		t.Error("Expertise is still open on a log that answered it")
+	got := promptsFor(t, branch())
+	outer := find(t, got, "monk/proficiency/1")
+	inner := rules.OptionKeys(outer.Choice.From)
+	if len(inner) == 0 {
+		t.Fatal("the branch selector offers nothing")
 	}
-	// Both halves were answered in the fixture, so neither should be open.
-	if has(got, "rogue-expertise-1/expertise/0/0") {
-		t.Error("the nested Expertise prompt is still open")
+	// Unanswered, the branch's own prompt does not exist.
+	if has(got, "monk/proficiency/1/0") {
+		t.Error("a nested prompt was open before its branch was chosen")
 	}
 
-	// Strip the inner answer and the inner prompt must reappear -- and only
-	// the inner one, because the outer is still answered.
-	stripped := Log{}
-	for _, e := range log.Events {
-		e.Choices = slices.DeleteFunc(slices.Clone(e.Choices), func(a Answer) bool {
-			return a.Prompt == "rogue-expertise-1/expertise/0/0"
-		})
-		stripped.Events = append(stripped.Events, e)
+	got = promptsFor(t, branch(inner[0]))
+	if has(got, "monk/proficiency/1") {
+		t.Error("the branch selector is still open on a log that answered it")
 	}
-	got = promptsFor(t, stripped)
-	if !has(got, "rogue-expertise-1/expertise/0/0") {
-		t.Errorf("the nested Expertise prompt did not reopen; got %v", promptIDs(got))
-	}
-	if has(got, "rogue-expertise-1/expertise/0") {
-		t.Error("the outer Expertise prompt reopened, though it is answered")
+	if !has(got, "monk/proficiency/1/0") {
+		t.Errorf("choosing a branch did not open it; got %v", promptIDs(got))
 	}
 }
 
-// A finished character is complete, and its one remaining prompt is the one
-// that advances it. That is what makes creation and level-up one flow.
-func TestFinishedCharacterIsCompleteAndCanAdvance(t *testing.T) {
-	got := promptsFor(t, RogueLog(t))
+// Expertise is one list, not a choice between branches.
+//
+// SRD 5.1 words the rogue's first Expertise as "two of your skill
+// proficiencies, or one of your skill proficiencies and your proficiency with
+// thieves' tools", and the compendium transcribes that as two branches. The
+// same feature at sixth level, and both of the bard's, are already flat in the
+// data -- so this is the transcription being reconciled, not a rule being
+// bent. oneList is what does it, on the asking side and the reading side both.
+func TestExpertiseIsAskedAsOneList(t *testing.T) {
+	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
+	var log Log
+	if err := log.Append(
+		Event{Type: EventInit, At: at},
+		Event{Type: EventClass, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 1},
+	); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
 
-	if !Complete(got) {
-		var open []rules.Slug
-		for _, p := range got {
-			if !p.Optional {
-				open = append(open, p.Choice.Prompt)
-			}
+	got := find(t, promptsFor(t, log), "rogue-expertise-1/expertise/0")
+	if got.Choice.Choose != 2 {
+		t.Errorf("choose = %d, want 2: the two picks both branches were worth", got.Choice.Choose)
+	}
+	keys := rules.OptionKeys(got.Choice.From)
+	if !slices.Contains(keys, rules.Slug("thieves-tools")) {
+		t.Errorf("options = %v, want thieves' tools merged into the list", keys)
+	}
+	if !slices.Contains(keys, rules.Slug("skill-stealth")) {
+		t.Errorf("options = %v, want the skills in the list", keys)
+	}
+	for _, key := range keys {
+		if strings.HasPrefix(key.String(), "rogue-expertise-1/") {
+			t.Errorf("options = %v, want no branch left to pick between", keys)
+			break
 		}
-		t.Fatalf("the rogue is not complete; still required: %v", open)
+	}
+	// And a flat list of references is one that HeldOnly survives, which the
+	// branch selector above it never could.
+	if !got.HeldOnly {
+		t.Error("the flat Expertise prompt is not heldOnly")
+	}
+}
+
+// A finished character is complete, and levelling up is one declaration: the
+// desired level *is* the level, and what those levels open is what is asked.
+// That is what makes creation and level-up one flow.
+func TestDeclaringALevelIsTakingIt(t *testing.T) {
+	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
+	log := RogueLog(t)
+	// RogueLog predates both identity questions, as an imported log does.
+	// Answering the ruleset leaves the desired level as the only thing
+	// outstanding, which is what the rest of this walks.
+	if err := log.Append(Event{Type: EventChange, At: at, Changes: []Change{
+		{Path: "identity.ruleset", Op: OpSet, Value: SlugValue("2014")},
+	}}); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+	got := promptsFor(t, log)
+
+	if want := []rules.Slug{"character/desired-level"}; !slices.Equal(required(got), want) {
+		t.Fatalf("still required: %v, want %v", required(got), want)
+	}
+	// Nothing anywhere asks which class a level goes into.
+	if has(got, "character/level") {
+		t.Error("something still offers a level to take")
 	}
 
-	advance := find(t, got, "character/level")
-	if !advance.Advances {
-		t.Error("character/level does not report that it advances")
+	declare := func(level int) []Prompt {
+		t.Helper()
+		if err := log.Append(Event{Type: EventChange, At: at, Changes: []Change{
+			{Path: "identity.desiredLevel", Op: OpSet, Value: IntValue(level)},
+		}}); err != nil {
+			t.Fatalf("Append() error = %v", err)
+		}
+		return promptsFor(t, log)
 	}
-	if !advance.Optional {
-		t.Error("character/level is not optional, so a finished character reads as unfinished")
+
+	// The rogue's log already takes three levels the old way, so declaring
+	// three changes nothing and the character reads as finished.
+	atGoal := declare(3)
+	if !Complete(atGoal) {
+		t.Errorf("a character at their desired level is not complete; required: %v", required(atGoal))
 	}
-	if advance.Group != GroupAdvance {
-		t.Errorf("character/level group = %s, want advance", advance.Group)
+
+	// Declaring four *is* the fourth level, and what it opens is the Ability
+	// Score Improvement it grants -- required, and asked for that level.
+	got = declare(4)
+	state, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatalf("Project() error = %v", err)
 	}
-	if advance.Event.Type != EventLevel {
-		t.Errorf("character/level posts a %s event, want level", advance.Event.Type)
+	if state.Identity.Level() != 4 {
+		t.Errorf("level = %d, want 4: the declaration is the level", state.Identity.Level())
+	}
+	if has(got, "character/level") {
+		t.Error("declaring a level asked which class it went into")
+	}
+	improvement := find(t, got, "rogue/ability-score-improvement/4")
+	if improvement.Optional {
+		t.Error("the improvement a level grants is optional")
+	}
+	if improvement.Level != 4 {
+		t.Errorf("improvement level = %d, want 4", improvement.Level)
+	}
+	if Complete(got) {
+		t.Error("a character owing their new level's improvement reads as complete")
 	}
 }
 
@@ -281,15 +397,12 @@ func TestExpertiseOffersOnlyTheSkillsAlreadyTrained(t *testing.T) {
 				{Prompt: "rogue/proficiency/0", Picks: []rules.Slug{
 					"skill-deception", "skill-persuasion", "skill-sleight-of-hand", "skill-stealth",
 				}},
-				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
-					"rogue-expertise-1/expertise/0/0",
-				}},
 			}},
 	); err != nil {
 		t.Fatalf("Append() error = %v", err)
 	}
 
-	prompt := find(t, promptsFor(t, log), "rogue-expertise-1/expertise/0/0")
+	prompt := find(t, promptsFor(t, log), "rogue-expertise-1/expertise/0")
 	if !prompt.HeldOnly {
 		t.Fatal("the expertise prompt is not heldOnly; Held would read as the illegal answers")
 	}
@@ -304,9 +417,17 @@ func TestExpertiseOffersOnlyTheSkillsAlreadyTrained(t *testing.T) {
 			t.Errorf("held = %v, want it to exclude %q: nothing trained it", prompt.Held, notHeld)
 		}
 	}
-	// The four the class granted, and not one row per skill in the game.
-	if len(prompt.Held) != 4 {
-		t.Errorf("held %d options, want the 4 trained skills: %v", len(prompt.Held), prompt.Held)
+	// Thieves' tools, which the rogue is proficient in and which oneList
+	// merged into this list, is holdable like any other row -- that merge is
+	// the whole of "or one skill and your thieves' tools".
+	if !slices.Contains(prompt.Held, rules.Slug("thieves-tools")) {
+		t.Errorf("held = %v, want it to include thieves-tools", prompt.Held)
+	}
+	// The four the class granted plus the tools, and not one row per skill in
+	// the game.
+	if len(prompt.Held) != 5 {
+		t.Errorf("held %d options, want the 4 trained skills and the tools: %v",
+			len(prompt.Held), prompt.Held)
 	}
 }
 
@@ -396,75 +517,26 @@ func TestAbilityScoreImprovementIsOfferedAndApplied(t *testing.T) {
 	}
 }
 
-// Multiclassing is gated on ability scores, and on both sides: the class
-// being left as well as the one being entered.
-func TestAdvanceOffersOnlyEligibleClasses(t *testing.T) {
-	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
-	build := func(scores map[rules.Ability]int) []Prompt {
-		t.Helper()
-		changes := make([]Change, 0, len(scores))
-		for ability, score := range scores {
-			changes = append(changes, Change{
-				Path: Path("abilities." + ability.Slug().String()), Op: OpSet, Value: IntValue(score),
-			})
-		}
-		slices.SortFunc(changes, func(a, b Change) int {
-			if a.Path < b.Path {
-				return -1
-			}
-			return 1
-		})
-		var log Log
-		if err := log.Append(
-			Event{Type: EventInit, At: at, Changes: changes},
-			Event{Type: EventClass, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 1},
-		); err != nil {
-			t.Fatalf("Append() error = %v", err)
-		}
-		return promptsFor(t, log)
-	}
-
-	// A rogue with Dexterity 8 may not leave, so no other class is on offer
-	// -- but staying a rogue always is.
-	weak := find(t, build(map[rules.Ability]int{rules.Dexterity: 8, rules.Strength: 16}), "character/level")
-	weakKeys := rules.OptionKeys(weak.Choice.From)
-	if !slices.Contains(weakKeys, "rogue") {
-		t.Error("a rogue was not offered another rogue level")
-	}
-	if slices.Contains(weakKeys, "fighter") {
-		t.Error("a rogue with Dexterity 8 was offered fighter; they cannot leave rogue")
-	}
-
-	// With Dexterity 15 they may leave, and Strength 16 lets them into
-	// fighter -- but Intelligence 8 keeps them out of wizard.
-	able := find(t, build(map[rules.Ability]int{
-		rules.Dexterity: 15, rules.Strength: 16, rules.Intelligence: 8,
-	}), "character/level")
-	ableKeys := rules.OptionKeys(able.Choice.From)
-	if !slices.Contains(ableKeys, "fighter") {
-		t.Error("a rogue with Dexterity 15 and Strength 16 was not offered fighter")
-	}
-	if slices.Contains(ableKeys, "wizard") {
-		t.Error("a rogue with Intelligence 8 was offered wizard")
-	}
-}
-
-// At level 20 there is nowhere to go, and the prompt that would say otherwise
-// must disappear rather than offer an illegal level.
-func TestNoAdvancePromptAtMaximumLevel(t *testing.T) {
+// Twentieth level is where the 2014 rules stop, and declaring it must produce
+// a twentieth-level character rather than run off the end of the class table.
+func TestDeclaringTheMaximumLevel(t *testing.T) {
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	var log Log
-	events := []Event{
-		{Type: EventInit, At: at},
-		{Type: EventClass, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 1},
-	}
-	for level := 2; level <= maxCharacterLevel; level++ {
-		events = append(events, Event{
-			Type: EventLevel, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: level,
-		})
-	}
-	if err := log.Append(events...); err != nil {
+	if err := log.Append(
+		Event{Type: EventInit, At: at},
+		Event{Type: EventClass, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 1},
+		Event{Type: EventChange, At: at, Changes: []Change{
+			{Path: "identity.desiredLevel", Op: OpSet, Value: IntValue(MaxCharacterLevel)},
+		}},
+	); err != nil {
 		t.Fatalf("Append() error = %v", err)
+	}
+	state, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatalf("Project() error = %v", err)
+	}
+	if state.Identity.Level() != MaxCharacterLevel {
+		t.Errorf("level = %d, want %d", state.Identity.Level(), MaxCharacterLevel)
 	}
 	if has(promptsFor(t, log), "character/level") {
 		t.Error("a level-20 character was offered another level")

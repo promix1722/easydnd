@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { Prompt } from '@/lib/api'
 
-import { blockOrder, blocksFor, inheritPlace, keyFor, reclaimPlace, settledKey } from './blocks'
+import { blockOrder, blocksFor, groupByLevel, inheritPlace, keyFor, reclaimPlace, settledKey } from './blocks'
 import type { SettledRow } from './settled'
 
 function row(over: Partial<SettledRow> & { seq: number }): SettledRow {
@@ -19,7 +19,6 @@ function prompt(over: Partial<Prompt> & { choice: Prompt['choice'] }): Prompt {
   return {
     group: 'class',
     optional: false,
-    advances: false,
     event: { type: 'class' },
     heldOnly: false,
     ...over,
@@ -86,7 +85,7 @@ describe('blocksFor', () => {
     ])
   })
 
-  it('marks a level already taken as the one thing that does not open', () => {
+  it('draws a level already taken as a statement, with nothing to open', () => {
     const blocks = blocksFor(
       [row({ seq: 5, level: 2, label: 'Level gained', event: { type: 'level', level: 2 } })],
       [],
@@ -153,5 +152,93 @@ describe('blocksFor', () => {
     // nothing about why.
     expect(keyFor({ prompt: SKILLS, replaces: null })).toBe(open?.key)
     expect(keyFor({ prompt: SKILLS, replaces: settled })).toBe(decided?.key)
+  })
+})
+
+describe('groupByLevel', () => {
+  it('cuts the ordered list into its levels, unlevelled first', () => {
+    const blocks = blocksFor(
+      [row({ seq: 4, level: 1 }), row({ seq: 6, level: 3 })],
+      [EXPERTISE, SKILLS, RACE],
+    )
+
+    const groups = groupByLevel(blocks)
+    expect(groups.map((group) => group.level)).toEqual([undefined, 1, 3])
+    expect(groups.map((group) => group.blocks.map((block) => block.key))).toEqual([
+      ['open:character/race'],
+      ['settled:4', 'open:rogue/proficiency/0'],
+      ['settled:6', 'open:rogue/expertise/0'],
+    ])
+  })
+
+  it('keeps a pinned block with its level, wherever the order put it', () => {
+    const order = blockOrder()
+    blocksFor([row({ seq: 6, level: 3 })], [], order)
+    // A level-1 entry arriving later is pinned at the end of the list --
+    // and still grouped under level 1, ahead of the level-3 heading.
+    const late = blocksFor([row({ seq: 6, level: 3 }), row({ seq: 7, level: 1 })], [], order)
+    expect(late.map((block) => block.key)).toEqual(['settled:6', 'settled:7'])
+
+    expect(groupByLevel(late).map((group) => group.level)).toEqual([1, 3])
+  })
+})
+
+describe('changeable', () => {
+  it('locks the ruleset, which is final, and nothing else', () => {
+    const ruleset = row({
+      seq: 3,
+      stage: 'identity',
+      event: {
+        type: 'change',
+        seq: 3,
+        changes: [{ path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } }],
+      },
+    })
+    const level = row({ seq: 9, event: { type: 'level', seq: 9 } })
+    const desired = row({
+      seq: 4,
+      stage: 'identity',
+      event: {
+        type: 'change',
+        seq: 4,
+        changes: [{ path: 'identity.desiredLevel', op: 'set', value: { kind: 'int', int: 3 } }],
+      },
+    })
+
+    const settled = blocksFor([ruleset, desired, level], []).filter(
+      (block) => block.kind === 'settled',
+    )
+    const changeableBySeq = new Map(settled.map((block) => [block.row.seq, block.changeable]))
+    expect(changeableBySeq.get(3)).toBe(false)
+    // A bare level entry is a fact, not a control: nothing asked which class
+    // it went into. The declared goal is the control that replaces it.
+    expect(changeableBySeq.get(9)).toBe(false)
+    expect(changeableBySeq.get(4)).toBe(true)
+  })
+})
+
+describe('what a level grants', () => {
+  const levelRow = (over: Partial<SettledRow> & { seq: number }) =>
+    row({ ...over, stage: 'class' })
+
+  it('keeps what a level granted changeable, while the level itself is a fact', () => {
+    // Both arrive as `level` events. Locking them together took every
+    // improvement, Expertise and feature pick off the screen with the levels.
+    const improvement = levelRow({
+      seq: 11,
+      event: {
+        type: 'level',
+        seq: 11,
+        ref: 'class:barbarian',
+        level: 4,
+        choices: [{ prompt: 'barbarian/ability-score-improvement/4/0', picks: ['wis', 'int'] }],
+      },
+    })
+    const level = levelRow({ seq: 9, event: { type: 'level', seq: 9, ref: 'class:barbarian', level: 3 } })
+
+    const settled = blocksFor([improvement, level], []).filter((b) => b.kind === 'settled')
+    const changeable = new Map(settled.map((b) => [b.row.seq, b.changeable]))
+    expect(changeable.get(11)).toBe(true)
+    expect(changeable.get(9)).toBe(false)
   })
 })

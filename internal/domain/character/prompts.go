@@ -23,7 +23,6 @@ const (
 	GroupRace
 	GroupBackground
 	GroupClass
-	GroupAdvance
 	GroupPersonality
 )
 
@@ -34,7 +33,6 @@ var promptGroupNames = map[PromptGroup]string{
 	GroupRace:       "race",
 	GroupBackground: "background",
 	GroupClass:      "class",
-	GroupAdvance:    "advance",
 	// Who the character is, as against what they are. The background decides
 	// what they did before; this is what they are like, and it is the one
 	// group whose answers are the player's own words rather than a pick.
@@ -51,10 +49,10 @@ func (g PromptGroup) String() string {
 
 // PromptEvent is the event an answer must be posted as.
 //
-// It is load-bearing rather than decorative. The first level in a class is a
-// class event and every later level is a level event; a subclass is its own
-// type again. A client that decided this for itself would be reimplementing
-// the rules in the browser, and would get multiclassing wrong the first time.
+// It is load-bearing rather than decorative. The class a character starts as
+// is a class event, a subclass is its own type, and what a level grants is a
+// level event carrying that level's answers. A client that decided this for
+// itself would be reimplementing the rules in the browser.
 type PromptEvent struct {
 	Type  EventType
 	Ref   rules.Ref
@@ -80,15 +78,10 @@ type Prompt struct {
 
 	// Optional reports that a character is complete without answering it.
 	//
-	// Without this distinction the flow deadlocks: a character who has not
-	// picked their personality traits would never be finished, so the prompt
-	// offering a level would never be reached, and the character could never
-	// advance.
+	// Without this distinction nothing is ever finished: a character who has
+	// not picked their personality traits would read as unfinished forever,
+	// and every surface that asks "is this character done?" would answer no.
 	Optional bool
-
-	// Advances reports that answering this prompt grants a level. It is what
-	// lets one screen serve both creation and level-up.
-	Advances bool
 
 	// Event is what the answer must be posted as.
 	Event PromptEvent
@@ -152,10 +145,13 @@ func Complete(prompts []Prompt) bool {
 // a build flow should ask.
 //
 // It is the counterpart to Project and the reason creation and level-up are
-// one code path rather than two: a finished character's only open prompt is
-// "which class do you gain a level in?", answering it appends a level event,
-// and that opens the level's own prompts. There is no separate level-up
-// endpoint because there is no separate question.
+// one code path rather than two: levelling up is raising the character's
+// desired level, Project makes that the class's level, and the levels it adds
+// pose their own questions here -- the archetype, the improvements, a
+// feature's picks -- which arrive in the same list as every other question.
+// There is no separate level-up endpoint because there is no separate
+// question, and no question at all about which class a level goes into while
+// there is one class to go into.
 //
 // The result is a pure function of the log and the catalogue. In particular
 // it does not depend on the order the player answered in, which is what makes
@@ -205,11 +201,12 @@ type promptBuilder struct {
 
 func (b *promptBuilder) build() []Prompt {
 	b.identity()
+	b.ruleset()
+	b.desiredLevel()
 	b.abilities()
 	b.race()
 	b.background()
 	b.classes()
-	b.advance()
 	return b.out
 }
 
@@ -298,6 +295,45 @@ func (b *promptBuilder) identity() {
 		Choice: rules.Choice{Prompt: "character/init", Choose: 1, Kind: rules.ChooseText},
 		Group:  GroupIdentity,
 		Event:  PromptEvent{Type: EventInit},
+	})
+}
+
+// ruleset asks which rules the character is built under, once.
+//
+// There is exactly one answer today -- the compendium's own ruleset -- and the
+// validator holds every answer to it, so the question is a recorded fact
+// rather than a decision. It exists so that a 2024 compendium, when one is
+// wired in, meets characters that already say which rules they meant.
+//
+// Required, with the desired level below it, and the two of them are why the
+// identity stage is three questions rather than a name: a character is built
+// to a level under a set of rules, and both are decisions the sheet cannot
+// derive. A log that predates them -- an import -- reads as unfinished until
+// they are answered, which is the honest reading: nothing in it says which
+// rules it was written under.
+func (b *promptBuilder) ruleset() {
+	if b.empty || !b.state.Identity.Ruleset.IsZero() {
+		return
+	}
+	b.out = append(b.out, Prompt{
+		Choice: rules.Choice{Prompt: "character/ruleset", Choose: 1, Kind: rules.ChooseText},
+		Group:  GroupIdentity,
+		Event:  PromptEvent{Type: EventChange},
+	})
+}
+
+// desiredLevel asks what level the character is being built towards.
+//
+// It is answered by a change event setting identity.desiredLevel, so like the
+// ability scores it closes by state rather than by a recorded answer.
+func (b *promptBuilder) desiredLevel() {
+	if b.empty || b.state.Identity.DesiredLevel > 0 {
+		return
+	}
+	b.out = append(b.out, Prompt{
+		Choice: rules.Choice{Prompt: "character/desired-level", Choose: 1, Kind: rules.ChooseLevel},
+		Group:  GroupIdentity,
+		Event:  PromptEvent{Type: EventChange},
 	})
 }
 
@@ -506,10 +542,16 @@ func (b *promptBuilder) classes() {
 			continue
 		}
 		source := rules.NewRef(rules.RefClass, taken.Class)
+		// Level 1, not the level the character has reached. What follows is
+		// the grant a class makes when it is *entered* -- its skills, its
+		// starting kit -- so a fifth-level barbarian's unanswered skill choice
+		// belongs to the level that offered it and files under it. Stamping
+		// the current level instead filed every one of them at the end of the
+		// class story, under a level that granted nothing.
 		base := Prompt{
 			Group:  GroupClass,
 			Source: source,
-			Level:  taken.Level,
+			Level:  1,
 			Event:  PromptEvent{Type: EventClass, Ref: source, Level: 1},
 		}
 
@@ -589,7 +631,11 @@ func (b *promptBuilder) featurePrompts(slug rules.Slug, level int, class rules.R
 	}
 	expertise := p
 	expertise.HeldOnly = true
-	b.addChoice(feature.Specific.ExpertiseOptions, expertise)
+	// oneList, because the rogue's first Expertise is transcribed as a choice
+	// between branches and is one list of two. Project reads it through the
+	// same function, or an answer to the flat question would not resolve
+	// against the nested shape.
+	b.addChoice(oneList(feature.Specific.ExpertiseOptions), expertise)
 	b.addChoice(feature.Specific.SubfeatureOptions, p)
 	b.addChoice(feature.Specific.EnemyTypeOptions, p)
 	b.addChoice(feature.Specific.TerrainTypeOptions, p)
@@ -610,6 +656,12 @@ func (b *promptBuilder) abilityScoreImprovement(class rules.Slug, level int) {
 		Choose: 2,
 		Kind:   rules.ChooseAbilityBonus,
 		From:   rules.OptionSet{Kind: rules.OptionsExplicit, Options: abilityBonusOptions()},
+		// Two points rather than two scores: both may go into one ability,
+		// which is the "+2 to one" half of the rule. This is the only choice
+		// in the game that says so -- a half-elf's two look identical and are
+		// "two *different* scores" -- which is why it is stated here rather
+		// than inferred from the kind.
+		Repeatable: true,
 	}
 	feat := rules.Choice{
 		Prompt: prompt + "/1",
@@ -642,7 +694,8 @@ func asiPrompt(class rules.Slug, level int) rules.Slug {
 }
 
 // abilityBonusOptions is "+1 to any ability", once per ability. Picking the
-// same ability twice is the "+2 to one" half of the rule.
+// same ability twice is the "+2 to one" half of the rule, which the choice
+// above allows by being Repeatable.
 func abilityBonusOptions() []rules.Option {
 	abilities := rules.Abilities()
 	out := make([]rules.Option, 0, len(abilities))
@@ -652,44 +705,8 @@ func abilityBonusOptions() []rules.Option {
 	return out
 }
 
-// advance offers the next level.
-//
-// This is the prompt that makes creation and level-up the same flow. It is
-// always open and always optional, so a finished character reads as complete
-// while still having somewhere to go. At character level 20 it disappears,
-// because there is nowhere left.
-func (b *promptBuilder) advance() {
-	if b.state.Identity.Level() >= maxCharacterLevel {
-		return
-	}
-	if len(b.state.Identity.Classes) == 0 {
-		return
-	}
-	var eligible []rules.Slug
-	for _, class := range b.cat.Classes.All() {
-		if canMulticlassInto(b.cat, b.state.Identity.Classes, class.Slug, b.state.Abilities) {
-			eligible = append(eligible, class.Slug)
-		}
-	}
-	if len(eligible) == 0 {
-		return
-	}
-	b.out = append(b.out, Prompt{
-		Choice: rules.Choice{
-			Prompt: "character/level",
-			Choose: 1,
-			Kind:   rules.ChooseLevel,
-			From:   refOptions(rules.RefClass, eligible),
-		},
-		Group:    GroupAdvance,
-		Optional: true,
-		Advances: true,
-		Event:    PromptEvent{Type: EventLevel},
-	})
-}
-
-// maxCharacterLevel is where advancement stops in the 2014 rules.
-const maxCharacterLevel = 20
+// MaxCharacterLevel is where advancement stops in the 2014 rules.
+const MaxCharacterLevel = 20
 
 // refOptions builds an explicit option set naming catalogue entries.
 func refOptions(kind rules.RefKind, slugs []rules.Slug) rules.OptionSet {
@@ -704,17 +721,32 @@ func refOptions(kind rules.RefKind, slugs []rules.Slug) rules.OptionSet {
 //
 // Only the cases where a duplicate is actually illegal are reported:
 // proficiencies and languages. Being offered a second rapier is fine.
+//
+// It looks inside branches as well as at the options themselves, because the
+// client answers a branch in the card that offered it -- so the options it
+// draws are the branches' options, and the greying-out has to reach them. The
+// monk's "one artisan's tool or one musical instrument" is the case: without
+// this, a tool the character already had looked pickable and the server
+// refused the answer. Option keys are unique within a prompt, so one flat list
+// still says which option each held entry is.
 func (b *promptBuilder) heldIn(c rules.Choice) []rules.Slug {
 	var held []rules.Slug
-	for i, option := range c.From.Options {
-		ref, ok := option.(rules.RefOption)
-		if !ok {
-			continue
-		}
-		if b.holds(ref.Ref) {
-			held = append(held, rules.OptionKey(option, i))
+	var walk func(options []rules.Option)
+	walk = func(options []rules.Option) {
+		for _, option := range options {
+			switch opt := option.(type) {
+			case rules.RefOption:
+				if b.holds(opt.Ref) {
+					held = append(held, rules.OptionKey(option))
+				}
+			case rules.NestedOption:
+				walk(opt.Choice.From.Options)
+			case rules.BundleOption:
+				walk(opt.Items)
+			}
 		}
 	}
+	walk(c.From.Options)
 	if c.From.Kind == rules.OptionsFromCollection && c.From.Collection == rules.RefLanguage {
 		held = append(held, b.state.Base.Languages...)
 	}

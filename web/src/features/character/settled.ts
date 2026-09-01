@@ -1,4 +1,4 @@
-import type { Change, CharacterEvent } from '@/lib/api'
+import type { Answer, Change, CharacterEvent } from '@/lib/api'
 
 import { writtenLabel } from './promptNames'
 import { refName } from './refNames'
@@ -88,8 +88,13 @@ function rowFor(
     return {
       seq,
       stage,
-      label: promptLabel(first.prompt),
-      value: answers.flatMap((answer) => answer.picks).map(pickLabel).join(', '),
+      label: settledPromptName(t, first.prompt, names),
+      // Read as what was chosen: the branch answers in between say only which
+      // way the question went.
+      value: leafAnswers(answers)
+        .flatMap((answer) => answer.picks)
+        .map((pick) => settledPickName(t, pick, names))
+        .join(', '),
       ...level,
       event,
     }
@@ -112,6 +117,58 @@ function rowFor(
   return null
 }
 
+/** A stored option key resolved through the localized catalogue when possible. */
+export function settledPickName(
+  t: Translate,
+  pick: string,
+  names: ReadonlyMap<string, string>,
+): string {
+  if ((ABILITY_ORDER as readonly string[]).includes(pick)) return abilityName(t, pick)
+  return names.get(pick) ?? pickLabel(pick)
+}
+
+function settledPromptName(
+  t: Translate,
+  prompt: string,
+  names: ReadonlyMap<string, string>,
+): string {
+  const parts = prompt.split('/').filter((part) => part !== '' && !/^\d+$/.test(part))
+  const owner = parts[0] ?? ''
+  const ownerName = ['class', 'race', 'background', 'feature', 'trait']
+    .map((kind) => names.get(`${kind}:${owner}`))
+    .find((name) => name !== undefined)
+  const kind = parts.findLast((part) => part !== owner)
+  const kindName =
+    kind === 'proficiency' || kind === 'expertise' || kind === 'multiclass'
+      ? t('sheet.proficiencies')
+      : kind === 'starting-equipment'
+        ? t('choice.equipment')
+        : undefined
+  if (ownerName !== undefined && kindName !== undefined) return `${ownerName} · ${kindName}`
+  return promptLabel(prompt)
+}
+
+/**
+ * The answers in an entry that say what was chosen, without the ones that say
+ * only which branch it was chosen in.
+ *
+ * A question whose options are themselves questions is answered in one entry
+ * now: the branch, then what the branch offered. Printing both reads "Expertise,
+ * Skill Stealth, Skill Acrobatics", naming the choice once as itself.
+ *
+ * A branch is spotted by its id being extended by another answer's -- `X` and
+ * `X/0`. Every branch id in the compendium extends its parent's, and so does
+ * the improvement's, which the domain synthesises. Comparing the *pick* against
+ * the answered prompts, which is what this used to do, missed every branch
+ * whose key is not its inner prompt: "or a feat" is keyed `feat`, and a bundle
+ * is keyed by its contents.
+ */
+export function leafAnswers(answers: readonly Answer[]): Answer[] {
+  return answers.filter(
+    (answer) => !answers.some((other) => other.prompt.startsWith(`${answer.prompt}/`)),
+  )
+}
+
 /**
  * Addressed changes, read back as a decision rather than as a patch.
  *
@@ -129,6 +186,22 @@ function summarise(t: Translate, changes: readonly Change[]): { label: string; v
   const alignment = changes.find((change) => change.path === 'identity.alignment')
   if (alignment !== undefined) {
     return { label: t('settled.alignment'), value: formatValue(t, alignment.value) }
+  }
+
+  const desired = changes.find((change) => change.path === 'identity.desiredLevel')
+  if (desired !== undefined) {
+    return { label: t('settled.desiredLevel'), value: formatValue(t, desired.value) }
+  }
+
+  // Named rather than echoed: "2014" is a manifest string, and the block
+  // should say what a person calls the rules it stands for.
+  const ruleset = changes.find((change) => change.path === 'identity.ruleset')
+  if (ruleset !== undefined) {
+    const slug = ruleset.value.slug ?? ruleset.value.string
+    return {
+      label: t('settled.ruleset'),
+      value: slug === '2014' ? t('ruleset.2014') : formatValue(t, ruleset.value),
+    }
   }
 
   // Every line of one, joined: a trait entry may carry two, and reading back

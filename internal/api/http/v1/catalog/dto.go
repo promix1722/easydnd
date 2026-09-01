@@ -32,6 +32,12 @@ type Choice struct {
 	Choose int       `json:"choose"`
 	Kind   string    `json:"kind"`
 	From   OptionSet `json:"from"`
+
+	// Repeatable allows one option to be picked more than once, which makes
+	// the picks points to spend rather than a set to choose. Only a level's
+	// Ability Score Improvement sets it -- a half-elf's two bonuses look
+	// identical and must go to two different scores.
+	Repeatable bool `json:"repeatable,omitempty"`
 }
 
 // OptionSet is the pool a Choice draws from.
@@ -378,12 +384,14 @@ type MagicItem struct {
 
 // Spell is a spell.
 //
-// The collection endpoint serves the summary half of this -- slug, name,
-// level, school, classes -- because 319 spells at full fidelity is a payload
-// nobody needs in order to build a character. Full detail comes from the same
-// endpoint with ?slugs=.
+// The collection endpoint serves the summary half of this -- everything a
+// list can search and filter on: slug, name, source, level, school, classes,
+// ritual, concentration, casting time and the component booleans -- because
+// 319 spells at full fidelity is a payload nobody needs in order to browse.
+// The prose and the effect detail come from the same endpoint with ?slugs=.
 type Spell struct {
 	Entry
+	Source        string            `json:"source,omitempty"`
 	Level         int               `json:"level"`
 	School        string            `json:"school,omitempty"`
 	Classes       []string          `json:"classes,omitempty"`
@@ -400,6 +408,17 @@ type Spell struct {
 	Damage        *SpellDamage      `json:"damage,omitempty"`
 	Healing       map[string]string `json:"healing,omitempty"`
 	HigherLevel   []string          `json:"higherLevel,omitempty"`
+}
+
+// SpellSearchResult is a page of the spells collection, searched.
+//
+// An envelope rather than the bare array the plain collection path serves: a
+// page is meaningless without the total behind it. The two shapes cannot be
+// confused -- one is an object, the other an array -- and the plain path
+// keeps its shape so nothing that reads the whole collection has to change.
+type SpellSearchResult struct {
+	Spells []Spell `json:"spells"`
+	Total  int     `json:"total"`
 }
 
 // RuleValue is a structured rule string: a casting time, a range, a duration.

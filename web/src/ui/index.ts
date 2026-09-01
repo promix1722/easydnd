@@ -19,6 +19,9 @@ export { Accordion, AppShell, Burger, NavLink, Tabs } from '@mantine/core'
 // which is that its *desktop* rendering is not a carousel at all.
 // `Carousel.Slide` rides along as a static member.
 export { Carousel } from '@mantine/carousel'
+// Arrow keys and the wheel for a carousel that fills its page. Spread on to a
+// `Carousel`; see the hook for what it borrows and when it gives it back.
+export { useCarouselGestures } from './carouselGestures'
 export { useDisclosure } from '@mantine/hooks'
 
 // The icon set, named one glyph at a time. Re-exported for the same reason the
@@ -48,6 +51,7 @@ export {
   IconUserCircle,
   IconUserPlus,
   IconUsers,
+  IconWand,
 } from '@tabler/icons-react'
 
 // Layout and typography primitives, re-exported unchanged.
@@ -125,7 +129,7 @@ export { UpdateRequired } from './UpdateRequired'
 export type { UpdateRequiredProps } from './UpdateRequired'
 export { ProficiencyMark } from './ProficiencyMark'
 export type { ProficiencyLevel, ProficiencyMarkProps } from './ProficiencyMark'
-export { Page } from './Page'
+export { Page, PageBody } from './Page'
 export type { Crumb, PageProps } from './Page'
 export { pageState } from './pageState'
 export type { PageState } from './pageState'
@@ -141,7 +145,7 @@ export type { TabRowProps, TabRowTab } from './TabRow'
 
 // Viewport access, for the shell and for components whose two renderings share
 // no markup. Prefer the primitives above.
-export { PAGE_BACKDROP, backdropFor } from './backdrop'
+export { PAGE_BACKDROP } from './backdrop'
 export { Panel } from './Panel'
 export type { PanelProps } from './Panel'
 export { useIsDesktop } from './useIsDesktop'

@@ -5,10 +5,10 @@ layout, layer rules, and how it ships. For the Go API it talks to, see
 [backend.md](backend.md); for the game model behind both, see [dnd.md](dnd.md).
 
 Status: **real**. Sign-in (passkeys and Google), the character list with its
-folders, character creation, the build loop, the account screen and the sheet
-are all built and tested. **Level-up is not**, and this client does not offer
-it -- see [Level-up is not offered](#level-up-is-not-offered). Neither is the
-battle tracker: `/games` is a section in the navigation whose page says so.
+folders, character creation, the build loop, level-up, the account screen and
+the sheet are all built and tested -- see
+[Level-up is the desired level](#level-up-is-the-desired-level). The battle
+tracker is not: `/games` is a section in the navigation whose page says so.
 
 ## Quick start
 
@@ -370,6 +370,23 @@ three.js out of the main bundle, and all three are load-bearing:
 3. `scripts/check-layers.mjs` lists `three` and `cannon-es` as `ui/`-only
    vendors, so a feature cannot import either directly and quietly undo the
    split.
+
+**What that costs the visitor is a wait, so the wait is drawn.** The `Suspense`
+fallback used to be `null`: the moment between swiping to the die and having it
+was an empty box, and on a development machine -- where the chunk comes from
+memory -- that moment does not exist, which is why it went unnoticed for so
+long. It is 158 kB over whatever connection a phone has, on the panel somebody
+swiped to *because* they wanted the die, and an empty panel there reads as a
+panel with nothing in it rather than as one still arriving. The fallback is now
+a centred `Loader`, named for a screen reader, which is a second thing the
+`ui/D20.tsx` header always claimed this file shipped and did not.
+
+It sits under `Suspense` only, and deliberately not before the intersection: an
+unswiped panel has not asked for anything, so a spinner there would claim work
+that is not happening -- and would animate off screen for as long as the landing
+page is open. Loading is announced by the spinner's own name rather than through
+the polite live region below it, which carries results; a spinner interrupting
+the number somebody just rolled is the wrong trade.
 
 The measured result: `index-*.js` is 260 kB gzipped and contains no three.js at
 all; `d20-scene-*.js` is 158 kB and is not in the precache manifest. Both are
@@ -844,6 +861,14 @@ takes an override for the two screens whose word says something the generic one
 does not -- "Projecting the sheet...", "Reading the log..." -- rather than
 imposing one word everywhere or letting four drift apart again.
 
+**`PageBody` is the same two blocks around a smaller region**, exported from
+`ui/Page.tsx` for the screen whose *controls* have loaded and whose *results*
+have not. A page is the right unit when there is nothing at all to show; it is
+the wrong one when replacing the body would also replace the filters you just
+touched. `features/spells/SpellsScreen.tsx` is the only caller and the reason
+it exists -- see below. Reach for `Page`'s own `state` prop first; this is the
+escape hatch.
+
 **`Page` does not branch on viewport, and must not.** The actions wrap under the
 heading on a narrow screen because the row is allowed to wrap, and the cap is
 inert below 1024px. `Page.test.tsx` pins that by comparing the two renderings
@@ -908,6 +933,97 @@ that is the whole difference between the two pages.
 A **game** is one sitting, and it is never called a session -- in this client
 that word means being signed in, right down to `SessionUser` and
 `startGuestSession` in the same flat `@/lib/api` barrel.
+
+## Spells are the compendium, browsable
+
+The fourth `SECTIONS` entry, at `/spells` and `/spells/:slug`. The section is a
+reader over the catalogue rather than anybody's data: the rows belong to no
+account, there is nothing to create and no row action, and a guest sees exactly
+what an account does. It is still behind `Private` like every section, because
+the catalog endpoints require a session -- the Go router marks the two lines to
+move if a truly public browser is ever wanted.
+
+It is also the client's **first search-and-filter surface**, and the server
+does the work: `searchSpells` in `lib/api/catalog.ts` sends the filters as
+query parameters and gets back a `{spells, total}` page, filtered, sorted and
+paged by `search.go` -- so the screen only says what it wants and appends
+pages behind a **Load more** button, shown while fewer rows are loaded than
+`total` says exist. The search box debounces 300ms before writing the URL,
+because the URL is the request now and firing one per letter would race four
+requests to answer the word. The filter state lives in `useSearchParams`, not
+component state, so a filtered list survives a reload and can be handed to
+somebody as a URL, the same way the character list carries `?folder=`.
+`getCollection('spells')` still serves the whole bare array -- character
+creation's spell prompts read that path and never met the envelope.
+
+The detail page asks the same endpoint for the whole entry with `?slugs=`,
+which is where the prose and the remaining rule values live.
+
+**Every spell has an icon**, a 128px webp under `web/public/spells/<slug>.webp`,
+drawn at 32px in the list (via `DataList`'s `leading` slot -- a prop rather
+than part of the primary column because the phone card never calls that
+column's `render`) and at 40px beside the detail heading (`Page`'s `lead`).
+The set is generated by `make spell-icons` -- art, not derived data, so there
+is deliberately no drift check; rerolling one means deleting its webp and its
+cached master. See docs/backend.md on `cmd/llm`.
+
+**Adjusting a filter must not take the filters down.** `useResource` blanks
+itself when its key changes, which is correct for a key naming a different
+*thing* -- a different character, a different group -- and wrong for the one
+key in this app that carries adjustable filter state. `SpellsScreen` fetched
+its search results and the schools and classes filling its Selects in a single
+resource keyed on the search, so every ticked checkbox threw away the controls
+that ticked it, and the page-level state took the whole screen down to a
+spinner and rebuilt it -- search box, filters, count and table -- to change
+which rows were in the table. Typing lost the caret on every pause.
+
+It is two resources now. `spells:options` is keyed on nothing, loads once,
+comes from the catalogue cache thereafter, and is the only one that gates the
+page. The search is keyed as before but gates the results region alone through
+`PageBody`. A third piece finishes it: the screen holds the last page that
+arrived, so a search in flight *dims* the rows already on screen instead of
+emptying the table. They are the previous answer, not a wrong one, and the
+flicker this fixed should not simply have moved inside the panel.
+
+**They are the one asset class that is *not* imported**, and the exception is
+deliberate. Everything else in `src/assets/` goes through Vite so it is
+content-hashed and nginx's `immutable` rule applies. These went the same way
+once -- an eager `import.meta.glob` in `features/spells/spellIcon.tsx` -- and
+it cost far more than the hash was worth:
+
+- Vite inlines assets under 4 kB as base64. 66 icons cleared that bar and were
+  baked into the entry chunk: **319 kB of a 1.2 MB bundle**, downloaded by
+  every visitor including everyone who never opens Spells, and re-sent whole on
+  every release, because a data URI cannot be cached apart from the JavaScript
+  holding it.
+- The remaining 253 became a map of URL strings the bundle carried whether or
+  not a single row rendered.
+- In the Vite dev server, every entry of an eager glob is served as its own
+  module. A cold load spent **319 round trips** before the app could paint.
+
+The file name *is* the slug, so `spellIcon.tsx` computes `/spells/${slug}.webp`
+and asks for nothing else. Dropping the glob took the entry chunk from
+1,218,402 to 877,243 bytes, and the browser now fetches an icon only when
+`loading="lazy"` says it is about to be seen. A slug with no file is answered
+by the SPA fallback with `index.html`, which fails to decode; `onError` hides
+the element rather than leaving a broken-image glyph in the row.
+
+What this gives up is the hash, and with it `immutable`: nginx's catch-all
+gives `/spells/` `no-cache`, so a repeat visit revalidates each icon it shows
+and gets a 304. That is the honest policy for a name that can be rerolled in
+place, and a few hundred bytes on a warm cache is the right trade against
+319 kB on every cold one. Being webp they still dodge the service worker's
+`png` precache glob, so no install carries them.
+
+**`features/spells/spellText.ts` is the piece the structured rule values were
+waiting for**: the compendium stores casting time, range and duration as
+`{kind, amount, unit}` precisely so a client can render "90 feet" per locale,
+and this module is that rendering. It sits in `features/spells/` and *not* in
+`src/domain/`, deliberately: `domain/` may not import `@/lib`, and these
+functions want the typed `Translate` so every key they name is checked against
+`en.json` at compile time -- the same reasoning that moved
+`features/character/labels.ts` out of `domain/`. Other features import it from
+here, which is precedented (`features/games` imports `../groups/roles`).
 
 ## Games are a section, not a corner of a group
 
@@ -1117,13 +1233,15 @@ Nothing in it decides what an answer *means* either. The prompt says which
 event carries it and the screen copies that verbatim, so the browser never
 learns that a first level is a `class` event and a fourth is a `level` one.
 Option keys come from the server for the same reason: a bundle of a shortbow
-and twenty arrows has no slug of its own.
+and twenty arrows has no slug of its own, and the server composes it one --
+`shortbow+arrow` -- so a settled row can read it back as "Shortbow, Arrow"
+without asking the compendium what the answer meant.
 
 The exception, and its bounds, is the character's **inputs**: a name, an
-alignment and the six ability scores. They settle a value on the sheet rather
-than naming a catalogue entry or answering a grant, so each is stored as an
-addressed change -- and the prompt, which says the entry is a `change`, has
-nowhere to say to which path. `BuildScreen`'s `INPUTS` is that table and is
+alignment, the six ability scores, the desired level and the ruleset. They
+settle a value on the sheet rather than naming a catalogue entry or answering
+a grant, so each is stored as an addressed change -- and the prompt, which
+says the entry is a `change`, has nowhere to say to which path. `BuildScreen`'s `INPUTS` is that table and is
 deliberately the only place a path is written down. It is worth knowing why it
 exists: an alignment is namespaced `character/alignment` exactly like
 `character/race`, this screen read the namespace as the shape, and the
@@ -1177,9 +1295,11 @@ A decided choice and an open one are the same object at two moments, so they
 are one list rather than two sections: the choice of a race *is* the question
 "which race?" once it has an answer. `features/character/blocks` merges them,
 sorted by level with everything un-levelled first, which reads as the story it
-is -- took rogue at 1, still owes two skills at 1, gained a level at 2. What
-tells the two apart is that an open block is drawn to stand out, not where it
-sits.
+is -- took rogue at 1, still owes two skills at 1, gained a level at 2 -- and
+`groupByLevel` then cuts the ordered list into one section per level, so the
+panel draws a "Level N" heading over each run instead of a tag on every card.
+What tells the two apart is that an open block is drawn to stand out, not
+where it sits.
 
 **Nothing opens itself**, with one exception below. The screen used to open the
 first open question of the tab; it has no way of knowing which of five a player
@@ -1290,7 +1410,8 @@ who the character is -- and a stub that left them would have shown seven
 untouched rows to anybody opening the build screen to look at one. The four
 written ones are answered as changes rather than picks, which is what they are
 now; the stub is a log the build screen could have written, so it writes what
-that screen would. The only row that remains is the standing offer of a level.
+that screen would. Nothing at all remains open: the stub declares a desired
+level of 3 and takes all three, so even the level question has been answered.
 
 The gate is `import.meta.env.DEV`, not a runtime check on a version or a
 feature flag, and the difference is the point: Vite replaces it with a literal,
@@ -1329,7 +1450,7 @@ be lost. A change that costs nothing else is simply made, because confirming
 every change teaches players to confirm without reading, which is exactly the
 habit the one change that *does* cost something needs them not to have.
 
-An answer to a *nested* prompt -- a rogue's Expertise, a half-elf's ability
+An answer that carries *picks* -- a rogue's Expertise, a half-elf's ability
 bonuses -- cannot be re-posed directly, because the options that made it up
 arrived with a prompt the server stopped emitting the moment it was answered.
 Opening one of those blocks therefore drops the entry, which reaches the same
@@ -1342,11 +1463,52 @@ everything else: only if another answer cannot survive it.
 The question that comes back is also **open**. `done` takes the key of a block
 that does not exist yet, and the reread is what brings it into being; without
 that the row you pressed turned back into a shut question and wanted pressing
-again, which is the same gesture twice for one intention. The key is knowable
-in both directions: a dropped entry names the prompt it answered, and a *nested
-option's key is its inner prompt's slug*, so answering "a martial melee weapon"
-rather than the greataxe beside it says exactly which question is about to
-arrive.
+again, which is the same gesture twice for one intention.
+
+A **subrace and a subclass** take the same route, for a different reason:
+their options are narrowed by the entry above them. The server offers a
+half-elf their subraces and a rogue their archetypes, and this screen cannot
+know either list -- rebuilding the question from the answer's own kind, which
+is right for a race or a class, offered Berserker and Champion to a rogue.
+`NARROWED` in `BuildScreen` is that list, and `reask` returns nothing for it.
+
+### A choice inside a choice is answered where it was asked
+
+Some options are themselves questions. "A martial weapon and a shield, or two
+martial weapons" makes the second branch a choice; so does the improvement a
+level grants, whose first branch is "raise two of your scores". Picking one
+used to confirm it, post it, wait for the server to pose the branch, and draw
+it as a **second block** further down the tab -- so a question the player was
+in the middle of answering became two questions in two places, the second of
+which had to be found and pressed.
+
+`PromptCard` resolves it in place. Two things already existed and neither was
+used: the branch's whole inner choice ships inside the option it is
+(`Option.choice`), and the server validates a batch of answers one at a time
+against a log that grows as each lands -- so a branch answer and the answer it
+opens travel in one event, the second legal because the first arrived. So
+picking a branch draws its options in the same card, with nothing fetched and
+nothing posted, and Confirm sends all of it. `opens` is the client's mirror of
+the domain's `addOpened`, bundles included, because "a martial weapon **and** a
+shield" is a bundle whose first item is a question.
+
+A branch that is the only branch is not a question, and `settle` takes it on
+arrival rather than making it a click: the improvement opens straight onto the
+six abilities, with "or a feat" still there to change to.
+
+`loadEntries` reaches into branches for the same reason -- an inner option's
+name has to be there before anything is posted, and a branch drawing on a whole
+collection ("or a feat") pulls that collection in the same pass.
+
+One entry now carries the branch and its contents, so the settled row would
+read "Expertise, Skill Stealth, Skill Acrobatics" -- the choice named once as
+itself. `leafAnswers` drops the branch answers: an answer whose id is extended
+by another answer's in the same entry (`X` and `X/0`) said only which way the
+question went. Every branch id in the compendium extends its parent's, and so
+does the improvement's, which the server synthesises. The log screen reads
+through the same function; its own version compared the *pick* against the
+answered ids, which missed "or a feat" (keyed `feat`) and every bundle branch
+(keyed by its contents).
 
 ### A category's word appears exactly once
 
@@ -1502,22 +1664,56 @@ told apart from a level-up improvement: **by whether it offers anything to pick
 between**. That is the server's own statement of what may be picked here, not a
 slug this client has memorised.
 
-### Level-up is not offered
+### Level-up is the desired level
 
-The server poses "gain a level in which class?" and everything that follows
-from it under the `advance` group, and this client filters that group out of
-everything it draws: no block, no answering surface, no control.
-Taking a level does not work -- the event the client would post is recorded as
-a no-op -- and a question that appears answerable and silently changes nothing
-is worse than a question that is not asked. It is the same judgement that took
-the "Level up" button off the sheet.
+Levelling up is one gesture: declaring the level the character is built
+towards. The identity tab asks it as `character/desired-level` -- a number
+form, answered as the change event that settles `identity.desiredLevel` -- and
+the sheet's **Level up** button raises the same declaration: it *replaces* the
+entry that made it (the same revision the identity tab performs, via
+`features/character/desiredLevel.ts` so the two write the same change) and
+lands on the class tab, where the choices the declaration opened are waiting.
+The declaration *is* the level: the server raises the character to it and
+poses what those levels open -- the archetype, the improvements, a feature's
+picks -- as ordinary prompts in the ordinary list. So "level me to 9" is one
+number followed by the build loop, not a wizard, and this screen has no code
+that knows what a level is.
+
+The identity tab also asks `character/ruleset` once -- a select with the one
+option this application serves, "D&D 2014" -- and the answer is final: the
+settled block is drawn locked (`blocksFor` marks it unchangeable), and the
+server refuses any change to a value the compendium does not serve.
+
+**All three identity questions are drawn before the character exists**, in the
+order they are asked: the name, the rules, the level. Only the name can be
+answered there -- it is what creates the character, and the other two are
+answered against one -- so the other two are drawn with no body at all, which
+`ui/BlockList` already renders as a statement rather than a control that would
+fail. `NEW_IDENTITY_PROMPTS` in `BuildScreen` is the client's copy of what the
+server poses a moment later, so confirming a name settles a row rather than
+growing two new ones underneath it.
+
+**Nothing here asks which class a level went into**, and nothing fills it in
+either. There is no such question to ask: multiclassing is not offered, so a
+level has one place to go, and the server stopped posing it -- see
+[backend.md](backend.md#creation-and-level-up-are-one-flow) for what turning
+it back on costs. This screen used to answer it on the player's behalf, taking
+every owed level in one silent write so they were not made to press a button
+per level on the way to ninth; deleting the question deleted the autofill with
+it, which is the better version of the same judgement.
 
 Levels a character already *has* stay visible as settled blocks on the class
-tab, and stay read-only -- blocks with nothing to open, which is why
-`ui/BlockList` draws one as a statement rather than as a control that refuses. They are facts about the character -- an imported one may
-well have several -- rather than controls, and editing one would drive the same
-machinery that cannot take one. `domain/stages.ts` is the single line that
-reverses all of this on the day it works.
+tab, under their own "Level N" headings (`groupByLevel`), and stay read-only:
+`blocksFor` marks a bare level entry unchangeable, and `ui/BlockList` draws
+one as a statement rather than as a control that refuses. They are facts about
+the character. The way back down is the identity tab's level, revised like any
+other entry -- priced and confirmed, so what those levels bought is shown
+before it goes.
+
+What a level *granted* is a different thing wearing the same event type, and
+stays changeable: an improvement, an Expertise, a feature's pick all arrive as
+`level` events carrying answers, and locking them with the levels would take a
+whole class of real decisions off the screen.
 
 ## The sheet decides what order things come in
 
@@ -2043,6 +2239,36 @@ them away removes a control, not a way through -- the swipe, the arrow keys and
 the indicators all remain, and the indicators are what still say how many
 panels there are.
 
+**The arrow keys and the wheel move it too**, which is `ui/carouselGestures.ts`.
+Mantine gives a carousel a swipe, a pair of arrow buttons and indicators that
+answer the arrow keys *once one of them has focus* -- and none of that reaches
+the visitor who has neither touched the page nor tabbed into it. On a laptop the
+two obvious ways to move a carousel that fills the window are the arrow keys and
+the wheel, and both did nothing.
+
+Both are **borrowed rather than taken**, which is the whole of the hook. The
+wheel is read on the axis the gesture is actually on, and claimed only when the
+page has nowhere to scroll on that axis: a sideways trackpad swipe moves the
+carousel when nothing scrolls horizontally, a plain mouse wheel moves it when the
+page already fits, and the moment the page has scrolling of its own to do -- a
+short landscape phone where the carousel hits its `320px` floor and the page
+grows past the viewport -- the wheel goes straight back. A carousel that ate the
+wheel unconditionally would be a page you cannot scroll. One gesture is one
+slide: a flick fires dozens of events, so the rest of a gesture is read and
+thrown away for 400ms, and `preventDefault` still runs during that window so a
+sideways swipe cannot trigger the browser's back-navigation.
+
+The keys are borrowed on the same terms. Focus inside the carousel is left
+alone, because the indicators are a roving tabindex that already answers arrows
+there and handling them twice moves two slides per press; a field being typed in
+keeps its own arrows. The listener is on the window rather than the carousel,
+because "the carousel is what this page is" is the case it exists for, and the
+effect only binds once there is an engine -- so a page without a carousel binds
+nothing. It lives in `ui/` and returns `getEmblaApi` as a prop to spread, so
+`routes/LandingPage.tsx` never has to name `EmblaCarouselType`: only `ui/` may
+import the engine. `ui/TabDeck` deliberately does **not** use it -- it sits on
+pages that scroll, which is exactly the case the guard hands back.
+
 None of the three panels is a link, and not because two of them lead nowhere --
 `/groups` is real. It is that all three live behind the sign-in boundary, so a
 panel that navigated would bounce a signed-out visitor straight back to this
@@ -2141,17 +2367,21 @@ read as texture rather than illustration.
 
 It goes on `AppShell.Main` only. The header and the desktop navbar keep their own
 flat grounds: they are chrome sitting over the content, and one sheet of pattern
-running under all three would read as one surface. `backdropFor` is the opt-out,
-and `/roll` is the only page that takes it -- the die's screen is already a scene
-of its own, and a drawing behind a lit floor is two pictures in one box, the same
-argument that keeps the landing carousel's fourth panel free of art.
+running under all three would read as one surface.
 
-The landing page is the other exception, and it belongs to the *chrome* rather
-than to the path: `/` is the carousel signed out and the character list signed
-in, and only the first does without a backdrop -- it is three photographs
-already. So `shell/LandingShell.tsx` makes that call, while `backdropFor` carries
-the die's. The character list takes the pattern like every other page, and so do
-`/login` and `/legal`, which wear the landing chrome.
+**Every page takes it, and there are no exceptions.** There used to be two. The
+die's screen at `/roll` opted out because a canvas with its own lit floor is
+already a picture; the landing carousel opted out because it is three
+photographs, and a washed-out fourth showing through the gap between two panels
+is the page arguing with itself. Both are gone: one ground under every page is
+worth more than either argument, and at an 88% wash what shows through behind a
+canvas or between two slides is texture rather than a second picture.
+
+That deleted `backdropFor(pathname)` with them. It existed only to name the
+exceptions, and a function returning the same value for every path is a lookup
+pretending to be a decision -- so the three shells spread `PAGE_BACKDROP`
+directly and there is nothing left for them to keep in step. `LandingShell` no
+longer needs `useLocation` at all.
 
 `background-attachment` is `scroll` rather than `fixed`: iOS Safari sizes a fixed
 background against the document rather than the viewport, and a repeating tile
@@ -2240,6 +2470,18 @@ cache rule in `deploy/nginx/easydnd.conf` applies. One size for every viewport;
 a `<picture>` with a narrow variant is the upgrade if transfer size on a phone
 ever becomes a complaint. The art is decorative and carries no accessible name:
 the headings say what the page is.
+
+**The wordmark is a link home**, in all three shells, which is what a logo in
+that corner has meant since there were corners. It leads to `/` on both sides of
+the boundary -- the carousel signed out, the character list signed in -- and it
+carries no link styling, because the mark and the word are its appearance and a
+blue underlined "easydnd" would be the browser's default showing through.
+
+It replaced `/legal`'s "Back to easydnd" button. That was a second way home drawn
+on exactly one page, sitting in the corner `SignInActions` keeps for the way *in*
+rather than the way out; a licence notice should not need chrome of its own to
+get out of. `SignInActions` now draws nothing at all for a signed-in visitor
+there, and `auth.backToApp` is gone from both catalogues.
 
 The dragon mark went with the emptiness. The old `Center` existed because a lone
 mark on a blank page should read as optically centred against the *window* --
@@ -2682,20 +2924,31 @@ overflowed it. From a scrolled position that draws as a stray dash beside the
 first tab you can see, which is what it was reported as. `width: max-content`
 makes the list as wide as what is in it.
 
-**The end that is cut is hidden, not faded.** The far end of the strip is the
-one place the first rule cannot win -- the browser clamps the scroll wherever
-the arithmetic puts it, which on the sheet's last tab is 36px into
-*Proficiencies*. A gradient across that fragment was tried at 24px and again at
-32px and failed both times for the same reason: the far half of it sits at
-80-90% opacity and reads as a word. So the mask is transparent for the
-fragment's measured width and ramps up over the 16px after it, where the next
-whole tab starts. An end resting exactly on a boundary hides nothing and keeps
-the ramp, because an edge drawn hard says the strip ends there.
+**The end that is cut fades, and the tab under the fade stays visible.** This is
+the second answer here and the first one was backwards. The mask used to hide
+the cut tab outright, for its whole measured width, on the argument that a
+legible fragment reads as a broken word rather than as "there is more this way".
+What that missed is where the strip rests. Rule one lands it on a tab's own left
+edge, so the tab straddling the *far* edge is cut by however much of it happens
+to fit -- 56px of *Traits and features* on the sheet at rest -- and hiding the
+cut hid the entire next tab. The strip then ended in clean space after
+*Proficiencies* and read as four tabs, which is how it was reported. The
+fragment was never the problem: it was the only evidence there was more.
 
-Both are measured from the tabs' own geometry, which is the one thing in this
-component the suite cannot press: jsdom computes no layout, so every strip there
-is 0px wide, never overflows, and never draws a mask. What the tests hold is
-that the absence is identical at both viewports. The active tab is brought into view by setting `scrollLeft`, not
+So the fragment is kept and the fade is a constant 44px at any end with strip
+behind it. A tab dissolving into the edge is the signal every scrolling strip
+uses, and it cannot be read as a typo because it is visibly unfinished -- which
+is what the earlier 24px and 32px ramps got wrong, leaving the far half of a
+fragment at 80-90% opacity where it read as finished text. An end with nothing
+behind it is drawn hard, because that is what says the strip stops there.
+
+What that measures is now one boolean per end -- whether the scroller has
+anything left that way -- rather than the geometry of whichever tab lies across
+the edge. The per-tab spans, the search for the tab across a given x, and the
+mid-drag cap they needed went with the rule that wanted them. It is still the
+one thing in this component the suite cannot press: jsdom computes no layout, so
+every strip there is 0px wide, never overflows, and never draws a mask. What the
+tests hold is that the absence is identical at both viewports. The active tab is brought into view by setting `scrollLeft`, not
 by `scrollIntoView`, which scrolls every scrollable ancestor -- it would drag
 the document as well as the strip, and jsdom does not implement it. A stack of
 bordered disclosures needs no branch either: it is right at 390px and at
@@ -3062,6 +3315,15 @@ session.
 So the name moved out of the header's *text* and into the control's accessible
 name and tooltip: `Sign out`, or `End guest session` for a guest. The header
 ends in the way out whether or not there is an account behind the session.
+
+**Signing out lands on `/`**, rather than leaving the URL where it was. Staying
+put reads as a bug at every address that is not `/`: the chrome swaps to the
+logged-out one underneath you, and the deep link you were on -- a sheet, a group,
+`/account` -- either bounces through the gate or sits there naming a thing you
+can no longer open. `/` is the one address that means something on both sides of
+the boundary, so it is where the session ends. The navigation happens after the
+request rather than beside it, and `signOut` drops the local session even when
+the request fails, so it is reached either way.
 
 The cost is worth naming rather than glossing, because it has since grown: the
 display name is now printed **nowhere in the client**. `/account` used to carry

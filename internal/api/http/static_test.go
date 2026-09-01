@@ -139,6 +139,54 @@ func TestTheBundleSaysHowLongItKeeps(t *testing.T) {
 	}
 }
 
+// TestOnlyTheHomepageIsIndexable pins the SEO boundary. Every missing file is
+// an SPA navigation, but only `/` is public content; the rest are authenticated
+// routes or the client-side not-found page and begin life with the homepage's
+// metadata before React replaces it.
+func TestOnlyTheHomepageIsIndexable(t *testing.T) {
+	r := routerServing(t, bundle(t))
+
+	for path, want := range map[string]string{
+		"/":                 "",
+		"/index.html":       "noindex, nofollow",
+		"/characters/abc":   "noindex, nofollow",
+		"/not-a-real-route": "noindex, nofollow",
+	} {
+		rec := do(t, r, http.MethodGet, path, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want %d", path, rec.Code, http.StatusOK)
+		}
+		if got := rec.Header().Get("X-Robots-Tag"); got != want {
+			t.Errorf("GET %s X-Robots-Tag = %q, want %q", path, got, want)
+		}
+	}
+}
+
+func TestDiscoveryFilesAreServedAsFiles(t *testing.T) {
+	dir := bundle(t)
+	write(t, filepath.Join(dir, "robots.txt"), "User-agent: *\n")
+	write(t, filepath.Join(dir, "sitemap.xml"), "<?xml version=\"1.0\"?><urlset></urlset>")
+	write(t, filepath.Join(dir, "llms.txt"), "# easydnd.org\n")
+	r := routerServing(t, dir)
+
+	for path, want := range map[string]string{
+		"/robots.txt":  "User-agent: *",
+		"/sitemap.xml": "<urlset>",
+		"/llms.txt":    "# easydnd.org",
+	} {
+		rec := do(t, r, http.MethodGet, path, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want %d", path, rec.Code, http.StatusOK)
+		}
+		if !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("GET %s body = %q, want it to contain %q", path, rec.Body.String(), want)
+		}
+		if strings.Contains(rec.Body.String(), "<!doctype html") {
+			t.Errorf("GET %s returned the SPA fallback", path)
+		}
+	}
+}
+
 // TestIndexHtmlIsServedRatherThanRedirected pins the other thing the service
 // worker's install depends on: it precaches /index.html by that name, and
 // net/http's helpers answer it with a 301 to ./, so the install spent a

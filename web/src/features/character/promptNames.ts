@@ -1,9 +1,8 @@
 import type { Prompt } from '@/lib/api'
 import type { MessageKey, Translate } from '@/lib/i18n'
 
+import { choiceOptionName } from './labels'
 import { offersOptions } from './options'
-
-import { titleCase } from '@/domain'
 
 /**
  * A choice named as a thing rather than asked as a question.
@@ -43,6 +42,11 @@ import { titleCase } from '@/domain'
  */
 export function choiceName(t: Translate, prompt: Prompt): string {
   const { choose, kind } = prompt.choice
+  // The two questions the character poses about itself, named by their own
+  // slugs before the kind is consulted, because the ruleset shares `text`
+  // with the name and neither is a choice of something in the compendium.
+  if (prompt.choice.prompt === 'character/desired-level') return t('choice.desiredLevel')
+  if (prompt.choice.prompt === 'character/ruleset') return t('choice.ruleset')
   switch (kind) {
     case 'race':
       return t('choice.race')
@@ -54,18 +58,17 @@ export function choiceName(t: Translate, prompt: Prompt): string {
       return t('choice.class')
     case 'subclass':
       return t('choice.subclass')
-    case 'level':
-      return t('choice.level')
     case 'alignment':
       return t('choice.alignment')
     case 'text':
       return t('choice.text')
+    // Held is what makes this one different: Expertise doubles a proficiency
+    // the character already has, so its wording is the prompt's business
+    // rather than the choice's.
     case 'proficiency':
       return prompt.heldOnly
         ? t('choice.proficiencyDouble', { count: choose })
         : t('choice.proficiency', { count: choose })
-    case 'ability-bonus':
-      return t('choice.abilityBonus', { count: choose })
     // Two questions share this kind. The one that offers options is the
     // improvement a level grants; the one that offers none is the six numbers
     // a character starts with, which is a form rather than a choice of N.
@@ -73,10 +76,6 @@ export function choiceName(t: Translate, prompt: Prompt): string {
       return offersOptions(prompt)
         ? t('choice.improvement')
         : t('choice.abilityScores', { count: choose })
-    case 'language':
-      return t('choice.language', { count: choose })
-    case 'equipment':
-      return t('choice.equipment')
     case 'personality':
       return t('choice.personality', { count: choose })
     case 'ideal':
@@ -87,8 +86,14 @@ export function choiceName(t: Translate, prompt: Prompt): string {
       return t('choice.flaw')
     case 'spell':
       return t('choice.spell', { count: choose })
+    case 'trait':
+      return t('choice.trait', { count: choose })
+    // Everything a choice can be named by from the choice alone -- the
+    // proficiencies, the languages, the equipment, the spells -- is named in
+    // one place, so a block's heading and an option that opens onto the same
+    // question cannot come to call it two different things.
     default:
-      return t('choice.unknown', { count: choose, kind: titleCase(kind) })
+      return choiceOptionName(t, kind, choose, prompt.choice.from.collection)
   }
 }
 

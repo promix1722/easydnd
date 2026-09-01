@@ -3,14 +3,14 @@ import { useParams } from 'react-router'
 import type { Sheet } from '@/lib/api'
 import { getGroup, getSharedSheet } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
-import { useT } from '@/lib/i18n'
+import { useLocale, useT } from '@/lib/i18n'
 import { Badge, Page, pageState } from '@/ui'
+
+import { titleCase } from '@/domain'
 
 import type { Compendium } from '../character/compendium'
 import { loadCompendium } from '../character/compendium'
 import { SheetBody } from '../character/SheetBody'
-
-import { classLine, titleCase } from '@/domain'
 
 /**
  * A character shared with a group, read by somebody who does not own it.
@@ -23,6 +23,7 @@ import { classLine, titleCase } from '@/domain'
  */
 export function SharedSheetScreen() {
   const t = useT()
+  const locale = useLocale()
   const { id: groupId = '', character = '' } = useParams()
   // The same compendium the owner's own sheet loads, so the two name things
   // out of one set. Both requests are session-cached.
@@ -40,7 +41,7 @@ export function SharedSheetScreen() {
      * request for one word. A null renders as the crumb's placeholder.
      */
     groupName: string | null
-  }>(`shared:${character}`, async (signal) => {
+  }>(`shared:${locale}:${character}`, async (signal) => {
     const [sheet, compendium, groupName] = await Promise.all([
       getSharedSheet(character, signal),
       loadCompendium(),
@@ -76,6 +77,13 @@ export function SharedSheetScreen() {
   }
 
   const identity = data.sheet.identity
+  const named = (collection: string, slug: string | undefined) =>
+    slug === undefined
+      ? null
+      : (data.compendium.names?.get(`${collection}:${slug}`) ?? titleCase(slug))
+  const classes = (identity.classes ?? [])
+    .map(({ class: slug, level }) => `${named('classes', slug) ?? slug} ${level}`)
+    .join(' / ')
 
   return (
     <Page
@@ -84,9 +92,9 @@ export function SharedSheetScreen() {
       subtitle={
         <>
           {[
-            identity.race !== undefined ? titleCase(identity.race) : null,
-            identity.background !== undefined ? titleCase(identity.background) : null,
-            classLine(identity.classes),
+            named('races', identity.race),
+            named('backgrounds', identity.background),
+            classes,
           ]
             .filter((part) => part !== null && part !== '--')
             .join(' · ')}

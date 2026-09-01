@@ -531,6 +531,7 @@ func (g *generator) features() error {
 		return err
 	}
 	out := make([]file.Feature, 0, len(ups))
+	seen := make(map[string]bool, len(ups))
 	for _, up := range ups {
 		f := file.Feature{Slug: up.Index, Level: up.Level}
 		if up.Class != nil {
@@ -564,7 +565,16 @@ func (g *generator) features() error {
 			f.Invocations = indexes(s.Invocations)
 		}
 		out = append(out, f)
+		seen[up.Index] = true
 		g.put(file.FileFeatures, up.Index, file.Prose{Name: up.Name, Desc: up.Desc})
+	}
+	// Background features are embedded upstream rather than represented in the
+	// features file. backgrounds() records their prose before this step; give
+	// each one a mechanics entry too so catalog clients can resolve its name.
+	for slug := range g.prose[file.FileFeatures] {
+		if !seen[slug] {
+			out = append(out, file.Feature{Slug: slug})
+		}
 	}
 	return emit(g, file.FileFeatures, out, func(f file.Feature) string { return f.Slug })
 }
@@ -735,6 +745,11 @@ func (g *generator) magicItems() error {
 	return emit(g, file.FileMagicItems, out, func(m file.MagicItem) string { return m.Slug })
 }
 
+// srdSource is the source slug stamped on every spell this generator emits.
+// Spells carry a source so that content from elsewhere -- a later SRD, a
+// homebrew import -- can join the collection without a model change.
+const srdSource = "srd-5.1"
+
 func (g *generator) spells() error {
 	ups, err := read[upSpell](g, "5e-SRD-Spells.json")
 	if err != nil {
@@ -757,6 +772,7 @@ func (g *generator) spells() error {
 
 		s := file.Spell{
 			Slug:          up.Index,
+			Source:        srdSource,
 			Level:         up.Level,
 			School:        up.School.Index,
 			CastingTime:   castingTime,

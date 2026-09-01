@@ -44,7 +44,7 @@ describe('HomeRoute', () => {
     homeAt({ status: 'anonymous' })
 
     expect(screen.getByRole('region', { name: 'What easydnd is for' })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Build a character' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Build a D&D character' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Characters' })).not.toBeInTheDocument()
   })
 

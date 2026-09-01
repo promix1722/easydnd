@@ -44,18 +44,13 @@ export function SignInActions() {
   if (location.pathname === '/login') return corner
 
   // This chrome is normally the logged-out one, but /legal wears it for
-  // everybody -- so somebody who is already signed in needs the way back to
-  // the app rather than an invitation to sign in again.
-  if (status === 'authenticated') {
-    return (
-      <>
-        {corner}
-        <Button component={Link} to="/" variant="subtle">
-          {t('auth.backToApp')}
-        </Button>
-      </>
-    )
-  }
+  // everybody -- so somebody already signed in must not be offered an
+  // invitation to sign in again. They are offered nothing instead: the way back
+  // to the app is the wordmark in the other corner, which is a link home in
+  // every shell now (see ./Wordmark.tsx). A "Back to easydnd" button here was a
+  // second way home drawn on one page only, and the corner it sat in is the
+  // sign-in corner rather than the leaving one.
+  if (status === 'authenticated') return corner
 
   // Mid-check or offline: we do not know which of the two to offer, and
   // guessing "sign in" would tell a signed-in visitor they are not.

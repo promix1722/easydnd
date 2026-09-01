@@ -12,6 +12,7 @@ import {
   describeField,
 } from '@/lib/api'
 import type {
+  Answer,
   ApiFieldError,
   CharacterEvent,
   Dropped,
@@ -19,7 +20,7 @@ import type {
   PromptsResponse,
   Sheet,
 } from '@/lib/api'
-import { useT } from '@/lib/i18n'
+import { useLocale, useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
@@ -38,16 +39,14 @@ import {
 import type { Asking, Block, BlockOrder } from './blocks'
 import { eventLabel, stageLabel } from './labels'
 import { resolveRefNames } from './refNames'
-import { settledByStage } from './settled'
+import { settledByStage, settledPickName } from './settled'
 import type { SettledRow } from './settled'
 import { StagePanel } from './StagePanel'
 import type { Scores } from './AbilityScoresForm'
 
 import {
   STAGES,
-  answerable,
   kindOf,
-  pickLabel,
   promptLabel,
   stageOf,
 } from '@/domain'
@@ -105,6 +104,7 @@ interface Preview {
  */
 export function BuildScreen() {
   const t = useT()
+  const locale = useLocale()
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -115,14 +115,19 @@ export function BuildScreen() {
   const folder = search.get('folder') ?? undefined
   const isNew = id === ''
 
-  const build = useResource<BuildView>(`build:${id}`, async (signal) => {
+  const build = useResource<BuildView>(`build:${locale}:${id}`, async (signal) => {
     if (id === '') return EMPTY_VIEW
     const [prompts, log, sheet] = await Promise.all([
       getPrompts(id, signal),
       getEvents(id, signal),
       getSheet(id, signal),
     ])
-    return { prompts, events: log.events, sheet, names: await resolveRefNames(log.events) }
+    return {
+      prompts,
+      events: log.events,
+      sheet,
+      names: await resolveRefNames([...log.events, ...prompts.prompts]),
+    }
   })
 
   const create = useAction(createCharacter)
@@ -198,9 +203,7 @@ export function BuildScreen() {
   if (creating && !arriving && !isNew && !build.loading) setCreating(false)
 
   const view = build.data ?? EMPTY_VIEW
-  // Advancement is dropped before anything looks at it, so no tab, no list
-  // and no Next can reach a question this client cannot honestly answer.
-  const open = view.prompts.prompts.filter((prompt) => answerable(prompt.group))
+  const open = view.prompts.prompts
   // Until a tab is clicked the screen opens on the first thing left to do,
   // and moves on as things are answered. That is the loop, kept: a player who
   // never touches a tab is walked through the questions in order, and one who
@@ -249,7 +252,7 @@ export function BuildScreen() {
         settled.get(each) ?? [],
         posingName
           ? each === 'identity'
-            ? [NEW_NAME_PROMPT]
+            ? NEW_IDENTITY_PROMPTS
             : []
           : open.filter((prompt) => stageOf(prompt.group) === each),
         orderFor(each),
@@ -311,6 +314,13 @@ export function BuildScreen() {
     // replace: true, because the URL of a character that does not exist is
     // not a place the Back button should return anyone to.
     if (created) {
+      // The entry the creation wrote belongs where the question that asked
+      // for it was: at the top of identity, above the two questions drawn
+      // under it. Without this the name is a key the order has never seen and
+      // goes to the end -- so confirming it would drop it below the rules and
+      // the level, which is the one row the player was looking at moving.
+      // The same thing `append` does for every other answer.
+      inheritPlace(orderFor('identity'), NEW_NAME_KEY, settledKey(created.seq))
       // Set before the navigation, because the navigation is what changes the
       // resource key -- and the render that reads the new key is the one that
       // would otherwise blank the page.
@@ -433,9 +443,10 @@ export function BuildScreen() {
   }
 
   const submitEvent = (asked: Asking, event: CharacterEvent) => {
-    const open = followUpKey(asked.prompt, event)
-    if (asked.replaces === null) void append(event, open)
-    else void price(asked.replaces, event, open)
+    // No follow-up to open: a branch is answered in the card that offered it
+    // and arrives in this same event, so nothing new is about to appear.
+    if (asked.replaces === null) void append(event, null)
+    else void price(asked.replaces, event, null)
   }
 
   /*
@@ -561,8 +572,8 @@ export function BuildScreen() {
                     onOpen={openBlock}
                     asking={asking}
                     names={view.names}
-                    onAnswerPicks={(asked, picks) =>
-                      submitEvent(asked, eventFor(asked.prompt, picks))
+                    onAnswerPicks={(asked, answers) =>
+                      submitEvent(asked, eventFor(asked.prompt, answers))
                     }
                     onNameChange={(next) => {
                       setNameDraft(next)
@@ -585,6 +596,8 @@ export function BuildScreen() {
                       : {})}
                     {...maybeScores(asking?.replaces ?? null)}
                     {...maybeLines(asking?.replaces ?? null)}
+                    {...(view.sheet !== null ? { level: view.sheet.identity.level } : {})}
+                    posing={posingName}
                   />
                 ),
               }
@@ -631,7 +644,10 @@ export function BuildScreen() {
                         {(entry.lost ?? []).map((lost) => (
                           <Text key={lost.prompt} size="xs" c="dimmed">
                             {promptLabel(lost.prompt)}
-                            {lost.picks !== undefined && `: ${lost.picks.map(pickLabel).join(', ')}`}
+                            {lost.picks !== undefined &&
+                              `: ${lost.picks
+                                .map((pick) => settledPickName(t, pick, preview.names))
+                                .join(', ')}`}
                           </Text>
                         ))}
                       </div>
@@ -690,26 +706,6 @@ function landingStage(state: unknown): Stage | null {
 }
 
 /**
- * The question an answer brings with it, where it brings one.
- *
- * Picking a nested option -- "a martial melee weapon" rather than the greataxe
- * beside it -- answers the prompt and poses another, and the server names the
- * new one by the key the old one was answered with: a nested option's key *is*
- * its inner prompt's slug. So the block that is about to arrive is knowable
- * from the answer alone, and can be opened rather than left for a second press.
- */
-function followUpKey(prompt: Prompt, event: CharacterEvent): string | null {
-  const nested = new Set(
-    (prompt.choice.from.options ?? [])
-      .filter((option) => option.kind === 'nested')
-      .map((option) => option.key),
-  )
-  const picked = (event.choices ?? []).flatMap((answer) => answer.picks)
-  const follows = picked.find((pick) => nested.has(pick))
-  return follows === undefined ? null : promptKey(follows)
-}
-
-/**
  * The question a dropped entry puts back, named from the entry itself.
  *
  * An answer to a nested prompt cannot be re-posed directly, so opening it drops
@@ -746,10 +742,42 @@ const NEW_NAME_PROMPT: Prompt = {
   choice: { prompt: 'character/init', choose: 1, kind: 'text', from: { kind: 'explicit' } },
   group: 'identity',
   optional: false,
-  advances: false,
   event: { type: 'init' },
   heldOnly: false,
 }
+
+/**
+ * The rest of what the identity tab will ask, shown before there is anybody to
+ * ask it about.
+ *
+ * The same three questions the server poses the moment the character exists,
+ * in the same order, so the page does not grow two rows the instant a name is
+ * confirmed. They are drawn without an answering surface until then -- see
+ * `posing` in `StagePanel` -- because there is nothing to append an answer to:
+ * a name is what creates the character, and these are answered against it.
+ */
+const NEW_IDENTITY_PROMPTS: Prompt[] = [
+  NEW_NAME_PROMPT,
+  {
+    choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
+    group: 'identity',
+    optional: false,
+      event: { type: 'change' },
+    heldOnly: false,
+  },
+  {
+    choice: {
+      prompt: 'character/desired-level',
+      choose: 1,
+      kind: 'level',
+      from: { kind: 'explicit' },
+    },
+    group: 'identity',
+    optional: false,
+      event: { type: 'change' },
+    heldOnly: false,
+  },
+]
 
 const NEW_NAME_KEY = keyFor({ prompt: NEW_NAME_PROMPT, replaces: null })
 
@@ -836,6 +864,12 @@ const INPUTS: readonly {
     kind: 'alignment',
     collection: 'alignment',
   },
+  // The desired level and the ruleset are the character's own questions about
+  // itself. Both are answered as changes by a form of their own -- see
+  // AnswerSurface, which routes them by slug -- so `kind` here only has to
+  // survive the round trip through `inputPrompt`.
+  { prompt: 'character/desired-level', path: 'identity.desiredLevel', kind: 'level' },
+  { prompt: 'character/ruleset', path: 'identity.ruleset', kind: 'text' },
   // The four the player answers in their own words. They are inputs for the
   // same reason the alignment is -- they settle a value and name nothing in
   // the compendium -- and they have no collection because there is nothing to
@@ -866,8 +900,7 @@ function inputPrompt(input: (typeof INPUTS)[number], stage: Stage): Prompt {
     },
     group: stage,
     optional: false,
-    advances: false,
-    event: { type: 'change' },
+      event: { type: 'change' },
     heldOnly: false,
   }
 }
@@ -885,6 +918,15 @@ function inputPrompt(input: (typeof INPUTS)[number], stage: Stage): Prompt {
  * it was answered, and rebuilding them here would be this client deciding what
  * an answer means.
  */
+/**
+ * The entry kinds whose options are narrowed by another entry the character
+ * holds, and which this client therefore cannot re-pose.
+ *
+ * Race, class and background draw on their whole collection, so the question
+ * is rebuildable from the answer alone. These two are not.
+ */
+const NARROWED = ['subrace', 'subclass']
+
 function reask(row: SettledRow): Prompt | null {
   const event = row.event
   if (event.type === 'init') {
@@ -896,6 +938,14 @@ function reask(row: SettledRow): Prompt | null {
   if ((event.choices ?? []).length > 0) return null
   if (event.ref !== undefined) {
     const kind = kindOf(event.ref)
+    // A subrace and a subclass are narrowed by the entry above them: the
+    // server offers a half-elf's subraces and a rogue's archetypes, not every
+    // one in the compendium. Rebuilding the question here would offer all of
+    // them -- Berserker, Champion, Devotion to a rogue -- so it is not
+    // rebuilt. Opening the block drops the entry instead, which reaches the
+    // same place from the other side: the server poses the question again,
+    // with the right list, and the drop is priced like any other.
+    if (NARROWED.includes(kind)) return null
     return {
       choice: {
         prompt: `character/${kind}`,
@@ -905,7 +955,6 @@ function reask(row: SettledRow): Prompt | null {
       },
       group: row.stage,
       optional: false,
-      advances: false,
       event: {
         type: event.type,
         ...(event.level !== undefined ? { level: event.level } : {}),
@@ -927,8 +976,7 @@ function reask(row: SettledRow): Prompt | null {
       },
       group: row.stage,
       optional: false,
-      advances: false,
-      event: { type: event.type },
+          event: { type: event.type },
       heldOnly: false,
     }
   }
@@ -994,7 +1042,11 @@ function initEventFor(name: string): CharacterEvent {
 }
 
 /** The entry a prompt said its answer travels in, filled in with the answer. */
-function eventFor(prompt: Prompt, picks: string[]): CharacterEvent {
+function eventFor(prompt: Prompt, answers: readonly Answer[]): CharacterEvent {
+  // The question itself is the first answer; anything after it answers a
+  // branch the first one opened, resolved in the same card.
+  const picks = answers[0]?.picks ?? []
+
   // An input settles a value on the sheet, so its answer is the change that
   // settles it rather than a pick attached to an entry that means nothing.
   const input = INPUTS.find((each) => each.prompt === prompt.choice.prompt)
@@ -1014,10 +1066,15 @@ function eventFor(prompt: Prompt, picks: string[]): CharacterEvent {
   }
   // A prompt that selects a catalogue entry carries its answer in the event's
   // ref; every other prompt carries it in the choices.
+  //
+  // All of them, in the order they were given. The server validates a batch
+  // answer by answer against a log that grows as each lands, so a branch and
+  // what the branch opened travel together: the second is legal because the
+  // first one arrived.
   if (selectsTheEventItself(prompt)) {
     event.ref = `${refKindFor(prompt)}:${picks[0] ?? ''}`
   } else {
-    event.choices = [{ prompt: prompt.choice.prompt, picks }]
+    event.choices = answers.map((answer) => ({ prompt: answer.prompt, picks: answer.picks }))
   }
   return event
 }

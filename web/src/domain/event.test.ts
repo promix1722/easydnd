@@ -51,4 +51,21 @@ describe('pickLabel', () => {
   it('names the branch a nested option took', () => {
     expect(pickLabel('rogue-expertise-1/expertise/0/0')).toBe('Expertise')
   })
+
+  // An option granting several things at once is named by all of them, so the
+  // log row says what was taken. This used to read "#0", which named a
+  // position nobody looking at the row could resolve.
+  it('reads a composed key back as its parts', () => {
+    expect(pickLabel('shortbow+arrow')).toBe('Shortbow, Arrow')
+    expect(pickLabel('leather-armor+longbow+arrow')).toBe('Leather Armor, Longbow, Arrow')
+  })
+
+  // A bundle can hold a branch, and the branch is named by the pool it draws
+  // from -- so the parts of a composed key are not all plain slugs.
+  it('reads a branch inside a composed key', () => {
+    expect(pickLabel('martial-weapons+shield')).toBe('Martial Weapons, Shield')
+    expect(pickLabel('rogue-expertise-1/expertise/0/1/0+thieves-tools')).toBe(
+      'Expertise, Thieves Tools',
+    )
+  })
 })

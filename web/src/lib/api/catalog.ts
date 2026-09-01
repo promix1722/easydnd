@@ -19,8 +19,8 @@ export interface Entry {
 export interface Option {
   /**
    * What an answer names this option by. The client never computes this --
-   * a bundle of a shortbow and twenty arrows has no slug of its own, and the
-   * rule for naming one lives on the server.
+   * a bundle of a shortbow and twenty arrows has no slug of its own, so the
+   * server names it by its contents ("shortbow+arrow").
    */
   key: string
   kind:
@@ -65,6 +65,13 @@ export interface Choice {
   choose: number
   kind: string
   from: OptionSet
+  /**
+   * One option may be picked more than once, which makes the picks points to
+   * spend rather than a set to choose. Only a level's Ability Score
+   * Improvement says so -- a half-elf's two bonuses look identical and go to
+   * two different scores.
+   */
+  repeatable?: boolean
 }
 
 export interface CollectionInfo {
@@ -134,10 +141,58 @@ export interface Proficiency extends Entry {
   reference?: string
 }
 
+/**
+ * A structured rule string: a casting time, a range, a duration.
+ *
+ * The SRD writes these as prose -- "1 action", "90 feet", "Up to 1 minute" --
+ * and the compendium stores them structured so the client can render them per
+ * locale. Which optional fields apply depends on the kind; see
+ * features/spells/spellText.ts for the rendering.
+ */
+export interface RuleValue {
+  kind: string
+  amount?: number
+  unit?: string
+  distance?: number
+  upTo?: boolean
+}
+
+export interface SpellComponents {
+  verbal?: boolean
+  somatic?: boolean
+  material?: boolean
+  consumed?: boolean
+  /** The material component's description. Detail only, never on a summary. */
+  text?: string
+}
+
+/**
+ * The collection serves the summary fields -- through `components`, enough to
+ * search and filter -- and `?slugs=` fills in the rest. Every field past
+ * `level` is optional because the wire omits its zero value.
+ */
 export interface Spell extends Entry {
+  source?: string
   level: number
   school?: string
   classes?: string[]
+  subclasses?: string[]
+  ritual?: boolean
+  concentration?: boolean
+  castingTime?: RuleValue
+  components?: SpellComponents
+  range?: RuleValue
+  duration?: RuleValue
+  attackType?: string
+  savingThrow?: { ability: string; success?: string }
+  areaOfEffect?: { shape: string; size: number }
+  damage?: {
+    type?: string
+    atSlotLevel?: Record<string, string>
+    atCharacterLevel?: Record<string, string>
+  }
+  healing?: Record<string, string>
+  higherLevel?: string[]
 }
 
 /**
@@ -152,6 +207,14 @@ export interface Spell extends Entry {
  * answering in English, for as long as the tab stays open.
  */
 const cache = new Map<string, Promise<unknown>>()
+
+// Catalog JSON is regenerated while the development server stays up. Vite
+// preserves module state across updates, so without this a corrected
+// translation can remain stuck in the tab until a hard reload.
+if (import.meta.hot) {
+  cache.clear()
+  import.meta.hot.dispose(() => cache.clear())
+}
 
 function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
   const hit = cache.get(key)
@@ -205,4 +268,39 @@ export function getEntries<T extends Entry>(collection: string, slugs: string[])
 /** Indexes a collection by slug, for the lookups a sheet does constantly. */
 export function bySlug<T extends Entry>(entries: T[]): Map<string, T> {
   return new Map(entries.map((entry) => [entry.slug, entry]))
+}
+
+/** One search over the spells collection. Every field optional; see search.go. */
+export interface SpellSearch {
+  q?: string
+  level?: number
+  school?: string
+  class?: string
+  castingTime?: string
+  concentration?: boolean
+  ritual?: boolean
+  material?: boolean
+  limit?: number
+  offset?: number
+}
+
+export interface SpellPage {
+  spells: Spell[]
+  total: number
+}
+
+/**
+ * Searches the spells collection server-side: filtered, sorted, paged.
+ *
+ * Uncached, because the query varies per keystroke. The server only answers
+ * in this envelope when at least one parameter is sent -- callers here always
+ * send `limit` -- otherwise the same route serves the bare array
+ * `getCollection` expects.
+ */
+export function searchSpells(search: SpellSearch, signal?: AbortSignal): Promise<SpellPage> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(search)) {
+    if (value !== undefined && value !== '') params.set(key, String(value))
+  }
+  return request<SpellPage>(`/catalog/spells?${params.toString()}`, signal ? { signal } : {})
 }

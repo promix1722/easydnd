@@ -61,7 +61,7 @@ func TestLoadEntryCounts(t *testing.T) {
 		{"traits", c.Traits.Len(), 38},
 		{"classes", c.Classes.Len(), 12},
 		{"subclasses", c.Subclasses.Len(), 12},
-		{"features", c.Features.Len(), 407},
+		{"features", c.Features.Len(), 408},
 		{"backgrounds", c.Backgrounds.Len(), 1},
 		{"feats", c.Feats.Len(), 1},
 		{"items", c.Items.Len(), 237},
@@ -249,6 +249,10 @@ how much of the SRD anybody has got through.
 */
 func TestLocaleFallsBackPerKey(t *testing.T) {
 	dir := copyData(t)
+	ruDir := filepath.Join(dir, file.LocaleDir, rules.LocaleRU.String())
+	if err := os.RemoveAll(ruDir); err != nil {
+		t.Fatalf("remove copied Russian locale: %v", err)
+	}
 
 	// One entry, one field. `dwarf` keeps its English age and size prose;
 	// every other race, and every other collection, is untranslated.

@@ -39,7 +39,19 @@ const EVENTS: CharacterEvent[] = [
   },
   { seq: 5, type: 'background', source: 'background', ref: 'background:acolyte' },
   { seq: 6, type: 'class', source: 'class', ref: 'class:rogue', level: 1 },
-  { seq: 7, type: 'level', source: 'advance', ref: 'class:rogue', level: 2 },
+  { seq: 7, type: 'level', source: 'class', ref: 'class:rogue', level: 2 },
+  {
+    seq: 9,
+    type: 'class',
+    source: 'class',
+    level: 1,
+    choices: [
+      {
+        prompt: 'barbarian/proficiency/0',
+        picks: ['skill-animal-handling', 'skill-athletics'],
+      },
+    ],
+  },
   // Answered by nobody the server could name: an imported log, a DM's ruling.
   { seq: 8, type: 'note', note: 'Joined the party in Waterdeep.' },
 ]
@@ -48,6 +60,9 @@ const NAMES = new Map([
   ['race:half-elf', 'Half-Elf'],
   ['background:acolyte', 'Acolyte'],
   ['class:rogue', 'Rogue'],
+  ['class:barbarian', 'Варвар'],
+  ['skill-animal-handling', 'Навык: Уход за животными'],
+  ['skill-athletics', 'Навык: Атлетика'],
 ])
 
 const settled = () => settledByStage(testT, { events: EVENTS, names: NAMES })
@@ -59,7 +74,11 @@ describe('settledByStage', () => {
     // A `level` entry and a `class` entry are different types and the same
     // tab; a `change` entry could be either the six scores or a DM's ruling,
     // and only the server knows which prompt it settled.
-    expect(rows.get('class')?.map((row) => row.value)).toEqual(['Rogue', 'Rogue'])
+    expect(rows.get('class')?.map((row) => row.value)).toEqual([
+      'Rogue',
+      'Rogue',
+      'Навык: Уход за животными, Навык: Атлетика',
+    ])
     expect(rows.get('abilities')?.map((row) => row.label)).toEqual(['Ability scores'])
     expect(rows.get('identity')?.map((row) => row.value)).toEqual(['Zephyr'])
   })
@@ -75,8 +94,14 @@ describe('settledByStage', () => {
 
     expect(rows[1]).toMatchObject({
       label: 'Half Elf · Ability Bonus',
-      value: 'Dex, Con',
+      value: 'Dexterity, Constitution',
     })
+  })
+
+  it('localizes the owner and kind of a settled prompt', () => {
+    const row = settled().get('class')?.find((candidate) => candidate.seq === 9)
+
+    expect(row?.label).toBe('Варвар · Proficiencies')
   })
 
   it('reads the six scores back as scores rather than as a patch', () => {
@@ -86,7 +111,7 @@ describe('settledByStage', () => {
   })
 
   it('keeps a level with the level it was', () => {
-    expect(settled().get('class')?.map((row) => row.level)).toEqual([1, 2])
+    expect(settled().get('class')?.map((row) => row.level)).toEqual([1, 2, 1])
   })
 
   it('gives no tab to an entry the server could not attribute', () => {
@@ -94,5 +119,61 @@ describe('settledByStage', () => {
     // a constructor, and an entry answering no question constructs nothing.
     const rows = [...settled().values()].flat()
     expect(rows.map((row) => row.seq)).not.toContain(8)
+  })
+})
+
+describe('summarise', () => {
+  it('reads the desired level and the ruleset back as decisions', () => {
+    const rows = settledByStage(testT, {
+      events: [
+        {
+          seq: 1,
+          type: 'change',
+          source: 'identity',
+          changes: [
+            { path: 'identity.desiredLevel', op: 'set', value: { kind: 'int', int: 5 } },
+          ],
+        },
+        {
+          seq: 2,
+          type: 'change',
+          source: 'identity',
+          changes: [{ path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } }],
+        },
+      ],
+      names: new Map(),
+    })
+
+    expect(rows.get('identity')?.map((row) => [row.label, row.value])).toEqual([
+      ['Level', '5'],
+      ['Rules', 'D&D 2014'],
+    ])
+  })
+
+  // A question whose options are questions is answered in one entry now: the
+  // branch, then what the branch offered. Printing both would name the choice
+  // once as itself -- "Expertise, Skill Stealth, Skill Acrobatics".
+  it('reads a branch answer as what was chosen inside it, not as the branch', () => {
+    const rows = settledByStage(testT, {
+      events: [
+        {
+          seq: 1,
+          type: 'level',
+          source: 'class',
+          ref: 'class:rogue',
+          level: 4,
+          choices: [
+            {
+              prompt: 'rogue/ability-score-improvement/4',
+              picks: ['rogue/ability-score-improvement/4/0'],
+            },
+            { prompt: 'rogue/ability-score-improvement/4/0', picks: ['dex', 'dex'] },
+          ],
+        },
+      ],
+      names: new Map(),
+    })
+
+    expect(rows.get('class')?.map((row) => row.value)).toEqual(['Dexterity, Dexterity'])
   })
 })

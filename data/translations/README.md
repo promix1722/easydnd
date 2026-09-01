@@ -66,6 +66,32 @@ out and it falls back on its own.
 - A directory that is not a known language tag fails the same way.
 - Nothing checks how *much* is translated. A locale is allowed to be one line.
 
+Russian is the exception to that last general rule: it is a complete locale,
+and `cmd/srdgen` has a test that requires every non-empty English leaf to have a
+non-empty Russian counterpart. A new English entry therefore cannot quietly
+fall back to English on a Russian sheet.
+
+## Updating the Russian translation
+
+The development workbench preserves every populated leaf already in the output,
+uses the checked-in glossary for D&D terminology, and checkpoints each accepted
+API response beside the output. Rerunning the same command after a failure only
+requests the missing leaves.
+
+```sh
+go run ./cmd/llm translate \
+  -in data/srd_5.1/i18n/en/spells.json \
+  -out data/translations/ru/spells.json \
+  -existing data/translations/ru/spells.json \
+  -glossary data/translations/ru.glossary.json \
+  -to ru
+```
+
+Run it for each collection, review the resulting prose, then run
+`make data/srd && make verify`. The final write is atomic; an incomplete run
+leaves the old translation in place and progress in `<output>.checkpoint.json`.
+`ru.sources.json` records the generation model and terminology references.
+
 ## What is not translated here
 
 - **Mechanics.** Dice, ranges, bonuses and slot tables live in

@@ -24,10 +24,6 @@ type Prompt struct {
 	// Optional reports that a character is complete without answering it.
 	Optional bool `json:"optional"`
 
-	// Advances reports that answering this prompt grants a level. It is what
-	// lets one screen serve both creation and level-up.
-	Advances bool `json:"advances"`
-
 	// Event is what the answer must be posted as. A client copies it into
 	// the body verbatim and adds the choices, rather than deciding for
 	// itself whether a level is a class event or a level event.
@@ -56,8 +52,8 @@ type PromptsResponse struct {
 	Seq int `json:"seq"`
 
 	// Complete reports that nothing required is outstanding. It is separate
-	// from the list being empty, because a finished character still has the
-	// optional prompt that offers them a level.
+	// from the list being empty, because a character with only optional
+	// prompts left -- an unwritten personality trait -- is finished.
 	Complete bool     `json:"complete"`
 	Prompts  []Prompt `json:"prompts"`
 }
@@ -65,8 +61,8 @@ type PromptsResponse struct {
 // Prompts handles GET /v1/characters/{id}/prompts.
 //
 // This is the endpoint the build flow is driven by, for creation and for
-// level-up alike: a finished character's remaining prompt is "which class do
-// you gain a level in?", and answering it opens that level's own prompts.
+// level-up alike: raising identity.desiredLevel raises the character's level,
+// and the levels that adds pose their own questions here.
 func (h *Handler) Prompts(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := idOf(c)
@@ -99,7 +95,6 @@ func (h *Handler) Prompts(c *gin.Context) {
 			Group:    p.Group.String(),
 			Level:    p.Level,
 			Optional: p.Optional,
-			Advances: p.Advances,
 			Event: PromptEvent{
 				Type:  p.Event.Type.String(),
 				Ref:   refString(p.Event.Ref),

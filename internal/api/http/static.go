@@ -67,6 +67,14 @@ func staticSite(dir string) http.Handler {
 				http.NotFound(w, r)
 				return
 			}
+			// Only the public landing page is search content. Every other
+			// fallback is either an authenticated application route or the
+			// client-side not-found page, and all of them contain the landing
+			// metadata until React starts. Keep that shared document from turning
+			// private and invented URLs into duplicate search results.
+			if r.URL.Path != "/" {
+				w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+			}
 			http.ServeFile(w, r, index)
 			return
 		}
@@ -79,6 +87,10 @@ func staticSite(dir string) http.Handler {
 		// handed to ServeContent, which is the same machinery without the
 		// redirect in front of it.
 		if r.URL.Path == "/index.html" {
+			// The worker precaches this spelling, so it cannot redirect to `/`.
+			// Canonical metadata points at `/`; noindex keeps a crawler that
+			// guesses the implementation URL from indexing a second copy.
+			w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 			serveIndex(w, r, index)
 			return
 		}

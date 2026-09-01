@@ -371,6 +371,7 @@ type MagicItem struct {
 // Spell is a spell or cantrip.
 type Spell struct {
 	Slug   string `json:"slug"`
+	Source string `json:"source,omitempty"`
 	Level  int    `json:"level"`
 	School string `json:"school"`
 

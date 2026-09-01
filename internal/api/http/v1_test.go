@@ -362,6 +362,62 @@ func TestUnknownCollectionIsNotFound(t *testing.T) {
 	}
 }
 
+// The spells collection answers search parameters with a filtered, sorted,
+// paged envelope, while the plain path keeps serving the bare array -- the
+// build flow reads that one and must not notice the search existing.
+func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
+	r, session := newFullRouter(t)
+
+	search := func(query string) catalogapi.SpellSearchResult {
+		t.Helper()
+		rec := send(t, r, session, http.MethodGet, "/v1/catalog/spells?"+query, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET ?%s = %d, want 200: %s", query, rec.Code, rec.Body)
+		}
+		return decode[catalogapi.SpellSearchResult](t, rec)
+	}
+
+	// Filters compose: exactly one level-3 evocation spell contains "fire".
+	got := search("q=fire&level=3&school=evocation")
+	if got.Total != 1 || len(got.Spells) != 1 || got.Spells[0].Slug != "fireball" {
+		t.Errorf("filtered = %+v, want exactly fireball", got)
+	}
+
+	// A page carries the total behind it, and offsets walk the same order.
+	page := search("limit=50")
+	if page.Total != 319 || len(page.Spells) != 50 {
+		t.Errorf("first page = %d of %d, want 50 of 319", len(page.Spells), page.Total)
+	}
+	last := search("limit=50&offset=300")
+	if page.Total != last.Total || len(last.Spells) != 19 {
+		t.Errorf("last page = %d of %d, want 19 of %d", len(last.Spells), last.Total, page.Total)
+	}
+
+	// Sorted by level then name: the cantrips lead, alphabetically.
+	if page.Spells[0].Slug != "acid-splash" || page.Spells[0].Level != 0 {
+		t.Errorf("first spell = %+v, want the acid-splash cantrip", page.Spells[0])
+	}
+
+	// material=false is "castable without a material component".
+	for _, spell := range search("material=false&limit=200").Spells {
+		if spell.Components != nil && spell.Components.Material {
+			t.Errorf("spell %s has a material component", spell.Slug)
+		}
+	}
+
+	// An unparseable parameter is a validation error, not an empty result.
+	rec := send(t, r, session, http.MethodGet, "/v1/catalog/spells?level=ten", nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("level=ten status = %d, want 400", rec.Code)
+	}
+
+	// The plain path is untouched by the search existing: still a bare array.
+	rec = send(t, r, session, http.MethodGet, "/v1/catalog/spells", nil)
+	if body := rec.Body.String(); rec.Code != http.StatusOK || body == "" || body[0] != '[' {
+		t.Errorf("plain collection = %d %q..., want a 200 array", rec.Code, body[:min(len(body), 20)])
+	}
+}
+
 // The whole build flow through the API, in the shape a client actually sends
 // it: read the prompts, answer one, read the prompts again.
 func TestCharacterBuildFlow(t *testing.T) {
@@ -379,20 +435,43 @@ func TestCharacterBuildFlow(t *testing.T) {
 		t.Errorf("seq = %d, want 1", created.Seq)
 	}
 
-	// Creation carries a name and nothing else, so the scores are the first
-	// thing the character is asked for -- an ordinary open choice with an
-	// entry of its own, rather than eight selections bundled into the init.
+	// Creation carries a name and nothing else, so what the character is asked
+	// for first is the rest of its identity: the rules it is built under, and
+	// the level it is built to. Each is an ordinary open choice with an entry
+	// of its own, rather than a bundle folded into the init.
 	prompts := decode[characterapi.PromptsResponse](t,
 		send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts", nil))
 	if prompts.Complete {
 		t.Error("a character with nothing but a name reads as complete")
 	}
+	if first := firstRequired(t, prompts); first.Choice.Prompt != "character/ruleset" {
+		t.Fatalf("first required prompt = %q, want character/ruleset", first.Choice.Prompt)
+	}
+
+	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1,
+		"events": []map[string]any{{
+			"type": "change",
+			"changes": []map[string]any{
+				{"path": "identity.ruleset", "op": "set",
+					"value": map[string]any{"kind": "slug", "slug": "2014"}},
+				{"path": "identity.desiredLevel", "op": "set",
+					"value": map[string]any{"kind": "int", "int": 1}},
+			},
+		}},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("identity = %d, want 200: %s", rec.Code, rec.Body)
+	}
+
+	prompts = decode[characterapi.PromptsResponse](t,
+		send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts", nil))
 	if first := firstRequired(t, prompts); first.Choice.Prompt != "character/abilities" {
 		t.Fatalf("first required prompt = %q, want character/abilities", first.Choice.Prompt)
 	}
 
 	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
-		"expectedSeq": 1,
+		"expectedSeq": 2,
 		"events":      []map[string]any{scoresEvent()},
 	})
 	if rec.Code != http.StatusOK {
@@ -416,7 +495,7 @@ func TestCharacterBuildFlow(t *testing.T) {
 	}
 
 	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
-		"expectedSeq": 2,
+		"expectedSeq": 3,
 		"events": []map[string]any{{
 			"type": "race",
 			"ref":  "race:half-elf",
@@ -429,8 +508,8 @@ func TestCharacterBuildFlow(t *testing.T) {
 		t.Fatalf("append = %d, want 200: %s", rec.Code, rec.Body)
 	}
 	written := decode[characterapi.WriteResponse](t, rec)
-	if written.Seq != 3 {
-		t.Errorf("seq = %d, want 3", written.Seq)
+	if written.Seq != 4 {
+		t.Errorf("seq = %d, want 4", written.Seq)
 	}
 	// The write returns the new sheet, which is why the client needs no
 	// cache invalidation: the response is the invalidation.

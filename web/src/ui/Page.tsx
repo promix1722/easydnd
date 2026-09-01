@@ -48,6 +48,14 @@ export interface PageProps {
    */
   lead?: ReactNode
   /**
+   * The page's own emblem -- a spell's icon. Drawn immediately *before* the
+   * heading and tighter to it than the trail's own gap, because the pair is
+   * one identity, not two neighbours: the same reading a section root gives
+   * its glyph. Decorative; whatever goes here should carry no name of its
+   * own.
+   */
+  mark?: ReactNode
+  /**
    * That the phone's one row of chrome already carries this page's name.
    *
    * A section root gets this for free -- `Page` knows the section from the URL,
@@ -117,6 +125,7 @@ export function Page({
   trail,
   badge,
   lead,
+  mark,
   namedByChrome,
   subtitle,
   actions,
@@ -296,11 +305,21 @@ export function Page({
                   accessible name is that name -- not the whole trail. Drawn here
                   for every page except a section root, which draws its own
                   above so that the phone can drop it. */}
-              {!headingIsSectionOnly && (
-                <Title order={2} fz={HEADING_SIZE}>
-                  {here === undefined ? null : <CrumbLabel label={here.label} size="lg" />}
-                </Title>
-              )}
+              {!headingIsSectionOnly &&
+                (mark === undefined ? (
+                  <Title order={2} fz={HEADING_SIZE}>
+                    {here === undefined ? null : <CrumbLabel label={here.label} size="lg" />}
+                  </Title>
+                ) : (
+                  // The mark and the name are one identity, so they sit
+                  // tighter than the trail's own gap keeps its crumbs apart.
+                  <Group gap={6} align="center" wrap="nowrap">
+                    {mark}
+                    <Title order={2} fz={HEADING_SIZE}>
+                      {here === undefined ? null : <CrumbLabel label={here.label} size="lg" />}
+                    </Title>
+                  </Group>
+                ))}
               {badge}
               {lead}
             </Group>
@@ -318,7 +337,7 @@ export function Page({
           )}
         </Stack>
 
-        <Body state={state ?? READY}>{children}</Body>
+        <PageBody state={state ?? READY}>{children}</PageBody>
       </Stack>
     </Box>
   )
@@ -375,8 +394,16 @@ function CrumbLabel({ label, size }: { label: string | null; size: 'sm' | 'lg' }
  * Both blocks are the markup the screens already wrote inline -- lifted rather
  * than redesigned, so this change moved where they live without changing what
  * anybody sees.
+ *
+ * Exported because a page is not always the right unit. `Page` uses it for the
+ * whole body, which is correct when the screen has nothing at all to show; a
+ * screen whose *controls* are loaded and whose *results* are not needs the same
+ * two blocks around a smaller region, so that adjusting a filter does not take
+ * the filters down with it. `features/spells/SpellsScreen.tsx` is the worked
+ * example. Keep using `Page`'s own `state` prop for the first case -- this is
+ * the escape hatch, not the default.
  */
-function Body({ state, children }: { state: PageState; children: ReactNode }) {
+export function PageBody({ state, children }: { state: PageState; children: ReactNode }) {
   const t = useT()
   if (state.kind === 'loading') {
     return (

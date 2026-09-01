@@ -51,19 +51,17 @@ export const PAGE_BACKDROP: CSSProperties = {
 }
 
 /**
- * Which pages take it, given where you are.
+ * Every page takes it, with no exceptions.
  *
- * Only the die opts out, and it opts out because its whole screen is a scene of
- * its own: a canvas with a lit floor for the d20 to bounce on. A drawing behind
- * that is two pictures in one box -- the same argument that keeps the landing
- * carousel's fourth panel free of art.
+ * There used to be two carve-outs and both are gone. The die's screen opted out
+ * because a canvas with its own lit floor is already a picture, and the landing
+ * carousel opted out because it is three photographs; the answer in both cases
+ * is that one ground under every page is worth more than either exception. The
+ * wash is 88% of the page's own colour, so what shows through behind a canvas or
+ * between two panels is texture rather than a second picture.
  *
- * `/` is not in here even though the landing page does without one, because `/`
- * is two pages: the carousel signed out, the character list signed in. The
- * character list takes the pattern like every other page; the carousel does not,
- * and that is a fact about the *chrome* rather than about the path -- so
- * `shell/LandingShell.tsx` is where it is decided.
+ * There is deliberately no `backdropFor(pathname)` any more. It existed only to
+ * name the exceptions, and a function that now returns the same value for every
+ * path is a lookup pretending to be a decision -- so the three shells spread
+ * `PAGE_BACKDROP` directly and there is nothing left to keep in step.
  */
-export function backdropFor(pathname: string): CSSProperties | undefined {
-  return pathname === '/roll' ? undefined : PAGE_BACKDROP
-}

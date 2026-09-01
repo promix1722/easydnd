@@ -5,7 +5,7 @@ import { renderAt } from '@/test/render'
 
 import { LandingPage } from './LandingPage'
 
-const SLIDE_NAMES = ['Build a character', 'Join a group', 'Run sessions']
+const SLIDE_NAMES = ['Build a D&D character', 'Join a group', 'Run sessions'] as const
 
 /** The fourth panel, which only a phone is offered. */
 const DICE_SLIDE = 'Roll a d20'
@@ -32,9 +32,10 @@ describe('LandingPage', () => {
   it('keeps the slides in the order the app is met in', () => {
     renderAt('desktop', <LandingPage />)
 
-    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    const headings = screen.getAllByRole('heading').map((h) => h.textContent)
 
     expect(headings).toEqual(SLIDE_NAMES)
+    expect(screen.getByRole('heading', { level: 1, name: SLIDE_NAMES[0] })).toBeInTheDocument()
   })
 
   // Each panel is named by its own heading rather than by a second copy of the
@@ -46,7 +47,10 @@ describe('LandingPage', () => {
 
     for (const name of SLIDE_NAMES) {
       const slide = screen.getByRole('group', { name })
-      const heading = screen.getByRole('heading', { level: 2, name })
+      const heading = screen.getByRole('heading', {
+        level: name === SLIDE_NAMES[0] ? 1 : 2,
+        name,
+      })
 
       expect(slide.getAttribute('aria-labelledby')).toBe(heading.id)
       expect(slide).toContainElement(heading)
@@ -153,7 +157,7 @@ describe('LandingPage', () => {
   it('puts the die last, behind the three that describe the app', () => {
     renderAt('mobile', <LandingPage />)
 
-    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    const headings = screen.getAllByRole('heading').map((h) => h.textContent)
     expect(headings).toEqual([...SLIDE_NAMES, DICE_SLIDE])
 
     const panels = screen.getAllByRole('group')

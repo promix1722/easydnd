@@ -8,7 +8,6 @@ function prompt(over: Partial<Prompt> & { choice: Prompt['choice'] }): Prompt {
   return {
     group: 'race',
     optional: false,
-    advances: false,
     event: { type: 'race' },
     heldOnly: false,
     ...over,

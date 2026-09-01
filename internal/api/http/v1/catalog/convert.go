@@ -120,10 +120,11 @@ func (c converter) choice(ch *rules.Choice) *Choice {
 
 func (c converter) choiceValue(ch rules.Choice) Choice {
 	return Choice{
-		Prompt: ch.Prompt.String(),
-		Choose: ch.Choose,
-		Kind:   ch.Kind.String(),
-		From:   c.optionSet(ch.From),
+		Prompt:     ch.Prompt.String(),
+		Choose:     ch.Choose,
+		Kind:       ch.Kind.String(),
+		From:       c.optionSet(ch.From),
+		Repeatable: ch.Repeatable,
 	}
 }
 
@@ -147,8 +148,8 @@ func (c converter) optionSet(set rules.OptionSet) OptionSet {
 		out.Collection = set.Collection.String()
 	case rules.OptionsExplicit:
 		out.Options = make([]Option, 0, len(set.Options))
-		for i, option := range set.Options {
-			out.Options = append(out.Options, c.option(option, i))
+		for _, option := range set.Options {
+			out.Options = append(out.Options, c.option(option))
 		}
 	}
 	return out
@@ -171,9 +172,9 @@ func optionSetKindName(k rules.OptionSetKind) string {
 // Key comes from rules.OptionKey, which is the same function the projector
 // uses to resolve a stored answer. Serving it means the client never computes
 // an option's identity, it echoes what the server sent -- so the rule that a
-// bundle is named by its position lives in exactly one place.
-func (c converter) option(o rules.Option, index int) Option {
-	out := Option{Key: rules.OptionKey(o, index).String()}
+// bundle is named by what is in it lives in exactly one place.
+func (c converter) option(o rules.Option) Option {
+	out := Option{Key: rules.OptionKey(o).String()}
 	switch opt := o.(type) {
 	case rules.RefOption:
 		out.Kind = "ref"
@@ -186,8 +187,8 @@ func (c converter) option(o rules.Option, index int) Option {
 	case rules.BundleOption:
 		out.Kind = "bundle"
 		out.Items = make([]Option, 0, len(opt.Items))
-		for i, item := range opt.Items {
-			out.Items = append(out.Items, c.option(item, i))
+		for _, item := range opt.Items {
+			out.Items = append(out.Items, c.option(item))
 		}
 	case rules.AbilityBonusOption:
 		out.Kind = "ability-bonus"
@@ -508,17 +509,34 @@ func (c converter) magicItem(m domain.MagicItem) MagicItem {
 }
 
 // spellSummary is what the collection endpoint serves: enough to search and
-// filter, not the whole spell. 319 spells at full fidelity is a payload
-// nobody needs in order to build a character; ?slugs= returns the rest.
+// filter -- including by casting time and components -- not the whole spell.
+// 319 spells at full fidelity is a payload nobody needs in order to browse;
+// ?slugs= returns the rest. The material component's text is prose and stays
+// with the detail.
 func (c converter) spellSummary(s domain.Spell) Spell {
 	return Spell{
 		Entry:         Entry{Slug: s.Slug.String(), Name: s.Name},
+		Source:        s.Source.String(),
 		Level:         s.Level,
 		School:        s.School.String(),
 		Classes:       slugStrings(s.Classes),
 		Subclasses:    slugStrings(s.Subclasses),
 		Ritual:        s.Ritual,
 		Concentration: s.Concentration,
+		CastingTime:   castingTimeOf(s),
+		Components: &Components{
+			Verbal:   s.Components.Verbal,
+			Somatic:  s.Components.Somatic,
+			Material: s.Components.Material,
+		},
+	}
+}
+
+func castingTimeOf(s domain.Spell) *RuleValue {
+	return &RuleValue{
+		Kind:   s.CastingTime.Kind.String(),
+		Amount: s.CastingTime.Amount,
+		Unit:   s.CastingTime.Unit.String(),
 	}
 }
 
@@ -527,11 +545,6 @@ func (c converter) spell(s domain.Spell) Spell {
 	out.Desc = s.Desc
 	out.HigherLevel = s.HigherLevel
 	out.AttackType = s.AttackType.String()
-	out.CastingTime = &RuleValue{
-		Kind:   s.CastingTime.Kind.String(),
-		Amount: s.CastingTime.Amount,
-		Unit:   s.CastingTime.Unit.String(),
-	}
 	out.Range = &RuleValue{Kind: s.Range.Kind.String(), Distance: int(s.Range.Distance)}
 	out.Duration = &RuleValue{
 		Kind:   s.Duration.Kind.String(),
@@ -539,12 +552,7 @@ func (c converter) spell(s domain.Spell) Spell {
 		Unit:   s.Duration.Unit.String(),
 		UpTo:   s.Duration.UpTo,
 	}
-	out.Components = &Components{
-		Verbal:   s.Components.Verbal,
-		Somatic:  s.Components.Somatic,
-		Material: s.Components.Material,
-		Text:     s.Material,
-	}
+	out.Components.Text = s.Material
 	if s.Save != nil {
 		out.SavingThrow = &SavingThrow{
 			Ability: s.Save.Ability.Slug().String(),

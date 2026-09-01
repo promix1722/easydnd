@@ -47,6 +47,18 @@ func (h *Handler) Collection(c *gin.Context) {
 	}
 
 	if len(filter) == 0 {
+		// Spells answer search parameters -- filtered, sorted, paged, in an
+		// envelope. ?slugs= wins when both are sent: naming entries is the
+		// more specific request.
+		if name == CollectionSpells && hasSpellSearch(c) {
+			search, err := parseSpellSearch(c)
+			if err != nil {
+				helpers.FormatError(c, err)
+				return
+			}
+			h.searchSpells(c, search)
+			return
+		}
 		raw, err := h.collectionBytes(ctx, locale, name)
 		if err != nil {
 			helpers.FormatError(c, err)

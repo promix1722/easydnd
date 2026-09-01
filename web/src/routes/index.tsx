@@ -8,6 +8,7 @@ import { DiceScreen } from '@/features/dice'
 import { GameScreen, GamesScreen, SharedSheetScreen } from '@/features/games'
 import { GroupListScreen, GroupScreen } from '@/features/groups'
 import { LegalScreen } from '@/features/legal'
+import { SpellScreen, SpellsScreen } from '@/features/spells'
 
 import { LandingShell } from '@/shell/LandingShell'
 import { RootGate } from '@/shell/RootGate'
@@ -151,6 +152,27 @@ export const router = createBrowserRouter([
         element: (
           <Private>
             <GameScreen />
+          </Private>
+        ),
+      },
+
+      // The compendium's browsable half. Private like every section -- a
+      // guest session passes -- though the data is nobody's; if a public
+      // browser is ever wanted, the two catalog routes in the Go router are
+      // the thing to move, not this.
+      {
+        path: 'spells',
+        element: (
+          <Private>
+            <SpellsScreen />
+          </Private>
+        ),
+      },
+      {
+        path: 'spells/:slug',
+        element: (
+          <Private>
+            <SpellScreen />
           </Private>
         ),
       },

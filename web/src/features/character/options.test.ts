@@ -9,7 +9,6 @@ function prompt(overrides: Partial<Prompt>): Prompt {
     choice: { prompt: 'test', choose: 1, kind: 'proficiency', from: { kind: 'explicit', options: [] } },
     group: 'class',
     optional: false,
-    advances: false,
     heldOnly: false,
     event: { type: 'class' },
     ...overrides,
@@ -37,7 +36,7 @@ describe('choosableOptions', () => {
             kind: 'explicit',
             options: [
               {
-                key: '#0',
+                key: 'shortbow+arrow',
                 kind: 'bundle',
                 items: [
                   { key: 'shortbow', kind: 'ref', ref: 'item:shortbow', count: 1 },
@@ -52,7 +51,7 @@ describe('choosableOptions', () => {
       entries,
     )
 
-    expect(got.map((o) => o.key)).toEqual(['#0', 'shortsword'])
+    expect(got.map((o) => o.key)).toEqual(['shortbow+arrow', 'shortsword'])
     expect(got[0]?.label).toBe('Shortbow and Arrow ×20')
     expect(got[1]?.label).toBe('Shortsword')
   })

@@ -1,0 +1,31 @@
+{
+  "locale": "ru",
+  "generatedWith": {
+    "model": "gpt-4o-mini",
+    "tool": "cmd/llm translate"
+  },
+  "preservedHandTranslations": [
+    "abilities.json",
+    "races.json#/dragonborn/name",
+    "races.json#/dwarf/name",
+    "races.json#/elf/name",
+    "races.json#/gnome/name",
+    "races.json#/half-elf/name",
+    "races.json#/half-orc/name",
+    "races.json#/halfling/name",
+    "races.json#/human/name",
+    "races.json#/tiefling/name"
+  ],
+  "terminologyReferences": [
+    {
+      "name": "DnD.su 2014",
+      "url": "https://5e14.dnd.su/",
+      "usage": "Exact English/Russian entity-title verification only; no descriptions or user comments copied."
+    },
+    {
+      "name": "Long Story Short SRD 5.1",
+      "url": "https://longstoryshort.app/srd/",
+      "usage": "Russian SRD terminology reference; generated descriptions remain original translations."
+    }
+  ]
+}

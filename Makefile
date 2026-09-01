@@ -403,6 +403,22 @@ web/icons/check:
 web/release: web/build
 	tar -czf web.tar.gz -C web/dist .
 
+## spell-icons: generate the per-spell icons -- manual, costs OpenAI credit
+# Three steps: build the prompts from the SRD, generate 1024px PNGs into a
+# cache outside the repo (the expensive artifact, so it survives worktrees and
+# reruns), downscale to the 128px webp the client imports. Every step skips
+# what already exists, so an interrupted run resumes for free; rerolling one
+# icon means deleting its webp here and its PNG in the cache. Never part of
+# `verify` -- icons are art, and art has no drift check.
+SPELL_ICON_CACHE := $(HOME)/.cache/easydnd/spell-icons
+spell-icons:
+	@test -n "$$OPENAI_API_KEY" || { \
+	  echo "OPENAI_API_KEY is not set; source your secrets file first."; exit 1; }
+	node web/scripts/spell-icons.mjs prompts $(SPELL_ICON_CACHE)/prompts.json
+	go run ./cmd/llm images -in $(SPELL_ICON_CACHE)/prompts.json \
+	  -out $(SPELL_ICON_CACHE)/png -quality low -background transparent
+	node web/scripts/spell-icons.mjs convert $(SPELL_ICON_CACHE)/png
+
 ## lint/layers: fail if the inner layers reach for transport or storage
 lint/layers:
 	@! go list -deps ./internal/domain/... ./internal/usecase/... \
@@ -460,4 +476,4 @@ clean:
         data/srd data/srd/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \
         web/deps web/dev web/lint web/test web/check web/build web/release \
-        web/icons web/icons/check
+        web/icons web/icons/check spell-icons

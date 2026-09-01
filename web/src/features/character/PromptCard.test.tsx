@@ -31,7 +31,6 @@ function skillPrompt(overrides: Partial<Prompt> = {}): Prompt {
     source: 'class:rogue',
     group: 'class',
     optional: false,
-    advances: false,
     heldOnly: false,
     event: { type: 'class', ref: 'class:rogue', level: 1 },
     ...overrides,
@@ -64,7 +63,9 @@ describe('PromptCard', () => {
     expect(confirm).toBeEnabled()
 
     await user.click(confirm)
-    expect(onAnswer).toHaveBeenCalledWith(['acrobatics', 'stealth'])
+    expect(onAnswer).toHaveBeenCalledWith([
+      { prompt: 'rogue/proficiency/0', picks: ['acrobatics', 'stealth'] },
+    ])
   })
 
   it('answers with the server option keys, not with labels', async () => {
@@ -79,7 +80,7 @@ describe('PromptCard', () => {
           kind: 'explicit',
           options: [
             {
-              key: '#0',
+              key: 'shortbow+arrow',
               kind: 'bundle',
               items: [{ key: 'stealth', kind: 'ref', ref: 'item:stealth', count: 1 }],
             },
@@ -89,10 +90,43 @@ describe('PromptCard', () => {
     })
     renderAt(viewport, <PromptCard prompt={bundle} entries={entries} pending={false} onAnswer={onAnswer} />)
 
-    await user.click(screen.getByRole('button', { name: /Stealth/ }))
+    // The one option a question of one option can be answered with is already
+    // chosen -- see `only` -- so what is left is to confirm it.
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
-    // The bundle has no slug of its own; the server named it by position.
-    expect(onAnswer).toHaveBeenCalledWith(['#0'])
+    // The bundle has no slug of its own; the server named it by its contents.
+    expect(onAnswer).toHaveBeenCalledWith([
+      { prompt: 'rogue/starting-equipment/1', picks: ['shortbow+arrow'] },
+    ])
+  })
+
+  // Taking a level asks which class it goes into, and while multiclassing is
+  // not offered there is one answer: pressing it before pressing Confirm is a
+  // step that decides nothing.
+  it('starts with the only answer chosen, where there is only one', () => {
+    const single = skillPrompt({
+      choice: {
+        prompt: 'character/level',
+        choose: 1,
+        kind: 'level',
+        from: {
+          kind: 'explicit',
+          options: [{ key: 'bard', kind: 'ref', ref: 'class:bard', count: 1 }],
+        },
+      },
+    })
+    renderAt(viewport, <PromptCard prompt={single} entries={entries} pending={false} onAnswer={vi.fn()} />)
+
+    // Chosen, and not confirmed: the level is still the player's to take.
+    expect(screen.getByRole('button', { name: /^confirm$/i })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /choose 1 more/i })).not.toBeInTheDocument()
+  })
+
+  // Two options is a real question, and answering it for the player would be
+  // choosing their character's next level for them.
+  it('chooses nothing where there is a choice to make', () => {
+    renderAt(viewport, <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: /choose 2 more/i })).toBeDisabled()
   })
 
   it('disables an option the character already has', () => {
@@ -245,7 +279,6 @@ describe('an option description', () => {
     },
     group: 'race',
     optional: false,
-    advances: false,
     heldOnly: false,
     event: { type: 'race', ref: 'race:dragonborn' },
   }
@@ -266,5 +299,142 @@ describe('an option description', () => {
     expect(screen.getByText(DESC)).toBeInTheDocument()
     // And only the picked one carries it.
     expect(screen.getAllByText(DESC)).toHaveLength(1)
+  })
+})
+
+/**
+ * A choice inside a choice, answered in the card that offered it.
+ *
+ * The improvement a level grants is the shape: "raise your scores, or take a
+ * feat", where the first branch is itself "choose 2 of these six". Picking a
+ * branch used to confirm it, post it, and wait for the server to pose the
+ * branch as a second block further down the tab.
+ */
+describe('PromptCard with a branch', () => {
+  const viewport = 'desktop'
+
+  const scores = {
+    prompt: 'rogue/ability-score-improvement/4/0',
+    choose: 2,
+    kind: 'ability-bonus',
+    repeatable: true,
+    from: {
+      kind: 'explicit' as const,
+      options: [
+        { key: 'str', kind: 'ability-bonus' as const, ability: 'str', bonus: 1 },
+        { key: 'dex', kind: 'ability-bonus' as const, ability: 'dex', bonus: 1 },
+      ],
+    },
+  }
+
+  const improvement: Prompt = {
+    choice: {
+      prompt: 'rogue/ability-score-improvement/4',
+      choose: 1,
+      kind: 'ability-scores',
+      from: {
+        kind: 'explicit',
+        options: [
+          { key: 'rogue/ability-score-improvement/4/0', kind: 'nested', choice: scores },
+        ],
+      },
+    },
+    source: 'class:rogue',
+    group: 'class',
+    level: 4,
+    optional: false,
+    heldOnly: false,
+    event: { type: 'level', ref: 'class:rogue', level: 4 },
+  }
+
+  it('draws the branch in the same card and answers both together', async () => {
+    const user = setupUser()
+    const onAnswer = vi.fn()
+    renderAt(
+      viewport,
+      <PromptCard prompt={improvement} entries={new Map()} pending={false} onAnswer={onAnswer} />,
+    )
+
+    // The branch is the only option, so `only` has it chosen -- and choosing
+    // it is what draws what it offers, here, without a round trip.
+    const strength = await screen.findByRole('button', { name: /Strength/ })
+    expect(strength).toBeInTheDocument()
+
+    await user.click(strength)
+    await user.click(screen.getByRole('button', { name: /Dexterity/ }))
+    await user.click(screen.getByRole('button', { name: /^confirm$/i }))
+
+    // Parent first, because the server validates a batch answer by answer
+    // against a log that grows: the second is legal because the first landed.
+    expect(onAnswer).toHaveBeenCalledWith([
+      {
+        prompt: 'rogue/ability-score-improvement/4',
+        picks: ['rogue/ability-score-improvement/4/0'],
+      },
+      { prompt: 'rogue/ability-score-improvement/4/0', picks: ['str', 'dex'] },
+    ])
+  })
+
+  // "+2 to one ability, or +1 to two" is the rule, and two points into one
+  // score is the first half of it.
+  it('spends both points on one score where the prompt says it may', async () => {
+    const user = setupUser()
+    const onAnswer = vi.fn()
+    renderAt(
+      viewport,
+      <PromptCard prompt={improvement} entries={new Map()} pending={false} onAnswer={onAnswer} />,
+    )
+
+    await user.click(await screen.findByRole('button', { name: /Dexterity \+1/ }))
+    await user.click(screen.getByRole('button', { name: /Dexterity \+1/ }))
+    // The second point reads as what the score gains, not as a multiplier
+    // beside the number it multiplies.
+    expect(await screen.findByRole('button', { name: /Dexterity \+2/ })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^confirm$/i }))
+    expect(onAnswer.mock.calls[0]?.[0]?.[1]).toEqual({
+      prompt: 'rogue/ability-score-improvement/4/0',
+      picks: ['dex', 'dex'],
+    })
+  })
+
+  // A half-elf's two bonuses are the same kind over the same options and are
+  // "+1 to two *different* scores". Only the prompt can tell them apart.
+  it('will not repeat where the prompt does not say it may', async () => {
+    const user = setupUser()
+    const strict: Prompt = {
+      ...improvement,
+      choice: { ...scores, prompt: 'half-elf/ability-bonus/0', repeatable: false },
+    }
+    renderAt(
+      viewport,
+      <PromptCard prompt={strict} entries={new Map()} pending={false} onAnswer={vi.fn()} />,
+    )
+
+    await user.click(await screen.findByRole('button', { name: /Dexterity/ }))
+    // A second click takes the first one back rather than adding a point.
+    await user.click(screen.getByRole('button', { name: /Dexterity/ }))
+    expect(screen.getByRole('button', { name: /choose 2 more/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Dexterity \+2/ })).not.toBeInTheDocument()
+  })
+
+  // Spent points have to be recoverable without clearing the whole answer:
+  // with both of them on one score, every other option is greyed out, so that
+  // score is the only thing left to click and it had better do something.
+  it('takes the points back off an option once they are all on it', async () => {
+    const user = setupUser()
+    renderAt(
+      viewport,
+      <PromptCard prompt={improvement} entries={new Map()} pending={false} onAnswer={vi.fn()} />,
+    )
+
+    await user.click(await screen.findByRole('button', { name: /Dexterity \+1/ }))
+    await user.click(screen.getByRole('button', { name: /Dexterity \+1/ }))
+    await user.click(screen.getByRole('button', { name: /Dexterity \+2/ }))
+
+    // Back to nothing spent, and both options live again.
+    expect(screen.getByRole('button', { name: /choose 2 more/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Strength \+1/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /Dexterity \+1/ })).toBeEnabled()
   })
 })

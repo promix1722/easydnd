@@ -34,6 +34,15 @@ export interface Identity {
   classes?: ClassLevel[]
   level: number
   /**
+   * The level the player declared they are building towards. While `level` is
+   * below it, the server keeps one level's choices open. Absent when never
+   * declared.
+   */
+  desiredLevel?: number
+  /** The rules the character was built under, e.g. "2014". Absent when never
+   * recorded, which reads as the compendium's own. */
+  ruleset?: string
+  /**
    * Experience points, recorded rather than acted on: a level comes from a
    * level event, so crossing a threshold advances nobody. A table playing
    * milestones leaves it at zero.
@@ -188,8 +197,7 @@ export interface Prompt {
   level?: number
   /** A character is complete without answering an optional prompt. */
   optional: boolean
-  /** Answering this prompt grants a level. */
-  advances: boolean
+  /** What the answer must be posted as. */
   event: PromptEvent
   /** Options the character already has from another source. */
   held?: string[]
@@ -204,7 +212,7 @@ export interface Prompt {
 export interface PromptsResponse {
   seq: number
   /** Nothing required is outstanding. Separate from the list being empty: a
-   * finished character still has the optional prompt offering them a level. */
+   * finished character can still carry optional prompts. */
   complete: boolean
   prompts: Prompt[]
 }
