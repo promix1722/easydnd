@@ -2728,20 +2728,31 @@ overflowed it. From a scrolled position that draws as a stray dash beside the
 first tab you can see, which is what it was reported as. `width: max-content`
 makes the list as wide as what is in it.
 
-**The end that is cut is hidden, not faded.** The far end of the strip is the
-one place the first rule cannot win -- the browser clamps the scroll wherever
-the arithmetic puts it, which on the sheet's last tab is 36px into
-*Proficiencies*. A gradient across that fragment was tried at 24px and again at
-32px and failed both times for the same reason: the far half of it sits at
-80-90% opacity and reads as a word. So the mask is transparent for the
-fragment's measured width and ramps up over the 16px after it, where the next
-whole tab starts. An end resting exactly on a boundary hides nothing and keeps
-the ramp, because an edge drawn hard says the strip ends there.
+**The end that is cut fades, and the tab under the fade stays visible.** This is
+the second answer here and the first one was backwards. The mask used to hide
+the cut tab outright, for its whole measured width, on the argument that a
+legible fragment reads as a broken word rather than as "there is more this way".
+What that missed is where the strip rests. Rule one lands it on a tab's own left
+edge, so the tab straddling the *far* edge is cut by however much of it happens
+to fit -- 56px of *Traits and features* on the sheet at rest -- and hiding the
+cut hid the entire next tab. The strip then ended in clean space after
+*Proficiencies* and read as four tabs, which is how it was reported. The
+fragment was never the problem: it was the only evidence there was more.
 
-Both are measured from the tabs' own geometry, which is the one thing in this
-component the suite cannot press: jsdom computes no layout, so every strip there
-is 0px wide, never overflows, and never draws a mask. What the tests hold is
-that the absence is identical at both viewports. The active tab is brought into view by setting `scrollLeft`, not
+So the fragment is kept and the fade is a constant 44px at any end with strip
+behind it. A tab dissolving into the edge is the signal every scrolling strip
+uses, and it cannot be read as a typo because it is visibly unfinished -- which
+is what the earlier 24px and 32px ramps got wrong, leaving the far half of a
+fragment at 80-90% opacity where it read as finished text. An end with nothing
+behind it is drawn hard, because that is what says the strip stops there.
+
+What that measures is now one boolean per end -- whether the scroller has
+anything left that way -- rather than the geometry of whichever tab lies across
+the edge. The per-tab spans, the search for the tab across a given x, and the
+mid-drag cap they needed went with the rule that wanted them. It is still the
+one thing in this component the suite cannot press: jsdom computes no layout, so
+every strip there is 0px wide, never overflows, and never draws a mask. What the
+tests hold is that the absence is identical at both viewports. The active tab is brought into view by setting `scrollLeft`, not
 by `scrollIntoView`, which scrolls every scrollable ancestor -- it would drag
 the document as well as the strip, and jsdom does not implement it. A stack of
 bordered disclosures needs no branch either: it is right at 390px and at
