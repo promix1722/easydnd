@@ -33,6 +33,17 @@ the character URL must carry `X-Robots-Tag: noindex, nofollow`. Also fetch `/`
 with JavaScript disabled, or inspect the curl body, and confirm that the title,
 description, H1 and three product capabilities are present.
 
+That copy lives in a `<noscript>` block in `web/index.html`, outside `#root`,
+and it has to. The client mounts with `createRoot`, not `hydrateRoot`: React
+does not adopt what it finds in the container, it throws it away at the first
+commit. Anything left in `#root` is therefore the *visible page* until the
+bundle has downloaded and rendered -- unstyled, since the static markup carries
+no classes -- which under `make dev` is ten seconds of raw HTML. `<noscript>`
+costs nothing on that path and gives up nothing here: the copy is still in the
+bytes the server sends, which is what a crawler that does not execute
+JavaScript, an unfurler and a text-only agent read. Google does execute it, and
+gets `web/src/routes/LandingPage.tsx` saying the same things.
+
 ## Google Search Console
 
 1. Open [Google Search Console](https://search.google.com/search-console/) and

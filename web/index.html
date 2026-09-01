@@ -87,17 +87,36 @@
   </head>
   <body>
     <!--
-      The English landing copy is present before JavaScript runs so search
-      engines, link unfurlers and text-only agents do not receive an empty app
-      shell. React replaces this node's children after it resolves the session;
-      the signed-out landing page says the same things from locales/en.json.
+      The English landing copy, in <noscript> and outside #root. Both halves of
+      that matter.
+
+      Outside #root because main.tsx calls createRoot, not hydrateRoot. React
+      does not adopt what it finds in the container; it discards it at the first
+      commit. So copy left in there is the *painted page* for as long as the
+      bundle takes to arrive -- unstyled, because it carries no classes and
+      Mantine's stylesheet only resets bare h1/p/nav. Under `make dev`, where
+      Vite transforms the module graph cold, that was ten seconds of raw
+      browser-default HTML. An empty #root spends the same wait as a blank page,
+      which is what it did before this copy existed.
+
+      In <noscript> because a browser with JavaScript on never renders it, while
+      every consumer this was written for still receives it: it is in the bytes
+      the server sends, so a crawler that does not execute JavaScript, a link
+      unfurler and a text-only agent all parse it. Google does execute
+      JavaScript, and reads routes/LandingPage.tsx, which says the same things
+      from locales/en.json.
+
+      The <head> above is the part that never depended on any of this. Title,
+      description, canonical, the cards and the JSON-LD are read without
+      rendering anything at all.
     -->
-    <div id="root">
+    <noscript>
       <main>
         <h1>Build a D&amp;D character</h1>
         <p>
           Create your character step by step. Choose a race, class, background,
-          and skills — easydnd takes care of the character sheet and calculations.
+          and skills — easydnd takes care of the character sheet and
+          calculations.
         </p>
         <section>
           <h2>Join a group</h2>
@@ -118,7 +137,8 @@
           <a href="/legal">Legal and SRD attribution</a>
         </nav>
       </main>
-    </div>
+    </noscript>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

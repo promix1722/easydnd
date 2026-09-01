@@ -337,7 +337,7 @@ export function Page({
           )}
         </Stack>
 
-        <Body state={state ?? READY}>{children}</Body>
+        <PageBody state={state ?? READY}>{children}</PageBody>
       </Stack>
     </Box>
   )
@@ -394,8 +394,16 @@ function CrumbLabel({ label, size }: { label: string | null; size: 'sm' | 'lg' }
  * Both blocks are the markup the screens already wrote inline -- lifted rather
  * than redesigned, so this change moved where they live without changing what
  * anybody sees.
+ *
+ * Exported because a page is not always the right unit. `Page` uses it for the
+ * whole body, which is correct when the screen has nothing at all to show; a
+ * screen whose *controls* are loaded and whose *results* are not needs the same
+ * two blocks around a smaller region, so that adjusting a filter does not take
+ * the filters down with it. `features/spells/SpellsScreen.tsx` is the worked
+ * example. Keep using `Page`'s own `state` prop for the first case -- this is
+ * the escape hatch, not the default.
  */
-function Body({ state, children }: { state: PageState; children: ReactNode }) {
+export function PageBody({ state, children }: { state: PageState; children: ReactNode }) {
   const t = useT()
   if (state.kind === 'loading') {
     return (

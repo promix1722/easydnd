@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const OUT_DIR = join(ROOT, 'web', 'src', 'assets', 'spells')
+const OUT_DIR = join(ROOT, 'web', 'public', 'spells')
 const ICON_SIZE = 128
 
 // One color voice per school, so the set reads as a system rather than 319
