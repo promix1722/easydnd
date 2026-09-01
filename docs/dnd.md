@@ -116,6 +116,13 @@ and lets one loaded catalogue be shared immutably across requests.
 Monsters are deliberately **out of scope** for now; the vendored file stays
 reference-only until the battle tracker gets its own pass.
 
+Spells additionally carry a **source** slug — `srd-5.1` for every one of them
+today. The SRD is the only spell text the project may legally ship (everything
+outside it is unlicensed WotC copyright), so more spells can only ever arrive
+from another licensed document or a user's own import; the source field is
+what lets that content join the same collection without a model change, and
+what an attribution page would group by if a second source ever exists.
+
 ### Choices
 
 The SRD asks the player to choose constantly — two skills from a class list, a

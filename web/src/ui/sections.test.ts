@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { SECTIONS, sectionFor } from './sections'
 
 describe('the section table', () => {
-  it('has Characters, Groups and Games', () => {
-    expect(SECTIONS.map((section) => section.to)).toEqual(['/', '/groups', '/games'])
+  it('has Characters, Groups, Games and Spells', () => {
+    expect(SECTIONS.map((section) => section.to)).toEqual(['/', '/groups', '/games', '/spells'])
   })
 
   // Labels are message keys, not words -- the navbar, the tab bar and the
@@ -45,6 +45,11 @@ describe('sectionFor', () => {
     // reached through one, and the highlight has to say so.
     expect(sectionFor('/games')?.label).toBe('section.games')
     expect(sectionFor('/games/gam_1')?.label).toBe('section.games')
+  })
+
+  it('keeps Spells lit on a spell', () => {
+    expect(sectionFor('/spells')?.label).toBe('section.spells')
+    expect(sectionFor('/spells/fireball')?.label).toBe('section.spells')
   })
 
   it('claims a character sheet for Characters', () => {

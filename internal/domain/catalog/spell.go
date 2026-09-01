@@ -196,6 +196,12 @@ type SpellDamage struct {
 type Spell struct {
 	Entry
 
+	// Source names the document the spell comes from. Every spell today is
+	// "srd-5.1"; the field exists so that content from anywhere else -- a
+	// later SRD, a homebrew import -- can sit in the same collection without
+	// a model change.
+	Source rules.Slug
+
 	// Level is 0 for a cantrip, 1..MaxSpellLevel otherwise.
 	Level int
 

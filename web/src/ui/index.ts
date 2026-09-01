@@ -51,6 +51,7 @@ export {
   IconUserCircle,
   IconUserPlus,
   IconUsers,
+  IconWand,
 } from '@tabler/icons-react'
 
 // Layout and typography primitives, re-exported unchanged.

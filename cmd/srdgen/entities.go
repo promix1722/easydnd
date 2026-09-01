@@ -735,6 +735,11 @@ func (g *generator) magicItems() error {
 	return emit(g, file.FileMagicItems, out, func(m file.MagicItem) string { return m.Slug })
 }
 
+// srdSource is the source slug stamped on every spell this generator emits.
+// Spells carry a source so that content from elsewhere -- a later SRD, a
+// homebrew import -- can join the collection without a model change.
+const srdSource = "srd-5.1"
+
 func (g *generator) spells() error {
 	ups, err := read[upSpell](g, "5e-SRD-Spells.json")
 	if err != nil {
@@ -757,6 +762,7 @@ func (g *generator) spells() error {
 
 		s := file.Spell{
 			Slug:          up.Index,
+			Source:        srdSource,
 			Level:         up.Level,
 			School:        up.School.Index,
 			CastingTime:   castingTime,

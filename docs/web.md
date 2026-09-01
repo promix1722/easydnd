@@ -926,6 +926,41 @@ A **game** is one sitting, and it is never called a session -- in this client
 that word means being signed in, right down to `SessionUser` and
 `startGuestSession` in the same flat `@/lib/api` barrel.
 
+## Spells are the compendium, browsable
+
+The fourth `SECTIONS` entry, at `/spells` and `/spells/:slug`. The section is a
+reader over the catalogue rather than anybody's data: the rows belong to no
+account, there is nothing to create and no row action, and a guest sees exactly
+what an account does. It is still behind `Private` like every section, because
+the catalog endpoints require a session -- the Go router marks the two lines to
+move if a truly public browser is ever wanted.
+
+It is also the client's **first search-and-filter surface**, and the server
+does the work: `searchSpells` in `lib/api/catalog.ts` sends the filters as
+query parameters and gets back a `{spells, total}` page, filtered, sorted and
+paged by `search.go` -- so the screen only says what it wants and appends
+pages behind a **Load more** button, shown while fewer rows are loaded than
+`total` says exist. The search box debounces 300ms before writing the URL,
+because the URL is the request now and firing one per letter would race four
+requests to answer the word. The filter state lives in `useSearchParams`, not
+component state, so a filtered list survives a reload and can be handed to
+somebody as a URL, the same way the character list carries `?folder=`.
+`getCollection('spells')` still serves the whole bare array -- character
+creation's spell prompts read that path and never met the envelope.
+
+The detail page asks the same endpoint for the whole entry with `?slugs=`,
+which is where the prose and the remaining rule values live.
+
+**`features/spells/spellText.ts` is the piece the structured rule values were
+waiting for**: the compendium stores casting time, range and duration as
+`{kind, amount, unit}` precisely so a client can render "90 feet" per locale,
+and this module is that rendering. It sits in `features/spells/` and *not* in
+`src/domain/`, deliberately: `domain/` may not import `@/lib`, and these
+functions want the typed `Translate` so every key they name is checked against
+`en.json` at compile time -- the same reasoning that moved
+`features/character/labels.ts` out of `domain/`. Other features import it from
+here, which is precedented (`features/games` imports `../groups/roles`).
+
 ## Games are a section, not a corner of a group
 
 The header enforces it now. A game's trail is `Games / Thursday night`, and the

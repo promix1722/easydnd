@@ -285,7 +285,7 @@ that.
 | `GET` | `/v1/health` | liveness |
 | `GET` | `/v1/version` | the release identifier -- a deploy contract, see below |
 | `GET` | `/v1/catalog` | the compendium's index: ruleset, locales, collections and counts |
-| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it |
+| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it. Spells and magic items list as *summaries*, and `?slugs=` returns full fidelity. Spells alone also answer search parameters (`q`, `level`, `school`, `class`, `castingTime`, `concentration`, `ritual`, `material`, `limit`, `offset`) with a filtered, level-then-name-sorted, paged `{spells, total}` envelope -- the filter itself is `domain/catalog.SpellFilter`; with no search parameter the route serves the bare array from its byte cache, unchanged |
 | `GET` | `/v1/characters` | summaries |
 | `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
 | `POST` | `/v1/characters/import` | import a sheet exported by another tool |

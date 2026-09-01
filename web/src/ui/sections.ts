@@ -1,5 +1,5 @@
 import type { Icon } from '@tabler/icons-react'
-import { IconDice5, IconShield, IconUsers } from '@tabler/icons-react'
+import { IconDice5, IconShield, IconUsers, IconWand } from '@tabler/icons-react'
 
 import type { MessageKey } from '@/lib/i18n'
 
@@ -58,11 +58,15 @@ export interface Section {
  *   which is a shield. It is a group of *players*, and drawing it with people
  *   would say the same thing as the section above it.
  * - **Games** is one sitting. Dice.
+ * - **Spells** is the compendium's browsable half. A wand: the thing a spell
+ *   is cast with, and the one glyph in the row that is nobody's person, table
+ *   or sitting.
  */
 export const SECTIONS: readonly Section[] = [
   { to: '/', label: 'section.characters', icon: IconUsers, owns: ['/characters'] },
   { to: '/groups', label: 'section.groups', icon: IconShield, owns: ['/groups'] },
   { to: '/games', label: 'section.games', icon: IconDice5, owns: ['/games'] },
+  { to: '/spells', label: 'section.spells', icon: IconWand, owns: ['/spells'] },
 ]
 
 /**

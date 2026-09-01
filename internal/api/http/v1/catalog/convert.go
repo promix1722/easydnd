@@ -508,17 +508,34 @@ func (c converter) magicItem(m domain.MagicItem) MagicItem {
 }
 
 // spellSummary is what the collection endpoint serves: enough to search and
-// filter, not the whole spell. 319 spells at full fidelity is a payload
-// nobody needs in order to build a character; ?slugs= returns the rest.
+// filter -- including by casting time and components -- not the whole spell.
+// 319 spells at full fidelity is a payload nobody needs in order to browse;
+// ?slugs= returns the rest. The material component's text is prose and stays
+// with the detail.
 func (c converter) spellSummary(s domain.Spell) Spell {
 	return Spell{
 		Entry:         Entry{Slug: s.Slug.String(), Name: s.Name},
+		Source:        s.Source.String(),
 		Level:         s.Level,
 		School:        s.School.String(),
 		Classes:       slugStrings(s.Classes),
 		Subclasses:    slugStrings(s.Subclasses),
 		Ritual:        s.Ritual,
 		Concentration: s.Concentration,
+		CastingTime:   castingTimeOf(s),
+		Components: &Components{
+			Verbal:   s.Components.Verbal,
+			Somatic:  s.Components.Somatic,
+			Material: s.Components.Material,
+		},
+	}
+}
+
+func castingTimeOf(s domain.Spell) *RuleValue {
+	return &RuleValue{
+		Kind:   s.CastingTime.Kind.String(),
+		Amount: s.CastingTime.Amount,
+		Unit:   s.CastingTime.Unit.String(),
 	}
 }
 
@@ -527,11 +544,6 @@ func (c converter) spell(s domain.Spell) Spell {
 	out.Desc = s.Desc
 	out.HigherLevel = s.HigherLevel
 	out.AttackType = s.AttackType.String()
-	out.CastingTime = &RuleValue{
-		Kind:   s.CastingTime.Kind.String(),
-		Amount: s.CastingTime.Amount,
-		Unit:   s.CastingTime.Unit.String(),
-	}
 	out.Range = &RuleValue{Kind: s.Range.Kind.String(), Distance: int(s.Range.Distance)}
 	out.Duration = &RuleValue{
 		Kind:   s.Duration.Kind.String(),
@@ -539,12 +551,7 @@ func (c converter) spell(s domain.Spell) Spell {
 		Unit:   s.Duration.Unit.String(),
 		UpTo:   s.Duration.UpTo,
 	}
-	out.Components = &Components{
-		Verbal:   s.Components.Verbal,
-		Somatic:  s.Components.Somatic,
-		Material: s.Components.Material,
-		Text:     s.Material,
-	}
+	out.Components.Text = s.Material
 	if s.Save != nil {
 		out.SavingThrow = &SavingThrow{
 			Ability: s.Save.Ability.Slug().String(),
