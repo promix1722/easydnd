@@ -61,7 +61,7 @@ func TestLoadEntryCounts(t *testing.T) {
 		{"traits", c.Traits.Len(), 38},
 		{"classes", c.Classes.Len(), 12},
 		{"subclasses", c.Subclasses.Len(), 12},
-		{"features", c.Features.Len(), 407},
+		{"features", c.Features.Len(), 408},
 		{"backgrounds", c.Backgrounds.Len(), 1},
 		{"feats", c.Feats.Len(), 1},
 		{"items", c.Items.Len(), 237},
