@@ -62,11 +62,19 @@ export function blocksFor(
       key: keyForRow(row),
       ...(row.level !== undefined ? { level: row.level } : {}),
       row,
-      // A level already taken is shown and not touched. Replacing or removing
-      // one drives the same machinery that cannot take one in the first place,
-      // so the row is a fact about the character rather than a control --
-      // which is also what an imported character's levels are.
-      changeable: row.event.type !== 'level',
+      // A bare level entry is a fact about the character rather than a
+      // control: nothing writes one any more -- a level comes from the
+      // declared level -- and there was never a question about which class it
+      // went into. What a level *granted* is a different thing wearing the
+      // same event type, and stays changeable: an improvement, an Expertise,
+      // a feature's pick all arrive as level events carrying answers, and
+      // locking them with the levels took a whole class of real decisions off
+      // the screen.
+      //
+      // The ruleset is fixed for its own reason: choosing it is final, and
+      // the server holds every change to it to the one value already in
+      // effect.
+      changeable: !isTakenLevel(row) && !setsRuleset(row),
     })),
     ...prompts.map<Block>((prompt) => ({
       kind: 'open',
@@ -81,6 +89,43 @@ export function blocksFor(
   for (const block of blocks) place(order, block.key)
   const at = (block: Block) => order.places.get(block.key) ?? Number.MAX_SAFE_INTEGER
   return blocks.sort((a, b) => at(a) - at(b))
+}
+
+/** A level with nothing to re-ask: it took a level and granted no choice. */
+function isTakenLevel(row: SettledRow): boolean {
+  return row.event.type === 'level' && (row.event.choices ?? []).length === 0
+}
+
+/** Whether an entry is the one that recorded the ruleset, which is final. */
+function setsRuleset(row: SettledRow): boolean {
+  return (row.event.changes ?? []).some((change) => change.path === 'identity.ruleset')
+}
+
+/** One run of blocks under one heading: a class level, or none. */
+export interface LevelGroup {
+  level?: number
+  blocks: Block[]
+}
+
+/**
+ * The list cut into its levels, for the headings that replace per-card tags.
+ *
+ * Grouping happens after ordering, so a block keeps its pinned place *within*
+ * its level while the levels themselves always read in order -- un-levelled
+ * first, then ascending. A tab with no levelled blocks comes back as one
+ * heading-less group, which is every tab except the class story.
+ */
+export function groupByLevel(blocks: readonly Block[]): LevelGroup[] {
+  const runs = new Map<number, Block[]>()
+  for (const block of blocks) {
+    const level = block.level ?? -1
+    const run = runs.get(level) ?? []
+    run.push(block)
+    runs.set(level, run)
+  }
+  return [...runs]
+    .sort(([a], [b]) => a - b)
+    .map(([level, grouped]) => (level < 0 ? { blocks: grouped } : { level, blocks: grouped }))
 }
 
 /**

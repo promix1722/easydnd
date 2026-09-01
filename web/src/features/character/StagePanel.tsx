@@ -9,8 +9,11 @@ import type { BlockListItem } from '@/ui'
 
 import { AbilityScoresForm } from './AbilityScoresForm'
 import type { Scores } from './AbilityScoresForm'
+import { groupByLevel } from './blocks'
 import type { Asking, Block } from './blocks'
+import { DesiredLevelForm } from './DesiredLevelForm'
 import { NameForm } from './NameForm'
+import { RulesetForm } from './RulesetForm'
 import { offersOptions } from './options'
 import { PromptCard } from './PromptCard'
 import { choiceName, writtenAs } from './promptNames'
@@ -49,6 +52,14 @@ export interface StagePanelProps {
   method?: string
   /** What is already written, where the open question is one that is written. */
   lines?: readonly string[]
+  /** The character's current level, for the desired-level form to start from. */
+  level?: number
+  /**
+   * There is no character yet, so the only question that can be answered is
+   * the one that creates it. The rest of the identity tab is drawn, so the
+   * page says up front what it will ask, and does not open.
+   */
+  posing?: boolean
 }
 
 /**
@@ -92,6 +103,8 @@ export function StagePanel({
   scores,
   method,
   lines,
+  level,
+  posing = false,
 }: StagePanelProps) {
   const t = useT()
   const surface = (asked: Asking) => (
@@ -103,6 +116,7 @@ export function StagePanel({
       {...(scores !== undefined ? { scores } : {})}
       {...(method !== undefined ? { method } : {})}
       {...(lines !== undefined ? { lines } : {})}
+      {...(level !== undefined ? { level } : {})}
       onPicks={(picks) => onAnswerPicks(asked, picks)}
       onNameChange={onNameChange}
       onName={(next) => onAnswerName(asked, next)}
@@ -110,7 +124,7 @@ export function StagePanel({
     />
   )
 
-  const items = blocks.map<BlockListItem>((block) => {
+  const itemFor = (block: Block): BlockListItem => {
     const open = block.key === openKey
     if (block.kind === 'settled') {
       const header = <SettledHeader row={block.row} />
@@ -123,19 +137,40 @@ export function StagePanel({
         body: open ? (asking === null ? <Reasking /> : surface(asking)) : null,
       }
     }
+    // Before the character exists only the question that creates it can be
+    // answered, so the other two are drawn as what they are: questions coming,
+    // with nothing to open. A block with no body is a statement -- the same
+    // rendering a level already taken gets.
+    const waiting = posing && block.prompt.choice.prompt !== 'character/init'
     return {
       key: block.key,
       header: <OpenHeader prompt={block.prompt} names={names} />,
-      highlighted: true,
-      body: open && asking !== null ? surface(asking) : null,
+      highlighted: !waiting,
+      ...(waiting ? {} : { body: open && asking !== null ? surface(asking) : null }),
     }
-  })
+  }
 
   const nothingOpen = blocks.every((block) => block.kind === 'settled')
 
   return (
     <Stack gap="sm">
-      <BlockList items={items} open={openKey} onOpen={onOpen} />
+      {/*
+        One list per level rather than a tag on every card: the class story is
+        read level by level, and the heading says once what each card used to
+        repeat. Blocks that belong to no level -- everything outside the class
+        story -- come first, with no heading at all. Every list shares the one
+        open key, so one block is open across the whole tab, exactly as before.
+      */}
+      {groupByLevel(blocks).map((group) => (
+        <Stack key={group.level ?? 'unlevelled'} gap={6}>
+          {group.level !== undefined && (
+            <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+              {t('block.level', { level: group.level })}
+            </Text>
+          )}
+          <BlockList items={group.blocks.map(itemFor)} open={openKey} onOpen={onOpen} />
+        </Stack>
+      ))}
       {blocks.length === 0 ? (
         <Text size="sm" c="dimmed">
           {t('stagePanel.nothingYet')}
@@ -163,21 +198,14 @@ export function StagePanel({
   )
 }
 
-/** What was decided, and what it was decided to be. */
+/** What was decided, and what it was decided to be. The level it belongs to
+ * is said once by the heading over its group, not repeated per card. */
 function SettledHeader({ row }: { row: SettledRow }) {
-  const t = useT()
   return (
     <div>
-      <Group gap={6}>
-        <Text size="xs" c="dimmed" tt="uppercase">
-          {row.label}
-        </Text>
-        {row.level !== undefined && (
-          <Badge size="xs" variant="light">
-            {t('block.level', { level: row.level })}
-          </Badge>
-        )}
-      </Group>
+      <Text size="xs" c="dimmed" tt="uppercase">
+        {row.label}
+      </Text>
       <Text size="sm">{row.value}</Text>
     </div>
   )
@@ -206,18 +234,11 @@ function OpenHeader({ prompt, names }: { prompt: Prompt; names: ReadonlyMap<stri
           </Text>
         )}
       </Text>
-      <Group gap={6} wrap="nowrap">
-        {prompt.level !== undefined && (
-          <Badge size="xs" variant="light">
-            {t('block.level', { level: prompt.level })}
-          </Badge>
-        )}
-        {prompt.optional && (
-          <Badge size="xs" variant="light" color="gray">
-            {t('block.optional')}
-          </Badge>
-        )}
-      </Group>
+      {prompt.optional && (
+        <Badge size="xs" variant="light" color="gray">
+          {t('block.optional')}
+        </Badge>
+      )}
     </Group>
   )
 }
@@ -272,6 +293,7 @@ function AnswerSurface({
   scores,
   method,
   lines,
+  level,
   onPicks,
   onNameChange,
   onName,
@@ -284,6 +306,7 @@ function AnswerSurface({
   scores?: Scores
   method?: string
   lines?: readonly string[]
+  level?: number
   onPicks: (picks: string[]) => void
   onNameChange: (name: string) => void
   onName: (name: string) => void
@@ -293,6 +316,24 @@ function AnswerSurface({
   const { prompt, replaces } = asking
   const submitLabel = replaces === null ? t('answer.confirm') : t('answer.changeIt')
   const { kind } = prompt.choice
+
+  // The two questions the character poses about itself rather than out of the
+  // compendium, told apart by their own slugs: a desired level is a number,
+  // and a ruleset is a recorded, final fact. Before the kind map, because the
+  // ruleset arrives as `text` and would otherwise be a name.
+  if (prompt.choice.prompt === 'character/desired-level') {
+    return (
+      <DesiredLevelForm
+        initial={declaredLevel(replaces) ?? level ?? 1}
+        pending={pending}
+        submitLabel={submitLabel}
+        onSubmit={onChanges}
+      />
+    )
+  }
+  if (prompt.choice.prompt === 'character/ruleset') {
+    return <RulesetForm pending={pending} submitLabel={submitLabel} onSubmit={onChanges} />
+  }
 
   if (kind === 'text') {
     return (
@@ -335,6 +376,14 @@ function AnswerSurface({
   }
 
   return <PromptWithOptions prompt={prompt} pending={pending} onAnswer={onPicks} />
+}
+
+/** The level a settled declaration stated, read back for the form changing it. */
+function declaredLevel(replaces: SettledRow | null): number | undefined {
+  const change = (replaces?.event.changes ?? []).find(
+    (each) => each.path === 'identity.desiredLevel',
+  )
+  return change?.value.int
 }
 
 function maybeError(

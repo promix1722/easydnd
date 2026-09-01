@@ -12,6 +12,9 @@
 
 export type Stage = 'identity' | 'class' | 'race' | 'background' | 'abilities' | 'personality'
 
+/** Where advancement stops in the 2014 rules; the server enforces the same. */
+export const MAX_LEVEL = 20
+
 /**
  * Display order, which is the order a character is actually built in.
  *
@@ -47,10 +50,6 @@ const STAGE_OF_GROUP: Record<string, Stage> = {
   background: 'background',
   abilities: 'abilities',
   personality: 'personality',
-  // Advancement is the class story continued: which class the next level goes
-  // into, the archetype it unlocks, the improvement it grants. A tab of its
-  // own would split "I am a rogue" from "I am taking a third rogue level".
-  advance: 'class',
 }
 
 /**
@@ -63,24 +62,4 @@ const STAGE_OF_GROUP: Record<string, Stage> = {
  */
 export function stageOf(group: string | undefined): Stage | null {
   return group === undefined ? null : (STAGE_OF_GROUP[group] ?? null)
-}
-
-/**
- * Whether this client will offer to answer a prompt in this group.
- *
- * `advance` is not offered, and the reason is that it does not work: taking a
- * level posts a `level` event the server records as a no-op, so the question
- * would appear answerable, be answered, and change nothing. A question that
- * silently does nothing is worse than a question that is not asked -- and the
- * same judgement took the sheet's "Level up" button off the page.
- *
- * Advancement is filtered out of what is *offered*, never out of what is
- * *recorded*: `stageOf` still puts an `advance` entry on the class tab,
- * because levels an imported character already has are facts about it. They
- * are shown, and they are not editable, for the same reason.
- *
- * This goes when the level machinery works, and nothing else has to change.
- */
-export function answerable(group: string | undefined): boolean {
-  return group !== 'advance'
 }

@@ -19,8 +19,8 @@ export interface Entry {
 export interface Option {
   /**
    * What an answer names this option by. The client never computes this --
-   * a bundle of a shortbow and twenty arrows has no slug of its own, and the
-   * rule for naming one lives on the server.
+   * a bundle of a shortbow and twenty arrows has no slug of its own, so the
+   * server names it by its contents ("shortbow+arrow").
    */
   key: string
   kind:

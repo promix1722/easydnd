@@ -39,7 +39,7 @@ const EVENTS: CharacterEvent[] = [
   },
   { seq: 5, type: 'background', source: 'background', ref: 'background:acolyte' },
   { seq: 6, type: 'class', source: 'class', ref: 'class:rogue', level: 1 },
-  { seq: 7, type: 'level', source: 'advance', ref: 'class:rogue', level: 2 },
+  { seq: 7, type: 'level', source: 'class', ref: 'class:rogue', level: 2 },
   {
     seq: 9,
     type: 'class',
@@ -119,5 +119,34 @@ describe('settledByStage', () => {
     // a constructor, and an entry answering no question constructs nothing.
     const rows = [...settled().values()].flat()
     expect(rows.map((row) => row.seq)).not.toContain(8)
+  })
+})
+
+describe('summarise', () => {
+  it('reads the desired level and the ruleset back as decisions', () => {
+    const rows = settledByStage(testT, {
+      events: [
+        {
+          seq: 1,
+          type: 'change',
+          source: 'identity',
+          changes: [
+            { path: 'identity.desiredLevel', op: 'set', value: { kind: 'int', int: 5 } },
+          ],
+        },
+        {
+          seq: 2,
+          type: 'change',
+          source: 'identity',
+          changes: [{ path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } }],
+        },
+      ],
+      names: new Map(),
+    })
+
+    expect(rows.get('identity')?.map((row) => [row.label, row.value])).toEqual([
+      ['Level', '5'],
+      ['Rules', 'D&D 2014'],
+    ])
   })
 })

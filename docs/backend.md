@@ -491,8 +491,9 @@ optional -- the half-elf's third language and all six acolyte poses -- so the
 character counted as complete while the build screen still listed seven rows
 under "still to choose". Those seven answers are the only part of the log that
 is *invented* rather than transcribed: the export names no third language, and
-its background is Urchin, which SRD 5.1 does not publish. `character/level` is
-left open on purpose, being the standing offer every complete character carries.
+its background is Urchin, which SRD 5.1 does not publish. Nothing at all is
+left open: the stub declares a desired level of 3, which *is* the rogue's
+third level, and answers what those levels open.
 
 One of the seven records an answer and buys nothing, and it is a gap in the
 model rather than in the stub. `acolyte/starting-equipment/0` draws its options
@@ -533,22 +534,53 @@ longer bundles them and the stub answers `character/abilities` as its own entry.
 to decide?", and it is the only endpoint a build screen needs. It returns
 prompts in the compendium's own `Choice` grammar -- the ones the compendium
 poses, verbatim, and synthetic ones in the same shape for the questions it does
-not pose ("which race?", "which class do you gain a level in?").
+not pose ("which race?", "which class?").
 
-A finished character's remaining prompt is `character/level`. Answering it
-appends a level event, which opens that level's own prompts. So there is no
-level-up endpoint, because there is no separate question: creation is the first
-pass through the same loop.
+Advancement is one change event setting `identity.desiredLevel` (1--20,
+bounded by validation with the reason slug `field.level.range`). For a
+single-class character that number *is* the class's level -- `Project` raises
+it in `advanceToDesiredLevel` -- and the levels it adds pose their own
+questions here: the archetype at its due level, the Ability Score Improvements,
+a feature's picks. So there is no level-up endpoint, because there is no
+separate question: levelling up is raising the declaration, from the sheet's
+Level up button or the identity tab, and creation is the first pass through
+the same loop.
+
+Nothing takes a level as an entry of its own. `character/level` is gone, and a
+bare `level` event -- one naming a class and carrying no answers -- is refused
+on append, because no prompt offers it. The `level` event type is still in use
+for what a level *grants*: an improvement, an Expertise, a feature's pick all
+arrive as level events carrying answers.
+
+**Multiclassing is not offered.** Nothing poses a question that would give a
+character a second class, so `canMulticlassInto` and the `multiclassing`
+constant that gated it are gone -- git has them, and
+[dnd.md](dnd.md#characters-are-event-sourced) says what the rule was. What
+stays is everything that *reads* a multiclassed character: `Identity.Classes`
+is a slice, `applyClasses` walks it, `classGrant` still knows a later class
+grants no starting equipment, and the spellcasting summary is still one block
+per casting class. Turning multiclassing back on is posing the question again
+and stopping `advanceToDesiredLevel` from applying; the two go together, since
+a declaration cannot say which class a level went into.
+
+Two consequences worth knowing. An **imported** multiclassed character loses
+its later classes -- reported as unresolved rather than folded into the first,
+which would give it levels in a class it never took. And a character built
+before this change, whose log takes levels as entries, still *projects*
+correctly (levels are max-by-number, so the entries still count) but would
+lose them to a `Revise`, since nothing poses the prompt they answered.
+Characters live in memory and die with the process, so that window closes on
+its own.
 
 Three fields make the client mechanical rather than knowledgeable:
 
-- **`event`** says what the answer must be posted as. The first level in a
-  class is a `class` event and later levels are `level` events; a client that
-  decided this itself would be reimplementing the rules in the browser.
+- **`event`** says what the answer must be posted as. The class a character
+  starts as is a `class` event, a subclass is a `subclass` event, and what a
+  level grants is a `level` event; a client that decided this itself would be
+  reimplementing the rules in the browser.
 - **`optional`** says whether a character is complete without it. Without the
-  distinction the flow deadlocks -- an unpicked personality trait would mean
-  the character is never finished, so the prompt offering a level is never
-  reached.
+  distinction nothing is ever finished -- an unpicked personality trait would
+  mean the character reads as unfinished forever.
 - **`held`** lists options the character already has. Prompts are never
   narrowed by what is held, because narrowing would make the question depend on
   the order it was answered in; the client greys them out and the server
@@ -585,7 +617,7 @@ round trip instead of two, and it is why the client needs no cache
 invalidation: the response *is* the invalidation.
 
 Every write also records a **`source`**: the group of the prompt the entry
-answers -- `identity`, `abilities`, `race`, `background`, `class`, `advance` or
+answers -- `identity`, `abilities`, `race`, `background`, `class` or
 `personality`, the same vocabulary `/prompts` groups its questions by. The
 **server** writes
 it, from the prompt the event was matched against, and it is ignored if a

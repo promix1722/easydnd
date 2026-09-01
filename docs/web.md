@@ -5,10 +5,10 @@ layout, layer rules, and how it ships. For the Go API it talks to, see
 [backend.md](backend.md); for the game model behind both, see [dnd.md](dnd.md).
 
 Status: **real**. Sign-in (passkeys and Google), the character list with its
-folders, character creation, the build loop, the account screen and the sheet
-are all built and tested. **Level-up is not**, and this client does not offer
-it -- see [Level-up is not offered](#level-up-is-not-offered). Neither is the
-battle tracker: `/games` is a section in the navigation whose page says so.
+folders, character creation, the build loop, level-up, the account screen and
+the sheet are all built and tested -- see
+[Level-up is the desired level](#level-up-is-the-desired-level). The battle
+tracker is not: `/games` is a section in the navigation whose page says so.
 
 ## Quick start
 
@@ -1233,13 +1233,15 @@ Nothing in it decides what an answer *means* either. The prompt says which
 event carries it and the screen copies that verbatim, so the browser never
 learns that a first level is a `class` event and a fourth is a `level` one.
 Option keys come from the server for the same reason: a bundle of a shortbow
-and twenty arrows has no slug of its own.
+and twenty arrows has no slug of its own, and the server composes it one --
+`shortbow+arrow` -- so a settled row can read it back as "Shortbow, Arrow"
+without asking the compendium what the answer meant.
 
 The exception, and its bounds, is the character's **inputs**: a name, an
-alignment and the six ability scores. They settle a value on the sheet rather
-than naming a catalogue entry or answering a grant, so each is stored as an
-addressed change -- and the prompt, which says the entry is a `change`, has
-nowhere to say to which path. `BuildScreen`'s `INPUTS` is that table and is
+alignment, the six ability scores, the desired level and the ruleset. They
+settle a value on the sheet rather than naming a catalogue entry or answering
+a grant, so each is stored as an addressed change -- and the prompt, which
+says the entry is a `change`, has nowhere to say to which path. `BuildScreen`'s `INPUTS` is that table and is
 deliberately the only place a path is written down. It is worth knowing why it
 exists: an alignment is namespaced `character/alignment` exactly like
 `character/race`, this screen read the namespace as the shape, and the
@@ -1293,9 +1295,11 @@ A decided choice and an open one are the same object at two moments, so they
 are one list rather than two sections: the choice of a race *is* the question
 "which race?" once it has an answer. `features/character/blocks` merges them,
 sorted by level with everything un-levelled first, which reads as the story it
-is -- took rogue at 1, still owes two skills at 1, gained a level at 2. What
-tells the two apart is that an open block is drawn to stand out, not where it
-sits.
+is -- took rogue at 1, still owes two skills at 1, gained a level at 2 -- and
+`groupByLevel` then cuts the ordered list into one section per level, so the
+panel draws a "Level N" heading over each run instead of a tag on every card.
+What tells the two apart is that an open block is drawn to stand out, not
+where it sits.
 
 **Nothing opens itself**, with one exception below. The screen used to open the
 first open question of the tab; it has no way of knowing which of five a player
@@ -1406,7 +1410,8 @@ who the character is -- and a stub that left them would have shown seven
 untouched rows to anybody opening the build screen to look at one. The four
 written ones are answered as changes rather than picks, which is what they are
 now; the stub is a log the build screen could have written, so it writes what
-that screen would. The only row that remains is the standing offer of a level.
+that screen would. Nothing at all remains open: the stub declares a desired
+level of 3 and takes all three, so even the level question has been answered.
 
 The gate is `import.meta.env.DEV`, not a runtime check on a version or a
 feature flag, and the difference is the point: Vite replaces it with a literal,
@@ -1618,22 +1623,56 @@ told apart from a level-up improvement: **by whether it offers anything to pick
 between**. That is the server's own statement of what may be picked here, not a
 slug this client has memorised.
 
-### Level-up is not offered
+### Level-up is the desired level
 
-The server poses "gain a level in which class?" and everything that follows
-from it under the `advance` group, and this client filters that group out of
-everything it draws: no block, no answering surface, no control.
-Taking a level does not work -- the event the client would post is recorded as
-a no-op -- and a question that appears answerable and silently changes nothing
-is worse than a question that is not asked. It is the same judgement that took
-the "Level up" button off the sheet.
+Levelling up is one gesture: declaring the level the character is built
+towards. The identity tab asks it as `character/desired-level` -- a number
+form, answered as the change event that settles `identity.desiredLevel` -- and
+the sheet's **Level up** button raises the same declaration: it *replaces* the
+entry that made it (the same revision the identity tab performs, via
+`features/character/desiredLevel.ts` so the two write the same change) and
+lands on the class tab, where the choices the declaration opened are waiting.
+The declaration *is* the level: the server raises the character to it and
+poses what those levels open -- the archetype, the improvements, a feature's
+picks -- as ordinary prompts in the ordinary list. So "level me to 9" is one
+number followed by the build loop, not a wizard, and this screen has no code
+that knows what a level is.
+
+The identity tab also asks `character/ruleset` once -- a select with the one
+option this application serves, "D&D 2014" -- and the answer is final: the
+settled block is drawn locked (`blocksFor` marks it unchangeable), and the
+server refuses any change to a value the compendium does not serve.
+
+**All three identity questions are drawn before the character exists**, in the
+order they are asked: the name, the rules, the level. Only the name can be
+answered there -- it is what creates the character, and the other two are
+answered against one -- so the other two are drawn with no body at all, which
+`ui/BlockList` already renders as a statement rather than a control that would
+fail. `NEW_IDENTITY_PROMPTS` in `BuildScreen` is the client's copy of what the
+server poses a moment later, so confirming a name settles a row rather than
+growing two new ones underneath it.
+
+**Nothing here asks which class a level went into**, and nothing fills it in
+either. There is no such question to ask: multiclassing is not offered, so a
+level has one place to go, and the server stopped posing it -- see
+[backend.md](backend.md#creation-and-level-up-are-one-flow) for what turning
+it back on costs. This screen used to answer it on the player's behalf, taking
+every owed level in one silent write so they were not made to press a button
+per level on the way to ninth; deleting the question deleted the autofill with
+it, which is the better version of the same judgement.
 
 Levels a character already *has* stay visible as settled blocks on the class
-tab, and stay read-only -- blocks with nothing to open, which is why
-`ui/BlockList` draws one as a statement rather than as a control that refuses. They are facts about the character -- an imported one may
-well have several -- rather than controls, and editing one would drive the same
-machinery that cannot take one. `domain/stages.ts` is the single line that
-reverses all of this on the day it works.
+tab, under their own "Level N" headings (`groupByLevel`), and stay read-only:
+`blocksFor` marks a bare level entry unchangeable, and `ui/BlockList` draws
+one as a statement rather than as a control that refuses. They are facts about
+the character. The way back down is the identity tab's level, revised like any
+other entry -- priced and confirmed, so what those levels bought is shown
+before it goes.
+
+What a level *granted* is a different thing wearing the same event type, and
+stays changeable: an improvement, an Expertise, a feature's pick all arrive as
+`level` events carrying answers, and locking them with the levels would take a
+whole class of real decisions off the screen.
 
 ## The sheet decides what order things come in
 

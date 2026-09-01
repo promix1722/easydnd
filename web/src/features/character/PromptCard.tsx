@@ -30,7 +30,8 @@ export interface PromptCardProps {
  */
 export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardProps) {
   const t = useT()
-  const [picked, setPicked] = useState<string[]>([])
+  const options = choosableOptions(t, prompt, entries)
+  const [picked, setPicked] = useState<string[]>(() => only(prompt, options))
 
   // A new prompt is a new question; carrying the previous answer over would
   // silently pre-select something the player never chose. Reset during render
@@ -39,27 +40,32 @@ export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardPro
   const [shown, setShown] = useState(prompt.choice.prompt)
   if (shown !== prompt.choice.prompt) {
     setShown(prompt.choice.prompt)
-    setPicked([])
+    setPicked(only(prompt, options))
   }
-
-  const options = choosableOptions(t, prompt, entries)
   const target = prompt.choice.choose
   const ready = picked.length === target
   // "Choose one" is a different question from "choose two", and the
   // difference is what a click on a third option means.
   const one = target === 1
 
+  // Ability bonuses are the one prompt where picking the same option twice is
+  // meaningful: two points into Strength is how "+2 to one ability" is
+  // written, and the server accepts a repeat for this kind alone. Everywhere
+  // else a second click on a chosen option means "not that one after all".
+  //
+  // The deselect used to run first and unconditionally, which made the repeat
+  // unreachable: the second click on Strength took the first one back, so the
+  // improvement could only ever be spread across two abilities. Clear is how
+  // a repeat is undone.
+  const repeatable = prompt.choice.kind === 'ability-bonus'
+
   const toggle = (key: string) => {
     setPicked((current) => {
-      if (current.includes(key)) return current.filter((k) => k !== key)
+      if (current.includes(key) && !repeatable) return current.filter((k) => k !== key)
       // Where only one is wanted, picking another *is* changing your mind:
       // the old answer goes. Making somebody unpick before they can pick is
       // asking them to operate the form rather than answer the question.
       if (one) return [key]
-      // Ability bonuses are the one prompt where picking the same option
-      // twice is meaningful: two points into Dexterity is "+2 to one
-      // ability". Everywhere else a second click on a chosen option is a
-      // deselect, handled above.
       if (current.length >= target) return current
       return [...current, key]
     })
@@ -135,3 +141,20 @@ export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardPro
   )
 }
 
+
+/**
+ * The answer a question of one option answers itself with.
+ *
+ * Taking a level asks which class it goes into, and while multiclassing is not
+ * offered there is exactly one: pressing the only button before pressing
+ * Confirm is a step that decides nothing. So a prompt that wants one answer
+ * and offers one that can be given starts with it chosen -- and chosen is not
+ * confirmed, which is what keeps this a shortcut rather than a decision made
+ * on the player's behalf. When multiclassing returns the list grows, this
+ * stops firing, and the question is a real one again.
+ */
+function only(prompt: Prompt, options: readonly { key: string; disabled: boolean }[]): string[] {
+  if (prompt.choice.choose !== 1) return []
+  const open = options.filter((option) => !option.disabled)
+  return open.length === 1 && open[0] !== undefined ? [open[0].key] : []
+}

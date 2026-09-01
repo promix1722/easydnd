@@ -157,7 +157,7 @@ func Revise(
 		}
 
 		if requiredRef(event) {
-			if _, ok := answersAnOpenPrompt(rebuilt, cat, open, event); !ok {
+			if _, ok := answersAnOpenPrompt(open, event); !ok {
 				dropped = append(dropped, droppedEntry(event, DropNotOffered, nil))
 				continue
 			}

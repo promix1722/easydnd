@@ -130,8 +130,8 @@ func RogueLog(t *testing.T) Log {
 				}},
 				{Prompt: "rogue/starting-equipment/0", Picks: []rules.Slug{"rapier"}},
 				// The shortbow-and-arrows bundle has no slug of its own, so
-				// it is named by position.
-				{Prompt: "rogue/starting-equipment/1", Picks: []rules.Slug{"#0"}},
+				// it is named by what is in it.
+				{Prompt: "rogue/starting-equipment/1", Picks: []rules.Slug{"shortbow+arrow"}},
 				{Prompt: "rogue/starting-equipment/2", Picks: []rules.Slug{"burglars-pack"}},
 			},
 		},

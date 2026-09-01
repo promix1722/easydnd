@@ -12,38 +12,62 @@ func TestOptionKeyNamesEveryOptionKind(t *testing.T) {
 	tests := []struct {
 		name   string
 		option rules.Option
-		index  int
 		want   rules.Slug
 	}{
-		{"ref", rules.RefOption{Ref: rules.NewRef(rules.RefItem, "shortsword"), Count: 1}, 0, "shortsword"},
-		{"text", rules.TextOption{Key: "i-idolize-a-particular-hero-of"}, 3, "i-idolize-a-particular-hero-of"},
-		{"ability bonus", rules.AbilityBonusOption{Ability: rules.Dexterity, Bonus: 1}, 1, "dex"},
-		{"nested", rules.NestedOption{Choice: nested}, 0, "rogue-expertise-1/expertise/0/0"},
-		{"size", rules.SizeOption{Size: rules.Medium}, 2, rules.Slug(rules.Medium.String())},
-		{"action", rules.ActionOption{Key: "breath-weapon", Count: 1}, 0, "breath-weapon"},
-		{"damage notes", rules.DamageOption{Notes: "black-dragon"}, 4, "black-dragon"},
+		{"ref", rules.RefOption{Ref: rules.NewRef(rules.RefItem, "shortsword"), Count: 1}, "shortsword"},
+		{"text", rules.TextOption{Key: "i-idolize-a-particular-hero-of"}, "i-idolize-a-particular-hero-of"},
+		{"ability bonus", rules.AbilityBonusOption{Ability: rules.Dexterity, Bonus: 1}, "dex"},
+		{"size", rules.SizeOption{Size: rules.Medium}, rules.Slug(rules.Medium.String())},
+		{"action", rules.ActionOption{Key: "breath-weapon", Count: 1}, "breath-weapon"},
+		{"damage notes", rules.DamageOption{Notes: "black-dragon"}, "black-dragon"},
+		// Where the prose naming the dragon is absent, the damage names it.
+		{"damage type", rules.DamageOption{Damage: rules.Damage{Type: "acid"}}, "acid"},
 
-		// The options with no identity of their own fall back to position.
-		{"bundle", rules.BundleOption{}, 0, "#0"},
-		{"money", rules.MoneyOption{}, 1, "#1"},
-		{"score minimum", rules.ScoreMinimumOption{Ability: rules.Strength, Minimum: 13}, 2, "#2"},
+		// The options that carry no slug of their own are named by what they
+		// are made of, never by where they sit.
+		{"bundle", rules.BundleOption{Items: []rules.Option{
+			rules.RefOption{Ref: rules.NewRef(rules.RefItem, "shortbow"), Count: 1},
+			rules.RefOption{Ref: rules.NewRef(rules.RefItem, "arrow"), Count: 20},
+		}}, "shortbow+arrow"},
+		{"money", rules.MoneyOption{Coins: rules.Coins{Amount: 15, Unit: rules.Gold}}, "15-gp"},
+		{"score minimum", rules.ScoreMinimumOption{Ability: rules.Strength, Minimum: 13}, "str-13"},
+
+		// A branch is named by the pool it draws from, and falls back to its
+		// own prompt only where it lists its options inline.
+		{"nested from a category", rules.NestedOption{Choice: rules.Choice{
+			Prompt: "fighter/starting-equipment/1/0/0",
+			From:   rules.OptionSet{Kind: rules.OptionsFromEquipmentCategory, Category: "martial-weapons"},
+		}}, "martial-weapons"},
+		{"nested from a collection", rules.NestedOption{Choice: rules.Choice{
+			Prompt: "rogue/ability-score-improvement/4/1",
+			From:   rules.OptionSet{Kind: rules.OptionsFromCollection, Collection: rules.RefFeat},
+		}}, "feat"},
+		{"nested from an inline list", rules.NestedOption{Choice: nested}, "rogue-expertise-1/expertise/0/0"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := rules.OptionKey(tt.option, tt.index); got != tt.want {
+			if got := rules.OptionKey(tt.option); got != tt.want {
 				t.Errorf("OptionKey() = %q, want %q", got, tt.want)
 			}
 		})
 	}
 }
 
-// A positional key must never be mistakable for a catalogue slug, which is
-// always lower-kebab.
-func TestPositionalKeysCannotCollideWithSlugs(t *testing.T) {
-	key := rules.OptionKey(rules.BundleOption{}, 7)
-	if key[0] != '#' {
-		t.Errorf("positional key = %q, want a # prefix", key)
+// A composed key reads back as the things it is composed of, which is the
+// whole point of composing it: an answer naming a bundle says what is in the
+// bundle, in a log row and in a hand-written fixture alike.
+func TestBundleKeysReadAsTheirContents(t *testing.T) {
+	nested := rules.NestedOption{Choice: rules.Choice{
+		Prompt: "fighter/starting-equipment/1/0/0",
+		From:   rules.OptionSet{Kind: rules.OptionsFromEquipmentCategory, Category: "martial-weapons"},
+	}}
+	key := rules.OptionKey(rules.BundleOption{Items: []rules.Option{
+		nested,
+		rules.RefOption{Ref: rules.NewRef(rules.RefItem, "shield"), Count: 1},
+	}})
+	if key != "martial-weapons+shield" {
+		t.Errorf("bundle key = %q, want martial-weapons+shield", key)
 	}
 }
 
@@ -65,8 +89,8 @@ func TestFindOptionInvertsOptionKey(t *testing.T) {
 	if len(keys) != 2 {
 		t.Fatalf("OptionKeys() = %v, want 2 keys", keys)
 	}
-	if keys[0] != "#0" {
-		t.Errorf("bundle key = %q, want #0", keys[0])
+	if keys[0] != "shortbow+arrow" {
+		t.Errorf("bundle key = %q, want shortbow+arrow", keys[0])
 	}
 	if keys[1] != "shortsword" {
 		t.Errorf("ref key = %q, want shortsword", keys[1])

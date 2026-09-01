@@ -81,8 +81,8 @@ func (s *Service) CreateStub(
 //     so the character is *complete* with every one outstanding; it is not
 //     *finished*, which is what a stub should be. The export cannot settle them
 //     either way: it names no third language, and its background is Urchin.
-//     What is left open is `character/level` alone, which every complete
-//     character carries and answering would make the stub a level 4 rogue.
+//     Nothing at all is left open: the stub declares a desired level of 3,
+//     which *is* the rogue's third level, and answers what those levels open.
 func stubEvents() []domain.Event {
 	return []domain.Event{
 		// The six scores and the method that produced them: one selection, one
@@ -184,6 +184,16 @@ func stubEvents() []domain.Event {
 						"everything else in my life."),
 			}},
 		},
+		// The declared goal and the rules it is built under. Declaring level 3
+		// is the whole of taking those levels -- there are no level entries
+		// below, because with one class there is nothing to ask about them.
+		{
+			Type: domain.EventChange,
+			Changes: []domain.Change{
+				{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(3)},
+				{Path: "identity.ruleset", Op: domain.OpSet, Value: domain.SlugValue("2014")},
+			},
+		},
 		{
 			Type:  domain.EventClass,
 			Ref:   rules.NewRef(rules.RefClass, "rogue"),
@@ -203,8 +213,8 @@ func stubEvents() []domain.Event {
 				}},
 				{Prompt: "rogue/starting-equipment/0", Picks: []rules.Slug{"rapier"}},
 				// The shortbow-and-arrows bundle has no slug of its own, so it
-				// is named by position.
-				{Prompt: "rogue/starting-equipment/1", Picks: []rules.Slug{"#0"}},
+				// is named by what is in it.
+				{Prompt: "rogue/starting-equipment/1", Picks: []rules.Slug{"shortbow+arrow"}},
 				{Prompt: "rogue/starting-equipment/2", Picks: []rules.Slug{"burglars-pack"}},
 			},
 		},
@@ -218,17 +228,10 @@ func stubEvents() []domain.Event {
 				{Path: "equipment.equipped", Op: domain.OpAdd, Value: domain.SlugValue("leather-armor")},
 			},
 		},
-		// Level 2 grants Cunning Action: the bonus-action Dash, Disengage and
-		// Hide.
-		{Type: domain.EventLevel, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 2},
-		// The level comes *before* the subclass it makes due, and the order is
-		// not cosmetic: a rogue is asked for a Roguish Archetype because they
-		// have reached level 3, so nothing offers subclass:thief until the
-		// level granting it is in the log. Answering them the other way round
-		// is rejected -- which is the difference between this list and the
-		// domain fixture it was transcribed from, since Log.Append checks the
-		// shape of an entry and never asks whether anything was offering it.
-		{Type: domain.EventLevel, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 3},
+		// The Roguish Archetype, which the declared third level is what makes
+		// due: nothing offers subclass:thief until the character is level 3,
+		// and the declaration above is what makes them level 3. Level 2's
+		// Cunning Action needs no entry, because it grants no choice.
 		{Type: domain.EventSubclass, Ref: rules.NewRef(rules.RefSubclass, "thief"), Level: 3},
 	}
 }

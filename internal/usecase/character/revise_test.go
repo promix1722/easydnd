@@ -73,10 +73,8 @@ func answer(prompt rules.Slug, picks ...rules.Slug) domain.Answer {
 //	6 class       rogue, and its four skill proficiencies
 //	7 level       the level-1 Expertise, doubling two of the acolyte's skills
 //	8 class       the rapier
-//	9 level       second level
-//
-//	10 level       third level
-//	11 subclass    thief, due at third
+//	9 change      the declared level, which is what makes them third
+//	10 subclass   thief, due at third
 func rogue3(t *testing.T) *builder {
 	t.Helper()
 	return build(t).
@@ -96,8 +94,8 @@ func rogue3(t *testing.T) *builder {
 			}}).
 		add("equipment", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
 			Choices: []domain.Answer{answer("rogue/starting-equipment/0", "rapier")}}).
-		add("level 2", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "rogue"), Level: 2}).
-		add("level 3", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "rogue"), Level: 3}).
+		add("level 3", domain.Event{Type: domain.EventChange, Changes: []domain.Change{
+			{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(3)}}}).
 		add("subclass", domain.Event{Type: domain.EventSubclass, Ref: ref(rules.RefSubclass, "thief"), Level: 3})
 }
 
@@ -368,223 +366,6 @@ func TestReviseKeepsAnEntryThatLostAnAnswer(t *testing.T) {
 	}
 }
 
-// A multiclassed character is where "revalidate the suffix" earns its keep:
-// levels are ordered, and an entry that starts a class is what every later
-// level in it depends on.
-func TestReviseAClassOnAMulticlassedCharacter(t *testing.T) {
-	b := rogue3(t).
-		add("fighter 1", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "fighter"), Level: 1}).
-		add("fighter 2", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "fighter"), Level: 2}).
-		add("fighter 3", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "fighter"), Level: 3})
-
-	cat, _ := b.s.Catalog(context.Background(), rules.DefaultLocale)
-	state, err := domain.Project(b.log(), cat)
-	if err != nil {
-		t.Fatalf("Project() error = %v", err)
-	}
-	if state.Identity.Level() != 6 {
-		t.Fatalf("the fixture is level %d, want 6", state.Identity.Level())
-	}
-
-	// Entry 12 is the level that started the fighter. Spend it on the rogue
-	// instead; the two fighter levels after it have nothing left to sit on.
-	out, dropped := revised(t, b, 12, &domain.Event{
-		Type: domain.EventLevel, Ref: ref(rules.RefClass, "rogue"), Level: 4,
-	})
-
-	for _, seq := range []int{13, 14} {
-		d, ok := droppedAt(dropped, seq)
-		if !ok || d.Reason != charuc.DropNotOffered {
-			t.Errorf("dropped = %+v, want entry %d gone as not-offered", dropped, seq)
-		}
-	}
-
-	after, err := domain.Project(out, cat)
-	if err != nil {
-		t.Fatalf("Project() error = %v", err)
-	}
-	if len(after.Identity.Classes) != 1 {
-		t.Fatalf("classes = %+v, want the fighter gone entirely", after.Identity.Classes)
-	}
-	if after.Identity.Classes[0].Class != "rogue" || after.Identity.Classes[0].Level != 4 {
-		t.Errorf("classes = %+v, want rogue 4", after.Identity.Classes)
-	}
-	// Four levels of one class, not six of two: the levels that could not
-	// stand are gone rather than left orphaned at levels 2 and 3 of a class
-	// the character never took.
-	if after.Identity.Level() != 4 {
-		t.Errorf("level = %d, want 4", after.Identity.Level())
-	}
-}
-
-// How a name is changed: the opening entry is replaced, and nothing else
-// moves. Log.Validate requires init to be first and to appear once, so the
-// only guard needed is that the replacement is an init event too.
-func TestReviseReplacesTheOpeningEntry(t *testing.T) {
-	b := rogue3(t)
-	before := b.log()
-
-	out, dropped := revised(t, b, 1, &domain.Event{
-		Type: domain.EventInit,
-		Changes: []domain.Change{
-			{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue("Рурик")},
-		},
-	})
-	if len(dropped) != 0 {
-		t.Errorf("dropped = %+v, want nothing: a name is nobody's dependency", dropped)
-	}
-	if out.Len() != before.Len() {
-		t.Errorf("log length = %d, want %d", out.Len(), before.Len())
-	}
-	if out.Events[0].Source != domain.GroupIdentity {
-		t.Errorf("source = %s, want identity", out.Events[0].Source)
-	}
-
-	cat, _ := b.s.Catalog(context.Background(), rules.DefaultLocale)
-	state, err := domain.Project(out, cat)
-	if err != nil {
-		t.Fatalf("Project() error = %v", err)
-	}
-	if state.Identity.Name != "Рурик" {
-		t.Errorf("name = %q, want Рурик", state.Identity.Name)
-	}
-	if state.Identity.Level() != 3 {
-		t.Errorf("level = %d, want the character otherwise untouched", state.Identity.Level())
-	}
-}
-
-func TestReviseRefusesANonInitAtTheOpeningEntry(t *testing.T) {
-	b := rogue3(t)
-	cat, _ := b.s.Catalog(context.Background(), rules.DefaultLocale)
-
-	for _, tt := range []struct {
-		name        string
-		replacement *domain.Event
-	}{
-		{"another type", &domain.Event{Type: domain.EventNote, Note: "hello"}},
-		{"nothing at all", nil},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := charuc.Revise(b.log(), cat, 1, tt.replacement)
-			var fieldErr *types.FieldValidationError
-			if !errors.As(err, &fieldErr) {
-				t.Fatalf("Revise() error = %v, want a FieldValidationError", err)
-			}
-			if fieldErr.Fields[0].Field != "seq" {
-				t.Errorf("field = %q, want seq", fieldErr.Fields[0].Field)
-			}
-		})
-	}
-
-	// And the inverse: an init event anywhere but first would be a log that
-	// cannot be read back.
-	if _, _, err := charuc.Revise(b.log(), cat, 5, &domain.Event{Type: domain.EventInit}); err == nil {
-		t.Error("Revise() accepted a second init event")
-	}
-}
-
-// A rejected replacement writes nothing. The whole point of validating the
-// replacement strictly is that a 422 leaves the character exactly as it was.
-func TestReviseRejectsAnIllegalReplacementAndChangesNothing(t *testing.T) {
-	ctx := context.Background()
-	b := rogue3(t)
-	before := b.log()
-
-	_, err := b.s.Revise(ctx, testOwner, b.id, rules.DefaultLocale, before.LastSeq(), 3,
-		&domain.Event{Type: domain.EventSubrace, Ref: ref(rules.RefSubrace, "hill-dwarf")}, true)
-	var fieldErr *types.FieldValidationError
-	if !errors.As(err, &fieldErr) {
-		t.Fatalf("Revise() error = %v, want a FieldValidationError", err)
-	}
-
-	after := b.log()
-	if !slices.EqualFunc(before.Events, after.Events, sameEntry) {
-		t.Error("a rejected replacement changed the stored log")
-	}
-}
-
-func sameEntry(a, b domain.Event) bool {
-	if a.Seq != b.Seq || a.Type != b.Type || a.Ref != b.Ref ||
-		a.Level != b.Level || a.Source != b.Source || len(a.Choices) != len(b.Choices) {
-		return false
-	}
-	for i := range a.Choices {
-		if a.Choices[i].Prompt != b.Choices[i].Prompt ||
-			!slices.Equal(a.Choices[i].Picks, b.Choices[i].Picks) {
-			return false
-		}
-	}
-	return true
-}
-
-func TestReviseRejectsASeqOutsideTheLog(t *testing.T) {
-	b := rogue3(t)
-	cat, _ := b.s.Catalog(context.Background(), rules.DefaultLocale)
-
-	for _, seq := range []int{0, -1, 99} {
-		_, _, err := charuc.Revise(b.log(), cat, seq, &domain.Event{Type: domain.EventNote, Note: "x"})
-		var fieldErr *types.FieldValidationError
-		if !errors.As(err, &fieldErr) {
-			t.Errorf("Revise(seq=%d) error = %v, want a FieldValidationError", seq, err)
-		}
-	}
-}
-
-// The same guard every other write has, for the same reason: the whole log is
-// one record.
-func TestReviseRejectsAStaleExpectedSeq(t *testing.T) {
-	ctx := context.Background()
-	b := rogue3(t)
-
-	_, err := b.s.Revise(ctx, testOwner, b.id, rules.DefaultLocale, 2, 8,
-		&domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
-			Choices: []domain.Answer{answer("rogue/starting-equipment/0", "shortsword")}}, true)
-	var validation *types.ValidationError
-	if !errors.As(err, &validation) {
-		t.Fatalf("Revise() error = %v, want a ValidationError", err)
-	}
-}
-
-// The dry run is the same function with the write skipped, so it must report
-// exactly what the commit reports and leave the log alone.
-func TestDryRunPreviewsWithoutWriting(t *testing.T) {
-	ctx := context.Background()
-	b := rogue3(t)
-	before := b.log()
-	replacement := &domain.Event{Type: domain.EventRace, Ref: ref(rules.RefRace, "elf")}
-
-	preview, err := b.s.Revise(ctx, testOwner, b.id, rules.DefaultLocale, before.LastSeq(), 3, replacement, false)
-	if err != nil {
-		t.Fatalf("dry run error = %v", err)
-	}
-	if len(preview.Dropped) == 0 {
-		t.Fatal("the dry run reported no cost at all")
-	}
-	if !slices.EqualFunc(before.Events, b.log().Events, sameEntry) {
-		t.Fatal("the dry run wrote to the log")
-	}
-
-	commit, err := b.s.Revise(ctx, testOwner, b.id, rules.DefaultLocale, before.LastSeq(), 3, replacement, true)
-	if err != nil {
-		t.Fatalf("commit error = %v", err)
-	}
-	if commit.Seq != preview.Seq {
-		t.Errorf("committed seq = %d, previewed %d", commit.Seq, preview.Seq)
-	}
-	if len(commit.Dropped) != len(preview.Dropped) {
-		t.Fatalf("committed %d drops, previewed %d", len(commit.Dropped), len(preview.Dropped))
-	}
-	for i := range commit.Dropped {
-		if commit.Dropped[i].Seq != preview.Dropped[i].Seq ||
-			commit.Dropped[i].Reason != preview.Dropped[i].Reason {
-			t.Errorf("drop %d = %+v, previewed %+v", i, commit.Dropped[i], preview.Dropped[i])
-		}
-	}
-	if commit.Sheet.Identity.Race != "elf" {
-		t.Errorf("race = %q, want elf: the commit did happen", commit.Sheet.Identity.Race)
-	}
-}
-
 // A preview the player sat and thought about, while another tab moved the
 // log. It must not commit against a log it never saw -- and it does not,
 // because expectedSeq makes it the ordinary sequence conflict.
@@ -606,25 +387,19 @@ func TestAStalePreviewCannotBeCommitted(t *testing.T) {
 	}
 }
 
-// Removing a level, which has no replacement to put back. Everything that
-// stood on it goes: a third level with no second is not a character, and the
-// subclass it was due at is not either.
-func TestReviseDeletesALevelInTheMiddle(t *testing.T) {
+// Taking levels back, which is revising the one entry that declares them.
+// Everything those levels bought goes with them: a thief was due at third,
+// and a second-level rogue is not owed one.
+func TestReviseLowersTheDeclaredLevel(t *testing.T) {
 	b := rogue3(t)
 
-	out, dropped := revised(t, b, 9, nil)
+	out, dropped := revised(t, b, 9, &domain.Event{
+		Type:    domain.EventChange,
+		Changes: []domain.Change{{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(2)}},
+	})
 
-	for _, want := range []struct {
-		seq    int
-		reason charuc.DropReason
-	}{
-		{10, charuc.DropNotOffered},
-		{11, charuc.DropNotOffered},
-	} {
-		d, ok := droppedAt(dropped, want.seq)
-		if !ok || d.Reason != want.reason {
-			t.Errorf("dropped = %+v, want entry %d as %s", dropped, want.seq, want.reason)
-		}
+	if d, ok := droppedAt(dropped, 10); !ok || d.Reason != charuc.DropNotOffered {
+		t.Errorf("dropped = %+v, want the subclass gone as not-offered", dropped)
 	}
 
 	cat, _ := b.s.Catalog(context.Background(), rules.DefaultLocale)
@@ -632,17 +407,17 @@ func TestReviseDeletesALevelInTheMiddle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Project() error = %v", err)
 	}
-	if len(state.Identity.Classes) != 1 || state.Identity.Classes[0].Level != 1 {
-		t.Errorf("classes = %+v, want a level-1 rogue", state.Identity.Classes)
+	if len(state.Identity.Classes) != 1 || state.Identity.Classes[0].Level != 2 {
+		t.Errorf("classes = %+v, want a level-2 rogue", state.Identity.Classes)
 	}
 	if !state.Identity.Classes[0].Subclass.IsZero() {
 		t.Errorf("subclass = %q, want none: it was due at a level the character no longer has",
 			state.Identity.Classes[0].Subclass)
 	}
-	// Everything before the deleted level is untouched and renumbered
+	// Everything before the revised entry is untouched and renumbered
 	// contiguously, which is what Rebuild is for.
-	if out.Len() != 8 {
-		t.Errorf("log = %d entries, want 8", out.Len())
+	if out.Len() != 9 {
+		t.Errorf("log = %d entries, want 9", out.Len())
 	}
 }
 
@@ -670,7 +445,7 @@ func TestSourceSurvivesAReplace(t *testing.T) {
 	want := []domain.PromptGroup{
 		domain.GroupIdentity, domain.GroupAbilities, domain.GroupRace, domain.GroupRace,
 		domain.GroupBackground, domain.GroupClass, domain.GroupClass, domain.GroupClass,
-		domain.GroupAdvance, domain.GroupAdvance, domain.GroupClass,
+		domain.GroupIdentity, domain.GroupClass,
 	}
 	for i, group := range want {
 		if out.Events[i].Source != group {

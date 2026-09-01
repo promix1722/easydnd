@@ -66,14 +66,14 @@ func validateEvent(
 		if err := validateRef(cat, event, index); err != nil {
 			return err
 		}
-		if _, ok := answersAnOpenPrompt(log, cat, open, event); !ok {
+		if _, ok := answersAnOpenPrompt(open, event); !ok {
 			return types.NewFieldValidationError("some answers are not valid", types.FieldError{
 				Field: fmt.Sprintf("events[%d].ref", index), Rule: "not-offered",
 				Reason: "field.answer.notAsked",
 			})
 		}
 	}
-	fields := validateChanges(event, index)
+	fields := validateChanges(cat, event, index)
 
 	_, lost, err := surviving(log, cat, event, index)
 	if err != nil {
@@ -154,25 +154,18 @@ func surviving(
 // entries alive:
 //
 //   - the prompt selects the entry itself -- "which race?", "which subrace?",
-//     "which class do you gain a level in?" -- and the event names one of the
-//     options it offers;
+//     "which class?" -- and the event names one of the options it offers;
 //   - the prompt hangs off an entry the character already holds, in which case
 //     the prompt states the event it must be posted as, Ref and all, and the
 //     event matching that Ref is what makes it the entry those answers belong
 //     to.
 //
-// Level is compared only when both sides state one. A prompt that names no
-// level applies at any ("which class do you gain a level in?" does not know
-// the answer's level until it has one), and a client that omits the level is
-// answering the prompt it was handed either way.
+// Level is compared only when both sides state one, so a client that omits the
+// level is answering the prompt it was handed either way.
 //
 // The first match in prompt order wins, and prompt order is the order a build
-// flow asks in -- so a level event carrying that level's own answers is
-// attributed to the class that poses them rather than to the standing offer
-// of another level.
-func answersAnOpenPrompt(
-	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event,
-) (domain.Prompt, bool) {
+// flow asks in.
+func answersAnOpenPrompt(open []domain.Prompt, event domain.Event) (domain.Prompt, bool) {
 	for _, p := range open {
 		if p.Event.Type != event.Type {
 			continue
@@ -186,42 +179,9 @@ func answersAnOpenPrompt(
 		if !p.Event.Ref.IsZero() && p.Event.Ref != event.Ref {
 			continue
 		}
-		if p.Advances && !advancesInOrder(log, cat, event) {
-			continue
-		}
 		return p, true
 	}
 	return domain.Prompt{}, false
-}
-
-// advancesInOrder reports whether a level event names the level that actually
-// comes next in the class it names.
-//
-// The offer of a level says which classes are eligible and cannot say which
-// level, because it does not know which class the answer will name. Without
-// this check the sixth level of a fighter stays legal on a character with no
-// fighter at all -- which nobody could reach by answering prompts, but which
-// a replay reaches the moment the entry that started that class is replaced.
-// Every level after it would then survive, and the character would come out
-// of the rebuild with a class they never took.
-//
-// A zero level is left alone. It is what a client sends when it copies the
-// prompt's own event verbatim, and it has always projected as no level at
-// all; turning that into a rejection is a separate decision from this one.
-func advancesInOrder(log domain.Log, cat *catalog.Catalog, event domain.Event) bool {
-	if event.Level == 0 {
-		return true
-	}
-	state, err := domain.Project(log, cat)
-	if err != nil {
-		return false
-	}
-	for _, taken := range state.Identity.Classes {
-		if taken.Class == event.Ref.Slug {
-			return event.Level == taken.Level+1
-		}
-	}
-	return event.Level == 1
 }
 
 // offers reports whether an option set contains a catalogue entry.
@@ -277,7 +237,7 @@ func sourceOf(
 		return domain.GroupIdentity
 	}
 	if requiredRef(event) {
-		if p, ok := answersAnOpenPrompt(log, cat, open, event); ok {
+		if p, ok := answersAnOpenPrompt(open, event); ok {
 			return p.Group
 		}
 		return domain.PromptGroupNone
@@ -388,13 +348,42 @@ const (
 
 // validateChanges checks the addressed mutations an event carries.
 //
-// Exactly one thing is checked, and it is the one thing no rule can produce.
-// The six ability scores used to arrive with the create call and were bounded
-// there; they arrive as an answer now, so the bound moved here with them
-// rather than being quietly dropped along the way.
-func validateChanges(event domain.Event, index int) []types.FieldError {
+// Only what no rule can produce is checked. The six ability scores used to
+// arrive with the create call and were bounded there; they arrive as an answer
+// now, so the bound moved here with them rather than being quietly dropped
+// along the way. The desired level is bounded by where the 2014 rules stop,
+// and the ruleset must be the compendium's own -- which is what makes the
+// rules selection final: the only value a change can ever set is the one
+// already in effect.
+func validateChanges(cat *catalog.Catalog, event domain.Event, index int) []types.FieldError {
 	var fields []types.FieldError
 	for i, change := range event.Changes {
+		if change.Path == "identity.desiredLevel" {
+			if change.Value.Kind == domain.ValueInt &&
+				(change.Value.Int < 1 || change.Value.Int > domain.MaxCharacterLevel) {
+				fields = append(fields, types.FieldError{
+					Field:  fmt.Sprintf("events[%d].changes[%d].value", index, i),
+					Rule:   "range",
+					Reason: "field.level.range",
+				})
+			}
+			continue
+		}
+		if change.Path == "identity.ruleset" {
+			value := change.Value.Str
+			if change.Value.Kind == domain.ValueSlug {
+				value = change.Value.Slug.String()
+			}
+			if value != cat.Ruleset {
+				fields = append(fields, types.FieldError{
+					Field:  fmt.Sprintf("events[%d].changes[%d].value", index, i),
+					Rule:   "unsupported",
+					Reason: "field.ruleset.unsupported",
+					Args:   types.Args{"ruleset": cat.Ruleset},
+				})
+			}
+			continue
+		}
 		segments := change.Path.Segments()
 		if len(segments) != 2 || segments[0] != "abilities" {
 			continue

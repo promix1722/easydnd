@@ -108,6 +108,7 @@ func (p *projector) run(log Log) (State, error) {
 
 	p.applyRace()
 	p.applyBackground()
+	p.advanceToDesiredLevel()
 	p.applyClasses()
 	p.applyEquipmentChoices()
 
@@ -181,6 +182,31 @@ func (p *projector) takeLevel(class rules.Slug, level int) {
 	p.state.Identity.Classes = append(p.state.Identity.Classes, ClassLevel{Class: class, Level: level})
 }
 
+// advanceToDesiredLevel raises a single-class character to the level they
+// declared they are building towards.
+//
+// Levels used to be taken one event at a time, each one answering "which class
+// does this go into?" -- a question with one answer while multiclassing is
+// off, asked eight times on the way to ninth level. There is nothing to
+// record, so nothing records it: the declaration *is* the level, and
+// applyClasses grants what that level grants. What the player is actually
+// asked is what those levels open -- the archetype, the improvements -- which
+// Prompts derives from the same number.
+//
+// Raise only. Going back down is not something the rules do, and takeLevel is
+// already max-by-number for the same reason.
+//
+// With two classes this does nothing, because then the question is real again.
+// That is the whole of what turning multiclassing back on has to undo.
+func (p *projector) advanceToDesiredLevel() {
+	if len(p.state.Identity.Classes) != 1 {
+		return
+	}
+	if p.state.Identity.DesiredLevel > p.state.Identity.Classes[0].Level {
+		p.state.Identity.Classes[0].Level = p.state.Identity.DesiredLevel
+	}
+}
+
 // setSubclass attaches a subclass to whichever class offers it.
 func (p *projector) setSubclass(subclass rules.Slug) {
 	entry, ok := p.cat.Subclasses.Get(subclass)
@@ -205,7 +231,8 @@ func (p *projector) setSubclass(subclass rules.Slug) {
 // and the ruling would vanish.
 func isInputPath(path Path) bool {
 	switch path {
-	case "identity.name", "identity.alignment", "abilities.method":
+	case "identity.name", "identity.alignment", "identity.desiredLevel",
+		"identity.ruleset", "abilities.method":
 		return true
 	}
 	segments := path.Segments()

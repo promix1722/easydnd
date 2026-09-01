@@ -143,7 +143,7 @@ func TestAnswersAnOpenPrompt(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Prompts() error = %v", err)
 			}
-			prompt, ok := answersAnOpenPrompt(tt.log, cat, open, tt.event)
+			prompt, ok := answersAnOpenPrompt(open, tt.event)
 			if ok != tt.want {
 				t.Fatalf("answersAnOpenPrompt() = %v, want %v", ok, tt.want)
 			}

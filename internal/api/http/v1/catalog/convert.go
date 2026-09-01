@@ -147,8 +147,8 @@ func (c converter) optionSet(set rules.OptionSet) OptionSet {
 		out.Collection = set.Collection.String()
 	case rules.OptionsExplicit:
 		out.Options = make([]Option, 0, len(set.Options))
-		for i, option := range set.Options {
-			out.Options = append(out.Options, c.option(option, i))
+		for _, option := range set.Options {
+			out.Options = append(out.Options, c.option(option))
 		}
 	}
 	return out
@@ -171,9 +171,9 @@ func optionSetKindName(k rules.OptionSetKind) string {
 // Key comes from rules.OptionKey, which is the same function the projector
 // uses to resolve a stored answer. Serving it means the client never computes
 // an option's identity, it echoes what the server sent -- so the rule that a
-// bundle is named by its position lives in exactly one place.
-func (c converter) option(o rules.Option, index int) Option {
-	out := Option{Key: rules.OptionKey(o, index).String()}
+// bundle is named by what is in it lives in exactly one place.
+func (c converter) option(o rules.Option) Option {
+	out := Option{Key: rules.OptionKey(o).String()}
 	switch opt := o.(type) {
 	case rules.RefOption:
 		out.Kind = "ref"
@@ -186,8 +186,8 @@ func (c converter) option(o rules.Option, index int) Option {
 	case rules.BundleOption:
 		out.Kind = "bundle"
 		out.Items = make([]Option, 0, len(opt.Items))
-		for i, item := range opt.Items {
-			out.Items = append(out.Items, c.option(item, i))
+		for _, item := range opt.Items {
+			out.Items = append(out.Items, c.option(item))
 		}
 	case rules.AbilityBonusOption:
 		out.Kind = "ability-bonus"

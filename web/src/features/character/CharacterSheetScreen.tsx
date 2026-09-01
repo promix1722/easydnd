@@ -1,15 +1,18 @@
-import { Link, useParams } from 'react-router'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router'
 
-import { getPrompts, getSheet } from '@/lib/api'
+import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent } from '@/lib/api'
 import type { Prompt, Sheet } from '@/lib/api'
+import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
-import { Badge, Button, Page, pageState } from '@/ui'
+import { Badge, Button, Group, ModalSheet, NumberInput, Page, Stack, Text, pageState } from '@/ui'
 
 import type { Compendium } from './compendium'
 import { loadCompendium } from './compendium'
+import { desiredLevelChange } from './desiredLevel'
 import { SheetBody } from './SheetBody'
 
-import { answerable } from '@/domain'
+import { MAX_LEVEL } from '@/domain'
 
 import { useLocale, useT } from '@/lib/i18n'
 
@@ -37,18 +40,45 @@ export function CharacterSheetScreen() {
   const t = useT()
   const locale = useLocale()
   const { id = '' } = useParams()
+  const navigate = useNavigate()
+  const [pickingLevel, setPickingLevel] = useState<number | null>(null)
+
+  /**
+   * Declares the new desired level, then goes where the choices it opened are.
+   *
+   * The declaration lives in one entry, so raising it again *replaces* that
+   * entry -- the same revision the build screen's identity tab performs --
+   * rather than appending a second declaration for the log to read past. Only
+   * a character that never declared one gets an append. Raising it can drop
+   * nothing, so there is nothing to preview.
+   */
+  const levelUp = useAction(async (target: number) => {
+    const log = await getEvents(id)
+    const entry = log.events.find((event) =>
+      (event.changes ?? []).some((change) => change.path === 'identity.desiredLevel'),
+    )
+    if (entry?.seq !== undefined) {
+      const changes = (entry.changes ?? []).map((change) =>
+        change.path === 'identity.desiredLevel' ? desiredLevelChange(target) : change,
+      )
+      return replaceEvent(id, entry.seq, log.seq, { type: entry.type, changes })
+    }
+    return appendEvents(id, log.seq, [{ type: 'change', changes: [desiredLevelChange(target)] }])
+  })
+
+  const confirmLevelUp = async (target: number) => {
+    const written = await levelUp.run(target)
+    if (written === null) return
+    setPickingLevel(null)
+    await navigate(`/characters/${id}/build`, { state: { stage: 'class' } })
+  }
   // A projected sheet contains stable slugs, but its compendium contains
   // localized names. Changing language must therefore reload this resource;
   // clearing the catalogue cache alone cannot replace data already in state.
   const sheet = useResource<SheetView>(`sheet:${locale}:${id}`, async (signal) => {
     const [projected, prompts, compendium] = await Promise.all([
       getSheet(id, signal),
-      getPrompts(id, signal).then(
-        // Advancement is not offered anywhere in this client while level-up
-        // does not work; see domain/stages.ts.
-        (response) => (response.prompts ?? []).filter((prompt) => answerable(prompt.group)),
-        () => null,
-      ),
+      getPrompts(id, signal).then((response) => response.prompts ?? [], () => null),
       // Session-cached, so this is one request for the whole visit however
       // many sheets are opened.
       loadCompendium(),
@@ -108,12 +138,69 @@ export function CharacterSheetScreen() {
        * that answers it rather than to the one that reads the character.
        */
       actions={
-        <Button component={Link} to={`/characters/${id}/build`} variant="light">
-          {t('common.edit')}
-        </Button>
+        <Group gap="xs" wrap="nowrap">
+          {/*
+            Only for a character with a level to raise: one that has not taken
+            its first class yet is still being created, and the build screen is
+            already the whole of that. Gone at 20, where the rules stop.
+          */}
+          {identity.level >= 1 && identity.level < MAX_LEVEL && (
+            <Button
+              variant="light"
+              onClick={() =>
+                setPickingLevel(
+                  Math.min(
+                    Math.max(identity.desiredLevel ?? 0, identity.level + 1),
+                    MAX_LEVEL,
+                  ),
+                )
+              }
+            >
+              {t('sheet.levelUp')}
+            </Button>
+          )}
+          <Button component={Link} to={`/characters/${id}/build`} variant="light">
+            {t('common.edit')}
+          </Button>
+        </Group>
       }
     >
       <SheetBody sheet={s} compendium={sheet.data.compendium} />
+
+      <ModalSheet
+        opened={pickingLevel !== null}
+        onClose={() => setPickingLevel(null)}
+        title={t('sheet.levelUp')}
+      >
+        {pickingLevel !== null && (
+          <Stack gap="md">
+            <NumberInput
+              aria-label={t('choice.desiredLevel')}
+              min={identity.level + 1}
+              max={MAX_LEVEL}
+              clampBehavior="strict"
+              allowDecimal={false}
+              value={pickingLevel}
+              onChange={(value) => {
+                if (typeof value === 'number') setPickingLevel(value)
+              }}
+            />
+            {levelUp.error !== null && (
+              <Text size="sm" c="red">
+                {levelUp.error}
+              </Text>
+            )}
+            <Group>
+              <Button loading={levelUp.pending} onClick={() => void confirmLevelUp(pickingLevel)}>
+                {t('answer.confirm')}
+              </Button>
+              <Button variant="subtle" onClick={() => setPickingLevel(null)}>
+                {t('common.cancel')}
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </ModalSheet>
     </Page>
   )
 }

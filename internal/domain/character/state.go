@@ -54,6 +54,19 @@ type Identity struct {
 	// order taken; the first is the class the character started as.
 	Classes []ClassLevel
 
+	// DesiredLevel is the character level the player has declared they are
+	// building towards, set by a change event. While the taken level is below
+	// it, the prompts hand out one level's worth of choices at a time; at or
+	// above it, advancement stops being asked. Zero means never declared,
+	// which reads as "wherever the levels already taken put me".
+	DesiredLevel int
+
+	// Ruleset records which rules the character was built under, set once by
+	// a change event and validated against the compendium's own ruleset. Zero
+	// means the character predates the field and is implicitly the
+	// compendium's.
+	Ruleset rules.Slug
+
 	// Experience is the experience-point total, and it is *recorded* rather
 	// than acted on. Level comes from the log -- a level event is what makes
 	// a character third level -- so nothing here derives a level from this

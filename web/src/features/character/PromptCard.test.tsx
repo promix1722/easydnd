@@ -31,7 +31,6 @@ function skillPrompt(overrides: Partial<Prompt> = {}): Prompt {
     source: 'class:rogue',
     group: 'class',
     optional: false,
-    advances: false,
     heldOnly: false,
     event: { type: 'class', ref: 'class:rogue', level: 1 },
     ...overrides,
@@ -79,7 +78,7 @@ describe('PromptCard', () => {
           kind: 'explicit',
           options: [
             {
-              key: '#0',
+              key: 'shortbow+arrow',
               kind: 'bundle',
               items: [{ key: 'stealth', kind: 'ref', ref: 'item:stealth', count: 1 }],
             },
@@ -89,10 +88,41 @@ describe('PromptCard', () => {
     })
     renderAt(viewport, <PromptCard prompt={bundle} entries={entries} pending={false} onAnswer={onAnswer} />)
 
-    await user.click(screen.getByRole('button', { name: /Stealth/ }))
+    // The one option a question of one option can be answered with is already
+    // chosen -- see `only` -- so what is left is to confirm it.
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
-    // The bundle has no slug of its own; the server named it by position.
-    expect(onAnswer).toHaveBeenCalledWith(['#0'])
+    // The bundle has no slug of its own; the server named it by its contents.
+    expect(onAnswer).toHaveBeenCalledWith(['shortbow+arrow'])
+  })
+
+  // Taking a level asks which class it goes into, and while multiclassing is
+  // not offered there is one answer: pressing it before pressing Confirm is a
+  // step that decides nothing.
+  it('starts with the only answer chosen, where there is only one', () => {
+    const single = skillPrompt({
+      choice: {
+        prompt: 'character/level',
+        choose: 1,
+        kind: 'level',
+        from: {
+          kind: 'explicit',
+          options: [{ key: 'bard', kind: 'ref', ref: 'class:bard', count: 1 }],
+        },
+      },
+    })
+    renderAt(viewport, <PromptCard prompt={single} entries={entries} pending={false} onAnswer={vi.fn()} />)
+
+    // Chosen, and not confirmed: the level is still the player's to take.
+    expect(screen.getByRole('button', { name: /^confirm$/i })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /choose 1 more/i })).not.toBeInTheDocument()
+  })
+
+  // Two options is a real question, and answering it for the player would be
+  // choosing their character's next level for them.
+  it('chooses nothing where there is a choice to make', () => {
+    renderAt(viewport, <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: /choose 2 more/i })).toBeDisabled()
   })
 
   it('disables an option the character already has', () => {
@@ -245,7 +275,6 @@ describe('an option description', () => {
     },
     group: 'race',
     optional: false,
-    advances: false,
     heldOnly: false,
     event: { type: 'race', ref: 'race:dragonborn' },
   }

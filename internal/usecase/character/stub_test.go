@@ -34,7 +34,7 @@ func TestCreateStubBuildsTheReferenceCharacter(t *testing.T) {
 	s := newService(t)
 	c := mustCreateStub(t, s)
 
-	if got, want := c.Log.Len(), 13; got != want {
+	if got, want := c.Log.Len(), 12; got != want {
 		t.Fatalf("log length = %d, want %d", got, want)
 	}
 	if got := c.Log.Events[0].Type; got != domain.EventInit {
@@ -180,10 +180,10 @@ func TestStubDerivedNumbers(t *testing.T) {
 // screen still showed seven rows under "still to choose". Answering them is the
 // difference between a character the rules call finished and one a person would.
 //
-// `character/level` is the exception and stays open on purpose. It is the
-// standing offer every complete character carries, and answering it would not
-// fill anything in -- it would make the stub a level 4 rogue.
-func TestStubLeavesOnlyTheLevelOffer(t *testing.T) {
+// Not even `character/level` stays open: the stub declared level 3 and is
+// level 3, so there is nothing left to ask. Levelling it up would be raising
+// the declaration, not answering a standing offer.
+func TestStubLeavesNothingOpen(t *testing.T) {
 	s := newService(t)
 	c := mustCreateStub(t, s)
 
@@ -199,8 +199,8 @@ func TestStubLeavesOnlyTheLevelOffer(t *testing.T) {
 	for _, p := range prompts {
 		open = append(open, p.Choice.Prompt)
 	}
-	if len(open) != 1 || open[0] != "character/level" {
-		t.Errorf("open prompts = %v, want only character/level", open)
+	if len(open) != 0 {
+		t.Errorf("open prompts = %v, want none", open)
 	}
 }
 

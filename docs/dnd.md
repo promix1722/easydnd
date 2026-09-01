@@ -135,6 +135,25 @@ Every prompt carries a **stable id** (`fighter/starting-equipment/1`). That id i
 what a character's stored answer points at, so it must survive a data
 regeneration — otherwise reloading a character silently loses its choices.
 
+Every *option* carries a stable **slug** for the same reason, and it is derived
+from what the option is rather than from where it sits: a bundle of a shortbow
+and twenty arrows is `shortbow+arrow`, a martial weapon with a shield is
+`martial-weapons+shield`, a draconic ancestry's breath is `acid`. So an answer
+reads back as what was taken — in a log row, in a hand-written fixture, in a
+support question — and a person can write one and be right. Options used to
+fall back to a positional `#0` where they carried no slug, which was stable
+only until somebody reordered a class's equipment list, and legible never.
+
+What position did guarantee is that two options in one set cannot collide, and
+a derived slug cannot promise that on its own. That guarantee is a check over
+the whole compendium instead (`TestOptionKeysAreTotalAndUniquePerPrompt`),
+which fails the build rather than letting an ambiguous answer resolve to
+whichever option came first. One case has no derivable name at all — the
+monk's "one artisan's tool or one musical instrument" is two inline lists of
+the same kind, and the words telling them apart are SRD prose the compendium
+does not carry — so a branch that lists its options inline falls back to its
+own prompt id, which is unique by construction.
+
 Not every question the SRD *prints* as a table is posed as one. A background's
 personality traits, ideals, bonds and flaws are d8 tables in the book and are
 carried in the catalogue as `Choice`s of text options, but a character is asked
@@ -233,7 +252,7 @@ discriminator, not a sealed interface. Fields a given type does not use are zero
 | `init` | The opening state — for a character created here, the name. Always first, exactly once |
 | `change` | An arbitrary addressed mutation — the escape hatch for a DM ruling or homebrew, and how the ability scores are answered |
 | `race`, `subrace`, `background`, `class`, `subclass` | A catalogue entry plus the answers to its prompts |
-| `level` | A level gained in a class |
+| `level` | What a level granted, answered — an improvement, an Expertise, a feature's pick |
 | `feat` | A feat taken |
 | `note` | A player's annotation; changes nothing |
 
@@ -297,6 +316,34 @@ milestone. A group playing milestones leaves it at zero and loses nothing; a
 group counting XP has somewhere to keep the count. Set with a change event, on
 `identity.experience`, like every other value no rule computes.
 
+**The desired level *is* the level.** `Identity.DesiredLevel` is the level the
+player said they are building towards, set with a change event on
+`identity.desiredLevel` (1--20), and for a single-class character `Project`
+makes it the class's level (`advanceToDesiredLevel`). Nothing takes a level
+one entry at a time, because with one class there is no question about which
+class a level goes into, and a question with one answer is not a question. So
+levelling up is raising the declaration, creation at level N is declaring N,
+and going back down is revising the entry that declared it -- which prices
+what those levels bought, exactly like any other revision.
+
+What the declaration opens is what the player is actually asked: `Prompts`
+walks every level from 1 to that one and adds what each grants -- the
+archetype at its due level, the Ability Score Improvements, a feature's own
+picks -- to the same list race, background and abilities come in.
+
+**Multiclassing is not offered**, which is what this rests on. `Identity.Classes`
+is still a slice and `applyClasses` still walks it -- a log with two classes
+projects correctly, and the 2014 rules for what a second class grants are in
+`classGrant` -- but nothing poses the question that would create one. Turning
+it back on means posing "which class does this level go into?" again and
+stopping `advanceToDesiredLevel` from applying; the two go together.
+
+**The ruleset is recorded on the character.** `Identity.Ruleset`, set once
+with a change event on `identity.ruleset` and held by validation to the
+compendium's own ruleset -- "2014", today the only one served. It exists so
+that a future 2024 compendium meets characters that already say which rules
+they meant, and with one compendium it makes the choice final.
+
 **The skills map holds every skill, not only the trained ones.** A character
 proficient in six of the eighteen still projects all eighteen; the other twelve
 carry `NotProficient` and a bonus that is just the governing ability's
@@ -335,8 +382,10 @@ the export does not say which.
 
 So an import does not reconstruct choices. The export's final state becomes the
 character's *opening* state — an `init` event carrying the numbers, plus typed
-`race`, `class`, `level` and `subclass` events naming what the export states
-outright so that traits, features and level-scaled values attach. **No prompt
+`race`, `class` and `subclass` events and a declared `identity.desiredLevel`,
+naming what the export states outright so that traits, features and
+level-scaled values attach. A multiclassed export loses its later classes,
+reported as unresolved rather than folded into the first. **No prompt
 is answered.** An imported character arrives with every choice still open, and
 finishing it is the ordinary build loop.
 

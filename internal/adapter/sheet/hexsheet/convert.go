@@ -370,55 +370,58 @@ func (c *converter) structure(at time.Time) []character.Event {
 	classes := newIndex(c.cat.Classes, func(x catalog.Class) string { return x.Name })
 	subclasses := newIndex(c.cat.Subclasses, func(x catalog.Subclass) string { return x.Name })
 
-	for _, taken := range c.classLevels() {
-		slug, ok := classes.find(taken.ClassName)
+	// One class, because multiclassing is not offered: the levels a character
+	// has are the level they declare, and a declaration names no class. A
+	// second class in the export is reported rather than silently folded into
+	// the first, which would give the character levels in a class they never
+	// took.
+	taken := c.classLevels()
+	for _, extra := range taken[min(1, len(taken)):] {
+		c.unresolved("character.classes", fmt.Sprintf(
+			"%q cannot be carried: this application does not offer multiclassing",
+			extra.ClassName))
+	}
+	if len(taken) > 0 {
+		first := taken[0]
+		slug, ok := classes.find(first.ClassName)
 		if !ok {
 			c.unresolved("character.classes",
-				fmt.Sprintf("%q is not an SRD class", taken.ClassName))
-			continue
+				fmt.Sprintf("%q is not an SRD class", first.ClassName))
+			return events
 		}
 		ref := rules.NewRef(rules.RefClass, slug)
-
-		// The first level of a class is a class event; every level after it is
-		// a level event. Levels are emitted one at a time rather than jumping
-		// to the total, because each one is what opens that level's prompts.
 		events = append(events, character.Event{
 			Type: character.EventClass, At: at, Ref: ref, Level: 1,
 		})
 
-		subclassAt := 0
-		var subclassRef rules.Ref
-		if taken.Subclass != "" {
-			if sub, ok := subclasses.find(taken.Subclass); ok {
-				subclassRef = rules.NewRef(rules.RefSubclass, sub)
-				subclassAt = subclassLevel(c.cat, slug)
-			} else {
-				c.unresolved("character.classes",
-					fmt.Sprintf("%q is not an SRD subclass", taken.Subclass))
-			}
+		// The declared level, which *is* the level: nothing takes a level one
+		// event at a time any more, so the whole of "they are fifth" is this.
+		if first.Levels > 1 {
+			events = append(events, character.Event{
+				Type: character.EventChange, At: at,
+				Changes: []character.Change{{
+					Path:  "identity.desiredLevel",
+					Op:    character.OpSet,
+					Value: character.IntValue(first.Levels),
+				}},
+			})
 		}
 
-		// The level comes first and the subclass follows it, never the other
-		// way round. A subclass is due *at* a level, so a log that names it
-		// before the level has been taken is a log the build flow could not
-		// have written and the replay behind a replacement will not keep --
-		// it would drop the subclass as something nothing was asking for.
-		for level := 2; level <= taken.Levels; level++ {
-			events = append(events, character.Event{
-				Type: character.EventLevel, At: at, Ref: ref, Level: level,
-			})
-			if level == subclassAt && !subclassRef.IsZero() {
+		// The subclass follows the declaration that makes it due, never the
+		// other way round: a log naming a thief before the character is third
+		// is one the build flow could not have written, and the replay behind
+		// a replacement would drop it as something nothing was asking for.
+		if first.Subclass != "" {
+			if sub, ok := subclasses.find(first.Subclass); ok {
 				events = append(events, character.Event{
 					Type: character.EventSubclass, At: at,
-					Ref: subclassRef, Level: level,
+					Ref:   rules.NewRef(rules.RefSubclass, sub),
+					Level: max(subclassLevel(c.cat, slug), 1),
 				})
+			} else {
+				c.unresolved("character.classes",
+					fmt.Sprintf("%q is not an SRD subclass", first.Subclass))
 			}
-		}
-		// A subclass taken at first level has no later level event to precede.
-		if subclassAt <= 1 && !subclassRef.IsZero() {
-			events = append(events, character.Event{
-				Type: character.EventSubclass, At: at, Ref: subclassRef, Level: 1,
-			})
 		}
 	}
 

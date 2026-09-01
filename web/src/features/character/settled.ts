@@ -165,6 +165,22 @@ function summarise(t: Translate, changes: readonly Change[]): { label: string; v
     return { label: t('settled.alignment'), value: formatValue(t, alignment.value) }
   }
 
+  const desired = changes.find((change) => change.path === 'identity.desiredLevel')
+  if (desired !== undefined) {
+    return { label: t('settled.desiredLevel'), value: formatValue(t, desired.value) }
+  }
+
+  // Named rather than echoed: "2014" is a manifest string, and the block
+  // should say what a person calls the rules it stands for.
+  const ruleset = changes.find((change) => change.path === 'identity.ruleset')
+  if (ruleset !== undefined) {
+    const slug = ruleset.value.slug ?? ruleset.value.string
+    return {
+      label: t('settled.ruleset'),
+      value: slug === '2014' ? t('ruleset.2014') : formatValue(t, ruleset.value),
+    }
+  }
+
   // Every line of one, joined: a trait entry may carry two, and reading back
   // only the first would make the second invisible until the sheet.
   const written = changes.find((change) => writtenLabel(change.path) !== undefined)

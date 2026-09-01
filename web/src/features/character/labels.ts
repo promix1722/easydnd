@@ -131,6 +131,46 @@ export function abilityAbbr(t: Translate, slug: string): string {
   return key === undefined ? slug.toUpperCase() : t(key)
 }
 
+/**
+ * What a choice is *for*, named from the choice alone.
+ *
+ * This is the vocabulary shared by the two places a choice has to be named:
+ * the heading over a block, which `promptNames.choiceName` draws and which
+ * knows the prompt's own context on top of this, and an option that *is*
+ * another choice -- a branch of the rogue's Expertise, or the improvement a
+ * level grants. The branch used to read "Choose 2..." and its sibling "Choose
+ * 1...", which named the shape of the question and never what it was about:
+ * two indistinguishable buttons where the difference was two ability scores
+ * or a feat.
+ *
+ * The collection is consulted before the kind, because a choice's kind says
+ * how it behaves and the collection says what it is made of -- and the one
+ * place they disagree is the improvement's second branch, which the rules
+ * pose as a `feature` drawn from the feats.
+ */
+export function choiceOptionName(
+  t: Translate,
+  kind: string,
+  choose: number,
+  collection?: string,
+): string {
+  if (collection === 'feat') return t('choice.feat')
+  switch (kind) {
+    case 'proficiency':
+      return t('choice.proficiency', { count: choose })
+    case 'ability-bonus':
+      return t('choice.abilityBonus', { count: choose })
+    case 'language':
+      return t('choice.language', { count: choose })
+    case 'equipment':
+      return t('choice.equipment')
+    case 'spell':
+      return t('choice.spell', { count: choose })
+    default:
+      return t('choice.unknown', { count: choose, kind: titleCase(kind) })
+  }
+}
+
 /** A stored value, printed. */
 export function formatValue(t: Translate, value: ValueLike | undefined): string {
   if (value === undefined) return ''

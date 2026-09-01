@@ -2,14 +2,15 @@ import type { Entry, Option, Prompt } from '@/lib/api'
 import { slugOf, titleCase } from '@/domain'
 import type { Translate } from '@/lib/i18n'
 
-import { abilityName } from './labels'
+import { abilityName, choiceOptionName } from './labels'
 
 /**
  * One option as a prompt renders it: a key, a label, and why it may be off.
  *
  * The key is always the server's. A bundle of a shortbow and twenty arrows
- * has no slug of its own, and the rule for naming one lives on the server
- * precisely so that the client cannot get it wrong.
+ * has no slug of its own -- it is named by what is in it, "shortbow+arrow" --
+ * and the rule for composing that lives on the server precisely so that the
+ * client cannot get it wrong.
  */
 export interface Choosable {
   key: string
@@ -39,8 +40,9 @@ export function offersOptions(prompt: Prompt): boolean {
  * Turns a prompt's options into the buttons the card draws.
  *
  * An option's key is always the server's, never computed here. A bundle of a
- * shortbow and twenty arrows has no slug of its own, and the rule for naming
- * one lives on the server precisely so that the client cannot get it wrong.
+ * shortbow and twenty arrows has no slug of its own -- the server names it by
+ * its contents -- and that rule lives there precisely so that the client
+ * cannot get it wrong.
  */
 export function choosableOptions(
   t: Translate,
@@ -107,8 +109,16 @@ function labelOf(t: Translate, option: Option, entries: Map<string, Entry>): str
       return option.count !== undefined && option.count > 1 ? `${name} ×${option.count}` : name
     }
     case 'nested':
+      // Named by what the branch chooses, not by how many: "Choose 2..." and
+      // "Choose 1..." are the same button twice where one raises two ability
+      // scores and the other takes a feat.
       return option.choice
-        ? t('option.chooseN', { count: option.choice.choose })
+        ? choiceOptionName(
+            t,
+            option.choice.kind,
+            option.choice.choose,
+            option.choice.from.collection,
+          )
         : t('option.choose')
     case 'bundle':
       // Joined with the catalogue's own word for "and": a bundle of a shortbow

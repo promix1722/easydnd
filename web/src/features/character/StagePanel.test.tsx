@@ -62,7 +62,6 @@ const SKILLS: Prompt = {
   group: 'class',
   level: 1,
   optional: false,
-  advances: false,
   event: { type: 'class', ref: 'class:rogue', level: 1 },
   heldOnly: false,
 }
@@ -76,7 +75,6 @@ const SCORES: Prompt = {
   },
   group: 'abilities',
   optional: false,
-  advances: false,
   event: { type: 'change' },
   heldOnly: false,
 }
@@ -96,7 +94,6 @@ const TRAITS: Prompt = {
   },
   group: 'personality',
   optional: true,
-  advances: false,
   event: { type: 'change' },
   heldOnly: false,
 }
@@ -208,9 +205,13 @@ describe('StagePanel', () => {
     expect(screen.queryAllByRole('button', { name: /Drop it/ })).toHaveLength(0)
   })
 
-  it('leaves a level already taken as a fact rather than a block that opens', () => {
+  // A level is filled in with the class the character started as, and which
+  // class it went into is exactly what multiclassing changes -- so it opens.
+  it('draws a level already taken as a statement, not a control', () => {
     renderAt(viewport, panel([LEVEL_ROW], []))
 
+    // A level is a fact about the character: it is read, not pressed. The way
+    // to change one is the declared level on the identity tab.
     expect(screen.getByText('Level gained')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Level gained/ })).not.toBeInTheDocument()
   })

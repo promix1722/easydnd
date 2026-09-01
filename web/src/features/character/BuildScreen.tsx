@@ -45,7 +45,6 @@ import type { Scores } from './AbilityScoresForm'
 
 import {
   STAGES,
-  answerable,
   kindOf,
   promptLabel,
   stageOf,
@@ -203,9 +202,7 @@ export function BuildScreen() {
   if (creating && !arriving && !isNew && !build.loading) setCreating(false)
 
   const view = build.data ?? EMPTY_VIEW
-  // Advancement is dropped before anything looks at it, so no tab, no list
-  // and no Next can reach a question this client cannot honestly answer.
-  const open = view.prompts.prompts.filter((prompt) => answerable(prompt.group))
+  const open = view.prompts.prompts
   // Until a tab is clicked the screen opens on the first thing left to do,
   // and moves on as things are answered. That is the loop, kept: a player who
   // never touches a tab is walked through the questions in order, and one who
@@ -254,7 +251,7 @@ export function BuildScreen() {
         settled.get(each) ?? [],
         posingName
           ? each === 'identity'
-            ? [NEW_NAME_PROMPT]
+            ? NEW_IDENTITY_PROMPTS
             : []
           : open.filter((prompt) => stageOf(prompt.group) === each),
         orderFor(each),
@@ -316,6 +313,13 @@ export function BuildScreen() {
     // replace: true, because the URL of a character that does not exist is
     // not a place the Back button should return anyone to.
     if (created) {
+      // The entry the creation wrote belongs where the question that asked
+      // for it was: at the top of identity, above the two questions drawn
+      // under it. Without this the name is a key the order has never seen and
+      // goes to the end -- so confirming it would drop it below the rules and
+      // the level, which is the one row the player was looking at moving.
+      // The same thing `append` does for every other answer.
+      inheritPlace(orderFor('identity'), NEW_NAME_KEY, settledKey(created.seq))
       // Set before the navigation, because the navigation is what changes the
       // resource key -- and the render that reads the new key is the one that
       // would otherwise blank the page.
@@ -590,6 +594,8 @@ export function BuildScreen() {
                       : {})}
                     {...maybeScores(asking?.replaces ?? null)}
                     {...maybeLines(asking?.replaces ?? null)}
+                    {...(view.sheet !== null ? { level: view.sheet.identity.level } : {})}
+                    posing={posingName}
                   />
                 ),
               }
@@ -754,10 +760,42 @@ const NEW_NAME_PROMPT: Prompt = {
   choice: { prompt: 'character/init', choose: 1, kind: 'text', from: { kind: 'explicit' } },
   group: 'identity',
   optional: false,
-  advances: false,
   event: { type: 'init' },
   heldOnly: false,
 }
+
+/**
+ * The rest of what the identity tab will ask, shown before there is anybody to
+ * ask it about.
+ *
+ * The same three questions the server poses the moment the character exists,
+ * in the same order, so the page does not grow two rows the instant a name is
+ * confirmed. They are drawn without an answering surface until then -- see
+ * `posing` in `StagePanel` -- because there is nothing to append an answer to:
+ * a name is what creates the character, and these are answered against it.
+ */
+const NEW_IDENTITY_PROMPTS: Prompt[] = [
+  NEW_NAME_PROMPT,
+  {
+    choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
+    group: 'identity',
+    optional: false,
+      event: { type: 'change' },
+    heldOnly: false,
+  },
+  {
+    choice: {
+      prompt: 'character/desired-level',
+      choose: 1,
+      kind: 'level',
+      from: { kind: 'explicit' },
+    },
+    group: 'identity',
+    optional: false,
+      event: { type: 'change' },
+    heldOnly: false,
+  },
+]
 
 const NEW_NAME_KEY = keyFor({ prompt: NEW_NAME_PROMPT, replaces: null })
 
@@ -844,6 +882,12 @@ const INPUTS: readonly {
     kind: 'alignment',
     collection: 'alignment',
   },
+  // The desired level and the ruleset are the character's own questions about
+  // itself. Both are answered as changes by a form of their own -- see
+  // AnswerSurface, which routes them by slug -- so `kind` here only has to
+  // survive the round trip through `inputPrompt`.
+  { prompt: 'character/desired-level', path: 'identity.desiredLevel', kind: 'level' },
+  { prompt: 'character/ruleset', path: 'identity.ruleset', kind: 'text' },
   // The four the player answers in their own words. They are inputs for the
   // same reason the alignment is -- they settle a value and name nothing in
   // the compendium -- and they have no collection because there is nothing to
@@ -874,8 +918,7 @@ function inputPrompt(input: (typeof INPUTS)[number], stage: Stage): Prompt {
     },
     group: stage,
     optional: false,
-    advances: false,
-    event: { type: 'change' },
+      event: { type: 'change' },
     heldOnly: false,
   }
 }
@@ -913,7 +956,6 @@ function reask(row: SettledRow): Prompt | null {
       },
       group: row.stage,
       optional: false,
-      advances: false,
       event: {
         type: event.type,
         ...(event.level !== undefined ? { level: event.level } : {}),
@@ -935,8 +977,7 @@ function reask(row: SettledRow): Prompt | null {
       },
       group: row.stage,
       optional: false,
-      advances: false,
-      event: { type: event.type },
+          event: { type: event.type },
       heldOnly: false,
     }
   }

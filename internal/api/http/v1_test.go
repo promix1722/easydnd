@@ -435,20 +435,43 @@ func TestCharacterBuildFlow(t *testing.T) {
 		t.Errorf("seq = %d, want 1", created.Seq)
 	}
 
-	// Creation carries a name and nothing else, so the scores are the first
-	// thing the character is asked for -- an ordinary open choice with an
-	// entry of its own, rather than eight selections bundled into the init.
+	// Creation carries a name and nothing else, so what the character is asked
+	// for first is the rest of its identity: the rules it is built under, and
+	// the level it is built to. Each is an ordinary open choice with an entry
+	// of its own, rather than a bundle folded into the init.
 	prompts := decode[characterapi.PromptsResponse](t,
 		send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts", nil))
 	if prompts.Complete {
 		t.Error("a character with nothing but a name reads as complete")
 	}
+	if first := firstRequired(t, prompts); first.Choice.Prompt != "character/ruleset" {
+		t.Fatalf("first required prompt = %q, want character/ruleset", first.Choice.Prompt)
+	}
+
+	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1,
+		"events": []map[string]any{{
+			"type": "change",
+			"changes": []map[string]any{
+				{"path": "identity.ruleset", "op": "set",
+					"value": map[string]any{"kind": "slug", "slug": "2014"}},
+				{"path": "identity.desiredLevel", "op": "set",
+					"value": map[string]any{"kind": "int", "int": 1}},
+			},
+		}},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("identity = %d, want 200: %s", rec.Code, rec.Body)
+	}
+
+	prompts = decode[characterapi.PromptsResponse](t,
+		send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts", nil))
 	if first := firstRequired(t, prompts); first.Choice.Prompt != "character/abilities" {
 		t.Fatalf("first required prompt = %q, want character/abilities", first.Choice.Prompt)
 	}
 
 	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
-		"expectedSeq": 1,
+		"expectedSeq": 2,
 		"events":      []map[string]any{scoresEvent()},
 	})
 	if rec.Code != http.StatusOK {
@@ -472,7 +495,7 @@ func TestCharacterBuildFlow(t *testing.T) {
 	}
 
 	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
-		"expectedSeq": 2,
+		"expectedSeq": 3,
 		"events": []map[string]any{{
 			"type": "race",
 			"ref":  "race:half-elf",
@@ -485,8 +508,8 @@ func TestCharacterBuildFlow(t *testing.T) {
 		t.Fatalf("append = %d, want 200: %s", rec.Code, rec.Body)
 	}
 	written := decode[characterapi.WriteResponse](t, rec)
-	if written.Seq != 3 {
-		t.Errorf("seq = %d, want 3", written.Seq)
+	if written.Seq != 4 {
+		t.Errorf("seq = %d, want 4", written.Seq)
 	}
 	// The write returns the new sheet, which is why the client needs no
 	// cache invalidation: the response is the invalidation.
