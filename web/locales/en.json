@@ -121,6 +121,7 @@
   "common.rename": "Rename",
   "common.unnamed": "Unnamed",
   "dataList.empty": "Nothing here yet.",
+  "dice.loading": "Preparing the die",
   "dice.result": "You rolled {{value}}",
   "dice.roll": "Roll the dice",
   "error.account.notFound": "That account no longer exists.",

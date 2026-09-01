@@ -1,4 +1,4 @@
-import { VisuallyHidden } from '@mantine/core'
+import { Loader, VisuallyHidden } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 
@@ -106,7 +106,7 @@ export function D20Roll({ roll = d20 }: D20RollProps) {
   return (
     <div ref={frame} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
       {near && box ? (
-        <Suspense fallback={null}>
+        <Suspense fallback={<Waiting label={t('dice.loading')} />}>
           <D20Scene
             width={box.width}
             height={box.height}
@@ -142,6 +142,36 @@ export function D20Roll({ roll = d20 }: D20RollProps) {
       <VisuallyHidden aria-live="polite" aria-atomic>
         {value === null ? '' : t('dice.result', { value })}
       </VisuallyHidden>
+    </div>
+  )
+}
+
+/**
+ * What fills the box while the scene's chunk is on its way.
+ *
+ * The header above has always described this file as shipping "a placeholder",
+ * and until now it did not: the fallback was `null`, so the moment between
+ * deciding to load the die and having it was an empty box. On the machine this
+ * is developed on that moment is invisible -- the chunk is served from memory --
+ * which is exactly why it went unnoticed. It is 180 kB gzipped of three.js and
+ * cannon-es over whatever connection a phone has, on the panel a visitor
+ * swiped to *because* they wanted the die, and an empty panel there reads as a
+ * panel with nothing in it rather than as one still arriving.
+ *
+ * It sits only under `Suspense`, and deliberately not before `near`. An
+ * unswiped panel is not waiting for anything -- nothing has been asked for yet
+ * -- so a spinner there would be claiming work that is not happening, and would
+ * animate off screen for as long as the landing page is open.
+ *
+ * Named, because a spinner is the one thing on screen and a screen reader is
+ * otherwise told nothing at all. It is not a second live region: the polite one
+ * below carries results, and a spinner that announced itself there would
+ * interrupt the number somebody just rolled.
+ */
+function Waiting({ label }: { label: string }) {
+  return (
+    <div style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%' }}>
+      <Loader size="lg" aria-label={label} />
     </div>
   )
 }

@@ -371,6 +371,23 @@ three.js out of the main bundle, and all three are load-bearing:
    vendors, so a feature cannot import either directly and quietly undo the
    split.
 
+**What that costs the visitor is a wait, so the wait is drawn.** The `Suspense`
+fallback used to be `null`: the moment between swiping to the die and having it
+was an empty box, and on a development machine -- where the chunk comes from
+memory -- that moment does not exist, which is why it went unnoticed for so
+long. It is 158 kB over whatever connection a phone has, on the panel somebody
+swiped to *because* they wanted the die, and an empty panel there reads as a
+panel with nothing in it rather than as one still arriving. The fallback is now
+a centred `Loader`, named for a screen reader, which is a second thing the
+`ui/D20.tsx` header always claimed this file shipped and did not.
+
+It sits under `Suspense` only, and deliberately not before the intersection: an
+unswiped panel has not asked for anything, so a spinner there would claim work
+that is not happening -- and would animate off screen for as long as the landing
+page is open. Loading is announced by the spinner's own name rather than through
+the polite live region below it, which carries results; a spinner interrupting
+the number somebody just rolled is the wrong trade.
+
 The measured result: `index-*.js` is 260 kB gzipped and contains no three.js at
 all; `d20-scene-*.js` is 158 kB and is not in the precache manifest. Both are
 worth re-checking after a dependency bump, because nothing fails if they merge.
