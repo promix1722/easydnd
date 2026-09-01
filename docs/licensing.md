@@ -102,6 +102,15 @@ Recorded rather than quietly carried:
   descriptions from the CC-BY-4.0 `gabrielrega/cc-srd5` and keeping only
   mechanics from `5e-database`, which needs slug-to-heading matching in
   `cmd/srdgen`. Tracked in the generated attribution, not yet done.
+- **The images are AI-generated and unmentioned above.** The landing
+  photographs and backdrop tile (`web/src/assets/*.webp`) and the 319 spell
+  icons (`web/src/assets/spells/`, produced by `make spell-icons` through
+  OpenAI's image API) are generated images. OpenAI's terms assign its output
+  to the customer, so the project treats them as its own and they fall under
+  MIT with the rest -- but their provenance is recorded here rather than
+  implied, and a jurisdiction that denies copyright to generated images would
+  make them public domain rather than the project's. Either way nothing
+  restricts shipping them.
 - **No OGL 1.0a text is vendored.** `docs/reference_srd_5.1/fetch-srd.sh` pulls
   a license file for `cc-srd5` but none for `5e-database`. If that material
   really is OGL, the license's own notice requirements are unmet.

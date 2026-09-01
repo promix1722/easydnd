@@ -12,7 +12,9 @@
 //	llm translate -in en.json -out ru.json -to ru              translated copy
 //
 // The batch prompts file is a flat object, name to prompt; a name becomes the
-// output filename. One way to build it from the SRD mechanics:
+// output filename. The spell icons build theirs with
+// `node web/scripts/spell-icons.mjs prompts` and run the whole chain through
+// `make spell-icons`; a one-off can still be built by hand:
 //
 //	jq 'map({(.slug): ("icon of " + .slug)}) | add' data/srd_5.1/spells.json
 //

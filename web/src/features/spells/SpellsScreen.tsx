@@ -19,8 +19,10 @@ import {
   Text,
   TextInput,
   pageState,
+  useIsDesktop,
 } from '@/ui'
 
+import { SpellIcon } from './spellIcon'
 import { castingTimeText, componentsAbbrev, levelText } from './spellText'
 
 /**
@@ -40,6 +42,9 @@ const CASTING_TIMES = ['action', 'bonus-action', 'reaction', 'over-time']
 export function SpellsScreen() {
   const t = useT()
   const [params, setParams] = useSearchParams()
+  // A 390px card cannot host a name and two word-length badges, so the phone
+  // gets one-letter marks with the full word as the accessible name.
+  const isDesktop = useIsDesktop()
 
   function setParam(key: string, value: string | null) {
     setParams(
@@ -206,16 +211,17 @@ export function SpellsScreen() {
           <DataList
             items={rows}
             getKey={(spell) => spell.slug}
+            leading={(spell) => <SpellIcon slug={spell.slug} size={32} />}
             badges={(spell) => (
               <>
                 {spell.concentration === true && (
-                  <Badge size="sm" variant="light">
-                    {t('spell.concentration')}
+                  <Badge size="sm" variant="light" aria-label={t('spell.concentration')}>
+                    {isDesktop ? t('spell.concentration') : t('spell.concentrationShort')}
                   </Badge>
                 )}
                 {spell.ritual === true && (
-                  <Badge size="sm" variant="light" color="grape">
-                    {t('spell.ritual')}
+                  <Badge size="sm" variant="light" color="grape" aria-label={t('spell.ritual')}>
+                    {isDesktop ? t('spell.ritual') : t('spell.ritualShort')}
                   </Badge>
                 )}
               </>

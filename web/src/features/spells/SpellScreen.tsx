@@ -6,6 +6,7 @@ import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
 import { Badge, Group, Page, Panel, SimpleGrid, Stack, Text, Title, pageState } from '@/ui'
 
+import { SpellIcon } from './spellIcon'
 import { castingTimeText, componentsAbbrev, durationText, levelText, rangeText } from './spellText'
 
 /**
@@ -75,6 +76,7 @@ export function SpellScreen() {
   return (
     <Page
       trail={[{ label: spell.name }]}
+      mark={<SpellIcon slug={spell.slug} size={40} />}
       badge={
         <Group gap="xs">
           {spell.concentration === true && (

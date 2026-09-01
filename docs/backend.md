@@ -264,14 +264,22 @@ runtime. Nothing outside the generator reads the vendored dump.
 `cmd/llm` is a development-machine tool and no part of the service: it calls
 the OpenAI API (key from `OPENAI_API_KEY`) to batch-generate entity artwork
 and to translate JSON files, writing plain files that a developer then moves
-wherever they belong -- it knows nothing of the repo's layouts, because where
-images will live (database, S3) is not decided yet. `llm images -in
-prompts.json -out art/` turns a flat name-to-prompt object into `<name>.png`
-files, skipping ones that already exist so an interrupted batch resumes by
-rerunning; `llm translate -in data/srd_5.1/i18n/en/spells.json -out
-spells.ru.json -to ru` writes a same-shaped copy with every string leaf
-translated, keys and `{{placeholders}}` verified untouched. `-dry-run` on
-either shows the work without the key or the spend.
+wherever they belong -- it knows nothing of the repo's layouts. `llm images
+-in prompts.json -out art/` turns a flat name-to-prompt object into
+`<name>.png` files, skipping ones that already exist so an interrupted batch
+resumes by rerunning; `-workers N` generates that many concurrently, safe
+because a 429 self-throttles via its `Retry-After` (a free-tier cap of a few
+images per minute makes more than 2 mostly queue). `llm translate -in
+data/srd_5.1/i18n/en/spells.json -out spells.ru.json -to ru` writes a
+same-shaped copy with every string leaf translated, keys and
+`{{placeholders}}` verified untouched. `-dry-run` on either shows the work
+without the key or the spend.
+
+The first consumer is the spell icons: `make spell-icons` chains a prompt
+builder and a webp downscale (both `web/scripts/spell-icons.mjs`) around
+`llm images`, caching the 1024px masters in `~/.cache/easydnd/spell-icons/`
+and committing 128px webps to `web/src/assets/spells/` -- see docs/web.md for
+why they live there.
 
 ## The API
 

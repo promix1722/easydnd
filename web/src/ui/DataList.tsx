@@ -87,6 +87,15 @@ export interface DataListProps<T> {
    * inside the `<p>` that `<Text>` renders.
    */
   badges?: (item: T) => ReactNode
+  /**
+   * A mark drawn *before* the name at both widths -- a spell's icon.
+   *
+   * A prop rather than part of the primary column's `render`, because the
+   * phone card never calls that render: it rebuilds the heading from
+   * `text`/`to` so it can style and truncate the name itself. Anything that
+   * must lead the name on a card has to come in from outside the column.
+   */
+  leading?: (item: T) => ReactNode
   /** Every action on the row. An empty array draws no control at all. */
   actions?: (item: T) => readonly RowAction[]
   /**
@@ -126,6 +135,7 @@ export function DataList<T>({
   columns,
   getKey,
   badges,
+  leading,
   actions,
   menuActions,
   empty,
@@ -183,11 +193,13 @@ export function DataList<T>({
                         no columns. They sit in the identifying cell because
                         that is where each call site used to build them by
                         hand, inside the very `<Text>` that made them a `div`
-                        in a paragraph. */}
-                    {column.primary === true && badges !== undefined ? (
+                        in a paragraph. `leading` sits before the name for
+                        the same reason, on the other side. */}
+                    {column.primary === true && (badges !== undefined || leading !== undefined) ? (
                       <Group gap="xs" wrap="nowrap">
+                        {leading?.(item)}
                         {column.render(item)}
-                        {badges(item)}
+                        {badges?.(item)}
                       </Group>
                     ) : (
                       column.render(item)
@@ -230,6 +242,7 @@ export function DataList<T>({
                 Top-aligned once there is a second line, where the control
                 belongs beside the name rather than between the two. */}
             <Group gap="xs" wrap="nowrap" align={facts.length > 0 ? 'flex-start' : 'center'}>
+              {leading !== undefined && <Box style={{ flexShrink: 0 }}>{leading(item)}</Box>}
               <Box style={{ flex: 1, minWidth: 0 }}>
                 <Group gap="xs" wrap="nowrap">
                   {/* `minWidth: 0` is what lets `truncate` fire: without it a
@@ -241,7 +254,11 @@ export function DataList<T>({
                         {name}
                       </Text>
                     ) : (
-                      <Anchor component={Link} to={to} fw={650} truncate>
+                      // display block, because an inline anchor cannot clip:
+                      // `truncate`'s overflow rules need a box, and without
+                      // one a long name renders at full text width straight
+                      // through whatever badges follow it.
+                      <Anchor component={Link} to={to} fw={650} truncate display="block">
                         {name}
                       </Anchor>
                     )}

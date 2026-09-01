@@ -48,6 +48,14 @@ export interface PageProps {
    */
   lead?: ReactNode
   /**
+   * The page's own emblem -- a spell's icon. Drawn immediately *before* the
+   * heading and tighter to it than the trail's own gap, because the pair is
+   * one identity, not two neighbours: the same reading a section root gives
+   * its glyph. Decorative; whatever goes here should carry no name of its
+   * own.
+   */
+  mark?: ReactNode
+  /**
    * That the phone's one row of chrome already carries this page's name.
    *
    * A section root gets this for free -- `Page` knows the section from the URL,
@@ -117,6 +125,7 @@ export function Page({
   trail,
   badge,
   lead,
+  mark,
   namedByChrome,
   subtitle,
   actions,
@@ -296,11 +305,21 @@ export function Page({
                   accessible name is that name -- not the whole trail. Drawn here
                   for every page except a section root, which draws its own
                   above so that the phone can drop it. */}
-              {!headingIsSectionOnly && (
-                <Title order={2} fz={HEADING_SIZE}>
-                  {here === undefined ? null : <CrumbLabel label={here.label} size="lg" />}
-                </Title>
-              )}
+              {!headingIsSectionOnly &&
+                (mark === undefined ? (
+                  <Title order={2} fz={HEADING_SIZE}>
+                    {here === undefined ? null : <CrumbLabel label={here.label} size="lg" />}
+                  </Title>
+                ) : (
+                  // The mark and the name are one identity, so they sit
+                  // tighter than the trail's own gap keeps its crumbs apart.
+                  <Group gap={6} align="center" wrap="nowrap">
+                    {mark}
+                    <Title order={2} fz={HEADING_SIZE}>
+                      {here === undefined ? null : <CrumbLabel label={here.label} size="lg" />}
+                    </Title>
+                  </Group>
+                ))}
               {badge}
               {lead}
             </Group>
