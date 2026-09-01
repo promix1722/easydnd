@@ -1,6 +1,6 @@
-import { Outlet, useLocation } from 'react-router'
+import { Outlet } from 'react-router'
 
-import { AppShell, Group, backdropFor } from '@/ui'
+import { AppShell, Group, PAGE_BACKDROP } from '@/ui'
 
 import { HEADER_BOX, SAFE_BOTTOM, SAFE_TOP } from './chrome'
 import { LandingFooter } from './LandingFooter'
@@ -27,8 +27,6 @@ import { Wordmark } from './Wordmark'
  * against a number repeated in two files.
  */
 export function LandingShell() {
-  const { pathname } = useLocation()
-
   return (
     <AppShell
       header={{ height: HEADER_BOX }}
@@ -47,16 +45,14 @@ export function LandingShell() {
         </Group>
       </AppShell.Header>
 
-      {/* The picture behind /login and /legal -- see ui/backdrop.ts -- and not
-          behind the landing page itself, which is three photographs already.
-          A washed-out fourth one showing through the gap between two panels is
-          the page arguing with itself.
-
-          Only in this chrome. `/` is the character list once you are signed in,
-          and that page takes the picture like every other -- so the exception
-          belongs to the landing page rather than to the path, and cannot live
-          in `backdropFor` beside the die's. */}
-      <AppShell.Main style={pathname === '/' ? undefined : backdropFor(pathname)}>
+      {/* The picture behind every page this chrome wraps, the landing carousel
+          included -- see ui/backdrop.ts. The carousel used to be the exception,
+          on the grounds that it is three photographs already and a washed-out
+          fourth showing between two panels is the page arguing with itself. It
+          is not an exception any more: one ground under every page is worth more
+          than the argument, and at 88% wash what shows through the slide gap is
+          texture rather than a picture. */}
+      <AppShell.Main style={PAGE_BACKDROP}>
         <Outlet />
       </AppShell.Main>
 

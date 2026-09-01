@@ -95,10 +95,24 @@ describe('LandingShell', () => {
   // /legal wears this chrome for everybody, so a signed-in visitor can land
   // here. Inviting them to sign in again would be a lie, and no control at all
   // would strand them outside the app.
+  //
+  // The way back is the wordmark, which is a link home in every shell -- there
+  // is no longer a "Back to easydnd" button drawn on this one page. That is
+  // what the second assertion pins: not merely that the invitation is absent,
+  // but that something still leads out of here.
   it('offers the way back to somebody already signed in', () => {
     landingAt({ status: 'authenticated' })
 
     expect(screen.queryByRole('link', { name: 'Log in' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back to easydnd' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'easydnd' })).toHaveAttribute('href', '/')
+  })
+
+  // The corner is the way home on both sides of the boundary, so it is asserted
+  // for the signed-out visitor too -- who reaches the same `/`, drawn as the
+  // carousel rather than as the character list.
+  it('makes the wordmark the way home when signed out', () => {
+    landingAt()
+
+    expect(screen.getByRole('link', { name: 'easydnd' })).toHaveAttribute('href', '/')
   })
 })

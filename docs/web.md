@@ -2043,6 +2043,36 @@ them away removes a control, not a way through -- the swipe, the arrow keys and
 the indicators all remain, and the indicators are what still say how many
 panels there are.
 
+**The arrow keys and the wheel move it too**, which is `ui/carouselGestures.ts`.
+Mantine gives a carousel a swipe, a pair of arrow buttons and indicators that
+answer the arrow keys *once one of them has focus* -- and none of that reaches
+the visitor who has neither touched the page nor tabbed into it. On a laptop the
+two obvious ways to move a carousel that fills the window are the arrow keys and
+the wheel, and both did nothing.
+
+Both are **borrowed rather than taken**, which is the whole of the hook. The
+wheel is read on the axis the gesture is actually on, and claimed only when the
+page has nowhere to scroll on that axis: a sideways trackpad swipe moves the
+carousel when nothing scrolls horizontally, a plain mouse wheel moves it when the
+page already fits, and the moment the page has scrolling of its own to do -- a
+short landscape phone where the carousel hits its `320px` floor and the page
+grows past the viewport -- the wheel goes straight back. A carousel that ate the
+wheel unconditionally would be a page you cannot scroll. One gesture is one
+slide: a flick fires dozens of events, so the rest of a gesture is read and
+thrown away for 400ms, and `preventDefault` still runs during that window so a
+sideways swipe cannot trigger the browser's back-navigation.
+
+The keys are borrowed on the same terms. Focus inside the carousel is left
+alone, because the indicators are a roving tabindex that already answers arrows
+there and handling them twice moves two slides per press; a field being typed in
+keeps its own arrows. The listener is on the window rather than the carousel,
+because "the carousel is what this page is" is the case it exists for, and the
+effect only binds once there is an engine -- so a page without a carousel binds
+nothing. It lives in `ui/` and returns `getEmblaApi` as a prop to spread, so
+`routes/LandingPage.tsx` never has to name `EmblaCarouselType`: only `ui/` may
+import the engine. `ui/TabDeck` deliberately does **not** use it -- it sits on
+pages that scroll, which is exactly the case the guard hands back.
+
 None of the three panels is a link, and not because two of them lead nowhere --
 `/groups` is real. It is that all three live behind the sign-in boundary, so a
 panel that navigated would bounce a signed-out visitor straight back to this
@@ -2141,17 +2171,21 @@ read as texture rather than illustration.
 
 It goes on `AppShell.Main` only. The header and the desktop navbar keep their own
 flat grounds: they are chrome sitting over the content, and one sheet of pattern
-running under all three would read as one surface. `backdropFor` is the opt-out,
-and `/roll` is the only page that takes it -- the die's screen is already a scene
-of its own, and a drawing behind a lit floor is two pictures in one box, the same
-argument that keeps the landing carousel's fourth panel free of art.
+running under all three would read as one surface.
 
-The landing page is the other exception, and it belongs to the *chrome* rather
-than to the path: `/` is the carousel signed out and the character list signed
-in, and only the first does without a backdrop -- it is three photographs
-already. So `shell/LandingShell.tsx` makes that call, while `backdropFor` carries
-the die's. The character list takes the pattern like every other page, and so do
-`/login` and `/legal`, which wear the landing chrome.
+**Every page takes it, and there are no exceptions.** There used to be two. The
+die's screen at `/roll` opted out because a canvas with its own lit floor is
+already a picture; the landing carousel opted out because it is three
+photographs, and a washed-out fourth showing through the gap between two panels
+is the page arguing with itself. Both are gone: one ground under every page is
+worth more than either argument, and at an 88% wash what shows through behind a
+canvas or between two slides is texture rather than a second picture.
+
+That deleted `backdropFor(pathname)` with them. It existed only to name the
+exceptions, and a function returning the same value for every path is a lookup
+pretending to be a decision -- so the three shells spread `PAGE_BACKDROP`
+directly and there is nothing left for them to keep in step. `LandingShell` no
+longer needs `useLocation` at all.
 
 `background-attachment` is `scroll` rather than `fixed`: iOS Safari sizes a fixed
 background against the document rather than the viewport, and a repeating tile
@@ -2240,6 +2274,18 @@ cache rule in `deploy/nginx/easydnd.conf` applies. One size for every viewport;
 a `<picture>` with a narrow variant is the upgrade if transfer size on a phone
 ever becomes a complaint. The art is decorative and carries no accessible name:
 the headings say what the page is.
+
+**The wordmark is a link home**, in all three shells, which is what a logo in
+that corner has meant since there were corners. It leads to `/` on both sides of
+the boundary -- the carousel signed out, the character list signed in -- and it
+carries no link styling, because the mark and the word are its appearance and a
+blue underlined "easydnd" would be the browser's default showing through.
+
+It replaced `/legal`'s "Back to easydnd" button. That was a second way home drawn
+on exactly one page, sitting in the corner `SignInActions` keeps for the way *in*
+rather than the way out; a licence notice should not need chrome of its own to
+get out of. `SignInActions` now draws nothing at all for a signed-in visitor
+there, and `auth.backToApp` is gone from both catalogues.
 
 The dragon mark went with the emptiness. The old `Center` existed because a lone
 mark on a blank page should read as optically centred against the *window* --
@@ -3062,6 +3108,15 @@ session.
 So the name moved out of the header's *text* and into the control's accessible
 name and tooltip: `Sign out`, or `End guest session` for a guest. The header
 ends in the way out whether or not there is an account behind the session.
+
+**Signing out lands on `/`**, rather than leaving the URL where it was. Staying
+put reads as a bug at every address that is not `/`: the chrome swaps to the
+logged-out one underneath you, and the deep link you were on -- a sheet, a group,
+`/account` -- either bounces through the gate or sits there naming a thing you
+can no longer open. `/` is the one address that means something on both sides of
+the boundary, so it is where the session ends. The navigation happens after the
+request rather than beside it, and `signOut` drops the local session even when
+the request fails, so it is reached either way.
 
 The cost is worth naming rather than glossing, because it has since grown: the
 display name is now printed **nowhere in the client**. `/account` used to carry

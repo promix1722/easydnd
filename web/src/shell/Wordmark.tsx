@@ -1,7 +1,12 @@
+import { Link } from 'react-router'
+
 import { Group, Title } from '@/ui'
 
 /** Rendered edge length of the d20, the same in every header. */
 const MARK = 28
+
+/** The corner is a link, and a link in a header should not look like one. */
+const HOME = { textDecoration: 'none', color: 'inherit' } as const
 
 /**
  * The mark and the name, top left of every header.
@@ -26,6 +31,17 @@ const MARK = 28
  * -- they are looking at the app they opened. The mark stays, because the
  * corner still needs to be recognisably this app's. It is a prop rather than a
  * second component for the reason above: one corner, one definition.
+ *
+ * **The corner is a link home**, in all three shells, because that is what a
+ * logo in that corner has meant on every site since there were sites -- and it
+ * is one destination on both sides of the sign-in boundary: `/` is the carousel
+ * signed out and the character list signed in. It replaced `/legal`'s "Back to
+ * easydnd" button, which was a second way home drawn only on that page; a
+ * licence notice should not need chrome of its own to get out of.
+ *
+ * `color: inherit` and no underline, because the mark and the wordmark are the
+ * link's own appearance -- a blue underlined "easydnd" in the corner would be
+ * the browser's default styling showing through, not a decision. See `HOME`.
  */
 export function Wordmark({ order = 3, caption = true }: { order?: 3 | 4; caption?: boolean }) {
   // Alone, the mark is the only thing identifying the app, so it takes the
@@ -36,12 +52,22 @@ export function Wordmark({ order = 3, caption = true }: { order?: 3 | 4; caption
   // Group is a flex row with a gap, and a gap after the last child still
   // occupies the row. Next to a control that carries its own padding, that
   // read as the mark and the menu having drifted apart.
-  if (!caption) return <img src="/favicon.svg" alt="easydnd" width={MARK} height={MARK} />
+  if (!caption)
+    return (
+      <Link to="/" style={HOME}>
+        <img src="/favicon.svg" alt="easydnd" width={MARK} height={MARK} />
+      </Link>
+    )
 
   return (
-    <Group gap="xs" wrap="nowrap">
-      <img src="/favicon.svg" alt="" width={MARK} height={MARK} />
-      <Title order={order}>easydnd</Title>
-    </Group>
+    // The link wraps both, so the whole corner is the target rather than the
+    // word alone. It takes its accessible name from the Title inside it, which
+    // is why the image beside it stays `alt=""`.
+    <Link to="/" style={HOME}>
+      <Group gap="xs" wrap="nowrap">
+        <img src="/favicon.svg" alt="" width={MARK} height={MARK} />
+        <Title order={order}>easydnd</Title>
+      </Group>
+    </Link>
   )
 }

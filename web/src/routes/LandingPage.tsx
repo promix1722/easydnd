@@ -8,6 +8,7 @@ import {
   Stack,
   Text,
   Title,
+  useCarouselGestures,
   useIsDesktop,
 } from '@/ui'
 
@@ -221,6 +222,12 @@ export function LandingPage() {
   // they go, and the indicators below still say how many panels there are.
   const withControls = useIsDesktop()
 
+  // The arrow keys and the wheel, which Mantine does not offer a carousel that
+  // nothing has focused yet. This page is the case for it: the carousel is the
+  // whole of it, and on a laptop those two are what a visitor reaches for
+  // first. See `ui/carouselGestures.ts` for what it declines to take.
+  const gestures = useCarouselGestures()
+
   // The same viewport answer, used for the other thing this page varies. See
   // DICE_SLIDE above for why the die is a phone's and not a pointer's.
   const slides = withControls ? SLIDES : [...SLIDES, DICE_SLIDE]
@@ -230,6 +237,7 @@ export function LandingPage() {
     // Mantine gives the root `role="region"` and an `aria-roledescription` of
     // "carousel" already; the name is the part only this call site knows.
     <Carousel
+      {...gestures}
       aria-label={t('landing.label')}
       height={FILL_MAIN}
       slideGap="md"
