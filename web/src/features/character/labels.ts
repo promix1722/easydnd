@@ -207,3 +207,45 @@ const SENSE_KEYS = {
 
 export const speedName = lookup(SPEED_KEYS)
 export const senseName = lookup(SENSE_KEYS)
+
+/** Class-resource keys emitted by the rules engine. */
+const RESOURCE_KEYS = {
+  'action-surges': 'resource.action-surges',
+  'arcane-recovery-levels': 'resource.arcane-recovery-levels',
+  'aura-range': 'resource.aura-range',
+  'bardic-inspiration-die': 'resource.bardic-inspiration-die',
+  'brutal-critical-dice': 'resource.brutal-critical-dice',
+  'channel-divinity-charges': 'resource.channel-divinity-charges',
+  'destroy-undead-cr': 'resource.destroy-undead-cr',
+  'extra-attacks': 'resource.extra-attacks',
+  'favored-enemies': 'resource.favored-enemies',
+  'favored-terrain': 'resource.favored-terrain',
+  'indomitable-uses': 'resource.indomitable-uses',
+  'invocations-known': 'resource.invocations-known',
+  'ki-points': 'resource.ki-points',
+  'magical-secrets-max-5': 'resource.magical-secrets-max-5',
+  'magical-secrets-max-7': 'resource.magical-secrets-max-7',
+  'magical-secrets-max-9': 'resource.magical-secrets-max-9',
+  'martial-arts': 'resource.martial-arts',
+  'metamagic-known': 'resource.metamagic-known',
+  'mystic-arcanum-level-6': 'resource.mystic-arcanum-level-6',
+  'mystic-arcanum-level-7': 'resource.mystic-arcanum-level-7',
+  'mystic-arcanum-level-8': 'resource.mystic-arcanum-level-8',
+  'mystic-arcanum-level-9': 'resource.mystic-arcanum-level-9',
+  'pact-magic-level-1': 'resource.pact-magic-level-1',
+  'pact-magic-level-2': 'resource.pact-magic-level-2',
+  'pact-magic-level-3': 'resource.pact-magic-level-3',
+  'pact-magic-level-4': 'resource.pact-magic-level-4',
+  'pact-magic-level-5': 'resource.pact-magic-level-5',
+  'rage-count': 'resource.rage-count',
+  'rage-damage-bonus': 'resource.rage-damage-bonus',
+  'sneak-attack': 'resource.sneak-attack',
+  'song-of-rest-die': 'resource.song-of-rest-die',
+  'sorcery-points': 'resource.sorcery-points',
+  'unarmored-movement': 'resource.unarmored-movement',
+  'wild-shape-fly': 'resource.wild-shape-fly',
+  'wild-shape-max-cr': 'resource.wild-shape-max-cr',
+  'wild-shape-swim': 'resource.wild-shape-swim',
+} as const
+
+export const resourceName = lookup(RESOURCE_KEYS)

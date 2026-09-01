@@ -7,6 +7,7 @@ import (
 	"log"
 	"maps"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -24,7 +25,10 @@ const (
 const systemPrompt = `Translate every value of the user's JSON object into the language with IETF tag %q.
 Reply with a JSON object carrying exactly the same keys and only the translated values.
 Never translate, alter or drop a key. Preserve {{placeholder}} tokens byte for byte.
-A key ending in _one, _few, _many or _other names that plural form; translate the value accordingly.`
+A key ending in _one, _few, _many or _other names that plural form; translate the value accordingly.
+Preserve URLs, Markdown, numbers and game formulas. For Russian D&D prose use established 5e terminology,
+write dice as 1к6 rather than 1d6, and do not introduce proper names absent from the source.
+Use this glossary as authoritative terminology, inflecting Russian words to fit their sentence: %s`
 
 func translateCmd(args []string) error {
 	fs := flag.NewFlagSet("llm translate", flag.ExitOnError)
@@ -32,6 +36,8 @@ func translateCmd(args []string) error {
 	out := fs.String("out", "", "where the translated copy is written")
 	to := fs.String("to", "", "target language tag, e.g. ru")
 	model := fs.String("model", "gpt-4o-mini", "text model")
+	existing := fs.String("existing", "", "partial translation whose populated leaves are preserved")
+	glossaryPath := fs.String("glossary", "", "flat JSON object of source terms to preferred translations")
 	dryRun := fs.Bool("dry-run", false, "print leaf and request counts; no network, no key")
 	fs.Parse(args)
 
@@ -50,29 +56,50 @@ func translateCmd(args []string) error {
 
 	leaves := map[string]string{}
 	collect(doc, "", leaves)
-	batches := chunk(leaves, maxLeavesPerRequest, maxCharsPerRequest)
+
+	translated := map[string]string{}
+	if *existing != "" {
+		if err := loadMatchingLeaves(*existing, leaves, translated); err != nil {
+			return err
+		}
+	}
+	checkpoint := *out + ".checkpoint.json"
+	if err := loadCheckpoint(checkpoint, leaves, translated); err != nil {
+		return err
+	}
+
+	pending := make(map[string]string, len(leaves)-len(translated))
+	for path, source := range leaves {
+		if _, ok := translated[path]; !ok {
+			pending[path] = source
+		}
+	}
+	batches := chunk(pending, maxLeavesPerRequest, maxCharsPerRequest)
 
 	if *dryRun {
 		chars := 0
-		for _, s := range leaves {
+		for _, s := range pending {
 			chars += len(s)
 		}
-		log.Printf("%s: %d string leaves, %d chars, %d requests", *in, len(leaves), chars, len(batches))
+		log.Printf("%s: %d/%d leaves already translated; %d chars in %d requests", *in, len(translated), len(leaves), chars, len(batches))
 		return nil
+	}
+	glossary, err := loadGlossary(*glossaryPath)
+	if err != nil {
+		return err
 	}
 	key, err := apiKey()
 	if err != nil {
 		return err
 	}
 
-	translated := map[string]string{}
 	kept := 0
 	for i, batch := range batches {
 		payload := map[string]string{}
 		for _, p := range batch {
 			payload[p] = leaves[p]
 		}
-		got, err := translateChunk(key, *model, *to, payload)
+		got, err := translateChunk(key, *model, *to, glossary, payload)
 		if err != nil {
 			log.Printf("request %d/%d: %v", i+1, len(batches), err)
 			kept += len(batch)
@@ -90,28 +117,30 @@ func translateCmd(args []string) error {
 				translated[p] = t
 			}
 		}
+		if err := writeJSONAtomic(checkpoint, translated); err != nil {
+			return err
+		}
 		log.Printf("request %d/%d done", i+1, len(batches))
+	}
+	if kept > 0 {
+		return fmt.Errorf("%d leaves were not translated; progress is saved in %s", kept, checkpoint)
 	}
 
 	doc = splice(doc, "", translated)
-	body, err := json.MarshalIndent(doc, "", "  ")
-	if err != nil {
+	if err := writeJSONAtomic(*out, doc); err != nil {
 		return err
 	}
-	if err := os.WriteFile(*out, append(body, '\n'), 0o644); err != nil {
+	if err := os.Remove(checkpoint); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	// ponytail: encoding/json sorts object keys, so the output loses any
 	// hand-picked key order; both known payloads are machine-consumed.
 	// Preserve order with a token-level rewriter if anyone ever cares.
 	log.Printf("wrote %s: %d of %d leaves translated to %s", *out, len(translated), len(leaves), *to)
-	if kept > 0 {
-		return fmt.Errorf("%d leaves kept their source text; their paths are logged above, rerun on a cut-down file or fix by hand", kept)
-	}
 	return nil
 }
 
-func translateChunk(key, model, locale string, leaves map[string]string) (map[string]string, error) {
+func translateChunk(key, model, locale, glossary string, leaves map[string]string) (map[string]string, error) {
 	body, err := json.Marshal(leaves)
 	if err != nil {
 		return nil, err
@@ -120,7 +149,7 @@ func translateChunk(key, model, locale string, leaves map[string]string) (map[st
 		"model":           model,
 		"response_format": map[string]string{"type": "json_object"},
 		"messages": []map[string]string{
-			{"role": "system", "content": fmt.Sprintf(systemPrompt, locale)},
+			{"role": "system", "content": fmt.Sprintf(systemPrompt, locale, glossary)},
 			{"role": "user", "content": string(body)},
 		},
 	}
@@ -141,7 +170,107 @@ func translateChunk(key, model, locale string, leaves map[string]string) (map[st
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &out); err != nil {
 		return nil, fmt.Errorf("response was not a flat JSON object of strings: %w", err)
 	}
+	if len(out) != len(leaves) {
+		return nil, fmt.Errorf("response carried %d keys, want %d", len(out), len(leaves))
+	}
+	for path := range out {
+		if _, ok := leaves[path]; !ok {
+			return nil, fmt.Errorf("response added unknown key %q", path)
+		}
+	}
 	return out, nil
+}
+
+func loadMatchingLeaves(path string, source, out map[string]string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	var doc any
+	if err := json.Unmarshal(data, &doc); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	got := map[string]string{}
+	collect(doc, "", got)
+	for p, value := range got {
+		if _, ok := source[p]; ok {
+			out[p] = value
+		}
+	}
+	return nil
+}
+
+func loadCheckpoint(path string, source, out map[string]string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	var got map[string]string
+	if err := json.Unmarshal(data, &got); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	for p, value := range got {
+		original, ok := source[p]
+		if ok && placeholdersMatch(original, value) {
+			out[p] = value
+		}
+	}
+	return nil
+}
+
+func loadGlossary(path string) (string, error) {
+	if path == "" {
+		return "{}", nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	var glossary map[string]string
+	if err := json.Unmarshal(data, &glossary); err != nil {
+		return "", fmt.Errorf("%s: %w", path, err)
+	}
+	body, err := json.Marshal(glossary)
+	return string(body), err
+}
+
+func writeJSONAtomic(path string, value any) error {
+	body, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".translate-*.json")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	ok := false
+	defer func() {
+		tmp.Close()
+		if !ok {
+			os.Remove(tmpPath)
+		}
+	}()
+	if err := tmp.Chmod(0o644); err != nil {
+		return err
+	}
+	if _, err := tmp.Write(append(body, '\n')); err != nil {
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return err
+	}
+	ok = true
+	return nil
 }
 
 // collect records every non-empty string leaf under v into out, keyed by its

@@ -87,6 +87,8 @@ export function choiceName(t: Translate, prompt: Prompt): string {
       return t('choice.flaw')
     case 'spell':
       return t('choice.spell', { count: choose })
+    case 'trait':
+      return t('choice.trait', { count: choose })
     default:
       return t('choice.unknown', { count: choose, kind: titleCase(kind) })
   }

@@ -249,6 +249,10 @@ how much of the SRD anybody has got through.
 */
 func TestLocaleFallsBackPerKey(t *testing.T) {
 	dir := copyData(t)
+	ruDir := filepath.Join(dir, file.LocaleDir, rules.LocaleRU.String())
+	if err := os.RemoveAll(ruDir); err != nil {
+		t.Fatalf("remove copied Russian locale: %v", err)
+	}
 
 	// One entry, one field. `dwarf` keeps its English age and size prose;
 	// every other race, and every other collection, is untranslated.

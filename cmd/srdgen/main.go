@@ -153,8 +153,8 @@ func (g *generator) run() error {
 		g.conditions, g.damageTypes, g.magicSchools, g.weaponProperties,
 		g.proficiencies, g.equipmentCategories,
 		g.races, g.subraces, g.traits,
-		g.classes, g.classLevels, g.subclasses, g.features,
-		g.backgrounds, g.feats,
+		g.classes, g.classLevels, g.subclasses, g.backgrounds, g.features,
+		g.feats,
 		g.equipment, g.magicItems, g.spells,
 	}
 	for _, step := range steps {

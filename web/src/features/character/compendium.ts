@@ -14,9 +14,19 @@ import { bySlug, getCollection } from '@/lib/api'
  * Fetched together and flattened into one map keyed by collection *and* slug:
  * two collections may use the same slug, and a bare slug map would let a
  * background quietly rename a class. Each is session-cached, and the build
- * screen has usually warmed all five before a sheet is ever opened.
+ * screen has usually warmed the identity collections before a sheet is opened.
  */
-const NAMED = ['races', 'subraces', 'classes', 'subclasses', 'backgrounds'] as const
+const NAMED = [
+  'races',
+  'subraces',
+  'classes',
+  'subclasses',
+  'backgrounds',
+  'traits',
+  'features',
+  'languages',
+  'equipment',
+] as const
 
 async function namesOf(): Promise<Map<string, string> | null> {
   try {
@@ -43,7 +53,7 @@ export interface Compendium {
 }
 
 /**
- * Fetch the three collections the body draws.
+ * Fetch the collections the body draws.
  *
  * One loader rather than each screen assembling its own, so an owner's sheet
  * and the one their table opens cannot end up naming things out of different

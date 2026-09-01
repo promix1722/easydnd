@@ -11,7 +11,7 @@ import { SheetBody } from './SheetBody'
 
 import { answerable } from '@/domain'
 
-import { useT } from '@/lib/i18n'
+import { useLocale, useT } from '@/lib/i18n'
 
 /** The sheet, and what the character has not decided yet. */
 interface SheetView {
@@ -35,8 +35,12 @@ interface SheetView {
 /** The character sheet. */
 export function CharacterSheetScreen() {
   const t = useT()
+  const locale = useLocale()
   const { id = '' } = useParams()
-  const sheet = useResource<SheetView>(`sheet:${id}`, async (signal) => {
+  // A projected sheet contains stable slugs, but its compendium contains
+  // localized names. Changing language must therefore reload this resource;
+  // clearing the catalogue cache alone cannot replace data already in state.
+  const sheet = useResource<SheetView>(`sheet:${locale}:${id}`, async (signal) => {
     const [projected, prompts, compendium] = await Promise.all([
       getSheet(id, signal),
       getPrompts(id, signal).then(

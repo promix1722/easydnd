@@ -19,7 +19,7 @@ import type {
   PromptsResponse,
   Sheet,
 } from '@/lib/api'
-import { useT } from '@/lib/i18n'
+import { useLocale, useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
@@ -38,7 +38,7 @@ import {
 import type { Asking, Block, BlockOrder } from './blocks'
 import { eventLabel, stageLabel } from './labels'
 import { resolveRefNames } from './refNames'
-import { settledByStage } from './settled'
+import { settledByStage, settledPickName } from './settled'
 import type { SettledRow } from './settled'
 import { StagePanel } from './StagePanel'
 import type { Scores } from './AbilityScoresForm'
@@ -47,7 +47,6 @@ import {
   STAGES,
   answerable,
   kindOf,
-  pickLabel,
   promptLabel,
   stageOf,
 } from '@/domain'
@@ -105,6 +104,7 @@ interface Preview {
  */
 export function BuildScreen() {
   const t = useT()
+  const locale = useLocale()
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -115,14 +115,19 @@ export function BuildScreen() {
   const folder = search.get('folder') ?? undefined
   const isNew = id === ''
 
-  const build = useResource<BuildView>(`build:${id}`, async (signal) => {
+  const build = useResource<BuildView>(`build:${locale}:${id}`, async (signal) => {
     if (id === '') return EMPTY_VIEW
     const [prompts, log, sheet] = await Promise.all([
       getPrompts(id, signal),
       getEvents(id, signal),
       getSheet(id, signal),
     ])
-    return { prompts, events: log.events, sheet, names: await resolveRefNames(log.events) }
+    return {
+      prompts,
+      events: log.events,
+      sheet,
+      names: await resolveRefNames([...log.events, ...prompts.prompts]),
+    }
   })
 
   const create = useAction(createCharacter)
@@ -631,7 +636,10 @@ export function BuildScreen() {
                         {(entry.lost ?? []).map((lost) => (
                           <Text key={lost.prompt} size="xs" c="dimmed">
                             {promptLabel(lost.prompt)}
-                            {lost.picks !== undefined && `: ${lost.picks.map(pickLabel).join(', ')}`}
+                            {lost.picks !== undefined &&
+                              `: ${lost.picks
+                                .map((pick) => settledPickName(t, pick, preview.names))
+                                .join(', ')}`}
                           </Text>
                         ))}
                       </div>

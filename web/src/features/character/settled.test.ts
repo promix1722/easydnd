@@ -40,6 +40,18 @@ const EVENTS: CharacterEvent[] = [
   { seq: 5, type: 'background', source: 'background', ref: 'background:acolyte' },
   { seq: 6, type: 'class', source: 'class', ref: 'class:rogue', level: 1 },
   { seq: 7, type: 'level', source: 'advance', ref: 'class:rogue', level: 2 },
+  {
+    seq: 9,
+    type: 'class',
+    source: 'class',
+    level: 1,
+    choices: [
+      {
+        prompt: 'barbarian/proficiency/0',
+        picks: ['skill-animal-handling', 'skill-athletics'],
+      },
+    ],
+  },
   // Answered by nobody the server could name: an imported log, a DM's ruling.
   { seq: 8, type: 'note', note: 'Joined the party in Waterdeep.' },
 ]
@@ -48,6 +60,9 @@ const NAMES = new Map([
   ['race:half-elf', 'Half-Elf'],
   ['background:acolyte', 'Acolyte'],
   ['class:rogue', 'Rogue'],
+  ['class:barbarian', 'Варвар'],
+  ['skill-animal-handling', 'Навык: Уход за животными'],
+  ['skill-athletics', 'Навык: Атлетика'],
 ])
 
 const settled = () => settledByStage(testT, { events: EVENTS, names: NAMES })
@@ -59,7 +74,11 @@ describe('settledByStage', () => {
     // A `level` entry and a `class` entry are different types and the same
     // tab; a `change` entry could be either the six scores or a DM's ruling,
     // and only the server knows which prompt it settled.
-    expect(rows.get('class')?.map((row) => row.value)).toEqual(['Rogue', 'Rogue'])
+    expect(rows.get('class')?.map((row) => row.value)).toEqual([
+      'Rogue',
+      'Rogue',
+      'Навык: Уход за животными, Навык: Атлетика',
+    ])
     expect(rows.get('abilities')?.map((row) => row.label)).toEqual(['Ability scores'])
     expect(rows.get('identity')?.map((row) => row.value)).toEqual(['Zephyr'])
   })
@@ -75,8 +94,14 @@ describe('settledByStage', () => {
 
     expect(rows[1]).toMatchObject({
       label: 'Half Elf · Ability Bonus',
-      value: 'Dex, Con',
+      value: 'Dexterity, Constitution',
     })
+  })
+
+  it('localizes the owner and kind of a settled prompt', () => {
+    const row = settled().get('class')?.find((candidate) => candidate.seq === 9)
+
+    expect(row?.label).toBe('Варвар · Proficiencies')
   })
 
   it('reads the six scores back as scores rather than as a patch', () => {
@@ -86,7 +111,7 @@ describe('settledByStage', () => {
   })
 
   it('keeps a level with the level it was', () => {
-    expect(settled().get('class')?.map((row) => row.level)).toEqual([1, 2])
+    expect(settled().get('class')?.map((row) => row.level)).toEqual([1, 2, 1])
   })
 
   it('gives no tab to an entry the server could not attribute', () => {

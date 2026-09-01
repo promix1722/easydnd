@@ -88,8 +88,11 @@ function rowFor(
     return {
       seq,
       stage,
-      label: promptLabel(first.prompt),
-      value: answers.flatMap((answer) => answer.picks).map(pickLabel).join(', '),
+      label: settledPromptName(t, first.prompt, names),
+      value: answers
+        .flatMap((answer) => answer.picks)
+        .map((pick) => settledPickName(t, pick, names))
+        .join(', '),
       ...level,
       event,
     }
@@ -110,6 +113,37 @@ function rowFor(
   if (changes.length > 0) return { seq, stage, ...summarise(t, changes), ...level, event }
 
   return null
+}
+
+/** A stored option key resolved through the localized catalogue when possible. */
+export function settledPickName(
+  t: Translate,
+  pick: string,
+  names: ReadonlyMap<string, string>,
+): string {
+  if ((ABILITY_ORDER as readonly string[]).includes(pick)) return abilityName(t, pick)
+  return names.get(pick) ?? pickLabel(pick)
+}
+
+function settledPromptName(
+  t: Translate,
+  prompt: string,
+  names: ReadonlyMap<string, string>,
+): string {
+  const parts = prompt.split('/').filter((part) => part !== '' && !/^\d+$/.test(part))
+  const owner = parts[0] ?? ''
+  const ownerName = ['class', 'race', 'background', 'feature', 'trait']
+    .map((kind) => names.get(`${kind}:${owner}`))
+    .find((name) => name !== undefined)
+  const kind = parts.findLast((part) => part !== owner)
+  const kindName =
+    kind === 'proficiency' || kind === 'expertise' || kind === 'multiclass'
+      ? t('sheet.proficiencies')
+      : kind === 'starting-equipment'
+        ? t('choice.equipment')
+        : undefined
+  if (ownerName !== undefined && kindName !== undefined) return `${ownerName} · ${kindName}`
+  return promptLabel(prompt)
 }
 
 /**

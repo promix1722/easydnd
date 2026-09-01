@@ -201,6 +201,14 @@ export interface Spell extends Entry {
  */
 const cache = new Map<string, Promise<unknown>>()
 
+// Catalog JSON is regenerated while the development server stays up. Vite
+// preserves module state across updates, so without this a corrected
+// translation can remain stuck in the tab until a hard reload.
+if (import.meta.hot) {
+  cache.clear()
+  import.meta.hot.dispose(() => cache.clear())
+}
+
 function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
   const hit = cache.get(key)
   if (hit) return hit as Promise<T>

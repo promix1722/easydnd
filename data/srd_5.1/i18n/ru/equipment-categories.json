@@ -1,0 +1,119 @@
+{
+  "adventuring-gear": {
+    "name": "Приключенческое снаряжение"
+  },
+  "ammunition": {
+    "name": "Боеприпасы"
+  },
+  "arcane-foci": {
+    "name": "Арканикумы"
+  },
+  "armor": {
+    "name": "Доспехи"
+  },
+  "artisans-tools": {
+    "name": "Инструменты ремесленника"
+  },
+  "druidic-foci": {
+    "name": "Друидические фокусы"
+  },
+  "equipment-packs": {
+    "name": "Комплекты снаряжения"
+  },
+  "gaming-sets": {
+    "name": "Игровые наборы"
+  },
+  "heavy-armor": {
+    "name": "Тяжелые доспехи"
+  },
+  "holy-symbols": {
+    "name": "Святые символы"
+  },
+  "kits": {
+    "name": "Наборы"
+  },
+  "land-vehicles": {
+    "name": "Наземные транспортные средства"
+  },
+  "light-armor": {
+    "name": "Легкие доспехи"
+  },
+  "martial-melee-weapons": {
+    "name": "Боевые рукопашные оружия"
+  },
+  "martial-ranged-weapons": {
+    "name": "Боевые дальнобойные оружия"
+  },
+  "martial-weapons": {
+    "name": "Боевые оружия"
+  },
+  "medium-armor": {
+    "name": "Средние доспехи"
+  },
+  "melee-weapons": {
+    "name": "Рукопашные оружия"
+  },
+  "mounts-and-other-animals": {
+    "name": "Средства передвижения и другие животные"
+  },
+  "mounts-and-vehicles": {
+    "name": "Средства передвижения и транспортные средства"
+  },
+  "musical-instruments": {
+    "name": "Музыкальные инструменты"
+  },
+  "other-tools": {
+    "name": "Другие инструменты"
+  },
+  "potion": {
+    "name": "Зелье"
+  },
+  "ranged-weapons": {
+    "name": "Дальнобойные оружия"
+  },
+  "ring": {
+    "name": "Кольцо"
+  },
+  "rod": {
+    "name": "Жезл"
+  },
+  "scroll": {
+    "name": "Свиток"
+  },
+  "shields": {
+    "name": "Щиты"
+  },
+  "simple-melee-weapons": {
+    "name": "Простые рукопашные оружия"
+  },
+  "simple-ranged-weapons": {
+    "name": "Простые дальнобойные оружия"
+  },
+  "simple-weapons": {
+    "name": "Простые оружия"
+  },
+  "staff": {
+    "name": "Посох"
+  },
+  "standard-gear": {
+    "name": "Стандартное снаряжение"
+  },
+  "tack-harness-and-drawn-vehicles": {
+    "name": "Упряжь, сбруя и тянутые транспортные средства"
+  },
+  "tools": {
+    "name": "Инструменты"
+  },
+  "wand": {
+    "name": "Жезл"
+  },
+  "waterborne-vehicles": {
+    "name": "Водные транспортные средства"
+  },
+  "weapon": {
+    "name": "Оружие"
+  },
+  "wondrous-items": {
+    "name": "Чудесные предметы"
+  }
+}

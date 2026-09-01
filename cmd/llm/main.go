@@ -10,6 +10,8 @@
 //	llm images    -prompt "an acid arrow" [-name acid-arrow]   one image
 //	llm images    -in prompts.json                             many images
 //	llm translate -in en.json -out ru.json -to ru              translated copy
+//	llm translate -in en.json -out ru.json -to ru \
+//	  -existing ru.json -glossary glossary.json                resumable update
 //
 // The batch prompts file is a flat object, name to prompt; a name becomes the
 // output filename. The spell icons build theirs with

@@ -6,6 +6,19 @@ import { collectionOfKind, kindOf, slugOf, titleCase } from '@/domain'
 /** Anything that names a catalogue entry: a stored event, a dropped one. */
 export interface RefBearing {
   ref?: string
+  source?: string
+  choices?: { prompt: string; picks: string[] }[]
+}
+
+const PICK_COLLECTIONS: Record<string, string> = {
+  proficiency: 'proficiencies',
+  expertise: 'proficiencies',
+  multiclass: 'proficiencies',
+  'starting-equipment': 'equipment',
+  language: 'languages',
+  spell: 'spells',
+  subfeature: 'features',
+  subtrait: 'traits',
 }
 
 /**
@@ -26,12 +39,29 @@ export async function resolveRefNames(
 ): Promise<Map<string, string>> {
   const wanted = new Map<string, Map<string, string>>()
   for (const entry of entries) {
-    if (entry.ref === undefined) continue
-    const collection = collectionOfKind(kindOf(entry.ref))
-    if (collection === null) continue
-    const slugs = wanted.get(collection) ?? new Map<string, string>()
-    slugs.set(slugOf(entry.ref), entry.ref)
-    wanted.set(collection, slugs)
+    for (const ref of [entry.ref, entry.source]) {
+      if (ref === undefined) continue
+      const collection = collectionOfKind(kindOf(ref))
+      if (collection !== null) {
+        const slugs = wanted.get(collection) ?? new Map<string, string>()
+        slugs.set(slugOf(ref), ref)
+        wanted.set(collection, slugs)
+      }
+    }
+    for (const answer of entry.choices ?? []) {
+      const collection = answer.prompt
+        .split('/')
+        .map((part) => PICK_COLLECTIONS[part])
+        .find((part) => part !== undefined)
+      if (collection === undefined) continue
+      const slugs = wanted.get(collection) ?? new Map<string, string>()
+      for (const pick of answer.picks) {
+        // A nested option is an address, not a catalogue slug. Its following
+        // answer carries the actual referenced choice.
+        if (!pick.includes('/')) slugs.set(pick, pick)
+      }
+      wanted.set(collection, slugs)
+    }
   }
 
   const names = new Map<string, string>()

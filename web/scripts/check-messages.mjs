@@ -65,7 +65,7 @@ const USE_RE = /\bt\(\s*['"]([^'"]+)['"]/g
  * covered by something better than a grep: `useT` is typed from en.json, so a
  * key that is not in the catalogue does not compile.
  */
-const MENTION_RE = /['"]([A-Za-z][\w.]*)['"]/g
+const MENTION_RE = /['"]([A-Za-z][\w.-]*)['"]/g
 
 /**
  * Comments, so that a doc comment showing how to call `t` is not read as a

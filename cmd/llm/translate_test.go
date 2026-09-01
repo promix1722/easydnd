@@ -3,11 +3,45 @@ package main
 import (
 	"encoding/json"
 	"maps"
+	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
 )
+
+func TestLoadMatchingLeavesPreservesOnlySourcePaths(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "existing.json")
+	if err := os.WriteFile(path, []byte(`{"known":"перевод","extra":"лишнее"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out := map[string]string{}
+	if err := loadMatchingLeaves(path, map[string]string{"/known": "source"}, out); err != nil {
+		t.Fatal(err)
+	}
+	if !maps.Equal(out, map[string]string{"/known": "перевод"}) {
+		t.Fatalf("got %v", out)
+	}
+}
+
+func TestCheckpointRejectsStaleOrBrokenLeaves(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "checkpoint.json")
+	data := `{"/good":"{{n}} существ","/broken":"без токена","/stale":"старое"}`
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out := map[string]string{}
+	source := map[string]string{"/good": "{{n}} creatures", "/broken": "{{n}} creatures"}
+	if err := loadCheckpoint(path, source, out); err != nil {
+		t.Fatal(err)
+	}
+	if !maps.Equal(out, map[string]string{"/good": "{{n}} существ"}) {
+		t.Fatalf("got %v", out)
+	}
+}
 
 // One fixture covering both payload shapes the tool meets: a nested SRD prose
 // bundle and a flat i18next catalogue, plus a key that needs pointer escaping.
