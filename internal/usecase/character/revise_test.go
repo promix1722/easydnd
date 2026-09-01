@@ -89,8 +89,7 @@ func rogue3(t *testing.T) *builder {
 				"skill-perception", "skill-stealth", "skill-deception", "skill-persuasion")}}).
 		add("expertise", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "rogue"), Level: 1,
 			Choices: []domain.Answer{
-				answer("rogue-expertise-1/expertise/0", "rogue-expertise-1/expertise/0/0"),
-				answer("rogue-expertise-1/expertise/0/0", "skill-insight", "skill-religion"),
+				answer("rogue-expertise-1/expertise/0", "skill-insight", "skill-religion"),
 			}}).
 		add("equipment", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
 			Choices: []domain.Answer{answer("rogue/starting-equipment/0", "rapier")}}).
@@ -328,7 +327,7 @@ func TestReviseKeepsAnEntryThatLostAnAnswer(t *testing.T) {
 	if !stillARogue {
 		t.Fatal("the class entry was deleted because one of its picks died")
 	}
-	if !hasAnswer(out, "rogue-expertise-1/expertise/0/0") {
+	if !hasAnswer(out, "rogue-expertise-1/expertise/0") {
 		t.Error("Expertise went with it")
 	}
 	if !hasAnswer(out, "rogue/starting-equipment/0") {

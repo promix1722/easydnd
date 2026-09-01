@@ -149,4 +149,31 @@ describe('summarise', () => {
       ['Rules', 'D&D 2014'],
     ])
   })
+
+  // A question whose options are questions is answered in one entry now: the
+  // branch, then what the branch offered. Printing both would name the choice
+  // once as itself -- "Expertise, Skill Stealth, Skill Acrobatics".
+  it('reads a branch answer as what was chosen inside it, not as the branch', () => {
+    const rows = settledByStage(testT, {
+      events: [
+        {
+          seq: 1,
+          type: 'level',
+          source: 'class',
+          ref: 'class:rogue',
+          level: 4,
+          choices: [
+            {
+              prompt: 'rogue/ability-score-improvement/4',
+              picks: ['rogue/ability-score-improvement/4/0'],
+            },
+            { prompt: 'rogue/ability-score-improvement/4/0', picks: ['dex', 'dex'] },
+          ],
+        },
+      ],
+      names: new Map(),
+    })
+
+    expect(rows.get('class')?.map((row) => row.value)).toEqual(['Dexterity, Dexterity'])
+  })
 })

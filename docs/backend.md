@@ -572,7 +572,7 @@ lose them to a `Revise`, since nothing poses the prompt they answered.
 Characters live in memory and die with the process, so that window closes on
 its own.
 
-Three fields make the client mechanical rather than knowledgeable:
+Four fields make the client mechanical rather than knowledgeable:
 
 - **`event`** says what the answer must be posted as. The class a character
   starts as is a `class` event, a subclass is a `subclass` event, and what a
@@ -585,7 +585,20 @@ Three fields make the client mechanical rather than knowledgeable:
   narrowed by what is held, because narrowing would make the question depend on
   the order it was answered in; the client greys them out and the server
   rejects them. `heldOnly` inverts it for Expertise, where being proficient is
-  the precondition rather than the conflict.
+  the precondition rather than the conflict. It reaches inside branches, since
+  the client draws a branch in the card that offered it.
+- **`repeatable`**, on the choice rather than the prompt, says one option may
+  be picked more than once — the picks are points to spend. Only a level's
+  Ability Score Improvement says so: "+2 to one ability, or +1 to two". It is
+  not the choice's *kind*, which is what this used to be read off, because a
+  half-elf's two bonuses are the same kind over the same options and must go to
+  two different scores.
+
+An answer to a branch and the answer it opens arrive in **one event**, in that
+order. `surviving` re-projects the prompts between each answer in a batch, so
+the second is legal because the first landed — see
+[web.md](web.md#a-choice-inside-a-choice-is-answered-where-it-was-asked) for
+why the client sends them together.
 
 A prompt whose option set is **explicit and empty** is a question the player
 answers in their own words. Three exist: a name, and the four roleplaying lines

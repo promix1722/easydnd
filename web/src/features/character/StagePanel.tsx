@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { bySlug, getCollection, getEntries , describeField } from '@/lib/api'
-import type { ApiFieldError, Change, Entry, Prompt } from '@/lib/api'
+import type { Answer, ApiFieldError, Change, Entry, OptionSet, Prompt } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { Badge, BlockList, Button, Group, Loader, Stack, Text } from '@/ui'
@@ -31,7 +31,7 @@ export interface StagePanelProps {
   /** The question the open block is asking, where it has one. */
   asking: Asking | null
   names: ReadonlyMap<string, string>
-  onAnswerPicks: (asking: Asking, picks: string[]) => void
+  onAnswerPicks: (asking: Asking, answers: Answer[]) => void
   /** The name draft, which lives above this panel: see NameForm. */
   onNameChange: (name: string) => void
   onAnswerName: (asking: Asking, name: string) => void
@@ -117,7 +117,7 @@ export function StagePanel({
       {...(method !== undefined ? { method } : {})}
       {...(lines !== undefined ? { lines } : {})}
       {...(level !== undefined ? { level } : {})}
-      onPicks={(picks) => onAnswerPicks(asked, picks)}
+      onPicks={(answers) => onAnswerPicks(asked, answers)}
       onNameChange={onNameChange}
       onName={(next) => onAnswerName(asked, next)}
       onChanges={(changes) => onAnswerChanges(asked, changes)}
@@ -307,7 +307,7 @@ function AnswerSurface({
   method?: string
   lines?: readonly string[]
   level?: number
-  onPicks: (picks: string[]) => void
+  onPicks: (answers: Answer[]) => void
   onNameChange: (name: string) => void
   onName: (name: string) => void
   onChanges: (changes: Change[]) => void
@@ -410,7 +410,7 @@ function PromptWithOptions({
 }: {
   prompt: Prompt
   pending: boolean
-  onAnswer: (picks: string[]) => void
+  onAnswer: (answers: Answer[]) => void
 }) {
   const [entries, setEntries] = useState<Map<string, Entry>>(new Map())
 
@@ -427,19 +427,26 @@ function PromptWithOptions({
   return <PromptCard prompt={prompt} entries={entries} pending={pending} onAnswer={onAnswer} />
 }
 
-/** Fetches the catalogue entries a prompt's options name. */
+/**
+ * Fetches the catalogue entries a prompt's options name.
+ *
+ * Branches included, because a branch is drawn in the same card as the
+ * question that offered it -- so its options need names before anything is
+ * posted, not after the server poses it as a prompt of its own. A branch
+ * drawing on a whole collection, like the improvement's "or a feat", pulls
+ * that collection in the same pass.
+ */
 async function loadEntries(prompt: Prompt): Promise<Map<string, Entry>> {
-  const set = prompt.choice.from
-  if (set.kind === 'collection' && set.collection !== undefined) {
-    const collection = collectionOfKind(set.collection)
-    if (collection === null) return new Map()
-    return bySlug(await getCollection<Entry>(collection))
-  }
-
-  // Explicit options: gather the refs they name, grouped by collection.
+  const whole = new Set<string>()
   const wanted = new Map<string, Set<string>>()
-  const visit = (options: readonly { kind: string; ref?: string; items?: unknown[] }[]) => {
-    for (const option of options) {
+
+  const visitSet = (set: OptionSet) => {
+    if (set.kind === 'collection' && set.collection !== undefined) {
+      const collection = collectionOfKind(set.collection)
+      if (collection !== null) whole.add(collection)
+      return
+    }
+    for (const option of set.options ?? []) {
       if (option.kind === 'ref' && option.ref !== undefined) {
         const collection = collectionOfKind(kindOf(option.ref))
         if (collection === null) continue
@@ -447,13 +454,15 @@ async function loadEntries(prompt: Prompt): Promise<Map<string, Entry>> {
         bucket.add(slugOf(option.ref))
         wanted.set(collection, bucket)
       }
-      if (option.items) visit(option.items as { kind: string; ref?: string }[])
+      if (option.items !== undefined) visitSet({ kind: 'explicit', options: option.items })
+      if (option.choice !== undefined) visitSet(option.choice.from)
     }
   }
-  visit(set.options ?? [])
+  visitSet(prompt.choice.from)
 
-  const loaded = await Promise.all(
-    [...wanted].map(([collection, slugs]) => getEntries<Entry>(collection, [...slugs])),
-  )
+  const loaded = await Promise.all([
+    ...[...whole].map((collection) => getCollection<Entry>(collection)),
+    ...[...wanted].map(([collection, slugs]) => getEntries<Entry>(collection, [...slugs])),
+  ])
   return bySlug(loaded.flat())
 }

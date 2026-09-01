@@ -12,6 +12,7 @@ import {
   describeField,
 } from '@/lib/api'
 import type {
+  Answer,
   ApiFieldError,
   CharacterEvent,
   Dropped,
@@ -442,9 +443,10 @@ export function BuildScreen() {
   }
 
   const submitEvent = (asked: Asking, event: CharacterEvent) => {
-    const open = followUpKey(asked.prompt, event)
-    if (asked.replaces === null) void append(event, open)
-    else void price(asked.replaces, event, open)
+    // No follow-up to open: a branch is answered in the card that offered it
+    // and arrives in this same event, so nothing new is about to appear.
+    if (asked.replaces === null) void append(event, null)
+    else void price(asked.replaces, event, null)
   }
 
   /*
@@ -570,8 +572,8 @@ export function BuildScreen() {
                     onOpen={openBlock}
                     asking={asking}
                     names={view.names}
-                    onAnswerPicks={(asked, picks) =>
-                      submitEvent(asked, eventFor(asked.prompt, picks))
+                    onAnswerPicks={(asked, answers) =>
+                      submitEvent(asked, eventFor(asked.prompt, answers))
                     }
                     onNameChange={(next) => {
                       setNameDraft(next)
@@ -701,26 +703,6 @@ function buildTrail(t: Translate, isNew: boolean, name: string | null): Crumb[] 
 function landingStage(state: unknown): Stage | null {
   const named = (state as { stage?: unknown } | null)?.stage
   return typeof named === 'string' && STAGES.includes(named as Stage) ? (named as Stage) : null
-}
-
-/**
- * The question an answer brings with it, where it brings one.
- *
- * Picking a nested option -- "a martial melee weapon" rather than the greataxe
- * beside it -- answers the prompt and poses another, and the server names the
- * new one by the key the old one was answered with: a nested option's key *is*
- * its inner prompt's slug. So the block that is about to arrive is knowable
- * from the answer alone, and can be opened rather than left for a second press.
- */
-function followUpKey(prompt: Prompt, event: CharacterEvent): string | null {
-  const nested = new Set(
-    (prompt.choice.from.options ?? [])
-      .filter((option) => option.kind === 'nested')
-      .map((option) => option.key),
-  )
-  const picked = (event.choices ?? []).flatMap((answer) => answer.picks)
-  const follows = picked.find((pick) => nested.has(pick))
-  return follows === undefined ? null : promptKey(follows)
 }
 
 /**
@@ -936,6 +918,15 @@ function inputPrompt(input: (typeof INPUTS)[number], stage: Stage): Prompt {
  * it was answered, and rebuilding them here would be this client deciding what
  * an answer means.
  */
+/**
+ * The entry kinds whose options are narrowed by another entry the character
+ * holds, and which this client therefore cannot re-pose.
+ *
+ * Race, class and background draw on their whole collection, so the question
+ * is rebuildable from the answer alone. These two are not.
+ */
+const NARROWED = ['subrace', 'subclass']
+
 function reask(row: SettledRow): Prompt | null {
   const event = row.event
   if (event.type === 'init') {
@@ -947,6 +938,14 @@ function reask(row: SettledRow): Prompt | null {
   if ((event.choices ?? []).length > 0) return null
   if (event.ref !== undefined) {
     const kind = kindOf(event.ref)
+    // A subrace and a subclass are narrowed by the entry above them: the
+    // server offers a half-elf's subraces and a rogue's archetypes, not every
+    // one in the compendium. Rebuilding the question here would offer all of
+    // them -- Berserker, Champion, Devotion to a rogue -- so it is not
+    // rebuilt. Opening the block drops the entry instead, which reaches the
+    // same place from the other side: the server poses the question again,
+    // with the right list, and the drop is priced like any other.
+    if (NARROWED.includes(kind)) return null
     return {
       choice: {
         prompt: `character/${kind}`,
@@ -1043,7 +1042,11 @@ function initEventFor(name: string): CharacterEvent {
 }
 
 /** The entry a prompt said its answer travels in, filled in with the answer. */
-function eventFor(prompt: Prompt, picks: string[]): CharacterEvent {
+function eventFor(prompt: Prompt, answers: readonly Answer[]): CharacterEvent {
+  // The question itself is the first answer; anything after it answers a
+  // branch the first one opened, resolved in the same card.
+  const picks = answers[0]?.picks ?? []
+
   // An input settles a value on the sheet, so its answer is the change that
   // settles it rather than a pick attached to an entry that means nothing.
   const input = INPUTS.find((each) => each.prompt === prompt.choice.prompt)
@@ -1063,10 +1066,15 @@ function eventFor(prompt: Prompt, picks: string[]): CharacterEvent {
   }
   // A prompt that selects a catalogue entry carries its answer in the event's
   // ref; every other prompt carries it in the choices.
+  //
+  // All of them, in the order they were given. The server validates a batch
+  // answer by answer against a log that grows as each lands, so a branch and
+  // what the branch opened travel together: the second is legal because the
+  // first one arrived.
   if (selectsTheEventItself(prompt)) {
     event.ref = `${refKindFor(prompt)}:${picks[0] ?? ''}`
   } else {
-    event.choices = [{ prompt: prompt.choice.prompt, picks }]
+    event.choices = answers.map((answer) => ({ prompt: answer.prompt, picks: answer.picks }))
   }
   return event
 }

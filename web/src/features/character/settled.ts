@@ -1,4 +1,4 @@
-import type { Change, CharacterEvent } from '@/lib/api'
+import type { Answer, Change, CharacterEvent } from '@/lib/api'
 
 import { writtenLabel } from './promptNames'
 import { refName } from './refNames'
@@ -89,7 +89,9 @@ function rowFor(
       seq,
       stage,
       label: settledPromptName(t, first.prompt, names),
-      value: answers
+      // Read as what was chosen: the branch answers in between say only which
+      // way the question went.
+      value: leafAnswers(answers)
         .flatMap((answer) => answer.picks)
         .map((pick) => settledPickName(t, pick, names))
         .join(', '),
@@ -144,6 +146,27 @@ function settledPromptName(
         : undefined
   if (ownerName !== undefined && kindName !== undefined) return `${ownerName} · ${kindName}`
   return promptLabel(prompt)
+}
+
+/**
+ * The answers in an entry that say what was chosen, without the ones that say
+ * only which branch it was chosen in.
+ *
+ * A question whose options are themselves questions is answered in one entry
+ * now: the branch, then what the branch offered. Printing both reads "Expertise,
+ * Skill Stealth, Skill Acrobatics", naming the choice once as itself.
+ *
+ * A branch is spotted by its id being extended by another answer's -- `X` and
+ * `X/0`. Every branch id in the compendium extends its parent's, and so does
+ * the improvement's, which the domain synthesises. Comparing the *pick* against
+ * the answered prompts, which is what this used to do, missed every branch
+ * whose key is not its inner prompt: "or a feat" is keyed `feat`, and a bundle
+ * is keyed by its contents.
+ */
+export function leafAnswers(answers: readonly Answer[]): Answer[] {
+  return answers.filter(
+    (answer) => !answers.some((other) => other.prompt.startsWith(`${answer.prompt}/`)),
+  )
 }
 
 /**

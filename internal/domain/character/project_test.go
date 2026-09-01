@@ -226,11 +226,8 @@ func TestProjectGivesExpertiseOnlyToTrainedSkills(t *testing.T) {
 				{Prompt: "rogue/proficiency/0", Picks: []rules.Slug{
 					"skill-deception", "skill-persuasion", "skill-sleight-of-hand", "skill-stealth",
 				}},
-				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
-					"rogue-expertise-1/expertise/0/0",
-				}},
 				// Stealth the rogue is trained in; Athletics they are not.
-				{Prompt: "rogue-expertise-1/expertise/0/0", Picks: []rules.Slug{
+				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
 					"skill-athletics", "skill-stealth",
 				}},
 			},

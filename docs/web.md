@@ -1450,7 +1450,7 @@ be lost. A change that costs nothing else is simply made, because confirming
 every change teaches players to confirm without reading, which is exactly the
 habit the one change that *does* cost something needs them not to have.
 
-An answer to a *nested* prompt -- a rogue's Expertise, a half-elf's ability
+An answer that carries *picks* -- a rogue's Expertise, a half-elf's ability
 bonuses -- cannot be re-posed directly, because the options that made it up
 arrived with a prompt the server stopped emitting the moment it was answered.
 Opening one of those blocks therefore drops the entry, which reaches the same
@@ -1463,11 +1463,52 @@ everything else: only if another answer cannot survive it.
 The question that comes back is also **open**. `done` takes the key of a block
 that does not exist yet, and the reread is what brings it into being; without
 that the row you pressed turned back into a shut question and wanted pressing
-again, which is the same gesture twice for one intention. The key is knowable
-in both directions: a dropped entry names the prompt it answered, and a *nested
-option's key is its inner prompt's slug*, so answering "a martial melee weapon"
-rather than the greataxe beside it says exactly which question is about to
-arrive.
+again, which is the same gesture twice for one intention.
+
+A **subrace and a subclass** take the same route, for a different reason:
+their options are narrowed by the entry above them. The server offers a
+half-elf their subraces and a rogue their archetypes, and this screen cannot
+know either list -- rebuilding the question from the answer's own kind, which
+is right for a race or a class, offered Berserker and Champion to a rogue.
+`NARROWED` in `BuildScreen` is that list, and `reask` returns nothing for it.
+
+### A choice inside a choice is answered where it was asked
+
+Some options are themselves questions. "A martial weapon and a shield, or two
+martial weapons" makes the second branch a choice; so does the improvement a
+level grants, whose first branch is "raise two of your scores". Picking one
+used to confirm it, post it, wait for the server to pose the branch, and draw
+it as a **second block** further down the tab -- so a question the player was
+in the middle of answering became two questions in two places, the second of
+which had to be found and pressed.
+
+`PromptCard` resolves it in place. Two things already existed and neither was
+used: the branch's whole inner choice ships inside the option it is
+(`Option.choice`), and the server validates a batch of answers one at a time
+against a log that grows as each lands -- so a branch answer and the answer it
+opens travel in one event, the second legal because the first arrived. So
+picking a branch draws its options in the same card, with nothing fetched and
+nothing posted, and Confirm sends all of it. `opens` is the client's mirror of
+the domain's `addOpened`, bundles included, because "a martial weapon **and** a
+shield" is a bundle whose first item is a question.
+
+A branch that is the only branch is not a question, and `settle` takes it on
+arrival rather than making it a click: the improvement opens straight onto the
+six abilities, with "or a feat" still there to change to.
+
+`loadEntries` reaches into branches for the same reason -- an inner option's
+name has to be there before anything is posted, and a branch drawing on a whole
+collection ("or a feat") pulls that collection in the same pass.
+
+One entry now carries the branch and its contents, so the settled row would
+read "Expertise, Skill Stealth, Skill Acrobatics" -- the choice named once as
+itself. `leafAnswers` drops the branch answers: an answer whose id is extended
+by another answer's in the same entry (`X` and `X/0`) said only which way the
+question went. Every branch id in the compendium extends its parent's, and so
+does the improvement's, which the server synthesises. The log screen reads
+through the same function; its own version compared the *pick* against the
+answered ids, which missed "or a feat" (keyed `feat`) and every bundle branch
+(keyed by its contents).
 
 ### A category's word appears exactly once
 

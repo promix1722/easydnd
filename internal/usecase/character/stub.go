@@ -202,13 +202,11 @@ func stubEvents() []domain.Event {
 				{Prompt: "rogue/proficiency/0", Picks: []rules.Slug{
 					"skill-deception", "skill-persuasion", "skill-sleight-of-hand", "skill-stealth",
 				}},
-				// Expertise is "choose 1 of: two skills, or one skill plus
-				// thieves' tools". Answering the outer prompt names the branch
-				// by its own prompt id; the branch then carries the skills.
+				// Expertise: two of the skills the rogue is proficient in. The
+				// book words it as a choice between "two skills" and "one
+				// skill and thieves' tools"; oneList asks it as the single
+				// list of two those branches add up to.
 				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
-					"rogue-expertise-1/expertise/0/0",
-				}},
-				{Prompt: "rogue-expertise-1/expertise/0/0", Picks: []rules.Slug{
 					"skill-persuasion", "skill-stealth",
 				}},
 				{Prompt: "rogue/starting-equipment/0", Picks: []rules.Slug{"rapier"}},

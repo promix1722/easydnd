@@ -114,6 +114,24 @@ type Choice struct {
 	Choose int
 	Kind   ChoiceKind
 	From   OptionSet
+
+	// Repeatable allows one option to be picked more than once, which turns
+	// the picks into points being spent rather than a set being chosen.
+	//
+	// Exactly one thing needs it, and one thing that looks identical must not
+	// have it. A level's Ability Score Improvement is "+2 to one ability, or
+	// +1 to two", so two points into Dexterity is a legal answer; a half-elf's
+	// is "+1 to two *different* scores", and it is the same kind over the same
+	// ability-bonus options. Keying the rule on the kind -- which is what both
+	// the client and the validator used to do -- let the half-elf spend both
+	// points on one score.
+	//
+	// It lives here rather than on character.Prompt beside HeldOnly for two
+	// reasons: "may I pick this twice?" is a statement about the question
+	// where HeldOnly is one about the character, and a branch rendered inside
+	// its parent's card arrives as a Choice with no Prompt around it. Nothing
+	// in the compendium sets it; the domain does, on the prompt it synthesises.
+	Repeatable bool
 }
 
 // OptionSetKind distinguishes how an option set names its members.

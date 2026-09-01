@@ -32,6 +32,12 @@ type Choice struct {
 	Choose int       `json:"choose"`
 	Kind   string    `json:"kind"`
 	From   OptionSet `json:"from"`
+
+	// Repeatable allows one option to be picked more than once, which makes
+	// the picks points to spend rather than a set to choose. Only a level's
+	// Ability Score Improvement sets it -- a half-elf's two bonuses look
+	// identical and must go to two different scores.
+	Repeatable bool `json:"repeatable,omitempty"`
 }
 
 // OptionSet is the pool a Choice draws from.

@@ -1383,7 +1383,7 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     // And the question that comes back is *open*. Pressing a decided block
     // means "ask me that again", so it used to take a second press on the same
     // row to see the options -- the same gesture, twice, for one intention.
-    const asked = await screen.findByRole('button', { name: /ability scores to raise/ })
+    const asked = await screen.findByRole('button', { name: /points to raise your scores/ })
     expect(asked).toHaveAttribute('aria-expanded', 'true')
   })
 })

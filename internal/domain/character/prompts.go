@@ -631,7 +631,11 @@ func (b *promptBuilder) featurePrompts(slug rules.Slug, level int, class rules.R
 	}
 	expertise := p
 	expertise.HeldOnly = true
-	b.addChoice(feature.Specific.ExpertiseOptions, expertise)
+	// oneList, because the rogue's first Expertise is transcribed as a choice
+	// between branches and is one list of two. Project reads it through the
+	// same function, or an answer to the flat question would not resolve
+	// against the nested shape.
+	b.addChoice(oneList(feature.Specific.ExpertiseOptions), expertise)
 	b.addChoice(feature.Specific.SubfeatureOptions, p)
 	b.addChoice(feature.Specific.EnemyTypeOptions, p)
 	b.addChoice(feature.Specific.TerrainTypeOptions, p)
@@ -652,6 +656,12 @@ func (b *promptBuilder) abilityScoreImprovement(class rules.Slug, level int) {
 		Choose: 2,
 		Kind:   rules.ChooseAbilityBonus,
 		From:   rules.OptionSet{Kind: rules.OptionsExplicit, Options: abilityBonusOptions()},
+		// Two points rather than two scores: both may go into one ability,
+		// which is the "+2 to one" half of the rule. This is the only choice
+		// in the game that says so -- a half-elf's two look identical and are
+		// "two *different* scores" -- which is why it is stated here rather
+		// than inferred from the kind.
+		Repeatable: true,
 	}
 	feat := rules.Choice{
 		Prompt: prompt + "/1",
@@ -684,7 +694,8 @@ func asiPrompt(class rules.Slug, level int) rules.Slug {
 }
 
 // abilityBonusOptions is "+1 to any ability", once per ability. Picking the
-// same ability twice is the "+2 to one" half of the rule.
+// same ability twice is the "+2 to one" half of the rule, which the choice
+// above allows by being Repeatable.
 func abilityBonusOptions() []rules.Option {
 	abilities := rules.Abilities()
 	out := make([]rules.Option, 0, len(abilities))
@@ -710,17 +721,32 @@ func refOptions(kind rules.RefKind, slugs []rules.Slug) rules.OptionSet {
 //
 // Only the cases where a duplicate is actually illegal are reported:
 // proficiencies and languages. Being offered a second rapier is fine.
+//
+// It looks inside branches as well as at the options themselves, because the
+// client answers a branch in the card that offered it -- so the options it
+// draws are the branches' options, and the greying-out has to reach them. The
+// monk's "one artisan's tool or one musical instrument" is the case: without
+// this, a tool the character already had looked pickable and the server
+// refused the answer. Option keys are unique within a prompt, so one flat list
+// still says which option each held entry is.
 func (b *promptBuilder) heldIn(c rules.Choice) []rules.Slug {
 	var held []rules.Slug
-	for _, option := range c.From.Options {
-		ref, ok := option.(rules.RefOption)
-		if !ok {
-			continue
-		}
-		if b.holds(ref.Ref) {
-			held = append(held, rules.OptionKey(option))
+	var walk func(options []rules.Option)
+	walk = func(options []rules.Option) {
+		for _, option := range options {
+			switch opt := option.(type) {
+			case rules.RefOption:
+				if b.holds(opt.Ref) {
+					held = append(held, rules.OptionKey(option))
+				}
+			case rules.NestedOption:
+				walk(opt.Choice.From.Options)
+			case rules.BundleOption:
+				walk(opt.Items)
+			}
 		}
 	}
+	walk(c.From.Options)
 	if c.From.Kind == rules.OptionsFromCollection && c.From.Collection == rules.RefLanguage {
 		held = append(held, b.state.Base.Languages...)
 	}

@@ -67,7 +67,7 @@ export function choosableOptions(
     const reason = disabledBy(t, prompt, held, option.key)
     return {
       key: option.key,
-      label: labelOf(t, option, entries),
+      label: optionLabel(t, option, entries),
       ...maybeDetail(detailOf(option, entries)),
       disabled: reason !== undefined,
       ...maybeReason(reason),
@@ -100,7 +100,19 @@ function disabledBy(
   return held.has(key) ? t('option.alreadyHave') : undefined
 }
 
-function labelOf(t: Translate, option: Option, entries: Map<string, Entry>): string {
+/**
+ * What one option reads as, `times` of it.
+ *
+ * `times` is only ever more than one where a prompt lets the same option be
+ * picked twice, which is the improvement a level grants: two points into
+ * Strength is "Strength +2", not "Strength +1" wearing a multiplier.
+ */
+export function optionLabel(
+  t: Translate,
+  option: Option,
+  entries: Map<string, Entry>,
+  times = 1,
+): string {
   switch (option.kind) {
     case 'ref': {
       const slug = option.ref === undefined ? '' : slugOf(option.ref)
@@ -125,10 +137,10 @@ function labelOf(t: Translate, option: Option, entries: Map<string, Entry>): str
       // and twenty arrows is one option, and the conjunction between them is
       // prose like any other.
       return (option.items ?? [])
-        .map((item) => labelOf(t, item, entries))
+        .map((item) => optionLabel(t, item, entries))
         .join(t('option.bundleJoin'))
     case 'ability-bonus':
-      return `${abilityName(t, option.ability ?? '')} +${option.bonus ?? 1}`
+      return `${abilityName(t, option.ability ?? '')} +${(option.bonus ?? 1) * times}`
     case 'text':
       return option.text ?? option.key
     case 'money':

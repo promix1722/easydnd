@@ -2,6 +2,7 @@ package character
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -164,36 +165,88 @@ func TestPromptsAdvanceAsAnswersArrive(t *testing.T) {
 	}
 }
 
-// The nested-prompt fixed point: a choice inside a choice does not exist
-// until its parent is answered. This is what the rogue's Expertise needs, and
-// what makes a step counter impossible.
+// The nested-prompt fixed point: a choice inside a choice does not exist until
+// its parent is answered. The client resolves a branch inside the card that
+// offered it, posting both answers in one event -- which only works because
+// the second prompt does not exist until the first answer lands.
+//
+// The monk's tools are the case now that oneList flattens Expertise: "one
+// artisan's tool or one musical instrument" is two branches over different
+// pools and stays a real question about which branch you are in.
 func TestAnsweringAPromptOpensItsNestedPrompt(t *testing.T) {
-	log := RogueLog(t)
+	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
+	branch := func(picks ...rules.Slug) Log {
+		t.Helper()
+		var log Log
+		class := Event{Type: EventClass, At: at, Ref: rules.NewRef(rules.RefClass, "monk"), Level: 1}
+		if len(picks) > 0 {
+			class.Choices = []Answer{{Prompt: "monk/proficiency/1", Picks: picks}}
+		}
+		if err := log.Append(Event{Type: EventInit, At: at}, class); err != nil {
+			t.Fatalf("Append() error = %v", err)
+		}
+		return log
+	}
 
-	got := promptsFor(t, log)
-	if has(got, "rogue-expertise-1/expertise/0") {
-		t.Error("Expertise is still open on a log that answered it")
+	got := promptsFor(t, branch())
+	outer := find(t, got, "monk/proficiency/1")
+	inner := rules.OptionKeys(outer.Choice.From)
+	if len(inner) == 0 {
+		t.Fatal("the branch selector offers nothing")
 	}
-	// Both halves were answered in the fixture, so neither should be open.
-	if has(got, "rogue-expertise-1/expertise/0/0") {
-		t.Error("the nested Expertise prompt is still open")
+	// Unanswered, the branch's own prompt does not exist.
+	if has(got, "monk/proficiency/1/0") {
+		t.Error("a nested prompt was open before its branch was chosen")
 	}
 
-	// Strip the inner answer and the inner prompt must reappear -- and only
-	// the inner one, because the outer is still answered.
-	stripped := Log{}
-	for _, e := range log.Events {
-		e.Choices = slices.DeleteFunc(slices.Clone(e.Choices), func(a Answer) bool {
-			return a.Prompt == "rogue-expertise-1/expertise/0/0"
-		})
-		stripped.Events = append(stripped.Events, e)
+	got = promptsFor(t, branch(inner[0]))
+	if has(got, "monk/proficiency/1") {
+		t.Error("the branch selector is still open on a log that answered it")
 	}
-	got = promptsFor(t, stripped)
-	if !has(got, "rogue-expertise-1/expertise/0/0") {
-		t.Errorf("the nested Expertise prompt did not reopen; got %v", promptIDs(got))
+	if !has(got, "monk/proficiency/1/0") {
+		t.Errorf("choosing a branch did not open it; got %v", promptIDs(got))
 	}
-	if has(got, "rogue-expertise-1/expertise/0") {
-		t.Error("the outer Expertise prompt reopened, though it is answered")
+}
+
+// Expertise is one list, not a choice between branches.
+//
+// SRD 5.1 words the rogue's first Expertise as "two of your skill
+// proficiencies, or one of your skill proficiencies and your proficiency with
+// thieves' tools", and the compendium transcribes that as two branches. The
+// same feature at sixth level, and both of the bard's, are already flat in the
+// data -- so this is the transcription being reconciled, not a rule being
+// bent. oneList is what does it, on the asking side and the reading side both.
+func TestExpertiseIsAskedAsOneList(t *testing.T) {
+	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
+	var log Log
+	if err := log.Append(
+		Event{Type: EventInit, At: at},
+		Event{Type: EventClass, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 1},
+	); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+
+	got := find(t, promptsFor(t, log), "rogue-expertise-1/expertise/0")
+	if got.Choice.Choose != 2 {
+		t.Errorf("choose = %d, want 2: the two picks both branches were worth", got.Choice.Choose)
+	}
+	keys := rules.OptionKeys(got.Choice.From)
+	if !slices.Contains(keys, rules.Slug("thieves-tools")) {
+		t.Errorf("options = %v, want thieves' tools merged into the list", keys)
+	}
+	if !slices.Contains(keys, rules.Slug("skill-stealth")) {
+		t.Errorf("options = %v, want the skills in the list", keys)
+	}
+	for _, key := range keys {
+		if strings.HasPrefix(key.String(), "rogue-expertise-1/") {
+			t.Errorf("options = %v, want no branch left to pick between", keys)
+			break
+		}
+	}
+	// And a flat list of references is one that HeldOnly survives, which the
+	// branch selector above it never could.
+	if !got.HeldOnly {
+		t.Error("the flat Expertise prompt is not heldOnly")
 	}
 }
 
@@ -344,15 +397,12 @@ func TestExpertiseOffersOnlyTheSkillsAlreadyTrained(t *testing.T) {
 				{Prompt: "rogue/proficiency/0", Picks: []rules.Slug{
 					"skill-deception", "skill-persuasion", "skill-sleight-of-hand", "skill-stealth",
 				}},
-				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
-					"rogue-expertise-1/expertise/0/0",
-				}},
 			}},
 	); err != nil {
 		t.Fatalf("Append() error = %v", err)
 	}
 
-	prompt := find(t, promptsFor(t, log), "rogue-expertise-1/expertise/0/0")
+	prompt := find(t, promptsFor(t, log), "rogue-expertise-1/expertise/0")
 	if !prompt.HeldOnly {
 		t.Fatal("the expertise prompt is not heldOnly; Held would read as the illegal answers")
 	}
@@ -367,9 +417,17 @@ func TestExpertiseOffersOnlyTheSkillsAlreadyTrained(t *testing.T) {
 			t.Errorf("held = %v, want it to exclude %q: nothing trained it", prompt.Held, notHeld)
 		}
 	}
-	// The four the class granted, and not one row per skill in the game.
-	if len(prompt.Held) != 4 {
-		t.Errorf("held %d options, want the 4 trained skills: %v", len(prompt.Held), prompt.Held)
+	// Thieves' tools, which the rogue is proficient in and which oneList
+	// merged into this list, is holdable like any other row -- that merge is
+	// the whole of "or one skill and your thieves' tools".
+	if !slices.Contains(prompt.Held, rules.Slug("thieves-tools")) {
+		t.Errorf("held = %v, want it to include thieves-tools", prompt.Held)
+	}
+	// The four the class granted plus the tools, and not one row per skill in
+	// the game.
+	if len(prompt.Held) != 5 {
+		t.Errorf("held %d options, want the 4 trained skills and the tools: %v",
+			len(prompt.Held), prompt.Held)
 	}
 }
 

@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router'
 
 import { getEvents } from '@/lib/api'
-import type { Answer, CharacterEvent } from '@/lib/api'
+import type { CharacterEvent } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
 import { useLocale, useT } from '@/lib/i18n'
 
@@ -20,6 +20,7 @@ import {
 } from '@/ui'
 
 import { resolveRefNames } from './refNames'
+import { leafAnswers } from './settled'
 
 import {
   kindOf,
@@ -163,24 +164,10 @@ export function CharacterLogScreen() {
   )
 }
 
-/**
- * Drops the answer that only says which branch a nested prompt took.
- *
- * A nested option is named by the prompt it opens, and that prompt's own
- * answer is in the same event -- so keeping both prints the choice twice, once
- * saying "Expertise" and once saying which two skills.
- */
-function answersWorthShowing(choices: readonly Answer[]): Answer[] {
-  const answered = new Set(choices.map((answer) => answer.prompt))
-  return choices.filter(
-    (answer) => answer.picks.length === 0 || !answer.picks.every((pick) => answered.has(pick)),
-  )
-}
-
 function EventDetail({ event, names }: { event: CharacterEvent; names: Map<string, string> }) {
   const t = useT()
   const changes = event.changes ?? []
-  const choices = answersWorthShowing(event.choices ?? [])
+  const choices = leafAnswers(event.choices ?? [])
   const note = event.note ?? ''
   if (event.ref === undefined && choices.length === 0 && changes.length === 0 && note === '') {
     return (

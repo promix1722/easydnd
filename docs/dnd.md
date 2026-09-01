@@ -131,6 +131,30 @@ The model transcribes that grammar as a recursive `Choice`: choose N from an
 option set, where an option may itself be a choice, a bundle, a reference, an
 ability bonus, a damage expression or plain text.
 
+**Transcribing is not the same as asking**, and one case makes the difference
+visible. The rogue's first Expertise is printed as "two of your skill
+proficiencies, or one of your skill proficiencies and your proficiency with
+thieves' tools", and the compendium says exactly that: choose 1 of two
+branches. It is one question — choose 2 from your skills plus thieves' tools —
+and the same feature at sixth level, and both of the bard's, are already flat
+in the data. `oneList` reconciles it, in the domain rather than in the
+generator, so the compendium goes on saying what the book says. Both sides go
+through it: `Prompts` asks with it and `Project` reads with it, because
+projection resolves an answer by walking the catalogue's own shape and a
+flattened question with a nested reader would silently lose the answer. The
+guard is narrow — every branch over the same list of references, every branch
+worth the same number of picks — so "a martial weapon and a shield, or two
+martial weapons" is left alone, its pool being a category and "shield, shield"
+not being a legal answer.
+
+**`Repeatable` is on the choice, and only one choice has it.** A level's
+Ability Score Improvement is "+2 to one ability, or +1 to two", so the same
+ability picked twice is a legal answer and the points are summed. A half-elf's
+is "+1 to two *different* scores" — the same choice kind, over the same
+ability-bonus options — so a rule read off the kind let the half-elf spend both
+on one score. The prompt says it instead. Nothing in the compendium sets it;
+the domain does, on the improvement it synthesises.
+
 Every prompt carries a **stable id** (`fighter/starting-equipment/1`). That id is
 what a character's stored answer points at, so it must survive a data
 regeneration — otherwise reloading a character silently loses its choices.

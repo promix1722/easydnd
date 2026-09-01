@@ -65,6 +65,13 @@ export interface Choice {
   choose: number
   kind: string
   from: OptionSet
+  /**
+   * One option may be picked more than once, which makes the picks points to
+   * spend rather than a set to choose. Only a level's Ability Score
+   * Improvement says so -- a half-elf's two bonuses look identical and go to
+   * two different scores.
+   */
+  repeatable?: boolean
 }
 
 export interface CollectionInfo {

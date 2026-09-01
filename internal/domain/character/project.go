@@ -100,6 +100,13 @@ func (p *projector) run(log Log) (State, error) {
 	if err := p.applyChanges(p.inputs); err != nil {
 		return State{}, err
 	}
+	// The declared level comes first, because it *is* the character's level
+	// and almost everything below is per-level. Ability scores are the
+	// non-obvious one: deriveAbilities applies the improvement every fourth
+	// level grants, so a character who declared 4th level but had not been
+	// raised to it yet had their improvement silently do nothing.
+	p.advanceToDesiredLevel()
+
 	// Ability scores are finalised before anything that reads them. The hit
 	// point maximum is the reason this cannot wait: it is Constitution
 	// modifier per level, and a half-elf who put their +1 into Constitution
@@ -108,7 +115,6 @@ func (p *projector) run(log Log) (State, error) {
 
 	p.applyRace()
 	p.applyBackground()
-	p.advanceToDesiredLevel()
 	p.applyClasses()
 	p.applyEquipmentChoices()
 
@@ -358,7 +364,8 @@ func (p *projector) applyFeaturePrompts(features []rules.Slug) {
 			continue
 		}
 		if feature.Specific.ExpertiseOptions != nil {
-			p.expertise = append(p.expertise, p.answers.slugs(feature.Specific.ExpertiseOptions)...)
+			// Through oneList, because that is how Prompts asked it.
+			p.expertise = append(p.expertise, p.answers.slugs(oneList(feature.Specific.ExpertiseOptions))...)
 		}
 		if feature.Specific.SubfeatureOptions != nil {
 			p.state.Features = append(p.state.Features, p.answers.slugs(feature.Specific.SubfeatureOptions)...)
@@ -469,23 +476,25 @@ func (p *projector) deriveAbilities() {
 		}
 	}
 
-	race, ok := p.cat.Races.Get(p.state.Identity.Race)
-	if !ok {
-		return
-	}
-	for _, bonus := range race.AbilityBonuses {
-		p.state.Abilities.Scores[bonus.Ability] += bonus.Bonus
-	}
-	if race.AbilityBonusOptions != nil {
-		p.answers.chosen(*race.AbilityBonusOptions, func(o rules.Option) {
-			if bonus, ok := o.(rules.AbilityBonusOption); ok {
+	// Guarded rather than returned from. A missing race means no racial
+	// bonus and nothing else: the improvements below are a class's business,
+	// and an early return here quietly dropped them from every character
+	// without one.
+	if race, ok := p.cat.Races.Get(p.state.Identity.Race); ok {
+		for _, bonus := range race.AbilityBonuses {
+			p.state.Abilities.Scores[bonus.Ability] += bonus.Bonus
+		}
+		if race.AbilityBonusOptions != nil {
+			p.answers.chosen(*race.AbilityBonusOptions, func(o rules.Option) {
+				if bonus, ok := o.(rules.AbilityBonusOption); ok {
+					p.state.Abilities.Scores[bonus.Ability] += bonus.Bonus
+				}
+			})
+		}
+		if subrace, ok := p.cat.Subraces.Get(p.state.Identity.Subrace); ok {
+			for _, bonus := range subrace.AbilityBonuses {
 				p.state.Abilities.Scores[bonus.Ability] += bonus.Bonus
 			}
-		})
-	}
-	if subrace, ok := p.cat.Subraces.Get(p.state.Identity.Subrace); ok {
-		for _, bonus := range subrace.AbilityBonuses {
-			p.state.Abilities.Scores[bonus.Ability] += bonus.Bonus
 		}
 	}
 	p.applyAbilityScoreImprovements()

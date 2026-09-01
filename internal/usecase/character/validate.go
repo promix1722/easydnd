@@ -437,10 +437,15 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 			})
 			continue
 		}
-		// Duplicates are rejected, except where the prompt is adding a
-		// number: two points into Dexterity is how "+2 to one ability" is
+		// Duplicates are rejected unless the prompt says its picks are points
+		// being spent: two into Dexterity is how "+2 to one ability" is
 		// written, whereas being proficient in Stealth twice is not a thing.
-		if seen[pick] && prompt.Choice.Kind != rules.ChooseAbilityBonus {
+		//
+		// The prompt says it, rather than the kind implying it. A half-elf's
+		// two ability bonuses are the same kind over the same options and are
+		// "two *different* scores", so keying this on the kind let a half-elf
+		// put both of theirs into one.
+		if seen[pick] && !prompt.Choice.Repeatable {
 			fields = append(fields, types.FieldError{
 				Field: field, Rule: "duplicate", Reason: "field.answer.duplicate",
 			})

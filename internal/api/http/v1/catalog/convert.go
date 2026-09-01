@@ -120,10 +120,11 @@ func (c converter) choice(ch *rules.Choice) *Choice {
 
 func (c converter) choiceValue(ch rules.Choice) Choice {
 	return Choice{
-		Prompt: ch.Prompt.String(),
-		Choose: ch.Choose,
-		Kind:   ch.Kind.String(),
-		From:   c.optionSet(ch.From),
+		Prompt:     ch.Prompt.String(),
+		Choose:     ch.Choose,
+		Kind:       ch.Kind.String(),
+		From:       c.optionSet(ch.From),
+		Repeatable: ch.Repeatable,
 	}
 }
 

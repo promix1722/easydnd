@@ -118,23 +118,11 @@ func TestClassGrantIsAnswerableAfterTheLevelsAreTaken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Prompts() error = %v", err)
 	}
-	if !hasOpenPrompt(prompts, "rogue-expertise-1/expertise/0") {
-		t.Fatal("Expertise never opened, so its skills cannot be doubled at all")
-	}
-
-	// Its two-skill branch, and then the skills themselves -- which are only
-	// offered because the four proficiencies above landed. Expertise doubles
+	// And it offers the skills that answer just granted. Expertise doubles
 	// what the character holds, so an empty offer here is the visible symptom
 	// of an answer that went nowhere.
-	b.add("expertise branch", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "rogue"), Level: 1,
-		Choices: []domain.Answer{answer("rogue-expertise-1/expertise/0", "rogue-expertise-1/expertise/0/0")}})
-
-	prompts, err = b.s.Prompts(context.Background(), testOwner, b.id, rules.DefaultLocale)
-	if err != nil {
-		t.Fatalf("Prompts() error = %v", err)
-	}
 	for _, p := range prompts {
-		if p.Choice.Prompt != "rogue-expertise-1/expertise/0/0" {
+		if p.Choice.Prompt != "rogue-expertise-1/expertise/0" {
 			continue
 		}
 		if len(p.Held) == 0 {
@@ -142,5 +130,5 @@ func TestClassGrantIsAnswerableAfterTheLevelsAreTaken(t *testing.T) {
 		}
 		return
 	}
-	t.Error("the two-skill branch of Expertise never opened")
+	t.Error("Expertise never opened, so its skills cannot be doubled at all")
 }
