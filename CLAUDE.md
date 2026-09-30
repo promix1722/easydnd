@@ -25,9 +25,11 @@
 - **No user-facing English in `web/src/`.** Every caption lives in
   `web/locales/{en,ru}.json` and is reached by key, so translating the client
   never means opening a component. `npm run check:messages` fails on a key
-  nothing renders; `useT` is typed from `en.json`, so a key the catalogue does
-  not define will not compile. The Go side sends no prose either -- errors
-  travel as a `reason` slug, see `docs/backend.md#errors-are-keys-not-sentences`.
+  nothing renders **and on an English key Russian does not translate**, so a
+  caption and its Russian land in the same change; `useT` is typed from
+  `en.json`, so a key the catalogue does not define will not compile. The Go
+  side sends no prose either -- errors travel as a `reason` slug, see
+  `docs/backend.md#errors-are-keys-not-sentences`.
 - **Never hand-edit `web/public/favicon.svg` or `web/public/icons/`.** They are
   generated from the palette by `web/scripts/gen-icons.mjs`; change
   `PALETTE_NAME` (or the mark) and run `make web/icons`. `make web/icons/check`

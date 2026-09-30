@@ -75,22 +75,75 @@ fall back to English on a Russian sheet.
 
 The development workbench preserves every populated leaf already in the output,
 uses the checked-in glossary for D&D terminology, and checkpoints each accepted
-API response beside the output. Rerunning the same command after a failure only
-requests the missing leaves.
+API response beside the output. Rerunning after a failure only requests the
+leaves that are still missing.
 
 ```sh
-go run ./cmd/llm translate \
-  -in data/srd_5.1/i18n/en/spells.json \
-  -out data/translations/ru/spells.json \
-  -existing data/translations/ru/spells.json \
-  -glossary data/translations/ru.glossary.json \
-  -to ru
+make translate/ru                                  # the spells, model and effort pinned
+make translate/ru TRANSLATE_FLAGS=-dry-run         # counts only: no key, no spend
+make translate/ru TRANSLATE_REASONING=high         # compare settings
 ```
 
-Run it for each collection, review the resulting prose, then run
-`make data/srd && make verify`. The final write is atomic; an incomplete run
-leaves the old translation in place and progress in `<output>.checkpoint.json`.
-`ru.sources.json` records the generation model and terminology references.
+**Filling gaps and rerolling are different commands, and the difference is one
+flag.** `-existing` treats every populated leaf as done, which is what you want
+when finishing a half-translated file — and is a trap when you mean to redo the
+prose, because `-existing` points at the output and every leaf in it already
+counts as finished. The run then translates nothing and exits successfully.
+`-preserve name` is the reroll: keep the hand-checked names, re-request every
+description. `make translate/ru` passes it.
+
+Check the dry run before spending anything. It prints how many leaves are
+already translated, and for a reroll that number should be the count of names
+alone — 319 of 1654 for the spells. If it is close to the total, `-preserve` is
+not doing what you think and the real run would be a no-op.
+
+Review the prose, then `make verify` (the target already runs `make data/srd`).
+The final write is atomic: an incomplete run leaves the old translation in place
+and its progress in `<output>.checkpoint.json`, so a failed run costs only the
+leaves it had not reached. `ru.sources.json` records the pinned model, the
+reasoning effort and the terminology references — all three, because any of them
+changing changes the output.
+
+## How numbers and units are written
+
+The bullet below is about the *structured* values -- a spell's range field, its
+casting time -- which never pass through here at all. Prose is different: a
+description says "a 20-foot-radius sphere" in the middle of a sentence, and that
+measurement is text like any other. Three rules, and all three are enforced
+rather than hoped for.
+
+- **Dice keep Latin notation: `8d6`, not `8к6`.** This reverses what the
+  workbench used to ask for. Latin is what players read at the table, and it
+  has a second benefit: with `к` gone, every remaining digit in a sentence is a
+  real quantity, which is what makes the numeric check below cheap and precise.
+- **Imperial measurements stay imperial, with Russian unit words**: `30 футов`,
+  `радиусом 20 футов`, never metres or kilograms. The client renders the
+  structured range as `футов` (`spell.range.feet`), so prose that converted to
+  metres put `36 метров` in a description directly beneath `120 футов` in the
+  facts panel of the same spell. It did this in 39 places.
+- **Numbers survive exactly.** `valuesMatch` in `cmd/llm/translate.go` compares
+  the numbers and dice in the source against the translation and rejects a leaf
+  that differs, which aborts the run rather than writing it. A test in
+  `cmd/srdgen` asserts the same thing over the committed files, because this
+  directory is hand-editable and the workbench never sees a hand edit.
+
+  It compares the *set*, not a tally. Counting repeats was the obvious rule and
+  it was wrong: English states an area as "5 feet square" and Russian states it
+  as `5 на 5 футов`, so the idiom duplicates the number by construction. A
+  changed, invented or missing number still changes the set; a dropped repeat
+  no longer trips it, which is the narrower risk.
+
+  Both sides strip thousands separators first, because the two languages write
+  them differently -- `5,000gp` against `5 000 зм`.
+
+Which files these two checks cover is `proseChecked` in
+`cmd/srdgen/translations_test.go`. Adding a file there is a promise that its
+Russian has been brought up to the same standard, so a new collection starts
+outside the list and joins it once somebody has done that work.
+
+Neither check catches **dropped prose** -- text with no digits in it can vanish
+without tripping anything, which is exactly what one model setting did to the
+clauses naming other spells. Read the diff.
 
 ## What is not translated here
 

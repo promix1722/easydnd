@@ -27,7 +27,9 @@ Reply with a JSON object carrying exactly the same keys and only the translated 
 Never translate, alter or drop a key. Preserve {{placeholder}} tokens byte for byte.
 A key ending in _one, _few, _many or _other names that plural form; translate the value accordingly.
 Preserve URLs, Markdown, numbers and game formulas. For Russian D&D prose use established 5e terminology,
-write dice as 1к6 rather than 1d6, and do not introduce proper names absent from the source.
+write dice in Latin notation as 8d6 rather than 8к6, keep imperial measurements imperial with Russian unit
+words -- футов, фунтов, миль -- and never convert them to metres or kilograms, and do not introduce proper
+names absent from the source.
 Use this glossary as authoritative terminology, inflecting Russian words to fit their sentence: %s`
 
 func translateCmd(args []string) error {
@@ -35,8 +37,20 @@ func translateCmd(args []string) error {
 	in := fs.String("in", "", "JSON file to translate")
 	out := fs.String("out", "", "where the translated copy is written")
 	to := fs.String("to", "", "target language tag, e.g. ru")
-	model := fs.String("model", "gpt-4o-mini", "text model")
+	// Pinned to a dated snapshot, not a floating alias: ru.sources.json records
+	// what produced a translation, and an alias makes that record meaningless
+	// as soon as it moves.
+	model := fs.String("model", "gpt-5.4-2026-03-05", "text model")
+	// "Thinking" is a ChatGPT UI mode, not a model: in the API it is this
+	// parameter. Blank sends none, which is the pre-5.x behaviour.
+	reasoning := fs.String("reasoning", "", "reasoning effort: minimal, low, medium or high; blank sends none")
 	existing := fs.String("existing", "", "partial translation whose populated leaves are preserved")
+	// Without this, -existing pointing at -out preserves everything already
+	// there, so a rerun meant to redo the prose translates nothing at all and
+	// exits successfully. Naming the leaves to keep turns that trap into the
+	// way you ask for a reroll: `-preserve name` keeps the hand-checked names
+	// and re-requests every description.
+	preserve := fs.String("preserve", "", "comma-separated leaf names to keep from -existing; blank keeps every populated leaf")
 	glossaryPath := fs.String("glossary", "", "flat JSON object of source terms to preferred translations")
 	dryRun := fs.Bool("dry-run", false, "print leaf and request counts; no network, no key")
 	fs.Parse(args)
@@ -59,7 +73,11 @@ func translateCmd(args []string) error {
 
 	translated := map[string]string{}
 	if *existing != "" {
-		if err := loadMatchingLeaves(*existing, leaves, translated); err != nil {
+		var keep []string
+		if *preserve != "" {
+			keep = strings.Split(*preserve, ",")
+		}
+		if err := loadMatchingLeaves(*existing, keep, leaves, translated); err != nil {
 			return err
 		}
 	}
@@ -99,7 +117,7 @@ func translateCmd(args []string) error {
 		for _, p := range batch {
 			payload[p] = leaves[p]
 		}
-		got, err := translateChunk(key, *model, *to, glossary, payload)
+		got, err := translateChunk(key, *model, *reasoning, *to, glossary, payload)
 		if err != nil {
 			log.Printf("request %d/%d: %v", i+1, len(batches), err)
 			kept += len(batch)
@@ -110,8 +128,13 @@ func translateCmd(args []string) error {
 			case !ok:
 				log.Printf("%s: missing from the response, kept the source text", p)
 				kept++
-			case !placeholdersMatch(leaves[p], t):
-				log.Printf("%s: placeholders altered, kept the source text", p)
+			case !valuesMatch(leaves[p], t):
+				// Both token lists, because the leaf that keeps failing is the
+				// one someone has to read, and "altered" alone does not say how.
+				log.Printf("%s: numbers or placeholders altered, kept the source text\n  source %v %v\n  got    %v %v",
+					p,
+					placeholderRE.FindAllString(leaves[p], -1), numberTokens(leaves[p]),
+					placeholderRE.FindAllString(t, -1), numberTokens(t))
 				kept++
 			default:
 				translated[p] = t
@@ -140,7 +163,7 @@ func translateCmd(args []string) error {
 	return nil
 }
 
-func translateChunk(key, model, locale, glossary string, leaves map[string]string) (map[string]string, error) {
+func translateChunk(key, model, reasoning, locale, glossary string, leaves map[string]string) (map[string]string, error) {
 	body, err := json.Marshal(leaves)
 	if err != nil {
 		return nil, err
@@ -152,6 +175,11 @@ func translateChunk(key, model, locale, glossary string, leaves map[string]strin
 			{"role": "system", "content": fmt.Sprintf(systemPrompt, locale, glossary)},
 			{"role": "user", "content": string(body)},
 		},
+	}
+	// Omitted rather than sent empty: the models that predate the parameter
+	// reject it outright, and this tool still has to run against them.
+	if reasoning != "" {
+		req["reasoning_effort"] = reasoning
 	}
 	var resp struct {
 		Choices []struct {
@@ -181,7 +209,14 @@ func translateChunk(key, model, locale, glossary string, leaves map[string]strin
 	return out, nil
 }
 
-func loadMatchingLeaves(path string, source, out map[string]string) error {
+// loadMatchingLeaves copies leaves of an existing translation into out, keeping
+// only paths the source still has -- so a slug or a paragraph the English has
+// since dropped cannot be spliced back in.
+//
+// keep narrows that further to leaves whose last path segment is one of the
+// named ones, which is how a reroll asks to redo the prose but not the names.
+// An empty keep preserves every populated leaf, the original behaviour.
+func loadMatchingLeaves(path string, keep []string, source, out map[string]string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -196,11 +231,24 @@ func loadMatchingLeaves(path string, source, out map[string]string) error {
 	got := map[string]string{}
 	collect(doc, "", got)
 	for p, value := range got {
-		if _, ok := source[p]; ok {
-			out[p] = value
+		if _, ok := source[p]; !ok {
+			continue
 		}
+		if len(keep) > 0 && !slices.Contains(keep, leafName(p)) {
+			continue
+		}
+		out[p] = value
 	}
 	return nil
+}
+
+// leafName returns the path's last segment: "name" for /fireball/name, and the
+// array index for a paragraph of /fireball/desc.
+func leafName(path string) string {
+	if i := strings.LastIndexByte(path, '/'); i >= 0 {
+		return path[i+1:]
+	}
+	return path
 }
 
 func loadCheckpoint(path string, source, out map[string]string) error {
@@ -217,7 +265,7 @@ func loadCheckpoint(path string, source, out map[string]string) error {
 	}
 	for p, value := range got {
 		original, ok := source[p]
-		if ok && placeholdersMatch(original, value) {
+		if ok && valuesMatch(original, value) {
 			out[p] = value
 		}
 	}
@@ -321,20 +369,43 @@ func escapeKey(k string) string {
 }
 
 // chunk cuts the sorted leaf paths into groups no larger than maxLeaves
-// entries or maxChars of source text, whichever bites first. Sorting keeps
-// related keys in the same request, so the model translates a collection's
-// entries with its neighbours in view.
+// entries or maxChars of source text, whichever bites first -- but never cuts
+// through the middle of one top-level entry.
+//
+// The boundary matters because the paths sort `blocks < desc < fields < name`,
+// so cutting anywhere inside a spell could hand the model its "At Higher
+// Levels" note in one conversation and the description that note refers to in
+// another, with the material component somewhere else again. Whole entries
+// keep a spell's prose in front of the model that is translating it.
+//
+// Both caps are therefore soft: an entry bigger than either goes in a request
+// of its own rather than being split. They are still caps and not a target --
+// several whole entries are packed into each request, because the system
+// prompt carries the inlined glossary and sending one entry per request would
+// resend that glossary once per spell.
+//
+// Sorting is what makes an entry contiguous: every leaf of `acid-arrow` shares
+// the prefix `/acid-arrow/`, and `/` sorts below every character a slug can
+// continue with, so no other entry can interleave.
 func chunk(leaves map[string]string, maxLeaves, maxChars int) [][]string {
+	paths := slices.Sorted(maps.Keys(leaves))
 	var out [][]string
 	var cur []string
 	chars := 0
-	for _, p := range slices.Sorted(maps.Keys(leaves)) {
-		if len(cur) > 0 && (len(cur) == maxLeaves || chars+len(leaves[p]) > maxChars) {
+	for i := 0; i < len(paths); {
+		// Take the whole of the next entry, however big it turns out to be.
+		j, size := i, 0
+		for j < len(paths) && entryOf(paths[j]) == entryOf(paths[i]) {
+			size += len(leaves[paths[j]])
+			j++
+		}
+		if len(cur) > 0 && (len(cur)+(j-i) > maxLeaves || chars+size > maxChars) {
 			out = append(out, cur)
 			cur, chars = nil, 0
 		}
-		cur = append(cur, p)
-		chars += len(leaves[p])
+		cur = append(cur, paths[i:j]...)
+		chars += size
+		i = j
 	}
 	if len(cur) > 0 {
 		out = append(out, cur)
@@ -342,14 +413,82 @@ func chunk(leaves map[string]string, maxLeaves, maxChars int) [][]string {
 	return out
 }
 
-var placeholderRE = regexp.MustCompile(`\{\{[^}]*\}\}`)
+// entryOf returns the path's first segment: the slug of the entry a leaf
+// belongs to. The flat i18next payload has no second segment, so there every
+// key is its own entry and chunking falls back to packing by the caps alone.
+func entryOf(path string) string {
+	rest := strings.TrimPrefix(path, "/")
+	if i := strings.IndexByte(rest, '/'); i >= 0 {
+		return rest[:i]
+	}
+	return rest
+}
 
-// placeholdersMatch reports whether translation carries exactly the source's
-// {{placeholder}} tokens, repeat counts included. A translation that loses or
-// mangles one would render the raw braces to the user.
-func placeholdersMatch(source, translation string) bool {
-	a := placeholderRE.FindAllString(source, -1)
-	b := placeholderRE.FindAllString(translation, -1)
+var (
+	placeholderRE = regexp.MustCompile(`\{\{[^}]*\}\}`)
+	// Dice before bare numbers so that "8d6" is one token rather than an 8 and
+	// a 6, and `\d*d` so that the SRD's bare "d4" is a die too. Without that,
+	// a translation writing "1d4" where the source wrote "d4" would read as a
+	// number appearing from nowhere.
+	numberRE = regexp.MustCompile(`\d*d\d+|\d+`)
+	// Thousands separators, which the two languages write differently:
+	// English "1,500 gp" against Russian "1 500 зм". Both had to be handled --
+	// the comma alone still read the Russian as a 1 and a 500.
+	//
+	// Exactly three digits then a non-digit, which keeps this off the Russian
+	// decimal comma ("2,5 см" stays two tokens). Matched rather than asserted
+	// because RE2 has no lookahead, and put back by the replacement; a word
+	// boundary could not do it -- the SRD writes "5,000gp." with no space.
+	thousandsRE = regexp.MustCompile(`(\d)[,\x{00A0}\x{202F} ](\d\d\d)([^\d]|$)`)
+)
+
+// numberTokens is the numbers and dice in s, thousands separators removed so
+// that the same quantity written either way compares equal.
+func numberTokens(s string) []string {
+	for thousandsRE.MatchString(s) {
+		s = thousandsRE.ReplaceAllString(s, "${1}${2}${3}")
+	}
+	return numberRE.FindAllString(s, -1)
+}
+
+// valuesMatch reports whether translation carries exactly the source's
+// {{placeholder}} tokens and exactly its numbers and dice, repeat counts
+// included.
+//
+// Placeholders matter because a mangled one renders raw braces to the user.
+// Numbers matter more, and are the reason this is not just a placeholder
+// check: this corpus is rules text, where "8d6" coming back as "6d8" or "120
+// feet" as "12" is a wrong rule rather than a clumsy sentence, and every gate
+// downstream would wave it through. Being strict is deliberate -- a false
+// positive costs one re-requested leaf, a false negative ships a bug in the
+// rules.
+func valuesMatch(source, translation string) bool {
+	return tokensMatch(placeholderRE, source, translation) &&
+		numbersMatch(source, translation)
+}
+
+// numbersMatch compares the *set* of numbers and dice, not their repeat counts.
+//
+// Counting repeats was the obvious rule and it was wrong, because English
+// states an area as "5 feet square" and Russian states it as "5 на 5 футов".
+// The idiom duplicates the number by construction, so a strict count rejected
+// correct translations of every "N-foot-square" in the SRD -- four of them on
+// the first full run.
+//
+// What survives is what the check was for: a number that changes (120 -> 12),
+// a die that transposes (8d6 -> 6d8) and a number that disappears are all still
+// caught, because each changes the set. What is given up is a dropped repeat --
+// "2d6 then 2d6" coming back with one of them -- which is the narrower risk and
+// the price of not crying wolf on idiomatic Russian.
+func numbersMatch(source, translation string) bool {
+	a := slices.Compact(slices.Sorted(slices.Values(numberTokens(source))))
+	b := slices.Compact(slices.Sorted(slices.Values(numberTokens(translation))))
+	return slices.Equal(a, b)
+}
+
+func tokensMatch(re *regexp.Regexp, source, translation string) bool {
+	a := re.FindAllString(source, -1)
+	b := re.FindAllString(translation, -1)
 	slices.Sort(a)
 	slices.Sort(b)
 	return slices.Equal(a, b)

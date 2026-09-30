@@ -2,6 +2,7 @@
 /easydnd
 /srdgen
 /devslot
+/llm
 /bin/
 
 # Frontend release tarball (`make web/release`). The bundle's own build output

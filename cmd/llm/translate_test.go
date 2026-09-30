@@ -18,11 +18,35 @@ func TestLoadMatchingLeavesPreservesOnlySourcePaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := map[string]string{}
-	if err := loadMatchingLeaves(path, map[string]string{"/known": "source"}, out); err != nil {
+	if err := loadMatchingLeaves(path, nil, map[string]string{"/known": "source"}, out); err != nil {
 		t.Fatal(err)
 	}
 	if !maps.Equal(out, map[string]string{"/known": "перевод"}) {
 		t.Fatalf("got %v", out)
+	}
+}
+
+// The reroll case: keep the hand-checked names, re-request everything else.
+// Without -preserve, pointing -existing at the output file preserves the whole
+// file and the rerun translates nothing.
+func TestLoadMatchingLeavesKeepsOnlyNamedLeaves(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "existing.json")
+	body := `{"fireball":{"name":"Огненный шар","desc":["старый перевод"],"fields":{"material":"сера"}}}`
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	source := map[string]string{
+		"/fireball/name":            "Fireball",
+		"/fireball/desc/0":          "A bright streak flashes...",
+		"/fireball/fields/material": "a tiny ball of bat guano",
+	}
+	out := map[string]string{}
+	if err := loadMatchingLeaves(path, []string{"name"}, source, out); err != nil {
+		t.Fatal(err)
+	}
+	if !maps.Equal(out, map[string]string{"/fireball/name": "Огненный шар"}) {
+		t.Fatalf("got %v, want the name alone", out)
 	}
 }
 
@@ -107,20 +131,36 @@ func TestCollectAndSplice(t *testing.T) {
 	}
 }
 
-func TestPlaceholdersMatch(t *testing.T) {
+func TestValuesMatch(t *testing.T) {
 	for _, tc := range []struct {
+		name                string
 		source, translation string
 		ok                  bool
 	}{
-		{"Added {{when}}", "Добавлено {{when}}", true},
-		{"plain", "просто", true},
-		{"{{a}} and {{b}}", "{{b}} и {{a}}", true},
-		{"Added {{when}}", "Добавлено", false},
-		{"Added {{when}}", "Добавлено {{че}}", false},
-		{"{{n}} of {{n}}", "{{n}}", false},
+		{"placeholder kept", "Added {{when}}", "Добавлено {{when}}", true},
+		{"nothing to keep", "plain", "просто", true},
+		{"placeholders reordered", "{{a}} and {{b}}", "{{b}} и {{a}}", true},
+		{"placeholder dropped", "Added {{when}}", "Добавлено", false},
+		{"placeholder renamed", "Added {{when}}", "Добавлено {{че}}", false},
+		{"placeholder repeat lost", "{{n}} of {{n}}", "{{n}}", false},
+
+		// The half that makes this a rules-text gate rather than a
+		// placeholder check.
+		{"dice kept", "8d6 fire damage", "8d6 урона огнём", true},
+		{"dice transposed", "8d6 fire damage", "6d8 урона огнём", false},
+		{"bare die kept", "takes d4 damage", "получает d4 урона", true},
+		{"bare die grown a 1", "takes d4 damage", "получает 1d4 урона", false},
+		{"distance changed", "within 120 feet", "в пределах 12 футов", false},
+		{"distance dropped", "within 120 feet", "в пределах видимости", false},
+		{"numbers reordered", "1 of 20", "20 из 1", true},
+		{"dice not read as two numbers", "8d6", "8 и 6", false},
+		// "N feet square" is an N-by-N area, and Russian says so literally.
+		// Counting repeats rejected four correct translations on the first run.
+		{"square idiom repeats a number", "an area 5 feet square", "область 5 на 5 футов", true},
+		{"repeat still needs the number to exist", "an area 5 feet square", "область 5 на 10 футов", false},
 	} {
-		if got := placeholdersMatch(tc.source, tc.translation); got != tc.ok {
-			t.Errorf("placeholdersMatch(%q, %q) = %v, want %v", tc.source, tc.translation, got, tc.ok)
+		if got := valuesMatch(tc.source, tc.translation); got != tc.ok {
+			t.Errorf("%s: valuesMatch(%q, %q) = %v, want %v", tc.name, tc.source, tc.translation, got, tc.ok)
 		}
 	}
 }
@@ -146,5 +186,41 @@ func TestChunk(t *testing.T) {
 	slices.Sort(all)
 	if want := []string{"/a", "/b", "/c", "/d", "/e"}; !reflect.DeepEqual(all, want) {
 		t.Fatalf("chunks lost leaves: got %v", all)
+	}
+}
+
+func TestChunkKeepsAnEntryWhole(t *testing.T) {
+	// Two spells of three leaves each. Both caps below would have cut through
+	// the middle of the second spell when the caps were hard.
+	leaves := map[string]string{
+		"/fireball/blocks/higherLevel/0": "xxxx",
+		"/fireball/desc/0":               "xxxx",
+		"/fireball/name":                 "xxxx",
+		"/mending/blocks/higherLevel/0":  "xxxx",
+		"/mending/desc/0":                "xxxx",
+		"/mending/name":                  "xxxx",
+	}
+	for _, caps := range []struct{ leaves, chars int }{{4, 1000}, {100, 16}} {
+		for _, c := range chunk(leaves, caps.leaves, caps.chars) {
+			counted := map[string]int{}
+			for _, p := range c {
+				counted[entryOf(p)]++
+			}
+			for entry, got := range counted {
+				if got != 3 {
+					t.Errorf("caps %v: entry %q split across requests, %d of 3 leaves here", caps, entry, got)
+				}
+			}
+		}
+	}
+
+	// An entry larger than the caps still travels in one request rather than
+	// being cut in half -- the caps are soft, which is the whole point.
+	big := map[string]string{
+		"/wish/desc/0": strings.Repeat("x", 50),
+		"/wish/desc/1": strings.Repeat("x", 50),
+	}
+	if got := chunk(big, 1, 10); len(got) != 1 {
+		t.Errorf("oversized entry split into %d requests, want 1", len(got))
 	}
 }

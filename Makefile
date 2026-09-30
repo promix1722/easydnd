@@ -419,6 +419,38 @@ spell-icons:
 	  -out $(SPELL_ICON_CACHE)/png -quality low -background transparent
 	node web/scripts/spell-icons.mjs convert $(SPELL_ICON_CACHE)/png
 
+## translate/ru: re-translate the Russian spell prose -- manual, costs OpenAI credit
+# `-preserve name` is what makes this a reroll rather than a no-op: -existing
+# points at the output file, so without it every leaf already there counts as
+# done and the run translates nothing while exiting successfully. Naming the
+# leaves to keep re-requests every description and keeps the hand-checked names.
+#
+# Model and reasoning effort are pinned and explicit because
+# data/translations/ru.sources.json records both, and a record that says
+# "whatever the alias meant that day" is not a record. Override either on the
+# command line to compare settings:
+#
+#   make translate/ru TRANSLATE_FLAGS=-dry-run        # counts only, no key, no spend
+#   make translate/ru TRANSLATE_REASONING=high
+#
+# Never part of `verify`: it costs money and hits the network.
+TRANSLATE_MODEL     ?= gpt-5.4-2026-03-05
+TRANSLATE_REASONING ?= medium
+TRANSLATE_FLAGS     ?=
+translate/ru:
+	@test -n "$$OPENAI_API_KEY" || test -n "$(findstring -dry-run,$(TRANSLATE_FLAGS))" || { \
+	  echo "OPENAI_API_KEY is not set; source your secrets file first."; exit 1; }
+	go run ./cmd/llm translate \
+	  -in $(SRD_DIR)/i18n/en/spells.json \
+	  -out data/translations/ru/spells.json \
+	  -existing data/translations/ru/spells.json \
+	  -preserve name \
+	  -glossary data/translations/ru.glossary.json \
+	  -model $(TRANSLATE_MODEL) \
+	  -reasoning $(TRANSLATE_REASONING) \
+	  -to ru $(TRANSLATE_FLAGS)
+	@test -n "$(findstring -dry-run,$(TRANSLATE_FLAGS))" || $(MAKE) data/srd
+
 ## lint/layers: fail if the inner layers reach for transport or storage
 lint/layers:
 	@! go list -deps ./internal/domain/... ./internal/usecase/... \

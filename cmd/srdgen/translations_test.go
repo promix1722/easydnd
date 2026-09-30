@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -244,4 +246,118 @@ func translationLeaves(value any, path string, out map[string]string) {
 	default:
 		panic(fmt.Sprintf("unexpected JSON value %T", value))
 	}
+}
+
+// The files the two prose checks below cover: every collection whose Russian
+// carries prose with numbers in it.
+//
+// Adding a file here is a promise that its Russian has been brought up to the
+// same standard, so a new collection starts outside the list and joins it once
+// somebody has done that work.
+var proseChecked = []string{
+	"spells.json", "magic-items.json", "features.json", "equipment.json", "traits.json",
+}
+
+// Unit words only, never a fragment. "диаметр" and "периметр" are ordinary
+// Russian words that spell prose uses, and RE2 has no lookbehind, so the
+// preceding character is matched and checked instead of assumed.
+//
+// The abbreviations are here because the word list alone missed five leaves:
+// a donkey carried "190 кг" and a cube of force measured "2,5 см", which are
+// the same fault spelled shorter.
+var metricRE = regexp.MustCompile(`(?i)(` +
+	// Spelled out, anywhere.
+	`(^|[^а-яёa-z])(метр(ов|ах|ам|е|а|ы)?|сантиметр\p{Cyrillic}*|миллиметр\p{Cyrillic}*|` +
+	`километр\p{Cyrillic}*|килограмм(ов|а)?|грамм(ов|а)?)([^а-яёa-z]|$)` +
+	`|` +
+	// Abbreviated, but only straight after a number. A unit always follows a
+	// quantity, and that is what separates "2,5 см" from "(см. главу 5)" --
+	// "см." is also how Russian abbreviates "смотри", see, which occurs five
+	// times in this corpus and is not a measurement at all.
+	`\d\s*(кг|км|см|мм)([^а-яёa-z]|$)` +
+	`)`)
+
+// Numbers and dice. Dice first so "8d6" is one token and not an 8 and a 6, and
+// `\d*d` so the SRD's bare "d4" counts as a die.
+var numberRE = regexp.MustCompile(`\d*d\d+|\d+`)
+
+// Thousands separators, which the two languages write differently: English
+// "1,500 gp" against Russian "1 500 зм". Both had to be handled -- the comma
+// alone still read the Russian as a 1 and a 500.
+//
+// Exactly three digits and a word boundary, which is what keeps this off the
+// Russian decimal comma: "2,5 см" has one digit after it and stays two tokens.
+var thousandsRE = regexp.MustCompile(`(\d)[,\x{00A0}\x{202F} ](\d\d\d)([^\d]|$)`)
+
+// Measurements in prose stay imperial.
+//
+// The client renders a spell's structured range as "футов" (spell.range.feet
+// in web/locales/ru.json). Prose that converts to metres therefore prints
+// "36 метров" in a description sitting directly beneath "120 футов" in the
+// facts panel of the same spell -- which is what it used to do, in 39 places.
+func TestRussianProseKeepsImperialUnits(t *testing.T) {
+	for _, name := range proseChecked {
+		leaves := russianLeaves(t, name)
+		for _, path := range sortedKeys(leaves) {
+			if m := strings.TrimSpace(metricRE.FindString(leaves[path])); m != "" {
+				t.Errorf("%s%s converts a measurement to metric (%q); prose keeps feet and pounds", name, path, m)
+			}
+		}
+	}
+}
+
+// Every number and every die in the English prose survives translation.
+//
+// This corpus is rules text. "8d6" coming back as "6d8", or a 120-foot range
+// as 12, is a wrong rule rather than a clumsy sentence, and nothing else in
+// the build would notice. cmd/llm applies the same rule to a model's response;
+// this one covers the hand edits that never pass through cmd/llm at all.
+func TestRussianProseKeepsEveryNumber(t *testing.T) {
+	englishDir := filepath.Join("..", "..", "data", "srd_5.1", "i18n", "en")
+	for _, name := range proseChecked {
+		en := map[string]string{}
+		translationLeaves(readTranslationJSON(t, filepath.Join(englishDir, name)), "", en)
+		ru := russianLeaves(t, name)
+		for _, path := range sortedKeys(en) {
+			translated, ok := ru[path]
+			if !ok || translated == "" {
+				continue // absence is the coverage test's business, not this one's
+			}
+			want, got := numberSet(en[path]), numberSet(translated)
+			if !slices.Equal(want, got) {
+				t.Errorf("%s%s: English has %v, Russian has %v", name, path, want, got)
+			}
+		}
+	}
+}
+
+// numberSet is the distinct numbers and dice in a string, sorted.
+//
+// A set rather than a tally, because English writes an area as "5 feet square"
+// and Russian writes it as "5 на 5 футов": the idiom repeats the number, so
+// counting occurrences rejects correct translations. A number that changes,
+// transposes or vanishes still changes the set, which is what this guards.
+func numberSet(s string) []string {
+	for thousandsRE.MatchString(s) {
+		s = thousandsRE.ReplaceAllString(s, "${1}${2}${3}")
+	}
+	return slices.Compact(slices.Sorted(slices.Values(numberRE.FindAllString(s, -1))))
+}
+
+func russianLeaves(t *testing.T, name string) map[string]string {
+	t.Helper()
+	path := filepath.Join("..", "..", "data", "translations", "ru", name)
+	out := map[string]string{}
+	translationLeaves(readTranslationJSON(t, path), "", out)
+	return out
+}
+
+// Sorted so a failing run names the same leaf first every time.
+func sortedKeys(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	slices.Sort(out)
+	return out
 }

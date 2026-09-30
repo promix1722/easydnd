@@ -3477,9 +3477,24 @@ Two checks, both in `make web/lint`:
   catalogue is a type error at the call site.
 - **`npm run check:messages`.** The compiler cannot see the other direction --
   a key the catalogue defines that nothing renders any more -- and has nothing
-  to say about Russian. The script fails on an unused key and on a Russian key
-  with no English counterpart, and *reports* Russian coverage without ever
-  failing on it.
+  to say about Russian. The script fails on an unused key, on a Russian key
+  with no English counterpart, and on **an English key Russian does not
+  translate**.
+
+  That last one used to be a printed percentage rather than a failure, on the
+  argument that a partial locale is the normal state of a growing one. The
+  spells screen is why it changed: Russian shipped with every `spell.*` key
+  missing, the per-key fallback did exactly what it promises and served
+  English, and so nothing looked broken enough to notice until somebody read
+  the screen. A fallback that good is what stops a gap surfacing on its own,
+  which makes a number nobody reads the wrong instrument. Adding an English
+  caption now means adding its Russian in the same change.
+
+  Keys are compared on their base name, so Russian keeps the `_few` and
+  `_many` forms English has no use for and is never asked for a suffix its
+  grammar does not want. The runtime fallback stays either way -- it still
+  saves a user from a blank screen if a key slips through -- it just no longer
+  decides what "finished" means.
 
 ### The suite renders in English
 

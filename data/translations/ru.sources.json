@@ -1,11 +1,22 @@
 {
   "locale": "ru",
   "generatedWith": {
-    "model": "gpt-4o-mini",
-    "tool": "cmd/llm translate"
+    "tool": "cmd/llm translate",
+    "spells.json": {
+      "model": "gpt-5.4-2026-03-05",
+      "reasoning": "medium",
+      "note": "Descriptions, material components and higher-level notes retranslated from the English SRD; names preserved via -preserve name. Reasoning effort is recorded because it changes the output: without it the model dropped the clauses naming other spells."
+    },
+    "otherCollections": {
+      "model": "gpt-4o-mini",
+      "note": "Prose not retranslated, but repaired: dice moved to Latin notation, metric conversions put back to imperial, and the numbers that had drifted from the English corrected by hand. magic-items.json, features.json, equipment.json and traits.json now pass the same prose checks as spells.json and are listed in proseChecked."
+    }
   },
   "preservedHandTranslations": [
     "abilities.json",
+    "conditions.json#/*/name",
+    "damage-types.json#/*/name",
+    "magic-schools.json#/*/name",
     "races.json#/dragonborn/name",
     "races.json#/dwarf/name",
     "races.json#/elf/name",
@@ -14,18 +25,24 @@
     "races.json#/half-orc/name",
     "races.json#/halfling/name",
     "races.json#/human/name",
-    "races.json#/tiefling/name"
+    "races.json#/tiefling/name",
+    "spells.json#/*/name"
   ],
   "terminologyReferences": [
     {
       "name": "DnD.su 2014",
       "url": "https://5e14.dnd.su/",
-      "usage": "Exact English/Russian entity-title verification only; no descriptions or user comments copied."
+      "usage": "Entity titles only. Every spell name and every school name is matched to its DnD.su title; the seventeen spells whose names the SRD strips of their wizard (Melf, Bigby, ...) keep the de-named form. No descriptions or user comments copied. Damage type and condition names are matched to the same vocabulary: piercing and slashing had been swapped, and poisoned read as 'ядовитый', poisonous, which is the opposite sense."
     },
     {
       "name": "Long Story Short SRD 5.1",
-      "url": "https://longstoryshort.app/srd/",
-      "usage": "Russian SRD terminology reference; generated descriptions remain original translations."
+      "url": "https://longstoryshort.app/",
+      "usage": "Terminology reference only. Its translations are author-owned -- the site permits personal non-commercial use and short quoted fragments, and forbids republishing complete materials or derivative works without written permission -- so no prose from it is used here. Its separate /srd/ project has no translated spells."
     }
-  ]
+  ],
+  "proseConventions": {
+    "dice": "Latin notation: 8d6, not 8к6.",
+    "measurements": "Imperial, with Russian unit words -- футов, фунтов, миль. Never metres or kilograms: the client renders the structured range as футов, so converted prose contradicted the facts panel of the same spell.",
+    "numbers": "Every number and die in the English survives translation. Enforced by valuesMatch in cmd/llm/translate.go and by TestRussianProseKeepsEveryNumber. Compared as a set, not a tally, because 'N feet square' is idiomatically 'N на N футов' in Russian."
+  }
 }
