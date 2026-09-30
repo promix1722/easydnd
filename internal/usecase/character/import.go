@@ -84,6 +84,9 @@ func (s *Service) Import(
 	if err != nil {
 		return domain.Character{}, ImportReport{}, err
 	}
+	if len(log.Events) > 0 {
+		log.Events[0].RulesLock = cat.Lock.Clone()
+	}
 	if err := validateImported(cat, log); err != nil {
 		return domain.Character{}, ImportReport{}, err
 	}
@@ -92,7 +95,7 @@ func (s *Service) Import(
 	if err != nil {
 		return domain.Character{}, ImportReport{}, err
 	}
-	if err := s.repo.Append(ctx, created.ID, 0, log.Events...); err != nil {
+	if err := s.repo.Commit(ctx, created.ID, 0, log, "", nil); err != nil {
 		return domain.Character{}, ImportReport{}, err
 	}
 

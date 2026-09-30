@@ -210,6 +210,7 @@ export interface Prompt {
 }
 
 export interface PromptsResponse {
+  revision?: number
   seq: number
   /** Nothing required is outstanding. Separate from the list being empty: a
    * finished character can still carry optional prompts. */
@@ -218,6 +219,7 @@ export interface PromptsResponse {
 }
 
 export interface WriteResponse {
+  revision?: number
   seq: number
   sheet: Sheet
 }
@@ -388,8 +390,8 @@ export function getPrompts(id: string, signal?: AbortSignal): Promise<PromptsRes
 export function getEvents(
   id: string,
   signal?: AbortSignal,
-): Promise<{ seq: number; events: CharacterEvent[] }> {
-  return request<{ seq: number; events: CharacterEvent[] }>(
+): Promise<{ seq: number; revision?: number; events: CharacterEvent[] }> {
+  return request<{ seq: number; revision?: number; events: CharacterEvent[] }>(
     `/characters/${id}/events`,
     signal ? { signal } : {},
   )
@@ -406,10 +408,11 @@ export function appendEvents(
   id: string,
   expectedSeq: number,
   events: CharacterEvent[],
+  expectedRevision = expectedSeq,
 ): Promise<WriteResponse> {
   return request<WriteResponse>(`/characters/${id}/events`, {
     method: 'POST',
-    body: { expectedSeq, events },
+    body: { expectedSeq, expectedRevision, events },
   })
 }
 
@@ -435,10 +438,11 @@ export function replaceEvent(
   expectedSeq: number,
   event: CharacterEvent,
   dryRun = false,
+  expectedRevision = expectedSeq,
 ): Promise<ReviseResponse> {
   return request<ReviseResponse>(`/characters/${id}/events/${seq}${dryRun ? '?dryRun=true' : ''}`, {
     method: 'PUT',
-    body: { expectedSeq, event },
+    body: { expectedSeq, expectedRevision, event },
   })
 }
 
@@ -457,9 +461,10 @@ export function deleteEvent(
   seq: number,
   expectedSeq: number,
   dryRun = false,
+  expectedRevision = expectedSeq,
 ): Promise<ReviseResponse> {
   return request<ReviseResponse>(
-    `/characters/${id}/events/${seq}?expectedSeq=${expectedSeq}${dryRun ? '&dryRun=true' : ''}`,
+    `/characters/${id}/events/${seq}?expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}${dryRun ? '&dryRun=true' : ''}`,
     { method: 'DELETE' },
   )
 }
@@ -476,9 +481,10 @@ export function truncateEvents(
   id: string,
   expectedSeq: number,
   after: number,
+  expectedRevision = expectedSeq,
 ): Promise<WriteResponse> {
   return request<WriteResponse>(
-    `/characters/${id}/events?after=${after}&expectedSeq=${expectedSeq}`,
+    `/characters/${id}/events?after=${after}&expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}`,
     { method: 'DELETE' },
   )
 }

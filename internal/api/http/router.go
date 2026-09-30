@@ -10,6 +10,7 @@
 package httpapi
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -61,6 +62,13 @@ type Handlers struct {
 func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, error) {
 	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
 	r := gin.New()
+	if h.Catalog != nil {
+		locales, err := h.Catalog.ContentLocales(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		r.Use(locales)
+	}
 
 	// gin defaults to trusting 0.0.0.0/0 with ForwardedByClientIP on, which
 	// lets any client forge X-Forwarded-For and poison ClientIP in the access
@@ -216,6 +224,9 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.GET("/characters/:id/sheet", h.Character.Sheet)
 			authed.GET("/characters/:id/prompts", h.Character.Prompts)
 			authed.GET("/characters/:id/events", h.Character.Events)
+			authed.GET("/characters/:id/catalog/:collection", h.Character.Catalog)
+			authed.POST("/characters/:id/rules", h.Character.MigrateRules)
+			authed.POST("/characters/:id/rules/restore", h.Character.RestoreRules)
 			authed.POST("/characters/:id/events", h.Character.AppendEvents)
 			authed.DELETE("/characters/:id/events", h.Character.TruncateEvents)
 			// One entry of that log, addressed by position -- which is what

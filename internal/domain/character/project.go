@@ -43,15 +43,19 @@ import (
 // a different race changes the sheet, which is the entire point of projecting
 // rather than storing; the alternative would make the player re-enter six
 // numbers whenever they went back a step.
-func Project(log Log, cat *catalog.Catalog) (State, error) {
+func projectBuild(log Log, cat *catalog.Catalog) (State, error) {
 	if cat == nil {
 		return State{}, types.NewValidationError("projecting against a nil catalogue")
+	}
+	if lock := log.RulesLock(); !lock.IsZero() && !lock.Equal(cat.Lock) {
+		return State{}, types.NewValidationError("character rules lock does not match catalogue")
 	}
 	if err := log.Validate(); err != nil {
 		return State{}, err
 	}
 
 	p := projector{cat: cat, answers: foldAnswers(log)}
+	p.state.Abilities.ModifierRule = cat.Mechanics.Core.AbilityModifier
 	return p.run(log)
 }
 
@@ -84,7 +88,9 @@ type projector struct {
 	proficiencies []rules.Slug
 
 	// expertise is the skills doubled by a feature.
-	expertise []rules.Slug
+	expertise   []rules.Slug
+	err         error
+	statEffects []pendingEffect
 }
 
 // seqChange is a change together with the event that carried it, so an error
@@ -116,6 +122,24 @@ func (p *projector) run(log Log) (State, error) {
 	p.applyRace()
 	p.applyBackground()
 	p.applyClasses()
+	p.state.Status.ProficiencyBonus = proficiencyBonus(p.state.Identity.Level())
+	if e := p.cat.Mechanics.Core.Proficiency; e.Op != "" {
+		n, err := e.Eval(rules.Variables{"level": p.state.Identity.Level()})
+		if err != nil {
+			return State{}, err
+		}
+		p.state.Status.ProficiencyBonus = n
+	}
+	if err := p.applyPackRules(); err != nil {
+		return State{}, err
+	}
+	// Recompute HP from final modifiers, including per-level minimums.
+	p.state.Base.HitPoints.Max = 0
+	for i, taken := range p.state.Identity.Classes {
+		if class, ok := p.cat.Classes.Get(taken.Class); ok {
+			p.addHitPoints(class.HitDie, taken.Level, i == 0)
+		}
+	}
 	p.applyEquipmentChoices()
 
 	if err := p.applyChanges(p.equipment); err != nil {
@@ -124,11 +148,30 @@ func (p *projector) run(log Log) (State, error) {
 
 	p.deriveProficiencies()
 	p.deriveStatus()
+	for _, e := range p.statEffects {
+		if err := p.applyEffect(e.rule, e.effect); err != nil {
+			return State{}, err
+		}
+	}
+	p.state.Base.HitPoints.Current = p.state.Base.HitPoints.Max
+	if !p.cat.Lock.IsZero() {
+		if err := p.resourceDefinitions(); err != nil {
+			return State{}, err
+		}
+	}
 
 	if err := p.applyChanges(p.overrides); err != nil {
 		return State{}, err
 	}
-	return p.state, nil
+	for i := range p.state.Contributions {
+		c := &p.state.Contributions[i]
+		for _, e := range log.Events {
+			if e.Ref == c.Owner {
+				c.EventID = e.ID
+			}
+		}
+	}
+	return p.state, p.err
 }
 
 // replay walks the log in order, recording what was chosen. Nothing is
@@ -289,6 +332,9 @@ func (p *projector) applyRace() {
 		p.proficiencies = append(p.proficiencies, p.answers.slugs(trait.ProficiencyOptions)...)
 	}
 	p.state.Base.Senses = sensesFor(p.state.Traits)
+	if len(p.cat.Mechanics.Core.Senses) > 0 {
+		p.state.Base.Senses = packSenses(p.state.Traits, p.cat)
+	}
 }
 
 // applyBackground resolves the background's proficiencies, languages,
@@ -392,6 +438,26 @@ func (p *projector) addHitPoints(hitDie, level int, first bool) {
 	average := hitDie/2 + 1
 
 	gained := 0
+	if core := p.cat.Mechanics.Core; core.HitPointFirst.Op != "" {
+		vars := variables(p.state)
+		vars["hitDie"] = hitDie
+		firstHP, err := core.HitPointFirst.Eval(vars)
+		if err != nil {
+			p.err = err
+			return
+		}
+		laterHP, err := core.HitPointLater.Eval(vars)
+		if err != nil {
+			p.err = err
+			return
+		}
+		gained = level * laterHP
+		if first {
+			gained += firstHP - laterHP
+		}
+		p.state.Base.HitPoints.Max += gained
+		return
+	}
 	if first {
 		gained += hitDie + conModifier
 		gained += (level - 1) * (average + conModifier)
@@ -470,7 +536,7 @@ func (p *projector) deriveAbilities() {
 	if p.state.Abilities.Scores == nil {
 		p.state.Abilities.Scores = make(map[rules.Ability]int)
 	}
-	for _, ability := range rules.Abilities() {
+	for _, ability := range p.cat.AbilityIDs() {
 		if _, ok := p.state.Abilities.Scores[ability]; !ok {
 			p.state.Abilities.Scores[ability] = 10
 		}
@@ -666,6 +732,13 @@ func (p *projector) addCoins(coins rules.Coins) {
 func (p *projector) deriveStatus() {
 	level := p.state.Identity.Level()
 	profBonus := proficiencyBonus(level)
+	if p.cat.Mechanics.Core.Proficiency.Op != "" {
+		if n, err := p.cat.Mechanics.Core.Proficiency.Eval(rules.Variables{"level": level}); err == nil {
+			profBonus = n
+		} else {
+			p.err = err
+		}
+	}
 	p.state.Status.ProficiencyBonus = profBonus
 
 	for skill, state := range p.state.Skills.BySkill {
@@ -676,7 +749,7 @@ func (p *projector) deriveStatus() {
 		state.Bonus = p.state.Abilities.Modifier(def.Ability) + state.Proficiency.Apply(profBonus)
 		p.state.Skills.BySkill[skill] = state
 	}
-	for _, ability := range rules.Abilities() {
+	for _, ability := range p.cat.AbilityIDs() {
 		state := p.state.SavingThrows.ByAbility[ability]
 		state.Bonus = p.state.Abilities.Modifier(ability)
 		if state.Proficient {

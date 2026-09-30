@@ -59,6 +59,8 @@ type Dropped struct {
 
 // Revision is the outcome of replacing or removing one entry.
 type Revision struct {
+	Revision int
+
 	// Seq is where the log ends afterwards -- or would end, on a dry run.
 	Seq     int
 	Dropped []Dropped
@@ -139,6 +141,10 @@ func Revise(
 		// player is choosing right now. A rejection here writes nothing at
 		// all, so the stored log is byte-identical afterwards.
 		staged := *replacement
+		staged.ID = log.Events[targetSeq-1].ID
+		if targetSeq == 1 {
+			staged.RulesLock = log.RulesLock()
+		}
 		staged.Seq = 0
 		if err := validateEvent(rebuilt, cat, open, staged, 0); err != nil {
 			return domain.Log{}, nil, err
@@ -262,6 +268,9 @@ func (s *Service) Revise(
 	if err != nil {
 		return Revision{}, err
 	}
+	if err := checkRevision(ctx, character); err != nil {
+		return Revision{}, err
+	}
 	if got := character.Log.LastSeq(); got != expectedSeq {
 		return Revision{}, types.NewValidationError(
 			"character %q is at sequence %d, not %d", id, got, expectedSeq)
@@ -278,9 +287,13 @@ func (s *Service) Revise(
 		return Revision{}, err
 	}
 	if commit {
-		if err := s.repo.Rewrite(ctx, id, expectedSeq, rebuilt); err != nil {
+		if err := s.repo.Commit(ctx, id, character.Revision, rebuilt, commandID(ctx), nil); err != nil {
 			return Revision{}, err
 		}
 	}
-	return Revision{Seq: rebuilt.LastSeq(), Dropped: dropped, Sheet: sheet}, nil
+	revision := character.Revision
+	if commit {
+		revision += max(1, rebuilt.Len()-character.Log.Len())
+	}
+	return Revision{Revision: revision, Seq: rebuilt.LastSeq(), Dropped: dropped, Sheet: sheet}, nil
 }

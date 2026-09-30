@@ -1,0 +1,1617 @@
+{
+  "core": {
+    "maxLevel": 20,
+    "proficiency": {
+      "op": "add",
+      "args": [
+        {
+          "op": "constant",
+          "value": 2
+        },
+        {
+          "op": "floor-div",
+          "args": [
+            {
+              "op": "max",
+              "args": [
+                {
+                  "op": "constant",
+                  "value": 0
+                },
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "op": "read",
+                      "ref": "level"
+                    },
+                    {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "constant",
+              "value": 4
+            }
+          ]
+        }
+      ]
+    },
+    "abilityModifier": {
+      "op": "floor-div",
+      "args": [
+        {
+          "op": "subtract",
+          "args": [
+            {
+              "op": "read",
+              "ref": "score"
+            },
+            {
+              "op": "constant",
+              "value": 10
+            }
+          ]
+        },
+        {
+          "op": "constant",
+          "value": 2
+        }
+      ]
+    },
+    "standardArray": [
+      15,
+      14,
+      13,
+      12,
+      10,
+      8
+    ],
+    "pointBuyBudget": 27,
+    "pointCosts": {
+      "8": 0,
+      "9": 1,
+      "10": 2,
+      "11": 3,
+      "12": 4,
+      "13": 5,
+      "14": 7,
+      "15": 9
+    },
+    "multiclassSlots": {
+      "1": {
+        "1": 2
+      },
+      "2": {
+        "1": 3
+      },
+      "3": {
+        "1": 4,
+        "2": 2
+      },
+      "4": {
+        "1": 4,
+        "2": 3
+      },
+      "5": {
+        "1": 4,
+        "2": 3,
+        "3": 2
+      },
+      "6": {
+        "1": 4,
+        "2": 3,
+        "3": 3
+      },
+      "7": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 1
+      },
+      "8": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 2
+      },
+      "9": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 1
+      },
+      "10": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2
+      },
+      "11": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1
+      },
+      "12": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1
+      },
+      "13": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1
+      },
+      "14": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1
+      },
+      "15": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1,
+        "8": 1
+      },
+      "16": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1,
+        "8": 1
+      },
+      "17": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1
+      },
+      "18": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 3,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1
+      },
+      "19": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 3,
+        "6": 2,
+        "7": 1,
+        "8": 1,
+        "9": 1
+      },
+      "20": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 3,
+        "6": 2,
+        "7": 2,
+        "8": 1,
+        "9": 1
+      }
+    },
+    "senses": {
+      "darkvision": {
+        "kind": "darkvision",
+        "distance": 60
+      },
+      "superior-darkvision": {
+        "kind": "darkvision",
+        "distance": 120
+      }
+    },
+    "minScore": 1,
+    "maxScore": 30,
+    "abilityScoreIncrease": 2,
+    "baseArmorClass": 10,
+    "spellSaveBase": 8,
+    "hitPointFirst": {
+      "op": "add",
+      "args": [
+        {
+          "op": "read",
+          "ref": "hitDie"
+        },
+        {
+          "op": "read",
+          "ref": "modifier:con"
+        }
+      ]
+    },
+    "hitPointLater": {
+      "op": "max",
+      "args": [
+        {
+          "op": "constant",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "args": [
+            {
+              "op": "floor-div",
+              "args": [
+                {
+                  "op": "read",
+                  "ref": "hitDie"
+                },
+                {
+                  "op": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "constant",
+              "value": 1
+            },
+            {
+              "op": "read",
+              "ref": "modifier:con"
+            }
+          ]
+        }
+      ]
+    },
+    "hitDiceRecovery": [
+      {
+        "trigger": "long-rest",
+        "operation": "budget",
+        "budget": "hit-dice",
+        "amount": {
+          "op": "max",
+          "args": [
+            {
+              "op": "constant",
+              "value": 1
+            },
+            {
+              "op": "floor-div",
+              "args": [
+                {
+                  "op": "read",
+                  "ref": "level"
+                },
+                {
+                  "op": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "spellSlotRecovery": [
+      {
+        "trigger": "long-rest",
+        "operation": "all"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "id": "brutal-critical-dice",
+      "owner": "class:barbarian",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:barbarian",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 9,
+          "capacity": 1
+        },
+        {
+          "from": 13,
+          "capacity": 2
+        },
+        {
+          "from": 17,
+          "capacity": 3
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "rage-count",
+      "owner": "class:barbarian",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:barbarian",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 2
+        },
+        {
+          "from": 3,
+          "capacity": 3
+        },
+        {
+          "from": 6,
+          "capacity": 4
+        },
+        {
+          "from": 12,
+          "capacity": 5
+        },
+        {
+          "from": 17,
+          "capacity": 6
+        },
+        {
+          "from": 20,
+          "capacity": 9999
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "rage-damage-bonus",
+      "owner": "class:barbarian",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:barbarian",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 2
+        },
+        {
+          "from": 9,
+          "capacity": 3
+        },
+        {
+          "from": 16,
+          "capacity": 4
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "bardic-inspiration-die",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 6
+        },
+        {
+          "from": 5,
+          "capacity": 8
+        },
+        {
+          "from": 10,
+          "capacity": 10
+        },
+        {
+          "from": 15,
+          "capacity": 12
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "magical-secrets-max-5",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 10,
+          "capacity": 2
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "magical-secrets-max-7",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 14,
+          "capacity": 2
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "magical-secrets-max-9",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 18,
+          "capacity": 2
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "song-of-rest-die",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 6
+        },
+        {
+          "from": 9,
+          "capacity": 8
+        },
+        {
+          "from": 13,
+          "capacity": 10
+        },
+        {
+          "from": 17,
+          "capacity": 12
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "channel-divinity-charges",
+      "owner": "class:cleric",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:cleric",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 1
+        },
+        {
+          "from": 6,
+          "capacity": 2
+        },
+        {
+          "from": 18,
+          "capacity": 3
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ],
+      "sharedKey": "channel-divinity",
+      "combine": "max"
+    },
+    {
+      "id": "destroy-undead-cr",
+      "owner": "class:cleric",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:cleric",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0,
+          "rational": {
+            "numerator": 0,
+            "denominator": 1
+          }
+        },
+        {
+          "from": 5,
+          "capacity": 0,
+          "text": "1/2",
+          "rational": {
+            "numerator": 1,
+            "denominator": 2
+          }
+        },
+        {
+          "from": 8,
+          "capacity": 1,
+          "rational": {
+            "numerator": 1,
+            "denominator": 1
+          }
+        },
+        {
+          "from": 11,
+          "capacity": 2,
+          "rational": {
+            "numerator": 2,
+            "denominator": 1
+          }
+        },
+        {
+          "from": 14,
+          "capacity": 3,
+          "rational": {
+            "numerator": 3,
+            "denominator": 1
+          }
+        },
+        {
+          "from": 17,
+          "capacity": 4,
+          "rational": {
+            "numerator": 4,
+            "denominator": 1
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "wild-shape-fly",
+      "owner": "class:druid",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:druid",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0,
+          "boolean": false
+        },
+        {
+          "from": 8,
+          "capacity": 1,
+          "boolean": true
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "wild-shape-max-cr",
+      "owner": "class:druid",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:druid",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0,
+          "rational": {
+            "numerator": 0,
+            "denominator": 1
+          }
+        },
+        {
+          "from": 2,
+          "capacity": 0,
+          "text": "1/4",
+          "rational": {
+            "numerator": 1,
+            "denominator": 4
+          }
+        },
+        {
+          "from": 4,
+          "capacity": 0,
+          "text": "1/2",
+          "rational": {
+            "numerator": 1,
+            "denominator": 2
+          }
+        },
+        {
+          "from": 7,
+          "capacity": 1,
+          "rational": {
+            "numerator": 1,
+            "denominator": 1
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "wild-shape-swim",
+      "owner": "class:druid",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:druid",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0,
+          "boolean": false
+        },
+        {
+          "from": 4,
+          "capacity": 1,
+          "boolean": true
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "action-surges",
+      "owner": "class:fighter",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 1
+        },
+        {
+          "from": 17,
+          "capacity": 2
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "extra-attacks",
+      "owner": "class:fighter",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 5,
+          "capacity": 1
+        },
+        {
+          "from": 11,
+          "capacity": 2
+        },
+        {
+          "from": 20,
+          "capacity": 3
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "indomitable-uses",
+      "owner": "class:fighter",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 9,
+          "capacity": 1
+        },
+        {
+          "from": 13,
+          "capacity": 2
+        },
+        {
+          "from": 17,
+          "capacity": 3
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "ki-points",
+      "owner": "class:monk",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:monk",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 2
+        },
+        {
+          "from": 3,
+          "capacity": 3
+        },
+        {
+          "from": 4,
+          "capacity": 4
+        },
+        {
+          "from": 5,
+          "capacity": 5
+        },
+        {
+          "from": 6,
+          "capacity": 6
+        },
+        {
+          "from": 7,
+          "capacity": 7
+        },
+        {
+          "from": 8,
+          "capacity": 8
+        },
+        {
+          "from": 9,
+          "capacity": 9
+        },
+        {
+          "from": 10,
+          "capacity": 10
+        },
+        {
+          "from": 11,
+          "capacity": 11
+        },
+        {
+          "from": 12,
+          "capacity": 12
+        },
+        {
+          "from": 13,
+          "capacity": 13
+        },
+        {
+          "from": 14,
+          "capacity": 14
+        },
+        {
+          "from": 15,
+          "capacity": 15
+        },
+        {
+          "from": 16,
+          "capacity": 16
+        },
+        {
+          "from": 17,
+          "capacity": 17
+        },
+        {
+          "from": 18,
+          "capacity": 18
+        },
+        {
+          "from": 19,
+          "capacity": 19
+        },
+        {
+          "from": 20,
+          "capacity": 20
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "martial-arts",
+      "owner": "class:monk",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:monk",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1,
+          "dice": "1d4"
+        },
+        {
+          "from": 5,
+          "capacity": 1,
+          "dice": "1d6"
+        },
+        {
+          "from": 11,
+          "capacity": 1,
+          "dice": "1d8"
+        },
+        {
+          "from": 17,
+          "capacity": 1,
+          "dice": "1d10"
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "unarmored-movement",
+      "owner": "class:monk",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:monk",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 10
+        },
+        {
+          "from": 6,
+          "capacity": 15
+        },
+        {
+          "from": 10,
+          "capacity": 20
+        },
+        {
+          "from": 14,
+          "capacity": 25
+        },
+        {
+          "from": 18,
+          "capacity": 30
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "aura-range",
+      "owner": "class:paladin",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:paladin",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 6,
+          "capacity": 10
+        },
+        {
+          "from": 18,
+          "capacity": 30
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "favored-enemies",
+      "owner": "class:ranger",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:ranger",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        },
+        {
+          "from": 6,
+          "capacity": 2
+        },
+        {
+          "from": 14,
+          "capacity": 3
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "favored-terrain",
+      "owner": "class:ranger",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:ranger",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        },
+        {
+          "from": 6,
+          "capacity": 2
+        },
+        {
+          "from": 10,
+          "capacity": 3
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "sneak-attack",
+      "owner": "class:rogue",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:rogue",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1,
+          "dice": "1d6"
+        },
+        {
+          "from": 3,
+          "capacity": 2,
+          "dice": "2d6"
+        },
+        {
+          "from": 5,
+          "capacity": 3,
+          "dice": "3d6"
+        },
+        {
+          "from": 7,
+          "capacity": 4,
+          "dice": "4d6"
+        },
+        {
+          "from": 9,
+          "capacity": 5,
+          "dice": "5d6"
+        },
+        {
+          "from": 11,
+          "capacity": 6,
+          "dice": "6d6"
+        },
+        {
+          "from": 13,
+          "capacity": 7,
+          "dice": "7d6"
+        },
+        {
+          "from": 15,
+          "capacity": 8,
+          "dice": "8d6"
+        },
+        {
+          "from": 17,
+          "capacity": 9,
+          "dice": "9d6"
+        },
+        {
+          "from": 19,
+          "capacity": 10,
+          "dice": "10d6"
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "metamagic-known",
+      "owner": "class:sorcerer",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:sorcerer",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 3,
+          "capacity": 2
+        },
+        {
+          "from": 10,
+          "capacity": 3
+        },
+        {
+          "from": 16,
+          "capacity": 4
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "sorcery-points",
+      "owner": "class:sorcerer",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:sorcerer",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 2
+        },
+        {
+          "from": 3,
+          "capacity": 3
+        },
+        {
+          "from": 4,
+          "capacity": 4
+        },
+        {
+          "from": 5,
+          "capacity": 5
+        },
+        {
+          "from": 6,
+          "capacity": 6
+        },
+        {
+          "from": 7,
+          "capacity": 7
+        },
+        {
+          "from": 8,
+          "capacity": 8
+        },
+        {
+          "from": 9,
+          "capacity": 9
+        },
+        {
+          "from": 10,
+          "capacity": 10
+        },
+        {
+          "from": 11,
+          "capacity": 11
+        },
+        {
+          "from": 12,
+          "capacity": 12
+        },
+        {
+          "from": 13,
+          "capacity": 13
+        },
+        {
+          "from": 14,
+          "capacity": 14
+        },
+        {
+          "from": 15,
+          "capacity": 15
+        },
+        {
+          "from": 16,
+          "capacity": 16
+        },
+        {
+          "from": 17,
+          "capacity": 17
+        },
+        {
+          "from": 18,
+          "capacity": 18
+        },
+        {
+          "from": 19,
+          "capacity": 19
+        },
+        {
+          "from": 20,
+          "capacity": 20
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "invocations-known",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 2
+        },
+        {
+          "from": 4,
+          "capacity": 3
+        },
+        {
+          "from": 6,
+          "capacity": 4
+        },
+        {
+          "from": 9,
+          "capacity": 5
+        },
+        {
+          "from": 12,
+          "capacity": 6
+        },
+        {
+          "from": 15,
+          "capacity": 7
+        },
+        {
+          "from": 18,
+          "capacity": 8
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "mystic-arcanum-level-6",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 11,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "mystic-arcanum-level-7",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 13,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "mystic-arcanum-level-8",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 15,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "mystic-arcanum-level-9",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 17,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "arcane-recovery-levels",
+      "owner": "class:wizard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:wizard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        },
+        {
+          "from": 3,
+          "capacity": 2
+        },
+        {
+          "from": 5,
+          "capacity": 3
+        },
+        {
+          "from": 7,
+          "capacity": 4
+        },
+        {
+          "from": 9,
+          "capacity": 5
+        },
+        {
+          "from": 11,
+          "capacity": 6
+        },
+        {
+          "from": 13,
+          "capacity": 7
+        },
+        {
+          "from": 15,
+          "capacity": 8
+        },
+        {
+          "from": 17,
+          "capacity": 9
+        },
+        {
+          "from": 19,
+          "capacity": 10
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "paladin-channel-divinity",
+      "owner": "class:paladin",
+      "minimumLevel": 3,
+      "kind": "pool",
+      "input": "class:paladin",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ],
+      "sharedKey": "channel-divinity",
+      "combine": "max",
+      "group": "class",
+      "requiresSubclass": true
+    },
+    {
+      "id": "pact-magic",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1,
+          "slotLevel": 1
+        },
+        {
+          "from": 2,
+          "capacity": 2,
+          "slotLevel": 1
+        },
+        {
+          "from": 3,
+          "capacity": 2,
+          "slotLevel": 2
+        },
+        {
+          "from": 5,
+          "capacity": 2,
+          "slotLevel": 3
+        },
+        {
+          "from": 7,
+          "capacity": 2,
+          "slotLevel": 4
+        },
+        {
+          "from": 9,
+          "capacity": 2,
+          "slotLevel": 5
+        },
+        {
+          "from": 11,
+          "capacity": 3,
+          "slotLevel": 5
+        },
+        {
+          "from": 17,
+          "capacity": 4,
+          "slotLevel": 5
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ],
+      "group": "spell-slots"
+    },
+    {
+      "id": "bardic-inspiration",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:bard",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "modifier:cha"
+          }
+        ]
+      },
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0,
+          "dice": "1d6"
+        },
+        {
+          "from": 5,
+          "capacity": 0,
+          "dice": "1d8"
+        },
+        {
+          "from": 10,
+          "capacity": 0,
+          "dice": "1d10"
+        },
+        {
+          "from": 15,
+          "capacity": 0,
+          "dice": "1d12"
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "when": {
+            "op": "gte",
+            "args": [
+              {
+                "op": "read",
+                "ref": "class:bard"
+              },
+              {
+                "op": "constant",
+                "value": 5
+              }
+            ]
+          }
+        }
+      ],
+      "group": "class"
+    }
+  ],
+  "casting": {
+    "bard": {
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "cleric": {
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "druid": {
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "sorcerer": {
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "wizard": {
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "paladin": {
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 2,
+      "rounding": "floor",
+      "startsAt": 2
+    },
+    "ranger": {
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 2,
+      "rounding": "floor",
+      "startsAt": 2
+    },
+    "warlock": {
+      "kind": "independent",
+      "numerator": 0,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1,
+      "resource": "pact-magic"
+    }
+  }
+}

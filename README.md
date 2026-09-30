@@ -56,6 +56,8 @@ private shelf for its own characters, shared with nobody.
 | Doc | Covers |
 | --- | --- |
 | [docs/dnd.md](docs/dnd.md) | The game model: catalogue entities, the event-sourced character, and the SRD terminology the code follows |
+| [docs/packs.md](docs/packs.md) | JSON packs, version locks, extensible resources, configuration and migration APIs |
+| [docs/packs-plan.md](docs/packs-plan.md) | Original design and later milestones |
 | [docs/backend.md](docs/backend.md) | The Go service: layout, layer rules, configuration, deployment |
 | [docs/web.md](docs/web.md) | The browser client: layout, layer rules, how it ships |
 | [docs/seo.md](docs/seo.md) | Search-engine and answer-engine discovery, submission, and monitoring |

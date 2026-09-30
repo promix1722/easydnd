@@ -10,8 +10,9 @@ import (
 
 // EventsResponse is the body of GET /v1/characters/{id}/events.
 type EventsResponse struct {
-	Seq    int     `json:"seq"`
-	Events []Event `json:"events"`
+	Revision int     `json:"revision"`
+	Seq      int     `json:"seq"`
+	Events   []Event `json:"events"`
 }
 
 // Events handles GET /v1/characters/{id}/events.
@@ -25,5 +26,5 @@ func (h *Handler) Events(c *gin.Context) {
 	for _, e := range character.Log.Events {
 		events = append(events, eventOf(e))
 	}
-	c.JSON(http.StatusOK, EventsResponse{Seq: character.Log.LastSeq(), Events: events})
+	c.JSON(http.StatusOK, EventsResponse{Revision: character.Revision, Seq: character.Log.LastSeq(), Events: events})
 }

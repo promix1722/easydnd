@@ -172,7 +172,10 @@ func (g *generator) run() error {
 		return err
 	}
 
-	return g.writeManifest(locales)
+	if err := g.writeManifest(locales); err != nil {
+		return err
+	}
+	return g.writePack(locales)
 }
 
 // attribution ships with the data rather than beside it, so the notice travels

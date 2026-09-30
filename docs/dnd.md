@@ -5,10 +5,21 @@ What easydnd models, and the words it uses. Targets the **2014 rules** and
 data comes from, [backend.md](backend.md) for the Go architecture around it and
 [web.md](web.md) for the browser client.
 
-There are two halves. The **catalogue** is the static compendium everyone shares
-— races, classes, spells, equipment. A **character** is one player's, and is
-event-sourced: an ordered log of what was chosen, from which everything visible
-is derived.
+The **catalogue** is a compiled context of immutable JSON rule packs. A character
+pins exact releases and is derived from an editable ordered log. Pack-defined
+resources, casting profiles, grants, conditions, stat effects and action costs
+run through the same projector as the generated base rules. See
+[packs.md](packs.md) for the implemented contract. The legacy formulas and pool
+arrays described below remain compatibility paths; installed contexts use the
+base pack's explicit policy and `resources.pools`/`resources.parameters`.
+
+Usage events are temporal: spend/rest/action events validate against the build
+at their position, and later levels preserve spent uses. Rules upgrades are
+explicit migrations with previews and rollback checkpoints. A new pack version
+never changes an existing build implicitly.
+
+Ability scores are fixed to STR, DEX, CON, INT, WIS and CHA. Addons may grant
+bonuses, features and actions, but cannot add custom characteristics.
 
 ## Terminology
 

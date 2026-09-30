@@ -57,6 +57,19 @@ func pactMagicKey(level int) rules.Slug {
 // at exactly one -- the warlock's, which is the whole reason Pact Magic needs
 // separating.
 func kindOfCaster(cat *catalog.Catalog, class rules.Slug) casterKind {
+	if len(cat.Mechanics.Casting) > 0 {
+		profile, ok := cat.Mechanics.Casting[class]
+		if !ok {
+			return notACaster
+		}
+		if profile.Kind == "independent" {
+			return pactCaster
+		}
+		if profile.Denominator == 1 {
+			return fullCaster
+		}
+		return halfCaster
+	}
 	class20, ok := cat.ClassLevel(class, 20)
 	if !ok {
 		return notACaster
@@ -85,6 +98,18 @@ func kindOfCaster(cat *catalog.Catalog, class rules.Slug) casterKind {
 func casterLevel(cat *catalog.Catalog, classes []ClassLevel) int {
 	total := 0
 	for _, c := range classes {
+		if len(cat.Mechanics.Casting) > 0 {
+			profile, ok := cat.Mechanics.Casting[c.Class]
+			if !ok || profile.Kind != "shared" || c.Level < profile.StartsAt {
+				continue
+			}
+			n := c.Level * profile.Numerator
+			if profile.Rounding == "ceil" {
+				n += profile.Denominator - 1
+			}
+			total += n / profile.Denominator
+			continue
+		}
 		switch kindOfCaster(cat, c.Class) {
 		case fullCaster:
 			total += c.Level
@@ -110,6 +135,9 @@ func spellSlots(cat *catalog.Catalog, classes []ClassLevel) ([MaxSpellLevel + 1]
 
 	var casting []ClassLevel
 	for _, c := range classes {
+		if profile, ok := cat.Mechanics.Casting[c.Class]; ok && c.Level < profile.StartsAt {
+			continue
+		}
 		switch kindOfCaster(cat, c.Class) {
 		case pactCaster:
 			row, ok := cat.ClassLevel(c.Class, c.Level)
@@ -139,7 +167,17 @@ func spellSlots(cat *catalog.Catalog, classes []ClassLevel) ([MaxSpellLevel + 1]
 	case 1:
 		row, ok = cat.ClassLevel(casting[0].Class, casting[0].Level)
 	default:
-		row, ok = cat.ClassLevel(multiclassSlotReference, casterLevel(cat, casting))
+		if len(cat.Mechanics.Core.MulticlassSlots) > 0 {
+			values, found := cat.Mechanics.Core.MulticlassSlots[casterLevel(cat, casting)]
+			ok = found
+			for level, count := range values {
+				if level > 0 && level <= MaxSpellLevel {
+					row.SpellSlots[level] = count
+				}
+			}
+		} else {
+			row, ok = cat.ClassLevel(multiclassSlotReference, casterLevel(cat, casting))
+		}
 	}
 	if !ok {
 		return slots, pact
@@ -179,9 +217,16 @@ func spellcastingSummaries(
 		out = append(out, SpellcastingSummary{
 			Class:       c.Class,
 			Ability:     class.Spellcasting.Ability,
-			SaveDC:      8 + proficiencyBonus + modifier,
+			SaveDC:      spellSaveBase(cat) + proficiencyBonus + modifier,
 			AttackBonus: proficiencyBonus + modifier,
 		})
 	}
 	return out
+}
+
+func spellSaveBase(cat *catalog.Catalog) int {
+	if cat.Mechanics.Core.SpellSaveBase != 0 {
+		return cat.Mechanics.Core.SpellSaveBase
+	}
+	return 8
 }

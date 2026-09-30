@@ -173,7 +173,15 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	// than at the first request. Loading the default locale eagerly is what
 	// turns a missing or malformed data directory into a startup error --
 	// which deploy.sh's health gate then catches and rolls back.
-	catalogSource := catalogfile.NewSource(cfg.Data.SRDDir)
+	packPaths := append([]string{cfg.Data.SRDDir}, cfg.Data.PackFiles...)
+	var roots []catalogfile.Dependency
+	for id, version := range cfg.Data.DefaultPacks {
+		roots = append(roots, catalogfile.Dependency{ID: id, Version: version})
+	}
+	catalogSource, err := catalogfile.NewRegistry(packPaths, roots, cfg.Data.PackArchive)
+	if err != nil {
+		return fail(fmt.Errorf("load rule packs: %w", err))
+	}
 	if _, err := catalogSource.Load(ctx, rules.DefaultLocale); err != nil {
 		return fail(fmt.Errorf("load SRD data from %s: %w", cfg.Data.SRDDir, err))
 	}

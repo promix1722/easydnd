@@ -1,0 +1,17 @@
+{
+ "$schema":"https://json-schema.org/draft/2020-12/schema",
+ "$id":"https://easydnd.org/schemas/pack-v1.json",
+ "type":"object", "additionalProperties":false,
+ "required":["manifest","entities","locales"],
+ "properties":{
+  "manifest":{"type":"object","additionalProperties":false,"required":["schemaVersion","id","version","edition","semantics","defaultLocale"],"properties":{
+   "schemaVersion":{"const":1},"id":{"type":"string","pattern":"^[a-z][a-z0-9-]{0,79}$"},"version":{"type":"string"},"edition":{"type":"string","minLength":1},"semantics":{"const":"1"},"defaultLocale":{"type":"string","minLength":2},
+   "requires":{"type":"array","items":{"enum":["effects.v1","resources.v1","progressions.v1","overrides.v1","actions.v1"]},"uniqueItems":true},
+   "dependencies":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["id","version"],"properties":{"id":{"type":"string"},"version":{"type":"string"}}}},
+   "source":{"type":"string"},"attribution":{"type":"string"},"files":{"type":"object","additionalProperties":{"type":"string"}}
+  }},
+  "entities":{"type":"object","additionalProperties":{"type":"array","items":{"type":"object"}}},
+  "mechanics":{"type":"object"},
+  "locales":{"type":"object","additionalProperties":{"type":"object","additionalProperties":{"type":"object"}}}
+ }
+}

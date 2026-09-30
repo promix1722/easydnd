@@ -950,6 +950,7 @@ describe('BuildScreen', () => {
     // event that named an alignment was accepted, attributed to no prompt and
     // silently changed nothing.
     expect(posted[0]?.body).toEqual({
+      expectedRevision: 2,
       expectedSeq: 2,
       events: [
         {
@@ -1007,6 +1008,7 @@ describe('BuildScreen', () => {
     // records it is the change that puts it on the sheet -- the same shape the
     // alignment above travels in.
     expect(posted[0]?.body).toEqual({
+      expectedRevision: 2,
       expectedSeq: 2,
       events: [
         {
@@ -1089,6 +1091,7 @@ describe('BuildScreen', () => {
     // The array as it was dealt out, and the method travels with the answer
     // rather than with creation.
     expect(posted[0]?.body).toEqual({
+      expectedRevision: 1,
       expectedSeq: 1,
       events: [
         {
@@ -1367,7 +1370,7 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     })
     expect(posted[0]?.method).toBe('DELETE')
     // expectedSeq travels in the query, not in a body.
-    expect(posted[0]?.url).toContain('/events/3?expectedSeq=3&dryRun=true')
+    expect(posted[0]?.url).toContain('/events/3?expectedSeq=3&expectedRevision=3&dryRun=true')
     expect(posted[0]?.body).toEqual({})
 
     // This one costs another answer, so it is asked about before it is made.

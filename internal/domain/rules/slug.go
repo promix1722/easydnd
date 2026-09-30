@@ -59,6 +59,9 @@ const (
 	RefItem
 	RefMagicItem
 	RefSpell
+	RefResource
+	RefAction
+	RefRule
 )
 
 var refKindNames = map[RefKind]string{
@@ -84,6 +87,9 @@ var refKindNames = map[RefKind]string{
 	RefItem:              "item",
 	RefMagicItem:         "magic-item",
 	RefSpell:             "spell",
+	RefAction:            "action",
+	RefResource:          "resource",
+	RefRule:              "rule",
 }
 
 // String returns the kind's wire name, or "unknown" for a value outside the
@@ -129,6 +135,15 @@ func (r Ref) String() string { return r.Kind.String() + ":" + r.Slug.String() }
 // ParseRef reads the "kind:slug" form produced by Ref.String. The second
 // result reports whether the text was well formed.
 func ParseRef(s string) (Ref, bool) {
+	// Canonical pack:kind:local refs coexist with legacy kind:slug refs.
+	parts := strings.Split(s, ":")
+	if len(parts) == 3 {
+		kind, ok := ParseRefKind(parts[1])
+		if !ok || kind == RefNone || parts[0] == "" || parts[2] == "" {
+			return Ref{}, false
+		}
+		return Ref{Kind: kind, Slug: QualifiedSlug(parts[0], parts[2])}, true
+	}
 	kindText, slug, found := strings.Cut(s, ":")
 	if !found || slug == "" {
 		return Ref{}, false
@@ -138,4 +153,19 @@ func ParseRef(s string) (Ref, bool) {
 		return Ref{}, false
 	}
 	return Ref{Kind: kind, Slug: Slug(slug)}, true
+}
+
+// QualifiedSlug keeps the shipped base IDs as legacy aliases during migration.
+func QualifiedSlug(pack, local string) Slug {
+	if pack == "srd-2014" {
+		return Slug(local)
+	}
+	return Slug(pack + "/" + local)
+}
+func (r Ref) Canonical() string {
+	pack, local, ok := strings.Cut(r.Slug.String(), "/")
+	if !ok {
+		pack, local = "srd-2014", r.Slug.String()
+	}
+	return pack + ":" + r.Kind.String() + ":" + local
 }

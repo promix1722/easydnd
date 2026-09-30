@@ -20,10 +20,11 @@ type CollectionInfo struct {
 // and what can be fetched. A client reads it once and knows every URL under
 // /v1/catalog without a hardcoded list.
 type ManifestResponse struct {
-	Ruleset     string           `json:"ruleset"`
-	Locale      string           `json:"locale"`
-	Locales     []string         `json:"locales"`
-	Collections []CollectionInfo `json:"collections"`
+	Rules       helpers.RulesLock `json:"rules"`
+	Ruleset     string            `json:"ruleset"`
+	Locale      string            `json:"locale"`
+	Locales     []string          `json:"locales"`
+	Collections []CollectionInfo  `json:"collections"`
 }
 
 // Manifest handles GET /v1/catalog.
@@ -59,6 +60,7 @@ func (h *Handler) Manifest(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ManifestResponse{
 		Ruleset:     cat.Ruleset,
+		Rules:       helpers.RulesLockOf(cat.Lock),
 		Locale:      cat.Locale().String(),
 		Locales:     locales,
 		Collections: collections,

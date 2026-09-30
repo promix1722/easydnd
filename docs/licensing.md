@@ -28,6 +28,16 @@ Dependency licenses are a separate matter again: the Go modules in `go.mod` and
 the npm packages in `web/package-lock.json` carry their own terms, and this
 repository ships no aggregated `NOTICE` for them.
 
+## Pack artifacts
+
+The generated base `pack-manifest.json` carries the generator's existing SRD
+source and attribution. Portable/directory exports preserve that metadata and
+locale bundles; repackaging does not change the underlying terms described here.
+`data/rules/2014/` supplies authored mechanics missing from the upstream dump.
+The Tactician fixture in `data/packs/examples/` is illustrative project content,
+not a claim that its subclass appears in the SRD. Custom packs can carry their
+own source/attribution; the loader does not determine their publication rights.
+
 ## SRD 5.1 attribution
 
 This work includes material taken from the System Reference Document 5.1

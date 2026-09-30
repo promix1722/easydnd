@@ -81,7 +81,8 @@ func ProseFiles() []string {
 // safe because a Catalog is immutable, and it matters because converting all
 // 1,300 entries is not something to redo per request.
 type Source struct {
-	dir string
+	dir   string
+	files map[string][]byte
 
 	mu     sync.Mutex
 	loaded map[rules.Locale]*catalog.Catalog
@@ -122,7 +123,7 @@ func (s *Source) Locales(_ context.Context) ([]rules.Locale, error) {
 
 // Load reads and resolves the compendium for one locale.
 func (s *Source) Load(_ context.Context, locale rules.Locale) (*catalog.Catalog, error) {
-	if !locale.IsSupported() {
+	if !locale.IsSupported() && s.files == nil {
 		return nil, types.NewNotFoundError("unsupported locale %q", locale)
 	}
 
@@ -161,96 +162,96 @@ func (s *Source) build(locale rules.Locale) (*catalog.Catalog, error) {
 	// Mechanics first: every file is read before anything is converted, so a
 	// missing file is reported as a missing file rather than as a dangling
 	// reference three collections later.
-	abilities, err := read[AbilityScore](s.dir, FileAbilities)
+	abilities, err := readSource[AbilityScore](s, FileAbilities)
 	if err != nil {
 		return nil, err
 	}
-	skills, err := read[Skill](s.dir, FileSkills)
+	skills, err := readSource[Skill](s, FileSkills)
 	if err != nil {
 		return nil, err
 	}
-	alignments, err := read[Named](s.dir, FileAlignments)
+	alignments, err := readSource[Named](s, FileAlignments)
 	if err != nil {
 		return nil, err
 	}
-	languages, err := read[Language](s.dir, FileLanguages)
+	languages, err := readSource[Language](s, FileLanguages)
 	if err != nil {
 		return nil, err
 	}
-	conditions, err := read[Named](s.dir, FileConditions)
+	conditions, err := readSource[Named](s, FileConditions)
 	if err != nil {
 		return nil, err
 	}
-	damageTypes, err := read[Named](s.dir, FileDamageTypes)
+	damageTypes, err := readSource[Named](s, FileDamageTypes)
 	if err != nil {
 		return nil, err
 	}
-	magicSchools, err := read[Named](s.dir, FileMagicSchools)
+	magicSchools, err := readSource[Named](s, FileMagicSchools)
 	if err != nil {
 		return nil, err
 	}
-	weaponProperties, err := read[Named](s.dir, FileWeaponProperties)
+	weaponProperties, err := readSource[Named](s, FileWeaponProperties)
 	if err != nil {
 		return nil, err
 	}
-	proficiencies, err := read[Proficiency](s.dir, FileProficiencies)
+	proficiencies, err := readSource[Proficiency](s, FileProficiencies)
 	if err != nil {
 		return nil, err
 	}
-	equipmentCategories, err := read[EquipmentCategory](s.dir, FileEquipmentCategories)
+	equipmentCategories, err := readSource[EquipmentCategory](s, FileEquipmentCategories)
 	if err != nil {
 		return nil, err
 	}
-	races, err := read[Race](s.dir, FileRaces)
+	races, err := readSource[Race](s, FileRaces)
 	if err != nil {
 		return nil, err
 	}
-	subraces, err := read[Subrace](s.dir, FileSubraces)
+	subraces, err := readSource[Subrace](s, FileSubraces)
 	if err != nil {
 		return nil, err
 	}
-	traits, err := read[Trait](s.dir, FileTraits)
+	traits, err := readSource[Trait](s, FileTraits)
 	if err != nil {
 		return nil, err
 	}
-	classes, err := read[Class](s.dir, FileClasses)
+	classes, err := readSource[Class](s, FileClasses)
 	if err != nil {
 		return nil, err
 	}
-	classLevels, err := read[ClassLevel](s.dir, FileClassLevels)
+	classLevels, err := readSource[ClassLevel](s, FileClassLevels)
 	if err != nil {
 		return nil, err
 	}
-	subclasses, err := read[Subclass](s.dir, FileSubclasses)
+	subclasses, err := readSource[Subclass](s, FileSubclasses)
 	if err != nil {
 		return nil, err
 	}
-	features, err := read[Feature](s.dir, FileFeatures)
+	features, err := readSource[Feature](s, FileFeatures)
 	if err != nil {
 		return nil, err
 	}
-	backgrounds, err := read[Background](s.dir, FileBackgrounds)
+	backgrounds, err := readSource[Background](s, FileBackgrounds)
 	if err != nil {
 		return nil, err
 	}
-	feats, err := read[Feat](s.dir, FileFeats)
+	feats, err := readSource[Feat](s, FileFeats)
 	if err != nil {
 		return nil, err
 	}
-	equipment, err := read[Item](s.dir, FileEquipment)
+	equipment, err := readSource[Item](s, FileEquipment)
 	if err != nil {
 		return nil, err
 	}
-	magicItems, err := read[MagicItem](s.dir, FileMagicItems)
+	magicItems, err := readSource[MagicItem](s, FileMagicItems)
 	if err != nil {
 		return nil, err
 	}
-	spells, err := read[Spell](s.dir, FileSpells)
+	spells, err := readSource[Spell](s, FileSpells)
 	if err != nil {
 		return nil, err
 	}
 
-	manifest, err := ReadManifest(s.dir)
+	manifest, err := readManifestSource(s)
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +322,7 @@ func (s *Source) readBundles(locale rules.Locale, required bool) (bundles, error
 	out := make(bundles, len(ProseFiles()))
 	for _, file := range ProseFiles() {
 		path := filepath.Join(s.dir, LocaleDir, locale.String(), file)
-		raw, err := os.ReadFile(path)
+		raw, err := s.bytes(filepath.Join(LocaleDir, locale.String(), file))
 		if err != nil {
 			if !required && errors.Is(err, fs.ErrNotExist) {
 				continue
@@ -338,9 +339,9 @@ func (s *Source) readBundles(locale rules.Locale, required bool) (bundles, error
 }
 
 // read decodes one JSON array file into a slice.
-func read[T any](dir, file string) ([]T, error) {
-	path := filepath.Join(dir, file)
-	raw, err := os.ReadFile(path)
+func readSource[T any](s *Source, file string) ([]T, error) {
+	path := filepath.Join(s.dir, file)
+	raw, err := s.bytes(file)
 	if err != nil {
 		return nil, types.WrapServerError(err, "reading %s", path)
 	}
@@ -403,4 +404,31 @@ func mapNamed[Out ~struct{ catalog.Entry }](in []Named, b Bundle) []Out {
 		out = append(out, Out{entry(item.Slug, b)})
 	}
 	return out
+}
+
+// NewMemorySource consumes a normalized pack context. Files are private copies.
+func NewMemorySource(files map[string][]byte) *Source {
+	copied := make(map[string][]byte, len(files))
+	for name, data := range files {
+		copied[name] = append([]byte(nil), data...)
+	}
+	return &Source{dir: "<pack>", files: copied, loaded: make(map[rules.Locale]*catalog.Catalog)}
+}
+func (s *Source) bytes(name string) ([]byte, error) {
+	if s.files != nil {
+		if b, ok := s.files[filepath.ToSlash(name)]; ok {
+			return b, nil
+		}
+		return nil, fs.ErrNotExist
+	}
+	return os.ReadFile(filepath.Join(s.dir, name))
+}
+func readManifestSource(s *Source) (Manifest, error) {
+	b, err := s.bytes(FileManifest)
+	if err != nil {
+		return Manifest{}, err
+	}
+	var m Manifest
+	err = json.Unmarshal(b, &m)
+	return m, err
 }

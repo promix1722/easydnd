@@ -13,7 +13,9 @@ package memory
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -132,7 +134,8 @@ func (r *CharacterRepository) Append(_ context.Context, id domain.ID, expectedSe
 	if err := updated.Append(events...); err != nil {
 		return err
 	}
-	c.Log = updated
+	c.Log = updated.Clone()
+	c.Revision += max(1, len(events))
 	r.items[id] = c
 	return nil
 }
@@ -160,7 +163,8 @@ func (r *CharacterRepository) Truncate(_ context.Context, id domain.ID, expected
 	if err := updated.Truncate(afterSeq); err != nil {
 		return err
 	}
-	c.Log = updated
+	c.Log = updated.Clone()
+	c.Revision++
 	r.items[id] = c
 	return nil
 }
@@ -189,7 +193,8 @@ func (r *CharacterRepository) Rewrite(_ context.Context, id domain.ID, expectedS
 	}
 	// Cloned on the way in for the same reason it is cloned on the way out:
 	// the caller must not keep a handle on our backing array.
-	c.Log = domain.Log{Events: slices.Clone(log.Events)}
+	c.Log = log.Clone()
+	c.Revision++
 	r.items[id] = c
 	return nil
 }
@@ -209,6 +214,57 @@ func (r *CharacterRepository) Delete(_ context.Context, id domain.ID) error {
 // clone deep-copies the parts of a Character that a caller could otherwise
 // mutate through a shared backing array.
 func clone(c domain.Character) domain.Character {
-	c.Log.Events = slices.Clone(c.Log.Events)
+	c.Log = c.Log.Clone()
+	c.Commands = maps.Clone(c.Commands)
+	c.Checkpoints = slices.Clone(c.Checkpoints)
+	for i := range c.Checkpoints {
+		c.Checkpoints[i].Log = c.Checkpoints[i].Log.Clone()
+	}
 	return c
+}
+
+// Commit is the atomic write boundary for all application log mutations.
+func (r *CharacterRepository) Commit(_ context.Context, id domain.ID, expectedRevision int, log domain.Log, command string, checkpoint *domain.Checkpoint) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	c, ok := r.items[id]
+	if !ok {
+		return types.NewNotFoundError("character %q", id).Because("character.notFound")
+	}
+	if command != "" {
+		if _, ok := c.Commands[command]; ok {
+			return types.NewValidationError("command already committed; reload character revision")
+		}
+	}
+	if c.Revision != expectedRevision {
+		return types.NewValidationError("stale character revision: got %d, expected %d", expectedRevision, c.Revision)
+	}
+	if err := log.Validate(); err != nil {
+		return err
+	}
+	updated := log.Clone()
+	for i := range updated.Events {
+		e := &updated.Events[i]
+		if e.ID == "" {
+			e.ID = "evt_" + rand.Text()
+		}
+		if e.SchemaVersion == 0 {
+			e.SchemaVersion = 1
+		}
+	}
+	if checkpoint != nil {
+		cp := *checkpoint
+		cp.Log = cp.Log.Clone()
+		c.Checkpoints = append(c.Checkpoints, cp)
+	}
+	c.Revision += max(1, updated.Len()-c.Log.Len())
+	c.Log = updated
+	if command != "" {
+		if c.Commands == nil {
+			c.Commands = map[string]int{}
+		}
+		c.Commands[command] = c.Revision
+	}
+	r.items[id] = c
+	return nil
 }

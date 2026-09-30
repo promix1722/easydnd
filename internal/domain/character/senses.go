@@ -1,6 +1,9 @@
 package character
 
-import "github.com/promix1722/easydnd/internal/domain/rules"
+import (
+	"github.com/promix1722/easydnd/internal/domain/catalog"
+	"github.com/promix1722/easydnd/internal/domain/rules"
+)
 
 // traitSenses maps a racial trait to the sense it grants.
 //
@@ -46,4 +49,38 @@ func sensesFor(traits []rules.Slug) []Sense {
 		out = append(out, Sense{Kind: kind, Distance: best[kind]})
 	}
 	return out
+}
+
+func packSenses(traits []rules.Slug, cat *catalog.Catalog) []Sense {
+	var out []Sense
+	for _, trait := range traits {
+		def, ok := cat.Mechanics.Core.Senses[trait]
+		if !ok {
+			continue
+		}
+		kind, ok := senseKindByName(def.Kind)
+		if !ok {
+			continue
+		}
+		found := false
+		for i := range out {
+			if out[i].Kind == kind {
+				out[i].Distance = max(out[i].Distance, rules.Feet(def.Distance))
+				found = true
+			}
+		}
+		if !found {
+			out = append(out, Sense{Kind: kind, Distance: rules.Feet(def.Distance)})
+		}
+	}
+	return out
+}
+
+func senseKindByName(name string) (SenseKind, bool) {
+	for kind, value := range senseKindNames {
+		if value == name && kind != SenseNone {
+			return kind, true
+		}
+	}
+	return SenseNone, false
 }

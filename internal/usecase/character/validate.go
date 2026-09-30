@@ -39,7 +39,8 @@ func validateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.
 			return err
 		}
 	}
-	return nil
+	_, err := domain.Project(working, cat)
+	return err
 }
 
 // validateEvent checks one event against the prompts open once its structural
@@ -285,7 +286,7 @@ func closedGroup(
 func requiredRef(event domain.Event) bool {
 	switch event.Type {
 	case domain.EventRace, domain.EventSubrace, domain.EventBackground,
-		domain.EventClass, domain.EventSubclass, domain.EventLevel, domain.EventFeat:
+		domain.EventClass, domain.EventSubclass, domain.EventLevel, domain.EventFeat, domain.EventRule:
 		return true
 	}
 	return false
@@ -311,6 +312,13 @@ func validateRef(cat *catalog.Catalog, event domain.Event, index int) error {
 
 func exists(cat *catalog.Catalog, ref rules.Ref) bool {
 	switch ref.Kind {
+	case rules.RefRule:
+		for _, r := range cat.Mechanics.Rules {
+			if r.ID == ref.Slug {
+				return true
+			}
+		}
+		return false
 	case rules.RefRace:
 		return cat.Races.Has(ref.Slug)
 	case rules.RefSubrace:
@@ -360,7 +368,7 @@ func validateChanges(cat *catalog.Catalog, event domain.Event, index int) []type
 	for i, change := range event.Changes {
 		if change.Path == "identity.desiredLevel" {
 			if change.Value.Kind == domain.ValueInt &&
-				(change.Value.Int < 1 || change.Value.Int > domain.MaxCharacterLevel) {
+				(change.Value.Int < 1 || change.Value.Int > maxLevel(cat)) {
 				fields = append(fields, types.FieldError{
 					Field:  fmt.Sprintf("events[%d].changes[%d].value", index, i),
 					Rule:   "range",
@@ -388,13 +396,22 @@ func validateChanges(cat *catalog.Catalog, event domain.Event, index int) []type
 		if len(segments) != 2 || segments[0] != "abilities" {
 			continue
 		}
-		if _, ok := rules.ParseAbility(segments[1]); !ok {
+		if segments[1] == "method" {
+			continue
+		}
+		ability, ok := rules.ParseAbility(segments[1])
+		if !ok || !slices.Contains(cat.AbilityIDs(), ability) {
+			fields = append(fields, types.FieldError{Field: fmt.Sprintf("events[%d].changes[%d].path", index, i), Rule: "unknown", Reason: "field.answer.notInCompendium"})
 			continue
 		}
 		if change.Op != domain.OpSet || change.Value.Kind != domain.ValueInt {
 			continue
 		}
-		if change.Value.Int < minScore || change.Value.Int > maxScore {
+		low, high := minScore, maxScore
+		if cat.Mechanics.Core.MaxScore > 0 {
+			low, high = cat.Mechanics.Core.MinScore, cat.Mechanics.Core.MaxScore
+		}
+		if change.Value.Int < low || change.Value.Int > high {
 			fields = append(fields, types.FieldError{
 				Field:  fmt.Sprintf("events[%d].changes[%d].value", index, i),
 				Rule:   "range",
@@ -481,4 +498,11 @@ func findPrompt(open []domain.Prompt, id rules.Slug) (domain.Prompt, bool) {
 		}
 	}
 	return domain.Prompt{}, false
+}
+
+func maxLevel(cat *catalog.Catalog) int {
+	if cat.Mechanics.Core.MaxLevel > 0 {
+		return cat.Mechanics.Core.MaxLevel
+	}
+	return domain.MaxCharacterLevel
 }

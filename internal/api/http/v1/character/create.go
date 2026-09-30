@@ -32,9 +32,10 @@ type CreateParams struct {
 
 // CreateResponse is what a newly created character looks like.
 type CreateResponse struct {
-	ID    string `json:"id"`
-	Seq   int    `json:"seq"`
-	Sheet Sheet  `json:"sheet"`
+	Revision int    `json:"revision"`
+	ID       string `json:"id"`
+	Seq      int    `json:"seq"`
+	Sheet    Sheet  `json:"sheet"`
 }
 
 // Create handles POST /v1/characters.
@@ -62,8 +63,9 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, CreateResponse{
-		ID:    created.ID.String(),
-		Seq:   created.Log.LastSeq(),
-		Sheet: SheetOf(sheet),
+		ID:       created.ID.String(),
+		Seq:      created.Log.LastSeq(),
+		Revision: created.Revision,
+		Sheet:    SheetOf(sheet),
 	})
 }

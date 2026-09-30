@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 
@@ -549,11 +550,11 @@ func (g *generator) features() error {
 				f.Prerequisites = append(f.Prerequisites, file.Prerequisite{Kind: file.PrerequisiteLevel, Level: pre.Level})
 			case "feature":
 				f.Prerequisites = append(f.Prerequisites, file.Prerequisite{
-					Kind: file.PrerequisiteEntry, Ref: file.Ref("feature:" + slugify(pre.Feature)),
+					Kind: file.PrerequisiteEntry, Ref: file.Ref("feature:" + slugify(path.Base(pre.Feature))),
 				})
 			case "spell":
 				f.Prerequisites = append(f.Prerequisites, file.Prerequisite{
-					Kind: file.PrerequisiteEntry, Ref: file.Ref("spell:" + slugify(pre.Spell)),
+					Kind: file.PrerequisiteEntry, Ref: file.Ref("spell:" + slugify(path.Base(pre.Spell))),
 				})
 			}
 		}

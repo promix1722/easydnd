@@ -207,7 +207,11 @@ func (s *Service) CopyCharacter(
 		})
 	}
 
-	if err := s.repo.Append(ctx, created.ID, 0, events...); err != nil {
+	copied, err := domain.Rebuild(events)
+	if err != nil {
+		return domain.Character{}, err
+	}
+	if err := s.repo.Commit(ctx, created.ID, 0, copied, "", nil); err != nil {
 		return domain.Character{}, err
 	}
 	return s.repo.Get(ctx, created.ID)

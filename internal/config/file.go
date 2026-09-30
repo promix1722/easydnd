@@ -48,7 +48,10 @@ type fileLog struct {
 }
 
 type fileData struct {
-	SRDDir string `yaml:"srd_dir"`
+	SRDDir       string            `yaml:"srd_dir"`
+	PackFiles    []string          `yaml:"pack_files"`
+	DefaultPacks map[string]string `yaml:"default_packs"`
+	PackArchive  string            `yaml:"pack_archive"`
 }
 
 type fileDB struct {

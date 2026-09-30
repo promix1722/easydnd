@@ -1,0 +1,108 @@
+package catalog
+
+import "github.com/promix1722/easydnd/internal/domain/rules"
+
+// Mechanics is compiled pack policy. Empty policy is supported only by legacy
+// in-memory fixtures; installed packs always carry an explicit policy.
+type Mechanics struct {
+	Core      CoreRules
+	Actions   []ActionDefinition
+	Resources []ResourceDefinition
+	Rules     []RuleDefinition
+	Casting   map[rules.Slug]CastingProfile
+}
+
+type CoreRules struct {
+	MinScore, MaxScore, AbilityScoreIncrease, BaseArmorClass, SpellSaveBase int
+	HitPointFirst, HitPointLater                                            rules.Expression
+	HitDiceRecovery                                                         []RecoveryPolicy
+	SpellSlotRecovery                                                       []RecoveryPolicy
+	MaxLevel                                                                int
+	Proficiency                                                             rules.Expression
+	AbilityModifier                                                         rules.Expression
+	StandardArray                                                           []int
+	PointBuyBudget                                                          int
+	PointCosts                                                              map[int]int
+	MulticlassSlots                                                         map[int]map[int]int
+	Senses                                                                  map[rules.Slug]SenseGrant
+}
+
+type SenseGrant struct {
+	Kind     string
+	Distance int
+}
+
+type CastingProfile struct {
+	Kind                   string // shared or independent
+	Numerator, Denominator int
+	Rounding               string // floor or ceil, applied per class contribution
+	StartsAt               int
+	Resource               rules.Slug
+}
+
+type Rational struct{ Numerator, Denominator int }
+
+type ResourceRow struct {
+	Rational  *Rational
+	Boolean   *bool
+	From      int
+	Capacity  int
+	Dice      string
+	SlotLevel int
+	Text      string
+}
+
+type RecoveryPolicy struct {
+	When      *rules.Expression
+	Trigger   string
+	Operation string // all, amount, or budget
+	Amount    rules.Expression
+	Budget    string // shared allocation budget, e.g. hit-dice
+}
+
+type ResourceDefinition struct {
+	RequiresSubclass bool
+	Entry
+	Owner        rules.Ref
+	MinimumLevel int
+	Kind         string // pool or parameter
+	Input        string
+	Rows         []ResourceRow
+	Capacity     *rules.Expression
+	Recovery     []RecoveryPolicy
+	SharedKey    rules.Slug
+	Combine      string // max or sum for explicitly shared pools
+	Group        string
+}
+
+type RuleDefinition struct {
+	ID           rules.Slug
+	Owner        rules.Ref
+	MinimumLevel int
+	When         *rules.Expression
+	Choices      []rules.Choice
+	Effects      []Effect
+	Manual       bool
+}
+
+type Effect struct {
+	Op     string
+	Target string
+	Ref    rules.Ref
+	Value  rules.Expression
+}
+
+// ActionDefinition describes eligibility and atomic resource costs. Outcomes
+// such as attack rolls are resolved at the table and recorded as event facts.
+type ActionDefinition struct {
+	Entry
+	Owner        rules.Ref
+	MinimumLevel int
+	When         *rules.Expression
+	Costs        []ResourceCost
+	Manual       bool
+}
+type ResourceCost struct {
+	Resource rules.Slug
+	Amount   rules.Expression
+}

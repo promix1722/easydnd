@@ -1096,7 +1096,7 @@
     "prerequisites": [
       {
         "kind": "entry",
-        "ref": "spell:api-2014-spells-eldritch-blast"
+        "ref": "spell:eldritch-blast"
       }
     ]
   },
@@ -1150,7 +1150,7 @@
     "prerequisites": [
       {
         "kind": "entry",
-        "ref": "feature:api-2014-features-pact-of-the-tome"
+        "ref": "feature:pact-of-the-tome"
       }
     ]
   },
@@ -1166,7 +1166,7 @@
       },
       {
         "kind": "entry",
-        "ref": "feature:api-2014-features-pact-of-the-chain"
+        "ref": "feature:pact-of-the-chain"
       }
     ]
   },
@@ -1202,7 +1202,7 @@
     "prerequisites": [
       {
         "kind": "entry",
-        "ref": "spell:api-2014-spells-eldritch-blast"
+        "ref": "spell:eldritch-blast"
       }
     ]
   },
@@ -1236,7 +1236,7 @@
       },
       {
         "kind": "entry",
-        "ref": "feature:api-2014-features-pact-of-the-blade"
+        "ref": "feature:pact-of-the-blade"
       }
     ]
   },
@@ -1320,7 +1320,7 @@
     "prerequisites": [
       {
         "kind": "entry",
-        "ref": "spell:api-2014-spells-eldritch-blast"
+        "ref": "spell:eldritch-blast"
       }
     ]
   },
@@ -1366,7 +1366,7 @@
       },
       {
         "kind": "entry",
-        "ref": "feature:api-2014-features-pact-of-the-blade"
+        "ref": "feature:pact-of-the-blade"
       }
     ]
   },
@@ -1390,7 +1390,7 @@
     "prerequisites": [
       {
         "kind": "entry",
-        "ref": "feature:api-2014-features-pact-of-the-chain"
+        "ref": "feature:pact-of-the-chain"
       }
     ]
   },

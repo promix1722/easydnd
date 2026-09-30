@@ -42,3 +42,6 @@ local.mk
 
 # Written by `make config/preview`; see the preview target.
 config.preview.yaml
+
+# Optional local immutable pack archive
+.pack-archive/

@@ -163,7 +163,7 @@ func (s *Service) Sheet(
 	if err != nil {
 		return character.State{}, err
 	}
-	cat, err := s.catalog.Load(ctx, locale)
+	cat, err := catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
 	if err != nil {
 		return character.State{}, err
 	}
@@ -181,10 +181,6 @@ func (s *Service) Sheet(
 func (s *Service) summarize(
 	ctx context.Context, ids []character.ID, locale rules.Locale,
 ) ([]character.Summary, error) {
-	cat, err := s.catalog.Load(ctx, locale)
-	if err != nil {
-		return nil, err
-	}
 	out := make([]character.Summary, 0, len(ids))
 	for _, id := range ids {
 		c, err := s.characters.Get(ctx, id)
@@ -192,6 +188,10 @@ func (s *Service) summarize(
 			if types.IsNotFound(err) {
 				continue
 			}
+			return nil, err
+		}
+		cat, err := catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, character.Summarize(c.ID, c.Owner, c.Folder, c.Log, cat))

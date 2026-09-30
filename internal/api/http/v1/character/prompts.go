@@ -49,7 +49,8 @@ type PromptEvent struct {
 
 // PromptsResponse is the body of GET /v1/characters/{id}/prompts.
 type PromptsResponse struct {
-	Seq int `json:"seq"`
+	Revision int `json:"revision"`
+	Seq      int `json:"seq"`
 
 	// Complete reports that nothing required is outstanding. It is separate
 	// from the list being empty, because a character with only optional
@@ -80,7 +81,7 @@ func (h *Handler) Prompts(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	cat, err := h.service.Catalog(ctx, locale)
+	cat, err := h.service.CharacterCatalog(ctx, owner, id, locale)
 	if err != nil {
 		helpers.FormatError(c, err)
 		return
@@ -107,6 +108,7 @@ func (h *Handler) Prompts(c *gin.Context) {
 
 	c.JSON(http.StatusOK, PromptsResponse{
 		Seq:      character.Log.LastSeq(),
+		Revision: character.Revision,
 		Complete: domain.Complete(prompts),
 		Prompts:  out,
 	})

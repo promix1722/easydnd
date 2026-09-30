@@ -63,7 +63,7 @@ export function CharacterSheetScreen() {
       )
       return replaceEvent(id, entry.seq, log.seq, { type: entry.type, changes })
     }
-    return appendEvents(id, log.seq, [{ type: 'change', changes: [desiredLevelChange(target)] }])
+    return appendEvents(id, log.seq, [{ type: 'change', changes: [desiredLevelChange(target)] }], log.revision ?? log.seq)
   })
 
   const confirmLevelUp = async (target: number) => {

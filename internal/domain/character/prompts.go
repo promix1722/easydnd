@@ -207,6 +207,7 @@ func (b *promptBuilder) build() []Prompt {
 	b.race()
 	b.background()
 	b.classes()
+	b.packRules()
 	return b.out
 }
 
@@ -344,7 +345,7 @@ func (b *promptBuilder) abilities() {
 	b.out = append(b.out, Prompt{
 		Choice: rules.Choice{
 			Prompt: "character/abilities",
-			Choose: len(rules.Abilities()),
+			Choose: len(b.cat.AbilityIDs()),
 			Kind:   rules.ChooseAbilityScores,
 		},
 		Group: GroupAbilities,
@@ -653,9 +654,9 @@ func (b *promptBuilder) abilityScoreImprovement(class rules.Slug, level int) {
 	prompt := asiPrompt(class, level)
 	scores := rules.Choice{
 		Prompt: prompt + "/0",
-		Choose: 2,
+		Choose: abilityScoreIncrease(b.cat),
 		Kind:   rules.ChooseAbilityBonus,
-		From:   rules.OptionSet{Kind: rules.OptionsExplicit, Options: abilityBonusOptions()},
+		From:   rules.OptionSet{Kind: rules.OptionsExplicit, Options: abilityBonusOptions(b.cat.AbilityIDs())},
 		// Two points rather than two scores: both may go into one ability,
 		// which is the "+2 to one" half of the rule. This is the only choice
 		// in the game that says so -- a half-elf's two look identical and are
@@ -696,8 +697,7 @@ func asiPrompt(class rules.Slug, level int) rules.Slug {
 // abilityBonusOptions is "+1 to any ability", once per ability. Picking the
 // same ability twice is the "+2 to one" half of the rule, which the choice
 // above allows by being Repeatable.
-func abilityBonusOptions() []rules.Option {
-	abilities := rules.Abilities()
+func abilityBonusOptions(abilities []rules.Ability) []rules.Option {
 	out := make([]rules.Option, 0, len(abilities))
 	for _, ability := range abilities {
 		out = append(out, rules.AbilityBonusOption{Ability: ability, Bonus: 1})
@@ -775,4 +775,24 @@ func (b *promptBuilder) holds(ref rules.Ref) bool {
 		return known && state.Proficiency != rules.NotProficient
 	}
 	return false
+}
+
+func (b *promptBuilder) packRules() {
+	for _, r := range b.cat.Mechanics.Rules {
+		active, err := activeRule(b.state, b.cat, r)
+		if err != nil || !active {
+			continue
+		}
+		for _, ch := range r.Choices {
+			p := Prompt{Group: GroupClass, Source: r.Owner, Event: PromptEvent{Type: EventRule, Ref: rules.NewRef(rules.RefRule, r.ID)}}
+			b.addChoice(&ch, p)
+		}
+	}
+}
+
+func abilityScoreIncrease(cat *catalog.Catalog) int {
+	if cat.Mechanics.Core.AbilityScoreIncrease > 0 {
+		return cat.Mechanics.Core.AbilityScoreIncrease
+	}
+	return 2
 }

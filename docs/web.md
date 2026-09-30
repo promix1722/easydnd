@@ -10,6 +10,26 @@ the sheet are all built and tested -- see
 [Level-up is the desired level](#level-up-is-the-desired-level). The battle
 tracker is not: `/games` is a section in the navigation whose page says so.
 
+Character creation omits unimplemented equipment-category pickers, including
+the Acolyte starting-equipment card. Mixed choices retain working alternatives;
+a bundle is omitted if one of its components is unsupported. Source catalogue
+rules and previously recorded equipment remain intact. The screen no longer
+presents these unsupported menus as empty-compendium gaps.
+Ability scores remain the six standard characteristics, including with addons.
+
+## Pack transition
+
+Build edits, deletes and level-up requests now carry the server's `revision`
+as `expectedRevision`, alongside their positional `expectedSeq`. This closes
+the same-length-edit concurrency gap. Legacy test/API fixtures without a
+revision fall back to their sequence.
+
+Pack creation screens remain deferred. The existing ability editor and resource
+widgets still use the base-game presentation. Future consumption work should use
+the pinned character catalogue, generic `resources.pools`/`parameters`,
+`packActions`, and server-provided metadata rather than extending hardcoded
+resource labels. See [packs.md](packs.md) for the read/write contract.
+
 ## Quick start
 
 ```sh

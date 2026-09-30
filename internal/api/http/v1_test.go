@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -768,7 +769,7 @@ func TestReplaceAndDeleteAnEntry(t *testing.T) {
 
 	// And the same log, addressed the same way, with nothing to put back.
 	rec = send(t, r, session, http.MethodDelete,
-		"/v1/characters/"+id+"/events/3?expectedSeq=3", nil)
+		"/v1/characters/"+id+"/events/3?expectedSeq=3&expectedRevision="+strconv.Itoa(written.Revision), nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("delete = %d, want 200: %s", rec.Code, rec.Body)
 	}

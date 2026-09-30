@@ -9,6 +9,20 @@ SRD compendium, passkey and Google sign-in, and the rules math for creation and
 level-up are built and tested. A character can be created, built and levelled
 over HTTP.
 
+## Rule pack runtime
+
+Startup now registers the generated base pack plus `data.pack_files`, resolves
+`data.default_packs`, and compiles the selected contexts before readiness.
+`data.pack_archive` retains immutable releases by digest outside deployment
+folders. [packs.md](packs.md) documents the file format, CLI and new migration
+and contextual catalogue routes. No pack upload/authoring service is installed.
+
+All application character writes use repository revision CAS. `expectedSeq`
+identifies positions; `expectedRevision` detects concurrent same-length edits.
+Each init event pins a rules lock, and character/list/copy/shared-game reads use
+that lock. Migration/restore endpoints retain checkpoints atomically with the
+new log. Characters and checkpoints remain memory-only even with a pack archive.
+
 ## Quick start
 
 ```sh
@@ -1077,6 +1091,9 @@ rather than quietly defaulted.
 | `http.trusted_proxies` | `[127.0.0.1, "::1"]` | gin trusts `0.0.0.0/0` by default; narrowed here |
 | `log.level` | `info` | `debug`, `info`, `warn`, `error` |
 | `log.format` | `json` | `json` or `text` |
+| `data.pack_files` | `[]` | additional installed pack files/directories |
+| `data.default_packs` | `{}` | selected root IDs and version constraints; omitted means configured inputs |
+| `data.pack_archive` | empty | optional persistent digest-addressed release directory |
 | `data.srd_dir` | `data/srd_5.1` | read at startup; a missing or malformed directory is a fatal error, by design. Absolute in production, through `current/` so it follows the symlink swap |
 | `db.url` | *(none)* | **required in production**; libpq URL for the account store. Say `sslmode=verify-full` -- an omitted `sslmode` means libpq's `prefer`, which is unauthenticated and permits a plaintext fallback. Unset in development falls back to the in-memory store with a warning. The example file's placeholder password is rejected by name |
 | `db.max_conns` | `10` | pgxpool size |

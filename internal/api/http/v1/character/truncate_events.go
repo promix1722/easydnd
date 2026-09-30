@@ -1,6 +1,7 @@
 package character
 
 import (
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -45,6 +46,10 @@ func (h *Handler) TruncateEvents(c *gin.Context) {
 		return
 	}
 
+	if err := guardRevision(c, expected); err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
 	ctx := c.Request.Context()
 	id := idOf(c)
 	locale := helpers.Locale(c)
@@ -70,4 +75,17 @@ func intQuery(c *gin.Context, name string) (int, error) {
 		})
 	}
 	return value, nil
+}
+
+func guardRevision(c *gin.Context, fallback int) error {
+	revision := fallback
+	if c.Query("expectedRevision") != "" {
+		v, err := intQuery(c, "expectedRevision")
+		if err != nil {
+			return err
+		}
+		revision = v
+	}
+	c.Request = c.Request.WithContext(charuc.WithRevision(c.Request.Context(), revision))
+	return nil
 }

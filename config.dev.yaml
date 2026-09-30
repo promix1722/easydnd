@@ -17,6 +17,11 @@ log:
 data:
   # Relative to the repo root, which is where `make run/server` runs.
   srd_dir: data/srd_5.1
+  # Optional file-defined addons; see docs/packs.md.
+  pack_files: []
+  default_packs: {}
+  # Set to .pack-archive when retaining released packs between runs.
+  pack_archive: ""
 
 auth:
   # Passkeys created against this config are bound to localhost and are

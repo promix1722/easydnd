@@ -29,6 +29,9 @@ const unarmoredBaseAC = 10
 // until features carry mechanics.
 func armorClass(equipped []ItemStack, cat *catalog.Catalog, dexModifier int) int {
 	base := unarmoredBaseAC
+	if cat.Mechanics.Core.BaseArmorClass != 0 {
+		base = cat.Mechanics.Core.BaseArmorClass
+	}
 	dex := dexModifier
 	wearing := false
 	shields := 0

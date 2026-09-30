@@ -37,6 +37,7 @@ import {
   settledKey,
 } from './blocks'
 import type { Asking, Block, BlockOrder } from './blocks'
+import { creationPrompt } from './creationPrompts'
 import { eventLabel, stageLabel } from './labels'
 import { resolveRefNames } from './refNames'
 import { settledByStage, settledPickName } from './settled'
@@ -203,7 +204,10 @@ export function BuildScreen() {
   if (creating && !arriving && !isNew && !build.loading) setCreating(false)
 
   const view = build.data ?? EMPTY_VIEW
-  const open = view.prompts.prompts
+  const open = view.prompts.prompts.flatMap((prompt) => {
+    const supported = creationPrompt(prompt)
+    return supported === null ? [] : [supported]
+  })
   // Until a tab is clicked the screen opens on the first thing left to do,
   // and moves on as things are answered. That is the loop, kept: a player who
   // never touches a tab is walked through the questions in order, and one who
@@ -347,7 +351,7 @@ export function BuildScreen() {
   /** Sends one appended entry, then rereads everything. */
   const append = async (event: CharacterEvent, open: string | null) => {
     const answered = openKey
-    const written = await answer.run(id, view.prompts.seq, [event])
+    const written = await answer.run(id, view.prompts.seq, [event], view.prompts.revision ?? view.prompts.seq)
     if (written === null) return
     // The entry that just answered a question takes that question's place.
     // A single appended event is the log's new head, so the response's seq
@@ -372,8 +376,8 @@ export function BuildScreen() {
   const price = async (row: SettledRow, event: CharacterEvent | null, open: string | null) => {
     const result =
       event === null
-        ? await remove.run(id, row.seq, view.prompts.seq, true)
-        : await revise.run(id, row.seq, view.prompts.seq, event, true)
+        ? await remove.run(id, row.seq, view.prompts.seq, true, view.prompts.revision ?? view.prompts.seq)
+        : await revise.run(id, row.seq, view.prompts.seq, event, true, view.prompts.revision ?? view.prompts.seq)
     if (result === null) return
     const dropped = result.dropped ?? []
     if (dropped.length === 0) {
@@ -390,8 +394,8 @@ export function BuildScreen() {
     // commit of a price that was quoted against a different log.
     const written =
       event === null
-        ? await remove.run(id, row.seq, view.prompts.seq, false)
-        : await revise.run(id, row.seq, view.prompts.seq, event, false)
+        ? await remove.run(id, row.seq, view.prompts.seq, false, view.prompts.revision ?? view.prompts.seq)
+        : await revise.run(id, row.seq, view.prompts.seq, event, false, view.prompts.revision ?? view.prompts.seq)
     if (written === null) return
     // A removal is how a question that cannot be re-posed gets asked again, so
     // the question that comes back takes the answer's place in the list -- and

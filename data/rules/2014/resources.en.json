@@ -1,0 +1,104 @@
+{
+  "brutal-critical-dice": {
+    "name": "Brutal Critical Dice"
+  },
+  "rage-count": {
+    "name": "Rage Uses"
+  },
+  "rage-damage-bonus": {
+    "name": "Rage Damage Bonus"
+  },
+  "bardic-inspiration-die": {
+    "name": "Bardic Inspiration Die"
+  },
+  "magical-secrets-max-5": {
+    "name": "Magical Secrets (max 5th level)"
+  },
+  "magical-secrets-max-7": {
+    "name": "Magical Secrets (max 7th level)"
+  },
+  "magical-secrets-max-9": {
+    "name": "Magical Secrets (max 9th level)"
+  },
+  "song-of-rest-die": {
+    "name": "Song of Rest Die"
+  },
+  "channel-divinity-charges": {
+    "name": "Channel Divinity Uses"
+  },
+  "destroy-undead-cr": {
+    "name": "Destroy Undead CR"
+  },
+  "wild-shape-fly": {
+    "name": "Wild Shape Flight"
+  },
+  "wild-shape-max-cr": {
+    "name": "Wild Shape Max CR"
+  },
+  "wild-shape-swim": {
+    "name": "Wild Shape Swimming"
+  },
+  "action-surges": {
+    "name": "Action Surges"
+  },
+  "extra-attacks": {
+    "name": "Extra Attacks"
+  },
+  "indomitable-uses": {
+    "name": "Indomitable Uses"
+  },
+  "ki-points": {
+    "name": "Ki Points"
+  },
+  "martial-arts": {
+    "name": "Martial Arts"
+  },
+  "unarmored-movement": {
+    "name": "Unarmored Movement"
+  },
+  "aura-range": {
+    "name": "Aura Range"
+  },
+  "favored-enemies": {
+    "name": "Favored Enemies"
+  },
+  "favored-terrain": {
+    "name": "Favored Terrain"
+  },
+  "sneak-attack": {
+    "name": "Sneak Attack"
+  },
+  "metamagic-known": {
+    "name": "Metamagic Options Known"
+  },
+  "sorcery-points": {
+    "name": "Sorcery Points"
+  },
+  "invocations-known": {
+    "name": "Invocations Known"
+  },
+  "mystic-arcanum-level-6": {
+    "name": "Mystic Arcanum (6th level)"
+  },
+  "mystic-arcanum-level-7": {
+    "name": "Mystic Arcanum (7th level)"
+  },
+  "mystic-arcanum-level-8": {
+    "name": "Mystic Arcanum (8th level)"
+  },
+  "mystic-arcanum-level-9": {
+    "name": "Mystic Arcanum (9th level)"
+  },
+  "arcane-recovery-levels": {
+    "name": "Arcane Recovery Levels"
+  },
+  "paladin-channel-divinity": {
+    "name": "Channel Divinity Uses"
+  },
+  "pact-magic": {
+    "name": "Pact Magic"
+  },
+  "bardic-inspiration": {
+    "name": "Bardic Inspiration"
+  }
+}

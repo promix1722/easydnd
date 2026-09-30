@@ -19,6 +19,9 @@ package character
 
 import (
 	"context"
+	"github.com/promix1722/easydnd/internal/domain/pack"
+	"maps"
+	"slices"
 
 	"github.com/promix1722/easydnd/internal/types"
 )
@@ -51,6 +54,10 @@ func (o OwnerID) String() string { return string(o) }
 // that happened to the character in the fiction, and it has no business
 // appearing in their history.
 type Character struct {
+	Revision    int
+	Checkpoints []Checkpoint
+	Commands    map[string]int
+
 	ID     ID
 	Owner  OwnerID
 	Folder FolderID
@@ -188,7 +195,25 @@ func Rebuild(events []Event) (Log, error) {
 // without gaps, and an init event appears exactly once, first.
 func (l Log) Validate() error {
 	initSeen := false
+	ids := map[string]bool{}
 	for i, e := range l.Events {
+		if e.ID != "" {
+			if ids[e.ID] {
+				return types.NewValidationError("duplicate event identity")
+			}
+			ids[e.ID] = true
+		}
+		if !e.RulesLock.IsZero() {
+			if err := e.RulesLock.Validate(); err != nil {
+				return err
+			}
+		}
+		if e.SchemaVersion < 0 || e.SchemaVersion > 1 {
+			return types.NewValidationError("unsupported event schema %d", e.SchemaVersion)
+		}
+		if i > 0 && !e.RulesLock.IsZero() {
+			return types.NewValidationError("rules lock belongs to init event")
+		}
 		if e.Seq != i+1 {
 			return types.NewValidationError("event at index %d has sequence %d, expected %d", i, e.Seq, i+1)
 		}
@@ -209,6 +234,8 @@ func (l Log) Validate() error {
 // under internal/adapter/repository; internal/app picks the concrete one, and
 // that assignment is what proves conformance at compile time.
 type Repository interface {
+	Commit(context.Context, ID, int, Log, string, *Checkpoint) error
+
 	// Create stores a new character owned by owner, filed in folder, and
 	// returns it with its assigned ID and an empty log.
 	//
@@ -276,4 +303,36 @@ type Repository interface {
 	// Delete removes a character. Implementations report a
 	// *types.NotFoundError when it does not exist.
 	Delete(ctx context.Context, id ID) error
+}
+
+// Checkpoint retains the complete pre-migration build and its exact lock.
+type Checkpoint struct {
+	Revision int
+	Log      Log
+	Reason   string
+}
+
+func (l Log) RulesLock() pack.Lock {
+	if len(l.Events) == 0 {
+		return pack.Lock{}
+	}
+	return l.Events[0].RulesLock.Clone()
+}
+func (l Log) Clone() Log {
+	out := Log{Events: slices.Clone(l.Events)}
+	for i := range out.Events {
+		e := &out.Events[i]
+		e.RulesLock = e.RulesLock.Clone()
+		e.Allocations = maps.Clone(e.Allocations)
+		e.Choices = slices.Clone(e.Choices)
+		for j := range e.Choices {
+			e.Choices[j].Picks = slices.Clone(e.Choices[j].Picks)
+		}
+		e.Changes = slices.Clone(e.Changes)
+		for j := range e.Changes {
+			e.Changes[j].Value.Slugs = slices.Clone(e.Changes[j].Value.Slugs)
+			e.Changes[j].Value.Dice.Terms = slices.Clone(e.Changes[j].Value.Dice.Terms)
+		}
+	}
+	return out
 }

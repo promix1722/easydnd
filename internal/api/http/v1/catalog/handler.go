@@ -3,6 +3,8 @@ package catalog
 import (
 	"context"
 	"encoding/json"
+	"github.com/gin-gonic/gin"
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"log/slog"
 	"sync"
 
@@ -189,4 +191,12 @@ func (h *Handler) collectionBytes(ctx context.Context, locale rules.Locale, coll
 	}
 	h.rendered.Store(key, raw)
 	return raw, nil
+}
+
+func (h *Handler) ContentLocales(ctx context.Context) (gin.HandlerFunc, error) {
+	locales, err := h.source.Locales(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.ContentLocales(locales), nil
 }

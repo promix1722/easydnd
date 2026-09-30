@@ -10,6 +10,10 @@ import "github.com/promix1722/easydnd/internal/domain/rules"
 // two -- which is what DND.md means by "autocalculated", and why recomputing
 // it from scratch must always be safe.
 type State struct {
+	Contributions []Contribution
+	PackActions   []ActionOffer
+	ManualRules   []rules.Slug
+
 	Identity     Identity
 	Base         Base
 	Abilities    Abilities
@@ -182,6 +186,8 @@ type Base struct {
 // (see rules.Modifier), and storing a derived value is how a sheet ends up
 // internally inconsistent.
 type Abilities struct {
+	ModifierRule rules.Expression
+
 	// Scores are the base scores as generated -- point buy, standard array
 	// or rolled -- with every racial and Ability Score Improvement bonus
 	// already folded in by Project. An init event records the base; the
@@ -208,6 +214,11 @@ func (a Abilities) Score(ability rules.Ability) int {
 
 // Modifier returns the ability's modifier.
 func (a Abilities) Modifier(ability rules.Ability) int {
+	if a.ModifierRule.Op != "" {
+		if v, err := a.ModifierRule.Eval(rules.Variables{"score": a.Score(ability)}); err == nil {
+			return v
+		}
+	}
 	return rules.Modifier(a.Score(ability))
 }
 
@@ -356,6 +367,9 @@ const MaxSpellLevel = 9
 // superiority dice, so this uses the neutral word and keeps SpellSlots as one
 // named member.
 type Resources struct {
+	Pools      map[rules.Slug]ResourcePool
+	Parameters map[rules.Slug]Parameter
+
 	// SpellSlots is indexed by spell level, 1..MaxSpellLevel. Index 0 is
 	// unused so that SpellSlots[3] means third-level slots.
 	SpellSlots [MaxSpellLevel + 1]Pool
