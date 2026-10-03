@@ -562,20 +562,28 @@ beforeEach(() => {
 describe('BuildScreen', () => {
   const viewport = 'mobile'
 
-  it('names the question the server said was next, and opens it when pressed', async () => {
-    const user = setupUser()
+  it('opens and focuses the first choice on the initial tab', async () => {
     renderBuild(viewport)
 
-    // Named rather than asked, and shut until somebody asks for it: the screen
-    // does not know which of the open choices anybody came here to make.
     const race = await screen.findByRole('button', { name: /A race/ })
-    expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
-
-    await user.click(race)
-
-    // Options come from the collection the prompt named.
-    expect(await screen.findByRole('button', { name: 'Half-Elf' })).toBeInTheDocument()
+    expect(race).toHaveAttribute('aria-expanded', 'true')
+    const halfElf = await screen.findByRole('button', { name: 'Half-Elf' })
+    await waitFor(() => expect(halfElf).toHaveFocus())
     expect(screen.getByRole('button', { name: 'Dwarf' })).toBeInTheDocument()
+  })
+
+  it('opens the first choice on a clicked tab even when that tab has several choices', async () => {
+    const user = setupUser()
+    mockApi({ prompts: { seq: 2, complete: false, prompts: [SUBRACE_PROMPT, LANGUAGE_PROMPT] }, events: RACE_LOG })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Race' })
+    await user.click(tab('personal'))
+    await user.click(tab('race'))
+
+    expect(panel('race').getByRole('button', { name: 'A subrace' })).toHaveAttribute('aria-expanded', 'true')
+    const first = await panel('race').findByRole('button', { name: 'Hill Dwarf' })
+    await waitFor(() => expect(first).toHaveFocus())
   })
 
   /*
@@ -632,7 +640,6 @@ describe('BuildScreen', () => {
     const user = setupUser()
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /A race/ }))
     await user.click(await screen.findByRole('button', { name: 'Half-Elf' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
@@ -700,13 +707,89 @@ describe('BuildScreen', () => {
     // On to the next category with something required outstanding, which is
     // the class -- identity is where we were and abilities has nothing open.
     expect(tab('class')).toHaveAttribute('aria-selected', 'true')
+    expect(panel('class').getByRole('button', { name: 'A class' })).toHaveAttribute('aria-expanded', 'true')
+    expect(await screen.findByRole('group', { name: 'A class' })).toHaveFocus()
+  })
+
+  it('offers the 2014 rules selected and confirms them like another choice', async () => {
+    const user = setupUser()
+    mockApi({ prompts: { seq: 1, complete: false, prompts: [{
+      choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
+      group: 'identity', optional: false, event: { type: 'change' }, heldOnly: false,
+    }] } })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Rules' })
+    expect(panel('rules').queryByRole('combobox')).not.toBeInTheDocument()
+    const option = await panel('rules').findByRole('button', { name: 'D&D 2014' })
+    expect(option).toHaveAttribute('aria-pressed', 'true')
+    await user.click(option)
+    await user.tab()
+    const confirm = panel('rules').getByRole('button', { name: 'Confirm' })
+    expect(confirm).toHaveFocus()
+    expect(writes()).toHaveLength(0)
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(writes()).toHaveLength(1))
+    expect(writes()[0]?.body).toMatchObject({ events: [{ type: 'change', changes: [
+      { path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } },
+    ] }] })
+  })
+
+  it('focuses Next after confirming Rules with the mouse', async () => {
+    const user = setupUser()
+    mockApi({
+      prompts: { seq: 1, complete: false, prompts: [{
+        choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
+        group: 'identity', optional: false, event: { type: 'change' }, heldOnly: false,
+      }] },
+      then: { seq: 2, complete: false, prompts: [{
+        choice: { prompt: 'character/class', choose: 1, kind: 'class', from: { kind: 'explicit', options: [
+          { key: 'fighter', kind: 'text', text: 'Fighter' },
+        ] } },
+        group: 'class', optional: false, event: { type: 'class', level: 1 }, heldOnly: false,
+      }] },
+      thenEvents: { seq: 2, events: [INIT, {
+        seq: 2, type: 'change', source: 'identity',
+        changes: [{ path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } }],
+      }] },
+    })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Rules' })
+    await user.click(await panel('rules').findByRole('button', { name: 'D&D 2014' }))
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
+    const next = await panel('rules').findByRole('button', { name: 'Next' })
+    await waitFor(() => expect(next).toHaveFocus())
+    expect(current()).toBe('Rules')
+    await user.keyboard('{Enter}')
+    expect(current()).toBe('Class')
+    await waitFor(() => expect(panel('class').getByRole('button', { name: 'Fighter' })).toHaveFocus())
+  })
+
+  it('visits Personality even while required work remains, and can continue past its optional questions', async () => {
+    const user = setupUser()
+    mockApi({
+      prompts: { seq: 2, complete: false, prompts: [PARTWAY.prompts[2], TRAITS_OPEN.prompts[0]] },
+      events: BACKGROUND_LOG,
+    })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Background' })
+    await user.click(tab('background'))
+    await user.click(await panel('background').findByRole('button', { name: 'Next' }))
+
+    expect(current()).toBe('Personality')
+    expect(await screen.findByLabelText('Personality trait')).toHaveFocus()
+    await user.click(panel('personality').getByRole('button', { name: 'Next' }))
+    expect(current()).toBe('Class')
+    expect(panel('class').getByRole('button', { name: 'A class' })).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('closes the completed choice when nothing remains on its tab', async () => {
     const user = setupUser()
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /A race/ }))
     await user.click(await screen.findByRole('button', { name: 'Half-Elf' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
@@ -723,7 +806,6 @@ describe('BuildScreen', () => {
     mockApi({ then: { seq: 2, complete: false, prompts: [SUBRACE_PROMPT] }, thenEvents: RACE_LOG, until })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /A race/ }))
     await user.click(await screen.findByRole('button', { name: 'Dwarf' }))
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
     await waitFor(() => expect(writes()).toHaveLength(1))
@@ -733,7 +815,7 @@ describe('BuildScreen', () => {
     expect(await screen.findByRole('button', { name: 'Hill Dwarf' })).toBeInTheDocument()
     expect(current()).toBe('Race')
     expect(screen.getByRole('button', { name: 'A subrace' })).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('group', { name: 'A subrace' })).toHaveFocus()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Hill Dwarf' })).toHaveFocus())
   })
 
   it('edits personality before a background and focuses the next written answer', async () => {
@@ -752,8 +834,7 @@ describe('BuildScreen', () => {
     })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /1 personality trait/ }))
-    await user.type(screen.getByLabelText('Personality trait'), 'I trust strangers.')
+    await user.type(await screen.findByLabelText('Personality trait'), 'I trust strangers.')
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
     expect(await screen.findByLabelText('Ideal')).toHaveFocus()
@@ -761,32 +842,101 @@ describe('BuildScreen', () => {
     expect(panel('personality').getByText('I trust strangers.')).toBeInTheDocument()
   })
 
-  it('closes what was open when the tab changes', async () => {
+  it('keeps the keyboard in the next personality field after Tab and Enter', async () => {
+    const user = setupUser()
+    // jsdom focuses descendants of inert accordion panels, while browsers
+    // refuse that focus until the opening transition makes them interactive.
+    const originalFocus = HTMLTextAreaElement.prototype.focus
+    const focusSpy = vi.spyOn(HTMLTextAreaElement.prototype, 'focus').mockImplementation(function (this: HTMLTextAreaElement, options?: FocusOptions) {
+      if (this.closest('[inert], [aria-hidden="true"]')) return
+      originalFocus.call(this, options)
+    })
+    const written = (prompt: string, kind: string) => ({
+      ...TRAITS_OPEN.prompts[0]!,
+      choice: { ...TRAITS_OPEN.prompts[0]!.choice, prompt, kind },
+    })
+    mockApi({
+      prompts: { seq: 1, complete: true, prompts: [written('character/bond', 'bond'), written('character/flaw', 'flaw')] },
+      events: LOG_JUST_CREATED,
+      then: { seq: 2, complete: true, prompts: [written('character/flaw', 'flaw')] },
+      thenEvents: { seq: 2, events: [INIT, {
+        seq: 2, type: 'change', source: 'personality',
+        changes: [{ path: 'identity.bonds', op: 'set', value: { kind: 'string', string: 'asdfda' } }],
+      }] },
+    })
+    try {
+      renderBuild(viewport)
+
+      await screen.findByRole('tab', { name: 'Personality' })
+      expect(current()).toBe('Personality')
+      const bond = await screen.findByLabelText('Bond')
+      await waitFor(() => expect(bond).toHaveFocus())
+      await user.type(bond, 'asdfda')
+      await user.tab()
+      expect(screen.getByRole('button', { name: 'Confirm' })).toHaveFocus()
+      await user.keyboard('{Enter}')
+
+      const flaw = await screen.findByLabelText('Flaw')
+      await waitFor(() => expect(flaw).toHaveFocus())
+      await user.type(flaw, 'I rush into danger.')
+      expect(flaw).toHaveValue('I rush into danger.')
+    } finally {
+      focusSpy.mockRestore()
+    }
+  })
+
+  it('opens the first choice again when returning to a tab', async () => {
     const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
     await user.click(await screen.findByRole('tab', { name: 'Race' }))
-    await user.click(block(/2 to be proficient in/))
     expect(await screen.findByRole('button', { name: /Acrobatics/ })).toBeInTheDocument()
 
-    // A different tab is a different question, so the one in hand is dropped
-    // rather than waiting underneath for a return that may never come.
     await user.click(tab('background'))
     await user.click(tab('race'))
-    expect(screen.queryByRole('button', { name: /Acrobatics/ })).not.toBeInTheDocument()
+    const first = await screen.findByRole('button', { name: /Acrobatics/ })
+    await waitFor(() => expect(first).toHaveFocus())
   })
 
-  it('offers every category as a tab, in order, and disables none', async () => {
+  it('keeps non-spell categories available but hides spell tabs without choices', async () => {
     renderBuild(viewport)
     await screen.findByText('A race')
 
-    // Class first after the name -- it is the choice the most other choices
-    // hang off -- and the scores straight after it, because they are what the
-    // class was picked for. Nothing is disabled, because a tab is a place to
-    // look as well as a place to answer.
-    expect(tabs()).toEqual(['Personal', 'Rules', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Cantrips', 'Spells', 'Equipment'])
+    // The spell tabs appear when a choice is available; the remaining tabs
+    // remain places the player can visit before choosing a class.
+    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Equipment'])
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
+  })
+
+  it('reveals Cantrips and Spells when the chosen class grants those choices', async () => {
+    const user = setupUser()
+    const spell = (purpose: string) => ({
+      choice: { prompt: `wizard/spell/${purpose}/1`, choose: 1, kind: 'spell', from: { kind: 'explicit', options: [
+        { key: purpose, kind: 'ref', ref: `spell:${purpose}` },
+      ] } },
+      group: 'class', source: 'class:wizard', purpose, optional: false, heldOnly: false,
+      event: { type: 'level', ref: 'class:wizard', level: 1 },
+    })
+    mockApi({
+      prompts: { seq: 1, complete: false, prompts: [{
+        choice: { prompt: 'character/class', choose: 1, kind: 'class', from: { kind: 'explicit', options: [
+          { key: 'wizard', kind: 'text', text: 'Wizard' },
+        ] } },
+        group: 'class', optional: false, event: { type: 'class', level: 1 }, heldOnly: false,
+      }] },
+      then: { seq: 2, complete: false, prompts: [spell('cantrip'), spell('known')] },
+      thenEvents: { seq: 2, events: [INIT, { seq: 2, type: 'class', source: 'class', ref: 'class:wizard', level: 1 }] },
+    })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Class' })
+    expect(screen.queryByRole('tab', { name: 'Cantrips' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Spells' })).not.toBeInTheDocument()
+    await user.click(await panel('class').findByRole('button', { name: 'Confirm' }))
+
+    await screen.findByRole('tab', { name: 'Cantrips' })
+    expect(tabs().slice(-3)).toEqual(['Cantrips', 'Spells', 'Equipment'])
   })
 
   // One mount, walked across three tabs: each shows only what belongs to it,
@@ -823,7 +973,6 @@ describe('BuildScreen', () => {
     renderBuild(viewport)
 
     await user.click(await screen.findByRole('tab', { name: 'Race' }))
-    await user.click(screen.getByRole('button', { name: /2 to be proficient in/ }))
     await user.click(await screen.findByRole('button', { name: /Acrobatics/ }))
     await user.click(screen.getByRole('button', { name: /Insight/ }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
@@ -856,7 +1005,6 @@ describe('BuildScreen', () => {
       'aria-selected',
       'true',
     )
-    await user.click(await screen.findByRole('button', { name: /A race/ }))
     await user.click(await screen.findByRole('button', { name: 'Half-Elf' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
@@ -876,6 +1024,7 @@ describe('BuildScreen', () => {
     expect(tab('race')).toHaveAttribute('aria-selected', 'true')
     expect(panel('race').queryByText('A background')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
+    await waitFor(() => expect(panel('race').getByRole('button', { name: 'Next' })).toHaveFocus())
   })
 
   it('finishes to the sheet', async () => {
@@ -987,7 +1136,6 @@ describe('BuildScreen', () => {
     mockApi({ prompts: ALIGNMENT, events: BACKGROUND_LOG })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /An alignment/ }))
     await user.click(await screen.findByRole('button', { name: 'Neutral' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
@@ -1044,7 +1192,6 @@ describe('BuildScreen', () => {
     mockApi({ prompts: TRAITS_OPEN, events: BACKGROUND_LOG })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /1 personality trait/ }))
     await user.type(
       await screen.findByLabelText('Personality trait'),
       'I quote sacred texts at every turn.',
@@ -1115,8 +1262,7 @@ describe('BuildScreen', () => {
 
     // The scores are an ordinary open choice now, not a field on a create
     // form, which is what gives them an entry to point at and change.
-    await user.click(await screen.findByRole('button', { name: /6 ability scores/ }))
-    expect(tab('abilities')).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('tab', { name: 'Abilities' })).toHaveAttribute('aria-selected', 'true')
 
     // The array is dealt out rather than typed: six printed numbers, and the
     // decision is which ability gets which. Nothing can be confirmed until
@@ -1170,7 +1316,7 @@ describe('a new character', () => {
   // The phone's, for the reason the block above records.
   const viewport = 'mobile'
 
-  it('shows the whole of identity, and answers only the question that creates', async () => {
+  it('opens Rules first on a new character', async () => {
     renderNew(viewport)
 
     // All three, in the order they are asked, so the page says up front what
@@ -1181,24 +1327,96 @@ describe('a new character', () => {
     expect(panel('rules').getByText('The rules to play by')).toBeInTheDocument()
     expect(panel('class').getByText('Level')).toBeInTheDocument()
 
-    // The one block that opens itself: there is nothing behind it, and a front
-    // door whose only row is shut reads as broken.
-    expect(screen.getByLabelText('Name')).toBeInTheDocument()
+    expect(current()).toBe('Rules')
+    expect(panel('rules').getByRole('button', { name: /The rules to play by/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(await panel('rules').findByRole('button', { name: 'D&D 2014' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
     // Named once. The block says what the choice is, and the surface under it
     // used to say it twice more -- a heading and a field label.
     expect(screen.getAllByText(/^A name$/)).toHaveLength(1)
     expect(screen.queryByText('What are they called?')).not.toBeInTheDocument()
 
-    // The other two have nothing to open: there is no character to answer
-    // them against until the name creates one, so they are statements of what
-    // is coming rather than controls that would fail.
-    expect(screen.queryByRole('button', { name: /The rules to play by/ })).not.toBeInTheDocument()
+    // Level still needs a character; the rules choice is a draft until the
+    // name creates one.
     expect(screen.queryByRole('button', { name: /^Level$/ })).not.toBeInTheDocument()
 
     // The scores are a question asked of a character that exists, not a field
     // on the form that creates one.
     expect(screen.queryByText(/ability scores/)).not.toBeInTheDocument()
-    expect(tabs()).toEqual(['Personal', 'Rules', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Cantrips', 'Spells', 'Equipment'])
+    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Equipment'])
+  })
+
+  it('chooses 2014 rules before the name and saves them when the character is created', async () => {
+    const user = setupUser()
+    renderNew(viewport)
+
+    const rules = await screen.findByRole('button', { name: 'D&D 2014' })
+    await waitFor(() => expect(rules).toHaveFocus())
+    expect(rules).toHaveAttribute('aria-pressed', 'true')
+    await user.tab()
+    expect(panel('rules').getByRole('button', { name: 'Confirm' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    expect(current()).toBe('Rules')
+    const next = await panel('rules').findByRole('button', { name: 'Next' })
+    await waitFor(() => expect(next).toHaveFocus())
+    await user.keyboard('{Enter}')
+
+    expect(current()).toBe('Personal')
+    const name = await screen.findByLabelText('Name')
+    await waitFor(() => expect(name).toHaveFocus())
+    await user.type(name, 'Zephyr')
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Confirm' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(writes()).toHaveLength(2))
+    expect(writes()[0]?.body).toEqual({ name: 'Zephyr' })
+    expect(writes()[1]?.body).toMatchObject({
+      expectedSeq: 1,
+      events: [{ type: 'change', changes: [
+        { path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } },
+      ] }],
+    })
+  })
+
+  it('keeps the rules choice selected while the name is still a draft', async () => {
+    const user = setupUser()
+    renderNew(viewport)
+
+    await user.click(await screen.findByRole('button', { name: 'D&D 2014' }))
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
+    const next = await panel('rules').findByRole('button', { name: 'Next' })
+    await waitFor(() => expect(next).toHaveFocus())
+    expect(current()).toBe('Rules')
+    await user.click(next)
+    expect(current()).toBe('Personal')
+    await user.click(tab('rules'))
+
+    expect(panel('rules').getByRole('button', { name: 'D&D 2014' })).toHaveAttribute('aria-pressed', 'true')
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('opens and focuses the first class choice after creation from that tab', async () => {
+    const user = setupUser()
+    mockApi({ then: { seq: 2, complete: false, prompts: [{
+      choice: { prompt: 'character/class', choose: 1, kind: 'class', from: { kind: 'explicit', options: [
+        { key: 'fighter', kind: 'text', text: 'Fighter' },
+      ] } },
+      group: 'class', optional: false, event: { type: 'class', level: 1 }, heldOnly: false,
+    }] } })
+    renderNew(viewport)
+
+    await user.click(await screen.findByRole('button', { name: 'D&D 2014' }))
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
+    await user.click(panel('rules').getByRole('button', { name: 'Next' }))
+    await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Zephyr')
+    await user.click(tab('class'))
+
+    await waitFor(() => expect(current()).toBe('Class'))
+    const first = await screen.findByRole('button', { name: 'Fighter' })
+    await waitFor(() => expect(first).toHaveFocus())
+    expect(writes()).toHaveLength(2)
   })
 
   it('keeps the name where its question was when the character is created', async () => {
@@ -1239,6 +1457,7 @@ describe('a new character', () => {
     })
     renderNew(viewport)
 
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
     await user.type(await screen.findByLabelText('Name'), 'Zephyr')
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
@@ -1255,13 +1474,20 @@ describe('a new character', () => {
     expect(rows[0]).toMatch(/Zephyr/)
     expect(panel('rules').getByRole('button', { name: /The rules to play by/ })).toBeInTheDocument()
     expect(panel('class').getByRole('button', { name: /^Level$/ })).toBeInTheDocument()
+
+    await user.click(panel('personal').getByRole('button', { name: 'Next' }))
+    expect(current()).toBe('Rules')
+    expect(await panel('rules').findByRole('button', { name: 'D&D 2014' })).toBeInTheDocument()
   })
 
   it('creates the character once, with the name alone, and lands on the tab that was pressed', async () => {
     const user = setupUser()
     renderNew(viewport)
 
-    await user.type(await screen.findByLabelText('Name'), 'Rurik')
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+    const name = await screen.findByLabelText('Name')
+    await waitFor(() => expect(name).toHaveFocus())
+    await user.type(name, 'Rurik')
     await user.click(tab('class'))
 
     const creates = posted.filter((write) => apiPath(write.url) === '/v1/characters')
@@ -1294,7 +1520,10 @@ describe('a new character', () => {
     mockApi({ until })
     renderNew(viewport)
 
-    await user.type(await screen.findByLabelText('Name'), 'Rurik')
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+    const name = await screen.findByLabelText('Name')
+    await waitFor(() => expect(name).toHaveFocus())
+    await user.type(name, 'Rurik')
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
     // Not "the write landed" -- the write lands before the navigation does, and
@@ -1312,7 +1541,7 @@ describe('a new character', () => {
     // that had already succeeded. It read as a reload because it looked like
     // one. The tabs never go, and neither does the block being answered.
     expect(screen.queryByText('Working out what is next...')).not.toBeInTheDocument()
-    expect(tabs()).toHaveLength(10)
+    expect(tabs()).toHaveLength(8)
     expect(screen.getByText('A name')).toBeInTheDocument()
 
     // And what replaces the block being answered is that block with an answer
@@ -1328,6 +1557,7 @@ describe('a new character', () => {
     const user = setupUser()
     renderNew(viewport)
 
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
     await user.type(await screen.findByLabelText('Name'), 'Rurik')
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
@@ -1346,6 +1576,7 @@ describe('a new character', () => {
     const user = setupUser()
     renderNew(viewport)
 
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
     await screen.findByLabelText('Name')
     await user.click(tab('abilities'))
 
@@ -1467,6 +1698,7 @@ it('edits saved spells from the existing picks without deleting them on open or 
   })
   renderBuild('desktop')
   await user.click(await screen.findByRole('tab', { name: 'Cantrips' }))
+  expect(screen.queryByRole('tab', { name: 'Spells' })).not.toBeInTheDocument()
   expect(await screen.findByRole('button', { name: 'Remove Light' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Remove Mage Hand' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
@@ -1483,6 +1715,7 @@ it('edits saved spells from the existing picks without deleting them on open or 
   await user.click(screen.getByRole('button', { name: 'Add Fire Bolt' }))
   await user.click(screen.getByRole('button', { name: 'Next' }))
   await waitFor(() => expect(writes()).toHaveLength(1))
+  expect(current()).toBe('Equipment')
   expect(posted.every((request) => request.method === 'PUT')).toBe(true)
   expect(writes()[0]).toMatchObject({ method: 'PUT', body: {
     expectedSeq: 3, expectedRevision: 5,

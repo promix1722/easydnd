@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Answer, Choice, Entry, Option, Prompt } from '@/lib/api'
 import { useT } from '@/lib/i18n'
@@ -52,6 +52,9 @@ export interface PromptCardProps {
  */
 export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers = [] }: PromptCardProps) {
   const t = useT()
+  const confirmRef = useRef<HTMLButtonElement>(null)
+  const lastOptionRef = useRef<HTMLElement | null>(null)
+  const [touched, setTouched] = useState(false)
 
   // One piece of state, because a new prompt has to reset all of it at once:
   // the questions this card is walking, the answers it has, and the picks in
@@ -87,7 +90,14 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
   // scores.
   const repeatable = stage.repeatable === true
 
+  useEffect(() => {
+    if (!touched) return
+    const target = ready ? confirmRef.current : lastOptionRef.current
+    if (target?.isConnected) target.scrollIntoView?.({ block: 'nearest' })
+  }, [progress, ready, touched])
+
   const toggle = (key: string) => {
+    setTouched(true)
     setProgress((current) =>
       settle(t, prompt, entries, {
         ...current,
@@ -100,6 +110,7 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
   const confirmation = (
       <Group>
         <Button
+          ref={confirmRef}
           onClick={() => onAnswer([...progress.answers, { prompt: stage.prompt, picks: [...picked] }])}
           disabled={!ready || pending}
           loading={pending}
@@ -112,7 +123,7 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
           player in a branch they may not have wanted with no way out.
         */}
         {(picked.length > 0 || progress.answers.length > 0) && (
-          <Button variant="subtle" onClick={() => setProgress(begin(t, prompt, entries))}>
+          <Button variant="subtle" disabled={pending} onClick={() => setProgress(begin(t, prompt, entries))}>
             {t('prompt.clear')}
           </Button>
         )}
@@ -151,7 +162,14 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
               h="auto"
               py="xs"
               disabled={pending || option.disabled || spent}
-              onClick={() => toggle(option.key)}
+              // Once the answer is ready, Tab should reach Confirm from the
+              // chosen option even when more options follow it in a long list.
+              tabIndex={ready && option.key !== picked[picked.length - 1] ? -1 : 0}
+              onFocus={(event) => event.currentTarget.scrollIntoView?.({ block: 'nearest' })}
+              onClick={(event) => {
+                lastOptionRef.current = event.currentTarget
+                toggle(option.key)
+              }}
               rightSection={
                 option.disabled ? (
                   <Text size="xs" c="dimmed">

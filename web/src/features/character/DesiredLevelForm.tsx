@@ -26,7 +26,11 @@ export interface DesiredLevelFormProps {
  */
 export function DesiredLevelForm({ initial, pending, submitLabel, onSubmit }: DesiredLevelFormProps) {
   const t = useT()
-  const [level, setLevel] = useState<number>(Math.min(Math.max(initial, 1), MAX_LEVEL))
+  const [level, setLevel] = useState<number | string>(Math.min(Math.max(initial, 1), MAX_LEVEL))
+  const valid = typeof level === 'number' && level >= 1 && level <= MAX_LEVEL
+  const submit = () => {
+    if (valid && !pending) onSubmit([desiredLevelChange(level)])
+  }
 
   return (
     <Stack gap="md">
@@ -37,12 +41,15 @@ export function DesiredLevelForm({ initial, pending, submitLabel, onSubmit }: De
         clampBehavior="strict"
         allowDecimal={false}
         value={level}
-        onChange={(value) => {
-          if (typeof value === 'number') setLevel(value)
+        onChange={setLevel}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+          event.preventDefault()
+          submit()
         }}
       />
       <Group>
-        <Button onClick={() => onSubmit([desiredLevelChange(level)])} loading={pending}>
+        <Button onClick={submit} disabled={!valid} loading={pending}>
           {submitLabel}
         </Button>
       </Group>

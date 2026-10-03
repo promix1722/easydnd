@@ -7,6 +7,7 @@ import { PointBuy } from './PointBuy'
 import { ScoreAssignment } from './ScoreAssignment'
 import type { Placement } from './ScoreAssignment'
 import { ScoreStepper } from './ScoreStepper'
+import { abilityName } from './labels'
 
 import {
   ABILITY_ORDER,
@@ -166,7 +167,13 @@ export function AbilityScoresForm({
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" onKeyDown={(event) => {
+      if (how !== 'manual' || !ready || pending || event.key !== 'Enter' || event.nativeEvent.isComposing) return
+      const target = event.target
+      if (!(target instanceof HTMLInputElement) || !ABILITY_ORDER.some((ability) => target.getAttribute('aria-label') === abilityName(t, ability))) return
+      event.preventDefault()
+      submit()
+    }}>
       <Select
         label={t('scores.methodLabel')}
         description={t('scores.methodHint')}

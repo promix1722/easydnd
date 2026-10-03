@@ -327,6 +327,19 @@ describe('manual', () => {
     expect(scored(changes, 'str')).toBe(17)
   })
 
+  it('confirms manual scores with Enter from a score input', async () => {
+    const user = setupUser()
+    const onSubmit = vi.fn()
+    renderAt('desktop', form({ onSubmit, method: 'manual' }))
+
+    const strength = screen.getByLabelText('Strength')
+    await user.clear(strength)
+    await user.type(strength, '16{Enter}')
+
+    expect(onSubmit).toHaveBeenCalledOnce()
+    expect(scored(onSubmit.mock.calls[0]?.[0] as Change[], 'str')).toBe(16)
+  })
+
   it('starts at ten rather than at whatever the last method had not decided', async () => {
     const user = setupUser()
     const onSubmit = vi.fn()

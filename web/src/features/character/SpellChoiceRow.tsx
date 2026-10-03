@@ -36,7 +36,8 @@ export function SpellChoiceRow({ option, slug, spell, entries, isSelected, pendi
   const addLabel = t('list.rowAction', { label: t('common.add'), name: option.label })
   return (
     <Stack key={option.key} gap="xs">
-      <Paper component="article" aria-label={option.label} withBorder radius="sm" px="xs" py={4} bg={isSelected ? "var(--mantine-color-blue-light)" : "var(--mantine-color-body)"}>
+      <Paper component="article" aria-label={option.label} withBorder radius="sm" px="xs" py={4} bg={isSelected ? "var(--mantine-color-blue-light)" : "var(--mantine-color-body)"}
+        onFocus={(event) => event.currentTarget.scrollIntoView?.({ block: 'nearest' })}>
         <Group gap="xs" wrap="nowrap" align="center">
           <Button
             aria-label={option.label}

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Entry, Prompt } from '@/lib/api'
@@ -66,6 +66,23 @@ describe('PromptCard', () => {
     expect(onAnswer).toHaveBeenCalledWith([
       { prompt: 'rogue/proficiency/0', picks: ['acrobatics', 'stealth'] },
     ])
+  })
+
+  it('scrolls a lower selected option and then its confirmation into view', async () => {
+    const user = setupUser()
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
+    try {
+      renderAt(viewport, <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />)
+      const lower = screen.getByRole('button', { name: /Deception/ })
+      await user.click(lower)
+      await waitFor(() => expect(scroll.mock.contexts).toContain(lower))
+
+      await user.click(screen.getByRole('button', { name: /Acrobatics/ }))
+      const confirm = screen.getByRole('button', { name: 'Confirm' })
+      await waitFor(() => expect(scroll.mock.contexts).toContain(confirm))
+    } finally {
+      scroll.mockRestore()
+    }
   })
 
   it('answers with the server option keys, not with labels', async () => {

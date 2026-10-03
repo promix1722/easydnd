@@ -15,6 +15,7 @@ import {
 import type {
   Answer,
   ApiFieldError,
+  Change,
   CharacterEvent,
   Dropped,
   Prompt,
@@ -152,10 +153,13 @@ export function BuildScreen() {
   const [seeded, setSeeded] = useState(false)
   const [askedOn, setAskedOn] = useState<Stage | null>(null)
   const [nameDraft, setNameDraft] = useState('')
+  const [draftRules, setDraftRules] = useState<Change[] | null>(null)
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [creating, setCreating] = useState(false)
   const [advanceAfter, setAdvanceAfter] = useState<{ view: BuildView; stage: Stage } | null>(null)
+  const [openAfterCreation, setOpenAfterCreation] = useState<Stage | null>(null)
+  const [focusNextStage, setFocusNextStage] = useState<Stage | null>(null)
 
   /*
    * One order per tab, held once and mutated rather than replaced: see
@@ -225,26 +229,22 @@ export function BuildScreen() {
   // and moves on as things are answered. That is the loop, kept: a player who
   // never touches a tab is walked through the questions in order, and one who
   // does is pinned where they put themselves.
-  const stage = chosenStage ?? firstUnfinished(open)
+  const settled = settledByStage(t, view)
+  // Spell tabs only have work when the server offers a choice or the player
+  // has a saved selection to edit. A non-caster should never have to pass
+  // through empty Cantrips and Spells tabs.
+  const visibleStages = STAGES.filter((each) => each !== 'cantrips' && each !== 'spells' ||
+    open.some((prompt) => stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each) ||
+    (settled.get(each)?.length ?? 0) > 0)
+  const preferredStage = chosenStage ?? (isNew ? 'rules' : firstUnfinished(open))
+  const stage = visibleStages.includes(preferredStage) ? preferredStage : firstUnfinished(open)
 
-  // A different tab is a different question, so the block that was open is
-  // closed. During render rather than in an effect, so the new tab is never
-  // painted once with the old tab's question under it.
+  // A stage change driven by fresh prompts can leave a key from the previous
+  // tab. Explicit tab navigation sets its own first choice below.
   if (askedOn !== stage) {
     setAskedOn(stage)
     setOpenKey(null)
   }
-  // The one thing that opens itself, and it opens once. A character that does
-  // not exist has a single block on the page and nothing behind it, so there
-  // is no other question being pre-empted -- and a front door whose only row
-  // is shut reads as broken. Seeded rather than derived, so that closing it
-  // closes it. After the reset above, which fires on the very first render.
-  if (isNew && !seeded) {
-    setSeeded(true)
-    setOpenKey(NEW_NAME_KEY)
-  }
-
-  const settled = settledByStage(t, view)
   // While the character is being created there is no log to read yet, so the
   // question it is being created by is still the thing on screen.
   const posingName = isNew || creating
@@ -273,11 +273,25 @@ export function BuildScreen() {
     ]),
   )
   const blocks = blocksByStage.get(stage) ?? []
+  const firstChoice = (on: Stage) => blocksByStage.get(on)?.find((block) => block.kind === 'open')?.key ?? null
+  // The first tab on a loaded build is entered just like a clicked tab.
+  if (!seeded && !build.loading) {
+    setSeeded(true)
+    setOpenKey(firstChoice(stage))
+  }
+  if (openAfterCreation === stage && !creating && !build.loading) {
+    setOpenAfterCreation(null)
+    const next = firstChoice(stage)
+    setOpenKey(next)
+    if (next === null) setFocusNextStage(stage)
+  }
   // Wait for the refreshed prompts: an answer can create new choices on this tab.
   if (advanceAfter !== null && (advanceAfter.stage !== stage || advanceAfter.view !== view)) {
     setAdvanceAfter(null)
     if (advanceAfter.stage === stage) {
-      setOpenKey(blocks.find((block) => block.kind === 'open')?.key ?? null)
+      const next = firstChoice(stage)
+      setOpenKey(next)
+      if (next === null) setFocusNextStage(stage)
     }
   }
   const activeKey = openKey
@@ -303,6 +317,7 @@ export function BuildScreen() {
    */
   const done = (open: string | null = null) => {
     setOpenKey(open)
+    setFocusNextStage(null)
     setAdvanceAfter(open === null ? { view, stage } : null)
     setPreview(null)
     // Pinned to wherever the answer was given. The screen opens on the first
@@ -336,30 +351,46 @@ export function BuildScreen() {
     // replace: true, because the URL of a character that does not exist is
     // not a place the Back button should return anyone to.
     if (created) {
+      // Rules were chosen before there was a character to write them to.
+      // Save that choice against the new character before showing its prompts.
+      const rulesSaved = draftRules === null || await answer.run(created.id, created.seq, [
+        { type: 'change', changes: draftRules },
+      ], created.seq) !== null
       // Preserve the name question's position when its saved entry arrives.
       inheritPlace(orderFor('personal'), NEW_NAME_KEY, settledKey(created.seq))
       // Set before the navigation, because the navigation is what changes the
       // resource key -- and the render that reads the new key is the one that
       // would otherwise blank the page.
       setCreating(true)
+      setOpenAfterCreation(rulesSaved ? landOn : 'rules')
       await navigate(`/characters/${created.id}/build`, {
         replace: true,
-        state: { stage: landOn },
+        state: { stage: rulesSaved ? landOn : 'rules' },
       })
     }
   }
 
   const goToStage = (next: Stage) => {
     if (next === stage) return
-    // Nothing else can be answered before the character exists, so a tab click
-    // is the same gesture as pressing Next: make it, then go -- to the tab that
-    // was pressed, which is the whole of what the gesture asked for.
+    setFocusNextStage(null)
+    // Rules and name can be visited before creation. Other tabs still need a
+    // character, so entering one of those creates it from the name draft.
     if (isNew) {
+      if (next === 'rules' || next === 'personal') {
+        setChosenStage(next)
+        setAskedOn(next)
+        setOpenKey(next === 'rules' ? NEW_RULES_KEY : NEW_NAME_KEY)
+        return
+      }
       void createCharacterFromDraft(next)
       return
     }
     setAdvanceAfter(null)
     setChosenStage(next)
+    setAskedOn(next)
+    const first = firstChoice(next)
+    setOpenKey(first)
+    if (first === null) setFocusNextStage(next)
   }
 
   /** Sends one appended entry, then rereads everything. */
@@ -475,6 +506,7 @@ export function BuildScreen() {
    */
   const openBlock = (key: string | null) => {
     setOpenKey(key)
+    setFocusNextStage(null)
     const block = key === null ? null : blocks.find((each) => each.key === key)
     if (block?.kind !== 'settled') return
     if (isSpellChoice(block.row)) return
@@ -601,11 +633,11 @@ export function BuildScreen() {
               snaps back is worse than one that never gives.
             */
             swipeable={!posingName}
-            panels={STAGES.map((each) => {
+            panels={visibleStages.map((each) => {
               // Where Next goes from *this* tab, which is a fact about the tab
               // and not about the one on screen -- every panel is mounted, so
               // every panel's button has to be its own.
-              const after = stageAfter(each, open)
+              const after = each === 'rules' && isNew && draftRules !== null ? 'personal' : stageAfter(each, open)
               return {
                 value: each,
                 label: stageLabel(t, each),
@@ -622,10 +654,10 @@ export function BuildScreen() {
                       if (prompt === undefined) throw new Error(t('prompt.nothingOffered'))
                       return prompt
                     }}
-                    onAnswers={(submissions) => void saveSpells(submissions, each === 'cantrips' ? 'spells' : 'equipment')}
+                    onAnswers={(submissions) => void saveSpells(submissions, each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : 'equipment')}
                     pending={answer.pending || revise.pending || spellSave.pending || remove.pending || build.loading}
                     revision={view.prompts.revision ?? view.prompts.seq}
-                    onNext={() => goToStage(each === 'cantrips' ? 'spells' : 'equipment')}
+                    onNext={() => goToStage(each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : 'equipment')}
                   />
                 ) : (
                   <StagePanel
@@ -645,9 +677,13 @@ export function BuildScreen() {
                       if (isNew) void createCharacterFromDraft('personal')
                       else submitEvent(asked, initEventFor(next))
                     }}
-                    onAnswerChanges={(asked, changes) =>
-                      submitEvent(asked, { type: asked.prompt.event.type, changes })
-                    }
+                    onAnswerChanges={(asked, changes) => {
+                      if (isNew && asked.prompt.choice.prompt === 'character/ruleset') {
+                        setDraftRules(changes)
+                        setOpenKey(null)
+                        setFocusNextStage('rules')
+                      } else submitEvent(asked, { type: asked.prompt.event.type, changes })
+                    }}
                     pending={
                       creating || create.pending || answer.pending || revise.pending || remove.pending
                     }
@@ -661,6 +697,8 @@ export function BuildScreen() {
                     {...maybeLines(asking?.replaces ?? null)}
                     {...(view.sheet !== null ? { level: view.sheet.identity.level } : {})}
                     posing={posingName}
+                    rulesSelected={draftRules !== null}
+                    focusNext={focusNextStage === each}
                   />
                 ),
               }
@@ -810,22 +848,22 @@ const NEW_NAME_PROMPT: Prompt = {
 }
 
 /**
- * The initial questions, shown on Personal, Rules and Class before creation.
+ * The initial questions, shown on Rules, Personal and Class before creation.
  *
- * The same three questions the server poses the moment the character exists,
- * in the same order. They are drawn without an answering surface until then -- see
- * `posing` in `StagePanel` -- because there is nothing to append an answer to:
- * a name is what creates the character, and these are answered against it.
+ * Rules can be chosen before creation and saved with the first character
+ * write. Level still needs an existing character to be answered.
  */
+const NEW_RULES_PROMPT: Prompt = {
+  choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
+  group: 'identity',
+  optional: false,
+  event: { type: 'change' },
+  heldOnly: false,
+}
+
 const NEW_INITIAL_PROMPTS: Prompt[] = [
+  NEW_RULES_PROMPT,
   NEW_NAME_PROMPT,
-  {
-    choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
-    group: 'identity',
-    optional: false,
-      event: { type: 'change' },
-    heldOnly: false,
-  },
   {
     choice: {
       prompt: 'character/desired-level',
@@ -835,12 +873,13 @@ const NEW_INITIAL_PROMPTS: Prompt[] = [
     },
     group: 'identity',
     optional: false,
-      event: { type: 'change' },
+    event: { type: 'change' },
     heldOnly: false,
   },
 ]
 
 const NEW_NAME_KEY = keyFor({ prompt: NEW_NAME_PROMPT, replaces: null })
+const NEW_RULES_KEY = keyFor({ prompt: NEW_RULES_PROMPT, replaces: null })
 
 /**
  * The question behind a settled block, where there is one to put again.
@@ -881,17 +920,19 @@ function firstUnfinished(prompts: readonly Prompt[]): Stage {
 /**
  * The next category with something still open, wrapping round.
  *
- * Required questions first, and anything at all only if none is left: a
- * finished character always has an optional prompt somewhere, and a Next that
- * walked to it would never let anybody stop.
+ * Follow display order, including optional questions such as Personality.
+ * Only wrap to an earlier tab for required work that is still outstanding.
  */
 function stageAfter(stage: Stage, prompts: readonly Prompt[]): Stage | null {
-  const groups = (only: (p: Prompt) => boolean) =>
-    new Set(prompts.filter(only).flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
+  const all = new Set(prompts.flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
+  const required = new Set(prompts.filter((p) => !p.optional)
+    .flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
+  // Someone who entered a name before choosing rules should see Rules next.
+  if (stage === 'personal' && required.has('rules')) return 'rules'
   const from = STAGES.indexOf(stage)
-  const order = [...STAGES.slice(from + 1), ...STAGES.slice(0, from)]
-  const required = groups((p) => !p.optional)
-  return order.find((s) => required.has(s)) ?? order.find((s) => groups(() => true).has(s)) ?? null
+  return STAGES.slice(from + 1).find((s) => all.has(s))
+    ?? STAGES.slice(0, from).find((s) => required.has(s))
+    ?? null
 }
 
 function isStage(stage: Stage | null): stage is Stage {

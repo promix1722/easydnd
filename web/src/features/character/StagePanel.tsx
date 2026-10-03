@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 
 import { describeField, describeError } from '@/lib/api'
 import type { Answer, ApiFieldError, Change, Entry, Equipment, Prompt } from '@/lib/api'
@@ -41,12 +42,14 @@ export interface StagePanelProps {
   pending: boolean
   fields: readonly ApiFieldError[]
   /**
-   * Where to go when there is nothing left here.
+   * Where to go when required choices here are complete.
    *
    * Absent when there is nowhere to go, which is what makes the button the
    * end of the list rather than a fixture of it.
    */
   onNext?: () => void
+  /** Focus Next after the last answer on this tab has been saved. */
+  focusNext?: boolean
   /** What the character is called, so renaming starts from it. */
   name?: string
   /** The scores as the log stored them -- not as the sheet projects them. */
@@ -57,11 +60,11 @@ export interface StagePanelProps {
   /** The character's current level, for the desired-level form to start from. */
   level?: number
   /**
-   * There is no character yet, so the only question that can be answered is
-   * the one that creates it. Rules and level are drawn on their tabs as
-   * questions to answer once the name has created the character.
+   * There is no character yet. Rules can be chosen as a draft and the name
+   * creates the character; level waits until it exists.
    */
   posing?: boolean
+  rulesSelected?: boolean
 }
 
 /**
@@ -101,25 +104,25 @@ export function StagePanel({
   pending,
   fields,
   onNext,
+  focusNext = false,
   name,
   scores,
   method,
   lines,
   level,
   posing = false,
+  rulesSelected = false,
 }: StagePanelProps) {
   const t = useT()
-  const surfaceRef = useRef<HTMLDivElement>(null)
+  const nextRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
-    const surface = surfaceRef.current
-    if (surface === null) return
-    const field = surface.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled)')
-    const target = field ?? surface
-    target.focus()
-    surface.scrollIntoView?.({ block: 'nearest' })
-  }, [openKey])
+    if (!focusNext) return
+    const next = nextRef.current
+    next?.focus({ preventScroll: true })
+    next?.scrollIntoView?.({ block: 'nearest' })
+  }, [focusNext])
   const surface = (asked: Asking) => (
-    <div ref={surfaceRef} tabIndex={-1} role="group" aria-label={choiceName(t, asked.prompt)}>
+    <FocusedAnswer label={choiceName(t, asked.prompt)}>
       <AnswerSurface
         asking={asked}
         pending={pending}
@@ -129,12 +132,13 @@ export function StagePanel({
         {...(method !== undefined ? { method } : {})}
         {...(lines !== undefined ? { lines } : {})}
         {...(level !== undefined ? { level } : {})}
+        rulesSelected={rulesSelected}
         onPicks={(answers) => onAnswerPicks(asked, answers)}
         onNameChange={onNameChange}
         onName={(next) => onAnswerName(asked, next)}
         onChanges={(changes) => onAnswerChanges(asked, changes)}
       />
-    </div>
+    </FocusedAnswer>
   )
 
   const itemFor = (block: Block): BlockListItem => {
@@ -150,11 +154,8 @@ export function StagePanel({
         body: open ? (asking === null ? <Reasking /> : surface(asking)) : null,
       }
     }
-    // Before the character exists only the question that creates it can be
-    // answered, so the other two are drawn as what they are: questions coming,
-    // with nothing to open. A block with no body is a statement -- the same
-    // rendering a level already taken gets.
-    const waiting = posing && block.prompt.choice.prompt !== 'character/init'
+    // Level needs a character, while rules and name can be chosen beforehand.
+    const waiting = posing && block.prompt.choice.prompt === 'character/desired-level'
     return {
       key: block.key,
       header: <OpenHeader prompt={block.prompt} names={names} />,
@@ -163,7 +164,8 @@ export function StagePanel({
     }
   }
 
-  const nothingOpen = blocks.every((block) => block.kind === 'settled')
+  const nothingRequired = blocks.every((block) => block.kind === 'settled' || block.prompt.optional ||
+    (rulesSelected && block.prompt.choice.prompt === 'character/ruleset'))
 
   return (
     <Stack gap="sm">
@@ -190,26 +192,68 @@ export function StagePanel({
           {t('stagePanel.nothingYet')}
         </Text>
       ) : null}
-      {/*
-        Under the list, and only once the list has nothing left to answer. It
-        is not navigation -- the tabs are, and they are always there -- it is
-        the end of a piece of work saying where the next piece is, at the
-        moment that is the only thing left to say. It names no category,
-        because the category's word belongs to its tab.
-      */}
-      {nothingOpen && onNext !== undefined && (
+      {/* Optional questions may remain open; Next still lets the player visit
+          the next tab without making those answers required. */}
+      {nothingRequired && onNext !== undefined && (
         // In a Group rather than aligned by the Stack: aligning the stack to
         // its start shrink-wraps every child, and the list is one of them --
         // so the whole panel would take its width from whichever block
         // happens to be open, and change width as blocks are opened and shut.
         <Group>
-          <Button variant="light" onClick={onNext}>
+          <Button ref={nextRef} variant="light" onClick={onNext}>
             {t('stagePanel.next')}
           </Button>
         </Group>
       )}
     </Stack>
   )
+}
+
+/** Focus when Mantine's expanding panel can actually receive keyboard input. */
+function FocusedAnswer({ label, children }: { label: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const surface = ref.current
+    if (surface === null) return
+    const panel = surface.closest('[role="region"]')
+    let frame = 0
+    let focused = false
+    let waitingOnOptions = false
+    const observer = new MutationObserver(() => {
+      if (!focused) {
+        cancelAnimationFrame(frame)
+        frame = requestAnimationFrame(focus)
+      }
+    })
+    const focus = () => {
+      if (focused || !surface.isConnected || surface.closest('[inert], [aria-hidden="true"]')) return
+      const field = surface.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)')
+      if (waitingOnOptions && document.activeElement !== surface) {
+        // The player moved away while the choices loaded; leave their focus.
+        observer.disconnect()
+        return
+      }
+      if (field !== null && surface.contains(document.activeElement) && document.activeElement !== surface) {
+        focused = true
+        observer.disconnect()
+        return
+      }
+      const target = field ?? surface
+      target.focus({ preventScroll: true })
+      if (document.activeElement === target) {
+        if (field !== null) {
+          focused = true
+          observer.disconnect()
+        } else waitingOnOptions = true
+        surface.scrollIntoView?.({ block: 'nearest' })
+      }
+    }
+    if (panel !== null) observer.observe(panel, { attributes: true, attributeFilter: ['aria-hidden', 'inert', 'style'] })
+    observer.observe(surface, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled', 'style'] })
+    focus()
+    return () => { observer.disconnect(); cancelAnimationFrame(frame) }
+  }, [])
+  return <div ref={ref} tabIndex={-1} role="group" aria-label={label}>{children}</div>
 }
 
 /** What was decided, and what it was decided to be. The level it belongs to
@@ -308,6 +352,7 @@ function AnswerSurface({
   method,
   lines,
   level,
+  rulesSelected,
   onPicks,
   onNameChange,
   onName,
@@ -321,6 +366,7 @@ function AnswerSurface({
   method?: string
   lines?: readonly string[]
   level?: number
+  rulesSelected: boolean
   onPicks: (answers: Answer[]) => void
   onNameChange: (name: string) => void
   onName: (name: string) => void
@@ -346,7 +392,7 @@ function AnswerSurface({
     )
   }
   if (prompt.choice.prompt === 'character/ruleset') {
-    return <RulesetForm pending={pending} submitLabel={submitLabel} onSubmit={onChanges} />
+    return <RulesetForm pending={pending} selected={rulesSelected} onSubmit={onChanges} />
   }
 
   if (kind === 'text') {

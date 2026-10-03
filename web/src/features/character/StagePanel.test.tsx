@@ -1,7 +1,7 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { Change, Prompt } from '@/lib/api'
+import type { Answer, Change, Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 
@@ -13,11 +13,8 @@ import { StagePanel } from './StagePanel'
 /**
  * The tab's list, without the screen around it.
  *
- * Every block here is a name, a form or a fact, and none of them is a prompt
- * with options -- which is deliberate: those fetch their catalogue entries on
- * mount, and this file has nothing to answer them with. What the options do
- * once they are drawn is `PromptCard`'s test, and what the screen posts is
- * `BuildScreen`'s.
+ * These tests cover both field and option focus inside the accordion. The
+ * Metamagic prompt uses inline text options, so it needs no catalogue fixture.
  */
 
 const CLASS_ROW: SettledRow = {
@@ -98,7 +95,112 @@ const TRAITS: Prompt = {
   heldOnly: false,
 }
 
+const METAMAGIC: Prompt = {
+  choice: {
+    prompt: 'sorcerer/metamagic/0',
+    choose: 2,
+    kind: 'feature',
+    from: { kind: 'explicit', options: [
+      { key: 'careful', kind: 'text', text: 'Metamagic: Careful Spell' },
+      { key: 'distant', kind: 'text', text: 'Metamagic: Distant Spell' },
+      { key: 'empowered', kind: 'text', text: 'Metamagic: Empowered Spell' },
+      { key: 'extended', kind: 'text', text: 'Metamagic: Extended Spell' },
+      { key: 'heightened', kind: 'text', text: 'Metamagic: Heightened Spell' },
+      { key: 'quickened', kind: 'text', text: 'Metamagic: Quickened Spell' },
+      { key: 'subtle', kind: 'text', text: 'Metamagic: Subtle Spell' },
+      { key: 'twinned', kind: 'text', text: 'Metamagic: Twinned Spell' },
+    ] },
+  },
+  source: 'class:sorcerer',
+  group: 'class',
+  level: 3,
+  optional: false,
+  event: { type: 'class', ref: 'class:sorcerer', level: 3 },
+  heldOnly: false,
+}
+
+const DESIRED_LEVEL: Prompt = {
+  choice: { prompt: 'character/desired-level', choose: 1, kind: 'level', from: { kind: 'explicit' } },
+  group: 'identity',
+  optional: false,
+  event: { type: 'change' },
+  heldOnly: false,
+}
+
 const NAMES = new Map([['class:rogue', 'Rogue']])
+
+it('focuses the first Metamagic option and supports Enter, Tab, Enter, Tab, Enter', async () => {
+  const user = setupUser()
+  const onAnswerPicks = vi.fn()
+  renderAt('desktop', panel([], [METAMAGIC], {
+    openKey: 'open:sorcerer/metamagic/0',
+    asking: { prompt: METAMAGIC, replaces: null },
+    onAnswerPicks,
+  }))
+
+  const careful = await screen.findByRole('button', { name: 'Metamagic: Careful Spell' })
+  await waitFor(() => expect(careful).toHaveFocus())
+  await user.keyboard('{Enter}')
+  await user.tab()
+  const distant = screen.getByRole('button', { name: 'Metamagic: Distant Spell' })
+  expect(distant).toHaveFocus()
+  await user.keyboard('{Enter}')
+  await user.tab()
+  const confirm = screen.getByRole('button', { name: 'Confirm' })
+  expect(confirm).toHaveFocus()
+  await user.keyboard('{Enter}')
+
+  expect(onAnswerPicks).toHaveBeenCalledWith(
+    { prompt: METAMAGIC, replaces: null },
+    [{ prompt: 'sorcerer/metamagic/0', picks: ['careful', 'distant'] }],
+  )
+})
+
+it('tabs from a mouse-selected option straight to Confirm in a long list', async () => {
+  const user = setupUser()
+  const onAnswerPicks = vi.fn()
+  renderAt('desktop', panel([], [METAMAGIC], {
+    openKey: 'open:sorcerer/metamagic/0',
+    asking: { prompt: METAMAGIC, replaces: null },
+    onAnswerPicks,
+  }))
+
+  await user.click(await screen.findByRole('button', { name: 'Metamagic: Careful Spell' }))
+  await user.click(screen.getByRole('button', { name: 'Metamagic: Distant Spell' }))
+  expect(screen.getByRole('button', { name: 'Metamagic: Empowered Spell' })).toHaveAttribute('tabindex', '-1')
+  await user.tab()
+  expect(screen.getByRole('button', { name: 'Confirm' })).toHaveFocus()
+  await user.keyboard('{Enter}')
+
+  expect(onAnswerPicks).toHaveBeenCalledWith(
+    { prompt: METAMAGIC, replaces: null },
+    [{ prompt: 'sorcerer/metamagic/0', picks: ['careful', 'distant'] }],
+  )
+})
+
+it('confirms a typed level with Enter from the level input', async () => {
+  const user = setupUser()
+  const onAnswerChanges = vi.fn()
+  renderAt('desktop', panel([], [DESIRED_LEVEL], {
+    openKey: 'open:character/desired-level',
+    asking: { prompt: DESIRED_LEVEL, replaces: null },
+    onAnswerChanges,
+  }))
+
+  const input = screen.getByRole('textbox', { name: 'Level' })
+  await waitFor(() => expect(input).toHaveFocus())
+  await user.clear(input)
+  await user.keyboard('{Enter}')
+  expect(onAnswerChanges).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled()
+  await user.type(input, '3{Enter}')
+
+  expect(onAnswerChanges).toHaveBeenCalledOnce()
+  expect(onAnswerChanges).toHaveBeenCalledWith(
+    { prompt: DESIRED_LEVEL, replaces: null },
+    [{ path: 'identity.desiredLevel', op: 'set', value: { kind: 'int', int: 3 } }],
+  )
+})
 
 function panel(
   settled: readonly SettledRow[],
@@ -108,6 +210,8 @@ function panel(
     asking?: Asking | null
     onOpen?: (key: string | null) => void
     onNext?: () => void
+    focusNext?: boolean
+    onAnswerPicks?: (asking: Asking, answers: Answer[]) => void
     onAnswerChanges?: (asking: Asking, changes: Change[]) => void
     lines?: readonly string[]
   } = {},
@@ -119,13 +223,14 @@ function panel(
       onOpen={over.onOpen ?? vi.fn()}
       asking={over.asking ?? null}
       names={NAMES}
-      onAnswerPicks={vi.fn()}
+      onAnswerPicks={over.onAnswerPicks ?? vi.fn()}
       onNameChange={vi.fn()}
       onAnswerName={vi.fn()}
       onAnswerChanges={over.onAnswerChanges ?? vi.fn()}
       pending={false}
       fields={[]}
       {...(over.onNext ? { onNext: over.onNext } : {})}
+      {...(over.focusNext === undefined ? {} : { focusNext: over.focusNext })}
       {...(over.lines ? { lines: over.lines } : {})}
     />
   )
@@ -233,6 +338,14 @@ describe('StagePanel', () => {
     expect(onNext).toHaveBeenCalled()
   })
 
+  it('focuses Next when the final answer on a tab has been saved', () => {
+    const onNext = vi.fn()
+    const { rerender } = renderAt(viewport, panel([CLASS_ROW], [SKILLS], { onNext }))
+
+    rerender(panel([CLASS_ROW], [], { onNext, focusNext: true }))
+    expect(screen.getByRole('button', { name: 'Next' })).toHaveFocus()
+  })
+
   it('names no category when there is nothing yet, and says nothing once it is all answered', () => {
     const { rerender } = renderAt(viewport, panel([CLASS_ROW], []))
 
@@ -304,6 +417,24 @@ describe('the questions answered in words', () => {
     expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled()
     await user.type(screen.getByLabelText('Personality trait'), '   ')
     expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled()
+  })
+
+  it('confirms a written answer with Enter and keeps Shift+Enter for a new line', async () => {
+    const user = setupUser()
+    const onAnswerChanges = vi.fn()
+    renderAt(viewport, panel([], [TRAITS], {
+      openKey: 'open:character/personality-trait',
+      asking: { prompt: TRAITS, replaces: null },
+      onAnswerChanges,
+    }))
+
+    const field = screen.getByLabelText('Personality trait')
+    await user.type(field, 'I seek answers.{Shift>}{Enter}{/Shift}I share them.{Enter}')
+
+    expect(onAnswerChanges).toHaveBeenCalledOnce()
+    expect(onAnswerChanges.mock.calls[0]?.[1]).toEqual([{ path: 'identity.personalityTraits', op: 'set', value: {
+      kind: 'string', string: 'I seek answers.\nI share them.',
+    } }])
   })
 
   it('starts from what is already written when the answer is being changed', () => {

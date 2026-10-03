@@ -61,6 +61,11 @@ export function WrittenForm({
         rows={3}
         value={written}
         onChange={(event) => setWritten(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || kept === '' || pending) return
+          event.preventDefault()
+          onSubmit([{ path, op: 'set', value: { kind: 'string', string: kept } }])
+        }}
       />
       <Group>
         <Button

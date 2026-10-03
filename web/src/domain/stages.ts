@@ -26,8 +26,8 @@ export const MAX_LEVEL = 20
  * answer in front of the one required question on that tab.
  */
 export const STAGES = [
-  'personal',
   'rules',
+  'personal',
   'class',
   'abilities',
   'race',
