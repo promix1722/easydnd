@@ -1,6 +1,6 @@
 /** Builder tabs are presentation; class/race/background remain the rule owners. */
 
-export type Stage = 'identity' | 'class' | 'race' | 'background' | 'abilities' | 'personality' | 'cantrips' | 'spells' | 'equipment'
+export type Stage = 'personal' | 'rules' | 'class' | 'race' | 'background' | 'abilities' | 'personality' | 'cantrips' | 'spells' | 'equipment'
 
 /** Where advancement stops in the 2014 rules; the server enforces the same. */
 export const MAX_LEVEL = 20
@@ -26,7 +26,8 @@ export const MAX_LEVEL = 20
  * answer in front of the one required question on that tab.
  */
 export const STAGES = [
-  'identity',
+  'personal',
+  'rules',
   'class',
   'abilities',
   'race',
@@ -38,7 +39,9 @@ export const STAGES = [
 ] as const satisfies readonly Stage[]
 
 const STAGE_OF_GROUP: Record<string, Stage> = {
-  identity: 'identity',
+  identity: 'personal',
+  personal: 'personal',
+  rules: 'rules',
   class: 'class',
   race: 'race',
   background: 'background',
@@ -59,6 +62,8 @@ const STAGE_OF_GROUP: Record<string, Stage> = {
  * log at `/characters/:id/log` remains the unabridged record of them.
  */
 export function stageOf(group: string | undefined, choiceKind?: string, prompt?: string, purpose?: string): Stage | null {
+  if (prompt === 'character/ruleset') return 'rules'
+  if (prompt === 'character/desired-level') return 'class'
   if (choiceKind === 'spell' || (choiceKind === undefined && prompt?.split('/').includes('spell'))) {
     const cantrip = purpose === 'cantrip' || prompt?.split('/').includes('cantrip') || prompt?.startsWith('high-elf-cantrip/')
     return cantrip ? 'cantrips' : 'spells'

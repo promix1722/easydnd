@@ -93,9 +93,9 @@ interface Preview {
  * into existence -- so the number of steps is not knowable until the last one
  * is answered, and there is nothing to enumerate. What the tabs enumerate is
  * the server's own prompt *groups*, which are fixed: five categories a
- * question can belong to, not five steps to walk through. Every tab is
- * reachable at any time, and nothing on one can be answered before the server
- * asks it.
+ * question can belong to, not five steps to walk through. The UI splits these
+ * groups into tabs for personal details, rules, classes and their choices.
+ * Every tab is reachable, and a completed choice opens the next one there.
  *
  * Three requests, deliberately, because they answer three different questions.
  * `/prompts` says what is still open, `/events` says what was decided and in
@@ -155,6 +155,7 @@ export function BuildScreen() {
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [creating, setCreating] = useState(false)
+  const [advanceAfter, setAdvanceAfter] = useState<{ view: BuildView; stage: Stage } | null>(null)
 
   /*
    * One order per tab, held once and mutated rather than replaced: see
@@ -253,9 +254,8 @@ export function BuildScreen() {
    * arrive at it.
    *
    * Before there is a character there is no `/prompts` response, so the
-   * identity tab poses the first question itself: see NEW_NAME_PROMPT. The
-   * others have nothing on them until there is somebody to ask about, and say
-   * so.
+   * Personal poses the name itself: see NEW_NAME_PROMPT. Rules and Class
+   * show the other initial questions on their own tabs.
    *
    * The order is the screen's memory of where things are, and `blocksFor` both
    * reads it and writes to it: whatever is new keeps the place the level
@@ -266,16 +266,20 @@ export function BuildScreen() {
       each,
       blocksFor(
         settled.get(each) ?? [],
-        posingName
-          ? each === 'identity'
-            ? NEW_IDENTITY_PROMPTS
-            : []
-          : open.filter((prompt) => stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each),
+        (posingName ? NEW_INITIAL_PROMPTS : open).filter((prompt) =>
+          stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each),
         orderFor(each),
       ),
     ]),
   )
   const blocks = blocksByStage.get(stage) ?? []
+  // Wait for the refreshed prompts: an answer can create new choices on this tab.
+  if (advanceAfter !== null && (advanceAfter.stage !== stage || advanceAfter.view !== view)) {
+    setAdvanceAfter(null)
+    if (advanceAfter.stage === stage) {
+      setOpenKey(blocks.find((block) => block.kind === 'open')?.key ?? null)
+    }
+  }
   const activeKey = openKey
   const opened = blocks.find((block) => block.key === activeKey) ?? null
   // What the open block is asking, which is a fact about the block rather than
@@ -299,6 +303,7 @@ export function BuildScreen() {
    */
   const done = (open: string | null = null) => {
     setOpenKey(open)
+    setAdvanceAfter(open === null ? { view, stage } : null)
     setPreview(null)
     // Pinned to wherever the answer was given. The screen opens on the first
     // category with something to do, and that is the whole of the help it
@@ -312,7 +317,7 @@ export function BuildScreen() {
   }
 
   /**
-   * Creates the character the identity tab is describing.
+   * Creates the character the Personal tab is describing.
    *
    * `landOn` rides across the navigation in the route's state, because the
    * navigation is what loses it: a different URL is a different mount, and the
@@ -331,13 +336,8 @@ export function BuildScreen() {
     // replace: true, because the URL of a character that does not exist is
     // not a place the Back button should return anyone to.
     if (created) {
-      // The entry the creation wrote belongs where the question that asked
-      // for it was: at the top of identity, above the two questions drawn
-      // under it. Without this the name is a key the order has never seen and
-      // goes to the end -- so confirming it would drop it below the rules and
-      // the level, which is the one row the player was looking at moving.
-      // The same thing `append` does for every other answer.
-      inheritPlace(orderFor('identity'), NEW_NAME_KEY, settledKey(created.seq))
+      // Preserve the name question's position when its saved entry arrives.
+      inheritPlace(orderFor('personal'), NEW_NAME_KEY, settledKey(created.seq))
       // Set before the navigation, because the navigation is what changes the
       // resource key -- and the render that reads the new key is the one that
       // would otherwise blank the page.
@@ -358,6 +358,7 @@ export function BuildScreen() {
       void createCharacterFromDraft(next)
       return
     }
+    setAdvanceAfter(null)
     setChosenStage(next)
   }
 
@@ -487,8 +488,7 @@ export function BuildScreen() {
   }
 
   const submitEvent = (asked: Asking, event: CharacterEvent) => {
-    // No follow-up to open: a branch is answered in the card that offered it
-    // and arrives in this same event, so nothing new is about to appear.
+    // After saving, the refreshed prompts open the next choice on this tab.
     if (asked.replaces === null) void append(event, null)
     else void price(asked.replaces, event, null)
   }
@@ -642,7 +642,7 @@ export function BuildScreen() {
                       setNameError(undefined)
                     }}
                     onAnswerName={(asked, next) => {
-                      if (isNew) void createCharacterFromDraft('identity')
+                      if (isNew) void createCharacterFromDraft('personal')
                       else submitEvent(asked, initEventFor(next))
                     }}
                     onAnswerChanges={(asked, changes) =>
@@ -798,7 +798,7 @@ function reasonLabel(t: Translate, reason: string): string {
  *
  * The server emits the real one -- `character/init` -- as soon as a character
  * exists to have an empty log. Before that there is no character to ask about
- * and no request to make, so the identity tab poses the same question itself
+ * and no request to make, so Personal poses the same question itself
  * and the answer is a creation rather than an append.
  */
 const NEW_NAME_PROMPT: Prompt = {
@@ -810,16 +810,14 @@ const NEW_NAME_PROMPT: Prompt = {
 }
 
 /**
- * The rest of what the identity tab will ask, shown before there is anybody to
- * ask it about.
+ * The initial questions, shown on Personal, Rules and Class before creation.
  *
  * The same three questions the server poses the moment the character exists,
- * in the same order, so the page does not grow two rows the instant a name is
- * confirmed. They are drawn without an answering surface until then -- see
+ * in the same order. They are drawn without an answering surface until then -- see
  * `posing` in `StagePanel` -- because there is nothing to append an answer to:
  * a name is what creates the character, and these are answered against it.
  */
-const NEW_IDENTITY_PROMPTS: Prompt[] = [
+const NEW_INITIAL_PROMPTS: Prompt[] = [
   NEW_NAME_PROMPT,
   {
     choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
@@ -877,7 +875,7 @@ function firstUnfinished(prompts: readonly Prompt[]): Stage {
     prompts.filter((p) => !p.optional).flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)),
   )
   const any = new Set(prompts.flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
-  return STAGES.find((s) => required.has(s)) ?? STAGES.find((s) => any.has(s)) ?? 'identity'
+  return STAGES.find((s) => required.has(s)) ?? STAGES.find((s) => any.has(s)) ?? 'personal'
 }
 
 /**
@@ -965,7 +963,7 @@ function inputPrompt(input: (typeof INPUTS)[number], stage: Stage): Prompt {
           ? { kind: 'explicit' }
           : { kind: 'collection', collection: input.collection },
     },
-    group: stage,
+    group: stage === 'personal' || stage === 'rules' ? 'identity' : stage,
     optional: false,
       event: { type: 'change' },
     heldOnly: false,

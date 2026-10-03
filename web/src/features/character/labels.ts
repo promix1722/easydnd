@@ -71,7 +71,8 @@ export const eventLabel = lookup(EVENT_KEYS)
  * this table exists rather than the labels being inlined.
  */
 const STAGE_KEYS = {
-  identity: 'stage.identity',
+  personal: 'stage.personal',
+  rules: 'stage.rules',
   class: 'stage.class',
   race: 'stage.race',
   background: 'stage.background',

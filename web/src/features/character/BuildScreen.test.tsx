@@ -694,15 +694,15 @@ describe('BuildScreen', () => {
     expect(panel('class').queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
 
     // The identity tab is finished: the name is settled and nothing is open.
-    await user.click(tab('identity'))
-    await user.click(await panel('identity').findByRole('button', { name: 'Next' }))
+    await user.click(tab('personal'))
+    await user.click(await panel('personal').findByRole('button', { name: 'Next' }))
 
     // On to the next category with something required outstanding, which is
     // the class -- identity is where we were and abilities has nothing open.
     expect(tab('class')).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('leaves nothing open once an answer has landed', async () => {
+  it('closes the completed choice when nothing remains on its tab', async () => {
     const user = setupUser()
     renderBuild(viewport)
 
@@ -710,11 +710,55 @@ describe('BuildScreen', () => {
     await user.click(await screen.findByRole('button', { name: 'Half-Elf' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
-    // Answering is finishing with a question, not moving to the next one: the
-    // list comes back shut, and the player says what they want to do next.
+    // No new choices were returned for this tab, so the completed form closes.
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
     })
+  })
+
+  it('opens and focuses a new choice on the same tab after the refreshed prompts arrive', async () => {
+    const user = setupUser()
+    let arrive = () => {}
+    const until = new Promise<void>((resolve) => { arrive = resolve })
+    mockApi({ then: { seq: 2, complete: false, prompts: [SUBRACE_PROMPT] }, thenEvents: RACE_LOG, until })
+    renderBuild(viewport)
+
+    await user.click(await screen.findByRole('button', { name: /A race/ }))
+    await user.click(await screen.findByRole('button', { name: 'Dwarf' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+    await waitFor(() => expect(writes()).toHaveLength(1))
+    expect(screen.queryByRole('button', { name: 'Hill Dwarf' })).not.toBeInTheDocument()
+
+    arrive()
+    expect(await screen.findByRole('button', { name: 'Hill Dwarf' })).toBeInTheDocument()
+    expect(current()).toBe('Race')
+    expect(screen.getByRole('button', { name: 'A subrace' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('group', { name: 'A subrace' })).toHaveFocus()
+  })
+
+  it('edits personality before a background and focuses the next written answer', async () => {
+    const user = setupUser()
+    const ideal = {
+      ...TRAITS_OPEN.prompts[0]!,
+      choice: { ...TRAITS_OPEN.prompts[0]!.choice, prompt: 'character/ideal', kind: 'ideal' },
+    }
+    mockApi({
+      prompts: { ...TRAITS_OPEN, seq: 1 }, events: LOG_JUST_CREATED,
+      then: { seq: 2, complete: false, prompts: [ideal] },
+      thenEvents: { seq: 2, events: [INIT, {
+        seq: 2, type: 'change', source: 'personality',
+        changes: [{ path: 'identity.personalityTraits', op: 'set', value: { kind: 'string', string: 'I trust strangers.' } }],
+      }] },
+    })
+    renderBuild(viewport)
+
+    await user.click(await screen.findByRole('button', { name: /1 personality trait/ }))
+    await user.type(screen.getByLabelText('Personality trait'), 'I trust strangers.')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    expect(await screen.findByLabelText('Ideal')).toHaveFocus()
+    expect(current()).toBe('Personality')
+    expect(panel('personality').getByText('I trust strangers.')).toBeInTheDocument()
   })
 
   it('closes what was open when the tab changes', async () => {
@@ -741,7 +785,7 @@ describe('BuildScreen', () => {
     // hang off -- and the scores straight after it, because they are what the
     // class was picked for. Nothing is disabled, because a tab is a place to
     // look as well as a place to answer.
-    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Cantrips', 'Spells', 'Equipment'])
+    expect(tabs()).toEqual(['Personal', 'Rules', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Cantrips', 'Spells', 'Equipment'])
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
   })
 
@@ -767,8 +811,8 @@ describe('BuildScreen', () => {
     expect.soft(panel('race').getByText(/2 to be proficient in/)).toBeInTheDocument()
     expect.soft(panel('race').queryByText('A class')).not.toBeInTheDocument()
 
-    await user.click(tab('identity'))
-    expect.soft(panel('identity').getByText('Name')).toBeInTheDocument()
+    await user.click(tab('personal'))
+    expect.soft(panel('personal').getByText('Name')).toBeInTheDocument()
 
     expect.soft(posted).toHaveLength(0)
   })
@@ -912,7 +956,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'Identity' }))
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
     await user.click(block(/Name/))
 
     // The field starts from the name it is changing rather than from nothing.
@@ -1132,8 +1176,10 @@ describe('a new character', () => {
     // All three, in the order they are asked, so the page says up front what
     // it wants rather than growing two rows the moment a name is confirmed.
     expect(await screen.findByText('A name')).toBeInTheDocument()
-    expect(screen.getByText('The rules to play by')).toBeInTheDocument()
-    expect(screen.getByText('Level')).toBeInTheDocument()
+    expect(panel('personal').queryByText('The rules to play by')).not.toBeInTheDocument()
+    expect(panel('personal').queryByText('Level')).not.toBeInTheDocument()
+    expect(panel('rules').getByText('The rules to play by')).toBeInTheDocument()
+    expect(panel('class').getByText('Level')).toBeInTheDocument()
 
     // The one block that opens itself: there is nothing behind it, and a front
     // door whose only row is shut reads as broken.
@@ -1152,7 +1198,7 @@ describe('a new character', () => {
     // The scores are a question asked of a character that exists, not a field
     // on the form that creates one.
     expect(screen.queryByText(/ability scores/)).not.toBeInTheDocument()
-    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Cantrips', 'Spells', 'Equipment'])
+    expect(tabs()).toEqual(['Personal', 'Rules', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Cantrips', 'Spells', 'Equipment'])
   })
 
   it('keeps the name where its question was when the character is created', async () => {
@@ -1201,13 +1247,14 @@ describe('a new character', () => {
     // question's place it would go to the end of the list, and confirming a
     // name would drop the one row the player was looking at below two others.
     await waitFor(() => {
-      expect(panel('identity').getByText('Zephyr')).toBeInTheDocument()
+      expect(panel('personal').getByText('Zephyr')).toBeInTheDocument()
     })
-    const rows = panel('identity')
+    const rows = panel('personal')
       .getAllByRole('button')
       .map((each) => each.textContent ?? '')
     expect(rows[0]).toMatch(/Zephyr/)
-    expect(rows[1]).toMatch(/The rules to play by/)
+    expect(panel('rules').getByRole('button', { name: /The rules to play by/ })).toBeInTheDocument()
+    expect(panel('class').getByRole('button', { name: /^Level$/ })).toBeInTheDocument()
   })
 
   it('creates the character once, with the name alone, and lands on the tab that was pressed', async () => {
@@ -1265,7 +1312,7 @@ describe('a new character', () => {
     // that had already succeeded. It read as a reload because it looked like
     // one. The tabs never go, and neither does the block being answered.
     expect(screen.queryByText('Working out what is next...')).not.toBeInTheDocument()
-    expect(tabs()).toHaveLength(9)
+    expect(tabs()).toHaveLength(10)
     expect(screen.getByText('A name')).toBeInTheDocument()
 
     // And what replaces the block being answered is that block with an answer
@@ -1292,7 +1339,7 @@ describe('a new character', () => {
     await waitFor(() => {
       expect(screen.getByText('Name')).toBeInTheDocument()
     })
-    expect(current()).toBe('Identity')
+    expect(current()).toBe('Personal')
   })
 
   it('posts nothing for a blank name, and says why', async () => {

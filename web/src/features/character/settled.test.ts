@@ -81,7 +81,7 @@ describe('settledByStage', () => {
       'Навык: Уход за животными, Навык: Атлетика',
     ])
     expect(rows.get('abilities')?.map((row) => row.label)).toEqual(['Ability scores'])
-    expect(rows.get('identity')?.map((row) => row.value)).toEqual(['Zephyr'])
+    expect(rows.get('personal')?.map((row) => row.value)).toEqual(['Zephyr'])
   })
 
   it('carries the seq of the entry behind every row', () => {
@@ -145,10 +145,8 @@ describe('summarise', () => {
       names: new Map(),
     })
 
-    expect(rows.get('identity')?.map((row) => [row.label, row.value])).toEqual([
-      ['Level', '5'],
-      ['Rules', 'D&D 2014'],
-    ])
+    expect(rows.get('class')?.map((row) => [row.label, row.value])).toEqual([['Level', '5']])
+    expect(rows.get('rules')?.map((row) => [row.label, row.value])).toEqual([['Rules', 'D&D 2014']])
   })
 
   // A question whose options are questions is answered in one entry now: the

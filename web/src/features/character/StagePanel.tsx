@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { describeField, describeError } from '@/lib/api'
 import type { Answer, ApiFieldError, Change, Entry, Equipment, Prompt } from '@/lib/api'
@@ -58,8 +58,8 @@ export interface StagePanelProps {
   level?: number
   /**
    * There is no character yet, so the only question that can be answered is
-   * the one that creates it. The rest of the identity tab is drawn, so the
-   * page says up front what it will ask, and does not open.
+   * the one that creates it. Rules and level are drawn on their tabs as
+   * questions to answer once the name has created the character.
    */
   posing?: boolean
 }
@@ -73,10 +73,9 @@ export interface StagePanelProps {
  * answering surface, and a decided choice is the same block with an answer in
  * it, which is what it always was.
  *
- * Nothing is open until it is pressed. The screen no longer picks a question
- * for the player, because it has no way of knowing which of five open choices
- * they came here to make -- and a surface that opens itself is one they have
- * to close.
+ * A block opens when pressed, or when the build screen advances to it after
+ * an answer. Its answering surface receives focus so keyboard users can
+ * continue without finding the next block themselves.
  *
  * No block names the tab it is on. The category's word appears exactly once in
  * the document -- in the tab itself -- so that looking for "race" on this page
@@ -110,21 +109,32 @@ export function StagePanel({
   posing = false,
 }: StagePanelProps) {
   const t = useT()
+  const surfaceRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const surface = surfaceRef.current
+    if (surface === null) return
+    const field = surface.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled)')
+    const target = field ?? surface
+    target.focus()
+    surface.scrollIntoView?.({ block: 'nearest' })
+  }, [openKey])
   const surface = (asked: Asking) => (
-    <AnswerSurface
-      asking={asked}
-      pending={pending}
-      fields={fields}
-      {...(name !== undefined ? { name } : {})}
-      {...(scores !== undefined ? { scores } : {})}
-      {...(method !== undefined ? { method } : {})}
-      {...(lines !== undefined ? { lines } : {})}
-      {...(level !== undefined ? { level } : {})}
-      onPicks={(answers) => onAnswerPicks(asked, answers)}
-      onNameChange={onNameChange}
-      onName={(next) => onAnswerName(asked, next)}
-      onChanges={(changes) => onAnswerChanges(asked, changes)}
-    />
+    <div ref={surfaceRef} tabIndex={-1} role="group" aria-label={choiceName(t, asked.prompt)}>
+      <AnswerSurface
+        asking={asked}
+        pending={pending}
+        fields={fields}
+        {...(name !== undefined ? { name } : {})}
+        {...(scores !== undefined ? { scores } : {})}
+        {...(method !== undefined ? { method } : {})}
+        {...(lines !== undefined ? { lines } : {})}
+        {...(level !== undefined ? { level } : {})}
+        onPicks={(answers) => onAnswerPicks(asked, answers)}
+        onNameChange={onNameChange}
+        onName={(next) => onAnswerName(asked, next)}
+        onChanges={(changes) => onAnswerChanges(asked, changes)}
+      />
+    </div>
   )
 
   const itemFor = (block: Block): BlockListItem => {

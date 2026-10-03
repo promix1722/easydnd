@@ -211,6 +211,7 @@ func (b *promptBuilder) build() []Prompt {
 	b.abilities()
 	b.race()
 	b.background()
+	b.personality()
 	b.classes()
 	b.packRules()
 	spells, _ := spellChoices(b.state, b.cat, b.answers, b.all)
@@ -467,17 +468,13 @@ func (b *promptBuilder) background() {
 
 	optional := optionalPrompt(base)
 	b.addChoices(background.StartingEquipmentOptions, optional)
-
-	b.personality(background)
 }
 
 // personality poses who the character is: the four roleplaying questions and
 // an alignment.
 //
-// They are the background's questions -- it is the background that suggests
-// what an acolyte tends to believe -- but they are not answers about the
-// background, which is why they are a group of their own rather than four more
-// rows under it.
+// These are available from the start, independently of the background.
+// A background may suggest answers, but the player can write their own first.
 //
 // The four are asked as **text**, and the SRD's own d8 tables are not offered.
 // A trait is the one thing on a character sheet that is nobody's but the
@@ -491,9 +488,9 @@ func (b *promptBuilder) background() {
 // compare against an option set, so "answered" is a question about the sheet
 // rather than about the log -- which is the same rule the alignment follows,
 // and the reason neither of them goes through addChoice.
-func (b *promptBuilder) personality(background catalog.Background) {
-	written := func(choice rules.Choice, prompt rules.Slug, kind rules.ChoiceKind, set []string) {
-		if choice.Prompt.IsZero() || len(set) > 0 {
+func (b *promptBuilder) personality() {
+	written := func(prompt rules.Slug, kind rules.ChoiceKind, set []string) {
+		if len(set) > 0 {
 			return
 		}
 		b.out = append(b.out, Prompt{
@@ -516,10 +513,10 @@ func (b *promptBuilder) personality(background catalog.Background) {
 	}
 
 	id := b.state.Identity
-	written(background.PersonalityTraits, "character/personality-trait", rules.ChoosePersonality, id.PersonalityTraits)
-	written(background.Ideals, "character/ideal", rules.ChooseIdeal, id.Ideals)
-	written(background.Bonds, "character/bond", rules.ChooseBond, id.Bonds)
-	written(background.Flaws, "character/flaw", rules.ChooseFlaw, id.Flaws)
+	written("character/personality-trait", rules.ChoosePersonality, id.PersonalityTraits)
+	written("character/ideal", rules.ChooseIdeal, id.Ideals)
+	written("character/bond", rules.ChooseBond, id.Bonds)
+	written("character/flaw", rules.ChooseFlaw, id.Flaws)
 
 	if b.state.Identity.Alignment.IsZero() {
 		b.out = append(b.out, Prompt{

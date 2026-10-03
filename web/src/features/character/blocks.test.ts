@@ -187,7 +187,7 @@ describe('changeable', () => {
   it('locks the ruleset, which is final, and nothing else', () => {
     const ruleset = row({
       seq: 3,
-      stage: 'identity',
+      stage: 'rules',
       event: {
         type: 'change',
         seq: 3,
@@ -197,7 +197,7 @@ describe('changeable', () => {
     const level = row({ seq: 9, event: { type: 'level', seq: 9 } })
     const desired = row({
       seq: 4,
-      stage: 'identity',
+      stage: 'class',
       event: {
         type: 'change',
         seq: 4,
