@@ -31,6 +31,10 @@ func (h *Handler) AgentDraft(c *gin.Context) {
 	case "POST events/revise":
 		dispatch = func(d *Handler) { d.ReviseEvents(c) }
 	default:
+		if len(parts) == 2 && parts[0] == "catalog" && c.Request.Method == "GET" {
+			c.Params = append(c.Params, gin.Param{Key: "collection", Value: parts[1]})
+			dispatch = func(d *Handler) { d.Catalog(c) }
+		}
 		if len(parts) == 2 && parts[0] == "events" {
 			c.Params = append(c.Params, gin.Param{Key: "seq", Value: parts[1]})
 			if c.Request.Method == "PUT" {

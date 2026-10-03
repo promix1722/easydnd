@@ -1,3 +1,4 @@
+import { useCatalogScope } from '@/lib/api/catalogScope'
 import { useState } from 'react'
 
 import { slugOf } from '@/domain'
@@ -34,6 +35,7 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
   rules?: readonly SpellRule[]
 }) {
   const t = useT()
+  const scope = useCatalogScope()
   const limit = 20
   const [shownCount, setShownCount] = useState(limit)
   const [filters, setFilters] = useState(EMPTY_SPELL_FILTERS)
@@ -51,13 +53,13 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
     ? savedPicks(block).map((pick) => ({ pick, source: block.row.event.ref ?? block.row.event.choiceSource, level: block.row.event.level ?? 0 })) : [])
   const selectedBlocks = blocks.filter((block) => block.kind === 'settled' && block.row.event.purpose !== 'forget')
   const saved = [...selectedBlocks.flatMap((block) => savedPicks(block).map(slugOf)), ...current.custom]
-  const catalogue = useResource(`spell-stage:${JSON.stringify([saved, openQuestions, edited.map((block) => block.key), revision])}`, async () => {
+  const catalogue = useResource(`spell-stage:${scope}:${JSON.stringify([saved, openQuestions, edited.map((block) => block.key), revision])}`, async () => {
     const editQuestions = await Promise.all(edited.map(async (block) => ({ key: block.key, prompt: await loadSavedPrompt(block.row), row: block.row })))
     const questions = [...editQuestions.map((item) => item.prompt), ...openQuestions]
       .sort((a, b) => Number(a.optional) - Number(b.optional) || (a.level ?? 0) - (b.level ?? 0))
     const [selectedEntries, summaries, schools, classes] = await Promise.all([
-      getEntries<Spell>('spells', [...new Set(saved)]).then((items) => new Map<string, Entry>(items.map((item) => [item.slug, item]))),
-      getCollection<Spell>('spells'), getCollection('magic-schools'), getCollection('classes'),
+      getEntries<Spell>('spells', [...new Set(saved)], scope).then((items) => new Map<string, Entry>(items.map((item) => [item.slug, item]))),
+      getCollection<Spell>('spells', scope), getCollection('magic-schools', scope), getCollection('classes', scope),
     ])
     return { questions, editQuestions, entries: new Map<string, Entry>([...[...summaries, ...schools, ...classes].map((item) => [item.slug, item] as const), ...(selectedEntries ?? [])]) }
   })
@@ -65,10 +67,10 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
   const extra = savedExtra + current.extra
   const browsing = active && !availableOnly
   const loadLibrary = browsing || current.custom.length > 0 || extra > 0
-  const library = useResource(`spell-library:${loadLibrary}:${cantripsOnly}`, async () => {
+  const library = useResource(`spell-library:${scope}:${revision}:${loadLibrary}:${cantripsOnly}`, async () => {
     if (!loadLibrary) return { spells: [] as Spell[], entries: [] as Entry[] }
     const [summaries, schools, classes] = await Promise.all([
-      getCollection<Spell>('spells'), getCollection('magic-schools'), getCollection('classes'),
+      getCollection<Spell>('spells', scope), getCollection('magic-schools', scope), getCollection('classes', scope),
     ])
     const spells = summaries.filter((spell) => cantripsOnly ? spell.level === 0 : spell.level > 0)
     return { spells, entries: [...schools, ...classes, ...spells] }
@@ -137,7 +139,7 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
   const visibleCount = previousPageKey === pageKey ? shownCount : limit
   const pageRows = available.slice(0, visibleCount)
   const detailSlugs = [...new Set([...pageRows.map((row) => row.slug), ...selected.map((row) => row.slug)])]
-  const details = useResource(`spell-page:${JSON.stringify(detailSlugs)}`, () => getEntries<Spell>('spells', detailSlugs))
+  const details = useResource(`spell-page:${scope}:${revision}:${JSON.stringify(detailSlugs)}`, () => getEntries<Spell>('spells', detailSlugs, scope))
   for (const spell of details.data ?? []) entries.set(spell.slug, spell)
   const levels = [...new Set(selected.map(({ spell }) => spell?.level ?? -1))].sort((a, b) => a - b)
   const named = (slugs: readonly string[]) => [...new Set(slugs)].flatMap((slug) => {

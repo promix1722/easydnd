@@ -38,6 +38,7 @@ const PICK_COLLECTIONS: Record<string, string> = {
  */
 export async function resolveRefNames(
   entries: readonly RefBearing[],
+  scope = '',
 ): Promise<Map<string, string>> {
   const wanted = new Map<string, Map<string, string>>()
   for (const entry of entries) {
@@ -70,7 +71,7 @@ export async function resolveRefNames(
   await Promise.all(
     [...wanted].map(async ([collection, slugs]) => {
       try {
-        const loaded = bySlug(await getEntries<Entry>(collection, [...slugs.keys()]))
+        const loaded = bySlug(await getEntries<Entry>(collection, [...slugs.keys()], scope))
         for (const [slug, ref] of slugs) {
           const found = loaded.get(slug)
           if (found !== undefined) names.set(ref, found.name)

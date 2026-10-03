@@ -6,11 +6,12 @@ addons pass through the same decoder, dependency resolver and compiler.
 The original design discussion is in [packs-plan.md](packs-plan.md).
 
 This delivery covers files, the core evaluator, character locks, revisions,
-resource events and migration APIs. Pack editors, uploads, publishing,
-durable per-user private pack storage and authoring CRUD remain future work.
-Character imports can now compile temporary, session-scoped private definitions;
-see [agent.md](agent.md#custom-content). These releases use the same validator
-and immutable locks, never enter the default catalogue, and live in memory. The
+resource events and migration APIs. Pack editing, JSON uploads, publishing,
+private storage, and group sharing are available through the Homebrew section;
+see Homebrew authoring below. Character imports can also compile temporary,
+session-scoped private definitions; see [agent.md](agent.md#custom-content).
+These releases use the same validator and immutable locks, never enter the
+default catalogue, and live in memory. The
 existing browser still uses its original ability editor and resource displays;
 the new metadata/read contracts are available for that later UI work.
 
@@ -225,8 +226,8 @@ entity/resource/action needs a default name. A missing translation falls back;
 explicit empty map fields/blocks can clear those values. HTTP negotiates the
 installed content locales; the browser's own chrome currently remains en/ru.
 Lock plus locale identifies a compiled context, preventing cross-version cache
-mixing. Configured packs are operator-installed public catalogue content; private
-per-user packs need the deferred authoring/storage access model.
+mixing. Configured packs are operator-installed public catalogue content. Private releases
+use the authoring service access model described below.
 
 Research underlying these contracts: [SemVer](https://semver.org/),
 [JSON Schema 2020-12](https://json-schema.org/draft/2020-12),
@@ -250,3 +251,53 @@ The SRD input policy defines these in `data/rules/2014/mechanics.json`; regenera
 with `make data/srd`. Older profiles that omit selection policy keep their
 previous behavior. Character rules locks remain authoritative, so installing a
 new policy does not silently migrate existing pinned characters.
+
+## Homebrew authoring
+
+`/homebrew` manages personal drafts and immutable published releases. Guests use
+exactly the same authoring endpoints; their stored guest identity owns the packs,
+so access still depends on retaining that guest session. PostgreSQL persists packs
+and group shares when configured. Development without a database uses memory.
+Character logs remain memory-only.
+
+The visual editor is described by the existing typed wire definitions, including
+all entity collections, locale bundles and recursive mechanics. It writes the
+same portable JSON as the CLI. Drafts may be incomplete; saving uses an expected
+revision, while publishing requires validation and compilation in every supplied
+locale. Published versions cannot be overwritten. To publish another version,
+edit the draft's manifest version. Archiving hides a pack from new selections;
+its release bytes are retained for existing characters and checkpoints.
+
+SRD 5.1 is the default selection, independently of additional operator-installed
+packs. The first character tab and the spell browser accept multiple compatible
+roots. Dependencies are resolved automatically; one core provider is required.
+An independent core can define the same six standard scores, whose identities
+remain global; additional ability scores are still rejected. The character's
+exact lock governs choices, spells, names and shared-sheet catalogues. Changing
+packs on an existing character previews and commits through the rules migration
+API. Copies require current access to their releases; existing characters retain
+access for progression and restoration after a share is removed.
+
+Any group member may share a release they own. A share records its exact
+transitive closure and does not advance when another version is published. The
+contributor or an owner/DM may remove it. A contributor leaving does not remove
+it. A private dependency owned by somebody else must already be available to the
+group before it can be included. Group members can export accessible releases
+and import independent copies; sharing is not a restriction on redistribution.
+
+Browser import/export supports **one portable JSON document**, with no dependency
+bundles or directory uploads. Import creates an owned draft with a new ID and
+version 1.0.0, rewrites self-references, and preserves translations and source
+attribution. External dependencies remain declarations. Import missing packs
+separately, then use dependency mapping to point at their new identities; adjust
+version ranges in the manifest when necessary. Missing dependencies block
+publication, not draft saving. No remote fetching or executable content is added.
+
+The authoring API is `/v1/packs`: list/create, `schema`, `import`, `resolve`,
+`catalog[/collection]`, and per-ID `draft`, `validate`, `publish`, `archive`,
+`export` operations. Group sharing uses `/v1/groups/:id/packs`. Catalogue selection
+uses `packs=id@version,id@version`; resolution returns a complete rules lock.
+Every request checks current access before compiling or returning cached content.
+Drafts and all private authoring/catalogue responses use `Cache-Control: no-store`.
+Validation has localized reason codes, document locations, and expandable compiler
+details for diagnosing unsupported mechanics.

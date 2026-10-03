@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useCatalogScope } from '@/lib/api/catalogScope'
 
 import { describeField, describeError } from '@/lib/api'
 import type { Answer, ApiFieldError, Change, Entry, Equipment, Prompt } from '@/lib/api'
@@ -475,6 +476,7 @@ function PromptWithOptions({
   onAnswer: (answers: Answer[]) => void
 }) {
   const t = useT()
+  const scope = useCatalogScope()
   const locale = useLocale()
   const [entries, setEntries] = useState<Map<string, Entry>>(new Map())
   const [loading, setLoading] = useState(true)
@@ -490,7 +492,7 @@ function PromptWithOptions({
 
   useEffect(() => {
     let live = true
-    void loadEntries(prompt).then((loaded) => {
+    void loadEntries(prompt, scope).then((loaded) => {
       if (live) { setEntries(loaded); setLoading(false) }
     }).catch((cause: unknown) => {
       if (live) { setError(describeError(t, cause)); setLoading(false) }
@@ -498,7 +500,7 @@ function PromptWithOptions({
     return () => {
       live = false
     }
-  }, [prompt, locale, attempt, t])
+  }, [prompt, locale, attempt, t, scope])
 
   return <Stack gap="sm">
     {loading && <Text size="sm">{t('page.loadingEllipsis')}</Text>}

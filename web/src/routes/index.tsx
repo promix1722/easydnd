@@ -1,3 +1,4 @@
+import { PacksScreen, PackEditorScreen } from '@/features/packs'
 import { createBrowserRouter } from 'react-router'
 
 import { AccountScreen } from '@/features/account'
@@ -39,6 +40,8 @@ export const router = createBrowserRouter([
     element: <RootGate />,
     children: [
       { index: true, element: <HomeRoute /> },
+      { path: 'homebrew', element: <Private><PacksScreen /></Private> },
+      { path: 'homebrew/:id', element: <Private><PackEditorScreen /></Private> },
 
       // A character is somebody's, so these render the landing page to a
       // signed-out visitor rather than redirecting: the URL survives being

@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { PackSelector } from '@/features/packs'
+import type { RulesLock } from '@/lib/api/packs'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import type { Entry, Spell, SpellPage, SpellSearch } from '@/lib/api'
@@ -56,6 +58,10 @@ const PAGE_SIZE = 50
 export function SpellsScreen() {
   const t = useT()
   const [params, setParams] = useSearchParams()
+  const packQuery = params.get('packs') ?? ''
+  const scope = packQuery ? `/packs/catalog?packs=${encodeURIComponent(packQuery)}` : ''
+  const selectedLock: RulesLock | undefined = packQuery ? { edition: '2014', semantics: '1', packs: packQuery.split(',').map((p) => { const [id, version] = p.split('@'); return { id: id!, version: version!, digest: '' } }) } : undefined
+  const spellURL = (slug: string) => `/spells/${encodeURIComponent(slug)}${packQuery ? `?packs=${encodeURIComponent(packQuery)}` : ''}`
 
   function setParam(key: string, value: string | null) {
     setParams(
@@ -68,6 +74,8 @@ export function SpellsScreen() {
       { replace: true },
     )
   }
+
+  const packSelector = <Panel><PackSelector value={selectedLock} onChange={(lock) => { const next = new URLSearchParams(); next.set('packs', lock.packs.map((p) => `${p.id}@${p.version}`).join(',')); setParams(next) }} /></Panel>
 
   const query = (params.get('q') ?? '').trim()
   const level = params.get('level')
@@ -120,21 +128,23 @@ export function SpellsScreen() {
     ...(noMaterial ? { material: false } : {}),
     limit: PAGE_SIZE,
   }
-  const searchKey = JSON.stringify(search)
+  const searchKey = JSON.stringify([scope, search])
+  const activeSearch = useRef(searchKey)
+  useEffect(() => { activeSearch.current = searchKey }, [searchKey])
 
   // What fills the Selects. Keyed on nothing, because it answers to nothing:
   // the list of schools and the list of classes are the same whatever is being
   // searched for. Both are served from the catalogue cache after the first
   // visit, so this is usually not a request at all.
-  const options = useResource('spells:options', async () => {
+  const options = useResource(`spells:options:${scope}`, async () => {
     const [schools, classes] = await Promise.all([
-      getCollection<Entry>('magic-schools'),
-      getCollection<Entry>('classes'),
+      getCollection<Entry>('magic-schools', scope),
+      getCollection<Entry>('classes', scope),
     ])
     return { schools, classes }
   })
 
-  const found = useResource(`spells:${searchKey}`, (signal) => searchSpells(search, signal))
+  const found = useResource(`spells:${searchKey}`, (signal) => searchSpells(search, signal, scope))
 
   // The last page that arrived, held across the gap while the next one is in
   // flight. Without it the table would empty itself on every keystroke pause
@@ -142,6 +152,8 @@ export function SpellsScreen() {
   // confined to the table. With it the old rows stay under a dimmed panel and
   // are replaced when the new ones land.
   const [lastPage, setLastPage] = useState<SpellPage | null>(null)
+  const [lastScope, setLastScope] = useState(scope)
+  if (lastScope !== scope) { setLastScope(scope); setLastPage(null) }
   if (found.data !== null && found.data !== lastPage) setLastPage(found.data)
 
   // Appended pages, reset during render when the search changes -- the same
@@ -161,7 +173,7 @@ export function SpellsScreen() {
     onRetry: options.reload,
   })
   if (state.kind !== 'ready' || options.data === null) {
-    return <Page trail={[]} state={state} />
+    return <Page trail={[]}>{packSelector}<PageBody state={state}>{null}</PageBody></Page>
   }
 
   const { schools, classes } = options.data
@@ -180,8 +192,10 @@ export function SpellsScreen() {
   async function loadMore() {
     setLoadingMore(true)
     try {
-      const next = await searchSpells({ ...search, offset: rows.length })
-      setExtra((previous) => [...previous, ...next.spells])
+      const next = await searchSpells({ ...search, offset: rows.length }, undefined, scope)
+      if (activeSearch.current === searchKey) setExtra((previous) => [...previous, ...next.spells])
+    } catch {
+      if (activeSearch.current === searchKey) found.reload()
     } finally {
       setLoadingMore(false)
     }
@@ -189,6 +203,7 @@ export function SpellsScreen() {
 
   return (
     <Page trail={[]}>
+      {packSelector}
       <Panel>
         <Stack gap="md">
           <SpellFilters
@@ -218,16 +233,16 @@ export function SpellsScreen() {
                     items={rows}
                     getKey={(spell) => spell.slug}
                     leading={(spell) => <SpellIcon slug={spell.slug} size={32} />}
-                    badges={(spell) => <SpellTags spell={spell} />}
+                    badges={(spell) => <Group gap="xs"><SpellTags spell={spell} /><Badge variant="light">{spell.slug.includes('/') ? spell.slug.split('/')[0] : t('packs.srd')}</Badge></Group>}
                     columns={[
                       {
                         key: 'name',
                         header: t('spells.name'),
                         primary: true,
                         text: (spell) => spell.name,
-                        to: (spell) => `/spells/${spell.slug}`,
+                        to: (spell) => spellURL(spell.slug),
                         render: (spell) => (
-                          <Anchor component={Link} to={`/spells/${spell.slug}`}>
+                          <Anchor component={Link} to={spellURL(spell.slug)}>
                             <Text size="sm">{spell.name}</Text>
                           </Anchor>
                         ),

@@ -597,3 +597,18 @@ Unknown mechanics are manual notes rather than executable guesses. Complete
 custom definitions use the existing immutable pack lock. Both manual source
 notes and private definitions remain readable on copied/shared projections.
 See [agent.md](agent.md) for import reconciliation and review boundaries.
+
+## Selecting homebrew rules
+
+A character starts with SRD 5.1 and can select compatible accessible add-ons, or
+another complete core pack, on the first build tab. One core provider is required;
+dependencies and conflicts are checked by the existing pack compiler. Core packs
+may define the six standard ability scores, whose identities remain STR, DEX, CON,
+INT, WIS and CHA. Packs cannot introduce a seventh score.
+
+Creation pins the complete resolved release lock. Subsequent selection changes
+use migration preview and revision-checked application. Published pack updates
+never change an existing character implicitly. If group access to a pack ends,
+already pinned characters remain playable and can gain levels, while new
+characters and copies require current release access. Group shares are exact
+versions and advance only when explicitly replaced.

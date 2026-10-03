@@ -6,7 +6,9 @@ import (
 	"unicode/utf8"
 
 	domain "github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
 )
 
@@ -174,6 +176,15 @@ func (s *Service) CopyCharacter(
 	source, cat, err := s.load(ctx, owner, id, locale)
 	if err != nil {
 		return domain.Character{}, err
+	}
+	if s.packAccess != nil {
+		retained := pack.Lock{}
+		if private, ok := s.catalog.(interface{ PrivateReleases(pack.Lock) pack.Lock }); ok {
+			retained = private.PrivateReleases(source.Log.RulesLock())
+		}
+		if err := s.packAccess.AuthorizeLock(ctx, user.ID(owner), source.Log.RulesLock(), retained); err != nil {
+			return domain.Character{}, err
+		}
 	}
 	if target.IsZero() {
 		target = source.Folder

@@ -54,7 +54,7 @@ export function CharacterLogScreen() {
   const { id = '' } = useParams()
   const log = useResource<LogView>(`log:${id}`, async (signal) => {
     const { events } = await getEvents(id, signal)
-    return { events, names: await resolveRefNames(events) }
+    return { events, names: await resolveRefNames(events, `/characters/${id}/catalog`) }
   })
 
   const state = pageState(log, {

@@ -66,10 +66,19 @@ type SpellRule struct {
 	Automatic     []string `json:"automatic,omitempty"`
 }
 
+type BuildPolicy struct {
+	MinScore       int         `json:"minScore"`
+	MaxScore       int         `json:"maxScore"`
+	MaxLevel       int         `json:"maxLevel"`
+	StandardArray  []int       `json:"standardArray"`
+	PointBuyBudget int         `json:"pointBuyBudget"`
+	PointCosts     map[int]int `json:"pointCosts"`
+}
 type PromptsResponse struct {
-	SpellRules []SpellRule `json:"spellRules,omitempty"`
-	Revision   int         `json:"revision"`
-	Seq        int         `json:"seq"`
+	BuildPolicy *BuildPolicy `json:"buildPolicy,omitempty"`
+	SpellRules  []SpellRule  `json:"spellRules,omitempty"`
+	Revision    int          `json:"revision"`
+	Seq         int          `json:"seq"`
 
 	// Complete reports that nothing required is outstanding. It is separate
 	// from the list being empty, because a character with only optional
@@ -130,12 +139,17 @@ func (h *Handler) Prompts(c *gin.Context) {
 		out = append(out, promptOf(p, conv))
 	}
 
+	var policy *BuildPolicy
+	if core := cat.Mechanics.Core; core.MaxScore > 0 {
+		policy = &BuildPolicy{core.MinScore, core.MaxScore, core.MaxLevel, core.StandardArray, core.PointBuyBudget, core.PointCosts}
+	}
 	c.JSON(http.StatusOK, PromptsResponse{
-		SpellRules: spellRules,
-		Seq:        character.Log.LastSeq(),
-		Revision:   character.Revision,
-		Complete:   domain.Complete(prompts),
-		Prompts:    out,
+		BuildPolicy: policy,
+		SpellRules:  spellRules,
+		Seq:         character.Log.LastSeq(),
+		Revision:    character.Revision,
+		Complete:    domain.Complete(prompts),
+		Prompts:     out,
 	})
 }
 

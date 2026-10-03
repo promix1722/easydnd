@@ -28,14 +28,17 @@ import (
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
+	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	domain "github.com/promix1722/easydnd/internal/domain/auth"
+	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
 	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
+	packuc "github.com/promix1722/easydnd/internal/usecase/pack"
 )
 
 // newFullRouter builds the whole route table over the real compendium, an
@@ -87,7 +90,7 @@ var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data"
 // only in development, and the test that matters for it is the one asserting
 // the route is absent from a production table.
 func newFullRouterInEnv(
-	t *testing.T, env string,
+	t *testing.T, env string, withPacks ...bool,
 ) (*gin.Engine, *http.Cookie, *stubCeremony, *stubFederation) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -131,8 +134,21 @@ func newFullRouterInEnv(
 
 	// dev's shared, cached catalogue source -- building a second one here is
 	// what the verify-speedup commit removed.
-	source := catalogSource
+	var source catalog.Source = catalogSource
+	var packs *packuc.Service
+	var packHandler *packapi.Handler
 	groupRepo := memory.NewGroupRepository(users)
+	if len(withPacks) > 0 && withPacks[0] {
+		base, err := catalogfile.NewRegistry([]string{"../../../data/srd_5.1"}, nil, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		repo := memory.NewPackRepository()
+		engine := catalogfile.NewAuthoring(base, repo)
+		packs = packuc.NewService(repo, engine, groupRepo, users)
+		source = engine
+		packHandler = packapi.New(packs, engine)
+	}
 	// One character store, hoisted out of the constructor because the game
 	// service reads out of the same map this one writes into. A second
 	// instance would make every shared character a 404, with nothing in the
@@ -144,11 +160,15 @@ func newFullRouterInEnv(
 		groupRepo, characterRepo, source, log)
 	characterService := charuc.NewService(characterRepo,
 		memory.NewFolderRepository(), source, hexsheet.NewImporter(), gameService, log)
+	if packs != nil {
+		characterService.SetPackAccess(packs)
+	}
 	// The same signer mints invite links; the kind claim is what keeps them
 	// from being interchangeable with the session cookie beside them.
 	groupService := groupuc.NewService(groupRepo, users, signer, gameService, log)
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
+		Pack:          packHandler,
 		System:        system.New(testVersion),
 		Auth:          authapi.New(authService, cookies),
 		Authenticator: authService,

@@ -29,10 +29,10 @@ const NAMED = [
   'spells',
 ] as const
 
-async function namesOf(): Promise<Map<string, string> | null> {
+async function namesOf(scope = ''): Promise<Map<string, string> | null> {
   try {
     const collections = await Promise.all(
-      NAMED.map((collection) => getCollection<Entry>(collection)),
+      NAMED.map((collection) => getCollection<Entry>(collection, scope)),
     )
     const names = new Map<string, string>()
     collections.forEach((entries, at) => {
@@ -62,11 +62,11 @@ export interface Compendium {
  * whole visit however many sheets are opened, and each falls back to null
  * rather than failing the sheet -- title-cased slugs are worth drawing.
  */
-export async function loadCompendium(): Promise<Compendium> {
+export async function loadCompendium(scope = ''): Promise<Compendium> {
   const [skills, proficiencies, names] = await Promise.all([
-    getCollection<CatalogSkill>('skills').then(bySlug, () => null),
-    getCollection<CatalogProficiency>('proficiencies').then(bySlug, () => null),
-    namesOf(),
+    getCollection<CatalogSkill>('skills', scope).then(bySlug, () => null),
+    getCollection<CatalogProficiency>('proficiencies', scope).then(bySlug, () => null),
+    namesOf(scope),
   ])
   return { names, skills, proficiencies }
 }

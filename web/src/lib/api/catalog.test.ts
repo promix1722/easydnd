@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 
-import { getEntries } from './catalog'
+import { getCollection, getEntries } from './catalog'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -15,4 +15,17 @@ it('loads a whole spell-choice pool within the API slug limit', async () => {
   const entries = await getEntries('spells', slugs)
   expect(entries.map((entry) => entry.slug)).toEqual(slugs)
   expect(requested.every((chunk) => chunk.length <= 200)).toBe(true)
+})
+
+it('keeps private selections separate and rechecks access for every collection read', async () => {
+  const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { headers: { 'Content-Type': 'application/json' } }))
+  // Each response body is consumed once, including consecutive reads of one scope.
+  fetcher.mockImplementation(async () => new Response(JSON.stringify([]), { headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetcher)
+  await getCollection('spells', '/packs/catalog?packs=private%401.0.0')
+  await getCollection('spells', '/packs/catalog?packs=private%401.0.0')
+  await getCollection('spells', '/characters/one/catalog')
+  expect(fetcher).toHaveBeenCalledTimes(3)
+  expect(String(fetcher.mock.calls[0]?.[0])).toContain('/packs/catalog/spells?packs=private%401.0.0')
+  expect(String(fetcher.mock.calls[2]?.[0])).toContain('/characters/one/catalog/spells')
 })

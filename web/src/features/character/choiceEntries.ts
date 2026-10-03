@@ -2,7 +2,7 @@ import { bySlug, getCollection, getEntries } from '@/lib/api'
 import type { Entry, OptionSet, Prompt } from '@/lib/api'
 import { collectionOfKind, kindOf, slugOf } from '@/domain'
 
-export async function loadEntries(prompt: Prompt): Promise<Map<string, Entry>> {
+export async function loadEntries(prompt: Prompt, scope = ''): Promise<Map<string, Entry>> {
   const whole = new Set<string>()
   const wanted = new Map<string, Set<string>>()
 
@@ -36,17 +36,17 @@ export async function loadEntries(prompt: Prompt): Promise<Map<string, Entry>> {
     whole.add('classes')
   }
   const loaded = await Promise.all([
-    ...[...whole].map((collection) => getCollection<Entry>(collection)),
-    ...[...wanted].map(([collection, slugs]) => getEntries<Entry>(collection, [...slugs])),
+    ...[...whole].map((collection) => getCollection<Entry>(collection, scope)),
+    ...[...wanted].map(([collection, slugs]) => getEntries<Entry>(collection, [...slugs], scope)),
   ])
   const entries = bySlug(loaded.flat())
   const contents = loaded.flat().flatMap((entry) => ((entry as import('@/lib/api').Item).gear?.contents ?? []).map((item) => item.item)).filter((slug) => !entries.has(slug))
   if (wanted.has('equipment')) {
     for (const collection of ['damage-types', 'weapon-properties']) {
-      for (const entry of await getCollection<Entry>(collection)) entries.set(entry.slug, entry)
+      for (const entry of await getCollection<Entry>(collection, scope)) entries.set(entry.slug, entry)
     }
   }
-  const items = await getEntries<Entry>('equipment', [...new Set(contents)])
+  const items = await getEntries<Entry>('equipment', [...new Set(contents)], scope)
   for (const item of items) entries.set(item.slug, item)
   return entries
 }

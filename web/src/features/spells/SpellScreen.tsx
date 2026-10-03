@@ -1,4 +1,4 @@
-import { useParams } from 'react-router'
+import { useParams, useSearchParams } from 'react-router'
 
 import type { Entry, Spell } from '@/lib/api'
 import { bySlug, getCollection, getEntries } from '@/lib/api'
@@ -20,12 +20,15 @@ import { SpellDetails } from './SpellDetails'
 export function SpellScreen() {
   const t = useT()
   const { slug = '' } = useParams()
+  const [params] = useSearchParams()
+  const packs = params.get('packs') ?? ''
+  const scope = packs ? `/packs/catalog?packs=${encodeURIComponent(packs)}` : ''
 
-  const loaded = useResource(`spell:${slug}`, async () => {
+  const loaded = useResource(`spell:${slug}:${scope}`, async () => {
     const [spells, schools, classes] = await Promise.all([
-      getEntries<Spell>('spells', [slug]),
-      getCollection<Entry>('magic-schools'),
-      getCollection<Entry>('classes'),
+      getEntries<Spell>('spells', [slug], scope),
+      getCollection<Entry>('magic-schools', scope),
+      getCollection<Entry>('classes', scope),
     ])
     return { spell: spells[0] ?? null, schools, classes }
   })

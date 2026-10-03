@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 )
 
@@ -29,4 +30,13 @@ func (h *Handler) Sheet(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, characterapi.SheetOf(state))
+}
+
+func (h *Handler) Catalog(c *gin.Context) {
+	cat, err := h.service.CharacterCatalog(c.Request.Context(), h.actor(c), pathCharacterOf(c), helpers.Locale(c))
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	catalogapi.ServeCollection(c, cat)
 }

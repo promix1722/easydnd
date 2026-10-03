@@ -4052,3 +4052,33 @@ private catalogue names appear in the shared `SheetBody`, so copies and shared
 sheets retain custom content. Captions/errors have English and Russian
 translations. See [agent.md](agent.md) for the tool/question contract and the
 current in-memory lifetime.
+
+## Homebrew
+
+The Homebrew section lists built-in, owned and group-shared packs. The editor
+uses a recursive typed form driven by `/v1/packs/schema`, including reference
+pickers, ordered rows, expressions and locale maps. Closed sections are expanded
+lazily so large imported catalogues do not render every field at once. Saving
+keeps an incomplete draft; validating and publishing use the server compiler.
+Import/export uses single JSON files. Dependency replacement is explicit and
+preserves external version constraints. Every caption ships in English and Russian.
+
+Pack selection appears in the builder's first Rules tab and the spell browser.
+The import draft editor keeps its session's pack lock and loads catalogue entries
+through the authenticated draft route; pack selection is available after saving
+the character.
+Apply the selection before creating a character. For an existing character, Apply
+opens the rules migration preview and blocks committing invalid choices. The spell
+browser stores exact root versions in its URL and carries them into detail links.
+The selection and dependency closure are shown separately; SRD 5.1 starts selected.
+
+Catalogue functions accept an explicit request scope. Builder descendants receive
+the character scope through React context; spell pages receive a URL selection.
+Private catalogue reads bypass the old public collection cache so access is checked
+on each request. Shared and owned character sheets load their pinned catalogue.
+Groups have a Homebrew tab for sharing exact releases and removing shares.
+
+The prompts response also supplies the selected core's build policy: score
+bounds, standard array, point-buy prices/budget and maximum level. Builder forms
+consume that policy; legacy responses retain the SRD defaults. The sheet's level-up
+button uses the same maximum rather than a fixed level 20.

@@ -15,19 +15,29 @@ import (
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
 )
 
 // Service holds the character usecases. Every dependency arrives through the
 // constructor; there are no package-level singletons.
+type PackAccess interface {
+	AuthorizeLock(context.Context, user.ID, pack.Lock, pack.Lock) error
+	Default() pack.Lock
+}
+
+func (s *Service) SetPackAccess(access PackAccess) { s.packAccess = access }
+
 type Service struct {
-	repo     domain.Repository
-	folders  domain.FolderRepository
-	catalog  catalog.Source
-	importer SheetImporter
-	sharing  domain.Sharing
-	log      *slog.Logger
+	packAccess PackAccess
+	repo       domain.Repository
+	folders    domain.FolderRepository
+	catalog    catalog.Source
+	importer   SheetImporter
+	sharing    domain.Sharing
+	log        *slog.Logger
 
 	// clock is injected so that an import stamps a time a test can predict.
 	// Nil means the real clock; see the now method.
@@ -85,6 +95,7 @@ func (s *Service) now() time.Time {
 // answered from the abilities tab as their own entry, and the method travels
 // with them.
 type NewCharacter struct {
+	Rules     pack.Lock
 	Name      string
 	Alignment rules.Slug
 }
@@ -105,7 +116,18 @@ func (s *Service) Create(
 		return domain.Character{}, err
 	}
 
-	cat, err := s.catalog.Load(ctx, rules.DefaultLocale)
+	var cat *catalog.Catalog
+	if !opening.Rules.IsZero() {
+		if s.packAccess == nil {
+			return domain.Character{}, types.NewAccessDeniedError("pack selection unavailable")
+		}
+		if err := s.packAccess.AuthorizeLock(ctx, user.ID(owner), opening.Rules, pack.Lock{}); err != nil {
+			return domain.Character{}, err
+		}
+		cat, err = catalog.LoadLocked(ctx, s.catalog, rules.DefaultLocale, opening.Rules)
+	} else {
+		cat, err = s.catalog.Load(ctx, rules.DefaultLocale)
+	}
 	if err != nil {
 		return domain.Character{}, err
 	}

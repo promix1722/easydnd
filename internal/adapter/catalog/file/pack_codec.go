@@ -215,7 +215,7 @@ func (p *PackDocument) Validate() error {
 					return fmt.Errorf("invalid local ID %q", id)
 				}
 				if collection == "abilities" {
-					if _, ok := rules.ParseAbility(id); !ok || p.Manifest.ID != pack.BaseID {
+					if _, ok := rules.ParseAbility(id); !ok || (p.Manifest.ID != pack.BaseID && p.Mechanics.Core == nil) {
 						return fmt.Errorf("packs cannot introduce custom ability scores")
 					}
 				}

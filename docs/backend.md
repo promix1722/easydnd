@@ -2181,3 +2181,37 @@ are process-local, so browser reload resumes but server restart does not.
 See [agent.md](agent.md) for tool contracts, lifecycle, bounds and the `agent`
 YAML configuration. The nginx upload-limit change must be installed separately
 from a release; SSE disables buffering per response and sends heartbeats.
+
+## User-authored rule packs
+
+The pack usecase owns drafts, releases, and authorization. Its engine port reuses
+`adapter/catalog/file` decoding, dependency resolution, normalization and compilation.
+The adapter constructs immutable registry snapshots; character reads resolve exact
+locks against built-in and retained database releases. The compiled cache is not
+an authorization boundary. Catalogue selection, exports and new locks check access
+on each request; character-owned reads can retain already pinned releases after
+membership or sharing changes. Existing checkpoint restore stays character-scoped.
+
+Migration 00004 adds `rule_packs` and `group_rule_packs`. Pack records store portable
+release bytes and draft metadata together, with revision compare-and-swap writes.
+Group shares store an exact dependency closure. Deleting a group removes shares;
+no release garbage collection is performed. Memory and PostgreSQL repositories
+share concurrency and round-trip contract tests. Guest rows are materialized on
+first pack creation using the same account repository operation as groups.
+
+`POST /v1/characters` now accepts an optional `rules` lock. Omitting it selects SRD
+5.1. Rules migration checks current access for newly introduced releases and
+permits retained releases already in the character lock. Event responses include
+`rules`. Shared-sheet catalogue reads use `/v1/shared/:id/catalog/:collection` and
+the same authorization as the shared sheet. Pack import is bounded to 64 MiB and
+uses the existing strict JSON parser. `/v1/packs/schema` describes every editor
+field from the wire types; it is presentation metadata, not a new pack format.
+
+Private pack endpoints send no-store. General API failures retain reason slugs;
+authoring validation additionally returns a document path and technical compiler
+details, since authors need to diagnose unsupported rules and references.
+
+The authoring adapter also retains the import agent's generated private releases
+in memory. They stay outside pack listings and the default catalogue. Existing
+imported characters and their copies resolve those exact definitions; copying
+still checks current access to any ordinary homebrew releases in the same lock.

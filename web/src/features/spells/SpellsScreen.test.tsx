@@ -15,6 +15,7 @@ it('keeps shared filters in the browse URL and sends them to catalogue search', 
   vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input), 'http://localhost')
     let data: unknown = []
+    if (url.pathname === '/v1/packs') data = { packs: [], defaultRules: { edition: '2014', semantics: '1', packs: [] } }
     if (url.pathname.endsWith('/magic-schools')) data = [{ slug: 'divination', name: 'Divination' }]
     if (url.pathname.endsWith('/classes')) data = [{ slug: 'wizard', name: 'Wizard' }]
     if (url.pathname.endsWith('/spells')) {

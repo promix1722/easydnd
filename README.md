@@ -68,3 +68,7 @@ an account; use the account icon in the header to switch roles. See
 | [docs/web.md](docs/web.md) | The browser client: layout, layer rules, how it ships |
 | [docs/seo.md](docs/seo.md) | Search-engine and answer-engine discovery, submission, and monitoring |
 | [docs/licensing.md](docs/licensing.md) | MIT for the project's own code, and the SRD 5.1 attribution the data carries |
+
+Homebrew packs can be authored visually, shared with groups, and imported/exported
+as JSON. See [rule packs](docs/packs.md#homebrew-authoring) for versions,
+dependencies, storage, and character selection.

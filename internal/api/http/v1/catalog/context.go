@@ -21,3 +21,8 @@ func (s fixedSource) Locales(context.Context) ([]rules.Locale, error) {
 func ServeCollection(c *gin.Context, cat *catalog.Catalog) {
 	New(fixedSource{cat}, slog.Default()).Collection(c)
 }
+
+// ServeManifest renders an already authorized selection.
+func ServeManifest(c *gin.Context, cat *catalog.Catalog, log *slog.Logger) {
+	New(fixedSource{cat}, log).Manifest(c)
+}

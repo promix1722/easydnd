@@ -231,11 +231,32 @@ func validateMechanics(m PackMechanics) error {
 
 // normalizeID accepts canonical refs or local IDs. Qualified cross-pack refs
 // must explicitly name a declared dependency; the registry checks that graph.
+// The six standard scores have global identities even in an independently
+// authored core pack. Packs still cannot introduce additional scores.
+func normalizeAbility(value string) string {
+	if strings.Contains(value, ":") {
+		r, ok := rules.ParseRef(value)
+		if !ok || r.Kind != rules.RefAbility {
+			return value
+		}
+	}
+	last := value
+	if at := strings.LastIndexAny(last, ":/"); at >= 0 {
+		last = last[at+1:]
+	}
+	if _, ok := rules.ParseAbility(last); ok {
+		return last
+	}
+	return value
+}
 func normalizeID(packID, value string) string {
 	if value == "" {
 		return ""
 	}
 	if r, ok := rules.ParseRef(value); ok {
+		if r.Kind == rules.RefAbility {
+			return normalizeAbility(value)
+		}
 		return r.Slug.String()
 	}
 	if strings.Contains(value, "/") {
@@ -244,6 +265,9 @@ func normalizeID(packID, value string) string {
 	return rules.QualifiedSlug(packID, value).String()
 }
 func normalizeRef(packID, value string) string {
+	if r, ok := rules.ParseRef(value); ok && r.Kind == rules.RefAbility {
+		return "ability:" + normalizeAbility(value)
+	}
 	if value == "" {
 		return ""
 	}
@@ -265,6 +289,9 @@ var slugFields = map[string]bool{"slug": true, "class": true, "classes": true, "
 func normalizeValue(packID, key string, v any) any {
 	switch x := v.(type) {
 	case string:
+		if key == "ability" || key == "savingThrows" || key == "spellcastingAbility" {
+			return normalizeAbility(x)
+		}
 		if len(strings.Split(x, ":")) == 3 && key != "ref" && key != "reference" && key != "owner" {
 			if r, ok := rules.ParseRef(x); ok {
 				return r.Slug.String()
@@ -297,6 +324,9 @@ func normalizedEntities(p *PackDocument) (map[string][]any, error) {
 		for i, v := range rows {
 			rows[i] = normalizeValue(p.Manifest.ID, "", v)
 			m := rows[i].(map[string]any)
+			if name == "abilities" {
+				m["slug"] = normalizeAbility(m["slug"].(string))
+			}
 			if name == "equipment" || name == "magic-items" {
 				if x, ok := m["category"].(string); ok {
 					m["category"] = normalizeID(p.Manifest.ID, x)

@@ -39,17 +39,20 @@ import (
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
+	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/buildinfo"
 	"github.com/promix1722/easydnd/internal/config"
 	authdomain "github.com/promix1722/easydnd/internal/domain/auth"
 	"github.com/promix1722/easydnd/internal/domain/group"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
 	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
+	packuc "github.com/promix1722/easydnd/internal/usecase/pack"
 )
 
 // App owns the wired object graph and the HTTP server lifecycle.
@@ -189,6 +192,13 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		return fail(fmt.Errorf("load SRD data from %s: %w", cfg.Data.SRDDir, err))
 	}
 
+	var packRepo pack.Repository = memory.NewPackRepository()
+	if pool != nil {
+		packRepo = postgres.NewPackRepository(pool)
+	}
+	packSource := catalogfile.NewAuthoring(catalogSource, packRepo)
+	packService := packuc.NewService(packRepo, packSource, groupRepo, userRepo)
+
 	// Application layer. The game service is built first because the two
 	// services either side of it have to tell it when the things it refers to
 	// go away -- a deleted character comes off every table, a deleted group
@@ -202,11 +212,12 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	// the same hazard as the one account store, and it fails the same silent
 	// way.
 	gameService := gameuc.NewService(
-		gameRepo, sharedRepo, groupRepo, characterRepo, catalogSource,
+		gameRepo, sharedRepo, groupRepo, characterRepo, packSource,
 		log.With("usecase", "game"))
 	characterService := charuc.NewService(
-		characterRepo, folderRepo, catalogSource, hexsheet.NewImporter(), gameService,
+		characterRepo, folderRepo, packSource, hexsheet.NewImporter(), gameService,
 		log.With("usecase", "character"))
+	characterService.SetPackAccess(packService)
 	authService := authuc.NewService(userRepo, ceremony, signer, federations, authuc.Config{
 		SessionTTL:      cfg.Auth.SessionTTL,
 		GuestSessionTTL: cfg.Auth.GuestSessionTTL,
@@ -244,7 +255,8 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		WebDir:        opts.WebDir,
 		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)),
 		Authenticator: authService,
-		Catalog:       catalogapi.New(catalogSource, log.With("handler", "catalog")),
+		Pack:          packapi.New(packService, packSource),
+		Catalog:       catalogapi.New(packSource, log.With("handler", "catalog")),
 		Character:     characterapi.New(characterService, log.With("handler", "character")).WithAgent(agent),
 		Folder:        folderapi.New(characterService, log.With("handler", "folder")),
 		Game:          gameapi.New(gameService, log.With("handler", "game")),

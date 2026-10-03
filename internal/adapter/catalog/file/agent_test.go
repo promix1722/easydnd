@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
+
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
@@ -57,5 +60,47 @@ func TestPrivateDefinitionsRejectCoreAndForeignIdentity(t *testing.T) {
 		if _, err := r.CompilePrivate(context.Background(), r.DefaultLock(), "test", []byte(body), rules.DefaultLocale); err == nil {
 			t.Fatalf("accepted unsafe definition: %s", body)
 		}
+	}
+}
+
+func TestAuthoringRetainsPrivateImportDefinitions(t *testing.T) {
+	ctx := context.Background()
+	a := catalogfile.NewAuthoring(registry(t), memory.NewPackRepository())
+	body := []byte(`{"entities":{"feats":[{"slug":"star-touched"}]},"locales":{"en":{"feats":{"star-touched":{"name":"Star Touched","desc":["Source text"]}}}}}`)
+	cat, err := a.CompilePrivate(ctx, a.Default(), "private", body, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldLock := cat.Lock.Clone()
+	changed := []byte(strings.ReplaceAll(string(body), "Star Touched", "Moon Touched"))
+	if _, err := a.CompilePrivate(ctx, oldLock, "private", changed, rules.DefaultLocale); err != nil {
+		t.Fatal(err)
+	}
+	old, err := a.LoadLocked(ctx, rules.DefaultLocale, oldLock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	feat, ok := old.Feats.Get("import-private/star-touched")
+	if !ok || feat.Name != "Star Touched" {
+		t.Fatal("private pinned definition lost")
+	}
+	if _, err := a.LoadLocked(ctx, rules.Locale("ru"), oldLock); err != nil {
+		t.Fatal(err)
+	}
+	for _, record := range a.Builtins() {
+		if strings.HasPrefix(record.ID, "import-") {
+			t.Fatal("private import leaked into library")
+		}
+	}
+	global, err := a.Load(ctx, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if global.Feats.Has("import-private/star-touched") {
+		t.Fatal("private import leaked into default catalogue")
+	}
+	retained := a.PrivateReleases(oldLock)
+	if len(retained.Packs) != 1 || retained.Packs[0].ID != "import-private" {
+		t.Fatal("copy must retain only private definitions")
 	}
 }

@@ -1,3 +1,9 @@
+import { characterPath } from '@/lib/api/characters'
+import { DEFAULT_BUILD_POLICY } from '@/lib/api/packPolicy'
+import { CatalogScope, RulesEdition, CharacterPolicy } from '@/lib/api/catalogScope'
+import { PackSelector, PackMigrationPreview } from '@/features/packs'
+import { migratePackSelection, type RulesLock, type PackMigration } from '@/lib/api/packs'
+import { describeError } from '@/lib/api'
 import { useState } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 
@@ -60,6 +66,7 @@ import type { Stage } from '@/domain'
 
 /** Everything one build screen reads, in one round of requests. */
 interface BuildView {
+ rules?: RulesLock | undefined
   prompts: PromptsResponse
   events: CharacterEvent[]
   sheet: Sheet | null
@@ -132,6 +139,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
     ])
     return {
       prompts,
+      rules: log.rules,
       events: log.events,
       sheet,
       names: await resolveRefNames([
@@ -139,10 +147,15 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
         ...(prompts.spellRules ?? []).flatMap((rule) => [{ source: rule.source }, ...(rule.automatic ?? []).map((slug) => ({ ref: `spell:${slug}` })), ...(rule.listClasses ?? []).map((slug) => ({ ref: `class:${slug}` }))]),
         ...[...sheet.equipment.equipped, ...sheet.equipment.backpack, ...sheet.equipment.loot]
           .flatMap((stack) => stack.item === undefined ? [] : [{ ref: `item:${stack.item}` }]),
-      ]),
+      ], `${characterPath(id)}/catalog`),
     }
   })
 
+  const [selectedRules, setSelectedRules] = useState<RulesLock | undefined>(undefined)
+  const [packPreview, setPackPreview] = useState<(PackMigration & { rules: RulesLock }) | null>(null)
+  const [packError, setPackError] = useState('')
+  const [packDirty, setPackDirty] = useState(false)
+  const [packPending, setPackPending] = useState(false)
   const create = useAction(createCharacter)
   const answer = useAction(appendEvents)
   const revise = useAction(replaceEvent)
@@ -200,6 +213,9 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
   const [shownId, setShownId] = useState(id)
   const arriving = shownId !== id
   if (arriving) {
+    setPackDirty(false)
+    setPackPreview(null)
+    setPackError('')
     if (!creating) orders.clear()
     setShownId(id)
     setChosenStage(landingStage(location.state))
@@ -341,12 +357,14 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
    */
   const createCharacterFromDraft = async (landOn: Stage) => {
     if (create.pending) return
+    if (packDirty) { setPackError(t('packs.applyFirst')); return }
     if (nameDraft.trim() === '') {
       setNameError(t('build.nameRequired'))
       return
     }
     const created = await create.run({
       name: nameDraft.trim(),
+      ...(selectedRules ? { rules: selectedRules } : {}),
       ...(folder ? { folder } : {}),
     })
     // replace: true, because the URL of a character that does not exist is
@@ -430,7 +448,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
       await write(row, event, open)
       return
     }
-    setPreview({ row, event, dropped, names: await resolveRefNames(dropped), open })
+    setPreview({ row, event, dropped, names: await resolveRefNames(dropped, `${characterPath(id)}/catalog`), open })
   }
 
   /** Makes the change, whether it was asked about or not. */
@@ -465,7 +483,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
       if (preview === null) return
       if ((preview.dropped ?? []).length > 0) {
         const row = submissions.find((item) => item.replaces !== undefined)!.replaces!
-        setPreview({ row, event: replacements[0]!.event, dropped: preview.dropped ?? [], names: await resolveRefNames(preview.dropped ?? []), open: null, spellBatch: { submissions, next } })
+        setPreview({ row, event: replacements[0]!.event, dropped: preview.dropped ?? [], names: await resolveRefNames(preview.dropped ?? [], `${characterPath(id)}/catalog`), open: null, spellBatch: { submissions, next } })
         return
       }
     }
@@ -571,7 +589,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
         : revise.fields
 
   return (
-    <Page
+    <CharacterPolicy.Provider value={view.prompts.buildPolicy ?? DEFAULT_BUILD_POLICY}><RulesEdition.Provider value={(isNew ? selectedRules : view.rules)?.edition ?? '2014'}><CatalogScope.Provider value={id ? `${characterPath(id)}/catalog` : ''}><Page
       // The draft, while the character it names is being created: the sheet
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
@@ -661,6 +679,18 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
                     onNext={() => goToStage(each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : 'equipment')}
                   />
                 ) : (
+                  <Stack>
+                  {each === 'rules' && draftId === undefined && <Panel><PackSelector key={id} onDirtyChange={setPackDirty} value={isNew ? selectedRules : view.rules} disabled={packPending} onChange={(rules) => {
+                    if (isNew) { setSelectedRules(rules); setDraftRules(null); return }
+                    setPackPending(true); setPackError('')
+                    void migratePackSelection(id, view.prompts.revision ?? view.prompts.seq, rules, true).then((preview) => setPackPreview({ ...preview, rules })).catch((e: unknown) => setPackError(describeError(t, e))).finally(() => setPackPending(false))
+                  }} />
+                  {packError && <Alert color="red">{packError}</Alert>}
+                  {packPreview && <Stack><PackMigrationPreview before={packPreview.before} after={packPreview.after} />{packPreview.issues?.map((issue) => <Text key={issue.eventId} c="red">{issue.eventId}: {issue.reason}</Text>)}<Group><Button disabled={packPending || (packPreview.issues?.length ?? 0) > 0} onClick={() => {
+                    setPackPending(true)
+                    void migratePackSelection(id, packPreview.revision, packPreview.rules, false).then(() => { setPackPreview(null); build.refresh() }).catch((e: unknown) => setPackError(describeError(t, e))).finally(() => setPackPending(false))
+                  }}>{t('packs.applySelection')}</Button><Button variant="subtle" onClick={() => setPackPreview(null)}>{t('packs.cancel')}</Button></Group></Stack>}
+                  </Panel>}
                   <StagePanel
                     blocks={blocksByStage.get(each) ?? []}
                     openKey={openKey}
@@ -701,6 +731,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
                     rulesSelected={draftRules !== null}
                     focusNext={focusNextStage === each}
                   />
+                  </Stack>
                 ),
               }
             })}
@@ -777,7 +808,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
             </ModalSheet>
         </Stack>
       </Panel>
-    </Page>
+    </Page></CatalogScope.Provider></RulesEdition.Provider></CharacterPolicy.Provider>
   )
 }
 

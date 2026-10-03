@@ -126,3 +126,8 @@ Recorded rather than quietly carried:
   really is OGL, the license's own notice requirements are unmet.
 - **`data/srd_5.1/manifest.json` records `source` but no license field**, so the
   shipped data does not state its own terms in machine-readable form.
+
+Homebrew JSON export retains the pack's `source` and `attribution`. Importing or
+duplicating a pack changes its identity and creates a private draft but preserves
+those fields and its localized prose. Group sharing grants members access to
+export published content; it does not change the content's license.

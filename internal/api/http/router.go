@@ -26,6 +26,7 @@ import (
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
+	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	"github.com/promix1722/easydnd/internal/types"
@@ -42,6 +43,7 @@ type Handlers struct {
 	Folder      *folderapi.Handler
 	Game        *gameapi.Handler
 	Group       *groupapi.Handler
+	Pack        *packapi.Handler
 	// Authenticator resolves the session cookie for the guarded routes. It is
 	// the same object Auth is built over; the router takes it separately
 	// because middleware and handler need different halves of it.
@@ -201,6 +203,25 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// in a comment that it is deliberate.
 		authed := v1.Group("", middleware.RequireSession(h.Authenticator, cookies))
 		{
+			if h.Pack != nil {
+				packs := authed.Group("/packs", middleware.NoStore())
+				packs.GET("", h.Pack.List)
+				packs.POST("", h.Pack.Create)
+				packs.GET("/schema", h.Pack.Schema)
+				packs.POST("/import", h.Pack.Import)
+				packs.POST("/resolve", h.Pack.Resolve)
+				packs.GET("/catalog", h.Pack.Catalog)
+				packs.GET("/catalog/:collection", h.Pack.Catalog)
+				packs.GET("/:id", h.Pack.Get)
+				packs.PUT("/:id/draft", h.Pack.Save)
+				packs.POST("/:id/validate", h.Pack.Validate)
+				packs.POST("/:id/publish", h.Pack.Publish)
+				packs.POST("/:id/archive", h.Pack.Archive)
+				packs.GET("/:id/export", h.Pack.Export)
+				authed.GET("/groups/:id/packs", middleware.NoStore(), h.Pack.GroupList)
+				authed.POST("/groups/:id/packs", middleware.NoStore(), h.Pack.Share)
+				authed.DELETE("/groups/:id/packs", middleware.NoStore(), h.Pack.Unshare)
+			}
 			authed.GET("/catalog", h.Catalog.Manifest)
 			authed.GET("/catalog/:collection", h.Catalog.Collection)
 
@@ -343,6 +364,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// the record of its owner's decisions and none of the table's
 			// business.
 			authed.GET("/shared/:id/sheet", h.Game.Sheet)
+			authed.GET("/shared/:id/catalog/:collection", middleware.NoStore(), h.Game.Catalog)
 		}
 	}
 

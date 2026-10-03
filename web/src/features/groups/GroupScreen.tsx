@@ -1,3 +1,4 @@
+import { GroupPacks } from '@/features/packs'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
@@ -162,10 +163,12 @@ export function GroupScreen() {
             tabs={[
               { value: 'members', label: t('group.members') },
               { value: 'characters', label: t('section.characters') },
+              { value: 'packs', label: t('section.homebrew') },
             ]}
             value={tab}
             onChange={setTab}
           >
+            {tab === 'packs' && <GroupPacks group={group.id} canManage={canManage} />}
             {tab === 'characters' && <TablePanel groupId={group.id} role={group.role} />}
             {tab === 'members' && (
           <DataList

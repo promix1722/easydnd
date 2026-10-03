@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { SECTIONS, sectionFor } from './sections'
 
 describe('the section table', () => {
-  it('has Characters, Groups, Games and Spells', () => {
-    expect(SECTIONS.map((section) => section.to)).toEqual(['/', '/groups', '/games', '/spells'])
+  it('has Characters, Groups, Games, Homebrew and Spells', () => {
+    expect(SECTIONS.map((section) => section.to)).toEqual(['/', '/groups', '/games', '/homebrew', '/spells'])
   })
 
   // Labels are message keys, not words -- the navbar, the tab bar and the

@@ -44,7 +44,7 @@ export function SharedSheetScreen() {
   }>(`shared:${locale}:${character}`, async (signal) => {
     const [sheet, compendium, groupName] = await Promise.all([
       getSharedSheet(character, signal),
-      loadCompendium(),
+      loadCompendium(`/shared/${character}/catalog`),
       getGroup(groupId, signal).then(
         (group) => group.name,
         () => null,

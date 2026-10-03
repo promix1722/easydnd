@@ -195,6 +195,7 @@ func (r *Registry) Resolve(roots []Dependency) (pack.Lock, error) {
 			}
 			return strings.Compare(a.Manifest.Version, b.Manifest.Version)
 		})
+		var dependencyError error
 		for _, p := range candidates {
 			next := map[string]*PackDocument{}
 			for k, v := range selected {
@@ -204,7 +205,12 @@ func (r *Registry) Resolve(roots []Dependency) (pack.Lock, error) {
 			todo := append(slices.Clone(pending[1:]), p.Manifest.Dependencies...)
 			if found, err := solve(next, todo); err == nil {
 				return found, nil
+			} else {
+				dependencyError = err
 			}
+		}
+		if dependencyError != nil {
+			return nil, dependencyError
 		}
 		return nil, fmt.Errorf("no installed release satisfies %s %s", dep.ID, dep.Version)
 	}
@@ -354,7 +360,11 @@ func localeBundle(p *PackDocument, locale rules.Locale, collection string) Bundl
 	}
 	out := Bundle{}
 	for key, value := range base {
-		out[normalizeID(p.Manifest.ID, key)] = value
+		id := normalizeID(p.Manifest.ID, key)
+		if collection == "abilities" {
+			id = normalizeAbility(key)
+		}
+		out[id] = value
 	}
 	return out
 }
@@ -479,6 +489,14 @@ func compilePacks(docs []*PackDocument, locale rules.Locale, lock pack.Lock) (*c
 }
 
 func normalizeInput(packID, value string) string {
+	for _, prefix := range []string{"ability:", "modifier:"} {
+		if strings.HasPrefix(value, prefix) {
+			return prefix + normalizeAbility(strings.TrimPrefix(value, prefix))
+		}
+	}
+	if r, ok := rules.ParseRef(value); ok && r.Kind == rules.RefAbility {
+		return "ability:" + normalizeAbility(value)
+	}
 	if len(strings.Split(value, ":")) == 3 {
 		if r, ok := rules.ParseRef(value); ok {
 			return r.Kind.String() + ":" + r.Slug.String()
@@ -535,7 +553,7 @@ func normalizeMechanics(p *PackDocument) (PackMechanics, error) {
 			e.Ref = Ref(normalizeRef(p.Manifest.ID, string(e.Ref)))
 			normalizeExpression(p.Manifest.ID, &e.Value)
 			if strings.HasPrefix(e.Target, "abilities.") {
-				e.Target = "abilities." + normalizeID(p.Manifest.ID, strings.TrimPrefix(e.Target, "abilities."))
+				e.Target = "abilities." + normalizeAbility(strings.TrimPrefix(e.Target, "abilities."))
 			}
 		}
 		raw, _ := json.Marshal(v.Choices)
@@ -571,7 +589,7 @@ func normalizeMechanics(p *PackDocument) (PackMechanics, error) {
 		b.ID = normalizeID(p.Manifest.ID, b.ID)
 		b.Owner = Ref(normalizeRef(p.Manifest.ID, string(b.Owner)))
 		b.Class = normalizeID(p.Manifest.ID, b.Class)
-		b.Ability = normalizeID(p.Manifest.ID, b.Ability)
+		b.Ability = normalizeAbility(b.Ability)
 		for j := range b.Spells {
 			b.Spells[j] = normalizeID(p.Manifest.ID, b.Spells[j])
 		}

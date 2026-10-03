@@ -60,7 +60,7 @@ func TestAgentDraftStandardEditor(t *testing.T) {
 		r.ServeHTTP(w, req)
 		return w
 	}
-	for _, path := range []string{"sheet", "events", "prompts"} {
+	for _, path := range []string{"sheet", "events", "prompts", "catalog/spells"} {
 		if w := request("GET", path, "", ""); w.Code != 200 {
 			t.Fatalf("%s: %d %s", path, w.Code, w.Body)
 		}

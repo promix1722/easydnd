@@ -198,3 +198,12 @@ func (s *Service) summarize(
 	}
 	return out, nil
 }
+
+// CharacterCatalog follows the same read authorization as a shared sheet.
+func (s *Service) CharacterCatalog(ctx context.Context, actor user.ID, id character.ID, locale rules.Locale) (*catalog.Catalog, error) {
+	c, err := s.readable(ctx, actor, id)
+	if err != nil {
+		return nil, err
+	}
+	return catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
+}

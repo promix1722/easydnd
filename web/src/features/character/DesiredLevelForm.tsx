@@ -6,7 +6,7 @@ import { Button, Group, NumberInput, Stack } from '@/ui'
 
 import { desiredLevelChange } from './desiredLevel'
 
-import { MAX_LEVEL } from '@/domain'
+import { useCharacterPolicy } from '@/lib/api/catalogScope'
 
 export interface DesiredLevelFormProps {
   /** The level already declared, or the character's current one to start from. */
@@ -26,8 +26,9 @@ export interface DesiredLevelFormProps {
  */
 export function DesiredLevelForm({ initial, pending, submitLabel, onSubmit }: DesiredLevelFormProps) {
   const t = useT()
-  const [level, setLevel] = useState<number | string>(Math.min(Math.max(initial, 1), MAX_LEVEL))
-  const valid = typeof level === 'number' && level >= 1 && level <= MAX_LEVEL
+  const { maxLevel } = useCharacterPolicy()
+  const [level, setLevel] = useState<number | string>(Math.min(Math.max(initial, 1), maxLevel))
+  const valid = typeof level === 'number' && level >= 1 && level <= maxLevel
   const submit = () => {
     if (valid && !pending) onSubmit([desiredLevelChange(level)])
   }
@@ -37,7 +38,7 @@ export function DesiredLevelForm({ initial, pending, submitLabel, onSubmit }: De
       <NumberInput
         aria-label={t('choice.desiredLevel')}
         min={1}
-        max={MAX_LEVEL}
+        max={maxLevel}
         clampBehavior="strict"
         allowDecimal={false}
         value={level}

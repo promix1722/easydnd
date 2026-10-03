@@ -1,3 +1,5 @@
+import type { BuildPolicy } from './packPolicy'
+import type { RulesLock } from './packs'
 import type { Choice, Option } from './catalog'
 import { request } from './client'
 
@@ -249,6 +251,7 @@ export interface SpellRule {
 }
 
 export interface PromptsResponse {
+  buildPolicy?: BuildPolicy
   spellRules?: SpellRule[]
   revision?: number
   seq: number
@@ -325,6 +328,7 @@ export interface CreateResponse {
  * now, answered from their own tabs and each written as its own entry.
  */
 export interface NewCharacter {
+  rules?: RulesLock
   name: string
   alignment?: string
   /** Where to file it. Omitted means the account's default folder. */
@@ -431,8 +435,8 @@ export function getPrompts(id: string, signal?: AbortSignal, before?: number): P
 export function getEvents(
   id: string,
   signal?: AbortSignal,
-): Promise<{ seq: number; revision?: number; events: CharacterEvent[] }> {
-  return request<{ seq: number; revision?: number; events: CharacterEvent[] }>(
+): Promise<{ seq: number; revision?: number; rules?: RulesLock; events: CharacterEvent[] }> {
+  return request<{ seq: number; revision?: number; rules?: RulesLock; events: CharacterEvent[] }>(
     `${characterPath(id)}/events`,
     signal ? { signal } : {},
   )
@@ -570,6 +574,6 @@ export function reviseEvents(id: string, expectedSeq: number, expectedRevision: 
 }
 
 /** Draft ids address the same editing protocol without publishing a character. */
-function characterPath(id: string): string {
+export function characterPath(id: string): string {
   return id.startsWith("import:") ? `/agent-sessions/${encodeURIComponent(id.slice(7))}/draft` : `/characters/${encodeURIComponent(id)}`
 }

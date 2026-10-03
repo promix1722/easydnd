@@ -434,6 +434,7 @@ function mockApi({
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
+      if (apiPath(url) === '/v1/packs') return jsonResponse({ packs: [], defaultRules: { edition: '2014', semantics: '1', packs: [] } })
       if (method !== 'GET') {
         posted.push({ url, method, body: JSON.parse(String(init?.body ?? '{}')) })
         if (apiPath(url) === '/v1/characters') {
@@ -1325,6 +1326,8 @@ describe('a new character', () => {
     expect(panel('personal').queryByText('The rules to play by')).not.toBeInTheDocument()
     expect(panel('personal').queryByText('Level')).not.toBeInTheDocument()
     expect(panel('rules').getByText('The rules to play by')).toBeInTheDocument()
+    expect(panel('rules').getByText('Rule packs')).toBeInTheDocument()
+    expect(panel('personal').queryByText('Rule packs')).not.toBeInTheDocument()
     expect(panel('class').getByText('Level')).toBeInTheDocument()
 
     expect(current()).toBe('Rules')
@@ -1471,6 +1474,7 @@ describe('a new character', () => {
     const rows = panel('personal')
       .getAllByRole('button')
       .map((each) => each.textContent ?? '')
+      .filter((text) => text !== 'Apply selection')
     expect(rows[0]).toMatch(/Zephyr/)
     expect(panel('rules').getByRole('button', { name: /The rules to play by/ })).toBeInTheDocument()
     expect(panel('class').getByRole('button', { name: /^Level$/ })).toBeInTheDocument()

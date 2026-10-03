@@ -246,8 +246,15 @@ export function getManifest(): Promise<Manifest> {
   return cached(`manifest:${requestLocale()}`, () => request<Manifest>('/catalog'))
 }
 
+export function catalogURL(collection: string, scope = ''): string {
+ const [base, query] = (scope || '/catalog').split('?')
+ return `${base}/${collection}${query ? `?${query}` : ''}`
+}
+function queryURL(path: string, query: string): string { return `${path}${path.includes('?') ? '&' : '?'}${query}` }
+
 /** Fetches a whole collection, typed by the caller. */
-export function getCollection<T extends Entry>(collection: string): Promise<T[]> {
+export function getCollection<T extends Entry>(collection: string, scope = ''): Promise<T[]> {
+  if (scope) return request<T[]>(catalogURL(collection, scope))
   return cached(`collection:${requestLocale()}:${collection}`, () =>
     request<T[]>(`/catalog/${collection}`),
   )
@@ -260,7 +267,7 @@ export function getCollection<T extends Entry>(collection: string): Promise<T[]>
  * would fill the map with near-duplicates. Callers wanting the whole thing
  * should ask for the whole thing.
  */
-export function getEntries<T extends Entry>(collection: string, slugs: string[]): Promise<T[]> {
+export function getEntries<T extends Entry>(collection: string, slugs: string[], scope = ''): Promise<T[]> {
   if (slugs.length === 0) return Promise.resolve([])
   // High-level Magical Secrets can offer all 319 SRD spells. Keep each
   // request below the server's 200-slug bound and ordinary URL size limits.
@@ -268,7 +275,7 @@ export function getEntries<T extends Entry>(collection: string, slugs: string[])
   for (let start = 0; start < slugs.length; start += 100) chunks.push(slugs.slice(start, start + 100))
   return Promise.all(chunks.map((chunk) => {
     const query = encodeURIComponent(chunk.join(','))
-    return request<T[]>(`/catalog/${collection}?slugs=${query}`)
+    return request<T[]>(queryURL(catalogURL(collection, scope), `slugs=${query}`))
   })).then((loaded) => loaded.flat())
 }
 
@@ -304,10 +311,10 @@ export interface SpellPage {
  * send `limit` -- otherwise the same route serves the bare array
  * `getCollection` expects.
  */
-export function searchSpells(search: SpellSearch, signal?: AbortSignal): Promise<SpellPage> {
+export function searchSpells(search: SpellSearch, signal?: AbortSignal, scope = ''): Promise<SpellPage> {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(search)) {
     if (value !== undefined && value !== '') params.set(key, String(value))
   }
-  return request<SpellPage>(`/catalog/spells?${params.toString()}`, signal ? { signal } : {})
+  return request<SpellPage>(queryURL(catalogURL('spells', scope), params.toString()), signal ? { signal } : {})
 }

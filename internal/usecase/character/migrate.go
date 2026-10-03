@@ -10,6 +10,7 @@ import (
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
 )
 
@@ -57,6 +58,11 @@ func (s *Service) Migrate(ctx context.Context, owner domain.OwnerID, id domain.I
 	}
 	if err := target.Validate(); err != nil {
 		return Migration{}, types.NewValidationError("invalid rules lock: %v", err)
+	}
+	if s.packAccess != nil {
+		if err := s.packAccess.AuthorizeLock(ctx, user.ID(owner), target, c.Log.RulesLock()); err != nil {
+			return Migration{}, err
+		}
 	}
 	next, err := catalog.LoadLocked(ctx, s.catalog, locale, target)
 	if err != nil {

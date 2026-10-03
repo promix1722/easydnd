@@ -66,6 +66,7 @@ export const SECTIONS: readonly Section[] = [
   { to: '/', label: 'section.characters', icon: IconUsers, owns: ['/characters'] },
   { to: '/groups', label: 'section.groups', icon: IconShield, owns: ['/groups'] },
   { to: '/games', label: 'section.games', icon: IconDice5, owns: ['/games'] },
+  { to: '/homebrew', label: 'section.homebrew', icon: IconWand, owns: ['/homebrew'] },
   { to: '/spells', label: 'section.spells', icon: IconWand, owns: ['/spells'] },
 ]
 

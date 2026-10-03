@@ -13,9 +13,10 @@ import (
 
 // EventsResponse is the body of GET /v1/characters/{id}/events.
 type EventsResponse struct {
-	Revision int     `json:"revision"`
-	Seq      int     `json:"seq"`
-	Events   []Event `json:"events"`
+	Rules    helpers.RulesLock `json:"rules"`
+	Revision int               `json:"revision"`
+	Seq      int               `json:"seq"`
+	Events   []Event           `json:"events"`
 }
 
 // Events handles GET /v1/characters/{id}/events.
@@ -61,5 +62,6 @@ func (h *Handler) Events(c *gin.Context) {
 		}
 		events = append(events, wire)
 	}
-	c.JSON(http.StatusOK, EventsResponse{Revision: character.Revision, Seq: character.Log.LastSeq(), Events: events})
+	c.JSON(http.StatusOK, EventsResponse{
+		Rules: helpers.RulesLockOf(character.Log.RulesLock()), Revision: character.Revision, Seq: character.Log.LastSeq(), Events: events})
 }

@@ -18,6 +18,7 @@ import { useLocale, useT } from '@/lib/i18n'
 
 /** The sheet, and what the character has not decided yet. */
 interface SheetView {
+  maxLevel: number
   sheet: Sheet
   /**
    * Null when `/prompts` failed. The list of what is left is worth having and
@@ -78,12 +79,12 @@ export function CharacterSheetScreen() {
   const sheet = useResource<SheetView>(`sheet:${locale}:${id}`, async (signal) => {
     const [projected, prompts, compendium] = await Promise.all([
       getSheet(id, signal),
-      getPrompts(id, signal).then((response) => response.prompts ?? [], () => null),
+      getPrompts(id, signal).then((response) => response, () => null),
       // Session-cached, so this is one request for the whole visit however
       // many sheets are opened.
-      loadCompendium(),
+      loadCompendium(`/characters/${id}/catalog`),
     ])
-    return { sheet: projected, prompts, compendium }
+    return { sheet: projected, prompts: prompts?.prompts ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL, compendium }
   })
 
   const state = pageState(sheet, {
@@ -144,7 +145,7 @@ export function CharacterSheetScreen() {
             its first class yet is still being created, and the build screen is
             already the whole of that. Gone at 20, where the rules stop.
           */}
-          {identity.level >= 1 && identity.level < MAX_LEVEL && (
+          {identity.level >= 1 && identity.level < sheet.data.maxLevel && (
             <Button
               variant="light"
               onClick={() =>

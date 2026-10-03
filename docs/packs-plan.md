@@ -2,8 +2,8 @@
 
 Status: design record, 2026-09-30. Core implementation now exists; see
 [packs.md](packs.md) for the supported format and current behavior. Examples here
-remain proposals, not copyable v1 wire contracts. Browser metadata consumption,
-pack authoring and durable character storage remain later work. Repository
+remain proposals, not copyable v1 wire contracts. Browser pack selection, homebrew authoring and durable pack storage now exist;
+see [packs.md](packs.md#homebrew-authoring). Durable character storage remains later work. Repository
 guidance: `CLAUDE.md`.
 
 Treat **pack** and **addon** as the same artifact. The built-in 2014 rules become
