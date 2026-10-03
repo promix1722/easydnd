@@ -21,6 +21,8 @@ export interface Resource<T> {
   reload: () => void
   /** Ask again behind what is already on screen. See below. */
   refresh: () => void
+  /** A failed background refresh, when the caller opts to retain its last view. */
+  refreshError: string | null
 }
 
 /**
@@ -41,13 +43,16 @@ export interface Resource<T> {
  * `fetcher` is held in a ref, so a caller may pass an inline arrow without
  * pinning it in a useCallback at every call site.
  */
-export function useResource<T>(key: string, fetcher: (signal: AbortSignal) => Promise<T>): Resource<T> {
+export function useResource<T>(key: string, fetcher: (signal: AbortSignal) => Promise<T>, options: { pollInterval?: number; retainOnRefreshError?: boolean } = {}): Resource<T> {
   const t = useT()
+  const { pollInterval = 0, retainOnRefreshError = false } = options
+  const [refreshError, setRefreshError] = useState<string | null>(null)
   const [outcome, setOutcome] = useState<Outcome<T>>({ kind: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
   // The fetcher is read only from the effect, so it is parked in a ref there
   // rather than during render.
+  const fetching = useRef(false)
   const latest = useRef(fetcher)
   useEffect(() => {
     latest.current = fetcher
@@ -59,11 +64,13 @@ export function useResource<T>(key: string, fetcher: (signal: AbortSignal) => Pr
   const [shown, setShown] = useState(key)
   if (shown !== key) {
     setShown(key)
+    setRefreshError(null)
     setOutcome({ kind: 'loading' })
   }
 
   // The reset belongs to the click, not to the effect, for the same reason.
   const reload = useCallback(() => {
+    setRefreshError(null)
     setOutcome({ kind: 'loading' })
     setAttempt((n) => n + 1)
   }, [])
@@ -81,7 +88,8 @@ export function useResource<T>(key: string, fetcher: (signal: AbortSignal) => Pr
    * The outcome stays `ready`, so this does not reintroduce the state the
    * union exists to rule out: a *failed* refresh still takes the screen down
    * to its error, because data that is quietly out of date is worse than a
-   * screen that says it could not check.
+   * screen that says it could not check. A live tracker may explicitly retain
+   * the last view and surface `refreshError` while polling retries.
    */
   const refresh = useCallback(() => {
     setAttempt((n) => n + 1)
@@ -89,24 +97,48 @@ export function useResource<T>(key: string, fetcher: (signal: AbortSignal) => Pr
 
   useEffect(() => {
     const controller = new AbortController()
+    fetching.current = true
 
     latest
       .current(controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return
+        setRefreshError(null)
         setOutcome({ kind: 'ready', data })
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return
-        setOutcome({ kind: 'failed', error: describeError(t, cause) })
+        const message = describeError(t, cause)
+        if (retainOnRefreshError) {
+          setRefreshError(message)
+          setOutcome((previous) => previous.kind === 'ready' ? previous : { kind: 'failed', error: message })
+        } else {
+          setOutcome({ kind: 'failed', error: message })
+        }
       })
+      .finally(() => { if (!controller.signal.aborted) fetching.current = false })
 
     return () => {
+      fetching.current = false
       controller.abort()
     }
-  }, [key, attempt, t])
+  }, [key, attempt, t, retainOnRefreshError])
+
+  useEffect(() => {
+    if (!key || pollInterval === 0) return
+    const tick = () => { if (document.visibilityState === 'visible' && !fetching.current) refresh() }
+    const timer = window.setInterval(tick, pollInterval)
+    window.addEventListener('focus', tick)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', tick)
+      document.removeEventListener('visibilitychange', tick)
+    }
+  }, [key, pollInterval, refresh])
 
   return {
+    refreshError,
     data: outcome.kind === 'ready' ? outcome.data : null,
     error: outcome.kind === 'failed' ? outcome.error : null,
     loading: outcome.kind === 'loading',

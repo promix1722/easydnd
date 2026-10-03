@@ -144,10 +144,9 @@ describe('LoginScreen', () => {
   it('offers nothing external when none is configured', () => {
     loginAt({ providers: [] })
 
-    // Counted rather than matched loosely: the passkey button shares its
-    // "Continue with..." shape with the provider buttons, and what is being
-    // asserted here is that nothing on the page leaves for a provider.
-    expect(screen.getAllByRole('button')).toHaveLength(2)
+    // Local development accounts add buttons too; only provider actions
+    // leave for an external identity service.
+    expect(screen.queryByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Continue with a passkey' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Continue as a guest' })).toBeInTheDocument()
   })

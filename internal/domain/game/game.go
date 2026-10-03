@@ -10,8 +10,9 @@
 //
 // It also owns the group's shared character pool, in Shared below, rather than
 // leaving that to internal/domain/group. The two are one invariant: a game's
-// roster is a subset of the pool its group shares, and an aggregate that could
-// only see one half would let the halves disagree. It is the same test
+// player roster is a subset of the pool its group shares. Monsters are private
+// copies kept outside that pool. An aggregate that could only see one half
+// would let the halves disagree. It is the same test
 // internal/domain/character/folder.go applies when it keeps Folder in the
 // character package -- a folder has no meaning apart from characters, and a
 // game roster has none apart from the pool it draws from.
@@ -28,7 +29,7 @@
 //
 // # Why none of this is stored
 //
-// Everything here points at a character id, and a character id is a
+// Player entries point at a character id, and a character id is a
 // process-local counter that dies with the process -- see the memory
 // repository. A table in Postgres would therefore be full of ids naming
 // nothing by the next morning, which is the argument 00003_groups.sql already
@@ -111,13 +112,29 @@ type Game struct {
 	CreatedAt time.Time
 }
 
-// Entry is one character on a game's roster.
-//
-// An id and a timestamp, never a snapshot of the character. A copy taken when
-// the character was added would show the DM a sheet the player had since
-// changed, and the whole event-sourced design exists so that there is exactly
-// one answer to what a character currently is.
+// Entry is a participant with independent game values. Player base stats are
+// projected live; monsters hold private copies and never join the shared pool.
 type Entry struct {
-	Character character.ID
-	AddedAt   time.Time
+	ID         string
+	Kind       string
+	Character  character.ID
+	Owner      user.ID
+	AddedAt    time.Time
+	HP         int
+	TempHP     int
+	Initiative *int
+	Tags       []string
+	Locked     bool
+	Monster    *Stats
+}
+
+// Stats is the compact base block, copied for monsters and projected for players.
+type Stats struct {
+	Name         string
+	MaxHP        int
+	ArmorClass   int
+	Spellcasting []character.SpellcastingSummary
+	Speeds       []character.Speed
+	Senses       []character.Sense
+	Abilities    character.Abilities
 }

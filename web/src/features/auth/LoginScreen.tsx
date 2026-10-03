@@ -4,7 +4,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 import { isPasskeySupported } from '@/lib/webauthn'
-import { Alert, Button, Card, Group, Stack, Text, Title } from '@/ui'
+import { Alert, Button, Card, DevAccounts, Group, Stack, Text, Title } from '@/ui'
 
 /**
  * The way in, on a page of its own.
@@ -77,6 +77,7 @@ export function LoginScreen() {
     // would otherwise sit on the edge of the viewport.
     <Stack gap="lg" maw={560} mx="auto" pb="xl">
       <Title order={2}>{t('login.title')}</Title>
+      {import.meta.env.DEV && <DevAccounts />}
 
       {/* One alert for every flow. Whichever attempt failed most recently is
           the one worth showing, and the provider only keeps that one. */}

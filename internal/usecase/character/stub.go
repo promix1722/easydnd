@@ -38,15 +38,38 @@ const StubName = "Сахарок"
 func (s *Service) CreateStub(
 	ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale,
 ) (domain.Character, error) {
+	return s.createStub(ctx, owner, folder, locale, StubName, 3)
+}
+
+// CreateLevelOneStub builds a finished first-level character for development seeds.
+// It uses the same validated selections as the reference rogue, stopping before
+// the third-level subclass and declaring the actual first-level build target.
+func (s *Service) CreateLevelOneStub(ctx context.Context, owner domain.OwnerID, name string, locale rules.Locale) (domain.Character, error) {
+	return s.createStub(ctx, owner, "", locale, name, 1)
+}
+
+func (s *Service) createStub(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, name string, level int) (domain.Character, error) {
 	created, err := s.Create(ctx, owner, folder, NewCharacter{
-		Name:      StubName,
+		Name:      name,
 		Alignment: "neutral",
 	})
 	if err != nil {
 		return domain.Character{}, err
 	}
+	var events []domain.Event
+	for _, event := range stubEvents() {
+		if level == 1 && event.Type == domain.EventSubclass {
+			continue
+		}
+		for index := range event.Changes {
+			if event.Changes[index].Path == "identity.desiredLevel" {
+				event.Changes[index].Value = domain.IntValue(level)
+			}
+		}
+		events = append(events, event)
+	}
 	if _, err := s.Apply(
-		ctx, owner, created.ID, locale, created.Log.LastSeq(), stubEvents()...,
+		ctx, owner, created.ID, locale, created.Log.LastSeq(), events...,
 	); err != nil {
 		return domain.Character{}, err
 	}

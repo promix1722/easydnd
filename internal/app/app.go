@@ -34,6 +34,7 @@ import (
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	"github.com/promix1722/easydnd/internal/api/http/v1/development"
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
@@ -215,11 +216,22 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	groupService := groupuc.NewService(
 		groupRepo, userRepo, signer, gameService, log.With("usecase", "group"))
 
+	var devHandler *development.Handler
+	if cfg.Env == config.EnvDevelopment {
+		seed, err := seedDevelopment(ctx, userRepo, groupRepo, characterService, gameService, signer, cfg.Auth.SessionTTL)
+		if err != nil {
+			return fail(fmt.Errorf("seed development game: %w", err))
+		}
+		devHandler = development.New(seed, helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}, cfg.Auth.SessionTTL)
+		log.Info("development party seeded", "accounts", []string{"master", "player1", "player2"}, "group_id", devGroupID, "game_ids", seed.games)
+	}
+
 	// Inbound adapters. The character routes are declared behind
 	// RequireSession, and the handler reads the owner from the account that
 	// middleware resolved -- which is the honest source the comment that
 	// stood here was waiting for.
 	router, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
+		Development:   devHandler,
 		System:        system.New(buildinfo.Version),
 		Version:       buildinfo.Version,
 		WebDir:        opts.WebDir,

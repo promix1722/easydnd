@@ -77,9 +77,24 @@ that proves a request belongs to an account.
 
 One consequence is worth stating plainly because it is surprising. A group and
 its members live in PostgreSQL and survive a restart; the characters shared with
-it and the games run from it **do not**, because every one of those rows names a
+it and the games run from it **do not**, because player rows name a
 character id and a character id is a process-local counter. See
 [backend.md](backend.md#ownership-and-membership).
+
+An active game has an ordered list of player characters and NPCs. Player
+base stats follow their original sheets; current HP, temporary HP, rolled
+initiative and text tags belong to the game alone. Tags are temporary notes,
+including conditions, without applying mechanical effects to either sheet.
+Players can edit their own unlocked entries. The master (a group owner or DM)
+can edit all entries, lock player edits, and move or sort the list. Initiative
+is a reported roll total, initially unset; sorting is explicit and stable for
+ties, with unset entries last.
+
+NPCs are independent private copies of the master's characters, or stubs
+named NPC starting at 10/10 HP with editable stats. Copying one grants no access to the original sheet.
+Players see NPC names and their place in the order; the master sees stats
+and tags. Removing an NPC affects only the game, and copying the same source
+again creates another independent creature.
 
 The last row is different in kind from the others, and worth flagging rather
 than letting the table's authority stretch over it. The rest correct a wrong

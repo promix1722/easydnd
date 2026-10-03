@@ -10,6 +10,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/character"
 	domain "github.com/promix1722/easydnd/internal/domain/game"
 	"github.com/promix1722/easydnd/internal/domain/group"
+	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/types"
 )
 
@@ -268,5 +269,41 @@ func newGame(t *testing.T, repo *memory.GameRepository, id domain.ID, g group.ID
 	})
 	if err != nil {
 		t.Fatalf("Create(%q) error = %v", id, err)
+	}
+}
+
+func TestTrackerMutationIsAtomicAndDeeplyIsolated(t *testing.T) {
+	ctx := context.Background()
+	store := memory.NewGameRepository()
+	if err := store.Create(ctx, domain.Game{ID: "g", Group: "table", Name: "Game"}); err != nil {
+		t.Fatal(err)
+	}
+	initiative := 12
+	entry := domain.Entry{ID: "monster", Kind: "monster", HP: 4, Initiative: &initiative, Tags: []string{"secret"}, Monster: &domain.Stats{
+		Name: "Beast", Speeds: []character.Speed{{Kind: character.Walking, Distance: 30}},
+		Abilities: character.Abilities{Scores: map[rules.Ability]int{rules.Strength: 14}, ModifierRule: rules.Expression{Op: "add", Args: []rules.Expression{{Op: "constant", Value: 2}}}},
+	}}
+	if err := store.MutateEntries(ctx, "g", func(entries []domain.Entry) ([]domain.Entry, error) { return append(entries, entry), nil }); err != nil {
+		t.Fatal(err)
+	}
+	// Input references cannot write through into storage.
+	entry.Tags[0], *entry.Initiative, entry.Monster.Abilities.Scores[rules.Strength] = "changed", 99, 1
+	first, _ := store.Characters(ctx, "g")
+	if first[0].Tags[0] != "secret" || *first[0].Initiative != 12 || first[0].Monster.Abilities.Score(rules.Strength) != 14 {
+		t.Fatal("input aliases storage")
+	}
+	first[0].Monster.Speeds[0].Distance = 99
+	first[0].Monster.Abilities.ModifierRule.Args[0].Value = 99
+	err := store.MutateEntries(ctx, "g", func(entries []domain.Entry) ([]domain.Entry, error) {
+		entries[0].Tags[0] = "rejected"
+		entries[0].HP = 99
+		return entries, types.NewValidationError("reject")
+	})
+	if err == nil {
+		t.Fatal("expected refusal")
+	}
+	after, _ := store.Characters(ctx, "g")
+	if after[0].HP != 4 || after[0].Tags[0] != "secret" || after[0].Monster.Speeds[0].Distance != 30 || after[0].Monster.Abilities.ModifierRule.Args[0].Value != 2 {
+		t.Fatal("read or rejected mutation aliases storage")
 	}
 }

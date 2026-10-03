@@ -132,6 +132,10 @@ export type {
 // "session", which in this barrel means signing in.
 export {
   addToGame,
+  patchGameEntry,
+  deleteGameEntry,
+  addGameMonster,
+  orderGameEntries,
   createGame,
   deleteGame,
   getGame,
@@ -143,4 +147,8 @@ export {
   shareCharacter,
   unshareCharacter,
 } from './games'
-export type { GameDetail, GameSummary, TableCharacter } from './games'
+export type { GameDetail, GameSummary, TableCharacter, GameEntry, EntryStats, EntryPatch } from './games'
+
+// Seeded identities, available only on the development server.
+export { loginDevelopmentAccount } from './development'
+export type { DevelopmentAccount } from './development'

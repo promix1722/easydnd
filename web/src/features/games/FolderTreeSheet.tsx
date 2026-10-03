@@ -26,7 +26,11 @@ export function FolderTreeSheet({
   pending,
   onClose,
   onAdd,
+  title,
+  description,
 }: {
+  title?: string
+  description?: string
   opened: boolean
   seated: Set<string>
   pending: boolean
@@ -54,10 +58,10 @@ export function FolderTreeSheet({
   }
 
   return (
-    <ModalSheet opened={opened} onClose={onClose} title={t('folderTree.title')}>
+    <ModalSheet opened={opened} onClose={onClose} title={title ?? t('folderTree.title')}>
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
-          {t('folderTree.hint')}
+          {description ?? t('folderTree.hint')}
         </Text>
 
         {loading && <Loader size="sm" />}

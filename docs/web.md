@@ -1071,21 +1071,94 @@ remember where Thursday's game lives in order to find it. `GET /v1/games`
 answers that in one request, and each row carries `group_name` so the list can
 say which table without a request per row.
 
-A game screen offers two ways to fill a roster, and they are shaped differently
-because the things behind them are shaped differently.
+A game screen seats shared player characters from its group and creates
+private NPCs from owned characters or editable stubs.
 
 **Add character from group** is a flat list. A game is played at exactly one
 group, so there is one set of shared characters and nothing to branch on.
 
-**Add my characters** is a tree of your folders, collapsed. A folder is how its
+**Add NPC from my characters** is a tree of your folders, collapsed. A folder is how its
 owner already thinks about their characters -- somebody with three campaigns'
 worth of them knows which shelf tonight's is on -- and a flat list would make
 them read every name to find it. It fetches everything up front rather than per
 branch, because a character listing carries its own folder: one request covers
 every shelf, and a request per shelf would be slower for no benefit.
 
-Only characters that are not already seated are offered, and a folder with
-nothing left to offer is left out of the tree entirely.
+The group picker offers only characters that are not already seated. The NPC
+picker permits repeated private copies of any owned character.
+
+Development builds expose the seeded accounts on `/login` and through the
+account icon in the signed-in header. The choices are master, player1 and
+player2; each establishes a normal session through `/v1/dev/login`, then
+reloads into the current seeded game or the training game. Reloading clears
+resources and unsaved drafts belonging to the previous identity. Both controls
+are gated by `import.meta.env.DEV`, so production bundles offer none of them.
+See [the seeded party](backend.md#seeded-development-party) for the sample
+characters, games, locks and private NPCs.
+
+The roster is an active tracker. `GameTracker` renders a name heading, a line
+of HP/current maximum, temporary HP, AC, spell save DCs, movement, vision and
+rolled initiative, then six ability scores with modifiers, then free-text tags.
+Labels sit above values, using the sheet identity table's dimmed captions and
+plain bordered cards. Vitals and abilities use the same responsive column
+widths (seven on desktop), so both rows align. On mobile each row starts
+collapsed, showing HP, temporary HP, AC and spell DC in four columns. Russian
+roster captions use «Вр. ОЗ» and «СЗ» to fit the compact grid. Rolled initiative
+appears in parentheses before the name in the mobile header, and stays visible
+while collapsed. Unset initiative and private NPC values are omitted. A
+chevron in the header expands movement, vision and abilities independently
+for that entry. Tags stay visible in the collapsed row; empty tag lists have no
+placeholder or blank row, while editable entries retain the inline add control. The six abilities occupy the first six desktop columns. Row actions use the same “…” menu
+at every width. Owners edit their own unlocked game values; masters can lock
+player entries and move or sort the shared list. Masters can drag an entry by
+the dedicated grip with a mouse, touch or stylus, using the folder list's
+reserved drop indicator. The pointer is captured until release; a press must
+travel eight pixels before it becomes a drag. Canceled gestures and releases
+outside the roster leave ordering intact. Moving
+down lands after the hovered row; moving up lands before it. Move up/down in
+the menu provide keyboard ordering. Only masters can reorder. Sorting remains explicit.
+An edit sheet keeps its draft through background updates and disables saving
+if a refreshed permission says the entry is locked. The full-width Damage
+field previews how much temporary HP absorbs, then subtracts the remainder
+from HP, with neither going below zero. Revising or clearing damage recalculates
+from the draft's starting values, so typing and failed retries never subtract
+twice. Editing HP or temporary HP directly accepts the current preview as the
+new draft and clears damage. Apply confirms only changed fields; the close
+cross discards the draft.
+
+The master can add private NPC copies from the folder tree, including
+multiple copies, or create an editable stub. Stub defaults are name NPC, HP 10/10, AC 10,
+walking 30 feet, normal vision, abilities 10, zero temporary HP, no spell DC,
+no initiative, and no tags. The master edits name, HP, AC, ability scores, walking speed, and a single
+spell save DC. Other copied movement modes and senses remain intact while
+editing walking; they are not exposed as extra form controls. A copied caster's
+highest DC initializes the field, and an explicit edit applies the new DC to
+its casting profiles. Players see only names and ordering. The private flow never calls the
+player seating/share action. The top-left toolbar starts with Add character
+from group, followed by the two NPC actions; initiative ordering sits on the
+right. Player seating uses only the group picker. The NPC name is the first field in its edit sheet.
+Tags are managed directly in each row: adding or removing a tag immediately
+patches only tags, outside the stat editor. Read-only entries show badges;
+editable entries show removable tags and a small inline add field. Failed
+writes retain the draft, and refreshed locks disable its controls.
+For an older running API that still creates 1/1 stubs, the client records the
+existing roster and initializes only a uniquely identified new stub to 10/10.
+On older APIs, a uniquely identified new stub named Monster also receives the
+default NPC name. Character copies and existing NPCs keep their names and HP.
+
+Dragging first uses the atomic `before_id` operation. If an older running API
+rejects that operation with a validation error, the client falls back to its
+existing adjacent moves, using each confirmed response to check stable IDs and
+the destination. Only the dragged entry moves; retries are bounded, missing
+entries abort, and permission failures do not trigger fallback. This permits
+frontend updates without clearing process-local test games for an API restart.
+
+The game resource polls every three seconds while visible and refreshes on
+focus, visibility return, and successful writes. `useResource` aborts superseded
+requests and optionally retains its last result after a background error;
+the game displays a retry status until recovery. Initial failures still use
+normal page error handling. PATCH requests contain only changed fields, so
+saving a draft does not overwrite unrelated updates from another participant.
 
 `GamesScreen` offers **New game** only to somebody who runs at least one table,
 because a player has nowhere to put one and a dialog with an empty picker

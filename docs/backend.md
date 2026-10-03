@@ -51,6 +51,37 @@ make dev                            # Postgres, the API and the web client, one 
 make ports                          # what this worktree claimed, and where to open it
 ```
 
+### Seeded development party
+
+Every API startup with `env: development`, including `make dev` and
+`make run/server`, creates a ready-to-play group **Development party** and
+three test accounts: **master**, **player1**, **player2**. The master owns the
+group; both other accounts are players. Each owns one finished first-level
+half-elf rogue, built through validated events rather than imported stats.
+The player's characters are shared and seated in two games:
+
+- **Training encounter**: both players are unlocked, with initiative rolls,
+  temporary HP and a sample tag. Two private monsters demonstrate a character
+  copy and a 10/10 HP stub. The master's original character stays private.
+- **Locked encounter**: player2 is locked, so the master can test unlocking
+  before that player edits game values.
+
+`POST /v1/dev/login` with `{"account":"master"}` (or `player1`, `player2`)
+issues the normal HttpOnly session cookie and returns the seeded `game_ids`.
+It accepts only these three identities, keeps the `/v1` same-origin mutation
+checks, and is never registered in production. No password or passkey is
+required for these development accounts. The development client offers these
+buttons on `/login` and an account switcher in the signed-in header.
+Switching keeps the current seeded game when possible and reloads the page so
+no previous identity's resource data or edit drafts remain.
+
+Accounts and the group are reused when the API restarts against an existing
+development database. Characters and games are rebuilt because their stores
+are process-local. Signing in again within the same run does not reseed or
+reset game changes. Separate browser profiles or a private window let the
+master and players remain signed in simultaneously; tabs in one profile
+share the usual session cookie.
+
 `make dev` is a **disposable** stack: Ctrl-C takes the database down with the
 servers, so every run starts on an empty schema and nothing is left behind.
 When you want accounts to survive a restart, use the three targets it composes
@@ -311,6 +342,7 @@ that.
 | `GET` | `/v1/characters` | summaries |
 | `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
 | `POST` | `/v1/characters/import` | import a sheet exported by another tool |
+| `POST` | `/v1/dev/login` | **development only** -- sign in as master, player1, or player2 in the seeded party |
 | `POST` | `/v1/characters/stub` | **development only** -- build the reference character in one call |
 | `GET` | `/v1/characters/{id}` | the log |
 | `DELETE` | `/v1/characters/{id}` | |
@@ -348,6 +380,10 @@ that.
 | `DELETE` | `/v1/games/{id}` | DM or owner; the characters stay on the table |
 | `POST` | `/v1/games/{id}/characters` | seat some: `{"character_ids":[...]}`; your own land on the table too |
 | `DELETE` | `/v1/games/{id}/characters` | unseat one: `?character=C` |
+| `PATCH` | `/v1/games/{id}/entries/{entry}` | patch game HP, temp HP, initiative, tags; masters also lock players and edit monster base stats |
+| `DELETE` | `/v1/games/{id}/entries/{entry}` | remove a player entry or monster; DM or owner |
+| `POST` | `/v1/games/{id}/monsters` | private copy: `{"character_id":"..."}`; `{}` creates a stub; DM or owner |
+| `POST` | `/v1/games/{id}/order` | stable sort: `{"by_initiative":true}`; move: `{"entry_id":"...","direction":-1}` (or `1`); DM or owner |
 | `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only |
 
 Three of those need a word about their shape.
@@ -374,7 +410,7 @@ in, and that is not the table's business. A table sees what a character **is**.
 one character or nine, and "everyone at this table" is the client sending the
 list it already has on screen.
 
-**Seating your own character shares it.** Everything on a roster has to be
+**Seating your own player character shares it.** Every player character on a roster has to be
 readable by every member -- a game carrying a name nobody but its owner may
 open would be a leak the DM caused by accident -- so a character that is not on
 the table yet is put there, provided it belongs to the caller. Somebody else's
@@ -971,6 +1007,9 @@ indistinguishable from outside.
 | seat or unseat a character | — | yes | yes | **403** | **404** |
 | seat your own, not yet shared | — | yes | yes | **403** | **404** |
 | seat somebody else's, not yet shared | — | **400** | **400** | **403** | **404** |
+| edit unlocked game values | yes | yes | yes | own character only | **404** |
+| edit locked game values | **403** | yes | yes | **403** | **404** |
+| lock/unlock, reorder, manage monsters | **403** | yes | yes | **403** | **404** |
 
 Two rows are worth saying in prose. **A player may share** — that is the whole
 of what a player does at a table, and it is the half of a group that was missing
@@ -991,12 +1030,53 @@ game service and wired in `internal/app`. The arrows point outward from the
 thing being deleted, so a character still knows nothing about groups and a group
 still knows nothing about games.
 
-**Neither store is in Postgres, deliberately.** Every row on a table or a roster
+**Neither store is in Postgres, deliberately.** Every shared player row
 names a character id, and a character id is the process-local counter — the same
 argument `00003_groups.sql` makes for why the groups schema refuses to name one.
 So a group and its members survive a restart and the characters shared with it
 do not. That split is surprising and it is the price of having the feature
 before characters are durable; the two move to Postgres together or not at all.
+
+### Active game entries
+
+Game detail responses include ordered `entries`, separate from the legacy player
+`characters` summaries used by character pickers. Each entry has a game entry
+`id`, `kind`, `name`, and caller-specific `can_edit`. Player entries additionally
+carry `character_id`, `locked`, `hp`, `temp_hp`, optional `initiative`, `tags`, and
+compact `stats`. The stats block contains `name`, `max_hp`, `armor_class`,
+`spellcasting`, `speeds`, `senses`, and `abilities`; nested fields reuse sheet
+shapes. An absent initiative is unset. PATCH accepts `initiative: null` to clear it.
+
+Player base stats are projected live against their locked rules pack. HP and
+other game values are initialized once, stored on the entry, and never written
+to a character log. Newly seated characters are unlocked. Owners can edit only
+their own unlocked entries; group owners and DMs can edit all entries.
+`MutateEntries` runs the lock/ownership check and field patches against a deep
+copy under the game repository mutex. Rejected changes leave storage untouched,
+and independent field edits survive concurrent writes. The latest accepted
+write wins when two requests change the same field.
+
+NPCs hold private copies or editable default stats. New stubs are named NPC
+and start with 10 current and maximum HP. The internal kind `monster` and
+`/monsters` API route remain stable. Copying checks source
+ownership and does not share the source. Multiple copies have separate IDs.
+Players receive only a monster's ID, kind, name, and `can_edit: false`; private
+fields and source links are omitted server-side. Source deletion/unsharing
+removes linked player entries but does not remove copied monsters. Monster
+`stats` patches update only supplied base fields and recalculate ability
+modifiers; derived modifiers supplied by clients are ignored.
+
+HP pools must be nonnegative integers; HP may exceed the sheet's maximum.
+Initiative accepts signed integers. Tags are trimmed, deduplicated text, with
+at most 20 tags of at most 100 characters. Tags have no rules effects. Monster
+base values and movement ranges must be nonnegative; ability scores are 1–30.
+Ordering is master-only: descending initiative, unset last, stable ties. Manual
+menu moves exchange adjacent entries. Drag moves use `entry_id` and `before_id`
+to place one entry before a stable target ID; an empty `before_id` appends it.
+Missing source or target IDs reject the operation without changing the roster.
+This atomic operation preserves entries added since the client's last view.
+Sorting includes monsters without publishing
+their initiative values. Games, including monster copies, remain process-local.
 
 Invitations are stateless. A link is a signed token naming a group and a rank,
 valid for 24 hours, **reusable and not revocable** -- there is no invites table

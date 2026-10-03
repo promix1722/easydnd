@@ -1,5 +1,6 @@
 import type { ClassLevel, Sheet } from './characters'
 import { request } from './client'
+import { ApiError } from './errors'
 import type { GroupRole } from './groups'
 
 /**
@@ -15,10 +16,8 @@ import type { GroupRole } from './groups'
  * barrel -- and a second meaning for it here would be unreadable at the import
  * site.
  *
- * `TableCharacter` and the roster entries on a `GameDetail` are the same shape
- * today and are deliberately one type: what a table holds and what a game
- * seats are the same fact seen twice. Split them the first time a seat carries
- * something a share does not.
+ * Game entries carry independent tracking values; TableCharacter stays the
+ * lightweight summary used by the group's shared pool.
  */
 
 /** One character on a group's table, or seated at a game. */
@@ -52,6 +51,7 @@ export interface GameDetail {
   /** The caller's rank in the group, which is what decides the controls. */
   role: GroupRole
   characters: TableCharacter[]
+  entries: GameEntry[]
 }
 
 // The group's table.
@@ -149,4 +149,103 @@ export function removeFromGame(id: string, character: string): Promise<GameDetai
     `/games/${encodeURIComponent(id)}/characters?character=${encodeURIComponent(character)}`,
     { method: 'DELETE' },
   )
+}
+
+/** Base stats follow the player sheet, or belong to a private monster copy. */
+export interface EntryStats {
+  name: string
+  max_hp: number
+  armor_class: number
+  spellcasting: Sheet['status']['spellcasting']
+  speeds: Sheet['base']['speeds']
+  senses: Sheet['base']['senses']
+  abilities: Sheet['abilities']
+}
+
+export interface GameEntry {
+  id: string
+  kind: 'player' | 'monster'
+  name: string
+  character_id?: string
+  can_edit: boolean
+  locked?: boolean
+  hp?: number
+  temp_hp?: number
+  initiative?: number | null
+  tags?: string[]
+  stats?: EntryStats
+}
+
+export interface EntryPatch {
+  hp?: number
+  temp_hp?: number
+  initiative?: number | null
+  tags?: string[]
+  locked?: boolean
+  stats?: Partial<EntryStats>
+}
+
+export function patchGameEntry(id: string, entry: string, patch: EntryPatch): Promise<GameDetail> {
+  return request<GameDetail>(`/games/${encodeURIComponent(id)}/entries/${encodeURIComponent(entry)}`, { method: 'PATCH', body: patch })
+}
+
+export function deleteGameEntry(id: string, entry: string): Promise<GameDetail> {
+  return request<GameDetail>(`/games/${encodeURIComponent(id)}/entries/${encodeURIComponent(entry)}`, { method: 'DELETE' })
+}
+
+export async function addGameMonster(id: string, character?: string): Promise<GameDetail> {
+  // Record the roster before creating a stub so an older running API can be
+  // upgraded to the new default without touching pre-existing monsters.
+  const before = character ? null : await getGame(id)
+  const game = await request<GameDetail>(`/games/${encodeURIComponent(id)}/monsters`, { method: 'POST', body: { character_id: character ?? '' } })
+  if (before) {
+    const known = new Set(before.entries.map((entry) => entry.id))
+    const added = game.entries.filter((entry) => !known.has(entry.id))
+    const stub = added.length === 1 ? added[0] : undefined
+    if (stub?.kind === 'monster' && stub.can_edit) {
+      const patch: EntryPatch = {}
+      if (stub.hp === 1 && stub.stats?.max_hp === 1) {
+        patch.hp = 10
+        patch.stats = { max_hp: 10 }
+      }
+      if (stub.name === 'Monster' && stub.stats?.name === 'Monster') {
+        patch.stats = { ...patch.stats, name: 'NPC' }
+      }
+      if (Object.keys(patch).length > 0) return patchGameEntry(id, stub.id, patch)
+    }
+  }
+  return game
+}
+
+export async function orderGameEntries(id: string, order: {entry_id?: string; direction?: number; by_initiative?: boolean; before_id?: string}): Promise<GameDetail> {
+  const endpoint = `/games/${encodeURIComponent(id)}/order`
+  try {
+    return await request<GameDetail>(endpoint, { method: 'POST', body: order })
+  } catch (cause) {
+    // A frontend update must not force a restart of process-local games.
+    // Older APIs reject before_id-only moves before changing any entries.
+    if (order.before_id === undefined || !order.entry_id || !(cause instanceof ApiError)
+      || cause.status !== 400 || cause.code !== 'validation_error') throw cause
+  }
+
+  // Each confirmed response is the next source of truth. Move only the chosen
+  // entry, preserving other rows and checking stable IDs after each step.
+  let game = await getGame(id)
+  const limit = Math.max(4, game.entries.length * 2)
+  for (let attempt = 0; attempt < limit; attempt++) {
+    const from = game.entries.findIndex((entry) => entry.id === order.entry_id)
+    const before = order.before_id === '' ? game.entries.length
+      : game.entries.findIndex((entry) => entry.id === order.before_id)
+    if (from < 0 || before < 0) throw new ApiError(404, { code: 'not_found' })
+    const destination = before > from ? before - 1 : before
+    if (from === destination || order.entry_id === order.before_id) return game
+    game = await request<GameDetail>(endpoint, {
+      method: 'POST', body: { entry_id: order.entry_id, direction: destination > from ? 1 : -1 },
+    })
+  }
+  const from = game.entries.findIndex((entry) => entry.id === order.entry_id)
+  const before = order.before_id === '' ? game.entries.length
+    : game.entries.findIndex((entry) => entry.id === order.before_id)
+  if (from >= 0 && before >= 0 && (order.entry_id === order.before_id || from === (before > from ? before - 1 : before))) return game
+  throw new ApiError(409, { code: 'validation_error', reason: 'game.orderChanged' })
 }

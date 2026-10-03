@@ -333,3 +333,30 @@ func TestCreateStubFilesIntoAFolder(t *testing.T) {
 		t.Errorf("folder = %q, want %q", got, want)
 	}
 }
+
+func TestLevelOneStubIsFinishedAndHasNoThirdLevelFeatures(t *testing.T) {
+	s := newService(t)
+	c, err := s.CreateLevelOneStub(context.Background(), testOwner, "player1 rogue", rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sheet, err := s.Sheet(context.Background(), testOwner, c.ID, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sheet.Identity.Name != "player1 rogue" || sheet.Identity.Level() != 1 || sheet.Identity.DesiredLevel != 1 || sheet.Identity.Classes[0].Subclass != "" {
+		t.Fatalf("identity = %+v", sheet.Identity)
+	}
+	prompts, err := s.Prompts(context.Background(), testOwner, c.ID, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !domain.Complete(prompts) {
+		t.Fatal("seed has required choices remaining")
+	}
+	for _, prompt := range prompts {
+		if prompt.Purpose != "custom" || !prompt.Optional {
+			t.Fatalf("unfinished seed choice: %s", prompt.Choice.Prompt)
+		}
+	}
+}

@@ -166,5 +166,15 @@ func (h *Handler) detail(
 		helpers.FormatError(c, err)
 		return
 	}
-	c.JSON(status, gameOfDomain(g, role, roster))
+	participants, err := h.service.Participants(ctx, actor, id, helpers.Locale(c))
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	out := gameOfDomain(g, role, roster)
+	out.Entries = make([]GameEntry, 0, len(participants))
+	for _, participant := range participants {
+		out.Entries = append(out.Entries, entryOf(participant, role.AtLeast(group.RoleDM)))
+	}
+	c.JSON(status, out)
 }

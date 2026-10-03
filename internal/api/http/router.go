@@ -22,6 +22,7 @@ import (
 	"github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	"github.com/promix1722/easydnd/internal/api/http/v1/development"
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
@@ -33,13 +34,14 @@ import (
 // Handlers is the set of inbound adapters the router needs. internal/app
 // builds it.
 type Handlers struct {
-	System    *system.Handler
-	Auth      *auth.Handler
-	Catalog   *catalogapi.Handler
-	Character *characterapi.Handler
-	Folder    *folderapi.Handler
-	Game      *gameapi.Handler
-	Group     *groupapi.Handler
+	Development *development.Handler
+	System      *system.Handler
+	Auth        *auth.Handler
+	Catalog     *catalogapi.Handler
+	Character   *characterapi.Handler
+	Folder      *folderapi.Handler
+	Game        *gameapi.Handler
+	Group       *groupapi.Handler
 	// Authenticator resolves the session cookie for the guarded routes. It is
 	// the same object Auth is built over; the router takes it separately
 	// because middleware and handler need different halves of it.
@@ -130,6 +132,9 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// nginx happens to have no proxy_cache configured.
 		v1.GET("/version", middleware.NoStore(), h.System.Version)
 		v1.GET("/health", h.System.Health)
+		if cfg.Env == config.EnvDevelopment && h.Development != nil {
+			v1.POST("/dev/login", middleware.NoStore(), h.Development.Login)
+		}
 
 		// Sign-in. NoStore because these bodies say who someone is.
 		authRoutes := v1.Group("/auth", middleware.NoStore())
@@ -316,6 +321,10 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.DELETE("/games/:id", h.Game.Delete)
 			authed.POST("/games/:id/characters", h.Game.AddCharacters)
 			authed.DELETE("/games/:id/characters", h.Game.RemoveCharacter)
+			authed.PATCH("/games/:id/entries/:entry", h.Game.PatchEntry)
+			authed.DELETE("/games/:id/entries/:entry", h.Game.DeleteEntry)
+			authed.POST("/games/:id/monsters", h.Game.AddMonster)
+			authed.POST("/games/:id/order", h.Game.OrderEntries)
 
 			// One shared character's sheet, and only ever the sheet. It hangs
 			// off nothing because what grants the read is "some group we are
