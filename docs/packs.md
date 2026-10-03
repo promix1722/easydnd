@@ -230,3 +230,20 @@ Research underlying these contracts: [SemVer](https://semver.org/),
 [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785),
 [RFC 4647](https://www.rfc-editor.org/rfc/rfc4647), and the
 [official SRD 5.1](https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf).
+
+## Builder selection policy
+
+Casting profiles may set `selection` (`known`, `prepared`, `spellbook`),
+`prepareDivisor`, `bookStart`, `bookPerLevel`, `replaceKnown` and
+`expandedSubclass`. These control acquisition and preparation independently of
+slot progression. `spellBenefits` attach automatic spells or counted spell
+choices to an owner at a minimum level, with class/any-list/spellbook eligibility
+and a separate purpose such as Arcanum or mastery. Racial benefits can declare
+their casting ability. `choiceRequirements` gate conditional equipment offers
+on any of a list of proficiencies. Referenced owners, classes, spells and
+proficiencies must resolve in the pinned catalogue.
+
+The SRD input policy defines these in `data/rules/2014/mechanics.json`; regenerate
+with `make data/srd`. Older profiles that omit selection policy keep their
+previous behavior. Character rules locks remain authoritative, so installing a
+new policy does not silently migrate existing pinned characters.

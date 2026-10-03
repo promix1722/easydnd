@@ -233,6 +233,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// Seq means. Addressing a member of a sub-resource collection is
 			// not a third level: there is no route below these two, and
 			// there will not be one.
+			authed.POST("/characters/:id/events/revise", h.Character.ReviseEvents)
 			authed.PUT("/characters/:id/events/:seq", h.Character.ReplaceEvent)
 			authed.DELETE("/characters/:id/events/:seq", h.Character.DeleteEvent)
 

@@ -10,6 +10,7 @@ package character
 import (
 	"context"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
@@ -240,6 +241,26 @@ func (s *Service) Prompts(
 		return nil, err
 	}
 	return domain.Prompts(character.Log, cat)
+}
+
+// PromptsBefore reads the questions at an event's original position without
+// changing the saved log. Replacement validation uses this same prefix.
+func (s *Service) PromptsBefore(
+	ctx context.Context, owner domain.OwnerID, id domain.ID, locale rules.Locale, before int,
+) ([]domain.Prompt, error) {
+	character, cat, err := s.load(ctx, owner, id, locale)
+	if err != nil {
+		return nil, err
+	}
+	if before < 2 || before > character.Log.LastSeq() {
+		return nil, seqError("no editable event at this position", "field.seq.outOfRange")
+	}
+	prefix := domain.Log{Events: slices.Clone(character.Log.Events[:before-1])}
+	context, err := spellEditContext(prefix, character.Log, cat, character.Log.Events[before-1])
+	if err != nil {
+		return nil, err
+	}
+	return domain.Prompts(context, cat)
 }
 
 // Apply validates events against the catalogue and appends them to a

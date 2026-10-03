@@ -140,7 +140,10 @@ func (c converter) choices(chs []rules.Choice) []Choice {
 }
 
 func (c converter) optionSet(set rules.OptionSet) OptionSet {
-	out := OptionSet{Kind: optionSetKindName(set.Kind)}
+	out := OptionSet{Kind: optionSetKindName(set.Kind), Category: set.Category.String()}
+	if set.Collection != rules.RefNone {
+		out.Collection = set.Collection.String()
+	}
 	switch set.Kind {
 	case rules.OptionsFromEquipmentCategory:
 		out.Category = set.Category.String()
@@ -594,3 +597,6 @@ func scalingOf(table map[int]rules.Dice) map[string]string {
 }
 
 func (c converter) termEntry(t domain.Term) Term { return Term{Entry: entryOf(t.Entry)} }
+
+// OptionValue exposes resolved selections without duplicating the choice wire grammar.
+func (c Converter) OptionValue(option rules.Option) Option { return c.inner.option(option) }

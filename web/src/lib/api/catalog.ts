@@ -119,8 +119,9 @@ export interface Item extends Entry {
   category?: string
   cost?: { amount: number; unit: string }
   weight?: number
-  armor?: { category?: string; baseAC: number }
-  weapon?: { category?: string; range?: string; damage?: { dice: string; type?: string } }
+  armor?: { category?: string; baseAC: number; addsDexBonus?: boolean; maxDexBonus?: number; strengthMinimum?: number; stealthDisadvantage?: boolean }
+  gear?: { contents?: { item: string; count: number }[] }
+  weapon?: { category?: string; range?: string; damage?: { dice: string; type?: string }; normalRange?: number; longRange?: number; properties?: string[]; twoHandedDamage?: { dice: string; type?: string }; throwNormalRange?: number; throwLongRange?: number }
 }
 
 export interface Skill extends Entry {
@@ -261,8 +262,14 @@ export function getCollection<T extends Entry>(collection: string): Promise<T[]>
  */
 export function getEntries<T extends Entry>(collection: string, slugs: string[]): Promise<T[]> {
   if (slugs.length === 0) return Promise.resolve([])
-  const query = encodeURIComponent(slugs.join(','))
-  return request<T[]>(`/catalog/${collection}?slugs=${query}`)
+  // High-level Magical Secrets can offer all 319 SRD spells. Keep each
+  // request below the server's 200-slug bound and ordinary URL size limits.
+  const chunks: string[][] = []
+  for (let start = 0; start < slugs.length; start += 100) chunks.push(slugs.slice(start, start + 100))
+  return Promise.all(chunks.map((chunk) => {
+    const query = encodeURIComponent(chunk.join(','))
+    return request<T[]>(`/catalog/${collection}?slugs=${query}`)
+  })).then((loaded) => loaded.flat())
 }
 
 /** Indexes a collection by slug, for the lookups a sheet does constantly. */

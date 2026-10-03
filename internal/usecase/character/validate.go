@@ -39,8 +39,7 @@ func validateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.
 			return err
 		}
 	}
-	_, err := domain.Project(working, cat)
-	return err
+	return domain.ValidateSpellLimits(working, cat)
 }
 
 // validateEvent checks one event against the prompts open once its structural
@@ -446,6 +445,9 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 	legal := rules.OptionKeys(prompt.Choice.From)
 	seen := make(map[rules.Slug]bool, len(answer.Picks))
 	for _, pick := range answer.Picks {
+		if slices.Contains(prompt.Blocked, pick) {
+			fields = append(fields, types.FieldError{Field: field, Rule: "not-held", Reason: "field.answer.requiresProficiency"})
+		}
 		// A set drawn from a collection has no inline options; the pick is
 		// the entry's own slug, and the reference check above covers it.
 		if legal != nil && !slices.Contains(legal, pick) {

@@ -37,6 +37,26 @@ func (p *projector) applyChange(sc seqChange) error {
 	}
 
 	switch segments[0] {
+	case "spellLimits":
+		if len(segments) != 2 {
+			return p.unresolved(sc)
+		}
+		var target *int
+		switch segments[1] {
+		case "known":
+			target = &p.state.Spells.ExtraKnown
+		case "cantrip":
+			target = &p.state.Spells.ExtraCantrips
+		default:
+			return p.unresolved(sc)
+		}
+		if err := changeInt(p, sc, target); err != nil {
+			return err
+		}
+		if *target < 0 || *target > 1000 {
+			return types.NewValidationError("spell limit adjustment out of range")
+		}
+		return nil
 	case "identity":
 		return p.changeIdentity(sc, segments[1:])
 	case "abilities":

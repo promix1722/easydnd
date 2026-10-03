@@ -59,6 +59,9 @@ func OptionKey(o Option) Slug {
 		// path in an answer is the same unreadable thing as a position.
 		return nestedKey(opt.Choice)
 	case BundleOption:
+		if !opt.Key.IsZero() {
+			return opt.Key
+		}
 		return bundleKey(opt)
 	case SizeOption:
 		return Slug(opt.Size.String())

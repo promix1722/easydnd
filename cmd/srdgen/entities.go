@@ -290,6 +290,8 @@ func (g *generator) traits() error {
 
 // breathWeapon converts the dragonborn's ancestry-keyed breath attack, which
 // upstream stores as a bare action object rather than as a choice.
+// Preserve the legacy choice-shaped payload for catalogue compatibility; it
+// describes an automatic grant and must not become a character-build prompt.
 func (g *generator) breathWeapon(raw json.RawMessage, owner string) *file.Choice {
 	var v struct {
 		Name   string `json:"name"`
@@ -336,6 +338,16 @@ func (g *generator) classes() error {
 			StartingEquipment:        stacks(up.StartingEquipment),
 			StartingEquipmentOptions: g.choices(up.StartingEquipmentOptions, up.Index+"/starting-equipment"),
 			Subclasses:               indexes(up.Subclasses),
+		}
+		// SRD 5.1 explicitly includes a quiver with these arrows. Upstream
+		// omitted the container; preserve the rogue bundle's stored answer key.
+		if up.Index == "ranger" {
+			c.StartingEquipment = append(c.StartingEquipment, file.ItemStack{Item: "quiver", Count: 1})
+		}
+		if up.Index == "rogue" {
+			bundle := &c.StartingEquipmentOptions[1].From.Options[0]
+			bundle.Key = "shortbow+arrow"
+			bundle.Items = append(bundle.Items, file.Option{Kind: file.OptionRef, Ref: "item:quiver", Count: 1})
 		}
 		p := file.Prose{Name: up.Name}
 		if up.Spellcasting != nil {
@@ -598,6 +610,15 @@ func (g *generator) backgrounds() error {
 			Bonds:                    g.choice(up.Bonds, up.Index+"/bond", 0),
 			Flaws:                    g.choice(up.Flaws, up.Index+"/flaw", 0),
 		}
+		// These are fixed background grants in the SRD Equipment paragraph,
+		// absent from the upstream structured kit.
+		if up.Index == "acolyte" {
+			b.StartingEquipment = append(b.StartingEquipment, file.ItemStack{Item: "block-of-incense", Count: 5}, file.ItemStack{Item: "vestments", Count: 1})
+			b.StartingGold = &file.Cost{Amount: 15, Unit: "gp"}
+			b.StartingEquipmentOptions = append(b.StartingEquipmentOptions, file.Choice{Prompt: "acolyte/starting-equipment/1", Choose: 1, Kind: "equipment", From: file.OptionSet{Kind: file.OptionSetExplicit, Options: []file.Option{
+				{Kind: file.OptionRef, Ref: "item:prayer-book", Count: 1}, {Kind: file.OptionRef, Ref: "item:prayer-wheel", Count: 1},
+			}}})
+		}
 		p := file.Prose{Name: up.Name}
 		if up.Feature != nil {
 			// The background's feature has no entry of its own upstream, so
@@ -720,6 +741,12 @@ func (g *generator) equipment() error {
 
 		out = append(out, it)
 		g.put(file.FileEquipment, up.Index, p)
+	}
+	// Background equipment is explicitly named by the SRD even though it
+	// has no separate price/weight entry in the equipment table.
+	for _, item := range []struct{ slug, name string }{{"prayer-book", "Prayer Book"}, {"prayer-wheel", "Prayer Wheel"}} {
+		out = append(out, file.Item{Slug: item.slug, Category: "adventuring-gear"})
+		g.put(file.FileEquipment, item.slug, file.Prose{Name: item.name})
 	}
 	return emit(g, file.FileEquipment, out, func(i file.Item) string { return i.Slug })
 }

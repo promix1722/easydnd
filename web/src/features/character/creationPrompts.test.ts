@@ -14,20 +14,20 @@ function prompt(choice: Choice): Prompt {
 }
 
 describe('creationPrompt', () => {
-  it('omits an unimplemented category picker', () => {
-    expect(creationPrompt(prompt(category))).toBeNull()
+  it('retains every equipment category', () => {
+    expect(creationPrompt(prompt(category))?.choice).toEqual(category)
   })
   it('retains working equipment alternatives without changing their keys', () => {
     const original = prompt({ ...category, from: { kind: 'explicit', options: [
       { key: 'symbols', kind: 'nested', choice: category }, item,
     ] } })
-    expect(creationPrompt(original)?.choice.from.options).toEqual([item])
+    expect(creationPrompt(original)?.choice.from.options).toEqual(original.choice.from.options)
     expect(original.choice.from.options).toHaveLength(2)
   })
-  it('omits a question that cannot supply the requested number of picks', () => {
+  it('retains complete bundles and their nested choices', () => {
     expect(creationPrompt(prompt({ ...category, choose: 2, from: { kind: 'explicit', options: [
       { key: 'bundle', kind: 'bundle', items: [item, { key: 'symbols', kind: 'nested', choice: category }] }, item,
-    ] } }))).toBeNull()
+    ] } }))?.choice.from.options).toHaveLength(2)
   })
   it('preserves free-entry score forms and implemented collections', () => {
     const choices: Choice[] = [

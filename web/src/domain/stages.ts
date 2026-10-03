@@ -1,16 +1,6 @@
-/**
- * The five categories a character is built in, in the order they are offered.
- *
- * These are the server's own prompt groups, not a client-side taxonomy: every
- * prompt arrives carrying one, and every stored entry carries the group of the
- * prompt it answered. So this file holds no rule about what belongs where --
- * only the order the tabs sit in, and the one place two server groups collapse
- * into one tab.
- *
- * Framework-free, like everything else in domain/: no React, no transport.
- */
+/** Builder tabs are presentation; class/race/background remain the rule owners. */
 
-export type Stage = 'identity' | 'class' | 'race' | 'background' | 'abilities' | 'personality'
+export type Stage = 'identity' | 'class' | 'race' | 'background' | 'abilities' | 'personality' | 'cantrips' | 'spells' | 'equipment'
 
 /** Where advancement stops in the 2014 rules; the server enforces the same. */
 export const MAX_LEVEL = 20
@@ -28,7 +18,8 @@ export const MAX_LEVEL = 20
  * that has not already been decided -- a racial bonus is applied by the rules,
  * not typed in here.
  *
- * Personality is last, and is the only tab that asks nothing about the rules.
+ * Personality asks about the character. Spells and equipment follow the
+ * choices that grant them, with equipment always last.
  * A trait, an ideal, a bond, a flaw and an alignment are who the character is
  * rather than what they can do, and they used to sit under background because
  * that is which entry suggests them -- which put five questions nobody has to
@@ -41,6 +32,9 @@ export const STAGES = [
   'race',
   'background',
   'personality',
+  'cantrips',
+  'spells',
+  'equipment',
 ] as const satisfies readonly Stage[]
 
 const STAGE_OF_GROUP: Record<string, Stage> = {
@@ -50,16 +44,25 @@ const STAGE_OF_GROUP: Record<string, Stage> = {
   background: 'background',
   abilities: 'abilities',
   personality: 'personality',
+  cantrips: 'cantrips',
+  spells: 'spells',
+  equipment: 'equipment',
 }
 
 /**
- * The tab a server group belongs to, or null.
+ * Spell/equipment kinds get their own tabs; other choices retain their group.
+ * Older saved events can omit the kind, so their prompt address is a fallback.
  *
  * Null is a real answer rather than a defensive one. The server attributes an
  * event to the prompt it satisfied, and some events satisfy none -- an
  * imported log, a DM's adjustment, a note. Those have no tab, and the event
  * log at `/characters/:id/log` remains the unabridged record of them.
  */
-export function stageOf(group: string | undefined): Stage | null {
+export function stageOf(group: string | undefined, choiceKind?: string, prompt?: string, purpose?: string): Stage | null {
+  if (choiceKind === 'spell' || (choiceKind === undefined && prompt?.split('/').includes('spell'))) {
+    const cantrip = purpose === 'cantrip' || prompt?.split('/').includes('cantrip') || prompt?.startsWith('high-elf-cantrip/')
+    return cantrip ? 'cantrips' : 'spells'
+  }
+  if (choiceKind === 'equipment' || (choiceKind === undefined && prompt?.split('/').includes('starting-equipment'))) return 'equipment'
   return group === undefined ? null : (STAGE_OF_GROUP[group] ?? null)
 }

@@ -148,6 +148,7 @@ func (p *projector) run(log Log) (State, error) {
 
 	p.deriveProficiencies()
 	p.deriveStatus()
+	p.applySpells()
 	for _, e := range p.statEffects {
 		if err := p.applyEffect(e.rule, e.effect); err != nil {
 			return State{}, err
@@ -330,6 +331,9 @@ func (p *projector) applyRace() {
 		}
 		p.proficiencies = append(p.proficiencies, trait.Proficiencies...)
 		p.proficiencies = append(p.proficiencies, p.answers.slugs(trait.ProficiencyOptions)...)
+		if trait.Specific != nil {
+			p.state.Traits = append(p.state.Traits, p.answers.slugs(trait.Specific.SubtraitOptions)...)
+		}
 	}
 	p.state.Base.Senses = sensesFor(p.state.Traits)
 	if len(p.cat.Mechanics.Core.Senses) > 0 {
@@ -511,7 +515,7 @@ func (p *projector) applyEquipmentChoices() {
 }
 
 func (p *projector) addChosenEquipment(choice rules.Choice) {
-	p.answers.chosen(choice, func(o rules.Option) {
+	p.answers.chosen(p.cat.ResolveChoice(choice), func(o rules.Option) {
 		switch opt := o.(type) {
 		case rules.RefOption:
 			if opt.Ref.Kind == rules.RefItem || opt.Ref.Kind == rules.RefMagicItem {

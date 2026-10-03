@@ -18,6 +18,8 @@ import { IdentityTable } from './IdentityTable'
 import { ProficienciesPanel } from './ProficienciesPanel'
 import { SkillsPanel } from './SkillsPanel'
 import { Vitals } from './Vitals'
+import { spellChoiceName } from './promptNames'
+import { collectionOfKind, kindOf, slugOf } from '@/domain'
 
 import { abilitiesInOrder, signed, titleCase } from '@/domain'
 import { useT } from '@/lib/i18n'
@@ -203,6 +205,17 @@ export function SheetBody({
   // "Character sheet" rather than the character's name: the name is already the
   // heading above this, and a landmark whose name changed per character would
   // give a screen-reader user a different table of contents on every sheet.
+  if (s.spells.sources?.length) sections.push({
+    key: 'spells', title: t('sheet.spells'), desktop: 'panel', content: <Stack gap="md">
+      {s.spells.sources.map((source) => <Stack key={source.source} gap="xs">
+        <Text fw={600}>{source.source === 'rule:custom-spells' ? t('spellRules.custom') : named(collectionOfKind(kindOf(source.source)) ?? 'classes', slugOf(source.source))}</Text>
+        {(['cantrips', 'known', 'spellbook', 'prepared', 'arcanum', 'mastery'] as const).map((mode) => {
+          const spells = source[mode] ?? []
+          return spells.length === 0 ? null : <ItemList key={mode} label={spellChoiceName(t, mode === 'cantrips' ? 'cantrip' : mode, mode === 'prepared' ? source.preparationLimit ?? spells.length : spells.length)} items={spells.map((slug) => named('spells', slug))} />
+        })}
+      </Stack>)}
+    </Stack>,
+  })
   return <SectionDeck label={t('sheet.label')} cols={2} sections={sections} />
 }
 

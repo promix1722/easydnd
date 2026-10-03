@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 
 import {
   appendEvents,
+  reviseEvents,
   createCharacter,
   deleteEvent,
   getEvents,
@@ -20,7 +21,7 @@ import type {
   PromptsResponse,
   Sheet,
 } from '@/lib/api'
-import { useLocale, useT } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
@@ -32,6 +33,7 @@ import {
   blocksFor,
   inheritPlace,
   keyFor,
+  keyForRow,
   promptKey,
   reclaimPlace,
   settledKey,
@@ -43,6 +45,8 @@ import { resolveRefNames } from './refNames'
 import { settledByStage, settledPickName } from './settled'
 import type { SettledRow } from './settled'
 import { StagePanel } from './StagePanel'
+import { SpellStagePanel } from './SpellStagePanel'
+import type { SpellSubmission } from './SpellStagePanel'
 import type { Scores } from './AbilityScoresForm'
 
 import {
@@ -70,6 +74,7 @@ const EMPTY_VIEW: BuildView = {
 
 /** A change, priced before it is paid for. */
 interface Preview {
+  spellBatch?: { submissions: SpellSubmission[]; next: Stage }
   row: SettledRow
   /** Null for a removal: there is nothing to put back. */
   event: CharacterEvent | null
@@ -105,7 +110,6 @@ interface Preview {
  */
 export function BuildScreen() {
   const t = useT()
-  const locale = useLocale()
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -116,7 +120,8 @@ export function BuildScreen() {
   const folder = search.get('folder') ?? undefined
   const isNew = id === ''
 
-  const build = useResource<BuildView>(`build:${locale}:${id}`, async (signal) => {
+  // useResource refreshes on translator changes without unmounting the active draft.
+  const build = useResource<BuildView>(`build:${id}`, async (signal) => {
     if (id === '') return EMPTY_VIEW
     const [prompts, log, sheet] = await Promise.all([
       getPrompts(id, signal),
@@ -127,13 +132,19 @@ export function BuildScreen() {
       prompts,
       events: log.events,
       sheet,
-      names: await resolveRefNames([...log.events, ...prompts.prompts]),
+      names: await resolveRefNames([
+        ...log.events, ...prompts.prompts,
+        ...(prompts.spellRules ?? []).flatMap((rule) => [{ source: rule.source }, ...(rule.automatic ?? []).map((slug) => ({ ref: `spell:${slug}` })), ...(rule.listClasses ?? []).map((slug) => ({ ref: `class:${slug}` }))]),
+        ...[...sheet.equipment.equipped, ...sheet.equipment.backpack, ...sheet.equipment.loot]
+          .flatMap((stack) => stack.item === undefined ? [] : [{ ref: `item:${stack.item}` }]),
+      ]),
     }
   })
 
   const create = useAction(createCharacter)
   const answer = useAction(appendEvents)
   const revise = useAction(replaceEvent)
+  const spellSave = useAction(reviseEvents)
   const remove = useAction(deleteEvent)
 
   const [chosenStage, setChosenStage] = useState<Stage | null>(landingStage(location.state))
@@ -183,6 +194,7 @@ export function BuildScreen() {
   const [shownId, setShownId] = useState(id)
   const arriving = shownId !== id
   if (arriving) {
+    if (!creating) orders.clear()
     setShownId(id)
     setChosenStage(landingStage(location.state))
     setOpenKey(creating ? NEW_NAME_KEY : null)
@@ -258,13 +270,14 @@ export function BuildScreen() {
           ? each === 'identity'
             ? NEW_IDENTITY_PROMPTS
             : []
-          : open.filter((prompt) => stageOf(prompt.group) === each),
+          : open.filter((prompt) => stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each),
         orderFor(each),
       ),
     ]),
   )
   const blocks = blocksByStage.get(stage) ?? []
-  const opened = blocks.find((block) => block.key === openKey) ?? null
+  const activeKey = openKey
+  const opened = blocks.find((block) => block.key === activeKey) ?? null
   // What the open block is asking, which is a fact about the block rather than
   // a second piece of state. A settled block whose question cannot be put
   // again has none, and says so where its surface would have been.
@@ -400,13 +413,39 @@ export function BuildScreen() {
     // A removal is how a question that cannot be re-posed gets asked again, so
     // the question that comes back takes the answer's place in the list -- and
     // opens there, because being asked again is what the press meant.
-    if (event === null) reclaimPlace(orderFor(row.stage), settledKey(row.seq))
+    if (event === null) reclaimPlace(orderFor(row.stage), keyForRow(row))
     done(open)
+  }
+
+  const saveSpells = async (submissions: SpellSubmission[], next: Stage, approved = false) => {
+    const replacements = submissions.flatMap((item) => {
+      if (item.replaces === undefined) return []
+      const choices = (item.replaces.event.choices ?? []).map((answer) => answer.prompt === item.prompt.choice.prompt ? { ...answer, picks: item.picks } : answer)
+      return [{ seq: item.replaces.seq, event: eventFor(item.prompt, choices) }]
+    })
+    const events = submissions.filter((item) => item.replaces === undefined).map((item) => item.changes === undefined ? eventFor(item.prompt, [{ prompt: item.prompt.choice.prompt, picks: item.picks }]) : { type: 'change', changes: item.changes })
+    const run = (dryRun: boolean) => replacements.length === 1 && events.length === 0
+      ? revise.run(id, replacements[0]!.seq, view.prompts.seq, replacements[0]!.event, dryRun, view.prompts.revision ?? view.prompts.seq)
+      : spellSave.run(id, view.prompts.seq, view.prompts.revision ?? view.prompts.seq, replacements, events, dryRun)
+    if (replacements.length > 0 && !approved) {
+      const preview = await run(true)
+      if (preview === null) return
+      if ((preview.dropped ?? []).length > 0) {
+        const row = submissions.find((item) => item.replaces !== undefined)!.replaces!
+        setPreview({ row, event: replacements[0]!.event, dropped: preview.dropped ?? [], names: await resolveRefNames(preview.dropped ?? []), open: null, spellBatch: { submissions, next } })
+        return
+      }
+    }
+    const written = replacements.length === 0
+      ? await answer.run(id, view.prompts.seq, events, view.prompts.revision ?? view.prompts.seq)
+      : await run(false)
+    if (written !== null) { done(); setChosenStage(next) }
   }
 
   const commit = async () => {
     if (preview === null) return
-    await write(preview.row, preview.event, preview.open)
+    if (preview.spellBatch !== undefined) await saveSpells(preview.spellBatch.submissions, preview.spellBatch.next, true)
+    else await write(preview.row, preview.event, preview.open)
   }
 
   /**
@@ -437,6 +476,7 @@ export function BuildScreen() {
     setOpenKey(key)
     const block = key === null ? null : blocks.find((each) => each.key === key)
     if (block?.kind !== 'settled') return
+    if (isSpellChoice(block.row)) return
     const question = reask(block.row)
     if (question === null) {
       void price(block.row, null, reaskedKey(block.row))
@@ -489,7 +529,7 @@ export function BuildScreen() {
     )
   }
 
-  const failure = create.error ?? answer.error ?? revise.error ?? remove.error
+  const failure = create.error ?? answer.error ?? revise.error ?? remove.error ?? spellSave.error
   const fields: readonly ApiFieldError[] =
     create.fields.length > 0
       ? create.fields
@@ -569,7 +609,25 @@ export function BuildScreen() {
               return {
                 value: each,
                 label: stageLabel(t, each),
-                content: (
+                content: each === 'spells' || each === 'cantrips' ? (
+                  <SpellStagePanel
+                    cantripsOnly={each === 'cantrips'}
+                    rules={view.prompts.spellRules ?? []}
+                    blocks={blocksByStage.get(each) ?? []}
+                    active={each === stage}
+                    names={view.names}
+                    loadSavedPrompt={async (row) => {
+                      const response = await getPrompts(id, undefined, row.seq)
+                      const prompt = response.prompts.find((item) => item.choice.prompt === row.event.choices?.[0]?.prompt)
+                      if (prompt === undefined) throw new Error(t('prompt.nothingOffered'))
+                      return prompt
+                    }}
+                    onAnswers={(submissions) => void saveSpells(submissions, each === 'cantrips' ? 'spells' : 'equipment')}
+                    pending={answer.pending || revise.pending || spellSave.pending || remove.pending || build.loading}
+                    revision={view.prompts.revision ?? view.prompts.seq}
+                    onNext={() => goToStage(each === 'cantrips' ? 'spells' : 'equipment')}
+                  />
+                ) : (
                   <StagePanel
                     blocks={blocksByStage.get(each) ?? []}
                     openKey={openKey}
@@ -594,6 +652,7 @@ export function BuildScreen() {
                       creating || create.pending || answer.pending || revise.pending || remove.pending
                     }
                     fields={fields}
+                    {...(each === 'equipment' && view.sheet !== null ? { equipment: view.sheet.equipment } : {})}
                     {...(after === null ? {} : { onNext: () => goToStage(after) })}
                     {...(posingName || asking?.prompt.choice.kind === 'text'
                       ? { name: nameDraft }
@@ -791,6 +850,10 @@ const NEW_NAME_KEY = keyFor({ prompt: NEW_NAME_PROMPT, replaces: null })
  * Null is an answer rather than a failure: a nested prompt cannot be re-posed
  * from here, and the block says so and offers the drop instead.
  */
+function isSpellChoice(row: SettledRow): boolean {
+  return row.stage === 'spells' || row.stage === 'cantrips'
+}
+
 function askingFor(row: SettledRow): Asking | null {
   const prompt = reask(row)
   return prompt === null ? null : { prompt, replaces: row }
@@ -811,9 +874,9 @@ function title(view: BuildView): string {
  */
 function firstUnfinished(prompts: readonly Prompt[]): Stage {
   const required = new Set(
-    prompts.filter((p) => !p.optional).flatMap((p) => [stageOf(p.group)].filter(isStage)),
+    prompts.filter((p) => !p.optional).flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)),
   )
-  const any = new Set(prompts.flatMap((p) => [stageOf(p.group)].filter(isStage)))
+  const any = new Set(prompts.flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
   return STAGES.find((s) => required.has(s)) ?? STAGES.find((s) => any.has(s)) ?? 'identity'
 }
 
@@ -826,7 +889,7 @@ function firstUnfinished(prompts: readonly Prompt[]): Stage {
  */
 function stageAfter(stage: Stage, prompts: readonly Prompt[]): Stage | null {
   const groups = (only: (p: Prompt) => boolean) =>
-    new Set(prompts.filter(only).flatMap((p) => [stageOf(p.group)].filter(isStage)))
+    new Set(prompts.filter(only).flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
   const from = STAGES.indexOf(stage)
   const order = [...STAGES.slice(from + 1), ...STAGES.slice(0, from)]
   const required = groups((p) => !p.optional)

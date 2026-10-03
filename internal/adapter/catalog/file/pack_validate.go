@@ -198,7 +198,27 @@ func validateMechanics(m PackMechanics) error {
 			}
 		}
 	}
+	seenBenefits := map[string]bool{}
+	for _, b := range m.SpellBenefits {
+		if b.ID == "" || seenBenefits[b.ID] || b.Level < 1 || b.Level > 20 || b.Count < 0 || b.SpellLevel < -1 || b.SpellLevel > 9 {
+			return fmt.Errorf("invalid spell benefit %s", b.ID)
+		}
+		seenBenefits[b.ID] = true
+		if b.Mode != "cantrip" && b.Mode != "known" && b.Mode != "prepared" && b.Mode != "arcanum" && b.Mode != "mastery" && b.Mode != "spellbook" {
+			return fmt.Errorf("invalid spell benefit mode %s", b.ID)
+		}
+		if b.From != "" && b.From != "class" && b.From != "any" && b.From != "book" {
+			return fmt.Errorf("invalid spell benefit list %s", b.ID)
+		}
+	}
+
 	for id, c := range m.Casting {
+		if c.Selection != "" && c.Selection != "known" && c.Selection != "prepared" && c.Selection != "spellbook" {
+			return fmt.Errorf("invalid spell selection %s", id)
+		}
+		if c.PrepareDivisor < 0 || c.BookStart < 0 || c.BookPerLevel < 0 {
+			return fmt.Errorf("invalid spell selection counts %s", id)
+		}
 		if c.Kind != "shared" && c.Kind != "independent" {
 			return fmt.Errorf("invalid caster profile %s", id)
 		}
@@ -440,6 +460,34 @@ func validateReferences(docs []*PackDocument, entities map[string][]any, m PackM
 				return err
 			}
 			if err := expression(cost.Amount); err != nil {
+				return err
+			}
+		}
+	}
+	for _, benefit := range m.SpellBenefits {
+		if err := ref(string(benefit.Owner)); err != nil {
+			return err
+		}
+		if benefit.Class != "" {
+			if err := check("class", benefit.Class); err != nil {
+				return err
+			}
+		}
+		for _, spell := range benefit.Spells {
+			if err := check("spell", spell); err != nil {
+				return err
+			}
+		}
+	}
+	for _, requirement := range m.ChoiceRequirements {
+		if requirement.Prompt == "" || requirement.Pick == "" || len(requirement.AnyProficiency) == 0 {
+			return fmt.Errorf("invalid choice requirement")
+		}
+		if err := check("item", requirement.Pick); err != nil {
+			return err
+		}
+		for _, prof := range requirement.AnyProficiency {
+			if err := check("proficiency", prof); err != nil {
 				return err
 			}
 		}

@@ -36,3 +36,17 @@
     font-size: var(--mantine-font-size-md);
   }
 }
+
+/* Catalogue Markdown keeps its block structure at every reading width. */
+.markdown-body {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.markdown-body > :first-child { margin-top: 0; }
+.markdown-body > :last-child { margin-bottom: 0; }
+.markdown-body p, .markdown-body ul, .markdown-body ol { margin-block: 0.75em; }
+.markdown-body table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.markdown-body th, .markdown-body td { border: 1px solid var(--mantine-color-default-border); padding: 0.4em 0.6em; text-align: left; }
+.markdown-body img { max-width: 100%; }
+.markdown-body pre { overflow-x: auto; }
+.markdown-body a { color: var(--mantine-color-anchor); }

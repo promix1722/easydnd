@@ -10,11 +10,10 @@ the sheet are all built and tested -- see
 [Level-up is the desired level](#level-up-is-the-desired-level). The battle
 tracker is not: `/games` is a section in the navigation whose page says so.
 
-Character creation omits unimplemented equipment-category pickers, including
-the Acolyte starting-equipment card. Mixed choices retain working alternatives;
-a bundle is omitted if one of its components is unsupported. Source catalogue
-rules and previously recorded equipment remain intact. The screen no longer
-presents these unsupported menus as empty-compendium gaps.
+Character creation presents every starting-equipment alternative, including
+category menus and complete bundles. The server expands category membership;
+the client preserves its option keys and order. See
+[Builder choice behavior](#builder-choice-behavior) for the interaction contract.
 Ability scores remain the six standard characteristics, including with addons.
 
 ## Pack transition
@@ -1132,25 +1131,27 @@ dialog, because it asks nothing.
 ## The build screen is a loop, not a wizard
 
 `features/character/BuildScreen` reads `/prompts`, `/events` and `/sheet`, and
-draws six tabs. It is still a loop rather than an N-step wizard, and it has to
+draws nine tabs. It is still a loop rather than an N-step wizard, and it has to
 be: prompts nest -- answering the "two skills" branch of a rogue's Expertise is
 what brings the two-skill prompt into existence -- so the total number of steps
 is not knowable until the last one is answered. The tabs are not steps. They
-are the fixed set of *categories* a question can belong to, which is the
-server's own `Prompt.Group` and not a taxonomy this client invented, in the
-order `domain/stages.ts` states: identity, class, abilities, race, background,
-personality. Class first after the name, because it is the choice the most
-other choices hang off -- and the scores straight after it, because they are
+are display categories in the order `domain/stages.ts` states: identity, class,
+abilities, race, background, personality, cantrips, spells, equipment. Spell and equipment
+choices use their kind to select a tab; other choices use the server's group.
+Saved answers use the same mapping, with prompt IDs as a fallback for older
+events without choice metadata. Rule ownership remains class/race/background.
+Class comes first after the name, because it is the choice the most other
+choices hang off -- and the scores straight after it, because they are
 what the class was picked *for*: a barbarian wants the 15 in Strength, and
 deciding that while the class is still the last thing you looked at is the
 difference between building a character and filling in a form. Personality is
-last and is the only tab that asks nothing about the rules -- see
+the only tab that asks nothing about the rules -- see
 [below](#who-the-character-is-is-its-own-tab-and-its-own-words).
 
 ### The tabs are a deck, so a phone can swipe between them
 
-The five tabs are `ui/TabDeck`. **On a phone** it is a strip over a carousel of
-all five panels, every one mounted, one on screen: pressing a tab scrolls the
+The nine tabs are `ui/TabDeck`. **On a phone** it is a strip over a carousel of
+all nine panels, every one mounted, one on screen: pressing a tab scrolls the
 carousel to it and swiping the panel reports the tab it landed on, and neither
 can drive the other in a loop -- scrolling to the slide embla already holds does
 nothing, and the deck only reports a slide that is not the one the caller asked
@@ -3769,3 +3770,179 @@ Two things about that are the frontend's to keep working:
    would not roll back.
 
 [mantine]: https://mantine.dev
+
+## Builder choice behavior
+
+Creation and level-up use the same nine tabs and server prompts. Cantrips and
+Spells have separate tabs; all equipment choices live in the final Equipment tab, followed by
+a summary of the projected inventory and coins, including fixed grants. A selection
+changes a card in place: choosing, confirming, reopening, or replacing it must
+not sort the wizard's question cards. Spell choices have an explicit selected
+list above their filters; other option lists retain their original order. Answered choices use the original
+prompt identity; other events use their persistent ID. New questions append to
+their level group. Sequence numbers address writes, not visual identity.
+
+All displayed equipment and spell names resolve through the localized catalogue.
+Saved answers use the API's resolved `selections`, which retain quantities and
+fixed bundle components. A crossbow and twenty bolts therefore remain two named
+items with the ammunition count, including in Russian. Catalogue requests show
+loading and retry states; stale responses cannot overwrite a newer language.
+Selections remain in hand while option details load or the language changes.
+Large spell lists load in bounded catalogue batches rather than exceeding the
+API slug limit. Failed requests cannot be
+confirmed as if the catalogue were complete.
+
+Starting-equipment cards show complete descriptions plus armor and weapon facts,
+weight, cost and pack contents for the selected option. Bundles describe each
+component. Equipment-category choices support their full membership, and a
+multi-item category permits repeated copies. Confirmation still requires the
+requested number of items. Conditional cleric gear stays visible but disabled
+until its proficiency requirement is satisfied. Fixed equipment is granted by
+the rules; choosing equipment puts it in the backpack, without automatically
+wearing it. Starting wealth shopping is not part of this screen.
+
+A held trait, feat, fighting style or proficiency cannot be selected again where
+it would duplicate a benefit. Expertise offers proficient skills/tools that have
+not already received Expertise. Explicitly repeatable choices, including ability
+improvements and copies of equipment, keep their repetition behavior. Personality
+is free text, not a mechanically deduplicated list.
+
+Spell cards identify cantrips, spells known, spellbook additions, preparation,
+replacement and special grants. The builder shares the spells page's search and
+filters: level (including cantrips), school, class, casting time, concentration,
+ritual and no material
+components. The wizard's ‘Available for your character’ filter is enabled by
+default and uses the union of the server's eligible options, including racial
+and subclass grants. Turning it off loads the wider catalogue for the current
+Cantrips or Spells tab and allows any catalogue spell to be added, including
+spells beyond the normal class, level and count limits. A pick that fits a
+normal remaining allowance uses it; other picks are stored under the explicit
+custom-spells source. Custom picks remain marked after saving and when the
+filter is enabled again. They do not satisfy or inflate class/racial allowances.
+Reset restores the eligibility filter. Browsing never changes saved or draft picks. Each spell row shows its icon,
+level, concentration/ritual tags, school, casting time and components.
+
+Opening a spell previews it without adding it. Desktop previews expand inside the same spell box, below a horizontal divider,
+with no repeated icon or badges and only the row’s right-hand Add/Remove button. On phones, the same complete spell details open in a
+full-screen view with Add and Back controls; Back returns without changing the
+answer. Adding returns to the list with its filters intact. The detail view and
+the standalone spell page share a Markdown renderer, including emphasis, lists,
+tables and higher-level rules. Catalogue HTML is not executed.
+
+The Cantrips and Spells tabs each show one combined selected list immediately,
+without collapsed question boxes or a per-level choice selector. Only the
+selected list is grouped by spell level. Available spells form one flat,
+list sorted by ascending spell level, then localized name, below the filters. The pool is the union of the
+server's eligible options, so class lists, subclass grants, racial cantrips and
+current class-level limits constrain normal choices. Turning off character availability
+enables explicitly marked custom choices. Stored legacy forget answers are
+not learning slots and never increase the displayed capacity.
+
+New picks share one draft and one total, including saved selections: a character
+with two saved cantrips and one newly granted slot sees `2 / 3`. A matching
+algorithm assigns new picks to the underlying source allowances, reassigning
+flexible picks when necessary so click order cannot strand a racial or feature
+choice. Ordinary class learning uses the current-level pool for every allowance.
+Add is disabled when no legal assignment exists. Next sends the
+filled prompts in one revision-guarded append batch, preserving their server
+identities and class levels. A level-up extends the current selection by the
+allowance the rules grant; it does not reset previously saved spells.
+
+Removing a saved selection loads its read-only edit prompt automatically. All
+previous selections remain editable while other edits or acquisitions are in
+progress. Each changed answer keeps its own retained picks, while new picks are
+assigned to the remaining eligible slots. Nothing is written on Add or Remove.
+Multiple replacements and new acquisitions are committed atomically through the
+batch revision API; an invalid choice or stale revision leaves the entire saved
+log unchanged. Dependent changes still use the dry-run confirmation. Leaving
+the tab discards unconfirmed drafts; filters and localization do not.
+
+Each spell box contains its preview control and its Add or Remove button as
+separate, keyboard-accessible buttons inside one border. On phones, compact
+plus/trash controls with accessible spell-specific names and 44-pixel touch
+targets leave more room for the name and tags; the row uses reduced padding
+and a smaller icon. The full-screen detail view retains labeled Add/Remove
+and Back controls. A single Next button
+sits immediately after the selected list beside the count, followed by filters
+and available results. There is no second Next button at the bottom. With no
+draft, Next navigates directly; with a valid draft it saves first, then advances
+from Cantrips to Spells or from Spells to Equipment. Invalid or failed saves
+keep the draft and the current tab in place.
+Selected spells stay visible under every filter. Add remains inside each box,
+and a full selection still allows previews. Confirmation is blocked while
+catalogue data is loading or has failed. Filters never change the compendium's
+URL filters. Learning uses
+the server's exact count; preparation accepts a nonempty subset up to the
+displayed capacity.
+Leaving preparation open does not prevent finishing. The saved events retain the class level that grants each selection,
+including intermediate levels of a character created above level one. Cantrip
+purposes and legacy cantrip prompt IDs route to Cantrips; other spell choices
+route to Spells. Both saved choices and outstanding prompts use that mapping. The sheet displays spell ownership per source.
+
+Editing saved spells reads the question at the original event's
+position through `GET /characters/:id/prompts?before=:seq`, with the current
+class level and subclass used for spell eligibility. The selected list is
+seeded from that event's stored picks, including their order. Loading details or
+changing language does not reset the draft. Opening, closing or abandoning this
+editor does not delete or change the saved answer. Next uses the
+replacement preview and revision guard; dependent answers are only
+revalidated against the replacement when it is submitted.
+
+Other saved choices use the existing revision/preview flow. Where a question
+must be reopened by removing its answer, the dependent-answer preview describes
+what would be lost. Changing level or abilities can require new preparation choices. There is no
+automatic selection of spells, and the builder does not simulate resting,
+spellbook-copying purchases or combat spell use.
+
+
+### Current-level spell totals
+
+Above the selected list, the wizard shows one compact explanation
+per source, using the server's `spellRules`. Equivalent acquisition allowances
+are added together, and spellbook/preparation totals for one class share the same
+line. The class label uses its current level. Ordinary class choices identify
+the owning class rather than inferring extra classes from spells shared by
+multiple lists. Racial/feature choices, automatic grants and custom exceptions
+keep their own sources.
+
+The wizard uses current-level totals, with no replacement workflow or history
+of when a spell was learned. A level-five sorcerer can select six known spells
+from spell levels one through three, including at most two level-three spells,
+then edit that list directly. The highest-level count is base acquisitions since
+that spell level unlocked plus replacement opportunities in that interval;
+replacement opportunities never increase the total. Lower spell levels have no
+separate quotas. Per-level answer IDs remain internal storage addresses; all ordinary
+learning allowances draw from the class's current spell-level pool. Increasing
+the class level adds the newly granted count. Historical spell answers can be
+edited against today's class-level pool, without rewriting the level history.
+
+There are no forget selectors, replacement counters, or “Save and review
+replacements” step. Old saved swap events still project for compatibility,
+and previously forgotten spells stay out of the selected list. The simplified
+selection policy intentionally does not simulate the stricter 2014 sequence of
+spell acquisition and one replacement per class level. Casting slots remain
+separate resources, not per-spell-level quotas for spells known.
+
+Turning off character availability continues to allow explicit custom choices
+beyond these normal totals. They retain their custom source and a compact “Custom choice” badge, including
+after saving and reopening. The allowance panel includes the selected/total
+counter (including custom selections) at bottom left and gray minus/plus
+“Change spell limit” controls at bottom right. The extra allowance cannot go
+below zero; decreases, including decreases to previously saved extras, are saved
+on Next together with increases and spell edits. Adjustments persist as a separate extra
+allowance; they do not change class totals or highest-level caps. With character
+availability enabled, extras can be picked from the class pool and are explicitly
+custom. Availability off still permits unrestricted custom exceptions, even if
+the counter exceeds its normal-plus-extra denominator.
+
+Selected cards use blue highlighting. Both lists use compact 32px icons, reduced
+padding and one row action; mobile keeps a 44px action target. Available results
+start with 20 rows; “Load more” appends the next 20, matching the spells page.
+Changing filters resets the loaded range, while adding or removing a selection
+keeps the expanded list. The immutable catalogue's lightweight summaries are
+cached, filtered and paginated locally; descriptions are hydrated only for the
+visible rows and selected spells. The selected cantrip list has one “Cantrips”
+caption without a redundant level-zero heading. Selected leveled spells retain
+their level headings; available results remain sorted by level and localized name.
+Each allowance source, including additional allowance, has a caption with gray
+details on a separate line.

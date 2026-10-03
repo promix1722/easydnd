@@ -74,6 +74,7 @@ export {
   listCharacters,
   moveCharacter,
   replaceEvent,
+  reviseEvents,
   truncateEvents,
 } from './characters'
 export type {
@@ -95,6 +96,7 @@ export type {
   Prompt,
   PromptEvent,
   PromptsResponse,
+  SpellRule,
   ReviseResponse,
   Sheet,
   Skill,

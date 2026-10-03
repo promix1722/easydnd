@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
-import { bySlug, getCollection, getEntries , describeField } from '@/lib/api'
-import type { Answer, ApiFieldError, Change, Entry, OptionSet, Prompt } from '@/lib/api'
-import { useT } from '@/lib/i18n'
+import { describeField, describeError } from '@/lib/api'
+import type { Answer, ApiFieldError, Change, Entry, Equipment, Prompt } from '@/lib/api'
+import { useT, useLocale } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { Badge, BlockList, Button, Group, Loader, Stack, Text } from '@/ui'
 import type { BlockListItem } from '@/ui'
@@ -19,13 +19,15 @@ import { PromptCard } from './PromptCard'
 import { choiceName, writtenAs } from './promptNames'
 import { refName } from './refNames'
 import type { SettledRow } from './settled'
+import { EquipmentSummary } from './EquipmentSummary'
 import { WrittenForm } from './WrittenForm'
 
-import { collectionOfKind, kindOf, slugOf } from '@/domain'
+import { loadEntries } from './choiceEntries'
 
 export interface StagePanelProps {
   /** Everything on this tab: what was decided, and what is still asked. */
   blocks: readonly Block[]
+  equipment?: Equipment
   openKey: string | null
   onOpen: (key: string | null) => void
   /** The question the open block is asking, where it has one. */
@@ -88,6 +90,7 @@ export interface StagePanelProps {
  */
 export function StagePanel({
   blocks,
+  equipment,
   openKey,
   onOpen,
   asking,
@@ -171,7 +174,8 @@ export function StagePanel({
           <BlockList items={group.blocks.map(itemFor)} open={openKey} onOpen={onOpen} />
         </Stack>
       ))}
-      {blocks.length === 0 ? (
+      {equipment !== undefined && <EquipmentSummary equipment={equipment} names={names} />}
+      {blocks.length === 0 && equipment === undefined ? (
         <Text size="sm" c="dimmed">
           {t('stagePanel.nothingYet')}
         </Text>
@@ -375,7 +379,7 @@ function AnswerSurface({
     )
   }
 
-  return <PromptWithOptions prompt={prompt} pending={pending} onAnswer={onPicks} />
+  return <PromptWithOptions prompt={prompt} initialAnswers={replaces?.event.choices ?? []} pending={pending} onAnswer={onPicks} />
 }
 
 /** The level a settled declaration stated, read back for the form changing it. */
@@ -405,64 +409,44 @@ function maybeError(
  */
 function PromptWithOptions({
   prompt,
+  initialAnswers,
   pending,
   onAnswer,
 }: {
   prompt: Prompt
+  initialAnswers: readonly Answer[]
   pending: boolean
   onAnswer: (answers: Answer[]) => void
 }) {
+  const t = useT()
+  const locale = useLocale()
   const [entries, setEntries] = useState<Map<string, Entry>>(new Map())
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
+
+  const [request, setRequest] = useState({ prompt, locale, attempt })
+  if (request.prompt !== prompt || request.locale !== locale || request.attempt !== attempt) {
+    setRequest({ prompt, locale, attempt })
+    setLoading(true)
+    setError(null)
+  }
 
   useEffect(() => {
     let live = true
     void loadEntries(prompt).then((loaded) => {
-      if (live) setEntries(loaded)
+      if (live) { setEntries(loaded); setLoading(false) }
+    }).catch((cause: unknown) => {
+      if (live) { setError(describeError(t, cause)); setLoading(false) }
     })
     return () => {
       live = false
     }
-  }, [prompt])
+  }, [prompt, locale, attempt, t])
 
-  return <PromptCard prompt={prompt} entries={entries} pending={pending} onAnswer={onAnswer} />
-}
-
-/**
- * Fetches the catalogue entries a prompt's options name.
- *
- * Branches included, because a branch is drawn in the same card as the
- * question that offered it -- so its options need names before anything is
- * posted, not after the server poses it as a prompt of its own. A branch
- * drawing on a whole collection, like the improvement's "or a feat", pulls
- * that collection in the same pass.
- */
-async function loadEntries(prompt: Prompt): Promise<Map<string, Entry>> {
-  const whole = new Set<string>()
-  const wanted = new Map<string, Set<string>>()
-
-  const visitSet = (set: OptionSet) => {
-    if (set.kind === 'collection' && set.collection !== undefined) {
-      const collection = collectionOfKind(set.collection)
-      if (collection !== null) whole.add(collection)
-      return
-    }
-    for (const option of set.options ?? []) {
-      if (option.kind === 'ref' && option.ref !== undefined) {
-        const collection = collectionOfKind(kindOf(option.ref))
-        if (collection === null) continue
-        const bucket = wanted.get(collection) ?? new Set<string>()
-        bucket.add(slugOf(option.ref))
-        wanted.set(collection, bucket)
-      }
-      if (option.items !== undefined) visitSet({ kind: 'explicit', options: option.items })
-      if (option.choice !== undefined) visitSet(option.choice.from)
-    }
-  }
-  visitSet(prompt.choice.from)
-
-  const loaded = await Promise.all([
-    ...[...whole].map((collection) => getCollection<Entry>(collection)),
-    ...[...wanted].map(([collection, slugs]) => getEntries<Entry>(collection, [...slugs])),
-  ])
-  return bySlug(loaded.flat())
+  return <Stack gap="sm">
+    {loading && <Text size="sm">{t('page.loadingEllipsis')}</Text>}
+    {error !== null && <><Text c="red">{error}</Text><Button onClick={() => setAttempt((n) => n + 1)}>{t('page.retry')}</Button></>}
+    <PromptCard prompt={prompt} initialAnswers={initialAnswers} entries={entries} pending={pending || loading || error !== null} onAnswer={onAnswer} />
+  </Stack>
 }

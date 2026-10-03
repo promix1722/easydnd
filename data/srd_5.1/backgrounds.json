@@ -22,6 +22,14 @@
       {
         "item": "pouch",
         "count": 1
+      },
+      {
+        "item": "block-of-incense",
+        "count": 5
+      },
+      {
+        "item": "vestments",
+        "count": 1
       }
     ],
     "startingEquipmentOptions": [
@@ -33,8 +41,32 @@
           "kind": "equipment-category",
           "category": "holy-symbols"
         }
+      },
+      {
+        "prompt": "acolyte/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:prayer-book",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:prayer-wheel",
+              "count": 1
+            }
+          ]
+        }
       }
     ],
+    "startingGold": {
+      "amount": 15,
+      "unit": "gp"
+    },
     "feature": "acolyte-shelter-of-the-faithful",
     "personalityTraits": {
       "prompt": "acolyte/personality/0",

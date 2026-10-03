@@ -392,6 +392,8 @@ func compilePacks(docs []*PackDocument, locale rules.Locale, lock pack.Lock) (*c
 		mechanics.Actions = append(mechanics.Actions, m.Actions...)
 		mechanics.Resources = append(mechanics.Resources, m.Resources...)
 		mechanics.Rules = append(mechanics.Rules, m.Rules...)
+		mechanics.SpellBenefits = append(mechanics.SpellBenefits, m.SpellBenefits...)
+		mechanics.ChoiceRequirements = append(mechanics.ChoiceRequirements, m.ChoiceRequirements...)
 		for id, c := range m.Casting {
 			if _, ok := mechanics.Casting[id]; ok {
 				return nil, fmt.Errorf("duplicate casting profile %s", id)
@@ -550,6 +552,24 @@ func normalizeMechanics(p *PackDocument) (PackMechanics, error) {
 			cost := &a.Costs[j]
 			cost.Resource = normalizeID(p.Manifest.ID, cost.Resource)
 			normalizeExpression(p.Manifest.ID, &cost.Amount)
+		}
+	}
+	for i := range m.ChoiceRequirements {
+		requirement := &m.ChoiceRequirements[i]
+		requirement.Prompt = normalizeID(p.Manifest.ID, requirement.Prompt)
+		requirement.Pick = normalizeID(p.Manifest.ID, requirement.Pick)
+		for j := range requirement.AnyProficiency {
+			requirement.AnyProficiency[j] = normalizeID(p.Manifest.ID, requirement.AnyProficiency[j])
+		}
+	}
+	for i := range m.SpellBenefits {
+		b := &m.SpellBenefits[i]
+		b.ID = normalizeID(p.Manifest.ID, b.ID)
+		b.Owner = Ref(normalizeRef(p.Manifest.ID, string(b.Owner)))
+		b.Class = normalizeID(p.Manifest.ID, b.Class)
+		b.Ability = normalizeID(p.Manifest.ID, b.Ability)
+		for j := range b.Spells {
+			b.Spells[j] = normalizeID(p.Manifest.ID, b.Spells[j])
 		}
 	}
 	casting := map[string]CastingProfile{}

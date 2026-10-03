@@ -3,6 +3,7 @@ package character
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -61,6 +62,9 @@ type PromptEvent struct {
 
 // Prompt is one question the character still has to answer.
 type Prompt struct {
+	Blocked []rules.Slug
+	Purpose string
+	UpTo    bool
 	// Choice is the question, in the same grammar the compendium uses for
 	// the prompts it poses itself. Prompts the catalogue does not pose --
 	// "which race?" -- are synthesised into the same shape rather than into
@@ -195,6 +199,7 @@ type promptBuilder struct {
 	answers answers
 	scored  bool
 	empty   bool
+	all     bool
 
 	out []Prompt
 }
@@ -208,6 +213,8 @@ func (b *promptBuilder) build() []Prompt {
 	b.background()
 	b.classes()
 	b.packRules()
+	spells, _ := spellChoices(b.state, b.cat, b.answers, b.all)
+	b.out = append(b.out, spells...)
 	return b.out
 }
 
@@ -216,10 +223,14 @@ func (b *promptBuilder) add(p Prompt) {
 	if p.Choice.Prompt.IsZero() {
 		return
 	}
-	if b.answers.answered(p.Choice) {
+	if !b.all && b.answers.answered(p.Choice) {
 		return
 	}
 	p.Held = b.heldIn(p.Choice)
+	p.Blocked = b.blockedIn(p.Choice)
+	if p.HeldOnly {
+		p.Held = b.expertiseEligible(p.Choice, p.Held)
+	}
 	// HeldOnly is a statement about picking proficiencies, so it applies to
 	// the prompt that picks them and not to a branch selector above it.
 	// Expertise's outer prompt chooses between "two skills" and "one skill
@@ -252,6 +263,8 @@ func (b *promptBuilder) addChoice(c *rules.Choice, p Prompt) {
 	if c == nil {
 		return
 	}
+	resolved := b.cat.ResolveChoice(*c)
+	c = &resolved
 	p.Choice = *c
 	b.add(p)
 	if !b.answers.answered(*c) {
@@ -422,7 +435,8 @@ func (b *promptBuilder) race() {
 		if trait.Specific != nil {
 			b.addChoice(trait.Specific.SpellOptions, traitPrompt)
 			b.addChoice(trait.Specific.SubtraitOptions, traitPrompt)
-			b.addChoice(trait.Specific.BreathWeapon, traitPrompt)
+			// BreathWeapon describes the attack granted by ancestry. Its
+			// legacy choice-shaped payload is not a player decision.
 		}
 	}
 }
@@ -720,7 +734,8 @@ func refOptions(kind rules.RefKind, slugs []rules.Slug) rules.OptionSet {
 // heldIn reports which of a prompt's options the character already has.
 //
 // Only the cases where a duplicate is actually illegal are reported:
-// proficiencies and languages. Being offered a second rapier is fine.
+// proficiencies, languages, traits, feats, and features (including fighting
+// styles shared by different classes). A second rapier is fine.
 //
 // It looks inside branches as well as at the options themselves, because the
 // client answers a branch in the card that offered it -- so the options it
@@ -750,11 +765,62 @@ func (b *promptBuilder) heldIn(c rules.Choice) []rules.Slug {
 	if c.From.Kind == rules.OptionsFromCollection && c.From.Collection == rules.RefLanguage {
 		held = append(held, b.state.Base.Languages...)
 	}
+	if c.From.Kind == rules.OptionsFromCollection && c.From.Collection == rules.RefFeat {
+		held = append(held, b.state.Feats...)
+	}
 	return held
+}
+
+// Class-specific fighting-style entries describe the same non-repeatable benefit.
+func featureIdentity(slug rules.Slug) string {
+	s := slug.String()
+	if at := strings.Index(s, "fighting-style-"); at >= 0 {
+		return s[at:]
+	}
+	return s
+}
+
+func (b *promptBuilder) expertiseEligible(c rules.Choice, held []rules.Slug) []rules.Slug {
+	var out []rules.Slug
+	for _, slug := range held {
+		skill := slug
+		if def, ok := b.cat.Proficiencies.Get(slug); ok {
+			skill = def.Reference.Slug
+		}
+		if b.state.Skills.BySkill[skill].Proficiency == rules.Expertise {
+			continue
+		}
+		used := false
+		for _, feature := range b.state.Features {
+			def, ok := b.cat.Features.Get(feature)
+			if !ok || def.Specific == nil {
+				continue
+			}
+			ch := oneList(def.Specific.ExpertiseOptions)
+			if ch != nil && ch.Prompt != c.Prompt && slices.Contains(b.answers.slugs(ch), slug) {
+				used = true
+			}
+		}
+		if !used {
+			out = append(out, slug)
+		}
+	}
+	return out
 }
 
 func (b *promptBuilder) holds(ref rules.Ref) bool {
 	switch ref.Kind {
+	case rules.RefTrait:
+		return slices.Contains(b.state.Traits, ref.Slug)
+	case rules.RefFeat:
+		return slices.Contains(b.state.Feats, ref.Slug)
+	case rules.RefFeature:
+		for _, held := range b.state.Features {
+			if featureIdentity(held) == featureIdentity(ref.Slug) {
+				return true
+			}
+		}
+		return false
 	case rules.RefLanguage:
 		return slices.Contains(b.state.Base.Languages, ref.Slug)
 	case rules.RefProficiency:
@@ -795,4 +861,63 @@ func abilityScoreIncrease(cat *catalog.Catalog) int {
 		return cat.Mechanics.Core.AbilityScoreIncrease
 	}
 	return 2
+}
+
+// ResolvedSelections reads answers through their original choice trees. Bundle
+// keys are identities, not display labels; flattening here preserves quantities
+// and fixed items beside nested choices.
+func ResolvedSelections(log Log, cat *catalog.Catalog) (map[rules.Slug]ResolvedChoice, error) {
+	state, err := Project(log, cat)
+	if err != nil {
+		return nil, err
+	}
+	b := promptBuilder{cat: cat, state: state, answers: foldAnswers(log), scored: scoresWereSet(log), all: true}
+	out := map[rules.Slug]ResolvedChoice{}
+	for _, prompt := range b.build() {
+		resolved := ResolvedChoice{Source: prompt.Source, Kind: prompt.Choice.Kind, Purpose: prompt.Purpose}
+		b.answers.chosen(prompt.Choice, func(option rules.Option) { resolved.Options = append(resolved.Options, option) })
+		out[prompt.Choice.Prompt] = resolved
+	}
+	return out, nil
+}
+
+func (b *promptBuilder) blockedIn(choice rules.Choice) []rules.Slug {
+	var blocked []rules.Slug
+	for _, requirement := range b.cat.Mechanics.ChoiceRequirements {
+		if requirement.Prompt != choice.Prompt {
+			continue
+		}
+		allowed := false
+		for _, proficiency := range requirement.AnyProficiency {
+			if b.holds(rules.NewRef(rules.RefProficiency, proficiency)) {
+				allowed = true
+			}
+		}
+		if !allowed {
+			blocked = append(blocked, requirement.Pick)
+		}
+	}
+	var walk func(rules.Option)
+	walk = func(option rules.Option) {
+		switch opt := option.(type) {
+		case rules.NestedOption:
+			blocked = append(blocked, b.blockedIn(opt.Choice)...)
+		case rules.BundleOption:
+			for _, item := range opt.Items {
+				walk(item)
+			}
+		}
+	}
+	for _, option := range choice.From.Options {
+		walk(option)
+	}
+	return blocked
+}
+
+// ResolvedChoice carries the semantics of a now-closed question alongside its picks.
+type ResolvedChoice struct {
+	Source  rules.Ref
+	Kind    rules.ChoiceKind
+	Purpose string
+	Options []rules.Option
 }

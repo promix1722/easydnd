@@ -197,6 +197,9 @@ func TestStubLeavesNothingOpen(t *testing.T) {
 
 	var open []rules.Slug
 	for _, p := range prompts {
+		if p.Purpose == "custom" && p.Optional {
+			continue
+		}
 		open = append(open, p.Choice.Prompt)
 	}
 	if len(open) != 0 {
@@ -251,28 +254,10 @@ func TestStubOptionalAnswersReachTheSheet(t *testing.T) {
 		}
 	}
 
-	// The amulet chosen for acolyte/starting-equipment/0 is *not*, and this
-	// asserts the gap rather than the feature so that closing it fails here
-	// and gets noticed.
-	//
-	// That prompt draws its options from an equipment *category*
-	// (rules.OptionsFromEquipmentCategory, "any item in holy-symbols"), and
-	// nothing outside the catalogue DTO reads that kind: rules.OptionKeys
-	// returns no keys for it, so validateAnswer's membership check is skipped
-	// and any slug at all is accepted -- "not-a-real-item" and "rapier"
-	// included -- and the projector materialises none of them. The answer is
-	// still recorded and still closes the prompt, which is why the stub has
-	// nothing outstanding; it just buys no equipment.
-	//
-	// Pre-existing, and not about the stub: every category-drawn equipment
-	// prompt in the compendium behaves this way. Delete this and assert the
-	// amulet when that is fixed.
-	for _, stack := range append(slices.Clone(sheet.Equipment.Backpack), sheet.Equipment.Equipped...) {
-		if stack.Item == "amulet" {
-			t.Error("the amulet now reaches the sheet -- equipment-category choices " +
-				"have been implemented, so assert it properly and drop this")
-		}
+	if !backpack["amulet"] {
+		t.Error("selected holy symbol is missing from the backpack")
 	}
+
 }
 
 // TestStubEntriesAreAttributed is the check that keeps the stub a log the build

@@ -1087,3 +1087,106 @@ func TestGuestsDoNotSeeEachOthersCharacters(t *testing.T) {
 		t.Errorf("second guest sees %d characters belonging to the first", len(body.Characters))
 	}
 }
+
+func TestSavedEquipmentSelectionsPreserveBundleQuantities(t *testing.T) {
+	r, session := newFullRouter(t)
+	id := createCharacter(t, r, session)
+	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1,
+		"events": []map[string]any{{"type": "class", "ref": "class:fighter", "level": 1,
+			"choices":    []map[string]any{{"prompt": "fighter/starting-equipment/2", "picks": []string{"crossbow-light+crossbow-bolt"}}},
+			"selections": []map[string]any{{"kind": "ref", "key": "plate", "ref": "item:plate-armor", "count": 999}},
+		}},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("append: %d %s", rec.Code, rec.Body)
+	}
+	for _, locale := range []string{"en", "ru"} {
+		rec = send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/events?locale="+locale, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("events: %d %s", rec.Code, rec.Body)
+		}
+		events := decode[characterapi.EventsResponse](t, rec).Events
+		selected := events[len(events)-1].Selections
+		if len(selected) != 2 || selected[0].Ref != "item:crossbow-light" || selected[1].Ref != "item:crossbow-bolt" || selected[1].Count != 20 {
+			t.Fatalf("resolved selection: %+v", selected)
+		}
+	}
+}
+
+func TestPromptEditPreviewDoesNotWrite(t *testing.T) {
+	r, session := newFullRouter(t)
+	id := createCharacter(t, r, session)
+	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1, "events": []map[string]any{{"type": "race", "ref": "race:elf"}},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("append: %d %s", rec.Code, rec.Body)
+	}
+	before := readLog(t, r, session, id).Body.String()
+	rec = send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts?before=2", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("preview: %d %s", rec.Code, rec.Body)
+	}
+	preview := decode[characterapi.PromptsResponse](t, rec)
+	if preview.Seq != 2 || !hasPrompt(preview, "character/race") {
+		t.Fatalf("preview: %+v", preview)
+	}
+	if after := readLog(t, r, session, id).Body.String(); before != after {
+		t.Fatal("preview changed events")
+	}
+	for _, value := range []string{"", "bad", "0", "1", "3"} {
+		rec = send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts?before="+value, nil)
+		if rec.Code < 400 {
+			t.Fatalf("accepted before=%q", value)
+		}
+	}
+}
+
+func TestReviseEventsAtomically(t *testing.T) {
+	r, session := newFullRouter(t)
+	id := createCharacter(t, r, session)
+	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1, "events": []map[string]any{scoresEvent(), {"type": "race", "ref": "race:dwarf"}, {"type": "subrace", "ref": "subrace:hill-dwarf"}},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("build: %s", rec.Body)
+	}
+	head := decode[characterapi.WriteResponse](t, rec)
+	payload := map[string]any{"expectedSeq": head.Seq, "expectedRevision": head.Revision,
+		"replacements": []map[string]any{
+			{"seq": 3, "event": map[string]any{"type": "race", "ref": "race:elf"}},
+			{"seq": 4, "event": map[string]any{"type": "subrace", "ref": "subrace:high-elf"}},
+		},
+		"events": []map[string]any{{"type": "background", "ref": "background:acolyte"}},
+	}
+	path := "/v1/characters/" + id + "/events/revise"
+	rec = send(t, r, session, http.MethodPost, path+"?dryRun=true", payload)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("preview: %d %s", rec.Code, rec.Body)
+	}
+	preview := decode[characterapi.WriteResponse](t, rec)
+	if preview.Seq != 5 || len(preview.Dropped) != 0 {
+		t.Fatalf("preview = %+v", preview)
+	}
+	stored := decode[characterapi.EventsResponse](t, readLog(t, r, session, id))
+	if stored.Events[2].Ref != "race:dwarf" || stored.Seq != 4 {
+		t.Fatal("preview wrote changes")
+	}
+	rec = send(t, r, session, http.MethodPost, path, payload)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("commit: %d %s", rec.Code, rec.Body)
+	}
+	stored = decode[characterapi.EventsResponse](t, readLog(t, r, session, id))
+	if stored.Seq != 5 || stored.Events[2].Ref != "race:elf" || stored.Events[3].Ref != "subrace:high-elf" || stored.Events[4].Ref != "background:acolyte" {
+		t.Fatalf("not all changes saved: %+v", stored)
+	}
+	rec = send(t, r, session, http.MethodPost, path, payload)
+	if rec.Code == http.StatusOK {
+		t.Fatal("accepted stale draft")
+	}
+	rec = send(t, r, nil, http.MethodPost, path, payload)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated = %d", rec.Code)
+	}
+}

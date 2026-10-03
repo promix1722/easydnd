@@ -142,6 +142,7 @@ func stubEvents() []domain.Event {
 				// The prompt is the holy-symbols equipment category; an amulet
 				// is one of its three.
 				{Prompt: "acolyte/starting-equipment/0", Picks: []rules.Slug{"amulet"}},
+				{Prompt: "acolyte/starting-equipment/1", Picks: []rules.Slug{"prayer-book"}},
 			},
 		},
 		// Who this character is, which is four sentences and an alignment.

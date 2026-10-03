@@ -197,7 +197,7 @@ describe('StagePanel', () => {
   })
 
   it('says a question is being put again where it cannot be re-posed', async () => {
-    renderAt(viewport, panel([NESTED_ROW], [], { openKey: 'settled:3' }))
+    renderAt(viewport, panel([NESTED_ROW], [], { openKey: 'open:half-elf/ability-bonus/0' }))
 
     // No button and no explanation to read past: opening a decided block puts
     // its question again, and this one takes a moment longer to do it.

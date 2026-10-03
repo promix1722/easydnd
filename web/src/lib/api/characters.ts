@@ -1,4 +1,4 @@
-import type { Choice } from './catalog'
+import type { Choice, Option } from './catalog'
 import { request } from './client'
 
 /**
@@ -124,6 +124,19 @@ export interface Resources {
   class?: Pool[]
 }
 
+export interface SpellSource {
+  source: string
+  class?: string
+  ability?: string
+  cantrips?: string[]
+  known?: string[]
+  spellbook?: string[]
+  prepared?: string[]
+  arcanum?: string[]
+  mastery?: string[]
+  preparationLimit?: number
+}
+
 export interface Sheet {
   identity: Identity
   base: Base
@@ -133,7 +146,7 @@ export interface Sheet {
   status: Status
   equipment: Equipment
   resources: Resources
-  spells: { cantrips?: string[]; known?: string[]; prepared?: string[]; ability?: string }
+  spells: { sources?: SpellSource[]; cantrips?: string[]; known?: string[]; prepared?: string[]; ability?: string }
   actions: unknown[]
   feats?: string[]
   traits?: string[]
@@ -162,6 +175,11 @@ export interface Change {
 }
 
 export interface CharacterEvent {
+  choiceSource?: string
+  choiceKind?: string
+  purpose?: string
+  id?: string
+  selections?: Option[]
   seq?: number
   type: string
   at?: string
@@ -190,6 +208,9 @@ export interface PromptEvent {
 }
 
 export interface Prompt {
+  blocked?: string[]
+  purpose?: string
+  upTo?: boolean
   choice: Choice
   /** The catalogue entry posing this prompt, as "kind:slug". */
   source?: string
@@ -209,7 +230,23 @@ export interface Prompt {
   heldOnly: boolean
 }
 
+export interface SpellRule {
+  maxLevelCount?: number
+  id: string
+  source: string
+  class?: string
+  classLevel?: number
+  count: number
+  minLevel: number
+  maxLevel: number
+  purpose: string
+  optional: boolean
+  listClasses?: string[]
+  automatic?: string[]
+}
+
 export interface PromptsResponse {
+  spellRules?: SpellRule[]
   revision?: number
   seq: number
   /** Nothing required is outstanding. Separate from the list being empty: a
@@ -383,8 +420,9 @@ export function getSheet(id: string, signal?: AbortSignal): Promise<Sheet> {
   return request<Sheet>(`/characters/${id}/sheet`, signal ? { signal } : {})
 }
 
-export function getPrompts(id: string, signal?: AbortSignal): Promise<PromptsResponse> {
-  return request<PromptsResponse>(`/characters/${id}/prompts`, signal ? { signal } : {})
+export function getPrompts(id: string, signal?: AbortSignal, before?: number): Promise<PromptsResponse> {
+  const query = before === undefined ? '' : `?before=${before}`
+  return request<PromptsResponse>(`/characters/${id}/prompts${query}`, signal ? { signal } : {})
 }
 
 export function getEvents(
@@ -516,5 +554,14 @@ export function copyCharacter(id: string, folder?: string): Promise<CreateRespon
   return request<CreateResponse>(`/characters/${id}/copy`, {
     method: 'POST',
     body: { folder: folder ?? '' },
+  })
+}
+
+/** Atomically save edits to several past choices together with new answers. */
+export function reviseEvents(id: string, expectedSeq: number, expectedRevision: number,
+  replacements: { seq: number; event: CharacterEvent }[], events: CharacterEvent[], dryRun = false,
+): Promise<ReviseResponse> {
+  return request<ReviseResponse>(`/characters/${id}/events/revise${dryRun ? '?dryRun=true' : ''}`, {
+    method: 'POST', body: { expectedSeq, expectedRevision, replacements, events },
   })
 }

@@ -2413,6 +2413,22 @@
     }
   },
   {
+    "slug": "prayer-book",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 0,
+      "unit": ""
+    }
+  },
+  {
+    "slug": "prayer-wheel",
+    "category": "adventuring-gear",
+    "cost": {
+      "amount": 0,
+      "unit": ""
+    }
+  },
+  {
     "slug": "priests-pack",
     "category": "adventuring-gear",
     "cost": {

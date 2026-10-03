@@ -121,42 +121,66 @@ func Revise(
 			"field.seq.initFirst")
 	}
 
-	// The prefix is a Log rather than a bare slice, and each entry is staged
-	// through Append, because the replay projects the prefix at every step
-	// and Project refuses a log whose sequence numbers do not run 1..n. The
-	// numbering therefore has to be right *during* the rebuild, not only at
-	// the end of it.
-	rebuilt := domain.Log{Events: slices.Clone(log.Events[:targetSeq-1])}
+	return reviseMany(log, cat, map[int]*domain.Event{targetSeq: replacement}, nil)
+}
+
+// reviseMany validates explicit edits against the rebuilt prefix, retaining
+// original event addresses until every replacement has been applied.
+func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*domain.Event, added []domain.Event) (domain.Log, []Dropped, error) {
+	for seq, replacement := range replacements {
+		if seq < 1 || seq > log.LastSeq() || (seq == 1 && (replacement == nil || replacement.Type != domain.EventInit)) || (seq != 1 && replacement != nil && replacement.Type == domain.EventInit) {
+			return domain.Log{}, nil, seqError("invalid replacement address", "field.seq.outOfRange")
+		}
+	}
+	rebuilt := domain.Log{}
 	stage := func(event domain.Event) error {
 		event.Seq = 0
 		return rebuilt.Append(event)
 	}
 
-	if replacement != nil {
-		open, err := domain.Prompts(rebuilt, cat)
-		if err != nil {
-			return domain.Log{}, nil, err
-		}
-		// Strict, exactly as an append is: a replacement is something the
-		// player is choosing right now. A rejection here writes nothing at
-		// all, so the stored log is byte-identical afterwards.
-		staged := *replacement
-		staged.ID = log.Events[targetSeq-1].ID
-		if targetSeq == 1 {
-			staged.RulesLock = log.RulesLock()
-		}
-		staged.Seq = 0
-		if err := validateEvent(rebuilt, cat, open, staged, 0); err != nil {
-			return domain.Log{}, nil, err
-		}
-		staged.Source = sourceOf(rebuilt, cat, open, staged)
-		if err := stage(staged); err != nil {
-			return domain.Log{}, nil, err
-		}
-	}
-
 	var dropped []Dropped
-	for _, event := range log.Events[targetSeq:] {
+	for _, event := range log.Events {
+		if replacement, edited := replacements[event.Seq]; edited {
+			if replacement == nil {
+				continue
+			}
+			staged := *replacement
+			staged.ID = event.ID
+			staged.Seq = 0
+			if event.Seq == 1 {
+				staged.RulesLock = log.RulesLock()
+			}
+			validationLog, err := spellEditContext(rebuilt, log, cat, staged)
+			if err != nil {
+				return domain.Log{}, nil, err
+			}
+			open, err := domain.Prompts(validationLog, cat)
+			if err != nil {
+				return domain.Log{}, nil, err
+			}
+			if err := validateEvent(validationLog, cat, open, staged, 0); err != nil {
+				return domain.Log{}, nil, err
+			}
+			staged.Source = sourceOf(rebuilt, cat, open, staged)
+			if err := stage(staged); err != nil {
+				return domain.Log{}, nil, err
+			}
+			continue
+		}
+		// The untouched prefix must not be revalidated as new user input.
+		beforeFirst := true
+		for seq := range replacements {
+			if seq < event.Seq {
+				beforeFirst = false
+				break
+			}
+		}
+		if beforeFirst {
+			if err := stage(event); err != nil {
+				return domain.Log{}, nil, err
+			}
+			continue
+		}
 		open, err := domain.Prompts(rebuilt, cat)
 		if err != nil {
 			return domain.Log{}, nil, err
@@ -189,6 +213,16 @@ func Revise(
 		}
 		staged.Source = sourceOf(rebuilt, cat, open, staged)
 		if err := stage(staged); err != nil {
+			return domain.Log{}, nil, err
+		}
+	}
+
+	appended := slices.Clone(added)
+	if err := validateAndAttribute(rebuilt, cat, appended); err != nil {
+		return domain.Log{}, nil, err
+	}
+	for _, event := range appended {
+		if err := stage(event); err != nil {
 			return domain.Log{}, nil, err
 		}
 	}
@@ -264,6 +298,11 @@ func (s *Service) Revise(
 	replacement *domain.Event,
 	commit bool,
 ) (Revision, error) {
+	return s.ReviseBatch(ctx, owner, id, locale, expectedSeq, map[int]*domain.Event{targetSeq: replacement}, nil, commit)
+}
+
+// ReviseBatch commits replacements and acquisitions as one guarded log update.
+func (s *Service) ReviseBatch(ctx context.Context, owner domain.OwnerID, id domain.ID, locale rules.Locale, expectedSeq int, replacements map[int]*domain.Event, added []domain.Event, commit bool) (Revision, error) {
 	character, cat, err := s.load(ctx, owner, id, locale)
 	if err != nil {
 		return Revision{}, err
@@ -276,7 +315,15 @@ func (s *Service) Revise(
 			"character %q is at sequence %d, not %d", id, got, expectedSeq)
 	}
 
-	rebuilt, dropped, err := Revise(character.Log, cat, targetSeq, replacement)
+	var rebuilt domain.Log
+	var dropped []Dropped
+	if len(replacements) == 1 && len(added) == 0 {
+		for seq, event := range replacements {
+			rebuilt, dropped, err = Revise(character.Log, cat, seq, event)
+		}
+	} else {
+		rebuilt, dropped, err = reviseMany(character.Log, cat, replacements, added)
+	}
 	if err != nil {
 		return Revision{}, err
 	}

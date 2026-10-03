@@ -5,11 +5,13 @@ import "github.com/promix1722/easydnd/internal/domain/rules"
 // Mechanics is compiled pack policy. Empty policy is supported only by legacy
 // in-memory fixtures; installed packs always carry an explicit policy.
 type Mechanics struct {
-	Core      CoreRules
-	Actions   []ActionDefinition
-	Resources []ResourceDefinition
-	Rules     []RuleDefinition
-	Casting   map[rules.Slug]CastingProfile
+	Core               CoreRules
+	Actions            []ActionDefinition
+	Resources          []ResourceDefinition
+	Rules              []RuleDefinition
+	Casting            map[rules.Slug]CastingProfile
+	SpellBenefits      []SpellBenefit
+	ChoiceRequirements []ChoiceRequirement
 }
 
 type CoreRules struct {
@@ -33,6 +35,12 @@ type SenseGrant struct {
 }
 
 type CastingProfile struct {
+	Selection               string // known, prepared, or spellbook
+	PrepareDivisor          int
+	BookStart, BookPerLevel int
+	ReplaceKnown            bool
+	ExpandedSubclass        bool
+
 	Kind                   string // shared or independent
 	Numerator, Denominator int
 	Rounding               string // floor or ceil, applied per class contribution
@@ -105,4 +113,24 @@ type ActionDefinition struct {
 type ResourceCost struct {
 	Resource rules.Slug
 	Amount   rules.Expression
+}
+
+// SpellBenefit describes a source-specific acquisition or automatic grant.
+// Level is a class level for class features and character level for racial traits.
+type SpellBenefit struct {
+	Ability                  rules.Ability
+	ID                       rules.Slug
+	Owner                    rules.Ref
+	Class                    rules.Slug
+	Level, Count, SpellLevel int
+	Mode                     string // cantrip, known, prepared, arcanum, mastery, or spellbook
+	From                     string // class, any, or book
+	Spells                   []rules.Slug
+	CountsKnown              bool
+}
+
+// ChoiceRequirement keeps conditional starting-equipment offers in pack policy.
+type ChoiceRequirement struct {
+	Prompt, Pick   rules.Slug
+	AnyProficiency []rules.Slug
 }

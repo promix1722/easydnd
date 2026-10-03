@@ -387,6 +387,8 @@ const SHEET = {
 interface Wire {
   sheet?: unknown
   prompts?: unknown
+  editPrompts?: unknown
+  spellEntries?: unknown[]
   /** What `/prompts` answers once something has been written. */
   then?: unknown
   events?: unknown
@@ -418,6 +420,8 @@ let read: string[] = []
 function mockApi({
   sheet,
   prompts = RACE_PROMPT,
+  editPrompts,
+  spellEntries,
   then,
   events = LOG_JUST_CREATED,
   thenEvents,
@@ -442,6 +446,7 @@ function mockApi({
       }
       if (url.includes('/prompts')) {
         read.push(url)
+        if (url.includes('before=') && editPrompts !== undefined) return jsonResponse(editPrompts)
         if (until !== undefined && posted.length > 0) await until
         return jsonResponse(then !== undefined && posted.length > 0 ? then : prompts)
       }
@@ -449,6 +454,7 @@ function mockApi({
         return jsonResponse(thenEvents !== undefined && posted.length > 0 ? thenEvents : events)
       }
       if (url.includes('/sheet')) return jsonResponse(sheet ?? SHEET)
+      if (url.includes('/catalog/spells')) return jsonResponse(spellEntries ?? [])
       if (url.includes('/catalog/races')) return jsonResponse(RACES)
       if (url.includes('/catalog/subraces')) return jsonResponse(SUBRACES)
       if (url.includes('/catalog/alignments')) return jsonResponse(ALIGNMENTS)
@@ -735,7 +741,7 @@ describe('BuildScreen', () => {
     // hang off -- and the scores straight after it, because they are what the
     // class was picked for. Nothing is disabled, because a tab is a place to
     // look as well as a place to answer.
-    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
+    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Cantrips', 'Spells', 'Equipment'])
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
   })
 
@@ -1146,7 +1152,7 @@ describe('a new character', () => {
     // The scores are a question asked of a character that exists, not a field
     // on the form that creates one.
     expect(screen.queryByText(/ability scores/)).not.toBeInTheDocument()
-    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
+    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Cantrips', 'Spells', 'Equipment'])
   })
 
   it('keeps the name where its question was when the character is created', async () => {
@@ -1259,7 +1265,7 @@ describe('a new character', () => {
     // that had already succeeded. It read as a reload because it looked like
     // one. The tabs never go, and neither does the block being answered.
     expect(screen.queryByText('Working out what is next...')).not.toBeInTheDocument()
-    expect(tabs()).toHaveLength(6)
+    expect(tabs()).toHaveLength(9)
     expect(screen.getByText('A name')).toBeInTheDocument()
 
     // And what replaces the block being answered is that block with an answer
@@ -1389,4 +1395,151 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     const asked = await screen.findByRole('button', { name: /points to raise your scores/ })
     expect(asked).toHaveAttribute('aria-expanded', 'true')
   })
+})
+
+
+it('edits saved spells from the existing picks without deleting them on open or close', async () => {
+  const user = setupUser()
+  const choice = { prompt: 'wizard/spell/cantrip/1', choose: 2, kind: 'spell', from: {
+    kind: 'explicit', options: ['light', 'mage-hand', 'fire-bolt'].map((slug) => ({ kind: 'ref', key: slug, ref: `spell:${slug}` })),
+  } }
+  const spellPrompt = { choice, group: 'class', source: 'class:wizard', purpose: 'cantrip', optional: false, heldOnly: false, event: { type: 'level', ref: 'class:wizard', level: 1 } }
+  const events = { seq: 3, revision: 5, events: [INIT,
+    { seq: 2, type: 'class', ref: 'class:wizard', source: 'class', level: 1 },
+    { seq: 3, type: 'level', ref: 'class:wizard', source: 'class', level: 1, choiceKind: 'spell', purpose: 'cantrip',
+      choices: [{ prompt: choice.prompt, picks: ['light', 'mage-hand'] }] },
+  ] }
+  mockApi({
+    prompts: { seq: 3, revision: 5, complete: true, prompts: [] }, events,
+    editPrompts: { seq: 3, revision: 5, complete: false, prompts: [spellPrompt] },
+    spellEntries: [
+      { slug: 'light', name: 'Light', level: 0 },
+      { slug: 'mage-hand', name: 'Mage Hand', level: 0 },
+      { slug: 'fire-bolt', name: 'Fire Bolt', level: 0 },
+    ],
+  })
+  renderBuild('desktop')
+  await user.click(await screen.findByRole('tab', { name: 'Cantrips' }))
+  expect(await screen.findByRole('button', { name: 'Remove Light' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Remove Mage Hand' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+  expect(posted).toHaveLength(0)
+  await user.click(screen.getByRole('button', { name: 'Remove Light' }))
+  await waitFor(() => expect(read.some((url) => url.includes('/prompts?before=3'))).toBe(true))
+  await user.click(tab('class'))
+  expect(posted).toHaveLength(0)
+  await user.click(tab('cantrips'))
+  expect(await screen.findByRole('button', { name: 'Remove Light' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Remove Light' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Fire Bolt' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Fire Bolt' }))
+  await user.click(screen.getByRole('button', { name: 'Add Fire Bolt' }))
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(writes()).toHaveLength(1))
+  expect(posted.every((request) => request.method === 'PUT')).toBe(true)
+  expect(writes()[0]).toMatchObject({ method: 'PUT', body: {
+    expectedSeq: 3, expectedRevision: 5,
+    event: { choices: [{ prompt: choice.prompt, picks: ['mage-hand', 'fire-bolt'] }] },
+  } })
+})
+
+
+it('places spell and equipment questions in their own tabs and shows granted gear last', async () => {
+  const user = setupUser()
+  const question = (kind: string, group: string, owner: string) => ({
+    choice: { prompt: `${owner}/${kind}/0`, kind, choose: 1, from: { kind: 'explicit', options: [] } },
+    source: `${group}:${owner}`, group, optional: false, heldOnly: false, event: { type: group },
+  })
+  mockApi({
+    prompts: { seq: 1, complete: false, prompts: [
+      question('equipment', 'class', 'fighter'), question('equipment', 'background', 'acolyte'),
+      question('spell', 'race', 'elf'),
+    ] },
+    sheet: { ...SHEET, equipment: { equipped: [], backpack: [{ item: 'dagger', count: 2 }], loot: [], purse: { gp: 15 } } },
+  })
+  renderBuild('mobile')
+  await screen.findByRole('tab', { name: 'Spells' })
+  expect(tabs().slice(-2)).toEqual(['Spells', 'Equipment'])
+  expect(current()).toBe('Spells')
+  expect(panel('spells').queryByRole('combobox', { name: 'Spell selection' })).not.toBeInTheDocument()
+  expect(panel('equipment').getAllByRole('button', { name: /Starting equipment/ })).toHaveLength(2)
+  expect(panel('equipment').getByText('Dagger')).toBeInTheDocument()
+  expect(panel('equipment').getByText('×2')).toBeInTheDocument()
+  expect(panel('equipment').getByText('15 gp')).toBeInTheDocument()
+  for (const name of ['class', 'race', 'background']) {
+    expect(panel(name).queryByRole('button', { name: /Starting equipment|1 spell/ })).not.toBeInTheDocument()
+  }
+  await user.click(tab('equipment'))
+  expect(current()).toBe('Equipment')
+})
+
+it('saves the merged spell picker as a batch of legal per-level answers', async () => {
+  const user = setupUser()
+  const spellPrompt = (level: number, slugs: string[]) => ({
+    group: 'class', source: 'class:warlock', purpose: 'known', level, optional: false, heldOnly: false,
+    event: { type: 'level', ref: 'class:warlock', level },
+    choice: { prompt: `warlock/spell/known/${level}`, kind: 'spell', choose: 1,
+      from: { kind: 'explicit', options: slugs.map((slug) => ({ key: slug, kind: 'ref', ref: `spell:${slug}` })) } },
+  })
+  mockApi({ prompts: { seq: 2, revision: 4, complete: false, prompts: [spellPrompt(1, ['alarm']), spellPrompt(3, ['alarm', 'darkness'])] },
+    spellEntries: [{ slug: 'alarm', name: 'Alarm', level: 1 }, { slug: 'darkness', name: 'Darkness', level: 2 }],
+  })
+  renderBuild('desktop')
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add Darkness' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Add Darkness' }))
+  await user.click(screen.getByRole('button', { name: 'Add Alarm' }))
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(writes()).toHaveLength(1))
+  expect(writes()[0]).toMatchObject({ method: 'POST', body: {
+    expectedSeq: 2, expectedRevision: 4,
+    events: [
+      { type: 'level', ref: 'class:warlock', level: 1, choices: [{ prompt: 'warlock/spell/known/1', picks: ['alarm'] }] },
+      { type: 'level', ref: 'class:warlock', level: 3, choices: [{ prompt: 'warlock/spell/known/3', picks: ['darkness'] }] },
+    ],
+  } })
+})
+
+it('saves multiple previous spell edits and a new acquisition atomically before advancing', async () => {
+  const user = setupUser()
+  const question = (level: number, slugs: string[]) => ({
+    group: 'class', source: 'class:wizard', purpose: 'spellbook', level, optional: false, heldOnly: false,
+    event: { type: 'level', ref: 'class:wizard', level },
+    choice: { prompt: `wizard/spell/spellbook/${level}`, kind: 'spell', choose: 1,
+      from: { kind: 'explicit', options: slugs.map((slug) => ({ key: slug, kind: 'ref', ref: `spell:${slug}` })) } },
+  })
+  const first = question(1, ['alarm', 'burning-hands'])
+  const second = question(2, ['shield', 'magic-missile'])
+  const third = question(3, ['darkness'])
+  mockApi({
+    prompts: { seq: 4, revision: 6, complete: false, prompts: [third] },
+    events: { seq: 4, revision: 6, events: [INIT,
+      { seq: 2, type: 'class', ref: 'class:wizard', source: 'class', level: 1 },
+      { seq: 3, type: 'level', ref: 'class:wizard', source: 'class', choiceKind: 'spell', purpose: 'spellbook', level: 1, choices: [{ prompt: first.choice.prompt, picks: ['alarm'] }] },
+      { seq: 4, type: 'level', ref: 'class:wizard', source: 'class', choiceKind: 'spell', purpose: 'spellbook', level: 2, choices: [{ prompt: second.choice.prompt, picks: ['shield'] }] },
+    ] },
+    editPrompts: { seq: 4, revision: 6, complete: false, prompts: [first, second] },
+    spellEntries: ['alarm', 'burning-hands', 'shield', 'magic-missile', 'darkness'].map((slug) => ({ slug, name: slug, level: slug === 'darkness' ? 2 : 1 })),
+  })
+  renderBuild('desktop')
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add darkness' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Add darkness' }))
+  await user.click(screen.getByRole('button', { name: 'Remove alarm' }))
+  await user.click(screen.getByRole('button', { name: 'Remove shield' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add burning-hands' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Add burning-hands' }))
+  await user.click(screen.getByRole('button', { name: 'Add magic-missile' }))
+  expect(posted).toHaveLength(0)
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(writes()).toHaveLength(1))
+  expect(posted).toHaveLength(2)
+  expect(posted[0]?.url).toContain('/events/revise?dryRun=true')
+  expect(writes()[0]).toMatchObject({ method: 'POST', body: {
+    expectedSeq: 4, expectedRevision: 6,
+    replacements: [
+      { seq: 3, event: { choices: [{ prompt: first.choice.prompt, picks: ['burning-hands'] }] } },
+      { seq: 4, event: { choices: [{ prompt: second.choice.prompt, picks: ['magic-missile'] }] } },
+    ],
+    events: [{ choices: [{ prompt: third.choice.prompt, picks: ['darkness'] }] }],
+  } })
+  await waitFor(() => expect(screen.getByRole('tab', { name: 'Equipment' })).toHaveAttribute('aria-selected', 'true'))
 })

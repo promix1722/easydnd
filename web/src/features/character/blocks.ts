@@ -86,7 +86,12 @@ export function blocksFor(
   // Real levels start at 1, so -1 sorts the un-levelled first without a
   // sentinel a level could ever collide with.
   blocks.sort((a, b) => (a.level ?? -1) - (b.level ?? -1))
-  for (const block of blocks) place(order, block.key)
+  for (const block of blocks) {
+    if (block.kind === 'settled' && !order.places.has(block.key)) {
+      inheritPlace(order, settledKey(block.row.seq), block.key)
+    }
+    place(order, block.key)
+  }
   const at = (block: Block) => order.places.get(block.key) ?? Number.MAX_SAFE_INTEGER
   return blocks.sort((a, b) => at(a) - at(b))
 }
@@ -203,8 +208,10 @@ export function keyFor(asking: Asking): string {
   return asking.replaces === null ? keyForPrompt(asking.prompt) : keyForRow(asking.replaces)
 }
 
-function keyForRow(row: SettledRow): string {
-  return settledKey(row.seq)
+export function keyForRow(row: SettledRow): string {
+  const question = row.event.choices?.[0]?.prompt
+  if (question !== undefined) return promptKey(question)
+  return row.event.id === undefined ? settledKey(row.seq) : `event:${row.event.id}`
 }
 
 function keyForPrompt(prompt: Prompt): string {

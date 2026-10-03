@@ -1732,6 +1732,10 @@
       {
         "item": "arrow",
         "count": 20
+      },
+      {
+        "item": "quiver",
+        "count": 1
       }
     ],
     "startingEquipmentOptions": [
@@ -2019,8 +2023,14 @@
                   "kind": "ref",
                   "ref": "item:arrow",
                   "count": 20
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:quiver",
+                  "count": 1
                 }
-              ]
+              ],
+              "key": "shortbow+arrow"
             },
             {
               "kind": "ref",

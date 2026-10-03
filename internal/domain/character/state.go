@@ -385,6 +385,8 @@ type Resources struct {
 
 // Spellbook is what the character knows and has ready.
 type Spellbook struct {
+	ExtraKnown, ExtraCantrips int
+	Sources                   []SpellSource
 	// Cantrips are always available and cost no slot.
 	Cantrips []rules.Slug
 

@@ -149,3 +149,17 @@ describe('choosableOptions', () => {
     expect(got[0]?.label).toBe('Dexterity +1')
   })
 })
+
+it('describes armor statistics and every item of a bundle', () => {
+  const loaded = new Map<string, import('@/lib/api').Item>([
+    ['chain-mail', { slug: 'chain-mail', name: 'Chain Mail', armor: { baseAC: 16, strengthMinimum: 13, stealthDisadvantage: true }, desc: ['First paragraph.', 'Second paragraph.'] }],
+    ['arrow', { slug: 'arrow', name: 'Arrow', weight: 1 }],
+  ])
+  const got = choosableOptions(testT, prompt({ choice: { prompt: 'fighter/starting-equipment/0', choose: 1, kind: 'equipment', from: { kind: 'explicit', options: [{ key: 'kit', kind: 'bundle', items: [
+    { key: 'chain-mail', kind: 'ref', ref: 'item:chain-mail', count: 1 }, { key: 'arrow', kind: 'ref', ref: 'item:arrow', count: 20 },
+  ] }] } } }), loaded)
+  expect(got[0]?.detail).toContain('Second paragraph.')
+  expect(got[0]?.detail).toContain('Armor class: 16')
+  expect(got[0]?.detail).toContain('Strength required: 13')
+  expect(got[0]?.detail).toContain('Arrow ×20')
+})

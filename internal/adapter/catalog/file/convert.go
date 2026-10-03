@@ -184,7 +184,7 @@ func (c *conv) option(w Option) rules.Option {
 		for _, item := range w.Items {
 			items = append(items, c.option(item))
 		}
-		return rules.BundleOption{Items: items}
+		return rules.BundleOption{Key: rules.Slug(w.Key), Items: items}
 	case OptionAbilityBonus:
 		return rules.AbilityBonusOption{Ability: c.ability(w.Ability), Bonus: w.Bonus}
 	case OptionDamage:

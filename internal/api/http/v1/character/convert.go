@@ -350,6 +350,9 @@ func spellbookOf(s domain.Spellbook) Spellbook {
 		Known:    slugStrings(s.Known),
 		Prepared: slugStrings(s.Prepared),
 	}
+	for _, source := range s.Sources {
+		out.Sources = append(out.Sources, SpellSource{Source: refString(source.Source), Class: source.Class.String(), Ability: source.Ability.Slug().String(), Cantrips: slugStrings(source.Cantrips), Known: slugStrings(source.Known), Spellbook: slugStrings(source.Spellbook), Prepared: slugStrings(source.Prepared), Arcanum: slugStrings(source.Arcanum), Mastery: slugStrings(source.Mastery), PreparationLimit: source.PreparationLimit})
+	}
 	if s.Ability != rules.AbilityNone {
 		out.Ability = s.Ability.Slug().String()
 	}

@@ -77,6 +77,9 @@ const STAGE_KEYS = {
   background: 'stage.background',
   abilities: 'stage.abilities',
   personality: 'stage.personality',
+  cantrips: 'stage.cantrips',
+  spells: 'stage.spells',
+  equipment: 'stage.equipment',
 } as const satisfies Record<Stage, string>
 
 export function stageLabel(t: Translate, stage: Stage): string {
@@ -162,6 +165,10 @@ export function choiceOptionName(
       return t('choice.abilityBonus', { count: choose })
     case 'language':
       return t('choice.language', { count: choose })
+    case 'feature':
+      return t('choice.feature', { count: choose })
+    case 'trait':
+      return t('choice.trait', { count: choose })
     case 'equipment':
       return t('choice.equipment')
     case 'spell':

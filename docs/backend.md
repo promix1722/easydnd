@@ -732,17 +732,34 @@ minus some answers.
 
 **The dry run is the same function with `commit=false`.** It loads, validates,
 replays, renumbers, validates the rebuilt log and projects it, then skips
-exactly one line: `repo.Rewrite`. A separate preview route would be two paths
+exactly one line: `repo.Commit`. A separate preview route would be two paths
 to drift, and a preview that disagrees with its commit is worse than none. A
 stale preview cannot be committed silently either, and that costs nothing
 extra: the commit re-runs the replay, and if the log moved in between,
 `expectedSeq` makes it the ordinary sequence conflict.
 
-`Repository.Rewrite` is the port method behind it -- neither an append nor a
+`Repository.Commit` is the port method behind it -- neither an append nor a
 truncation, because replacing one entry can drop entries after it and the
 stored log comes back a different length. The in-memory adapter is the only
 implementation; the Postgres adapter holds accounts only, so there is no
 migration and no backfill for `source` either.
+
+#### Saving several spell edits together
+
+`POST /v1/characters/:id/events/revise[?dryRun=true]` accepts `expectedSeq`,
+`expectedRevision`, `replacements: [{seq, event}]` and appended `events`. It uses
+the same ownership and revision guards as a single replacement. Original
+sequence numbers address every replacement throughout the replay, even if an
+untouched event between them is dropped. Explicit replacements are validated
+strictly against the rebuilt prefix; untouched suffix events retain the existing
+survival rules. New acquisitions are validated after the replacements. Event
+identities survive replacement.
+
+The entire resulting log is projected before one repository commit. A failure in
+any replacement or appended event writes nothing. Dry-run returns the final
+sheet and dependent losses without saving; committing repeats those checks
+against the same revision guard. The builder uses this to edit multiple saved
+spells while adding new ones without partial writes or losing another draft.
 
 #### Two questions about a reference
 
@@ -1971,3 +1988,92 @@ the data. Guessing is how a level-up calculator reads "this cantrip has no
 scaling table" as "this cantrip does zero damage".
 
 [layout]: https://github.com/golang-standards/project-layout
+
+## Builder choice responses
+
+The existing prompts, events, append and revision routes serve equipment and
+spell choices. No second spell-writing endpoint bypasses event validation.
+Prompts add `purpose` (spell acquisition/preparation category), `upTo` (preparation
+capacity) and `blocked` (conditional options requiring proficiency). Equipment
+categories and supported collection choices are expanded into explicit legal
+options, retaining category/collection metadata and stable option keys.
+
+The events read endpoint adds read-only `choiceSource`, `choiceKind` and
+`purpose` to name closed questions in the current locale, plus `selections`: resolved leaf options for
+the event's answered choice trees, including item quantities and fixed components
+of nested bundles. The normal catalogue option DTO is reused. Client-supplied
+selection metadata is ignored; the server derives it from the character's log
+and pinned catalogue. This prevents clients from parsing display text out of
+bundle keys. Sequence/revision checks and mutation addresses are unchanged.
+
+Sheet spell state adds `sources`, preserving source reference, class, casting
+ability, cantrips, known spells, spellbook entries, preparation, special Arcanum
+and mastery selections, and preparation limits. Existing aggregate fields remain.
+Pack casting profiles describe learning mode, spellbook additions, preparation
+and replacement policy. Source-specific spell benefits and conditional equipment
+requirements are validated with their referenced catalogue entries.
+
+Append and revision use the same offered options and held/blocked checks. Replay
+removes invalid dependent answers through the existing preview mechanism; it does
+not silently grant unavailable equipment or spells. Catalogue option expansion
+is shared with equipment projection. The generated-data drift check therefore
+protects the same definitions used by both validation and sheet reads.
+
+
+### Reading the original spell question
+
+`GET /v1/characters/:id/prompts?before=N` returns the questions obtained by
+projecting the event prefix strictly before saved event N. N must name an
+existing event after the initial entry. This is a read-only operation with the
+same ownership checks and pinned catalogue as the ordinary prompt read; it never
+removes an event or writes a revision. The response retains the current head's
+sequence and revision for concurrency checks, while its prompts and completion
+flag describe the prefix. Spell editing uses this to obtain the original legal
+pool without treating the saved picks as spells learned elsewhere. The client
+seeds the editor from the saved event, then submits a normal event replacement;
+replacement preview and suffix validation still apply.
+
+
+### Explicit custom spells and wizard allowance metadata
+
+`GET /v1/characters/:id/prompts` includes `spellRules`: source, class, acquisition
+level, count, permitted spell-level range, shared class-list restrictions,
+purpose, optionality, and any automatic spell grants. This is derived from the
+same rules and catalogue as normal prompts, including already-answered choices.
+It describes the current character and aggregates learning counts by source
+and purpose. Spell-level bounds for ordinary learning use the current class
+level. No new forget/replacement prompts or templates are exposed.
+
+`before` reads the original answer prefix. For spell-only edits, a read-only
+validation context adds the character's current levels and subclasses for classes already in
+that prefix. This widens the spell pool to today's level while keeping the
+original answer count and held selections. The same context is used by explicit
+spell revisions, so a choice offered while editing is accepted when saved.
+Synthetic context levels are never stored, never exceed the current character's
+class levels, and do not affect non-spell revision validation.
+
+Two optional prompts, `custom/spell/cantrip` and `custom/spell/known`, accept any
+distinct catalogue spells of their respective spell-level category, independent
+of class, character level and normal count limits. They use `change` events and
+project into a separate `rule:custom-spells` source. They are explicit player
+exceptions, not relaxation of ordinary spell validation. Unknown slugs,
+duplicates and spells in the wrong category are rejected. Custom known spells
+are also prepared; no casting ability is inferred for the custom source.
+Empty answers remove a custom selection and reopen its optional prompt. Custom
+prompts never prevent a character from being complete, and never satisfy an
+unanswered class/racial prompt. Existing owner checks, revision guards and
+atomic revision handling apply unchanged.
+
+`spellRules.maxLevelCount` is present for ordinary class learning (known spells
+and spellbook entries). It is the sum of actual acquisition counts at the current
+maximum spell level plus eligible replacement opportunities, capped by the class
+total. Feature grants stay separate. Append and atomic revision validate the
+final projected class selection against this aggregate cap; checking individual
+historical prompt counts alone would allow excess highest-level spells. Custom
+sources are excluded. Existing logs still project for editing and correction.
+
+`change` events at `spellLimits.known` and `spellLimits.cantrip` set or increment
+an extra allowance (0–1000). These project independently from class rules and
+return as optional `spellRules` entries with purpose `custom-limit`. The wizard
+saves limit adjustments atomically with its spell selections. Custom spell
+provenance remains in the event choices, so labels survive later editing.

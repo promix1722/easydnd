@@ -1,10 +1,12 @@
 import { bySlug, getEntries } from '@/lib/api'
-import type { Entry } from '@/lib/api'
+import type { Entry, Option } from '@/lib/api'
 
 import { collectionOfKind, kindOf, slugOf, titleCase } from '@/domain'
 
 /** Anything that names a catalogue entry: a stored event, a dropped one. */
 export interface RefBearing {
+  choiceSource?: string
+  selections?: Option[]
   ref?: string
   source?: string
   choices?: { prompt: string; picks: string[] }[]
@@ -39,7 +41,7 @@ export async function resolveRefNames(
 ): Promise<Map<string, string>> {
   const wanted = new Map<string, Map<string, string>>()
   for (const entry of entries) {
-    for (const ref of [entry.ref, entry.source]) {
+    for (const ref of [entry.ref, entry.source, entry.choiceSource, ...(entry.selections ?? []).map((option) => option.ref)]) {
       if (ref === undefined) continue
       const collection = collectionOfKind(kindOf(ref))
       if (collection !== null) {

@@ -242,3 +242,14 @@ describe('what a level grants', () => {
     expect(changeable.get(9)).toBe(false)
   })
 })
+
+it('keeps equipment cards in place across answers, resequencing and reopening', () => {
+  const order = blockOrder()
+  const equipment = (index: number): Prompt => prompt({ level: 1, choice: { prompt: `fighter/starting-equipment/${index}`, choose: 1, kind: 'equipment', from: { kind: 'explicit', options: [] } } })
+  const questions = [equipment(0), equipment(1), equipment(2)]
+  const initial = blocksFor([], questions, order).map((block) => block.key)
+  const answered = row({ seq: 9, level: 1, event: { id: 'kit-event', type: 'class', choices: [{ prompt: questions[1]!.choice.prompt, picks: ['martial-weapons'] }] } })
+  expect(blocksFor([answered], [questions[2]!, questions[0]!], order).map((block) => block.key)).toEqual(initial)
+  expect(blocksFor([{ ...answered, seq: 7 }], [questions[0]!, questions[2]!], order).map((block) => block.key)).toEqual(initial)
+  expect(blocksFor([], questions, order).map((block) => block.key)).toEqual(initial)
+})

@@ -26,6 +26,7 @@ const NAMED = [
   'features',
   'languages',
   'equipment',
+  'spells',
 ] as const
 
 async function namesOf(): Promise<Map<string, string> | null> {

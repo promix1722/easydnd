@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CharacterEvent } from '@/lib/api'
+import { createI18n, type Translate } from '@/lib/i18n'
 import { testT } from '@/test/i18n'
 
 import { settledByStage } from './settled'
@@ -176,4 +177,55 @@ describe('summarise', () => {
 
     expect(rows.get('class')?.map((row) => row.value)).toEqual(['Dexterity, Dexterity'])
   })
+})
+
+it('renders resolved equipment bundles with localized names and quantities', () => {
+  const events: CharacterEvent[] = [{ seq: 1, type: 'class', source: 'class', ref: 'class:fighter', choices: [{ prompt: 'fighter/starting-equipment/2', picks: ['crossbow-light+crossbow-bolt'] }], selections: [
+    { kind: 'ref', key: 'crossbow-light', ref: 'item:crossbow-light', count: 1 },
+    { kind: 'ref', key: 'crossbow-bolt', ref: 'item:crossbow-bolt', count: 20 },
+  ] }]
+  const names = new Map([['class:fighter', 'Воин'], ['item:crossbow-light', 'Арбалет, легкий'], ['item:crossbow-bolt', 'Болт для арбалета']])
+  const rows = settledByStage(testT, { events, names }).get('equipment')!
+  expect(rows[0]?.value).toContain('Арбалет, легкий')
+  expect(rows[0]?.value).toContain('Болт для арбалета ×20')
+  expect(rows[0]?.value).not.toContain('Crossbow')
+})
+
+
+it('uses localized source metadata for a saved feature heading', () => {
+  const i18n = createI18n('ru')
+  const t = i18n.t.bind(i18n) as Translate
+  const events: CharacterEvent[] = [{
+    seq: 1, type: 'level', source: 'class', ref: 'class:fighter',
+    choiceSource: 'feature:fighter-fighting-style', choiceKind: 'feature',
+    choices: [{ prompt: 'fighter-fighting-style/0', picks: ['fighter-fighting-style-archery'] }],
+    selections: [{ kind: 'ref', key: 'fighter-fighting-style-archery', ref: 'feature:fighter-fighting-style-archery' }],
+  }]
+  const names = new Map([
+    ['feature:fighter-fighting-style', 'Боевой стиль'],
+    ['feature:fighter-fighting-style-archery', 'Стрельба'],
+  ])
+  const row = settledByStage(t, { events, names }).get('class')?.[0]
+  expect(row?.label).toBe(`Боевой стиль · ${t('choice.feature', { count: 1 })}`)
+  expect(row?.value).toBe('Стрельба')
+  expect(row?.label).not.toMatch(/[A-Za-z]/)
+})
+
+
+it('routes saved class, race and background choices by their choice kind without moving the owners', () => {
+  const events: CharacterEvent[] = [
+    { seq: 1, type: 'class', source: 'class', ref: 'class:wizard' },
+    { seq: 2, type: 'level', source: 'class', choiceKind: 'spell', choices: [{ prompt: 'wizard/spell/cantrip/1', picks: ['light'] }] },
+    { seq: 3, type: 'race', source: 'race', choiceKind: 'spell', choices: [{ prompt: 'elf/spell/0', picks: ['mage-hand'] }] },
+    { seq: 4, type: 'class', source: 'class', choiceKind: 'equipment', choices: [{ prompt: 'wizard/starting-equipment/0', picks: ['dagger'] }] },
+    { seq: 5, type: 'background', source: 'background', choiceKind: 'equipment', choices: [{ prompt: 'acolyte/starting-equipment/0', picks: ['amulet'] }] },
+    { seq: 6, type: 'level', source: 'class', choices: [{ prompt: 'wizard/spell/prepared/1', picks: ['alarm'] }] },
+  ]
+  const rows = settledByStage(testT, { events, names: new Map() })
+  expect(rows.get('class')?.map((row) => row.seq)).toEqual([1])
+  expect(rows.get('cantrips')?.map((row) => row.seq)).toEqual([2])
+  expect(rows.get('spells')?.map((row) => row.seq)).toEqual([3, 6])
+  expect(rows.get('equipment')?.map((row) => row.seq)).toEqual([4, 5])
+  expect(rows.has('race')).toBe(false)
+  expect(rows.has('background')).toBe(false)
 })

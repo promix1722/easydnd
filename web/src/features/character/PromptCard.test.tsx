@@ -438,3 +438,39 @@ describe('PromptCard with a branch', () => {
     expect(screen.getByRole('button', { name: /Dexterity \+1/ })).toBeEnabled()
   })
 })
+
+it('searches spell options without losing picks and permits partial preparation', async () => {
+  const user = setupUser()
+  const onAnswer = vi.fn()
+  const prompt = skillPrompt({ upTo: true, purpose: 'prepared', choice: {
+    prompt: 'wizard/spell/prepared/1', choose: 3, kind: 'spell', from: { kind: 'explicit', options: [
+      { kind: 'ref', key: 'light', ref: 'spell:light' }, { kind: 'ref', key: 'mage-hand', ref: 'spell:mage-hand' },
+    ] },
+  } })
+  renderAt('desktop', <PromptCard prompt={prompt} entries={new Map([['light', { slug: 'light', name: 'Light' }], ['mage-hand', { slug: 'mage-hand', name: 'Mage Hand' }]])} pending={false} onAnswer={onAnswer} />)
+  await user.click(screen.getByRole('button', { name: 'Light' }))
+  await user.click(screen.getByRole('button', { name: 'Add Light' }))
+  await user.type(screen.getByRole('textbox', { name: 'Search spells' }), 'mage')
+  expect(screen.getByRole('button', { name: 'Remove Light' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Finish selection' }))
+  expect(onAnswer).toHaveBeenCalledWith([{ prompt: 'wizard/spell/prepared/1', picks: ['light'] }])
+})
+
+it('keeps selected option order and picks when localized entries are refreshed', async () => {
+  const user = setupUser()
+  const onAnswer = vi.fn()
+  const prompt = skillPrompt()
+  const view = renderAt('desktop', <PromptCard prompt={prompt} entries={entries} pending={false} onAnswer={onAnswer} />)
+  await user.click(screen.getByRole('button', { name: 'Stealth' }))
+  const translated = new Map<string, Entry>([
+    ['acrobatics', { slug: 'acrobatics', name: 'Акробатика' }],
+    ['stealth', { slug: 'stealth', name: 'Скрытность' }],
+    ['deception', { slug: 'deception', name: 'Обман' }],
+  ])
+  view.rerender(<PromptCard prompt={{ ...prompt }} entries={translated} pending={false} onAnswer={onAnswer} />)
+  const labels = screen.getAllByRole('button').map((button) => button.textContent)
+  expect(labels.slice(0, 3)).toEqual(['Акробатика', 'Скрытность', 'Обман'])
+  await user.click(screen.getByRole('button', { name: 'Акробатика' }))
+  await user.click(screen.getByRole('button', { name: /^confirm$/i }))
+  expect(onAnswer).toHaveBeenCalledWith([{ prompt: prompt.choice.prompt, picks: ['stealth', 'acrobatics'] }])
+})

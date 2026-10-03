@@ -5,7 +5,10 @@
 // sheet, an event, a prompt -- live here.
 package character
 
-import "github.com/promix1722/easydnd/internal/api/http/helpers"
+import (
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
+)
 
 // Summary is one row of a character listing.
 type Summary struct {
@@ -43,14 +46,18 @@ type Character struct {
 
 // Event is one entry in a character's log.
 type Event struct {
-	ID            string         `json:"id,omitempty"`
-	SchemaVersion int            `json:"schemaVersion,omitempty"`
-	Resource      string         `json:"resource,omitempty"`
-	Amount        int            `json:"amount,omitempty"`
-	Trigger       string         `json:"trigger,omitempty"`
-	Allocations   map[string]int `json:"allocations,omitempty"`
-	Seq           int            `json:"seq,omitempty"`
-	Type          string         `json:"type"`
+	ChoiceSource  string              `json:"choiceSource,omitempty"`
+	ChoiceKind    string              `json:"choiceKind,omitempty"`
+	Purpose       string              `json:"purpose,omitempty"`
+	Selections    []catalogapi.Option `json:"selections,omitempty"`
+	ID            string              `json:"id,omitempty"`
+	SchemaVersion int                 `json:"schemaVersion,omitempty"`
+	Resource      string              `json:"resource,omitempty"`
+	Amount        int                 `json:"amount,omitempty"`
+	Trigger       string              `json:"trigger,omitempty"`
+	Allocations   map[string]int      `json:"allocations,omitempty"`
+	Seq           int                 `json:"seq,omitempty"`
+	Type          string              `json:"type"`
 
 	// Source is the group of the prompt this entry answers: identity, class,
 	// race, background, abilities or advance. It is what lets a client group
@@ -270,11 +277,25 @@ type Resources struct {
 }
 
 // Spellbook is what the character knows and has ready.
+type SpellSource struct {
+	Source           string   `json:"source"`
+	Class            string   `json:"class,omitempty"`
+	Ability          string   `json:"ability,omitempty"`
+	Cantrips         []string `json:"cantrips,omitempty"`
+	Known            []string `json:"known,omitempty"`
+	Spellbook        []string `json:"spellbook,omitempty"`
+	Prepared         []string `json:"prepared,omitempty"`
+	Arcanum          []string `json:"arcanum,omitempty"`
+	Mastery          []string `json:"mastery,omitempty"`
+	PreparationLimit int      `json:"preparationLimit,omitempty"`
+}
+
 type Spellbook struct {
-	Cantrips []string `json:"cantrips,omitempty"`
-	Known    []string `json:"known,omitempty"`
-	Prepared []string `json:"prepared,omitempty"`
-	Ability  string   `json:"ability,omitempty"`
+	Sources  []SpellSource `json:"sources,omitempty"`
+	Cantrips []string      `json:"cantrips,omitempty"`
+	Known    []string      `json:"known,omitempty"`
+	Prepared []string      `json:"prepared,omitempty"`
+	Ability  string        `json:"ability,omitempty"`
 }
 
 // Action is something the character can do on their turn.

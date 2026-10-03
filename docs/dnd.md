@@ -95,6 +95,13 @@ subclass (Sneak Attack, Cunning Action). The SRD keeps them in two files —
 38 traits, 407 features — and so does the model. A merged bucket could not answer
 "what did my race give me?".
 
+Dragonborn choose their draconic ancestry once. Breath Weapon and Damage
+Resistance are automatic racial traits; the selected ancestry determines their
+damage type without another confirmation. The legacy catalogue stores the
+ancestry's breath attack in a single-option `breathWeapon` choice-shaped payload
+for compatibility. This is ability data, not a player choice, so the prompt
+builder never offers it. Spell and subtrait choices remain real prompts.
+
 **"Slots" became resources.** `Resources` holds `SpellSlots`, `HitDice` and a
 generic keyed pool covering all thirty-two class-specific values the SRD defines.
 
@@ -464,8 +471,98 @@ in two, and the saving throws all come out matching the real exported sheet.
 - Actions from equipment and prepared spells. `State.Actions` carries only
   what a change event put there, and the battle tracker is where the rest
   belongs.
-- Spell selection. `Spells.Ability` is set; cantrips, known and prepared are
-  not. Choosing spells needs a per-class list filter and prepared-versus-known
-  rules, which is its own feature.
 - Unarmored Defense and Jack of All Trades. Both are class features whose
   mechanics the compendium records only as prose.
+
+## Builder choices under the 2014 rules
+
+The target is [SRD 5.1](https://www.dndbeyond.com/attachments/39j2li89/SRD5.1-CCBY4.0License.pdf),
+using the vendored text for Equipment, each class's Spellcasting/Pact Magic,
+Fighting Style, Expertise and the SRD subclass features. Rule policy lives in
+`data/rules/2014/mechanics.json`; generated catalogues are never edited directly.
+
+Equipment categories are expanded by the catalogue before either validation or
+projection. The expanded set retains its category identity so existing branch
+answers still resolve. Unknown items and items outside the offered category are
+rejected. Two martial weapons may be two copies of one weapon; two proficiencies
+or two fighting styles cannot duplicate the same benefit. Class-specific names
+for the same fighting style count as one style. Collection choices such as feats
+and languages are also validated against explicit catalogue membership.
+
+The generator repairs omissions against the SRD: ranger quivers, the rogue's
+quiver-bearing bow bundle, and the acolyte's five incense blocks, vestments,
+prayer-book/wheel choice and 15 gp. The rogue bundle retains its historical key
+`shortbow+arrow` although its resolved contents now include the quiver. A bundle
+can carry an explicit identity for precisely this kind of source correction.
+Cleric warhammer and chain-mail choices require appropriate proficiency. Pack
+contents are presented as contents of the granted pack, without also granting a
+second loose copy of every contained item.
+
+### Spell acquisition and preparation
+
+Spell sources retain their own cantrips, known spells, spellbook, prepared spells,
+Arcanum, mastery choices and preparation capacity. Aggregate cantrip/known/prepared
+fields remain for compatibility. Identical spells from separate classes retain
+separate ownership. Eligibility follows the individual class's level and spell
+list; combined multiclass slots do not unlock higher-level spells to learn.
+
+| Casting mode | Acquisition | Preparation |
+| --- | --- | --- |
+| Bard, ranger, sorcerer, warlock | Current table total, using the current class-level spell pool | Known spells are available |
+| Wizard | Six entries initially plus two per later wizard level, using the current class-level pool | Spellbook subset, Intelligence modifier + wizard level, minimum one |
+| Cleric, druid | Cantrips follow the class table | Class-list subset, Wisdom modifier + class level, minimum one |
+| Paladin | Begins at level two | Class-list subset, Charisma modifier + half paladin level rounded down, minimum one |
+
+Required acquisitions must be answered before the build is complete. Preparation
+is optional and may use less than the maximum. Its choices are revalidated when
+levels or ability modifiers change. The wizard permits direct editing within
+current totals rather than simulating 2014 retraining restrictions; the policy
+and its intentional simplification are described below.
+
+Pack spell benefits express exceptions explicitly: Life and Devotion spells are
+always prepared without consuming capacity; Fiend spells expand eligibility;
+Land spells depend on the chosen terrain. The Life domain's missing Guardian of
+Faith is restored by its benefit policy. Land's extra cantrip, Magical Secrets,
+Pact of the Tome/Chain, Mystic Arcanum, Spell Mastery, Signature Spells and Infernal
+Legacy are separate grants or choices. The high elf's existing cantrip choice is
+projected. Arcanum remains separate from Pact Magic slots. These selections do
+not implement spell casting, copying costs or rest tracking.
+
+Existing logs need no event rewrite: newly required unanswered spell choices
+appear as open prompts. Existing pinned pack releases retain their own policy;
+changing a character's pinned rules still uses the explicit pack migration flow.
+
+
+### Current-level spell selection and custom choices
+
+The wizard intentionally simplifies 2014 spell acquisition: it calculates the
+class's total number of known spells, cantrips or spellbook entries from the
+current class level, and allows ordinary spells from any spell level currently
+available to that class. It does not simulate when each spell was learned or
+require a forget/replacement operation. For example, a level-five sorcerer may
+choose six known spells from levels one through three, with at most two level-three
+spells: one base acquisition plus one replacement opportunity at class level five.
+The highest available spell level alone has a count quota: base class acquisitions
+since unlocking that level, plus one replacement per subsequent class level where
+the profile allows replacement, capped by the total. At sorcerer level six this
+is four level-three spells within seven known spells. Lower spell levels have no
+individual quotas. Spellbook acquisition uses the same base count with no
+replacement bonus; preparation and separate feature/racial grants do not use this
+learning quota. The class total never increases because of replacement opportunities.
+This is a product simplification of the SRD's stricter advancement history,
+not a claim that those distributions all result from RAW level-by-level play.
+Class boundaries, total counts, preparation rules, special feature grants and
+racial allowances remain distinct. Spell slots are casting resources, not
+quotas of spells to learn at each spell level. Old recorded swaps still replay
+for compatibility but are not offered as new wizard actions.
+
+The wizard permits deliberate custom choices when character availability is
+disabled. These belong to an explicit custom source, separate from ordinary
+class and racial allowances, and may exceed class, level and count limits.
+Unknown spells and duplicate entries remain invalid. The UI explains exceptions
+alongside the normal grants; it never interprets them as extra casting slots.
+
+The player's explicit additional spell limit is a separate persisted allowance,
+not a change to the class progression. Spells beyond the ordinary class allowance
+remain custom picks, even when covered by this extra count. Unlimited explicit
+custom choices remain possible with character availability disabled.

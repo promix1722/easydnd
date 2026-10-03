@@ -116,6 +116,13 @@ type Effect struct {
 	Value  Expression `json:"value,omitempty"`
 }
 type CastingProfile struct {
+	Selection        string `json:"selection,omitempty"`
+	PrepareDivisor   int    `json:"prepareDivisor,omitempty"`
+	BookStart        int    `json:"bookStart,omitempty"`
+	BookPerLevel     int    `json:"bookPerLevel,omitempty"`
+	ReplaceKnown     bool   `json:"replaceKnown,omitempty"`
+	ExpandedSubclass bool   `json:"expandedSubclass,omitempty"`
+
 	Kind        string `json:"kind"`
 	Numerator   int    `json:"numerator"`
 	Denominator int    `json:"denominator"`
@@ -158,7 +165,30 @@ type ResourceCost struct {
 	Resource string     `json:"resource"`
 	Amount   Expression `json:"amount"`
 }
+type SpellBenefit struct {
+	Ability     string   `json:"ability,omitempty"`
+	ID          string   `json:"id"`
+	Owner       Ref      `json:"owner"`
+	Class       string   `json:"class,omitempty"`
+	Level       int      `json:"level"`
+	Count       int      `json:"count,omitempty"`
+	SpellLevel  int      `json:"spellLevel"`
+	Mode        string   `json:"mode"`
+	From        string   `json:"from,omitempty"`
+	Spells      []string `json:"spells,omitempty"`
+	CountsKnown bool     `json:"countsKnown,omitempty"`
+}
+
+type ChoiceRequirement struct {
+	Prompt         string   `json:"prompt"`
+	Pick           string   `json:"pick"`
+	AnyProficiency []string `json:"anyProficiency"`
+}
+
 type PackMechanics struct {
+	ChoiceRequirements []ChoiceRequirement `json:"choiceRequirements,omitempty"`
+	SpellBenefits      []SpellBenefit      `json:"spellBenefits,omitempty"`
+
 	Actions   []ActionDefinition        `json:"actions,omitempty"`
 	Overrides []Override                `json:"overrides,omitempty"`
 	Core      *CoreRules                `json:"core,omitempty"`
@@ -178,7 +208,13 @@ func (w PackMechanics) domain(prose, actionProse Bundle) (catalog.Mechanics, err
 		}
 	}
 	for k, v := range w.Casting {
-		out.Casting[rules.Slug(k)] = catalog.CastingProfile{Kind: v.Kind, Numerator: v.Numerator, Denominator: v.Denominator, Rounding: v.Rounding, StartsAt: v.StartsAt, Resource: rules.Slug(v.Resource)}
+		out.Casting[rules.Slug(k)] = catalog.CastingProfile{Selection: v.Selection, PrepareDivisor: v.PrepareDivisor, BookStart: v.BookStart, BookPerLevel: v.BookPerLevel, ReplaceKnown: v.ReplaceKnown, ExpandedSubclass: v.ExpandedSubclass, Kind: v.Kind, Numerator: v.Numerator, Denominator: v.Denominator, Rounding: v.Rounding, StartsAt: v.StartsAt, Resource: rules.Slug(v.Resource)}
+	}
+	for _, r := range w.ChoiceRequirements {
+		out.ChoiceRequirements = append(out.ChoiceRequirements, catalog.ChoiceRequirement{Prompt: rules.Slug(r.Prompt), Pick: rules.Slug(r.Pick), AnyProficiency: slugs(r.AnyProficiency)})
+	}
+	for _, b := range w.SpellBenefits {
+		out.SpellBenefits = append(out.SpellBenefits, catalog.SpellBenefit{Ability: c.ability(b.Ability), ID: rules.Slug(b.ID), Owner: c.ref(b.Owner), Class: rules.Slug(b.Class), Level: b.Level, Count: b.Count, SpellLevel: b.SpellLevel, Mode: b.Mode, From: b.From, Spells: slugs(b.Spells), CountsKnown: b.CountsKnown})
 	}
 	for _, w := range w.Resources {
 		d := catalog.ResourceDefinition{RequiresSubclass: w.RequiresSubclass, Entry: entry(w.ID, prose), Owner: c.ref(w.Owner), MinimumLevel: w.MinimumLevel, Kind: w.Kind, Input: w.Input, SharedKey: rules.Slug(w.SharedKey), Combine: w.Combine, Group: w.Group}

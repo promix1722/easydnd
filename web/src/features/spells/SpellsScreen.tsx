@@ -10,20 +10,19 @@ import {
   Badge,
   Box,
   Button,
-  Checkbox,
   DataList,
   Group,
   Page,
   PageBody,
   Panel,
-  Select,
   Stack,
   Text,
-  TextInput,
   pageState,
-  useIsDesktop,
 } from '@/ui'
 
+import { SpellFilters } from './SpellFilters'
+import type { SpellFilterValues } from './filterSpells'
+import { SpellTags } from './SpellTags'
 import { SpellIcon } from './spellIcon'
 import { castingTimeText, componentsAbbrev, levelText } from './spellText'
 
@@ -53,15 +52,10 @@ import { castingTimeText, componentsAbbrev, levelText } from './spellText'
  */
 
 const PAGE_SIZE = 50
-const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-const CASTING_TIMES = ['action', 'bonus-action', 'reaction', 'over-time']
 
 export function SpellsScreen() {
   const t = useT()
   const [params, setParams] = useSearchParams()
-  // A 390px card cannot host a name and two word-length badges, so the phone
-  // gets one-letter marks with the full word as the accessible name.
-  const isDesktop = useIsDesktop()
 
   function setParam(key: string, value: string | null) {
     setParams(
@@ -96,6 +90,24 @@ export function SpellsScreen() {
     // setParam is recreated per render; the timer only needs draft and query.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, query])
+
+  function updateFilters(value: SpellFilterValues) {
+    setDraft(value.query)
+    setParams((previous) => {
+      const next = new URLSearchParams(previous)
+      const fields = {
+        level: value.level, school: value.school, class: value.casterClass, time: value.time,
+        conc: value.concentration ? '1' : null,
+        ritual: value.ritual ? '1' : null,
+        nomat: value.noMaterial ? '1' : null,
+      }
+      for (const [key, field] of Object.entries(fields)) {
+        if (field === null) next.delete(key)
+        else next.set(key, field)
+      }
+      return next
+    }, { replace: true })
+  }
 
   const search: SpellSearch = {
     ...(query === '' ? {} : { q: query }),
@@ -179,69 +191,12 @@ export function SpellsScreen() {
     <Page trail={[]}>
       <Panel>
         <Stack gap="md">
-          <TextInput
-            aria-label={t('spells.search')}
-            placeholder={t('spells.search')}
-            value={draft}
-            onChange={(event) => setDraft(event.currentTarget.value)}
+          <SpellFilters
+            value={{ query: draft, level, school, casterClass, time, concentration, ritual, noMaterial }}
+            onChange={updateFilters}
+            schools={schools}
+            classes={classes}
           />
-          <Group gap="sm">
-            <Select
-              aria-label={t('spells.filter.level')}
-              placeholder={t('spells.filter.allLevels')}
-              data={LEVELS.map((value) => ({ value: String(value), label: levelText(t, value) }))}
-              value={level}
-              onChange={(value) => setParam('level', value)}
-              clearable
-            />
-            <Select
-              aria-label={t('spells.filter.school')}
-              placeholder={t('spells.filter.allSchools')}
-              data={schools.map((entry) => ({ value: entry.slug, label: entry.name }))}
-              value={school}
-              onChange={(value) => setParam('school', value)}
-              clearable
-            />
-            <Select
-              aria-label={t('spells.filter.class')}
-              placeholder={t('spells.filter.allClasses')}
-              data={classes.map((entry) => ({ value: entry.slug, label: entry.name }))}
-              value={casterClass}
-              onChange={(value) => setParam('class', value)}
-              clearable
-            />
-            <Select
-              aria-label={t('spells.filter.castingTime')}
-              placeholder={t('spells.filter.anyTime')}
-              data={CASTING_TIMES.map((kind) => ({
-                value: kind,
-                label:
-                  kind === 'over-time'
-                    ? t('spells.filter.overTime')
-                    : castingTimeText(t, { kind }),
-              }))}
-              value={time}
-              onChange={(value) => setParam('time', value)}
-              clearable
-            />
-          </Group>
-          <Group gap="md">
-            <Checkbox
-              label={t('spells.filter.concentration')}
-              checked={concentration}
-              onChange={(event) => setParam('conc', event.currentTarget.checked ? '1' : null)}
-            />
-            <Checkbox
-              label={t('spells.filter.ritual')}
-              checked={ritual}
-              onChange={(event) => setParam('ritual', event.currentTarget.checked ? '1' : null)}
-            />
-            <Checkbox
-              label={t('spells.filter.noMaterial')}
-              checked={noMaterial}
-              onChange={(event) => setParam('nomat', event.currentTarget.checked ? '1' : null)}
-            />
-          </Group>
 
           {/* Everything below here, and nothing above it, answers to the
               search. `found.loading` dims it rather than replacing it: the
@@ -263,20 +218,7 @@ export function SpellsScreen() {
                     items={rows}
                     getKey={(spell) => spell.slug}
                     leading={(spell) => <SpellIcon slug={spell.slug} size={32} />}
-                    badges={(spell) => (
-                      <>
-                        {spell.concentration === true && (
-                          <Badge size="sm" variant="light" aria-label={t('spell.concentration')}>
-                            {isDesktop ? t('spell.concentration') : t('spell.concentrationShort')}
-                          </Badge>
-                        )}
-                        {spell.ritual === true && (
-                          <Badge size="sm" variant="light" color="grape" aria-label={t('spell.ritual')}>
-                            {isDesktop ? t('spell.ritual') : t('spell.ritualShort')}
-                          </Badge>
-                        )}
-                      </>
-                    )}
+                    badges={(spell) => <SpellTags spell={spell} />}
                     columns={[
                       {
                         key: 'name',

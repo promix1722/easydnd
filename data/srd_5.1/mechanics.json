@@ -1,4 +1,665 @@
 {
+  "choiceRequirements": [
+    {
+      "prompt": "cleric/starting-equipment/0",
+      "pick": "warhammer",
+      "anyProficiency": [
+        "warhammers",
+        "martial-weapons"
+      ]
+    },
+    {
+      "prompt": "cleric/starting-equipment/1",
+      "pick": "chain-mail",
+      "anyProficiency": [
+        "heavy-armor",
+        "all-armor"
+      ]
+    }
+  ],
+  "spellBenefits": [
+    {
+      "id": "magical-secrets-1",
+      "owner": "feature:magical-secrets-1",
+      "class": "bard",
+      "level": 10,
+      "count": 2,
+      "spellLevel": -1,
+      "mode": "known",
+      "from": "any",
+      "countsKnown": true
+    },
+    {
+      "id": "magical-secrets-2",
+      "owner": "feature:magical-secrets-2",
+      "class": "bard",
+      "level": 14,
+      "count": 2,
+      "spellLevel": -1,
+      "mode": "known",
+      "from": "any",
+      "countsKnown": true
+    },
+    {
+      "id": "magical-secrets-3",
+      "owner": "feature:magical-secrets-3",
+      "class": "bard",
+      "level": 18,
+      "count": 2,
+      "spellLevel": -1,
+      "mode": "known",
+      "from": "any",
+      "countsKnown": true
+    },
+    {
+      "id": "additional-magical-secrets",
+      "owner": "feature:additional-magical-secrets",
+      "class": "bard",
+      "level": 6,
+      "count": 2,
+      "spellLevel": -1,
+      "mode": "known",
+      "from": "any"
+    },
+    {
+      "id": "bonus-cantrip",
+      "owner": "feature:bonus-cantrip",
+      "class": "druid",
+      "level": 2,
+      "count": 1,
+      "spellLevel": 0,
+      "mode": "cantrip",
+      "from": "class"
+    },
+    {
+      "id": "pact-tome",
+      "owner": "feature:pact-of-the-tome",
+      "class": "warlock",
+      "level": 3,
+      "count": 3,
+      "spellLevel": 0,
+      "mode": "cantrip",
+      "from": "any"
+    },
+    {
+      "id": "pact-chain",
+      "owner": "feature:pact-of-the-chain",
+      "class": "warlock",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "known",
+      "spells": [
+        "find-familiar"
+      ]
+    },
+    {
+      "id": "mystic-arcanum-6th-level",
+      "owner": "feature:mystic-arcanum-6th-level",
+      "class": "warlock",
+      "level": 11,
+      "count": 1,
+      "spellLevel": 6,
+      "mode": "arcanum",
+      "from": "class"
+    },
+    {
+      "id": "mystic-arcanum-7th-level",
+      "owner": "feature:mystic-arcanum-7th-level",
+      "class": "warlock",
+      "level": 13,
+      "count": 1,
+      "spellLevel": 7,
+      "mode": "arcanum",
+      "from": "class"
+    },
+    {
+      "id": "mystic-arcanum-8th-level",
+      "owner": "feature:mystic-arcanum-8th-level",
+      "class": "warlock",
+      "level": 15,
+      "count": 1,
+      "spellLevel": 8,
+      "mode": "arcanum",
+      "from": "class"
+    },
+    {
+      "id": "mystic-arcanum-9th-level",
+      "owner": "feature:mystic-arcanum-9th-level",
+      "class": "warlock",
+      "level": 17,
+      "count": 1,
+      "spellLevel": 9,
+      "mode": "arcanum",
+      "from": "class"
+    },
+    {
+      "id": "spell-mastery-1",
+      "owner": "feature:spell-mastery",
+      "class": "wizard",
+      "level": 18,
+      "count": 1,
+      "spellLevel": 1,
+      "mode": "mastery",
+      "from": "book"
+    },
+    {
+      "id": "spell-mastery-2",
+      "owner": "feature:spell-mastery",
+      "class": "wizard",
+      "level": 18,
+      "count": 1,
+      "spellLevel": 2,
+      "mode": "mastery",
+      "from": "book"
+    },
+    {
+      "id": "signature-spell",
+      "owner": "feature:signature-spell",
+      "class": "wizard",
+      "level": 20,
+      "count": 2,
+      "spellLevel": 3,
+      "mode": "prepared",
+      "from": "book"
+    },
+    {
+      "ability": "cha",
+      "id": "infernal-legacy-1",
+      "owner": "trait:infernal-legacy",
+      "level": 1,
+      "spellLevel": -1,
+      "mode": "known",
+      "spells": [
+        "thaumaturgy"
+      ]
+    },
+    {
+      "ability": "cha",
+      "id": "infernal-legacy-3",
+      "owner": "trait:infernal-legacy",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "known",
+      "spells": [
+        "hellish-rebuke"
+      ]
+    },
+    {
+      "ability": "cha",
+      "id": "infernal-legacy-5",
+      "owner": "trait:infernal-legacy",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "known",
+      "spells": [
+        "darkness"
+      ]
+    },
+    {
+      "id": "life-1",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 1,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "bless",
+        "cure-wounds"
+      ]
+    },
+    {
+      "id": "life-3",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "lesser-restoration",
+        "spiritual-weapon"
+      ]
+    },
+    {
+      "id": "life-5",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "beacon-of-hope",
+        "revivify"
+      ]
+    },
+    {
+      "id": "life-7",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "death-ward",
+        "guardian-of-faith"
+      ]
+    },
+    {
+      "id": "life-9",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "mass-cure-wounds",
+        "raise-dead"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-arctic-3",
+      "owner": "feature:circle-of-the-land-arctic",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "hold-person",
+        "spike-growth"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-arctic-5",
+      "owner": "feature:circle-of-the-land-arctic",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "sleet-storm",
+        "slow"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-arctic-7",
+      "owner": "feature:circle-of-the-land-arctic",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "freedom-of-movement",
+        "ice-storm"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-arctic-9",
+      "owner": "feature:circle-of-the-land-arctic",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "commune-with-nature",
+        "cone-of-cold"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-coast-3",
+      "owner": "feature:circle-of-the-land-coast",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "mirror-image",
+        "misty-step"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-coast-5",
+      "owner": "feature:circle-of-the-land-coast",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "water-breathing",
+        "water-walk"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-coast-7",
+      "owner": "feature:circle-of-the-land-coast",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "control-water",
+        "freedom-of-movement"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-coast-9",
+      "owner": "feature:circle-of-the-land-coast",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "conjure-elemental",
+        "scrying"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-desert-3",
+      "owner": "feature:circle-of-the-land-desert",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "blur",
+        "silence"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-desert-5",
+      "owner": "feature:circle-of-the-land-desert",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "create-food-and-water",
+        "protection-from-energy"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-desert-7",
+      "owner": "feature:circle-of-the-land-desert",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "blight",
+        "hallucinatory-terrain"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-desert-9",
+      "owner": "feature:circle-of-the-land-desert",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "insect-plague",
+        "wall-of-stone"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-forest-3",
+      "owner": "feature:circle-of-the-land-forest",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "barkskin",
+        "spider-climb"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-forest-5",
+      "owner": "feature:circle-of-the-land-forest",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "call-lightning",
+        "plant-growth"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-forest-7",
+      "owner": "feature:circle-of-the-land-forest",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "divination",
+        "freedom-of-movement"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-forest-9",
+      "owner": "feature:circle-of-the-land-forest",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "commune-with-nature",
+        "tree-stride"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-grassland-3",
+      "owner": "feature:circle-of-the-land-grassland",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "invisibility",
+        "pass-without-trace"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-grassland-5",
+      "owner": "feature:circle-of-the-land-grassland",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "daylight",
+        "haste"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-grassland-7",
+      "owner": "feature:circle-of-the-land-grassland",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "divination",
+        "freedom-of-movement"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-grassland-9",
+      "owner": "feature:circle-of-the-land-grassland",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "dream",
+        "insect-plague"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-mountain-3",
+      "owner": "feature:circle-of-the-land-mountain",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "spider-climb",
+        "spike-growth"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-mountain-5",
+      "owner": "feature:circle-of-the-land-mountain",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "lightning-bolt",
+        "meld-into-stone"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-mountain-7",
+      "owner": "feature:circle-of-the-land-mountain",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "stone-shape",
+        "stoneskin"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-mountain-9",
+      "owner": "feature:circle-of-the-land-mountain",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "passwall",
+        "wall-of-stone"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-swamp-3",
+      "owner": "feature:circle-of-the-land-swamp",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "acid-arrow",
+        "darkness"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-swamp-5",
+      "owner": "feature:circle-of-the-land-swamp",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "water-walk",
+        "stinking-cloud"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-swamp-7",
+      "owner": "feature:circle-of-the-land-swamp",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "freedom-of-movement",
+        "locate-creature"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-swamp-9",
+      "owner": "feature:circle-of-the-land-swamp",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "insect-plague",
+        "scrying"
+      ]
+    },
+    {
+      "id": "devotion-3",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "protection-from-evil-and-good",
+        "sanctuary"
+      ]
+    },
+    {
+      "id": "devotion-5",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "lesser-restoration",
+        "zone-of-truth"
+      ]
+    },
+    {
+      "id": "devotion-9",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "beacon-of-hope",
+        "dispel-magic"
+      ]
+    },
+    {
+      "id": "devotion-13",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 13,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "freedom-of-movement",
+        "guardian-of-faith"
+      ]
+    },
+    {
+      "id": "devotion-17",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 17,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "commune",
+        "flame-strike"
+      ]
+    },
+    {
+      "ability": "int",
+      "id": "high-elf-casting",
+      "owner": "trait:high-elf-cantrip",
+      "level": 1,
+      "spellLevel": 0,
+      "mode": "cantrip"
+    }
+  ],
   "core": {
     "minScore": 1,
     "maxScore": 30,
@@ -1616,6 +2277,8 @@
   ],
   "casting": {
     "bard": {
+      "selection": "known",
+      "replaceKnown": true,
       "kind": "shared",
       "numerator": 1,
       "denominator": 1,
@@ -1623,6 +2286,8 @@
       "startsAt": 1
     },
     "cleric": {
+      "selection": "prepared",
+      "prepareDivisor": 1,
       "kind": "shared",
       "numerator": 1,
       "denominator": 1,
@@ -1630,6 +2295,8 @@
       "startsAt": 1
     },
     "druid": {
+      "selection": "prepared",
+      "prepareDivisor": 1,
       "kind": "shared",
       "numerator": 1,
       "denominator": 1,
@@ -1637,6 +2304,8 @@
       "startsAt": 1
     },
     "paladin": {
+      "selection": "prepared",
+      "prepareDivisor": 2,
       "kind": "shared",
       "numerator": 1,
       "denominator": 2,
@@ -1644,6 +2313,8 @@
       "startsAt": 2
     },
     "ranger": {
+      "selection": "known",
+      "replaceKnown": true,
       "kind": "shared",
       "numerator": 1,
       "denominator": 2,
@@ -1651,6 +2322,8 @@
       "startsAt": 2
     },
     "sorcerer": {
+      "selection": "known",
+      "replaceKnown": true,
       "kind": "shared",
       "numerator": 1,
       "denominator": 1,
@@ -1658,6 +2331,9 @@
       "startsAt": 1
     },
     "warlock": {
+      "selection": "known",
+      "replaceKnown": true,
+      "expandedSubclass": true,
       "kind": "independent",
       "numerator": 0,
       "denominator": 1,
@@ -1666,6 +2342,10 @@
       "resource": "pact-magic"
     },
     "wizard": {
+      "selection": "spellbook",
+      "prepareDivisor": 1,
+      "bookStart": 6,
+      "bookPerLevel": 2,
       "kind": "shared",
       "numerator": 1,
       "denominator": 1,

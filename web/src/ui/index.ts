@@ -157,3 +157,5 @@ export { CHROME_INSET, CONTENT_MAX_WIDTH, ROW_HEIGHT, TOUCH_TARGET } from '@/the
 // Theme + provider, so main.tsx never imports Mantine either.
 export { AppTheme } from './AppTheme'
 export { theme } from './theme'
+export { Markdown } from './Markdown'
+export { ChoiceDetails } from './ChoiceDetails'

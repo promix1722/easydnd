@@ -118,8 +118,8 @@ type Choice struct {
 	// Repeatable allows one option to be picked more than once, which turns
 	// the picks into points being spent rather than a set being chosen.
 	//
-	// Exactly one thing needs it, and one thing that looks identical must not
-	// have it. A level's Ability Score Improvement is "+2 to one ability, or
+	// Ability Score Improvement and multiple equipment picks permit it, but
+	// racial bonuses do not. A level's Ability Score Improvement is "+2 to one ability, or
 	// +1 to two", so two points into Dexterity is a legal answer; a half-elf's
 	// is "+1 to two *different* scores", and it is the same kind over the same
 	// ability-bonus options. Keying the rule on the kind -- which is what both
@@ -130,7 +130,8 @@ type Choice struct {
 	// reasons: "may I pick this twice?" is a statement about the question
 	// where HeldOnly is one about the character, and a branch rendered inside
 	// its parent's card arrives as a Choice with no Prompt around it. Nothing
-	// in the compendium sets it; the domain does, on the prompt it synthesises.
+	// in the source compendium sets it; choice resolution sets it for equipment
+	// categories and the domain sets it on synthesised improvement prompts.
 	Repeatable bool
 }
 
@@ -210,6 +211,8 @@ func (NestedOption) optionKind() OptionKind { return OptionKindNested }
 
 // BundleOption is several things granted together as one selectable answer.
 type BundleOption struct {
+	// Key preserves a historical identity when a transcription correction adds an item.
+	Key   Slug
 	Items []Option
 }
 
