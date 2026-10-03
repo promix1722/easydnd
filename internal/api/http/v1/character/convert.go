@@ -154,6 +154,8 @@ func valueKindName(k domain.ValueKind) string {
 // through its own detail path.
 func SheetOf(s domain.State) Sheet {
 	out := Sheet{
+		ImportSession: s.ImportSession, CatalogNames: s.CatalogNames,
+		ImportedNotes: s.ImportedNotes,
 		Identity:      identityOf(s.Identity),
 		Base:          baseOf(s.Base),
 		Abilities:     abilitiesOf(s.Abilities),

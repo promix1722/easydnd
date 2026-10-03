@@ -80,7 +80,10 @@ development database. Characters and games are rebuilt because their stores
 are process-local. Signing in again within the same run does not reseed or
 reset game changes. Open separate tabs and choose master, player1 and player2
 in each: development shortcuts keep a random cookie selector in tab-local
-`sessionStorage` and send it as `X-EasyDnD-Dev-Session`. Each successful switch
+`sessionStorage` and send it as `X-EasyDnD-Dev-Session`. Native EventSource
+uses the `devSession` query parameter on GET instead, since it cannot set
+headers; both select a signed HttpOnly cookie and are ignored in production.
+Each successful switch
 uses a new selector, including in duplicated tabs; a failed switch keeps the
 previous identity. The signed token stays in an HttpOnly cookie. This header
 is ignored in production.
@@ -2167,3 +2170,14 @@ an extra allowance (0–1000). These project independently from class rules and
 return as optional `spellRules` entries with purpose `custom-limit`. The wizard
 saves limit adjustments atomically with its spell selections. Custom spell
 provenance remains in the event choices, so labels survive later editing.
+
+## Character import sessions
+
+The optional import agent uses a fixed Go worker pool and an OpenAI Responses
+adapter behind the `AgentModel` port. Its authenticated `/v1/agent-sessions`
+routes keep a draft separate from the ordinary character repository until an
+explicit, idempotent Save. Sessions, source bytes and immutable private packs
+are process-local, so browser reload resumes but server restart does not.
+See [agent.md](agent.md) for tool contracts, lifecycle, bounds and the `agent`
+YAML configuration. The nginx upload-limit change must be installed separately
+from a release; SSE disables buffering per response and sends heartbeats.

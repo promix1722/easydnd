@@ -165,6 +165,7 @@ export function CharacterSheetScreen() {
         </Group>
       }
     >
+      {s.importSession && <Button component={Link} variant="subtle" to={`/characters/import?session=${encodeURIComponent(s.importSession)}`}>{t('agent.history')}</Button>}
       <SheetBody sheet={s} compendium={sheet.data.compendium} />
 
       <ModalSheet

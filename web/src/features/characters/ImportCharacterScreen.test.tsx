@@ -38,6 +38,7 @@ function mockApi(response: unknown = IMPORTED, status = 201) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes('/agent-capabilities')) return new Response(JSON.stringify({ enabled: false }))
       posted.push({
         url: String(input),
         method: init?.method ?? 'GET',

@@ -138,6 +138,9 @@ export interface SpellSource {
 }
 
 export interface Sheet {
+ importSession?: string
+ catalogNames?: Record<string,string>
+ importedNotes?: string[]
   identity: Identity
   base: Base
   abilities: Abilities
@@ -417,12 +420,12 @@ export function createStubCharacter(folder?: string): Promise<CreateResponse> {
 }
 
 export function getSheet(id: string, signal?: AbortSignal): Promise<Sheet> {
-  return request<Sheet>(`/characters/${id}/sheet`, signal ? { signal } : {})
+  return request<Sheet>(`${characterPath(id)}/sheet`, signal ? { signal } : {})
 }
 
 export function getPrompts(id: string, signal?: AbortSignal, before?: number): Promise<PromptsResponse> {
   const query = before === undefined ? '' : `?before=${before}`
-  return request<PromptsResponse>(`/characters/${id}/prompts${query}`, signal ? { signal } : {})
+  return request<PromptsResponse>(`${characterPath(id)}/prompts${query}`, signal ? { signal } : {})
 }
 
 export function getEvents(
@@ -430,7 +433,7 @@ export function getEvents(
   signal?: AbortSignal,
 ): Promise<{ seq: number; revision?: number; events: CharacterEvent[] }> {
   return request<{ seq: number; revision?: number; events: CharacterEvent[] }>(
-    `/characters/${id}/events`,
+    `${characterPath(id)}/events`,
     signal ? { signal } : {},
   )
 }
@@ -448,7 +451,7 @@ export function appendEvents(
   events: CharacterEvent[],
   expectedRevision = expectedSeq,
 ): Promise<WriteResponse> {
-  return request<WriteResponse>(`/characters/${id}/events`, {
+  return request<WriteResponse>(`${characterPath(id)}/events`, {
     method: 'POST',
     body: { expectedSeq, expectedRevision, events },
   })
@@ -478,7 +481,7 @@ export function replaceEvent(
   dryRun = false,
   expectedRevision = expectedSeq,
 ): Promise<ReviseResponse> {
-  return request<ReviseResponse>(`/characters/${id}/events/${seq}${dryRun ? '?dryRun=true' : ''}`, {
+  return request<ReviseResponse>(`${characterPath(id)}/events/${seq}${dryRun ? '?dryRun=true' : ''}`, {
     method: 'PUT',
     body: { expectedSeq, expectedRevision, event },
   })
@@ -502,7 +505,7 @@ export function deleteEvent(
   expectedRevision = expectedSeq,
 ): Promise<ReviseResponse> {
   return request<ReviseResponse>(
-    `/characters/${id}/events/${seq}?expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}${dryRun ? '&dryRun=true' : ''}`,
+    `${characterPath(id)}/events/${seq}?expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}${dryRun ? '&dryRun=true' : ''}`,
     { method: 'DELETE' },
   )
 }
@@ -522,13 +525,13 @@ export function truncateEvents(
   expectedRevision = expectedSeq,
 ): Promise<WriteResponse> {
   return request<WriteResponse>(
-    `/characters/${id}/events?after=${after}&expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}`,
+    `${characterPath(id)}/events?after=${after}&expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}`,
     { method: 'DELETE' },
   )
 }
 
 export function deleteCharacter(id: string): Promise<void> {
-  return request<void>(`/characters/${id}`, { method: 'DELETE' })
+  return request<void>(`${characterPath(id)}`, { method: 'DELETE' })
 }
 
 /**
@@ -541,7 +544,7 @@ export function deleteCharacter(id: string): Promise<void> {
  * An empty folder means the account's default.
  */
 export function moveCharacter(id: string, folder: string): Promise<void> {
-  return request<void>(`/characters/${id}/folder`, { method: 'PUT', body: { folder } })
+  return request<void>(`${characterPath(id)}/folder`, { method: 'PUT', body: { folder } })
 }
 
 /**
@@ -551,7 +554,7 @@ export function moveCharacter(id: string, folder: string): Promise<void> {
  * beside it unless another folder is named.
  */
 export function copyCharacter(id: string, folder?: string): Promise<CreateResponse> {
-  return request<CreateResponse>(`/characters/${id}/copy`, {
+  return request<CreateResponse>(`${characterPath(id)}/copy`, {
     method: 'POST',
     body: { folder: folder ?? '' },
   })
@@ -561,7 +564,12 @@ export function copyCharacter(id: string, folder?: string): Promise<CreateRespon
 export function reviseEvents(id: string, expectedSeq: number, expectedRevision: number,
   replacements: { seq: number; event: CharacterEvent }[], events: CharacterEvent[], dryRun = false,
 ): Promise<ReviseResponse> {
-  return request<ReviseResponse>(`/characters/${id}/events/revise${dryRun ? '?dryRun=true' : ''}`, {
+  return request<ReviseResponse>(`${characterPath(id)}/events/revise${dryRun ? '?dryRun=true' : ''}`, {
     method: 'POST', body: { expectedSeq, expectedRevision, replacements, events },
   })
+}
+
+/** Draft ids address the same editing protocol without publishing a character. */
+function characterPath(id: string): string {
+  return id.startsWith("import:") ? `/agent-sessions/${encodeURIComponent(id.slice(7))}/draft` : `/characters/${encodeURIComponent(id)}`
 }

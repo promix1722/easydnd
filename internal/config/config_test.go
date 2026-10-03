@@ -582,3 +582,17 @@ func TestGoogleRejectsAnUnknownKey(t *testing.T) {
 	loadErr(t, "env: development\nauth:\n  google:\n    clientid: an-id\n",
 		"with a misspelt key inside auth.google")
 }
+
+func TestAgentConfigurationIsOptionalAndBounded(t *testing.T) {
+	cfg := loadOK(t, "env: development\n")
+	if cfg.Agent.APIKey != "" || cfg.Agent.Workers != 4 || cfg.Agent.RequestTimeout != 2*time.Minute {
+		t.Fatalf("unexpected agent defaults: %+v", cfg.Agent)
+	}
+	cfg = loadOK(t, "env: development\nagent:\n  api_key: example\n  model: configured-model\n  workers: 2\n  max_turns: 15\n  request_timeout: 30s\n")
+	if cfg.Agent.Workers != 2 || cfg.Agent.RequestTimeout != 30*time.Second || cfg.Agent.Model != "configured-model" {
+		t.Fatal("agent configuration ignored")
+	}
+	for _, body := range []string{"api_key: example", "workers: 33", "request_timeout: 0s", "request_timeout: 11m", "max_turns: -1"} {
+		loadErr(t, "env: development\nagent:\n  "+body+"\n", "invalid agent setting")
+	}
+}

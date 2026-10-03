@@ -293,6 +293,7 @@ export function CharacterListScreen() {
                   folder={folder}
                   onNew={() => void navigate(`/characters/new?folder=${folder.id}`)}
                 >
+                  <Button variant="default" onClick={() => void navigate(`/characters/import?folder=${encodeURIComponent(folder.id)}`)}>{t('characters.import')}</Button>
                   {/* Development only, and absent from a production bundle
                       rather than hidden in one: Vite replaces
                       import.meta.env.DEV with a literal, so this folds away

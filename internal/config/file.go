@@ -22,12 +22,22 @@ const EnvConfigPath = "EASYDND_CONFIG"
 // Durations are strings ("10s") rather than time.Duration so that a malformed
 // value produces our own error naming the key, not a yaml type error.
 type fileConfig struct {
-	Env  string   `yaml:"env"`
-	HTTP fileHTTP `yaml:"http"`
-	Log  fileLog  `yaml:"log"`
-	Data fileData `yaml:"data"`
-	Auth fileAuth `yaml:"auth"`
-	DB   fileDB   `yaml:"db"`
+	Agent fileAgent `yaml:"agent"`
+	Env   string    `yaml:"env"`
+	HTTP  fileHTTP  `yaml:"http"`
+	Log   fileLog   `yaml:"log"`
+	Data  fileData  `yaml:"data"`
+	Auth  fileAuth  `yaml:"auth"`
+	DB    fileDB    `yaml:"db"`
+}
+
+type fileAgent struct {
+	APIKey         string `yaml:"api_key"`
+	Model          string `yaml:"model"`
+	Workers        int    `yaml:"workers"`
+	MaxTurns       int    `yaml:"max_turns"`
+	MaxSessions    int    `yaml:"max_sessions"`
+	RequestTimeout string `yaml:"request_timeout"`
 }
 
 type fileHTTP struct {

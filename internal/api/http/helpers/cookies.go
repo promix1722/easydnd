@@ -60,6 +60,11 @@ func (o CookieOptions) sessionName(c *gin.Context) string {
 	name := o.SessionCookieName()
 	if o.Development {
 		scope := c.GetHeader(HeaderDevelopmentSession)
+		// Native EventSource cannot set headers. Its development-only query
+		// selector still selects a signed HttpOnly cookie, never a credential.
+		if scope == "" && c.Request.Method == http.MethodGet {
+			scope = c.Query("devSession")
+		}
 		if decoded, err := hex.DecodeString(scope); err == nil && len(decoded) == 16 {
 			return name + "_" + scope
 		}

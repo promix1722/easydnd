@@ -19,6 +19,7 @@ const BASE_URL = '/v1'
 const HEADER_REQUEST_ID = 'X-Request-Id'
 
 export interface RequestOptions {
+  formData?: FormData
   method?: string
   body?: unknown
   signal?: AbortSignal
@@ -95,7 +96,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     ...(options.signal ? { signal: options.signal } : {}),
   }
 
-  if (options.rawBody !== undefined) {
+  if (options.formData !== undefined) {
+    init.body = options.formData
+  } else if (options.rawBody !== undefined) {
     headers['Content-Type'] = 'application/json'
     init.body = options.rawBody
   } else if (options.body !== undefined) {

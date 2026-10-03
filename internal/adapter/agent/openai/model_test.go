@@ -1,0 +1,44 @@
+package openai
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	sdk "github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
+
+func TestResponsesStreamUsesCompleteToolArguments(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Error(err)
+		}
+		if body["store"] != false || body["stream"] != true {
+			t.Errorf("unexpected privacy/stream config: %v", body)
+		}
+		encoded, _ := json.Marshal(body["input"])
+		if !strings.Contains(string(encoded), "image_url") || !strings.Contains(string(encoded), "input_file") {
+			t.Error("missing multimodal inputs")
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, "data: {\"type\":\"response.output_text.delta\",\"delta\":\"Reading\"}\n\n")
+		fmt.Fprint(w, "data: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"{bad partial\"}\n\n")
+		fmt.Fprint(w, `data: {"type":"response.completed","response":{"id":"r1","output":[{"type":"function_call","call_id":"call1","name":"get_build_context","arguments":"{}"}]}}`+"\n\n")
+	}))
+	defer server.Close()
+	m := &Model{client: sdk.NewClient(option.WithAPIKey("test"), option.WithBaseURL(server.URL), option.WithMaxRetries(0)), model: "configured-model"}
+	text := ""
+	got, err := m.Respond(context.Background(), charuc.AgentRequest{Locale: "en", Files: []charuc.AgentFile{{Name: "sheet.png", MIME: "image/png", Data: []byte("image")}, {Name: "sheet.pdf", MIME: "application/pdf", Data: []byte("pdf")}}}, func(s string) { text += s })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text != "Reading" || len(got.Calls) != 1 || got.Calls[0].Arguments != "{}" {
+		t.Fatalf("bad stream: %+v %q", got, text)
+	}
+}

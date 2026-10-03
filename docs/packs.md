@@ -7,7 +7,10 @@ The original design discussion is in [packs-plan.md](packs-plan.md).
 
 This delivery covers files, the core evaluator, character locks, revisions,
 resource events and migration APIs. Pack editors, uploads, publishing,
-per-user private pack storage and authoring CRUD remain future work. The
+durable per-user private pack storage and authoring CRUD remain future work.
+Character imports can now compile temporary, session-scoped private definitions;
+see [agent.md](agent.md#custom-content). These releases use the same validator
+and immutable locks, never enter the default catalogue, and live in memory. The
 existing browser still uses its original ability editor and resource displays;
 the new metadata/read contracts are available for that later UI work.
 

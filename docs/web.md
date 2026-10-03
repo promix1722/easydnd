@@ -4024,3 +4024,31 @@ caption without a redundant level-zero heading. Selected leveled spells retain
 their level headings; available results remain sorted by level and localized name.
 Each allowance source, including additional allowance, has a caption with gray
 details on a separate line.
+
+## Import workspace
+
+Folder Import buttons open a single assistant chat when the server reports an
+enabled provider; the legacy JSON screen remains the unconfigured fallback.
+`AgentImportScreen` renders streamed text and every activity step in one always
+visible chronological log. User text and attachments share one message. Source
+labels and internal assumptions are omitted. The compact composer has file
+attachment and Send actions; Enter sends, Shift+Enter adds a newline.
+
+`/characters/import/:sessionId` identifies a chat. `/character` and `/editor`
+are separate child pages with Characters / Chatbot Creation / ID / … breadcrumbs.
+They render the existing `SheetBody` and full `BuildScreen` against the same
+unsaved draft. No modal wraps these pages and no assumptions panel precedes the
+sheet. Navigation within the session preserves unsent composer text. Old
+`?session=...` links remain supported.
+
+Questions and unresolved choices are handled in chat with suggested reply
+buttons and free-text input. Sending waits for the current assistant run to end;
+there is no Stop control. SSE snapshots update turn status, and a periodic read
+recovers missed terminal updates without making the composer busy. New messages
+scroll into view unless the user has scrolled up.
+
+Save publishes a normal character and freezes its conversation. Source notes and
+private catalogue names appear in the shared `SheetBody`, so copies and shared
+sheets retain custom content. Captions/errors have English and Russian
+translations. See [agent.md](agent.md) for the tool/question contract and the
+current in-memory lifetime.

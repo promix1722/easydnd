@@ -12,6 +12,7 @@ import (
 
 // Handler serves the character resource.
 type Handler struct {
+	agent   *charuc.Agent
 	service *charuc.Service
 	log     *slog.Logger
 }
@@ -56,3 +57,6 @@ const FolderQueryParam = "folder"
 func folderOf(c *gin.Context) domain.FolderID {
 	return domain.FolderID(c.Query(FolderQueryParam))
 }
+
+// WithAgent installs the optional import coordinator.
+func (h *Handler) WithAgent(a *charuc.Agent) *Handler { h.agent = a; return h }

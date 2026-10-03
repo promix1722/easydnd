@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
@@ -40,6 +41,19 @@ func (s *Service) Migrate(ctx context.Context, owner domain.OwnerID, id domain.I
 	}
 	if c.Revision != expectedRevision {
 		return Migration{}, types.NewValidationError("stale migration revision")
+	}
+	for _, release := range target.Packs {
+		if strings.HasPrefix(release.ID, "import-") {
+			owned := false
+			for _, oldRelease := range c.Log.RulesLock().Packs {
+				if oldRelease == release {
+					owned = true
+				}
+			}
+			if !owned {
+				return Migration{}, types.NewValidationError("private pack is not attached to this character")
+			}
+		}
 	}
 	if err := target.Validate(); err != nil {
 		return Migration{}, types.NewValidationError("invalid rules lock: %v", err)

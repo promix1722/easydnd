@@ -67,6 +67,10 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'characters/import/:sessionId/:importView?',
+        element: <Private><ImportCharacterScreen /></Private>,
+      },
+      {
         path: 'characters/:id',
         element: (
           <Private>

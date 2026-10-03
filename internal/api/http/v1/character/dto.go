@@ -113,6 +113,9 @@ type Value struct {
 
 // Sheet is the projected character.
 type Sheet struct {
+	ImportSession string                 `json:"importSession,omitempty"`
+	CatalogNames  map[string]string      `json:"catalogNames,omitempty"`
+	ImportedNotes []string               `json:"importedNotes,omitempty"`
 	Contributions []Contribution         `json:"contributions,omitempty"`
 	PackActions   []ActionOffer          `json:"packActions,omitempty"`
 	ManualRules   []string               `json:"manualRules,omitempty"`

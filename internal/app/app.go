@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	agentmodel "github.com/promix1722/easydnd/internal/adapter/agent/openai"
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	oidcadapter "github.com/promix1722/easydnd/internal/adapter/oidc"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
@@ -53,9 +54,10 @@ import (
 
 // App owns the wired object graph and the HTTP server lifecycle.
 type App struct {
-	cfg *config.Config
-	log *slog.Logger
-	srv *http.Server
+	agent *charuc.Agent
+	cfg   *config.Config
+	log   *slog.Logger
+	srv   *http.Server
 	// pool is nil when no db.url was configured, which only development
 	// permits. Close releases it.
 	pool *pgxpool.Pool
@@ -225,6 +227,11 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		devHandler = development.New(seed, helpers.NewCookieOptions(cfg), cfg.Auth.SessionTTL)
 		log.Info("development party seeded", "accounts", []string{"master", "player1", "player2"}, "group_id", devGroupID, "game_ids", seed.games)
 	}
+	var model charuc.AgentModel
+	if cfg.Agent.APIKey != "" {
+		model = agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model)
+	}
+	agent := charuc.NewAgent(characterService, model, charuc.AgentConfig{Workers: cfg.Agent.Workers, MaxTurns: cfg.Agent.MaxTurns, MaxSessions: cfg.Agent.MaxSessions, Timeout: cfg.Agent.RequestTimeout})
 
 	// Inbound adapters. The character routes are declared behind
 	// RequireSession, and the handler reads the owner from the account that
@@ -238,20 +245,22 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)),
 		Authenticator: authService,
 		Catalog:       catalogapi.New(catalogSource, log.With("handler", "catalog")),
-		Character:     characterapi.New(characterService, log.With("handler", "character")),
+		Character:     characterapi.New(characterService, log.With("handler", "character")).WithAgent(agent),
 		Folder:        folderapi.New(characterService, log.With("handler", "folder")),
 		Game:          gameapi.New(gameService, log.With("handler", "game")),
 		Group:         groupapi.New(groupService, log.With("handler", "group")),
 	})
 	if err != nil {
+		agent.Close()
 		return fail(fmt.Errorf("build router: %w", err))
 	}
 
 	return &App{
-		cfg:  cfg,
-		log:  log,
-		srv:  httpapi.NewServer(cfg.HTTP, router),
-		pool: pool,
+		agent: agent,
+		cfg:   cfg,
+		log:   log,
+		srv:   httpapi.NewServer(cfg.HTTP, router),
+		pool:  pool,
 	}, nil
 }
 
@@ -361,6 +370,9 @@ func (a *App) Run(ctx context.Context) error {
 // every connection is handed back, and the requests still draining in
 // Shutdown are holding some of them.
 func (a *App) Close() {
+	if a.agent != nil {
+		a.agent.Close()
+	}
 	if a.pool != nil {
 		a.pool.Close()
 	}

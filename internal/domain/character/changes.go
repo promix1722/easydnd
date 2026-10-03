@@ -37,6 +37,19 @@ func (p *projector) applyChange(sc seqChange) error {
 	}
 
 	switch segments[0] {
+	case "finalAbilities":
+		if len(segments) != 2 || ch.Op != OpSet || ch.Value.Kind != ValueInt {
+			return p.unresolved(sc)
+		}
+		ability, ok := rules.ParseAbility(segments[1])
+		if !ok || ch.Value.Int < 1 || ch.Value.Int > 30 {
+			return p.unresolved(sc)
+		}
+		if p.finalAbilities == nil {
+			p.finalAbilities = map[rules.Ability]int{}
+		}
+		p.finalAbilities[ability] = ch.Value.Int
+		return nil
 	case "spellLimits":
 		if len(segments) != 2 {
 			return p.unresolved(sc)
@@ -142,6 +155,7 @@ func (p *projector) changeAbilities(sc seqChange, rest []string) error {
 	}
 	switch sc.Change.Op {
 	case OpSet:
+		delete(p.finalAbilities, ability)
 		p.state.Abilities.Scores[ability] = value
 	case OpIncrement:
 		p.state.Abilities.Scores[ability] += value

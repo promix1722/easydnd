@@ -153,6 +153,8 @@ func NewRegistry(paths []string, roots []Dependency, archive string) (*Registry,
 }
 
 func (r *Registry) Resolve(roots []Dependency) (pack.Lock, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	// Backtracking ensures a later dependency can constrain an earlier selection.
 	var solve func(map[string]*PackDocument, []Dependency) (map[string]*PackDocument, error)
 	solve = func(selected map[string]*PackDocument, pending []Dependency) (map[string]*PackDocument, error) {
@@ -289,6 +291,8 @@ func (r *Registry) ordered(lock pack.Lock) ([]*PackDocument, error) {
 }
 func (r *Registry) DefaultLock() pack.Lock { return r.defaultLock.Clone() }
 func (r *Registry) Locales(context.Context) ([]rules.Locale, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	set := map[string]bool{"en": true}
 	for _, versions := range r.releases {
 		for _, p := range versions {

@@ -207,6 +207,16 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// Characters. Every route is at most one level deep: a
 			// sub-resource under an addressed parent, and never a
 			// sub-resource of that.
+			authed.GET("/agent-capabilities", h.Character.AgentCapabilities)
+			authed.POST("/agent-sessions", h.Character.AgentCreate)
+			authed.GET("/agent-sessions", h.Character.AgentList)
+			authed.GET("/agent-sessions/:id", h.Character.AgentGet)
+			authed.Any("/agent-sessions/:id/draft/*path", h.Character.AgentDraft)
+			authed.GET("/agent-sessions/:id/events", h.Character.AgentEvents)
+			authed.POST("/agent-sessions/:id/files", h.Character.AgentFiles)
+			authed.POST("/agent-sessions/:id/control", h.Character.AgentControl)
+			authed.POST("/agent-sessions/:id/edit", h.Character.AgentEdit)
+			authed.POST("/agent-sessions/:id/finalize", h.Character.AgentFinalize)
 			authed.GET("/characters", h.Character.List)
 			authed.POST("/characters", h.Character.Create)
 			// Import is a sibling of create, not a sub-resource of a

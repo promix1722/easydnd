@@ -581,3 +581,19 @@ The player's explicit additional spell limit is a separate persisted allowance,
 not a change to the class progression. Spells beyond the ordinary class allowance
 remain custom picks, even when covered by this extra count. Unlimited explicit
 custom choices remain possible with character availability disabled.
+
+## Imported observations and final ability totals
+
+Agent imports hold observed facts separately from validated choice answers in
+an unpublished log. `finalAbilities.<ability>` is an explicit source total:
+projection installs it before dependent calculations and avoids adding race,
+ASI or pack ability bonuses again. Save attempts to invert ordinary additive
+bonuses into base scores, verifying that reprojection preserves the totals.
+Non-invertible custom rules retain the explicit override; a later ordinary base
+score assignment clears it. This keeps common imported characters compatible
+with subsequent ability progression without inventing historical choices.
+
+Unknown mechanics are manual notes rather than executable guesses. Complete
+custom definitions use the existing immutable pack lock. Both manual source
+notes and private definitions remain readable on copied/shared projections.
+See [agent.md](agent.md) for import reconciliation and review boundaries.

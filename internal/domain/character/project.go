@@ -2,6 +2,7 @@ package character
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -61,8 +62,9 @@ func projectBuild(log Log, cat *catalog.Catalog) (State, error) {
 
 // projector carries the working state of one projection.
 type projector struct {
-	cat     *catalog.Catalog
-	answers answers
+	finalAbilities map[rules.Ability]int
+	cat            *catalog.Catalog
+	answers        answers
 
 	state State
 
@@ -118,6 +120,9 @@ func (p *projector) run(log Log) (State, error) {
 	// modifier per level, and a half-elf who put their +1 into Constitution
 	// would otherwise be three hit points short at 3rd level.
 	p.deriveAbilities()
+	for ability, score := range p.finalAbilities {
+		p.state.Abilities.Scores[ability] = score
+	}
 
 	p.applyRace()
 	p.applyBackground()
@@ -172,6 +177,7 @@ func (p *projector) run(log Log) (State, error) {
 			}
 		}
 	}
+	p.privateNames()
 	return p.state, p.err
 }
 
@@ -185,7 +191,7 @@ func (p *projector) replay(log Log) {
 			for _, ch := range e.Changes {
 				sc := seqChange{Seq: e.Seq, Change: ch}
 				switch {
-				case isInputPath(ch.Path):
+				case isInputPath(ch.Path) || strings.HasPrefix(string(ch.Path), "finalAbilities."):
 					p.inputs = append(p.inputs, sc)
 				case isEquipmentPath(ch.Path):
 					p.equipment = append(p.equipment, sc)
@@ -210,6 +216,13 @@ func (p *projector) replay(log Log) {
 				p.state.Feats = append(p.state.Feats, e.Ref.Slug)
 			}
 		case EventNote, EventNone:
+			if strings.HasPrefix(e.Note, "import.session:") {
+				p.state.ImportSession = strings.TrimPrefix(e.Note, "import.session:")
+			}
+			if strings.HasPrefix(e.Note, "import.manual:") {
+				_, body, _ := strings.Cut(e.Note, "\n")
+				p.state.ImportedNotes = append(p.state.ImportedNotes, body)
+			}
 		}
 	}
 }
@@ -805,4 +818,66 @@ func proficiencyBonus(characterLevel int) int {
 		return 2
 	}
 	return 2 + (characterLevel-1)/4
+}
+
+// Private definitions travel in the locked projection, including shared and
+// copied sheets. The global compendium intentionally cannot resolve them.
+func (p *projector) privateNames() {
+	private := false
+	for _, release := range p.cat.Lock.Packs {
+		if strings.HasPrefix(release.ID, "import-") {
+			private = true
+			break
+		}
+	}
+	if !private {
+		return
+	}
+	p.state.CatalogNames = map[string]string{}
+	add := func(collection string, entry catalog.Entry) {
+		if strings.HasPrefix(entry.Slug.String(), "import-") {
+			p.state.CatalogNames[collection+":"+entry.Slug.String()] = entry.Name
+			body := entry.Name
+			if len(entry.Desc) > 0 {
+				body += "\n" + strings.Join(entry.Desc, "\n\n")
+			}
+			p.state.ImportedNotes = append(p.state.ImportedNotes, body)
+		}
+	}
+	for _, v := range p.cat.Spells.All() {
+		add("spells", v.Entry)
+	}
+	for _, v := range p.cat.Items.All() {
+		add("equipment", v.Entry)
+	}
+	for _, v := range p.cat.MagicItems.All() {
+		add("equipment", v.Entry)
+	}
+	for _, v := range p.cat.Races.All() {
+		add("races", v.Entry)
+	}
+	for _, v := range p.cat.Subraces.All() {
+		add("subraces", v.Entry)
+	}
+	for _, v := range p.cat.Classes.All() {
+		add("classes", v.Entry)
+	}
+	for _, v := range p.cat.Subclasses.All() {
+		add("subclasses", v.Entry)
+	}
+	for _, v := range p.cat.Backgrounds.All() {
+		add("backgrounds", v.Entry)
+	}
+	for _, v := range p.cat.Feats.All() {
+		add("feats", v.Entry)
+	}
+	for _, v := range p.cat.Features.All() {
+		add("features", v.Entry)
+	}
+	for _, v := range p.cat.Traits.All() {
+		add("traits", v.Entry)
+	}
+	for _, v := range p.cat.Languages.All() {
+		add("languages", v.Entry)
+	}
 }

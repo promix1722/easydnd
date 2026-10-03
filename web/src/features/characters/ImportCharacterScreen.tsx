@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
+import { useEffect, useState } from 'react'
+import { agentCapabilities } from '@/lib/api/agent'
+import { AgentImportScreen } from './AgentImportScreen'
+import { useNavigate, useSearchParams, useParams } from 'react-router'
 
 import { importCharacter } from '@/lib/api'
 import type { ImportEntry, ImportReport } from '@/lib/api'
@@ -31,6 +33,15 @@ import {
  * no prompts, so there is always something left to decide.
  */
 export function ImportCharacterScreen() {
+ const [enabled,setEnabled]=useState(false)
+ const [params]=useSearchParams()
+ const {sessionId}=useParams()
+ useEffect(()=>{let live=true;void agentCapabilities().then(v=>{if(live)setEnabled(v.enabled)},()=>{});return()=>{live=false}},[])
+ if (enabled || sessionId || params.has('session')) return <AgentImportScreen />
+ return <LegacyImportCharacterScreen />
+}
+
+function LegacyImportCharacterScreen() {
   const t = useT()
   const navigate = useNavigate()
   // The folder the character list was filtered to when Import was pressed.

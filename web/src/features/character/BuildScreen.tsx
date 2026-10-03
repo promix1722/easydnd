@@ -109,9 +109,10 @@ interface Preview {
  * to is written by the server too -- so a dropped answer reappears under its
  * own tab without this screen routing it anywhere.
  */
-export function BuildScreen() {
+export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDone?: () => void; trail?: Crumb[] } = {}) {
   const t = useT()
-  const { id = '' } = useParams()
+  const { id: routeId = '' } = useParams()
+  const id = draftId ?? routeId
   const navigate = useNavigate()
   const location = useLocation()
   // The folder the character list was filtered to when New character was pressed.
@@ -542,7 +543,7 @@ export function BuildScreen() {
   if (build.loading && !creating) {
     return (
       <Page
-        trail={buildTrail(t, isNew, null)}
+        trail={trail ?? buildTrail(t, isNew, null)}
         state={{ kind: 'loading', what: t('build.loading') }}
       />
     )
@@ -550,7 +551,7 @@ export function BuildScreen() {
   if (build.error !== null) {
     return (
       <Page
-        trail={buildTrail(t, isNew, null)}
+        trail={trail ?? buildTrail(t, isNew, null)}
         state={{
           kind: 'failed',
           title: t('build.loadFailed'),
@@ -574,7 +575,7 @@ export function BuildScreen() {
       // The draft, while the character it names is being created: the sheet
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
-      trail={buildTrail(t, isNew, creating ? nameDraft.trim() : title(view))}
+      trail={trail ?? buildTrail(t, isNew, creating ? nameDraft.trim() : title(view))}
       /*
        * On the heading line, against the right edge, and only once there is a
        * character to finish.
@@ -592,7 +593,7 @@ export function BuildScreen() {
             actions: (
               <Button
                 variant={view.prompts.complete ? 'filled' : 'light'}
-                onClick={() => void navigate(`/characters/${id}`)}
+                onClick={() => onDone ? onDone() : void navigate(`/characters/${id}`)}
               >
                 {t('build.finish')}
               </Button>

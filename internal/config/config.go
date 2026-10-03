@@ -41,13 +41,20 @@ const (
 const GoogleRedirectPath = "/v1/auth/sso/google/callback"
 
 // Config is the fully resolved runtime configuration.
+type AgentConfig struct {
+	APIKey, Model                  string
+	Workers, MaxTurns, MaxSessions int
+	RequestTimeout                 time.Duration
+}
+
 type Config struct {
-	Env  string
-	HTTP HTTPConfig
-	Auth AuthConfig
-	Log  LogConfig
-	Data DataConfig
-	DB   DBConfig
+	Agent AgentConfig
+	Env   string
+	HTTP  HTTPConfig
+	Auth  AuthConfig
+	Log   LogConfig
+	Data  DataConfig
+	DB    DBConfig
 
 	// Source is the config file this was loaded from, logged at startup so the
 	// log stream answers "which config is this process running?".
@@ -206,7 +213,14 @@ func Load(path string) (*Config, error) {
 		return nil, err
 	}
 
+	if f.Agent.APIKey != "" && strings.TrimSpace(f.Agent.Model) == "" {
+		return nil, fmt.Errorf("agent.model is required when agent.api_key is set")
+	}
+	if f.Agent.Workers < 0 || f.Agent.Workers > 32 || f.Agent.MaxTurns < 0 || f.Agent.MaxTurns > 200 || f.Agent.MaxSessions < 0 || f.Agent.MaxSessions > 1000 {
+		return nil, fmt.Errorf("invalid agent limits")
+	}
 	cfg := &Config{
+		Agent:         AgentConfig{APIKey: strings.TrimSpace(f.Agent.APIKey), Model: strings.TrimSpace(f.Agent.Model), Workers: p.intVal(f.Agent.Workers, 4), MaxTurns: p.intVal(f.Agent.MaxTurns, 40), MaxSessions: p.intVal(f.Agent.MaxSessions, 100), RequestTimeout: p.duration("agent.request_timeout", f.Agent.RequestTimeout, 2*time.Minute)},
 		Env:           env,
 		Auth:          auth,
 		Source:        src.path,
@@ -268,6 +282,9 @@ func Load(path string) (*Config, error) {
 }
 
 func (c *Config) validate() error {
+	if c.Agent.RequestTimeout <= 0 || c.Agent.RequestTimeout > 10*time.Minute {
+		return fmt.Errorf("agent.request_timeout must be positive and at most 10m")
+	}
 	switch c.Env {
 	case EnvDevelopment, EnvProduction:
 	default:

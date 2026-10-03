@@ -268,3 +268,25 @@ func (r *CharacterRepository) Commit(_ context.Context, id domain.ID, expectedRe
 	r.items[id] = c
 	return nil
 }
+
+// CreateWithLog publishes an imported draft in one critical section.
+func (r *CharacterRepository) CreateWithLog(_ context.Context, owner domain.OwnerID, folder domain.FolderID, log domain.Log) (domain.Character, error) {
+	if err := log.Validate(); err != nil {
+		return domain.Character{}, err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.nextID++
+	c := domain.Character{ID: domain.ID(fmt.Sprintf("chr_%06d", r.nextID)), Owner: owner, Folder: folder, Log: log.Clone(), Revision: max(1, log.Len())}
+	for i := range c.Log.Events {
+		e := &c.Log.Events[i]
+		if e.ID == "" {
+			e.ID = "evt_" + rand.Text()
+		}
+		if e.SchemaVersion == 0 {
+			e.SchemaVersion = 1
+		}
+	}
+	r.items[c.ID] = c
+	return clone(c), nil
+}

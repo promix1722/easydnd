@@ -65,6 +65,9 @@ class NoIntersectionObserver implements IntersectionObserver {
   }
 }
 
+// Autosizing textareas listen for font loading; jsdom has no FontFaceSet.
+if (!document.fonts) Object.defineProperty(document, 'fonts', { value: new EventTarget(), configurable: true })
+
 globalThis.ResizeObserver ??= NoResizeObserver
 globalThis.IntersectionObserver ??= NoIntersectionObserver
 

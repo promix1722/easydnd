@@ -10,6 +10,9 @@ import "github.com/promix1722/easydnd/internal/domain/rules"
 // two -- which is what DND.md means by "autocalculated", and why recomputing
 // it from scratch must always be safe.
 type State struct {
+	ImportSession string
+	CatalogNames  map[string]string
+	ImportedNotes []string
 	Contributions []Contribution
 	PackActions   []ActionOffer
 	ManualRules   []rules.Slug

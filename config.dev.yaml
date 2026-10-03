@@ -62,3 +62,12 @@ auth:
 # db.url and the origins that slot implies. This file is what `make run/server`
 # loads on a worktree that has claimed nothing; see
 # docs/backend.md#running-more-than-one-worktree for the rest.
+
+# Optional AI character import. Supply credentials in a private config file.
+# agent:
+#   api_key: "..."
+#   model: "your-responses-model"
+#   workers: 4
+#   max_turns: 40
+#   max_sessions: 100
+#   request_timeout: 2m

@@ -183,7 +183,7 @@ func scoresWereSet(log Log) bool {
 	for _, e := range log.Events {
 		for _, ch := range e.Changes {
 			segments := ch.Path.Segments()
-			if len(segments) == 2 && segments[0] == "abilities" {
+			if len(segments) == 2 && (segments[0] == "abilities" || segments[0] == "finalAbilities") {
 				if _, ok := rules.ParseAbility(segments[1]); ok {
 					return true
 				}

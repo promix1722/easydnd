@@ -213,7 +213,9 @@ func (p *projector) applyPackRules() error {
 					case rules.RefOption:
 						p.grantPackRef(v.Ref)
 					case rules.AbilityBonusOption:
-						p.state.Abilities.Scores[v.Ability] += v.Bonus
+						if _, pinned := p.finalAbilities[v.Ability]; !pinned {
+							p.state.Abilities.Scores[v.Ability] += v.Bonus
+						}
 					}
 				})
 			}
@@ -280,6 +282,9 @@ func (p *projector) applyEffect(r catalog.RuleDefinition, e catalog.Effect) erro
 	var distance *rules.Feet
 	if strings.HasPrefix(e.Target, "abilities.") {
 		ability = rules.Ability(strings.TrimPrefix(e.Target, "abilities."))
+		if _, pinned := p.finalAbilities[ability]; pinned {
+			return nil
+		}
 		local = p.state.Abilities.Score(ability)
 		target = &local
 	} else if strings.HasPrefix(e.Target, "speed.") {

@@ -45,6 +45,7 @@ export {
   IconLanguage,
   IconLogout,
   IconPencil,
+  IconPaperclip,
   IconPlus,
   IconShield,
   IconTrash,
@@ -88,6 +89,7 @@ export {
   ActionIcon,
   Button,
   FileInput,
+  FileButton,
   // Per-row actions -- a roster's members, a character list's rows. The
   // alternative is four buttons in every row, which DataList's mobile card
   // rendering cannot lay out legibly.
