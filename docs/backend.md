@@ -78,9 +78,19 @@ no previous identity's resource data or edit drafts remain.
 Accounts and the group are reused when the API restarts against an existing
 development database. Characters and games are rebuilt because their stores
 are process-local. Signing in again within the same run does not reseed or
-reset game changes. Separate browser profiles or a private window let the
-master and players remain signed in simultaneously; tabs in one profile
-share the usual session cookie.
+reset game changes. Open separate tabs and choose master, player1 and player2
+in each: development shortcuts keep a random cookie selector in tab-local
+`sessionStorage` and send it as `X-EasyDnD-Dev-Session`. Each successful switch
+uses a new selector, including in duplicated tabs; a failed switch keeps the
+previous identity. The signed token stays in an HttpOnly cookie. This header
+is ignored in production.
+
+All development auth cookie names also include a namespace derived from the
+API listen address. Different worktree ports on the same browser hostname
+therefore cannot overwrite or clear one another's sessions, passkey ceremonies
+or SSO flight cookies. Production cookie names are unchanged. Restarting an
+API without `auth.session_secret` still invalidates that API's sessions because
+its signing key is generated per process.
 
 `make dev` is a **disposable** stack: Ctrl-C takes the database down with the
 servers, so every run starts on an empty schema and nothing is left behind.

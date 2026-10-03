@@ -127,7 +127,7 @@ func newFullRouterInEnv(
 		},
 		log,
 	)
-	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
+	cookies := helpers.NewCookieOptions(cfg)
 
 	// dev's shared, cached catalogue source -- building a second one here is
 	// what the verify-speedup commit removed.

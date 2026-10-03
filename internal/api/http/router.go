@@ -62,7 +62,7 @@ type Handlers struct {
 // NewRouter builds the engine and declares the complete route table. Keeping
 // every route visible in one file is deliberate: it is the API's index.
 func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, error) {
-	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
+	cookies := helpers.NewCookieOptions(cfg)
 	r := gin.New()
 	if h.Catalog != nil {
 		locales, err := h.Catalog.ContentLocales(context.Background())

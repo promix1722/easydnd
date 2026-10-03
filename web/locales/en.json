@@ -1,6 +1,6 @@
 {
   "dev.accounts": "Development accounts",
-  "dev.accountsHint": "Open the seeded party as the master or a player. Switch accounts from the header to check permissions.",
+  "dev.accountsHint": "Open the seeded party as the master or a player. Use separate tabs for simultaneous accounts; switching affects this tab only.",
   "dev.switchAccount": "Switch development account ({{name}})",
   "dev.master": "master",
   "dev.player1": "player1",

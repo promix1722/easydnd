@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { clearDevelopmentSession } from '@/lib/api/devSession'
 
 import {
   ApiError,
@@ -227,6 +228,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const signInWith = useCallback((provider: string) => {
     setError(null)
+    // OAuth navigations use the ordinary browser session, without fetch headers.
+    clearDevelopmentSession()
     window.location.assign(ssoStartUrl(provider, currentPath()))
   }, [])
 

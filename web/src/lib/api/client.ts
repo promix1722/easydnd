@@ -6,6 +6,7 @@ import { noteReleaseHeader } from '@/lib/version/state'
 
 import { ApiError, TransportError, isApiErrorEnvelope } from './errors'
 import { requestLocale } from './locale'
+import { developmentSession } from './devSession'
 
 /**
  * Same-origin by design. nginx routes /v1/ to the Go process and / to this
@@ -23,6 +24,8 @@ export interface RequestOptions {
   signal?: AbortSignal
   /** Override the generated correlation id. Mostly useful in tests. */
   requestId?: string
+  /** Development cookie selector; never a credential. */
+  developmentSession?: string
   /**
    * Send the raw value as the body instead of JSON-encoding it.
    *
@@ -75,6 +78,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const headers: Record<string, string> = {
     Accept: 'application/json',
     [HEADER_REQUEST_ID]: requestId,
+  }
+
+  if (import.meta.env.DEV) {
+    const scope = options.developmentSession ?? developmentSession()
+    if (scope) headers['X-EasyDnD-Dev-Session'] = scope
   }
 
   const init: RequestInit = {

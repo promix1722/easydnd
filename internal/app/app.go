@@ -222,7 +222,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		if err != nil {
 			return fail(fmt.Errorf("seed development game: %w", err))
 		}
-		devHandler = development.New(seed, helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}, cfg.Auth.SessionTTL)
+		devHandler = development.New(seed, helpers.NewCookieOptions(cfg), cfg.Auth.SessionTTL)
 		log.Info("development party seeded", "accounts", []string{"master", "player1", "player2"}, "group_id", devGroupID, "game_ids", seed.games)
 	}
 
@@ -235,7 +235,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		System:        system.New(buildinfo.Version),
 		Version:       buildinfo.Version,
 		WebDir:        opts.WebDir,
-		Auth:          authapi.New(authService, helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}),
+		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)),
 		Authenticator: authService,
 		Catalog:       catalogapi.New(catalogSource, log.With("handler", "catalog")),
 		Character:     characterapi.New(characterService, log.With("handler", "character")),

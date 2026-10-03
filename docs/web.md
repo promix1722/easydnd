@@ -1091,7 +1091,12 @@ Development builds expose the seeded accounts on `/login` and through the
 account icon in the signed-in header. The choices are master, player1 and
 player2; each establishes a normal session through `/v1/dev/login`, then
 reloads into the current seeded game or the training game. Reloading clears
-resources and unsaved drafts belonging to the previous identity. Both controls
+resources and unsaved drafts belonging to the previous identity. Open separate
+tabs and choose a different account in each to test the master and players
+together. Each shortcut login selects its own HttpOnly cookie using a random
+value in tab-local sessionStorage; switching one tab preserves the others.
+Development API servers also namespace their cookies by listen address so
+worktrees on different ports cannot overwrite each other. Both controls
 are gated by `import.meta.env.DEV`, so production bundles offer none of them.
 See [the seeded party](backend.md#seeded-development-party) for the sample
 characters, games, locks and private NPCs.

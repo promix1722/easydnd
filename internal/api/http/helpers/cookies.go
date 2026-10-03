@@ -1,10 +1,13 @@
 package helpers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/promix1722/easydnd/internal/config"
 )
 
 // Cookie names. The prefixes are not decoration: a browser enforces them.
@@ -33,31 +36,59 @@ const (
 type CookieOptions struct {
 	// Secure marks cookies Secure and switches on the name prefixes. Derived
 	// from the environment, never from a request.
-	Secure bool
+	Secure      bool
+	Development bool
+	namespace   string
+}
+
+// NewCookieOptions isolates development servers even when their browser URLs
+// share a hostname. Cookies do not isolate ports; the API listen address does.
+func NewCookieOptions(cfg *config.Config) CookieOptions {
+	o := CookieOptions{Secure: cfg.Auth.SecureCookies, Development: cfg.Env == config.EnvDevelopment}
+	if o.Development && cfg.HTTP.Port != "" {
+		sum := sha256.Sum256([]byte(cfg.HTTP.Addr()))
+		o.namespace = "_dev_" + hex.EncodeToString(sum[:8])
+	}
+	return o
+}
+
+const HeaderDevelopmentSession = "X-EasyDnD-Dev-Session"
+
+// The selector is not a credential: the selected cookie still needs a valid
+// signature. Ignore the header entirely outside development.
+func (o CookieOptions) sessionName(c *gin.Context) string {
+	name := o.SessionCookieName()
+	if o.Development {
+		scope := c.GetHeader(HeaderDevelopmentSession)
+		if decoded, err := hex.DecodeString(scope); err == nil && len(decoded) == 16 {
+			return name + "_" + scope
+		}
+	}
+	return name
 }
 
 // SessionCookieName is the name the session cookie goes out under.
 func (o CookieOptions) SessionCookieName() string {
 	if o.Secure {
-		return "__Host-" + sessionCookieBase
+		return "__Host-" + sessionCookieBase + o.namespace
 	}
-	return sessionCookieBase
+	return sessionCookieBase + o.namespace
 }
 
 // CeremonyCookieName is the name the in-flight ceremony cookie goes out under.
 func (o CookieOptions) CeremonyCookieName() string {
 	if o.Secure {
-		return "__Secure-" + ceremonyCookieBase
+		return "__Secure-" + ceremonyCookieBase + o.namespace
 	}
-	return ceremonyCookieBase
+	return ceremonyCookieBase + o.namespace
 }
 
 // FlightCookieName is the name the in-flight SSO cookie goes out under.
 func (o CookieOptions) FlightCookieName() string {
 	if o.Secure {
-		return "__Secure-" + flightCookieBase
+		return "__Secure-" + flightCookieBase + o.namespace
 	}
-	return flightCookieBase
+	return flightCookieBase + o.namespace
 }
 
 // SetSession writes the session cookie.
@@ -68,7 +99,7 @@ func (o CookieOptions) FlightCookieName() string {
 // which is the case that matters.
 func (o CookieOptions) SetSession(c *gin.Context, token string, ttl time.Duration) {
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     o.SessionCookieName(),
+		Name:     o.sessionName(c),
 		Value:    token,
 		Path:     sessionCookiePath,
 		MaxAge:   int(ttl.Seconds()),
@@ -81,7 +112,7 @@ func (o CookieOptions) SetSession(c *gin.Context, token string, ttl time.Duratio
 // ClearSession expires the session cookie.
 func (o CookieOptions) ClearSession(c *gin.Context) {
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     o.SessionCookieName(),
+		Name:     o.sessionName(c),
 		Value:    "",
 		Path:     sessionCookiePath,
 		MaxAge:   -1,
@@ -172,7 +203,7 @@ func (o CookieOptions) Flight(c *gin.Context) string {
 
 // Session reads the session token, empty if absent.
 func (o CookieOptions) Session(c *gin.Context) string {
-	value, err := c.Cookie(o.SessionCookieName())
+	value, err := c.Cookie(o.sessionName(c))
 	if err != nil {
 		return ""
 	}

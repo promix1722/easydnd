@@ -7,8 +7,11 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
@@ -18,12 +21,17 @@ import (
 )
 
 func developmentApp(t *testing.T, env string) *App {
+	return developmentAppAtPort(t, env, "8080")
+}
+
+func developmentAppAtPort(t *testing.T, env, port string) *App {
 	t.Helper()
 	cfg, err := config.Load(filepath.Join("..", "..", "config.dev.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	cfg.Env = env
+	cfg.HTTP.Port = port
 	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "srd_5.1")
 	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
 	if err != nil {
@@ -153,4 +161,76 @@ func TestDevelopmentLoginKeepsSameOriginGuard(t *testing.T) {
 			t.Fatal("development login bypassed the mutation guard")
 		}
 	}
+}
+
+// One browser cookie jar, two ports and three tabs. This catches both the
+// cross-port overwrite and the stale UI silently acting as another player.
+func TestDevelopmentBrowserSessionIsolation(t *testing.T) {
+	first := developmentAppAtPort(t, config.EnvDevelopment, "18082")
+	second := developmentAppAtPort(t, config.EnvDevelopment, "18083")
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	send := func(app *App, port, scope, method, path, body string) *httptest.ResponseRecorder {
+		address, err := url.Parse("http://localhost:" + port + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequest(method, address.String(), strings.NewReader(body))
+		req.Header.Set("Origin", "http://localhost:5173")
+		req.Header.Set("X-Request-Id", "isolation-test")
+		req.Header.Set("X-EasyDnD-Dev-Session", scope)
+		req.Header.Set("Content-Type", "application/json")
+		for _, cookie := range jar.Cookies(address) {
+			req.AddCookie(cookie)
+		}
+		rec := httptest.NewRecorder()
+		app.srv.Handler.ServeHTTP(rec, req)
+		jar.SetCookies(address, rec.Result().Cookies())
+		return rec
+	}
+	master, player1, player2 := strings.Repeat("a", 32), strings.Repeat("b", 32), strings.Repeat("c", 32)
+	login := func(app *App, port, scope, account string) {
+		t.Helper()
+		rec := send(app, port, scope, "POST", "/v1/dev/login", `{"account":"`+account+`"}`)
+		if rec.Code != 200 {
+			t.Fatalf("login: %d %s", rec.Code, rec.Body)
+		}
+	}
+	assertUser := func(app *App, port, scope, name string) {
+		t.Helper()
+		me := devDecode[authapi.SessionResponse](t, send(app, port, scope, "GET", "/v1/auth/me", ""))
+		if me.User.DisplayName != name {
+			t.Fatalf("got %s, want %s", me.User.DisplayName, name)
+		}
+	}
+	login(first, "18082", master, "master")
+	login(first, "18082", player1, "player1")
+	login(first, "18082", player2, "player2")
+	// Even identical tab selectors cannot collide across API servers.
+	login(second, "18083", master, "player2")
+	for scope, name := range map[string]string{master: "master", player1: "player1", player2: "player2"} {
+		assertUser(first, "18082", scope, name)
+	}
+	assertUser(second, "18083", master, "player2")
+	if rec := send(first, "18082", master, "POST", "/v1/auth/logout", "{}"); rec.Code != 200 {
+		t.Fatal(rec.Body)
+	}
+	if rec := send(first, "18082", master, "GET", "/v1/auth/me", ""); rec.Code != 401 {
+		t.Fatal("signed-out tab still authenticated")
+	}
+	assertUser(first, "18082", player1, "player1")
+	assertUser(first, "18082", player2, "player2")
+	assertUser(second, "18083", master, "player2")
+	// Plain sessions (including built previews) also need cross-port isolation.
+	login(first, "18082", "", "master")
+	login(second, "18083", "", "player1")
+	assertUser(first, "18082", "", "master")
+	assertUser(second, "18083", "", "player1")
+	// An unknown selector must not fall back to another tab's normal session.
+	if rec := send(first, "18082", strings.Repeat("d", 32), "GET", "/v1/auth/me", ""); rec.Code != 401 {
+		t.Fatal("unknown tab inherited normal session")
+	}
+	assertUser(first, "18082", "", "master")
 }

@@ -21,8 +21,8 @@ export function DevAccounts({ compact = false, currentName }: { compact?: boolea
     const current = window.location.pathname
     const destination = result.game_ids.find((id) => current === `/games/${id}`) ?? result.game_ids[0]
     // A full navigation rebuilds auth and all resource/draft state for the new
-    // session. The cookie is shared normally, so separate browser profiles can
-    // also test simultaneous master and player sessions.
+    // session. The development cookie selector stays in this tab, so other
+    // tabs keep their master/player identity.
     window.location.assign(destination ? `/games/${destination}` : '/games')
   }
 
