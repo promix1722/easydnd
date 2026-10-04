@@ -1,8 +1,13 @@
 # Attribution
 
-The files in this directory are **generated** by `cmd/srdgen` from the vendored
+The JSON files in this directory are **generated** by `cmd/srdgen` from the vendored
 dump at `docs/reference_srd_5.1/data/`. Do not edit them by hand: `make verify`
 regenerates them into a temporary directory and fails on any difference.
+
+The 319 WebP files under spell-icons/ are committed artwork inputs, copied
+from the matching SRD spell IDs in easydnd-2014/spell-icons/. They are
+AI-generated illustrations; srdgen includes them in the pack manifest and
+copies them when writing another output directory.
 
 ## SRD 5.1
 

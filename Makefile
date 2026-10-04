@@ -412,10 +412,14 @@ web/icons/check:
 web/release: web/build
 	tar -czf web.tar.gz -C web/dist .
 
+## image/generate: generate one 128px WebP (manual, costs OpenAI credit)
+image/generate:
+	go run ./cmd/spellicon $(IMAGE_FLAGS)
+
 ## spell-icons: generate the per-spell icons -- manual, costs OpenAI credit
 # Three steps: build the prompts from the SRD, generate 1024px PNGs into a
 # cache outside the repo (the expensive artifact, so it survives worktrees and
-# reruns), downscale to the 128px webp the client imports. Every step skips
+# reruns), downscale to the 128px WebPs owned by the SRD pack. Every step skips
 # what already exists, so an interrupted run resumes for free; rerolling one
 # icon means deleting its webp here and its PNG in the cache. Never part of
 # `verify` -- icons are art, and art has no drift check.
@@ -427,6 +431,7 @@ spell-icons:
 	go run ./cmd/llm images -in $(SPELL_ICON_CACHE)/prompts.json \
 	  -out $(SPELL_ICON_CACHE)/png -quality low -background transparent
 	node web/scripts/spell-icons.mjs convert $(SPELL_ICON_CACHE)/png
+	$(MAKE) data/srd
 
 ## translate/ru: re-translate the Russian spell prose -- manual, costs OpenAI credit
 # `-preserve name` is what makes this a reroll rather than a no-op: -existing
@@ -460,11 +465,17 @@ translate/ru:
 	  -to ru $(TRANSLATE_FLAGS)
 	@test -n "$(findstring -dry-run,$(TRANSLATE_FLAGS))" || $(MAKE) data/srd
 
+# The standalone spellicon usecase owns its provider HTTP calls by design.
+# Excluding its root still catches any other usecase that imports it transitively.
 ## lint/layers: fail if the inner layers reach for transport or storage
 lint/layers:
-	@! go list -deps ./internal/domain/... ./internal/usecase/... \
+	@! go list -deps $$(go list ./internal/domain/... ./internal/usecase/... \
+	  | grep -v '^github.com/promix1722/easydnd/internal/usecase/spellicon$$') \
 	  | grep -E 'gin-gonic|^net/http$$|^database/sql$$|jackc/pgx|pressly/goose' \
 	  || { echo "LAYER VIOLATION: inner layers must not import transport or storage"; exit 1; }
+	@! go list -deps ./internal/usecase/spellicon \
+	  | grep -E 'gin-gonic|^database/sql$$|jackc/pgx|pressly/goose' \
+	  || { echo "LAYER VIOLATION: standalone icon generation must not import server frameworks or storage"; exit 1; }
 	@echo "layers clean"
 
 ## tidy: sync go.mod and go.sum
@@ -517,4 +528,4 @@ clean:
         data/srd data/srd/check data/lint data/lint/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \
         web/deps web/dev web/lint web/test web/check web/build web/release \
-        web/icons web/icons/check spell-icons
+        web/icons web/icons/check spell-icons image/generate

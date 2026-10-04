@@ -37,6 +37,7 @@ const maxPackBytes = 64 << 20
 // PackDocument is the portable, lossless pack representation. Locale keys are
 // collection -> local ID -> prose; mechanics labels use the resources collection.
 type PackDocument struct {
+	Icons      *PackIcons                     `json:"icons,omitempty"`
 	Provenance map[string]map[string][]string `json:"provenance,omitempty"`
 	Manifest   PackManifest                   `json:"manifest"`
 	Entities   map[string]json.RawMessage     `json:"entities"`
@@ -139,6 +140,9 @@ func (p *PackDocument) Validate() error {
 		return err
 	}
 	var value any
+	if len(b) > maxPackBytes {
+		return fmt.Errorf("pack exceeds %d bytes", maxPackBytes)
+	}
 	if err = json.Unmarshal(b, &value); err != nil {
 		return err
 	}
@@ -242,6 +246,9 @@ func (p *PackDocument) Validate() error {
 		return err
 	}
 	if err := p.validateProvenance(); err != nil {
+		return err
+	}
+	if err := p.validateIcons(); err != nil {
 		return err
 	}
 	return validateMechanics(p.Mechanics)
@@ -376,6 +383,15 @@ func readPackDirectory(read func(string) ([]byte, error)) (*PackDocument, error)
 			return nil, fmt.Errorf("pack exceeds size limit")
 		}
 		switch {
+		case strings.HasPrefix(logical, "icons/spells/"):
+			id := strings.TrimPrefix(logical, "icons/spells/")
+			if !validLocalID(id) {
+				return nil, fmt.Errorf("invalid icon ID %q", id)
+			}
+			if p.Icons == nil {
+				p.Icons = &PackIcons{Spells: map[string][]byte{}}
+			}
+			p.Icons.Spells[id] = data
 		case logical == "provenance":
 			if err = strictJSON(data, &p.Provenance); err != nil {
 				return nil, err
@@ -458,6 +474,18 @@ func SavePackDirectory(path string, p *PackDocument) error {
 			if err = write("locales/"+tag+"/"+name, "i18n/"+tag+"/"+name+".json", bundle); err != nil {
 				return err
 			}
+		}
+	}
+	if p.Icons != nil {
+		for id, data := range p.Icons.Spells {
+			name := "spell-icons/" + id + ".webp"
+			if err = os.MkdirAll(filepath.Join(temp, "spell-icons"), 0755); err != nil {
+				return err
+			}
+			if err = os.WriteFile(filepath.Join(temp, name), data, 0644); err != nil {
+				return err
+			}
+			manifest.Files["icons/spells/"+id] = name
 		}
 	}
 	b, err := json.MarshalIndent(manifest, "", "  ")

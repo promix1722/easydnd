@@ -528,6 +528,7 @@ func (c converter) spellSummary(s domain.Spell) Spell {
 	summary.Desc = nil
 	return Spell{
 		Entry:         summary,
+		Icon:          s.Icon,
 		Source:        s.Source.String(),
 		Level:         s.Level,
 		School:        s.School.String(),

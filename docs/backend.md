@@ -9,6 +9,32 @@ SRD compendium, passkey and Google sign-in, and the rules math for creation and
 level-up are built and tested. A character can be created, built and levelled
 over HTTP.
 
+## Single-image generation
+
+`internal/usecase/spellicon` contains the synchronous OpenAI image request,
+bounded retries, cancellation, PNG decoding, resizing and WebP encoding.
+This standalone package is the explicit exception to the inner-layer HTTP
+dependency rule; the layer checks still prohibit importing it from other
+usecases and still reject server frameworks and persistence in the generator.
+It returns 128×128 WebP bytes and has no queue, catalog dependency, file store,
+server configuration or application startup integration.
+
+The standalone binary owns command-line input and atomic file output:
+
+```sh
+go build -o bin/spellicon ./cmd/spellicon
+OPENAI_API_KEY=... bin/spellicon -prompt 'A glowing arcane rune' -out /tmp/rune.webp
+```
+
+Its default model is `gpt-image-2.5-sunburst`, overridable with `-model`.
+Requests use transparent 1024×1024 artwork at low quality, then convert to
+128×128 lossless WebP. `-timeout` defaults to five minutes including retries;
+`-overwrite` permits replacing an existing regular file. Generation failure
+preserves existing output. The CLI handles interruption and never exposes the
+key through a web interface. `make image/generate IMAGE_FLAGS='-prompt ...
+-out ...'` is an equivalent development command. The existing `llm` CLI remains
+compatible for offline translation and PNG batches.
+
 ## Rule pack runtime
 
 Startup registers the generated base pack plus `data.pack_files` and
@@ -343,8 +369,8 @@ without the key or the spend.
 The first consumer is the spell icons: `make spell-icons` chains a prompt
 builder and a webp downscale (both `web/scripts/spell-icons.mjs`) around
 `llm images`, caching the 1024px masters in `~/.cache/easydnd/spell-icons/`
-and committing 128px webps to `web/src/assets/spells/` -- see docs/web.md for
-why they live there.
+and committing 128px WebPs to `data/srd_5.1/spell-icons/`. The SRD pack
+manifest distributes those files; see [packs.md](packs.md#spell-artwork).
 
 ## The API
 
@@ -1143,7 +1169,9 @@ Imports point inward, never outward:
 
 Two mechanical checks back this up: `make lint/layers` greps the dependency
 graph of the inner layers, and a `depguard` rule in `.golangci.yml` denies the
-same imports at lint time.
+same imports at lint time. The standalone `usecase/spellicon` generator is
+the outbound HTTP exception described above; other inner packages cannot
+import it, and its dependencies still exclude server frameworks and storage.
 
 The frontend has its own layer rule and its own checker; see
 [web.md](web.md#dependency-rule).

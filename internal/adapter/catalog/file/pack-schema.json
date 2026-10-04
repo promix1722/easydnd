@@ -11,6 +11,7 @@
    "title":{"type":"string"},"sources":{"type":"object","additionalProperties":{"type":"string"}},"source":{"type":"string"},"attribution":{"type":"string"},"files":{"type":"object","additionalProperties":{"type":"string"}}
   }},
   "entities":{"type":"object","additionalProperties":{"type":"array","items":{"type":"object"}}},
+  "icons":{"type":"object","additionalProperties":false,"properties":{"spells":{"type":"object","additionalProperties":{"type":"string"}}}},
   "provenance":{"type":"object","additionalProperties":{"type":"object","additionalProperties":{"type":"array","items":{"type":"string"},"uniqueItems":true}}},
   "mechanics":{"type":"object"},
   "locales":{"type":"object","additionalProperties":{"type":"object","additionalProperties":{"type":"object"}}}

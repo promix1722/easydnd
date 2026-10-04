@@ -7,9 +7,9 @@ import { setupUser } from '@/test/user'
 import { PromptCard } from './PromptCard'
 
 const spells: Spell[] = [
-  { slug: 'light', name: 'Light', level: 0, school: 'evocation', classes: ['wizard'], castingTime: { kind: 'action' }, components: { verbal: true, material: true } },
-  { slug: 'detect-magic', name: 'Detect Magic', level: 1, school: 'divination', classes: ['wizard', 'cleric'], castingTime: { kind: 'action' }, components: { verbal: true, somatic: true }, concentration: true, ritual: true, desc: ['***Sense magic.*** Sense nearby magic.\n\n- A visible aura\n- A magical school'] },
-  { slug: 'shield', name: 'Shield', level: 1, school: 'abjuration', classes: ['wizard'], castingTime: { kind: 'reaction' } },
+  { slug: 'light', icon: 'data:image/webp;base64,bGlnaHQ=', name: 'Light', level: 0, school: 'evocation', classes: ['wizard'], castingTime: { kind: 'action' }, components: { verbal: true, material: true } },
+  { slug: 'detect-magic', icon: 'data:image/webp;base64,ZGV0ZWN0', name: 'Detect Magic', level: 1, school: 'divination', classes: ['wizard', 'cleric'], castingTime: { kind: 'action' }, components: { verbal: true, somatic: true }, concentration: true, ritual: true, desc: ['***Sense magic.*** Sense nearby magic.\n\n- A visible aura\n- A magical school'] },
+  { slug: 'shield', icon: 'data:image/webp;base64,c2hpZWxk', name: 'Shield', level: 1, school: 'abjuration', classes: ['wizard'], castingTime: { kind: 'reaction' } },
 ]
 const entries = new Map<string, Entry>([
   ...spells.map((spell): [string, Entry] => [spell.slug, spell]),
@@ -39,7 +39,7 @@ for (const viewport of ['desktop', 'mobile'] as const) {
       expect(within(detect).getByLabelText('Concentration')).toBeInTheDocument()
       expect(within(detect).getByLabelText('Ritual')).toBeInTheDocument()
       expect(within(detect).getByText('Divination · 1 action · V, S')).toBeInTheDocument()
-      expect(container.querySelector('img[src="/spells/detect-magic.webp"]')).toBeInTheDocument()
+      expect(container.querySelector('img[src="data:image/webp;base64,ZGV0ZWN0"]')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Fireball' })).not.toBeInTheDocument()
       expect(within(available).queryByRole('heading')).not.toBeInTheDocument()
       expect(screen.getByRole('textbox', { name: 'Search spells' }).compareDocumentPosition(available) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

@@ -23,7 +23,16 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	created := send(t, r, owner, http.MethodPost, "/v1/packs/import?title=My%20rules", json.RawMessage(raw))
+	var doc map[string]any
+	if err = json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	icon, err := os.ReadFile("../../../data/srd_5.1/spell-icons/magic-missile.webp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc["icons"] = map[string]any{"spells": map[string][]byte{"guiding-mark": icon}}
+	created := send(t, r, owner, http.MethodPost, "/v1/packs/import?title=My%20rules", doc)
 	if created.Code != 200 {
 		t.Fatal(created.Body.String())
 	}
@@ -66,6 +75,21 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 	catalog := send(t, r, outsider, http.MethodGet, "/v1/packs/catalog/spells?packs="+p.ID+"@1.0.0", nil)
 	if catalog.Code != 200 || catalog.Header().Get("Cache-Control") != "no-store" || !strings.Contains(catalog.Body.String(), p.ID+"/") {
 		t.Fatalf("catalog: %d", catalog.Code)
+	}
+	if !strings.Contains(catalog.Body.String(), "data:image/webp;base64,") {
+		t.Fatal("shared catalog lost artwork")
+	}
+	exported := send(t, r, owner, http.MethodGet, "/v1/packs/"+p.ID+"/export?version=1.0.0", nil)
+	var exportedDoc struct {
+		Icons struct {
+			Spells map[string][]byte `json:"spells"`
+		} `json:"icons"`
+	}
+	if err := json.Unmarshal(exported.Body.Bytes(), &exportedDoc); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(icon, exportedDoc.Icons.Spells["guiding-mark"]) {
+		t.Fatal("published export lost artwork")
 	}
 	for _, path := range []string{"/v1/packs/spells?pack=" + p.ID, "/v1/packs/spell-filters"} {
 		rec := send(t, r, outsider, http.MethodGet, path, nil)

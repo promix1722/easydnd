@@ -23,6 +23,7 @@ const schema: PackSchema = {
 function Harness() {
   const [value, setValue] = useState<PackValue>({
     version: '1.0.0',
+    icons: { spells: { 'guiding-mark': 'base64-artwork' } },
     rules: [{ manual: false, minimumLevel: 1 }],
     locales: { en: 'Sample' },
   })
@@ -50,6 +51,7 @@ it('edits nested typed values without losing sibling content', () => {
   const result = JSON.parse(screen.getByTestId('result').textContent!)
   expect(result).toEqual({
     version: '1.1.0',
+    icons: { spells: { 'guiding-mark': 'base64-artwork' } },
     rules: [{ manual: true, minimumLevel: 1 }],
     locales: { en: 'Sample' },
   })

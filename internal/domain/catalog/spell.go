@@ -196,6 +196,9 @@ type SpellDamage struct {
 type Spell struct {
 	Entry
 
+	// Icon is validated pack artwork, encoded as a WebP data URL.
+	Icon string
+
 	// Source names the document the spell comes from. Every spell today is
 	// "srd-5.1"; the field exists so that content from anywhere else -- a
 	// later SRD, a homebrew import -- can sit in the same collection without

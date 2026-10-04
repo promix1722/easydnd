@@ -267,7 +267,7 @@ export function SpellsScreen() {
                   <DataList
                     items={rows}
                     getKey={(spell) => `${spell.provenance?.packId}@${spell.provenance?.version}/${spell.slug}`}
-                    leading={(spell) => <SpellIcon slug={spell.slug} size={32} />}
+                    leading={(spell) => <SpellIcon icon={spell.icon} size={32} />}
                     badges={(spell) => <SpellTags spell={spell} />}
                     columns={[
                       {

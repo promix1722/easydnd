@@ -58,9 +58,11 @@ func main() {
 	out := flag.String("out", defaultOut, "output data directory")
 	translations := flag.String("translations", defaultTranslations,
 		"hand-edited translation directory, one subdirectory per locale")
+	icons := flag.String("icons", filepath.Join(defaultOut, "spell-icons"), "committed spell icon directory")
 	flag.Parse()
 
 	g := newGenerator(*in, *out, *translations)
+	g.iconDir = *icons
 	if err := g.run(); err != nil {
 		fmt.Fprintf(os.Stderr, "srdgen: %v\n", err)
 		os.Exit(1)
@@ -86,6 +88,7 @@ type generator struct {
 	inDir    string
 	outDir   string
 	transDir string
+	iconDir  string
 
 	// prose accumulates the English bundle for each mechanics file, keyed by
 	// that file's name so the two stay aligned by construction.
@@ -104,6 +107,7 @@ func newGenerator(in, out, translations string) *generator {
 		inDir:    in,
 		outDir:   out,
 		transDir: translations,
+		iconDir:  filepath.Join(defaultOut, "spell-icons"),
 		prose:    make(map[string]file.Bundle),
 		terms:    make(file.Bundle),
 		counts:   make(map[string]int),
@@ -183,9 +187,14 @@ func (g *generator) run() error {
 // with the files it covers -- including into the deploy tarball.
 const attribution = `# Attribution
 
-The files in this directory are **generated** by ` + "`" + `cmd/srdgen` + "`" + ` from the vendored
+The JSON files in this directory are **generated** by ` + "`" + `cmd/srdgen` + "`" + ` from the vendored
 dump at ` + "`" + `docs/reference_srd_5.1/data/` + "`" + `. Do not edit them by hand: ` + "`" + `make verify` + "`" + `
 regenerates them into a temporary directory and fails on any difference.
+
+The 319 WebP files under spell-icons/ are committed artwork inputs, copied
+from the matching SRD spell IDs in easydnd-2014/spell-icons/. They are
+AI-generated illustrations; srdgen includes them in the pack manifest and
+copies them when writing another output directory.
 
 ## SRD 5.1
 

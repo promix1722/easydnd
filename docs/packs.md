@@ -15,6 +15,41 @@ default catalogue, and live in memory. The
 existing browser still uses its original ability editor and resource displays;
 the new metadata/read contracts are available for that later UI work.
 
+## Spell artwork
+
+Artwork is optional and belongs to an immutable release. Directory and ZIP
+packs declare files in the manifest, using local spell IDs:
+
+```json
+"files": {
+  "icons/spells/guiding-mark": "spell-icons/guiding-mark.webp"
+}
+```
+
+Portable JSON carries the same bytes as base64:
+
+```json
+"icons": { "spells": { "guiding-mark": "<base64 WebP bytes>" } }
+```
+
+Only valid 128×128 WebPs naming spells defined in that pack are accepted.
+Artwork counts toward the existing 64 MiB pack limit, survives imports,
+exports, draft editing, forks, publishing and sharing, and participates in the
+release digest. Updating an icon requires a new release version. Existing
+packs without icons retain their digests and remain valid. Existing catalog
+summary/detail routes expose an optional `icon` data URL; no image routes or
+separate image storage are used.
+
+The SRD pack is now `1.1.1`. Preserve `data.pack_archive` when deploying so
+characters pinned to `1.1.0` continue to use the archived release. An explicit
+`data.default_packs.srd-2014` pin must be updated to select `1.1.1`.
+
+The committed `data/srd_5.1/spell-icons/` directory is the default artwork
+input for `srdgen`, including checks generating into temporary directories.
+`-icons` selects another input directory. SRD generation requires one matching
+file per SRD spell and never generates images or reads an external checkout by
+default.
+
 ## Load and export
 
 ```sh

@@ -87,6 +87,41 @@ func (g *generator) writePack(locales []rules.Locale) error {
 	if err = g.write("provenance.json", provenance); err != nil {
 		return err
 	}
+	var spells []struct {
+		Slug string `json:"slug"`
+	}
+	spellData, err := os.ReadFile(filepath.Join(g.outDir, "spells.json"))
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(spellData, &spells); err != nil {
+		return err
+	}
+	if err = os.MkdirAll(filepath.Join(g.outDir, "spell-icons"), 0755); err != nil {
+		return err
+	}
+	for _, spell := range spells {
+		name := spell.Slug + ".webp"
+		source := filepath.Join(g.iconDir, name)
+		destination := filepath.Join(g.outDir, "spell-icons", name)
+		data, err := os.ReadFile(source)
+		if err != nil {
+			return err
+		}
+		// The default input is committed inside this pack. Never truncate that
+		// input when regenerating in place; only copy into a different output.
+		sourceInfo, err := os.Stat(source)
+		if err != nil {
+			return err
+		}
+		destInfo, destErr := os.Stat(destination)
+		if destErr != nil || !os.SameFile(sourceInfo, destInfo) {
+			if err = os.WriteFile(destination, data, 0644); err != nil {
+				return err
+			}
+		}
+		manifest.Files["icons/spells/"+spell.Slug] = "spell-icons/" + name
+	}
 	manifest.Files["provenance"] = "provenance.json"
 	if err = g.write("pack-manifest.json", manifest); err != nil {
 		return err

@@ -59,7 +59,7 @@ export function SpellScreen() {
   return (
     <Page
       trail={[{ label: spell.name }]}
-      mark={<SpellIcon slug={spell.slug} size={40} />}
+      mark={<SpellIcon icon={spell.icon} size={40} />}
       badge={
         <Group gap="xs">
           {spell.concentration === true && (

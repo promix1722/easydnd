@@ -14,6 +14,7 @@ export interface RulesLock {
 export type PackValue =
   string | number | boolean | null | PackValue[] | { [key: string]: PackValue }
 export interface PackDocument {
+  icons?: { spells?: Record<string, string> }
   provenance?: Record<string, Record<string, string[]>>
   manifest: { id: string; version: string; [key: string]: PackValue }
   entities: Record<string, PackValue>

@@ -28,6 +28,7 @@ linters:
           files:
             - "**/internal/domain/**"
             - "**/internal/usecase/**"
+            - "!**/internal/usecase/spellicon/**"
             - "**/internal/types/**"
           deny:
             - pkg: "github.com/gin-gonic/gin"
@@ -48,6 +49,29 @@ linters:
               desc: "OpenID Connect is a transport concern; it reaches the application layer through the auth.Federation port, implemented in internal/adapter/oidc"
             - pkg: "golang.org/x/oauth2"
               desc: "the authorization-code exchange belongs in internal/adapter/oidc, behind the auth.Federation port"
+
+        # The offline icon generator intentionally owns outbound HTTP.
+        # Server frameworks and persistence remain forbidden here too.
+        standalone-icon-generator:
+          files:
+            - "**/internal/usecase/spellicon/**"
+          deny:
+            - pkg: "github.com/gin-gonic/gin"
+              desc: "the standalone generator has no server framework"
+            - pkg: "database/sql"
+              desc: "the generator returns bytes and has no storage"
+            - pkg: "github.com/jackc/pgx"
+              desc: "the generator returns bytes and has no storage"
+            - pkg: "github.com/pressly/goose"
+              desc: "the generator has no database migrations"
+            - pkg: "github.com/go-webauthn"
+              desc: "authentication belongs in server adapters"
+            - pkg: "github.com/golang-jwt"
+              desc: "authentication belongs in server adapters"
+            - pkg: "github.com/coreos/go-oidc"
+              desc: "authentication belongs in server adapters"
+            - pkg: "golang.org/x/oauth2"
+              desc: "authentication belongs in server adapters"
 
         # Adapters depend inward, never sideways into one another.
         outbound-adapters:

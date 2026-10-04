@@ -8,7 +8,7 @@ import { castingTimeText, componentsAbbrev, levelText } from '@/features/spells/
 import type { Choosable } from './options'
 
 /** Separate sibling buttons inside one bordered box keep the row keyboard accessible. */
-export function SpellChoiceRow({ option, slug, spell, entries, isSelected, pending, disabled, opened, onOpen, onToggle, custom = false }: {
+export function SpellChoiceRow({ option, spell, entries, isSelected, pending, disabled, opened, onOpen, onToggle, custom = false }: {
   custom?: boolean
   option: Choosable
   slug: string
@@ -53,7 +53,7 @@ export function SpellChoiceRow({ option, slug, spell, entries, isSelected, pendi
             styles={{ label: { width: '100%', whiteSpace: 'normal' } }}
           >
             <Group gap="xs" wrap="nowrap" align="flex-start" w="100%">
-              <SpellIcon slug={slug} size={32} />
+              <SpellIcon icon={spell?.icon} size={32} />
               <Stack gap={2} style={{ textAlign: 'left', minWidth: 0, flex: 1 }}>
                 <Group gap="xs" wrap="nowrap" justify="space-between">
                   <Group gap="xs" style={{ minWidth: 0, flex: 1 }}>
@@ -90,7 +90,7 @@ export function SpellChoiceRow({ option, slug, spell, entries, isSelected, pendi
             ? <Button variant="default" aria-label={removeLabel} disabled={pending || disabled} onClick={changeSelection}>{t('common.remove')}</Button>
             : <Button disabled={pending || disabled} onClick={changeSelection}>{t('common.add')}</Button>}
           mobileSummary={<Group gap="xs">
-            <SpellIcon slug={slug} size={40} />
+            <SpellIcon icon={spell?.icon} size={40} />
             {spell?.level !== undefined && <Badge variant="default">{levelText(t, spell.level)}</Badge>}
             {spell !== undefined && <SpellTags spell={spell} />}
           </Group>}

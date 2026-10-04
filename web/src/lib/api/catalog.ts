@@ -191,6 +191,7 @@ export interface SpellComponents {
  * `level` is optional because the wire omits its zero value.
  */
 export interface Spell extends Entry {
+  icon?: string
   catalogPacks?: string
   source?: string
   level: number

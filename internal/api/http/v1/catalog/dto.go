@@ -405,6 +405,7 @@ type MagicItem struct {
 // 319 spells at full fidelity is a payload nobody needs in order to browse.
 // The prose and the effect detail come from the same endpoint with ?slugs=.
 type Spell struct {
+	Icon         string `json:"icon,omitempty"`
 	CatalogPacks string `json:"catalogPacks,omitempty"`
 	Entry
 	Source        string            `json:"source,omitempty"`
