@@ -47,43 +47,41 @@ func (a *Agent) recordProgress(ctx context.Context, s *AgentSession, tool string
 	p := agentProgress{Operation: "imported"}
 	switch tool {
 	case "resolve_import_facts":
-		if args.Ref != "" {
-			ref, ok := rules.ParseRef(args.Ref)
-			if !ok {
-				return
-			}
-			p.Field = ref.Kind.String()
-			p.Value = ref.Slug.String()
-			cat, err := a.Catalog(ctx, *s)
-			if err == nil {
-				if selected, resolveErr := resolveAgentReference(cat, args.Ref); resolveErr == nil {
-					ref = selected
-				}
-				for _, entry := range catalogCandidates(cat, ref.Kind.String()) {
-					if entry.Ref == ref.Canonical() {
-						p.Value = entry.Name
-						break
-					}
-				}
-			}
+		// The write itself says what it settled on: the catalogue entry a
+		// printed name resolved to, or the path a value landed at.
+		var written struct{ Ref, Name, Path string }
+		_ = json.Unmarshal(result, &written)
+		if ref, ok := rules.ParseRef(written.Ref); ok {
+			p.Field, p.Value = ref.Kind.String(), written.Name
 			if args.Level != nil {
 				p.Level = *args.Level
 			}
-		} else {
-			p.Field = args.Path
-			var value any
-			_ = json.Unmarshal(args.Value, &value)
-			if values, ok := value.([]any); ok {
-				parts := []string{}
-				for _, v := range values {
-					parts = append(parts, fmt.Sprint(v))
-				}
-				p.Value = strings.Join(parts, ", ")
-			} else {
-				p.Value = fmt.Sprint(value)
-			}
+			break
 		}
+		p.Field = localPath(written.Path)
+		if p.Field == "" {
+			p.Field = args.Path
+		}
+		var value any
+		_ = json.Unmarshal(args.Value, &value)
+		if values, ok := value.([]any); ok {
+			parts := []string{}
+			for _, v := range values {
+				parts = append(parts, fmt.Sprint(v))
+			}
+			p.Value = strings.Join(parts, ", ")
+		} else {
+			p.Value = fmt.Sprint(value)
+		}
+	case "set_inventory":
+		p.Field, p.Value = "item", args.Name+" × "+string(args.Value)
 	case "upsert_custom_option":
+		// Content the build or the pack already has was imported as itself,
+		// and said so on its own line.
+		var outcome struct{ Native bool }
+		if _ = json.Unmarshal(result, &outcome); outcome.Native {
+			return
+		}
 		p.Operation = "custom"
 		p.Field = args.Kind
 		p.Value = args.Name

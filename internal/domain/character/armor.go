@@ -62,6 +62,25 @@ func armorClass(equipped []ItemStack, cat *catalog.Catalog, dexModifier int) int
 	return base + dex + shields
 }
 
+// worn reports whether the character is wearing body armor, and whether they
+// carry a shield. They are the two facts about equipment a rule can ask for:
+// "while you are not wearing armor" is how the rules word every unarmored
+// defense, and the monk's adds "or wielding a shield".
+func worn(equipped []ItemStack, cat *catalog.Catalog) (armor, shield bool) {
+	for _, stack := range equipped {
+		item, ok := cat.Items.Get(stack.Item)
+		if !ok || item.Armor == nil {
+			continue
+		}
+		if item.Armor.Category == catalog.Shield {
+			shield = true
+		} else {
+			armor = true
+		}
+	}
+	return armor, shield
+}
+
 // equippedSlugs is the item slugs a character has equipped, for the callers
 // that need the list rather than the numbers.
 func equippedSlugs(equipped []ItemStack) []rules.Slug {

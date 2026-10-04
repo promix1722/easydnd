@@ -170,7 +170,7 @@ func TestSourceChecklistBlocksPrematureReviewAndBatchRetainsValidFacts(t *testin
 			}
 		}
 		return charuc.AgentResponse{Calls: []charuc.AgentCall{
-			{ID: "custom", Name: "upsert_custom_option", Arguments: `{"id":"criminal","kind":"background","name":"Criminal","hit_die":0,"level":0,"ref":"unresolved","description":"Source background"}`},
+			{ID: "custom", Name: "upsert_custom_option", Arguments: `{"id":"criminal","kind":"background","name":"Criminal","hit_die":0,"level":0,"description":"Source background"}`},
 			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
@@ -243,15 +243,17 @@ func TestSourceIdentityReuseSubclassOrderAndInventoryCounts(t *testing.T) {
 	}
 }
 
-func TestSourceScoresAndQuantityListsSurviveLegacyBatchTool(t *testing.T) {
+func TestSourceScoresAndInventoryCountsSurviveBatchTools(t *testing.T) {
 	svc := newService(t)
-	model := modelFunc(func(context.Context, charuc.AgentRequest, func(string)) (charuc.AgentResponse, error) {
-		return charuc.AgentResponse{Calls: []charuc.AgentCall{
-			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name","class:sorcerer","race:half-elf","equipment.equipped","skills.stealth","savingThrows.dex"],"scores":{"str":8,"dex":14,"con":15,"int":10,"wis":12,"cha":17}}`},
-			{ID: "facts", Name: "resolve_import_facts", Arguments: `{"facts":[{"path":"identity.name","value":"Source hero"},{"ref":"class:sorcerer","level":3},{"ref":"race:half-elf"},{"path":"equipment.equipped","value":["2 Dagger","2 Dagger","Javelin","Javelin","Javelin","Javelin"]},{"path":"skills.stealth.bonus","value":4},{"path":"savingThrows.dex.bonus","value":2}]}`},
-			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
-		}}, nil
-	})
+	model := &script{turns: [][]charuc.AgentCall{{
+		call("plan", "plan_import", `{"expected":["identity.name","class:sorcerer","race:half-elf","item:Dagger"],"scores":{"str":8,"dex":14,"con":15,"int":10,"wis":12,"cha":17}}`),
+		call("facts", "resolve_import_facts", `{"facts":[{"path":"identity.name","value":"Source hero"},{"ref":"class:sorcerer","level":3},{"ref":"race:half-elf"}]}`),
+		// The sheet prints its gear twice, on two pages, and writes a quantity
+		// into the name; a stack is the count it states, not the number of
+		// times it is mentioned.
+		call("gear", "set_inventory", `{"items":[{"name":"Dagger","count":2,"placement":"equipped"},{"name":"2 Dagger","placement":"equipped"},{"name":"Javelins x4","placement":"equipped"},{"name":"Rope, Hempen (50 feet)"},{"name":"Vorpal Spoon"}]}`),
+		call("done", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
+	}}}
 	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "Preserve source")
@@ -274,6 +276,10 @@ func TestSourceScoresAndQuantityListsSurviveLegacyBatchTool(t *testing.T) {
 	}
 	if len(counts) != 2 || counts["dagger"] != 2 || counts["javelin"] != 4 {
 		t.Fatalf("quantity or duplicate source page lost: %+v", sheet.Equipment)
+	}
+	// The class's default kit is not on the sheet, so it is not in the pack.
+	if len(sheet.Equipment.Backpack) != 1 || sheet.Equipment.Backpack[0].Item != "rope-hempen-50-feet" {
+		t.Fatalf("backpack is not the sheet's: %+v", sheet.Equipment.Backpack)
 	}
 }
 

@@ -2275,6 +2275,91 @@
       "group": "class"
     }
   ],
+  "rules": [
+    {
+      "id": "barbarian-unarmored-defense",
+      "owner": "feature:barbarian-unarmored-defense",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "status.armorClass",
+          "value": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "not",
+                "args": [
+                  {
+                    "op": "read",
+                    "ref": "equipped:armor"
+                  }
+                ]
+              },
+              {
+                "op": "max",
+                "args": [
+                  {
+                    "op": "constant"
+                  },
+                  {
+                    "op": "read",
+                    "ref": "modifier:con"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "monk-unarmored-defense",
+      "owner": "feature:monk-unarmored-defense",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "status.armorClass",
+          "value": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "not",
+                "args": [
+                  {
+                    "op": "or",
+                    "args": [
+                      {
+                        "op": "read",
+                        "ref": "equipped:armor"
+                      },
+                      {
+                        "op": "read",
+                        "ref": "equipped:shield"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "max",
+                "args": [
+                  {
+                    "op": "constant"
+                  },
+                  {
+                    "op": "read",
+                    "ref": "modifier:wis"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
   "casting": {
     "bard": {
       "selection": "known",

@@ -105,6 +105,79 @@ func TestProjectRogueStatusBlock(t *testing.T) {
 	}
 }
 
+// Armor worn as a counted stack protects exactly as armor worn as a list
+// entry does. The import writes stacks, because a sheet prints quantities.
+func TestProjectArmorEquippedByCountSetsArmorClass(t *testing.T) {
+	log := RogueLog(t)
+	if err := log.Append(
+		Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue(nil)}}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	bare, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bare.Status.ArmorClass != 13 {
+		t.Fatalf("unarmored armor class = %d, want 10 + DEX 3", bare.Status.ArmorClass)
+	}
+	if err := log.Append(
+		Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped.leather-armor", Op: OpSet, Value: IntValue(1)}}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	worn, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if worn.Status.ArmorClass != 14 {
+		t.Errorf("armor class = %d, want leather 11 + DEX 3", worn.Status.ArmorClass)
+	}
+}
+
+// Unarmored Defense is a rule the pack states, not a number armorClass knows:
+// a barbarian adds Constitution while wearing no armor and keeps a shield, a
+// monk adds Wisdom and loses it to either. Nobody else gets anything.
+func TestProjectUnarmoredDefense(t *testing.T) {
+	// The installed pack, not the bare compendium: a rule is pack policy, and
+	// the plain source carries none.
+	cat := spellCatalog(t)
+	for _, tt := range []struct {
+		name     string
+		class    rules.Slug
+		equipped []rules.Slug
+		want     int
+	}{
+		{"barbarian, bare", "barbarian", nil, 13},                                // 10 + DEX 2 + CON 1
+		{"barbarian with a shield", "barbarian", []rules.Slug{"shield"}, 15},     // + 2
+		{"barbarian in leather", "barbarian", []rules.Slug{"leather-armor"}, 13}, // 11 + DEX 2, no CON
+		{"monk, bare", "monk", nil, 15},                                          // 10 + DEX 2 + WIS 3
+		{"monk with a shield", "monk", []rules.Slug{"shield"}, 14},               // 10 + DEX 2 + 2, no WIS
+		{"fighter, bare", "fighter", nil, 12},
+	} {
+		var log Log
+		if err := log.Append(
+			Event{Type: EventInit, Changes: []Change{
+				{Path: "identity.name", Op: OpSet, Value: StringValue("Bare")},
+				{Path: "abilities.dex", Op: OpSet, Value: IntValue(14)},
+				{Path: "abilities.con", Op: OpSet, Value: IntValue(13)},
+				{Path: "abilities.wis", Op: OpSet, Value: IntValue(16)},
+			}},
+			Event{Type: EventClass, Ref: rules.NewRef(rules.RefClass, tt.class), Level: 1},
+			Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue(tt.equipped)}}},
+		); err != nil {
+			t.Fatal(err)
+		}
+		state, err := Project(log, cat)
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if state.Status.ArmorClass != tt.want {
+			t.Errorf("%s: armor class = %d, want %d", tt.name, state.Status.ArmorClass, tt.want)
+		}
+	}
+}
+
 func TestProjectRogueSkillsAndSaves(t *testing.T) {
 	s := rogueSheet(t)
 

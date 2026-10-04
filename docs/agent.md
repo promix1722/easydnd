@@ -45,16 +45,20 @@ suggested text answers. The latest unanswered question shows clickable replies;
 the composer always permits a different free-text answer. A reply is an ordinary
 user message, and the assistant applies it using validated choice tools. The
 model must ask a direct question instead of narrating that it is paused.
-`plan_import` records the six printed ability scores immediately and a checklist
-of documented source facts. Unknown sheet
-paths become custom-entry keys. `import_facts` writes batches and reports errors
-for rejected facts; it publishes progress only for successful writes.
-`prepare_review` refuses missing checklist entries even for a partial draft,
-and returns unresolved required prompts without ending the run;
-it accepts a partial draft only when the model explicitly sets `allow_incomplete`
-after the user has chosen to leave choices incomplete. This flag is a model
-assertion of that conversation, not a separate server-verified consent record.
-Saving a partial character remains an explicit user action.
+
+`prepare_review` hands the draft over. It refuses while a required choice is
+open, returning the open choices with their options, and accepts a partial
+draft only when the model explicitly sets `allow_incomplete` after the user has
+chosen to leave choices incomplete. This flag is a model assertion of that
+conversation, not a separate server-verified consent record. It also holds a
+**checklist** the model wrote in `plan_import` against the draft -- the
+entries the sheet puts on the character, down to class features and racial
+traits, each covered by the character having it, however it got there -- and that part
+is a reminder rather than a lock: entries not in the draft are listed once, and
+the same list a second time passes. It used to block until every entry was
+satisfied, and a model that had worded one in a way nothing could satisfy
+responded by inventing custom content until the list went quiet. Saving a
+partial character remains an explicit user action.
 
 There is no interruption control in the UI. Sending and attaching files wait
 while the assistant is running; typing the next reply remains possible. Terminal
@@ -108,57 +112,122 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 
 | Tool | Responsibility |
 | --- | --- |
-| `get_build_context` | Current projection, compact open prompts, rules lock, log and manual content |
+| `get_build_context` | The draft by fact path, open prompts **with their options**, the answers given so far, custom entries, differences from the sheet's printed numbers, checklist entries not yet covered |
 | `read_source` | Text/JSON source contents, or reference to an attached image/PDF |
+| `plan_import` | Transcribe the sheet in one typed call: final ability totals, level, hit points, armor class, speed, every skill and save bonus, coins, inventory and spells, plus a checklist of what else it documents |
+| `import_facts` | Race, subrace, class with its level, subclass, background and feats **by printed name**; printed values at a path. Per-fact errors with candidates |
+| `assign_skills` | Distribute the sheet's proficient skills over the prompts that grant skills, and its expertise over the expertise prompts |
+| `assign_spells` | Distribute the sheet's cantrips and spells over the build's spell prompts, and keep the ones past the build's count as spells known |
+| `answer_choices` | Answer open prompts in one batch, by option key or printed name, through the existing character validator. Rejections name the pick and the rule |
+| `revise_choice` | Replace a prior choice and report invalidated dependent entries |
+| `list_choice_options` | Page through a prompt with more than 60 options |
+| `set_inventory` | Items by printed name, count and placement; unmatched names come back with candidates |
 | `search_catalog` | Ranked identities across supported locales within the pinned rules lock |
 | `get_option_details` | Exact catalogue mechanics and, when available, a pack wire example |
-| `list_choice_options` | Available keys and choice constraints, paged 60 keys at a time |
-| `plan_import` | Record documented source facts and custom-entry keys |
-| `import_facts` | Batch observations, with errors for individual rejected facts |
-| `resolve_import_facts` | Upsert an observed structural reference or supported sheet field |
-| `answer_choice` | Apply an answer through the existing character validator |
-| `revise_choice` | Replace a prior choice and report invalidated dependent entries |
-| `upsert_custom_option` | Preserve an editable typed custom definition with known details |
-| `reconcile_import` | Reproject the current draft for comparison with sources |
+| `upsert_custom_option` | Keep content the rules lack as an editable typed definition. Refuses to copy what the pack or the build already has |
 | `ask_user` | Ask a blocking question and release the worker |
 | `prepare_review` | Mark the draft ready for the owner's review |
+
+A response may carry several tool calls; they run in order, up to 32. Once a
+call ends the turn (`ask_user`, a successful `prepare_review`) the rest of that
+response is answered "not run" rather than executed. A rejected call returns
+the message together with whatever makes the next attempt different: the
+`fields` a validator named -- which pick, which rule -- and the `candidates` a
+name could have meant. At debug level every call is logged with its arguments
+and result (`AI wizard tool call`), which is the only record of what a model
+actually asked for; the arguments are a player's character sheet, so it is
+debug-only.
 
 Session creation and saving are application operations, not model tools. Source
 text, catalogue descriptions and files are explicitly treated as untrusted data
 in the model instructions. There are no shell, network-browsing, unrelated
 character-editing or publishing tools.
 
-### Identity matching is separate from eligibility
+### Names, not slugs
 
-Search returns canonical refs. Exact refs, normalized localized names and slugs
-are ranked first, followed by Unicode edit distance and token overlap. Results
-are merged across locales and deterministically ordered. Optional spell level
-narrows candidates. Mass/Greater/Lesser variants are not normalized into their
-ordinary counterparts. Fire Bolt and Fireball retain distinct identities.
+Every tool that takes a catalogue entry takes it the way a sheet prints it, in
+any locale the pinned packs ship, and one function (`resolve`) turns that into
+a canonical ref or into an error listing the entries it could have meant. A
+model never has to produce a slug, which matters more than it sounds: a pack
+installed under its own id namespaces every slug (`dnd-2014/stealth`), so the
+`skills.stealth.bonus` and `equipment.backpack.dagger` a model naturally
+writes address nothing. Paths are resolved the same way, and everything the
+model reads back is in local names.
 
-The model can make a reasonable unambiguous match and record an assumption;
-there is no confirmation dialog for every typo. An identity match does **not**
-authorize choosing a spell. Open prompts and the normal validator enforce its
-source, class, purpose, counts and held options. Known, prepared, spellbook and
-granted spells continue to use the existing spell rules. Ambiguous or incomplete
-content can remain manual rather than being silently replaced.
+Matching is identity, not spelling distance alone. Names are compared as sets
+of singular words, so "Rope, Hempen" is "Hempen Rope", "Arrows" is "Arrow" and
+"Rations" finds "Rations (1 day)". A sheet that says more than the catalogue --
+"Path of the Totem Warrior" for "Totem Warrior" -- matches only inside a
+closed scope: a subclass among its class's, a subrace among its race's, a pick
+among its prompt's options. That scope is also a correctness requirement, not
+a convenience: "Wild Magic" is exactly the barbarian's path and only loosely
+the sorcerer's origin, and unscoped it picks the wrong one. Outside a scope
+the looser match would turn "Fire Shield" into "Shield". Mass/Greater/Lesser
+variants are never normalized into their ordinary counterparts, and Fire Bolt
+and Fireball stay distinct.
 
-### Observations and choices
+An exact or reordered name wins outright; between two spellings of one name
+the entry that carries mechanics wins (the development pack has some items
+twice). Anything weaker has to be the only plausible reading, or the tool
+answers with candidates instead of guessing.
 
-A foreign sheet describes a current state, not the player's historical choices.
-Observed name, race, classes and totals are upserted without inventing a sequence
-of level-up answers. Repeating the same observation replaces that observation.
-Choices are only applied through the choice validator. Direct field edits are
-later log entries, so updating an older observation does not erase them.
+An identity match does **not** authorize choosing a spell. Open prompts and
+the normal validator enforce its source, class, purpose, counts and held
+options.
 
-During import, `finalAbilities.<ability>` records an observed total before
-modifier-dependent calculations. Race, ASI and pack ability bonuses cannot add
-themselves to that total again. At save, additive cases are reconciled back to
-ordinary base scores and checked by projection; subsequent progression then
-works normally. A non-invertible custom rule retains its explicit total override
-rather than changing the observed value. Setting an ordinary `abilities.*` base
-score later removes that ability's override. Other imported numeric overrides
-remain explicit log changes, as with the legacy importer.
+### Rebuilding the sheet
+
+The import rebuilds the character the sheet describes: catalogue entries, then
+the build's own choices, answered through the validator a player's answers go
+through. See [dnd.md](dnd.md#imported-builds-and-final-ability-totals) for why
+it no longer records a sheet as overrides.
+
+**The transcription comes first and is typed.** `plan_import` has a slot for
+each thing a sheet prints -- six scores, level, hit points, armor class,
+speed, a bonus per skill and per save, coins, items. A number asked for one
+fact at a time is a number a model skips; a form with an empty field is
+harder to leave half done. Scores, level, coins and items are written to the
+draft. The derived numbers are kept beside it as a reference and never written.
+
+**The server does the arithmetic and the matching.** From the printed bonuses
+it reads which skills and saves are proficient (a bonus is the modifier plus
+the proficiency bonus, once or twice) and returns the list. `assign_skills`
+then distributes those skills over the prompts that grant them. That is a
+matching problem -- Sleight of Hand is not on the sorcerer's list, so it must
+be the half-elf's, which leaves Insight for the sorcerer -- and a model given
+it picks whatever fills the slot. `assign_spells` is the same solver over the
+spell prompts: an Arcane Trickster's Mage Hand is already granted, its other
+two cantrips fill its own prompt, and the high elf's cantrip is then a
+question the sheet does not answer. Prompts that must be answered are filled
+first and larger ones before smaller, so the one left open is the one worth
+asking the owner about; spells the sheet lists past what the prompts take are
+kept in the builder's extra-spell answers. All of this used to be left to the
+model, which tried Mage Hand in each prompt in turn.
+
+Both tools replace the picks of their kind made so far, and remove them
+outright rather than through `Revise`: nothing but another pick of the same
+kind depends on one, and `Revise` would re-judge every later answer.
+
+**Printed numbers are a reference, not an instruction.** Every write reports
+`differences`: where the draft computes something other than the sheet
+prints. They tell the model a skill is unassigned or the level is wrong, and
+they go in its summary. Nothing is pinned to make them agree, because a number
+read off a scan is the least reliable thing in an import -- a model that reads
+the armor class box as hit points will also confirm it when asked. A number is
+written over the build only on purpose (`import_facts` with a path, when the
+user asks to keep one), and is dropped again at review and at save if the
+build computes the same value.
+
+**Prompts are judged against the build alone.** A value written over the
+build would otherwise make every skill it mentions "already held" and refuse
+the pick that explains it, so prompts and answers are computed on the draft
+with such values lifted off.
+
+Class level is the sheet's: `plan_import`'s level is the desired level, so a
+class named without its level is still built to it. A structural entry that is
+named again replaces its observation, and one that changes -- a different
+race -- is revised, so answers given to the old one do not replay as picks of
+the new one.
 
 Finalization validates the projection and name, checks folder ownership again,
 and publishes the entire log through the repository's atomic `CreateWithLog`.
@@ -166,6 +235,18 @@ Repeated finalization returns the same character ID. No empty character is
 created as an intermediate step.
 
 ### Custom content
+
+Custom content is for what the selected rules lack. `upsert_custom_option`
+first looks for the entry among what the build already holds, then in the
+pack, and makes nothing custom of what it finds: a feature the class grants is
+left alone, a subclass or background the pack has is imported as itself, a
+catalogue item goes into the inventory, and a catalogue spell beyond the
+class's count goes into the builder's own extra-spell answers
+(`custom/spell/known`, `custom/spell/cantrip`). A sheet prints everything a
+character has, and each of those arriving as a custom entry is how an imported
+rogue ended up with a custom Sneak Attack beside the catalogue's. A `ref` or
+`parent` that does not resolve is an error with candidates, not something
+dropped in silence.
 
 Custom classes, races, subraces, backgrounds, subclasses, spells, cantrips,
 equipment, feats, features and traits are stable definitions in the character
@@ -267,13 +348,16 @@ override, leaving normal HTTP timeouts in place.
 
 ## Validation and later milestones
 
-Tests cover translated/fuzzy spell identity, worker bounds, cancellation, owner
-isolation, HTTP uploads/SSE recovery, score preservation and rebasing, repeated
-Save, private definition isolation/versioning, the Responses streaming adapter,
-and desktop/mobile chat, standalone preview/editor pages, composer preservation, draft
-editor ownership/revision checks, explicit questions and suggested answers,
-required-choice review guards, missed terminal status recovery, and read-only
-saved history.
+Tests cover translated/fuzzy spell identity, printed-name resolution and its
+scopes, a scripted end-to-end import that ends with no custom entry and nothing
+pinned (on the SRD and on a namespaced pack), skill distribution, the
+one-time checklist reminder, calls after a turn has ended, worker bounds,
+cancellation, owner isolation, HTTP uploads/SSE recovery, score preservation
+and rebasing, repeated Save, private definition isolation/versioning, the
+Responses streaming adapter, and desktop/mobile chat, standalone
+preview/editor pages, composer preservation, draft editor ownership/revision
+checks, explicit questions and suggested answers, required-choice review
+guards, missed terminal status recovery, and read-only saved history.
 The provider adapter is tested against a local HTTP fixture; a live provider
 smoke test requires deployment credentials and a configured model.
 
@@ -297,9 +381,28 @@ node scripts/check-ai-wizard.mjs --pdf /tmp/Arya.pdf \
   --api http://localhost:18083/v1 --origin http://localhost:8083
 ```
 
-It checks source values, spell identities, inventory counts, custom content and
-source discrepancies, then saves, reopens, edits the name and a custom definition
-and verifies that facts survive. Test edits are restored; the imported character
-remains saved. It uses the configured provider and can incur provider charges.
-No provider credentials or session cookies are stored by the script. The PDF
-itself is not committed.
+It sends one neutral instruction, answers a question with its first suggested
+option, and then checks two things. That the draft **is the sheet**: name,
+scores, class and level, hit points, armor class, spells, inventory counts,
+coins, skill and save bonuses. And that it is **a build**: `subclass` and
+`background` are catalogue entries, no custom option exists outside
+`allowedCustom`, no printed value is pinned over the build outside
+`allowedOverrides`, and no required choice is open outside `openPrompts`. It
+then saves, reopens, edits the name and, where one exists, a custom
+definition, and verifies that facts survive. Test edits are restored; the
+imported character remains saved.
+
+The three expectation files are written for the development pack
+(`dnd-2014`), which has the subclasses and backgrounds the sheets use; against
+the bare SRD they fail by design, because there those are not in the rules.
+`itemAlternatives` names the second slug of items that pack carries twice. The
+run uses the configured provider and can incur provider charges. No provider
+credentials or session cookies are stored by the script. The PDFs themselves
+are not committed.
+
+What the regression cannot make deterministic is the model's reading. The
+tooling removes the errors a server can catch -- unknown names, illegal
+picks, a wrong skill split, a misread number pinned over a correct build --
+but a line the model skips in an equipment list is simply not imported, and a
+small model does skip one now and then. When a run fails that way and the tool
+log shows no rejection, `agent.model` is the lever.

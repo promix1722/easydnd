@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -52,7 +53,18 @@ type agentOperation struct {
 }
 
 type AgentSession struct {
-	expected    []string
+	expected []string
+	// nudged is the checklist entries review was last refused over. The same
+	// list a second time means the model has seen it and is done.
+	nudged []string
+	// printed is the sheet's derived numbers -- hit points, armor class, skill
+	// and save bonuses -- by fact path, as a model read them. They are what the
+	// build is checked against and never part of the character: a number read
+	// off a scan is the least reliable thing in an import, and pinning one
+	// over a build that computes otherwise makes the sheet wrong with authority.
+	printed map[string]int
+	// spells is the cantrips and spells the sheet lists, by printed name.
+	spells      []string
 	operations  map[string]agentOperation
 	ID          string            `json:"id"`
 	Folder      domain.FolderID   `json:"folder"`
@@ -383,7 +395,7 @@ func (a *Agent) Finalize(ctx context.Context, owner domain.OwnerID, id string, r
 	if !ok {
 		return AgentSession{}, types.NewNotImplementedError("atomic character creation unavailable")
 	}
-	savedLog := rebaseAgentScores(s.Log, cat)
+	savedLog := pruneAgentOverrides(rebaseAgentScores(s.Log, cat), cat)
 	saved, err := repo.CreateWithLog(ctx, owner, folder, savedLog)
 	if err != nil {
 		return AgentSession{}, err
@@ -468,11 +480,6 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 		addAgentEvent(s, "status", "failed", "", nil)
 		return
 	}
-	if len(response.Calls) > 32 {
-		s.Status = "failed"
-		s.Revision++
-		return
-	}
 	// Commit a complete response before executing any tool. Partial streamed
 	// arguments are never interpreted. The transcript is the operation ledger.
 	s.Input = append(s.Input, response.Output...)
@@ -481,24 +488,35 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 	if s.operations == nil {
 		s.operations = map[string]agentOperation{}
 	}
-	for _, call := range response.Calls {
+	for i, call := range response.Calls {
 		hash := sha256.Sum256([]byte(call.Name + "\x00" + call.Arguments))
 		op, known := s.operations[call.ID]
 		if known && op.Hash != hash {
 			op = agentOperation{Hash: hash, Error: true, Result: raw(map[string]string{"error": "operation id reused with different arguments"})}
 		} else if !known {
 			var result any
-			if len(call.Arguments) > 128<<10 {
+			// Every call still gets an output -- the provider rejects a
+			// transcript with an unanswered call -- but a response is one
+			// bounded batch, and nothing runs after the call that ended the turn.
+			switch {
+			case i >= 32:
+				err = fmt.Errorf("too many tool calls in one response; send the rest again")
+			case s.Status != "running":
+				err = fmt.Errorf("not run: the turn had already ended with a question or a review; send it again if it is still needed")
+			case len(call.Arguments) > 128<<10:
 				err = fmt.Errorf("tool arguments too large")
-			} else {
+			default:
 				result, err = a.tool(ctx, s, call.Name, []byte(call.Arguments))
 			}
 			op = agentOperation{Hash: hash, Result: raw(result)}
 			if err != nil {
 				a.service.log.Warn("AI wizard tool rejected", "tool", call.Name, "error", err)
 				op.Error = true
-				op.Result = raw(map[string]string{"error": err.Error()})
+				op.Result = agentError(err)
 			}
+			// The only record of what a model actually asked for. Debug, because
+			// the arguments are a player's character sheet.
+			a.service.log.Debug("AI wizard tool call", "session", s.ID, "tool", call.Name, "arguments", clip(call.Arguments), "result", clip(string(op.Result)))
 			s.operations[call.ID] = op
 		}
 		s.Input = append(s.Input, raw(map[string]any{"type": "function_call_output", "call_id": call.ID, "output": string(op.Result)}))
@@ -521,8 +539,9 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 		if op.Error {
 			s.Events[len(s.Events)-1].Data = op.Result
 		}
-		if !op.Error && !known {
-			a.recordProgress(ctx, s, call.Name, args, op.Result)
+		// Batches and answers publish their own progress, one line per write.
+		if tool := agentToolName(call.Name, args); !op.Error && !known && (tool == "resolve_import_facts" || tool == "upsert_custom_option" || tool == "revise_choice") {
+			a.recordProgress(ctx, s, tool, args, op.Result)
 		}
 		s.Events[len(s.Events)-1].Source = args.Source
 		s.Events[len(s.Events)-1].Assumption = args.Assumption
@@ -540,6 +559,34 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 			a.signal()
 		}
 	}
+}
+
+func clip(text string) string {
+	if len(text) > 6000 {
+		return text[:6000] + "…"
+	}
+	return text
+}
+
+// agentError is what a rejected call tells the model: the message, and
+// whatever would make its next attempt different -- the fields a validator
+// named, the entries a name could have meant. A bare "some answers are not
+// valid" is how a model ends up preserving the content as custom instead.
+func agentError(err error) json.RawMessage {
+	out := map[string]any{"error": err.Error()}
+	var invalid *types.FieldValidationError
+	if errors.As(err, &invalid) {
+		fields := []map[string]any{}
+		for _, f := range invalid.Fields {
+			fields = append(fields, map[string]any{"field": f.Field, "rule": f.Rule, "reason": f.Reason, "args": f.Args})
+		}
+		out["fields"] = fields
+	}
+	var unsettled *candidatesError
+	if errors.As(err, &unsettled) {
+		out["candidates"] = unsettled.Candidates
+	}
+	return raw(out)
 }
 
 func transcriptSize(input []json.RawMessage) int {

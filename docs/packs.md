@@ -246,6 +246,22 @@ Inputs include `level`, `proficiency`, `class:<id>`, `ability:<id>` and
 respective environments. Dice are descriptions; evaluation never rolls them.
 A new operation needs a new supported engine capability.
 
+Two more inputs say what is worn: `equipped:armor` and `equipped:shield`, each
+1 or 0. They exist for rules worded "while you are not wearing armor", and are
+readable **only in the value of an effect on something other than an ability
+score**. That restriction is the order of projection rather than caution: a
+rule's `when` and its ability effects are settled before the starting kit is
+granted and the log's equipment changes are applied, so there they could only
+ever read "nothing equipped". A pack that reads them anywhere else is refused
+at load. The base data's Unarmored Defense is the example:
+
+```json
+{"id": "barbarian-unarmored-defense", "owner": "feature:barbarian-unarmored-defense", "minimumLevel": 1,
+ "effects": [{"op": "add", "target": "status.armorClass", "value": {"op": "multiply", "args": [
+   {"op": "not", "args": [{"op": "read", "ref": "equipped:armor"}]},
+   {"op": "max", "args": [{"op": "constant", "value": 0}, {"op": "read", "ref": "modifier:con"}]}]}}]}
+```
+
 Characters retain exactly STR, DEX, CON, INT, WIS and CHA. Packs may modify
 these scores, but cannot introduce additional characteristics. The example pack
 uses a Wisdom bonus; version 2.0.0 removes its former demonstration Luck score.
@@ -363,7 +379,16 @@ Research underlying these contracts: [SemVer](https://semver.org/),
 Casting profiles may set `selection` (`known`, `prepared`, `spellbook`),
 `prepareDivisor`, `bookStart`, `bookPerLevel`, `replaceKnown` and
 `expandedSubclass`. These control acquisition and preparation independently of
-slot progression. `spellBenefits` attach automatic spells or counted spell
+slot progression.
+
+A profile is keyed by a class, or by a **subclass** that casts when its class
+does not (Arcane Trickster, Eldritch Knight). A subclass profile must also set
+`list`, the class whose spell list it draws on, and `ability`, its
+spellcasting ability -- a class's profile needs neither, because the class has
+both. The subclass's `class-levels` rows carry its `spellSlots`,
+`cantripsKnown` and `spellsKnown`, one row per level it casts at. A profile
+keyed by something that is neither a class nor a subclass, or a subclass
+profile missing either field, is refused at load. `spellBenefits` attach automatic spells or counted spell
 choices to an owner at a minimum level, with class/any-list/spellbook eligibility
 and a separate purpose such as Arcanum or mastery. Racial benefits can declare
 their casting ability. Casting profiles may be keyed by a subclass to use its

@@ -54,10 +54,7 @@ if (args['session-file']) {
       args.pdf.split('/').at(-1),
     )
     form.append('rules', JSON.stringify(defaultRules))
-    form.append(
-      'instructions',
-      'Import all pages of this character. Preserve every documented fact, quantity and personal detail. Retain source/rules discrepancies and explain them; preserve unavailable content as typed editable custom options. I explicitly accept leaving undocumented historical choices incomplete. Continue until all documented content is saved in the draft, then call prepare_review with allow_incomplete=true.',
-    )
+    form.append('instructions', 'Import this character sheet.')
     view = await request('/agent-sessions', form, 'POST')
   }
 }
@@ -91,57 +88,78 @@ while (Date.now() < deadline && view.session.status !== 'review') {
   }
   if (view.session.status === 'waiting') {
     assert(++questions <= 6, 'Repeated unresolved questions')
+    // A question is the wizard saying the sheet does not settle something. Take
+    // its first suggestion, as a user in a hurry would; with none offered, say
+    // so and let it leave the choice open.
+    const question = view.session.events.findLast((event) => event.kind === 'question')
+    const text =
+      question?.options?.[0] ??
+      'The sheet is all I have. Leave that choice open and finish the import.'
+    console.log(`> ${text}`)
     await request(
       `/agent-sessions/${id}/control`,
-      {
-        revision: view.session.revision,
-        action: 'message',
-        text: 'Continue importing all documented facts. Preserve unknown entities with upsert_custom_option, omitting unknown numeric fields. Do not invent historical choices; I explicitly accept those incomplete. Preserve and explain source discrepancies. After importing all source facts, call prepare_review with allow_incomplete=true; I explicitly accept missing undocumented historical choices.',
-      },
+      { revision: view.session.revision, action: 'message', text },
       'POST',
     )
   }
   await new Promise((resolve) => setTimeout(resolve, 3000))
 }
 assert.equal(view.session.status, 'review', 'Import timed out')
+// A pack installed under its own id namespaces every slug ("dnd-2014/rogue").
+// The expectations are written in the local names a sheet uses.
+// Declarations rather than constants: a session that is already saved is
+// checked above this point in the file.
+function local(slug) {
+  return String(slug ?? '')
+    .split('/')
+    .pop()
+}
+function localKeys(object) {
+  return Object.fromEntries(Object.entries(object ?? {}).map(([key, value]) => [local(key), value]))
+}
 export function check(sheet) {
   assert.equal(sheet.identity.name, expected.name)
   assert.deepEqual(sheet.abilities.scores, expected.scores)
-  assert.equal(sheet.identity.classes?.[0]?.class, expected.class)
+  assert.equal(local(sheet.identity.classes?.[0]?.class), expected.class)
   assert.equal(sheet.identity.classes?.[0]?.level, expected.level)
-  assert.equal(sheet.identity.race, expected.race)
+  assert.equal(local(sheet.identity.race), expected.race)
+  // The point of the import: what the selected rules have is imported as
+  // itself. A subclass or background kept as a custom entry has a "custom-"
+  // slug and fails here.
+  if (expected.subrace) assert.equal(local(sheet.identity.subrace), expected.subrace)
+  if (expected.subclass)
+    assert.equal(local(sheet.identity.classes?.[0]?.subclass), expected.subclass)
+  if (expected.background) assert.equal(local(sheet.identity.background), expected.background)
   assert.equal(sheet.base.hitPoints.max, expected.hp)
   assert.equal(sheet.status.armorClass, expected.ac)
-  for (const name of expected.customNames ?? [])
+  const customs = (sheet.customOptions ?? []).filter(
+    (option) => option.kind !== 'note' && option.selected !== false,
+  )
+  const allowed = (expected.allowedCustom ?? []).map(normalize)
+  for (const option of customs)
     assert(
-      sheet.customOptions?.some((option) => option.name.toLowerCase() === name.toLowerCase()),
-      `Missing editable ${name}`,
+      allowed.includes(normalize(option.name)),
+      `Custom ${option.kind} "${option.name}" should be native`,
     )
+  const cantrips = (sheet.spells.cantrips ?? []).map(local)
+  const spells = [...(sheet.spells.known ?? []), ...(sheet.spells.prepared ?? [])].map(local)
   for (const [expectedNames, actualNames] of [
-    [expected.cantrips ?? [], sheet.spells.cantrips ?? []],
-    [expected.spells ?? [], [...(sheet.spells.known ?? []), ...(sheet.spells.prepared ?? [])]],
+    [expected.cantrips ?? [], cantrips],
+    [expected.spells ?? [], spells],
   ])
     for (const spell of expectedNames)
-      assert(
-        actualNames.includes(spell) ||
-          sheet.customOptions?.some(
-            (option) =>
-              option.selected &&
-              normalize(option.name) === normalize(spell) &&
-              actualNames.includes('custom-' + option.id),
-          ),
-        `Missing selected spell ${spell}`,
-      )
-  if (expected.subrace) assert.equal(sheet.identity.subrace, expected.subrace)
+      assert(actualNames.includes(spell), `Missing selected spell ${spell}`)
   const inventory = [
     ...sheet.equipment.equipped,
     ...sheet.equipment.backpack,
     ...sheet.equipment.loot,
   ]
   for (const [item, count] of Object.entries(expected.inventory ?? {})) {
+    // The pack carries some items under two slugs; either is the item.
+    const slugs = [item, ...(expected.itemAlternatives?.[item] ?? [])]
     const matches = inventory.filter(
       (stack) =>
-        stack.item === item ||
+        slugs.includes(local(stack.item)) ||
         sheet.customOptions?.some(
           (option) =>
             stack.item === 'custom-' + option.id &&
@@ -158,13 +176,39 @@ export function check(sheet) {
   }
   for (const [unit, count] of Object.entries(expected.purse ?? {}))
     assert.equal(sheet.equipment.purse?.[unit] ?? 0, count, `Coins: ${unit}`)
+  const skills = localKeys(sheet.skills)
   for (const [skill, bonus] of Object.entries(expected.skills ?? {}))
-    assert.equal(sheet.skills[skill]?.bonus, bonus, `Skill: ${skill}`)
+    assert.equal(skills[skill]?.bonus, bonus, `Skill: ${skill}`)
   for (const [ability, bonus] of Object.entries(expected.saves ?? {}))
     assert.equal(sheet.savingThrows[ability]?.bonus, bonus, `Save: ${ability}`)
   const notes = [JSON.stringify(sheet.customOptions), ...(sheet.importedNotes ?? [])].join('\n')
   for (const note of expected.notes ?? [])
     assert(notes.toLowerCase().includes(note.toLowerCase()), `Missing source discrepancy ${note}`)
+}
+// What the saved character is made of: an ordinary build, with printed values
+// pinned only where the expectation says the sheet really differs from the
+// rules, and no required question left open that it does not name.
+async function checkBuild(characterId) {
+  const { events } = await request(`/characters/${characterId}/events`)
+  const pinned = events
+    .filter((event) => event.observed)
+    .flatMap((event) => event.changes ?? [])
+    .map((change) => change.path.split('.').map(local).join('.'))
+    .filter((path) => /^(skills|savingThrows|status|base)\.|^proficiencies$/.test(path))
+  for (const path of pinned)
+    assert(
+      (expected.allowedOverrides ?? []).some((prefix) => path === prefix || path.startsWith(prefix + '.')),
+      `Printed value still pinned over the build: ${path}`,
+    )
+  const { prompts } = await request(`/characters/${characterId}/prompts`)
+  // A prompt named after a class carries the pack's namespace in front.
+  for (const prompt of prompts.filter((prompt) => !prompt.optional))
+    assert(
+      (expected.openPrompts ?? []).some(
+        (id) => prompt.choice.prompt === id || prompt.choice.prompt.endsWith('/' + id),
+      ),
+      `Required choice left open: ${prompt.choice.prompt}`,
+    )
 }
 function normalize(s) {
   return s
@@ -178,6 +222,7 @@ const characterId = view.session.characterId
 assert(characterId)
 const before = await request(`/characters/${characterId}/sheet`)
 check(before)
+await checkBuild(characterId)
 let events = await request(`/characters/${characterId}/events`)
 const renamed = structuredClone(events.events[0])
 renamed.changes = [
@@ -197,23 +242,26 @@ const after = await request(`/characters/${characterId}/sheet`)
 after.identity.name = expected.name
 assert.deepEqual(after, before, 'Editing the name erased imported facts')
 const customs = await request(`/characters/${characterId}/custom-options`)
+// A fully native import has nothing custom to edit, which is the goal rather
+// than a gap in the check.
 const option = customs.options.find((option) => option.kind === 'background') ?? customs.options[0]
-assert(option, 'No editable custom content')
-const originalDescription = option.description
-option.description += '\nRound-trip edit check.'
-await request(
-  `/characters/${characterId}/custom-options`,
-  { revision: customs.revision, option },
-  'POST',
-)
-const reopened = await request(`/characters/${characterId}/sheet`)
-assert(
-  reopened.customOptions.some(
-    (saved) => saved.id === option.id && saved.description === option.description,
-  ),
-  'Custom edit did not survive reopen',
-)
-assert.deepEqual(reopened.identity.classes, before.identity.classes, 'Custom edit erased class')
+const originalDescription = option?.description
+if (option) {
+  option.description += '\nRound-trip edit check.'
+  await request(
+    `/characters/${characterId}/custom-options`,
+    { revision: customs.revision, option },
+    'POST',
+  )
+  const reopened = await request(`/characters/${characterId}/sheet`)
+  assert(
+    reopened.customOptions.some(
+      (saved) => saved.id === option.id && saved.description === option.description,
+    ),
+    'Custom edit did not survive reopen',
+  )
+  assert.deepEqual(reopened.identity.classes, before.identity.classes, 'Custom edit erased class')
+}
 const finalEvents = await request(`/characters/${characterId}/events`)
 await request(
   `/characters/${characterId}/events/1`,
@@ -229,10 +277,12 @@ await request(
   },
   'PUT',
 )
-const finalCustoms = await request(`/characters/${characterId}/custom-options`)
-await request(
-  `/characters/${characterId}/custom-options`,
-  { revision: finalCustoms.revision, option: { ...option, description: originalDescription } },
-  'POST',
-)
-console.log(`PASS: source checks, save, reopen, name edit and custom edit: ${characterId}`)
+if (option) {
+  const finalCustoms = await request(`/characters/${characterId}/custom-options`)
+  await request(
+    `/characters/${characterId}/custom-options`,
+    { revision: finalCustoms.revision, option: { ...option, description: originalDescription } },
+    'POST',
+  )
+}
+console.log(`PASS: source checks, native build, save, reopen and edits: ${characterId}`)

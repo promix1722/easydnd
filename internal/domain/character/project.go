@@ -348,9 +348,15 @@ func isInputPath(path Path) bool {
 // isEquipmentPath reports whether a change moves items between the carried
 // lists, which has to happen between the starting kit being granted and armor
 // class being derived from what is worn.
+//
+// A stack set by count -- equipment.equipped.leather-armor -- is as much a
+// move as a list is, and has to land in the same place: left to the override
+// tier it arrives after armor class was derived, and the armor an imported
+// character is wearing protects nobody. The purse is not carried in a list
+// and stays an ordinary override.
 func isEquipmentPath(path Path) bool {
 	segments := path.Segments()
-	return len(segments) == 2 && segments[0] == "equipment"
+	return len(segments) >= 2 && segments[0] == "equipment" && segments[1] != "purse"
 }
 
 // applyRace resolves the race and subrace: bonuses, speed, size, languages,

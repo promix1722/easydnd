@@ -451,14 +451,17 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 	legal := rules.OptionKeys(prompt.Choice.From)
 	seen := make(map[rules.Slug]bool, len(answer.Picks))
 	for _, pick := range answer.Picks {
+		// Every per-pick error names its pick. A prompt takes several, and
+		// "one of these is not an option" leaves the caller to guess which.
+		named := types.Args{"pick": pick.String()}
 		if slices.Contains(prompt.Blocked, pick) {
-			fields = append(fields, types.FieldError{Field: field, Rule: "not-held", Reason: "field.answer.requiresProficiency"})
+			fields = append(fields, types.FieldError{Field: field, Rule: "not-held", Reason: "field.answer.requiresProficiency", Args: named})
 		}
 		// A set drawn from a collection has no inline options; the pick is
 		// the entry's own slug, and the reference check above covers it.
 		if legal != nil && !slices.Contains(legal, pick) {
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "option", Reason: "field.answer.notAnOption",
+				Field: field, Rule: "option", Reason: "field.answer.notAnOption", Args: named,
 			})
 			continue
 		}
@@ -472,7 +475,7 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 		// put both of theirs into one.
 		if seen[pick] && !prompt.Choice.Repeatable {
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "duplicate", Reason: "field.answer.duplicate",
+				Field: field, Rule: "duplicate", Reason: "field.answer.duplicate", Args: named,
 			})
 		}
 		seen[pick] = true
@@ -488,11 +491,11 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 		switch {
 		case prompt.HeldOnly && !held:
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "not-held", Reason: "field.answer.notProficient",
+				Field: field, Rule: "not-held", Reason: "field.answer.notProficient", Args: named,
 			})
 		case !prompt.HeldOnly && held:
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "held", Reason: "field.answer.alreadyHeld",
+				Field: field, Rule: "held", Reason: "field.answer.alreadyHeld", Args: named,
 			})
 		}
 	}

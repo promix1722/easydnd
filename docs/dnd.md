@@ -486,8 +486,24 @@ in two, and the saving throws all come out matching the real exported sheet.
 - Actions from equipment and prepared spells. `State.Actions` carries only
   what a change event put there, and the battle tracker is where the rest
   belongs.
-- Unarmored Defense and Jack of All Trades. Both are class features whose
-  mechanics the compendium records only as prose.
+- Jack of All Trades, a class feature whose mechanics the compendium records
+  only as prose.
+
+Unarmored Defense used to be on that list. It is derived now, and not by
+`armorClass`: that function knows what armor does, and Unarmored Defense is a
+class feature. It is two pack rules owned by the barbarian's and the monk's
+feature, each an `add` effect on `status.armorClass` whose value reads what is
+worn -- Constitution while no armor is worn, Wisdom while neither armor nor a
+shield is. See [packs.md](packs.md#file-contract) for the two inputs,
+`equipped:armor` and `equipped:shield`, and why only an effect's value may read
+them. The bonus is never negative: a character may always use the plain
+`10 + DEX`.
+
+Worn armor counts whether it was equipped as a list entry
+(`equipment.equipped` add `leather-armor`) or as a counted stack
+(`equipment.equipped.leather-armor` set `1`). The second is how an import
+writes inventory, because a sheet prints quantities; both are applied before
+armor class is derived.
 
 ## Builder choices under the 2014 rules
 
@@ -539,6 +555,26 @@ Defense without interpreting their prose.
 | Wizard | Six entries initially plus two per later wizard level, using the current class-level pool | Spellbook subset, Intelligence modifier + wizard level, minimum one |
 | Cleric, druid | Cantrips follow the class table | Class-list subset, Wisdom modifier + class level, minimum one |
 | Paladin | Begins at level two | Class-list subset, Charisma modifier + half paladin level rounded down, minimum one |
+
+| Arcane Trickster, Eldritch Knight | Begins at level three, from the **subclass's** table and the wizard's list | Known spells are available |
+
+A class is not the only thing that casts. A rogue does not and an Arcane
+Trickster does, so a casting profile may be keyed by a **subclass** instead of
+a class. Such a profile names the class whose spell list it draws on and its
+spellcasting ability, since the subclass has neither; its cantrips known,
+spells known and slots are read from the subclass's own advancement rows, and
+its prompts are named after it (`arcane-trickster/spell/known/3`). Everything
+that asks how a class casts -- slots, the multiclass caster level, the
+spellcasting summary, the spell prompts -- asks one function, `castingFor`,
+which answers with the subclass's profile when it has one and the class's
+otherwise. A rogue with any other archetype is exactly the non-caster it was.
+
+The school limits are **not enforced**: an Arcane Trickster is offered the
+whole wizard list rather than enchantment and illusion plus the free picks at
+levels 3, 8, 14 and 20, and an Eldritch Knight likewise for abjuration and
+evocation. The limit is prose the profile does not carry. That is a builder
+that offers too much, not one that computes wrong; a profile field for the
+schools, and spell benefits for the unrestricted picks, is where it would go.
 
 Required acquisitions must be answered before the build is complete. Preparation
 is optional and may use less than the maximum. Its choices are revalidated when
@@ -594,16 +630,39 @@ not a change to the class progression. Spells beyond the ordinary class allowanc
 remain custom picks, even when covered by this extra count. Unlimited explicit
 custom choices remain possible with character availability disabled.
 
-## Imported observations and final ability totals
+## Imported builds and final ability totals
 
-Agent imports hold observed facts separately from validated choice answers in
-an unpublished log. `finalAbilities.<ability>` is an explicit source total:
-projection installs it before dependent calculations and avoids adding race,
-ASI or pack ability bonuses again. Save attempts to invert ordinary additive
-bonuses into base scores, verifying that reprojection preserves the totals.
-Non-invertible custom rules retain the explicit override; a later ordinary base
-score assignment clears it. This keeps common imported characters compatible
-with subsequent ability progression without inventing historical choices.
+An agent import **rebuilds the character**: catalogue race, class, subclass and
+background, then the build's own choices -- class skills, expertise, languages,
+spells, metamagic -- answered through the same validator a player's answers go
+through. It used to do the opposite, recording the sheet's skills, saves, hit
+points and armor class as overrides and leaving every choice open on the
+grounds that a sheet is not a history. The result was a character the builder
+could not edit, pinned to numbers a model had read off a scan. A sheet is not a
+history, but it does determine a build, and the build is what the product is
+for.
+
+Two kinds of event are still written without a prompt asking for them, and
+both are marked `Observed`:
+
+- The structural entries -- race, subrace, class with its level, subclass,
+  background, feat. A sheet states these outright, so they are facts rather
+  than answers. They open exactly the prompts an ordinary entry opens.
+- `finalAbilities.<ability>`, an explicit source total. Projection installs it
+  before dependent calculations and avoids adding race, ASI or pack ability
+  bonuses again. Save inverts ordinary additive bonuses into base scores,
+  verifying that reprojection preserves the totals. Non-invertible custom rules
+  retain the explicit override; a later ordinary base score assignment clears
+  it. This keeps imported characters compatible with later ability progression.
+
+The sheet's *derived* numbers -- hit points, armor class, skill and save
+bonuses -- are not written at all. They are held beside the draft as a
+reference: the server reads the proficiencies off the bonuses, reports where
+the draft computes something else, and writes nothing to make it agree. A
+number is pinned over the build only when it is imported on purpose, and even
+then it is dropped at review and at save if the build computes the same value
+(`pruneAgentOverrides`), so an imported character carries no override that
+merely repeats its own arithmetic. See [agent.md](agent.md#rebuilding-the-sheet).
 
 Unknown mechanics are manual notes rather than executable guesses. Complete
 custom definitions use the existing immutable pack lock. Both manual source
