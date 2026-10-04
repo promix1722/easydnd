@@ -8,9 +8,10 @@ character or session ID parameter with which to target another record.
 
 ## User flow
 
-Each folder offers Import. When `agent.api_key` and `agent.model` are configured,
-this opens one assistant conversation on desktop and mobile. Without the provider,
-the existing deterministic HexSheet JSON screen and API remain available.
+Each folder offers Import, which opens one assistant conversation on desktop and
+mobile. The server needs `agent.api_key` and `agent.model` configured to process
+uploads. Without the provider, imports report that AI import is not configured;
+the workspace does not fall back to the legacy HexSheet JSON screen.
 
 Upload PDF, PNG, JPEG, WebP, JSON or UTF-8 text and optionally describe what needs
 attention. Multiple files belong to the same character. Files may also be added

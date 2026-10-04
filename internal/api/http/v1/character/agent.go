@@ -21,7 +21,7 @@ func (h *Handler) AgentCapabilities(c *gin.Context) {
 }
 func (h *Handler) agentAvailable(c *gin.Context) bool {
 	if h.agent == nil || !h.agent.Enabled() {
-		helpers.FormatError(c, types.NewNotImplementedError("agent disabled"))
+		helpers.FormatError(c, types.NewNotImplementedError("agent disabled").Because("agent.disabled"))
 		return false
 	}
 	return true
