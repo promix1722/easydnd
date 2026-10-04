@@ -1,9 +1,8 @@
 import type { RulesLock } from './packs'
-import type { CharacterEvent as Event, Sheet } from './characters'
 import { request } from './client'
 
 export interface AgentEvent {
-  actions?: ('view' | 'edit' | 'save')[]
+  actions?: ('view' | 'edit')[]
   files?: { name: string; mime: string }[]
   options?: string[]
   source?: string
@@ -24,7 +23,6 @@ export interface AgentSession {
     | 'paused'
     | 'failed'
     | 'review'
-    | 'saved'
   revision: number
   characterId?: string
   events: AgentEvent[]
@@ -40,7 +38,6 @@ export interface AgentSession {
 }
 export interface AgentView {
   session: AgentSession
-  sheet: Sheet
 }
 export const agentCapabilities = () =>
   request<{ enabled: boolean }>('/agent-capabilities')
@@ -73,17 +70,6 @@ export const controlAgent = (
     method: 'POST',
     body: { revision, action, text },
   })
-export const editAgent = (id: string, revision: number, events: Event[]) =>
-  request<AgentView>(`/agent-sessions/${encodeURIComponent(id)}/edit`, {
-    method: 'POST',
-    body: { revision, events },
-  })
-export const finalizeAgent = (id: string, revision: number) =>
-  request<AgentView>(`/agent-sessions/${encodeURIComponent(id)}/finalize`, {
-    method: 'POST',
-    body: { revision },
-  })
-
 export function addAgentFiles(
   id: string,
   revision: number,

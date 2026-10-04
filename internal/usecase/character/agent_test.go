@@ -35,7 +35,9 @@ func waitAgent(t *testing.T, a *charuc.Agent, id string, condition func(charuc.A
 		}
 		time.Sleep(time.Millisecond)
 	}
-	t.Fatal("agent did not settle")
+	s, _ := a.Get(testOwner, id)
+	b, _ := json.Marshal(s.Events)
+	t.Fatalf("agent did not settle: %s %s", s.Status, b)
 	return charuc.AgentSession{}
 }
 func TestAgentCancelFencesLateResponseAndOwner(t *testing.T) {
@@ -154,26 +156,14 @@ func TestAgentFactsFinalScoresManualAndIdempotentSave(t *testing.T) {
 	if len(sheet.ImportedNotes) != 1 {
 		t.Fatal("custom content lost")
 	}
-	s, err = a.Edit(context.Background(), testOwner, s.ID, s.Revision, []domain.Event{{Type: domain.EventChange, Changes: []domain.Change{{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue("User edit")}}}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	first, err := a.Finalize(context.Background(), testOwner, s.ID, s.Revision)
-	if err != nil {
-		t.Fatal(err)
-	}
-	second, err := a.Finalize(context.Background(), testOwner, s.ID, s.Revision)
-	if err != nil || first.CharacterID != second.CharacterID {
-		t.Fatal("duplicate finalization")
-	}
+	// The character is real and its owner's: an edit made in the builder is
+	// an ordinary edit, with no draft to go through.
+	edit(t, svc, s.CharacterID, domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue("User edit")}}})
 	list, err := svc.List(context.Background(), testOwner, "", rules.DefaultLocale)
 	if err != nil || len(list) != 1 || list[0].Name != "User edit" {
-		t.Fatalf("saved characters: %#v %v", list, err)
+		t.Fatalf("characters: %#v %v", list, err)
 	}
-	if _, err = a.Control(testOwner, s.ID, "message", "modify after save", second.Revision); err == nil {
-		t.Fatal("saved history was mutable")
-	}
-	b, _ := json.Marshal(first)
+	b, _ := json.Marshal(s)
 	var public map[string]any
 	_ = json.Unmarshal(b, &public)
 	if _, ok := public["Owner"]; ok {
@@ -198,7 +188,7 @@ func TestAgentSavedScoresCanBeImprovedNormally(t *testing.T) {
 		t.Fatal(err)
 	}
 	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
-	saved, err := a.Finalize(context.Background(), testOwner, s.ID, s.Revision)
+	saved, err := a.Get(testOwner, s.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,34 +252,76 @@ func TestAgentMatchesTranslatedSpellWithoutChangingIdentity(t *testing.T) {
 	}
 }
 
-func TestAgentDraftEditorRejectsActiveTurn(t *testing.T) {
-	started := make(chan struct{})
-	model := modelFunc(func(ctx context.Context, _ charuc.AgentRequest, _ func(string)) (charuc.AgentResponse, error) {
-		close(started)
-		<-ctx.Done()
-		return charuc.AgentResponse{}, ctx.Err()
+// edit changes a wizard's character the way the builder does.
+func edit(t *testing.T, svc *charuc.Service, id domain.ID, events ...domain.Event) {
+	t.Helper()
+	c, err := svc.Get(context.Background(), testOwner, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = svc.Apply(charuc.WithRevision(context.Background(), c.Revision), testOwner, id, rules.DefaultLocale, c.Log.LastSeq(), events...); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The wizard writes to a real character, so what it imports is in the
+// builder's own terms: nothing printed is pinned over the build where the
+// builder has a question for it.
+func TestAgentWritesTheBuildersOwnEntries(t *testing.T) {
+	svc := newService(t)
+	model := modelFunc(func(context.Context, charuc.AgentRequest, func(string)) (charuc.AgentResponse, error) {
+		return charuc.AgentResponse{Calls: []charuc.AgentCall{
+			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"],"level":3,"scores":{"str":8,"dex":14,"con":15,"int":10,"wis":12,"cha":17}}`},
+			{ID: "facts", Name: "import_facts", Arguments: `{"facts":[{"path":"identity.name","value":"Vas Pup"},{"kind":"race","name":"Half-Elf"},{"kind":"class","name":"Rogue","level":3},{"kind":"subclass","name":"Thief"},{"path":"identity.personalityTraits","value":"Always has a plan."},{"path":"identity.flaws","value":"Cannot pass up a con."}]}`},
+			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
+		}}, nil
 	})
-	a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	<-started
-	called := false
-	if err := a.WithDraft(testOwner, s.ID, true, func(*charuc.Service) { called = true }); err == nil || called {
-		t.Fatal("active draft editor write admitted")
+	if s.CharacterID == "" {
+		t.Fatal("no character behind the chat")
 	}
-	if err := a.WithDraft("other", s.ID, false, func(*charuc.Service) { called = true }); err == nil || called {
-		t.Fatal("foreign draft read admitted")
-	}
-	if err := a.WithDraft(testOwner, s.ID, false, func(svc *charuc.Service) {
-		_, err = svc.Sheet(context.Background(), testOwner, domain.ID(s.ID), rules.DefaultLocale)
-	}); err != nil {
-		t.Fatal(err)
-	}
+	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
+	c, err := svc.Get(context.Background(), testOwner, s.CharacterID)
 	if err != nil {
 		t.Fatal(err)
+	}
+	levels, method := map[domain.EventType]int{}, false
+	for _, e := range c.Log.Events {
+		if e.Type == domain.EventClass || e.Type == domain.EventSubclass {
+			levels[e.Type] = e.Level
+		}
+		for _, ch := range e.Changes {
+			path := string(ch.Path)
+			if strings.HasPrefix(path, "finalAbilities.") || e.Observed && strings.HasPrefix(path, "identity.") {
+				t.Errorf("%s is pinned over the build", path)
+			}
+			if e.Type == domain.EventInit && path == "identity.ruleset" {
+				t.Error("the name and the rules share an entry")
+			}
+			method = method || path == "abilities.method" && ch.Value.Slug == "manual"
+		}
+	}
+	if levels[domain.EventClass] != 1 || levels[domain.EventSubclass] != 3 || !method {
+		t.Errorf("class at %d, subclass at %d, ability scores answered = %v", levels[domain.EventClass], levels[domain.EventSubclass], method)
+	}
+	sheet, err := svc.Sheet(context.Background(), testOwner, c.ID, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sheet.Identity.Name != "Vas Pup" || sheet.Identity.Level() != 3 || sheet.Abilities.Score("cha") != 17 || len(sheet.Identity.PersonalityTraits) != 1 || len(sheet.Identity.Flaws) != 1 {
+		t.Errorf("sheet = %+v, cha %d", sheet.Identity, sheet.Abilities.Score("cha"))
+	}
+	// Discarding the chat discards what it made.
+	if _, err = a.Control(testOwner, s.ID, "discard", "", s.Revision); err != nil {
+		t.Fatal(err)
+	}
+	if list, _ := svc.List(context.Background(), testOwner, "", rules.DefaultLocale); len(list) != 0 {
+		t.Errorf("discarded character kept: %+v", list)
 	}
 }
 

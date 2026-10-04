@@ -32,12 +32,7 @@ func (h *Handler) agentResult(c *gin.Context, s charuc.AgentSession, err error) 
 		helpers.FormatError(c, err)
 		return
 	}
-	sheet, err := h.agent.Sheet(c.Request.Context(), s)
-	if err != nil {
-		helpers.FormatError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"session": s, "sheet": SheetOf(sheet)})
+	c.JSON(http.StatusOK, gin.H{"session": s})
 }
 func (h *Handler) AgentCreate(c *gin.Context) {
 	if !h.agentAvailable(c) {
@@ -85,42 +80,6 @@ func (h *Handler) AgentControl(c *gin.Context) {
 	s, err := h.agent.Control(h.owner(c), c.Param("id"), p.Action, p.Text, p.Revision)
 	h.agentResult(c, s, err)
 }
-func (h *Handler) AgentEdit(c *gin.Context) {
-	if !h.agentAvailable(c) {
-		return
-	}
-	var p struct {
-		Revision int     `json:"revision"`
-		Events   []Event `json:"events"`
-	}
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 128<<10)
-	if err := c.ShouldBindJSON(&p); err != nil {
-		helpers.FormatError(c, types.NewValidationError("invalid draft edit"))
-		return
-	}
-	events, err := toEvents(p.Events)
-	if err != nil {
-		helpers.FormatError(c, err)
-		return
-	}
-	s, err := h.agent.Edit(c.Request.Context(), h.owner(c), c.Param("id"), p.Revision, events)
-	h.agentResult(c, s, err)
-}
-func (h *Handler) AgentFinalize(c *gin.Context) {
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1024)
-	if !h.agentAvailable(c) {
-		return
-	}
-	var p struct {
-		Revision int `json:"revision"`
-	}
-	if err := c.ShouldBindJSON(&p); err != nil {
-		helpers.FormatError(c, types.NewValidationError("invalid save"))
-		return
-	}
-	s, err := h.agent.Finalize(c.Request.Context(), h.owner(c), c.Param("id"), p.Revision)
-	h.agentResult(c, s, err)
-}
 
 // Every event has a durable-within-process cursor. Reconnect starts with a
 // coherent snapshot; no missed interval exists between snapshot and polling.
@@ -154,11 +113,7 @@ func (h *Handler) AgentEvents(c *gin.Context) {
 	}
 	for {
 		if revision != s.Revision {
-			sheet, err := h.agent.Sheet(c.Request.Context(), s)
-			if err != nil {
-				return
-			}
-			if !send("snapshot", len(s.Events), gin.H{"session": s, "sheet": SheetOf(sheet)}) {
+			if !send("snapshot", len(s.Events), gin.H{"session": s}) {
 				return
 			}
 			cursor = len(s.Events)

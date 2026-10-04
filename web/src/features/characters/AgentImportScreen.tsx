@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useNavigate, useSearchParams, useParams } from 'react-router'
 import {
   addAgentFiles,
   controlAgent,
   createAgentSession,
-  finalizeAgent,
   getAgentSession,
   listAgentSessions,
 } from '@/lib/api/agent'
@@ -28,12 +28,10 @@ import {
   Textarea,
 } from '@/ui'
 import { PackSelector } from '../packs/PackSelector'
+import { listPacks } from '@/lib/api/packs'
 import type { RulesLock } from '@/lib/api/packs'
+import { useResource } from '@/lib/useResource'
 import { progressText } from './agentProgress'
-import { BuildScreen } from '../character/BuildScreen'
-import { SheetBody } from '../character/SheetBody'
-import { loadCompendium } from '../character/compendium'
-import type { Compendium } from '../character/compendium'
 
 const STATUS_LABELS = {
   queued: 'agent.status.queued',
@@ -42,32 +40,32 @@ const STATUS_LABELS = {
   paused: 'agent.status.paused',
   failed: 'agent.status.failed',
   review: 'agent.status.review',
-  saved: 'agent.status.saved',
 } as const
 
 /** Stream events are rendered from recorded state, so reconnect/reload never
- * creates a second conversation or restarts an import. Chat, view and editor
- * share one route component so unsent input survives page navigation. */
+ * creates a second conversation or restarts an import. The chat writes to a
+ * real character from its first message: View and Edit are that character's
+ * own sheet and builder, not pages of this one. */
 export function AgentImportScreen() {
   const t = useT()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const { sessionId, importView } = useParams()
+  const { sessionId } = useParams()
   const id = sessionId ?? params.get('session')
   const folder = params.get('folder') ?? undefined
   const [view, setView] = useState<AgentView | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const [message, setMessage] = useState('')
-  const [selectedRules, setSelectedRules] = useState<RulesLock>()
+  // The rules are part of the conversation: the assistant opens with the ones
+  // it will use, already chosen, and they can be changed there before the
+  // first message carries them to the server.
+  const packs = useResource('pack-selection', listPacks)
+  const [chosenRules, setChosenRules] = useState<RulesLock>()
+  const selectedRules = chosenRules ?? packs.data?.defaultRules
   const [rulesDirty, setRulesDirty] = useState(false)
-  const subview = importView ?? params.get('view')
+  const [rulesOpen, setRulesOpen] = useState(false)
   const [connected, setConnected] = useState(true)
   const [drafts, setDrafts] = useState<AgentSession[]>([])
-  const [compendium, setCompendium] = useState<Compendium>({
-    names: null,
-    skills: null,
-    proficiencies: null,
-  })
   const composer = useRef<HTMLTextAreaElement>(null)
   const end = useRef<HTMLDivElement>(null)
   const follow = useRef(true)
@@ -85,16 +83,13 @@ export function AgentImportScreen() {
     return result
   })
   useEffect(() => {
-    void loadCompendium().then(setCompendium)
-  }, [])
-  useEffect(() => {
     let live = true
     setView((old) => (old?.session.id === id ? old : null))
     if (!id) {
       void listAgentSessions().then(
         (s) => {
           if (live)
-            setDrafts(s.filter((v) => v.status !== 'saved' && (!folder || v.folder === folder)))
+            setDrafts(s.filter((v) => !folder || v.folder === folder))
         },
         () => {},
       )
@@ -169,16 +164,14 @@ export function AgentImportScreen() {
   }, [view?.session.events.length, view?.session.status])
   const session = view?.session
   const active = session?.status === 'running' || session?.status === 'queued'
-  const saved = session?.status === 'saved'
   const currentSessionId = session?.id
   useEffect(() => {
-    if (currentSessionId && !active && !saved && !subview) composer.current?.focus()
-  }, [active, saved, subview, currentSessionId])
+    if (currentSessionId && !active) composer.current?.focus()
+  }, [active, currentSessionId])
   async function send(answer = message) {
     if (
       active ||
       action.pending ||
-      saved ||
       (!answer.trim() && !files.length) ||
       (!session && (!selectedRules || rulesDirty))
     )
@@ -206,59 +199,11 @@ export function AgentImportScreen() {
     const result = await action.run(() => controlAgent(session.id, session.revision, kind))
     if (result && kind === 'discard') void navigate('/characters')
   }
-  const chatPath = id ? `/ai-wizard/${encodeURIComponent(id)}` : '/ai-wizard'
-  const trail = [...(id ? [{ label: id, ...(subview ? { to: chatPath } : {}) }] : [])]
-  function openSubview(value: 'character' | 'editor' | null) {
-    void navigate(`${chatPath}${value ? `/${value}` : ''}`)
-    if (value !== 'editor' && session) void action.run(() => getAgentSession(session.id))
+  const trail = id ? [{ label: id }] : []
+  const open = (kind: 'view' | 'edit') => {
+    if (session?.characterId)
+      void navigate(`/characters/${session.characterId}${kind === 'edit' ? '/build' : ''}`)
   }
-  if (subview && !view && !action.error)
-    return (
-      <Page
-        trail={[
-          ...trail,
-          {
-            label: subview === 'editor' ? t('common.edit') : t('agent.preview'),
-          },
-        ]}
-        state={{ kind: 'loading' }}
-      />
-    )
-  if (subview === 'editor' && view) {
-    if (active)
-      return (
-        <Page trail={[...trail, { label: t('common.edit') }]}>
-          <Text>{t('agent.waitForReply')}</Text>
-          <Button onClick={() => openSubview(null)}>{t('agent.backToChat')}</Button>
-        </Page>
-      )
-    return (
-      <BuildScreen
-        key={session?.id}
-        draftId={saved && session?.characterId ? session.characterId : `import:${id}`}
-        trail={[...trail, { label: t('common.edit') }]}
-        onDone={() => openSubview(null)}
-      />
-    )
-  }
-  if (subview === 'character' && view)
-    return (
-      <Page
-        trail={[...trail, { label: t('agent.preview') }]}
-        actions={
-          <Group>
-            <Button variant="subtle" onClick={() => openSubview(null)}>
-              {t('agent.backToChat')}
-            </Button>
-            <Button disabled={active} onClick={() => openSubview('editor')}>
-              {t('common.edit')}
-            </Button>
-          </Group>
-        }
-      >
-        <SheetBody sheet={view.sheet} compendium={compendium} />
-      </Page>
-    )
   return (
     <Page trail={trail}>
       <Stack gap="md">
@@ -287,21 +232,17 @@ export function AgentImportScreen() {
                 {t('agent.chatId', { id: session.id.slice(0, 8) })}
               </Text>
             </Group>
+            <Group gap="xs">
+              <Button variant="subtle" size="compact-sm" onClick={() => open('view')}>
+                {t('import.viewSheet')}
+              </Button>
+              <Button variant="subtle" size="compact-sm" onClick={() => open('edit')}>
+                {t('common.edit')}
+              </Button>
+            </Group>
           </Group>
         )}
-        {!id && (
-          <Stack gap="xs">
-            <Text c="dimmed" size="sm">
-              {t('agent.rulesRequired')}
-            </Text>
-            <PackSelector
-              value={selectedRules}
-              onChange={setSelectedRules}
-              onDirtyChange={setRulesDirty}
-            />
-          </Stack>
-        )}
-        {(id || selectedRules) && (
+        {
           <Card withBorder padding="md" radius="md">
             <Stack gap="md">
               <div
@@ -325,30 +266,44 @@ export function AgentImportScreen() {
                     <Conversation
                       events={session.events}
                       files={session.files}
-                      canAnswer={!active && !saved && !action.pending}
+                      canAnswer={!active && !action.pending}
                       onAnswer={(answer) => void send(answer)}
-                      onAction={(kind) => {
-                        if (kind === 'save' && session)
-                          void action.run(() => finalizeAgent(session.id, session.revision))
-                        else if (saved && session.characterId)
-                          void navigate(
-                            `/characters/${session.characterId}${kind === 'edit' ? '/build' : ''}`,
-                          )
-                        else openSubview(kind === 'view' ? 'character' : 'editor')
-                      }}
-                      saved={!!saved}
-                      canSave={view?.sheet.identity.name !== '…'}
+                      onAction={open}
+                      active={active}
                       review={session.status === 'review'}
                     />
-                    {active && (
-                      <Text size="sm" c="dimmed" mt="md">
-                        {t('agent.thinking')}
-                      </Text>
-                    )}
                   </>
                 ) : (
-                  <Stack>
-                    <Text>{t('agent.lead')}</Text>
+                  <Stack gap="md">
+                    <Bubble>
+                      <Stack gap="sm">
+                        <Text>{t('agent.lead')}</Text>
+                        {/* Said in the message itself, so the rules read as
+                            chosen while the selector is folded. */}
+                        {selectedRules && (
+                          <Text size="sm" fw={600}>
+                            {selectedRules.packs
+                              .map(
+                                (release) =>
+                                  `${packs.data?.packs.find((pack) => pack.id === release.id)?.title ?? release.id} v${release.version}`,
+                              )
+                              .join(', ')}
+                          </Text>
+                        )}
+                        <PackSelector
+                          value={selectedRules}
+                          // Confirming is the end of choosing: fold the
+                          // selector and hand the keyboard to the message.
+                          onChange={(lock) => {
+                            setChosenRules(lock)
+                            setRulesOpen(false)
+                            composer.current?.focus()
+                          }}
+                          onDirtyChange={setRulesDirty}
+                          disclosure={{ open: rulesOpen, onOpen: setRulesOpen }}
+                        />
+                      </Stack>
+                    </Bubble>
                     {drafts.map((draft) => (
                       <Button
                         key={draft.id}
@@ -362,9 +317,7 @@ export function AgentImportScreen() {
                 )}
                 <div ref={end} />
               </div>
-              {saved ? (
-                <Alert>{t('agent.saved')}</Alert>
-              ) : (
+              {
                 <form
                   onSubmit={(event) => {
                     event.preventDefault()
@@ -450,7 +403,9 @@ export function AgentImportScreen() {
                         type="submit"
                         loading={action.pending}
                         disabled={
-                          active || (session ? !message.trim() && !files.length : !files.length)
+                          active ||
+                          (!message.trim() && !files.length) ||
+                          (!session && (!selectedRules || rulesDirty))
                         }
                       >
                         {t('agent.send')}
@@ -479,15 +434,15 @@ export function AgentImportScreen() {
                     </Text>
                   )}
                 </form>
-              )}
+              }
             </Stack>
           </Card>
-        )}
+        }
         <Group justify="space-between">
           <Text size="xs" c="dimmed">
             {t('agent.memory')}
           </Text>
-          {session && !saved && (
+          {session && (
             <Button
               variant="subtle"
               color="red"
@@ -503,23 +458,43 @@ export function AgentImportScreen() {
   )
 }
 
+/** One side of the conversation: the assistant on the left, the player on
+ * the right. */
+function Bubble({ mine = false, children }: { mine?: boolean; children: ReactNode }) {
+  return (
+    <div
+      style={{
+        alignSelf: mine ? 'flex-end' : 'flex-start',
+        maxWidth: '85%',
+        overflowWrap: 'anywhere',
+        padding: '10px 14px',
+        borderRadius: 16,
+        ...(mine ? { borderBottomRightRadius: 4 } : { borderBottomLeftRadius: 4 }),
+        background: mine
+          ? 'var(--mantine-primary-color-light)'
+          : 'var(--mantine-color-default-hover)',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
 function Conversation({
   events,
   files,
   canAnswer,
   onAnswer,
   onAction,
-  saved,
-  canSave,
+  active,
   review,
 }: {
   events: AgentEvent[]
   files: AgentSession['files']
   canAnswer: boolean
   onAnswer: (answer: string) => void
-  onAction: (action: 'view' | 'edit' | 'save') => void
-  saved: boolean
-  canSave: boolean
+  onAction: (action: 'view' | 'edit') => void
+  active: boolean
   review: boolean
 }) {
   const t = useT()
@@ -527,6 +502,7 @@ function Conversation({
     key: number
     kind: string
     text: string
+    lines?: string[]
     files?: AgentEvent['files']
     options?: string[] | undefined
     actions?: AgentEvent['actions']
@@ -551,12 +527,14 @@ function Conversation({
       const label = progressText(t, event.data)
       if (!label) continue
       const previous = rows.at(-1)
-      if (previous?.kind === 'activity') previous.text += '\n' + label
-      else rows.push({ key: event.id, kind: 'activity', text: label })
+      if (previous?.kind === 'activity') previous.lines!.push(label)
+      else rows.push({ key: event.id, kind: 'activity', text: '', lines: [label] })
     } else if (event.kind === 'attachments') {
       // Older sessions recorded attachment markers separately from the user.
       continue
     } else if (['user', 'assistant', 'question', 'edit'].includes(event.kind)) {
+      // A run of builder edits is one notice, however many entries it wrote.
+      if (event.kind === 'edit' && rows.at(-1)?.kind === 'edit') continue
       rows.push({
         key: event.id,
         kind: event.kind,
@@ -570,64 +548,54 @@ function Conversation({
     }
   }
   const lastAssistant = rows.findLast((row) => ['assistant', 'question'].includes(row.kind))
-  if (review && lastAssistant && !lastAssistant.actions)
-    lastAssistant.actions = ['view', 'edit', 'save']
+  if (review && lastAssistant && !lastAssistant.actions) lastAssistant.actions = ['view', 'edit']
   return (
     <Stack gap="md">
-      {rows.map((row) => (
-        <div
-          key={row.key}
-          style={{
-            alignSelf: row.kind === 'user' ? 'flex-end' : 'stretch',
-            maxWidth: row.kind === 'user' ? '85%' : '100%',
-            overflowWrap: 'anywhere',
-            borderRadius: 16,
-            padding: row.kind === 'user' ? '12px 16px' : '4px 0',
-            background: row.kind === 'user' ? 'var(--mantine-color-default-hover)' : undefined,
-          }}
-        >
-          {row.kind === 'activity' ? (
-            <Text size="sm" c="dimmed" style={{ whiteSpace: 'pre-line' }}>
-              {row.text}
-            </Text>
-          ) : (
+      {rows.map((row, index) =>
+        row.kind === 'activity' ? (
+          // What the assistant wrote is one line of the conversation, not the
+          // conversation: it folds away once the next message arrives.
+          <Bubble key={row.key}>
+            <details open={active && index === rows.length - 1}>
+              <summary style={{ cursor: 'pointer' }}>
+                <Text span size="sm" c="dimmed">
+                  {t('agent.progress.count', { count: row.lines!.length })}
+                </Text>
+              </summary>
+              <Text size="sm" c="dimmed" mt="xs" style={{ whiteSpace: 'pre-line' }}>
+                {row.lines!.join('\n')}
+              </Text>
+            </details>
+          </Bubble>
+        ) : row.kind === 'edit' ? (
+          <Text key={row.key} size="xs" c="dimmed" ta="center">
+            {t('agent.edited')}
+          </Text>
+        ) : (
+          <Bubble key={row.key} mine={row.kind === 'user'}>
             <Stack gap="xs">
               {!!row.files?.length && (
                 <Group gap="xs">
-                  {row.files.map((file, index) => (
-                    <Text key={index} size="sm" fw={500}>
+                  {row.files.map((file, at) => (
+                    <Badge
+                      key={at}
+                      variant="default"
+                      leftSection={<IconPaperclip size={12} />}
+                      tt="none"
+                    >
                       {file.name}
-                    </Text>
+                    </Badge>
                   ))}
                 </Group>
               )}
-              {row.kind === 'edit' ? (
-                <Text size="sm" c="dimmed">
-                  {t('agent.edited')}
-                </Text>
-              ) : row.text ? (
-                <Markdown>{row.text}</Markdown>
-              ) : null}
+              {row.text ? <Markdown>{row.text}</Markdown> : null}
               {!!row.actions?.length && (
                 <Group gap="xs">
-                  {row.actions
-                    .filter((kind) => kind !== 'save' || !saved)
-                    .map((kind) => (
-                      <Button
-                        key={kind}
-                        variant="light"
-                        disabled={
-                          (!canAnswer && !saved && kind !== 'view') || (kind === 'save' && !canSave)
-                        }
-                        onClick={() => onAction(kind)}
-                      >
-                        {kind === 'view'
-                          ? t('import.viewSheet')
-                          : kind === 'edit'
-                            ? t('common.edit')
-                            : t('agent.save')}
-                      </Button>
-                    ))}
+                  {row.actions.map((kind) => (
+                    <Button key={kind} variant="default" onClick={() => onAction(kind)}>
+                      {kind === 'view' ? t('import.viewSheet') : t('common.edit')}
+                    </Button>
+                  ))}
                 </Group>
               )}
               {row.kind === 'question' && row.key === lastQuestion && row.key > lastUser && (
@@ -637,7 +605,7 @@ function Conversation({
                       {row.options.map((option) => (
                         <Button
                           key={option}
-                          variant="light"
+                          variant="default"
                           disabled={!canAnswer}
                           onClick={() => onAnswer(option)}
                         >
@@ -652,9 +620,16 @@ function Conversation({
                 </>
               )}
             </Stack>
-          )}
-        </div>
-      ))}
+          </Bubble>
+        ),
+      )}
+      {active && (
+        <Bubble>
+          <Text size="sm" c="dimmed">
+            {t('agent.thinking')}
+          </Text>
+        </Bubble>
+      )}
     </Stack>
   )
 }

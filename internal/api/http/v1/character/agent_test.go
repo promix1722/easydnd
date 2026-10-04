@@ -128,7 +128,7 @@ func TestImportHTTPUploadResumeOwnershipAndSSE(t *testing.T) {
 			break
 		}
 	}
-	if !strings.Contains(frame, "event: snapshot") || !strings.Contains(frame, `"name":"Hero"`) || !strings.Contains(frame, `"status":"review"`) {
+	if !strings.Contains(frame, "event: snapshot") || !strings.Contains(frame, `"characterId":"chr_`) || !strings.Contains(frame, `"status":"review"`) {
 		t.Fatalf("bad recovery snapshot %s", frame)
 	}
 	cancel()

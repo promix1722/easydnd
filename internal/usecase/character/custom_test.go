@@ -40,16 +40,13 @@ func TestImportNameEditRetainsObservedClassScoresAndInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var result charuc.Revision
-	var reviseErr error
-	err = a.WithDraft(testOwner, session.ID, true, func(draft *charuc.Service) {
-		result, reviseErr = draft.Revise(context.Background(), testOwner, domain.ID(session.ID), rules.DefaultLocale, session.Log.LastSeq(), 1, &domain.Event{Type: domain.EventInit, Changes: []domain.Change{{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue("Renamed")}}}, true)
-	})
+	stored, err := svc.Get(context.Background(), testOwner, session.CharacterID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reviseErr != nil {
-		t.Fatal(reviseErr)
+	result, err := svc.Revise(charuc.WithRevision(context.Background(), stored.Revision), testOwner, stored.ID, rules.DefaultLocale, stored.Log.LastSeq(), 1, &domain.Event{Type: domain.EventInit, Changes: []domain.Change{{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue("Renamed")}}}, true)
+	if err != nil {
+		t.Fatal(err)
 	}
 	before.Identity.Name = "Renamed"
 	if !reflect.DeepEqual(before, result.Sheet) {
@@ -59,7 +56,7 @@ func TestImportNameEditRetainsObservedClassScoresAndInventory(t *testing.T) {
 		t.Fatalf("renaming dropped imports: %+v", result.Dropped)
 	}
 	session, _ = a.Get(testOwner, session.ID)
-	saved, err := a.Finalize(context.Background(), testOwner, session.ID, session.Revision)
+	saved, err := a.Get(testOwner, session.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +329,7 @@ func TestImportedClassUsesSelectedPackNamespaceAndSurvivesEditing(t *testing.T) 
 	if classProgress != 1 {
 		t.Fatalf("unselected explicit reference was applied: class progress=%d", classProgress)
 	}
-	saved, err := a.Finalize(context.Background(), testOwner, session.ID, session.Revision)
+	saved, err := a.Get(testOwner, session.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

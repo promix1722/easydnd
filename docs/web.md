@@ -4036,17 +4036,24 @@ details on a separate line.
 
 Folder Import buttons open a single assistant chat when the server reports an
 enabled provider; the legacy JSON screen remains the unconfigured fallback.
-`AgentImportScreen` renders streamed text and every activity step in one always
-visible chronological log. User text and attachments share one message. Source
+`AgentImportScreen` is a chat of message bubbles: the assistant's on the left,
+the owner's on the right, with a message's attachments inside it. A run of
+progress lines is one assistant bubble holding a native `<details>` -- "Changes
+written: 23" -- open while the assistant works and folded afterwards. Source
 labels and internal assumptions are omitted. The compact composer has file
 attachment and Send actions; Enter sends, Shift+Enter adds a newline.
 
-`/characters/import/:sessionId` identifies a chat. `/character` and `/editor`
-are separate child pages with Characters / Chatbot Creation / ID / … breadcrumbs.
-They render the existing `SheetBody` and full `BuildScreen` against the same
-unsaved draft. No modal wraps these pages and no assumptions panel precedes the
-sheet. Navigation within the session preserves unsent composer text. Old
-`?session=...` links remain supported.
+The pack selector is not a step before the chat. It is in the assistant's
+opening bubble, in its collapsible form, with the account's default releases
+already chosen (`listPacks().defaultRules`), so Send works as soon as there is
+something to send. An unconfirmed change to it blocks Send, as it does in the
+builder.
+
+`/ai-wizard/:sessionId` identifies a chat and is the only page of it. View and
+Edit navigate to `/characters/:id` and `/characters/:id/build`: the chat writes
+to a real character from its first message, so there is no preview page, no
+draft editor and no Save. `BuildScreen` takes no draft id and `characterPath`
+has one shape.
 
 Questions and unresolved choices are handled in chat with suggested reply
 buttons and free-text input. Sending waits for the current assistant run to end;
@@ -4054,11 +4061,39 @@ there is no Stop control. SSE snapshots update turn status, and a periodic read
 recovers missed terminal updates without making the composer busy. New messages
 scroll into view unless the user has scrolled up.
 
-Save publishes a normal character and freezes its conversation. Source notes and
-private catalogue names appear in the shared `SheetBody`, so copies and shared
-sheets retain custom content. Captions/errors have English and Russian
-translations. See [agent.md](agent.md) for the tool/question contract and the
-current in-memory lifetime.
+Source notes and private catalogue names appear in the shared `SheetBody`, so
+copies and shared sheets retain custom content. Captions/errors have English
+and Russian translations. See [agent.md](agent.md) for the tool/question
+contract and the current in-memory lifetime.
+
+### No "imported values"
+
+The builder used to carry an `ImportedFieldsPanel` under its tabs: every
+printed value an import had laid over the build, as a row with an Edit button
+-- ability scores as six rows, personality as four under the wrong tab. It is
+gone, and nothing replaced it, because the import now writes what the builder
+writes: an imported character's scores are the ability-scores card and open
+`AbilityScoresForm`, its traits are the Personality tab's written cards, its
+level is the Level card. What an import still lays over the build (inventory,
+coins) is shown by the Equipment tab's ordinary summary.
+
+### A custom entry is the last option of its list
+
+Nothing custom sits at the end of a tab. `CustomChoice`
+(`features/character/customChoice.ts`) is a context the builder provides, and
+the lists that read it end with **Custom…**: `PromptCard` for a race, class,
+background or equipment choice (`CUSTOM_KINDS` maps the question's kind to the
+entry's, so `equipment` makes an `item`), and `SpellStagePanel` at the end of
+its available-spells list, making a cantrip or a spell by tab. That is the
+whole set. The option is marked `data-custom-choice` so that opening a question
+still focuses its first real option, which may be loading. Catalogue entries
+flagged `manual` are offered in the list with a Custom badge.
+
+`CustomOptionsPanel` only *shows*: it draws a character's custom entries as
+`BlockList` blocks -- the same card every other decision is -- inside the tab's
+panel, above Next, and owns the form. It has no add button. It is mounted once
+per tab, so only the tab on screen (`modal`) draws the form, whose state lives
+in `BuildScreen` because the pickers open it too.
 
 ## Homebrew
 
@@ -4075,7 +4110,6 @@ pack selection, using the same collapsible cards and Confirm/Clear actions as
 race selection. Confirming packs preserves the previously confirmed edition.
 Confirmed pack selections are final in the builder. Existing characters show
 their pinned releases read-only; migration controls are not offered here.
-The import draft editor retains its session's lock until the character is saved.
 
 The standalone spell browser searches all accessible published packs. Pack and
 Book/source multiselects live beside the other spell filters, apply immediately,

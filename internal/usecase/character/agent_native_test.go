@@ -193,7 +193,7 @@ func TestAgentRebuildsASheetAsANativeBuild(t *testing.T) {
 				t.Errorf("context is not in local names: %s", out)
 			}
 
-			saved, err := a.Finalize(context.Background(), testOwner, s.ID, s.Revision)
+			saved, err := a.Get(testOwner, s.ID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -364,11 +364,8 @@ func TestAgentPruningLeavesTheOwnersEditsAlone(t *testing.T) {
 	}
 	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
 	// The owner pins the armor class to the very number the build computes.
-	s, err = a.Edit(context.Background(), testOwner, s.ID, s.Revision, []domain.Event{{Type: domain.EventChange, Changes: []domain.Change{{Path: "status.armorClass", Op: domain.OpSet, Value: domain.IntValue(10)}}}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	saved, err := a.Finalize(context.Background(), testOwner, s.ID, s.Revision)
+	edit(t, svc, s.CharacterID, domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "status.armorClass", Op: domain.OpSet, Value: domain.IntValue(10)}}})
+	saved, err := a.Get(testOwner, s.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

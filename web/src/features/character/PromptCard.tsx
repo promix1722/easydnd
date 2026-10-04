@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 
 import type { Answer, Choice, Entry, Option, Prompt } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
-import { Box, Button, Group, Markdown, SourceTags, Stack, Text } from '@/ui'
+import { Badge, Box, Button, Group, Markdown, SourceTags, Stack, Text } from '@/ui'
+import { CUSTOM_KINDS, CustomChoice } from './customChoice'
 
 import { SpellChoices } from './SpellChoices'
 
@@ -52,6 +53,7 @@ export interface PromptCardProps {
  */
 export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers = [] }: PromptCardProps) {
   const t = useT()
+  const custom = useContext(CustomChoice)
   const confirmRef = useRef<HTMLButtonElement>(null)
   const lastOptionRef = useRef<HTMLElement | null>(null)
   const [touched, setTouched] = useState(false)
@@ -193,6 +195,7 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
                     */}
                     {stacked(t, stage, option.key, count, entries) ?? option.label}
                   </Text>
+                  {option.manual === true && <Badge>{t('custom.manual')}</Badge>}
                   <SourceTags provenance={option.provenance} rightAligned />
                 </Group>
               </Stack>
@@ -218,6 +221,18 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
             {t('prompt.nothingOffered')}
           </Text>
         )}
+        {/*
+          The last option of the list rather than a control somewhere else on
+          the page: a race the rules do not have is still an answer to "which
+          race", and is looked for where the races are.
+        */}
+        {custom !== null && CUSTOM_KINDS[stage.kind] !== undefined && (
+          // Marked so that opening the question focuses its first real option,
+          // which may still be loading, rather than this.
+          <Button data-custom-choice variant="default" justify="flex-start" disabled={pending} onClick={() => custom(CUSTOM_KINDS[stage.kind]!)}>
+            {t('custom.add')}
+          </Button>
+        )}
       </Stack>}
 
       {repeatable && <Text size="xs" c="dimmed">{stage.kind === 'equipment' ? t('prompt.repeatEquipment') : t('prompt.pointsToSpend')}</Text>}
@@ -242,11 +257,17 @@ interface Progress {
 }
 
 function begin(t: Translate, prompt: Prompt, entries: Map<string, Entry>, initialAnswers: readonly Answer[] = []): Progress {
-  // A saved spell answer is a draft until explicitly confirmed. Do not reseed
-  // when catalogue details or translations arrive, or removals would be undone.
-  const saved = prompt.choice.kind === 'spell'
-    ? initialAnswers.find((answer) => answer.prompt === prompt.choice.prompt)
-    : undefined
+  // A question reopened to change its answer opens *on* that answer: the
+  // class that was chosen is the pressed one in the list, not one more
+  // unpressed row among twelve. (A saved spell answer is likewise a draft
+  // until confirmed; it is not reseeded when catalogue details arrive, or
+  // removals would be undone.)
+  const saved = initialAnswers.find((answer) => answer.prompt === prompt.choice.prompt)
+  // Seeded without settling: settle takes a finished stage as answered and
+  // moves on, and an answer shown for changing has not been given again.
+  if (saved !== undefined && prompt.choice.kind !== 'spell') {
+    return { for: prompt.choice.prompt, stages: [prompt.choice], answers: [], picked: [...saved.picks] }
+  }
   return settle(t, prompt, entries, {
     for: prompt.choice.prompt,
     stages: [prompt.choice],

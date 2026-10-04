@@ -1,19 +1,31 @@
 # AI Wizard
 
-The AI Wizard creates **one character draft** from a description or uploaded sources.
-It does not create a character record until the owner presses **Save character**.
-The same session contains its attachments, conversation, tool results, draft,
-custom definitions and eventual character ID. A model never receives an owner,
-character or session ID parameter with which to target another record.
+The AI Wizard creates **one character** from a description or uploaded sources.
+The character is real from the first message: it is created with the session,
+it is in the owner's character list while the assistant is still working, and
+every tool call is committed to it. There is no draft and no Save. The session
+holds the attachments, the conversation, tool results and the id of that
+character. A model never receives an owner, character or session ID parameter
+with which to target another record.
+
+It used to be the opposite -- a private draft served through a parallel copy
+of the character API, published by an explicit Save -- and everything awkward
+about the wizard came from there: View and Edit were pages of the chat rather
+than of a character, the editor needed a second repository to pretend a draft
+was one, and what the import wrote did not have to look like what the builder
+writes because nothing but the wizard's own panels ever read it.
 
 ## User flow
 
 The desktop and mobile menu has **AI Wizard / AI Помощник**. Folder actions link
-to the same workspace while preserving the destination folder. The owner first
-selects and confirms rules and pack releases; only then can they describe a
-character or upload sources. The HTTP API also requires this pinned rules lock. The server needs `agent.api_key` and `agent.model` configured to process
-uploads. Without the provider, imports report that AI import is not configured;
-the workspace does not fall back to the legacy HexSheet JSON screen.
+to the same workspace while preserving the destination folder. **The rules are
+chosen in the chat, not before it**: the assistant's opening message carries
+the pack selector, collapsed, with the account's default releases already
+chosen, so the owner can send at once or change them there first. The lock
+travels with the first message and is final from then on -- the HTTP API still
+requires it. The server needs `agent.api_key` and `agent.model` configured to
+process uploads. Without the provider, imports report that AI import is not
+configured; the workspace does not fall back to the legacy HexSheet JSON screen.
 
 Upload PDF, PNG, JPEG, WebP, JSON or UTF-8 text and optionally describe what needs
 attention. Multiple files belong to the same character. Files may also be added
@@ -21,24 +33,31 @@ later in the conversation. Filenames identify sources; new attachments must not
 reuse a filename. The server checks the content type rather than trusting the
 browser's filename or MIME header.
 
-Chat is one chronological message log. Assistant text and factual progress
-appear inline. Progress comes from validated writes, such as “Class imported:
-Sorcerer, level 3” or “Name imported: Vas Pup”. Catalogue searches and internal
-tool labels are hidden. Consecutive progress updates share one compact block.
-View, Edit and Save buttons appear inside assistant messages when relevant. Each user message
+Chat is one chronological log of **messages**: the assistant's on the left,
+the owner's on the right, each in its own bubble. Factual progress comes from
+validated writes, such as “Class imported: Sorcerer, level 3” or “Name
+imported: Vas Pup”, and a run of it is one bubble that reads “Changes written:
+23” and unfolds to the lines -- open while the assistant is working, folded
+once the next message arrives. It used to be the lines themselves, which made
+the transcript a wall of them with the conversation somewhere inside.
+Catalogue searches and internal tool labels are hidden. Each user message
 contains its own attachments and text; filenames are not a separate global row.
 Source/page evidence and assumptions remain internal metadata, not transcript
 labels or a preview warning panel. The compact composer sits at the bottom;
 Enter sends and Shift+Enter inserts a line break. Scrolling up stops following.
 
-Routes are `/ai-wizard/:sessionId`, with `/character` and `/editor` child pages.
-Old `/characters/import` routes redirect, retaining the session and query.
-Breadcrumbs start at AI Wizard.
-Legacy `?session=...` links still open. The preview uses the standard `SheetBody`;
-the editor uses the complete standard `BuildScreen` against the same draft.
-Opening a page does not save the character. Editor changes enter the transcript
-and the assistant's context. Unsent chat input survives navigation within the
-session. Neither page displays the internal assumptions list.
+The assistant replies in **the language of the owner's latest message**, and
+writes its questions and suggested answers in it too. The interface locale is
+only the fallback, for a first message that is an attachment and nothing else.
+
+The route is `/ai-wizard/:sessionId`. Old `/characters/import` routes redirect,
+retaining the session and query, and legacy `?session=...` links still open.
+**View and Edit are links to the character**: `/characters/:id` and
+`/characters/:id/build`, the ordinary sheet and the ordinary builder. They sit
+in the chat header from the first message and inside assistant messages where
+relevant. The sheet links back to the chat. An edit made in the builder is an
+ordinary edit of an ordinary character; the assistant notices it on its next
+tool call (see [Session lifetime](#session-lifetime)).
 
 Unresolved choices belong in chat. `ask_user` records a question and up to six
 suggested text answers. The latest unanswered question shows clickable replies;
@@ -46,7 +65,7 @@ the composer always permits a different free-text answer. A reply is an ordinary
 user message, and the assistant applies it using validated choice tools. The
 model must ask a direct question instead of narrating that it is paused.
 
-`prepare_review` hands the draft over. It refuses while a required choice is
+`prepare_review` ends the import. It refuses while a required choice is
 open, returning the open choices with their options, and accepts a partial
 draft only when the model explicitly sets `allow_incomplete` after the user has
 chosen to leave choices incomplete. This flag is a model assertion of that
@@ -57,19 +76,18 @@ traits, each covered by the character having it, however it got there -- and tha
 is a reminder rather than a lock: entries not in the draft are listed once, and
 the same list a second time passes. It used to block until every entry was
 satisfied, and a model that had worded one in a way nothing could satisfy
-responded by inventing custom content until the list went quiet. Saving a
-partial character remains an explicit user action.
+responded by inventing custom content until the list went quiet.
 
 There is no interruption control in the UI. Sending and attaching files wait
 while the assistant is running; typing the next reply remains possible. Terminal
 status snapshots re-enable Send and focus the composer. A three-second snapshot
 refresh recovers a missed end-of-turn stream update without disabling input.
-Resume continues a paused conversation; Retry uses the same draft after a failure.
+Resume continues a paused conversation; Retry continues after a failure.
 The internal stop API remains for cancellation and lifecycle handling.
-Waiting for a reply holds no worker. Discard removes an unsaved session.
-Save is an explicit owner action and may save a partial draft whose remaining
-choices can be answered in the ordinary character editor. Saving makes the
-conversation read-only. The saved sheet links back to that history.
+Waiting for a reply holds no worker. **Discard deletes the character with the
+chat** -- it is what discarding the draft used to mean -- while leaving the
+chat any other way leaves the character where it is. A character whose
+remaining choices are open is finished in the ordinary builder.
 
 ## Session lifetime
 
@@ -82,9 +100,19 @@ characters. PostgreSQL account storage does not change that guarantee.
 The coordinator in `internal/usecase/character/agent.go` owns the session map and
 its mutation lock. It deliberately has no database or durable job framework in
 this release. A fixed number of goroutines run independent sessions, with one
-active model request per session. Model I/O runs outside the lock; draft/tool
-mutations and finalization run inside it. Waiting, review and paused states do
-not consume workers.
+active model request per session. Model I/O runs outside the lock; tool
+mutations run inside it. Waiting, review and paused states do not consume
+workers.
+
+The session's log is the agent's **working copy** of the character, not the
+character. Around every tool call the coordinator reads the stored character
+and, if the call changed anything, commits it back at the revision it read
+(`pull`, `call`, `push` in `agent.go`). A revision that moved in between means
+the owner edited in the builder. The edit wins: the working copy is replaced,
+the call is answered "not run: the player edited the character", and the model
+re-reads the build context before going on -- only `get_build_context` itself
+is let through. The builder is therefore never locked while the assistant
+runs. A character the owner deleted fails the session.
 
 Every stop, user message, file addition or direct edit advances a generation.
 A late response from an older generation cannot publish text or change the
@@ -126,7 +154,7 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 | `get_option_details` | Exact catalogue mechanics and, when available, a pack wire example |
 | `upsert_custom_option` | Keep content the rules lack as an editable typed definition. Refuses to copy what the pack or the build already has |
 | `ask_user` | Ask a blocking question and release the worker |
-| `prepare_review` | Mark the draft ready for the owner's review |
+| `prepare_review` | End the import: check the name and required choices, drop overrides the build reproduces |
 
 A response may carry several tool calls; they run in order, up to 32. Once a
 call ends the turn (`ask_user`, a successful `prepare_review`) the rest of that
@@ -138,7 +166,8 @@ and result (`AI wizard tool call`), which is the only record of what a model
 actually asked for; the arguments are a player's character sheet, so it is
 debug-only.
 
-Session creation and saving are application operations, not model tools. Source
+Session creation -- which is also character creation -- is an application
+operation, not a model tool. Source
 text, catalogue descriptions and files are explicitly treated as untrusted data
 in the model instructions. There are no shell, network-browsing, unrelated
 character-editing or publishing tools.
@@ -186,8 +215,9 @@ it no longer records a sheet as overrides.
 each thing a sheet prints -- six scores, level, hit points, armor class,
 speed, a bonus per skill and per save, coins, items. A number asked for one
 fact at a time is a number a model skips; a form with an empty field is
-harder to leave half done. Scores, level, coins and items are written to the
-draft. The derived numbers are kept beside it as a reference and never written.
+harder to leave half done. Level, coins and items are written to the
+character. The six scores are held by the session and *solved into* it (see
+below). The derived numbers are kept as a reference and never written.
 
 **The server does the arithmetic and the matching.** From the printed bonuses
 it reads which skills and saves are proficient (a bonus is the modifier plus
@@ -223,16 +253,48 @@ build would otherwise make every skill it mentions "already held" and refuse
 the pick that explains it, so prompts and answers are computed on the draft
 with such values lifted off.
 
-Class level is the sheet's: `plan_import`'s level is the desired level, so a
-class named without its level is still built to it. A structural entry that is
+### The builder's own entries
+
+Whatever the builder has a question for, the import answers the way the
+builder's own form does, so that an imported character opens in the builder as
+the cards a hand-built one has and nowhere as a list of "imported values":
+
+- **Name, then rules.** The character opens with the two entries a new
+  character gets: `init` with the name, and a change setting
+  `identity.ruleset`. They used to be one entry, which the builder files under
+  Rules, where the ruleset is final -- so the name sat on the Rules tab and
+  could not be changed.
+- **Level.** `identity.desiredLevel`, as an ordinary change. The class entry
+  is at level 1 and the subclass entry at the level its class chooses one,
+  because an entry's level is the level its decision belongs to and that is
+  how the Class tab is grouped. The level printed beside the class is the
+  level the character is built towards -- a question of its own. Only a
+  second class keeps levels on the class entries, since one desired level
+  cannot say how they are shared out.
+- **Ability scores.** One entry: `abilities.method = manual` and the six base
+  scores, which is what the ability-scores form writes and reads back. The
+  sheet prints *totals*, and the bonuses that turn a base into a total arrive
+  in any order, so the session keeps the totals and after every tool call
+  solves the bases that reach them, rewriting that one entry in place
+  (`settleScores`). An edit by the owner ends that: their numbers win. Only a
+  build no base score can reach -- a custom rule that is not additive -- keeps
+  a `finalAbilities` total pinned over it.
+- **Personality traits, ideals, bonds, flaws, alignment.** Ordinary changes in
+  the Personality group, one per path, rewritten in place when stated again.
+
+What stays an `Observed` entry is what the builder has no question for: the
+structural entries (race, class, subclass, background, feat), which a sheet
+states outright, and the inventory, coins, languages and tool proficiencies.
+The Equipment tab shows the inventory and coins through its ordinary summary;
+they are changed through the chat. A structural entry that is
 named again replaces its observation, and one that changes -- a different
 race -- is revised, so answers given to the old one do not replay as picks of
 the new one.
 
-Finalization validates the projection and name, checks folder ownership again,
-and publishes the entire log through the repository's atomic `CreateWithLog`.
-Repeated finalization returns the same character ID. No empty character is
-created as an intermediate step.
+The character is created with the session through the repository's atomic
+`CreateWithLog`, so there is never an empty character behind a chat. The name
+and the pruning of overrides the build reproduces are checked at
+`prepare_review`.
 
 ### Custom content
 
@@ -251,7 +313,7 @@ dropped in silence.
 Custom classes, races, subraces, backgrounds, subclasses, spells, cantrips,
 equipment, feats, features and traits are stable definitions in the character
 log. Names, descriptions, provenance and explicitly known numeric details are
-editable in both AI drafts and the ordinary creation/edit wizard. Unknown
+editable in the ordinary builder, for wizard-made and hand-made characters alike. Unknown
 mechanics remain unknown; an unknown class hit die does not generate HP or dice.
 
 Definitions overlay only that character's catalogue. Canonical references can
@@ -266,10 +328,21 @@ remain available as editable custom definitions without automatically selecting
 them. Direct name edits merge the opening fields, preserving bundled legacy
 facts.
 
-The normal wizard offers **Custom…** on applicable tabs and **Edit custom
-option** for saved definitions. Observed fields have direct edit controls on
-their corresponding tabs. Custom choices can be deselected to return to
-catalogue selection.
+**A custom entry is an answer to a question the builder already asks**, never
+a control of its own. The builder offers six: a custom **race**, **class** and
+**background** as the last option of those pickers, a custom **item** as the
+last option of an equipment choice, and a custom **cantrip** or **spell** as
+the last entry of the spell tabs' list. Each opens the entry's form with its
+kind already said. No tab has a "Custom…" button under it -- the Personal tab
+used to end with one that made a note. Entries written earlier are offered in
+their list beside the catalogue's, marked Custom.
+
+A custom entry on a character is a block on its tab like any other decision
+-- what it is, its name, a Custom mark -- above the tab's Next, and pressing
+it opens the same form, where it can be deselected to return to a catalogue
+choice. That includes kinds the builder does not offer to create (a subclass,
+a feature, a note): the assistant may still record one when a sheet has
+something the rules lack, and it has to be visible and editable where it lands.
 
 The backend retains compatibility with complete private pack definitions through
 the existing strict compiler. The standard model tool schema favors typed
@@ -292,25 +365,19 @@ Owners are taken from authentication, never from a request body.
 | `GET /v1/agent-capabilities` | Whether the provider is configured |
 | `POST /v1/agent-sessions?folder=...` | Multipart required `rules` JSON, optional `files` and `instructions`; at least a description or file is required |
 | `GET /v1/agent-sessions` | Owner's import sessions |
-| `GET /v1/agent-sessions/:id` | Session snapshot and projected sheet |
+| `GET /v1/agent-sessions/:id` | Session snapshot, including `characterId` |
 | `GET /v1/agent-sessions/:id/events` | SSE snapshots, updates and cursor recovery |
 | `POST /v1/agent-sessions/:id/files` | Multipart files, revision and optional instructions |
-| `POST /v1/agent-sessions/:id/control` | Revision plus `message`, `stop`, `resume`, `retry` or `discard` action |
-| `POST /v1/agent-sessions/:id/edit` | Revision and ordinary event DTOs |
-| `POST /v1/agent-sessions/:id/finalize` | Revision; idempotently saves the character |
+| `POST /v1/agent-sessions/:id/control` | Revision plus `message`, `stop`, `resume`, `retry` or `discard` action; `discard` deletes the character too |
+
 
 Normal characters expose GET/POST `/v1/characters/:id/custom-options`.
 GET returns `{revision, options}`; POST accepts `{revision, option}` and returns
 the updated sheet and revision. Writes check ownership and optimistic revision.
 Definitions cannot be erased by generic note replacement.
 
-The standard editor also uses `/v1/agent-sessions/:id/draft`: GET `sheet`,
-`events`, `prompts` and `custom-options`; POST `custom-options`, `events` and `events/revise`; PUT/DELETE
-`events/:seq`. These routes reuse ordinary character handlers and validation with
-a scoped draft repository. Reads/commits run under the coordinator lock, reject
-foreign owners and stale revisions, and never create a normal character record.
-Writes are rejected while the assistant is active or after saving. Unsupported
-operations (copy, move, delete, rules migration) are not exposed.
+The character itself is read and edited through the ordinary
+`/v1/characters/:id` routes. There is no draft surface.
 
 The existing `POST /v1/characters/import` contract is unchanged.
 
@@ -331,8 +398,8 @@ agent:
 
 The key's absence disables AI import. Limits default to the values above;
 workers are bounded at 32, turns at 200, sessions at 1000 and request timeout at
-10 minutes. The session count includes retained saved conversations, so capacity
-must be sized for this memory-first deployment. Unsaved drafts can be discarded.
+10 minutes. The session count includes finished conversations, so capacity
+must be sized for this memory-first deployment.
 
 Additional fixed bounds are 8 files / 20 MiB per session, 256 KiB per text/JSON
 file, 16,000 UTF-8 bytes per message, 128 KiB per tool argument payload, 12,000
@@ -353,11 +420,13 @@ scopes, a scripted end-to-end import that ends with no custom entry and nothing
 pinned (on the SRD and on a namespaced pack), skill distribution, the
 one-time checklist reminder, calls after a turn has ended, worker bounds,
 cancellation, owner isolation, HTTP uploads/SSE recovery, score preservation
-and rebasing, repeated Save, private definition isolation/versioning, the
-Responses streaming adapter, and desktop/mobile chat, standalone
-preview/editor pages, composer preservation, draft editor ownership/revision
-checks, explicit questions and suggested answers, required-choice review
-guards, missed terminal status recovery, and read-only saved history.
+and rebasing, the builder's own entries on the stored character (name apart
+from rules, class at 1 and subclass at its level, one manual ability-scores
+entry, nothing printed pinned over an identity field), discard deleting the
+character, private definition isolation/versioning, the Responses streaming
+adapter, and desktop/mobile chat, View and Edit opening the real character,
+rules preselected inside the chat, explicit questions and suggested answers,
+required-choice review guards and missed terminal status recovery.
 The provider adapter is tested against a local HTTP fixture; a live provider
 smoke test requires deployment credentials and a configured model.
 
@@ -388,9 +457,9 @@ coins, skill and save bonuses. And that it is **a build**: `subclass` and
 `background` are catalogue entries, no custom option exists outside
 `allowedCustom`, no printed value is pinned over the build outside
 `allowedOverrides`, and no required choice is open outside `openPrompts`. It
-then saves, reopens, edits the name and, where one exists, a custom
+then reopens the character, edits the name and, where one exists, a custom
 definition, and verifies that facts survive. Test edits are restored; the
-imported character remains saved.
+imported character remains.
 
 The three expectation files are written for the development pack
 (`dnd-2014`), which has the subclasses and backgrounds the sheets use; against

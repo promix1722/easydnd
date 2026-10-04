@@ -595,7 +595,7 @@ export function reviseEvents(id: string, expectedSeq: number, expectedRevision: 
   })
 }
 
-/** Draft ids address the same editing protocol without publishing a character. */
+/** Where one character's own routes live. */
 export function characterPath(id: string): string {
-  return id.startsWith("import:") ? `/agent-sessions/${encodeURIComponent(id.slice(7))}/draft` : `/characters/${encodeURIComponent(id)}`
+  return `/characters/${encodeURIComponent(id)}`
 }

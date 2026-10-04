@@ -5,6 +5,7 @@ import type { Entry, Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 
+import { CustomChoice } from './customChoice'
 import { PromptCard } from './PromptCard'
 
 const entries = new Map<string, Entry>([
@@ -46,6 +47,40 @@ function skillPrompt(overrides: Partial<Prompt> = {}): Prompt {
  */
 describe('PromptCard', () => {
   const viewport = 'desktop'
+
+  // A race the rules do not have is still an answer to "which race", so the
+  // way to write one is the last option of that list -- and of no list whose
+  // answer cannot be custom.
+  it('ends a race list, and only such a list, with the custom option', async () => {
+    const user = setupUser()
+    const custom = vi.fn()
+    const race = skillPrompt({ choice: { prompt: 'character/race', choose: 1, kind: 'race', from: { kind: 'collection', collection: 'race' } } })
+    const races = new Map<string, Entry>([['elf', { slug: 'elf', name: 'Elf' }], ['custom-xxx', { slug: 'custom-xxx', name: 'Xxx', manual: true }]])
+    const { unmount } = renderAt(viewport, <CustomChoice.Provider value={custom}>
+      <PromptCard prompt={race} entries={races} pending={false} onAnswer={vi.fn()} />
+    </CustomChoice.Provider>)
+    // An entry the player wrote earlier is offered beside the catalogue's, marked.
+    expect(screen.getByRole('button', { name: /Xxx/ })).toHaveTextContent('Custom')
+    await user.click(screen.getByRole('button', { name: 'Custom…' }))
+    expect(custom).toHaveBeenCalledWith('race')
+    unmount()
+    renderAt(viewport, <CustomChoice.Provider value={custom}>
+      <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />
+    </CustomChoice.Provider>)
+    expect(screen.queryByRole('button', { name: 'Custom…' })).not.toBeInTheDocument()
+  })
+
+  // Opening a decided question to change it shows what was decided: the
+  // chosen entry is the pressed one, and Confirm is ready without re-picking.
+  it('opens a reopened question on the answer it already has', () => {
+    const race = skillPrompt({ choice: { prompt: 'character/race', choose: 1, kind: 'race', from: { kind: 'collection', collection: 'race' } } })
+    const races = new Map<string, Entry>([['elf', { slug: 'elf', name: 'Elf' }], ['dwarf', { slug: 'dwarf', name: 'Dwarf' }]])
+    renderAt(viewport, <PromptCard prompt={race} entries={races} pending={false} onAnswer={vi.fn()}
+      initialAnswers={[{ prompt: 'character/race', picks: ['dwarf'] }]} />)
+    expect(screen.getByRole('button', { name: /Dwarf/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Elf/ })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled()
+  })
 
   it('will not confirm until the right number is picked', async () => {
     const user = setupUser()

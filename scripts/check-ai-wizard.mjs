@@ -60,11 +60,6 @@ if (args['session-file']) {
 }
 const id = view.session.id
 console.log(`Import session ${id}`)
-if (view.session.status === 'saved') {
-  check(await request(`/characters/${view.session.characterId}/sheet`))
-  console.log(`PASS: saved source checks: ${view.session.characterId}`)
-  process.exit(0)
-}
 let seen = 0,
   resumes = 0,
   questions = 0
@@ -216,8 +211,8 @@ function normalize(s) {
     .replace(/[^a-z0-9]/g, '')
     .replace(/^tashas/, '')
 }
-check(view.sheet)
-view = await request(`/agent-sessions/${id}/finalize`, { revision: view.session.revision }, 'POST')
+// The chat writes to a real character from its first message: there is no
+// draft to check and nothing to save.
 const characterId = view.session.characterId
 assert(characterId)
 const before = await request(`/characters/${characterId}/sheet`)

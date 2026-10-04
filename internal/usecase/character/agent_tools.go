@@ -389,7 +389,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		s.Log = pruned
 		s.Status = "review"
 		addAgentEvent(s, "assistant", args.Text, "", nil)
-		s.Events[len(s.Events)-1].Actions = []string{"view", "edit", "save"}
+		s.Events[len(s.Events)-1].Actions = []string{"view", "edit"}
 		return map[string]bool{"ready": true}, nil
 	case "upsert_custom_option":
 		return a.customOption(ctx, s, cat, args)
@@ -1085,7 +1085,40 @@ func (a *Agent) entityFact(ctx context.Context, s *AgentSession, cat *catalog.Ca
 			return domain.Log{}, nil, fmt.Errorf("invalid level")
 		}
 	}
+	// An entry's level is the level its decision belongs to, which is how the
+	// builder files it: a class is chosen at 1 and its subclass when it falls
+	// due. The level printed beside the class is the level the character is
+	// built towards, a question of its own, answered below. Only a second
+	// class needs levels of its own, because one desired level cannot say how
+	// they are shared out.
+	printed := level
+	switch typ {
+	case domain.EventClass:
+		if args.Level != nil {
+			if s.classLevels == nil {
+				s.classLevels = map[rules.Slug]int{}
+			}
+			s.classLevels[ref.Slug] = printed
+		}
+		if _, only := s.classLevels[ref.Slug]; len(s.classLevels) == 0 || len(s.classLevels) == 1 && only {
+			level = 1
+		}
+	case domain.EventSubclass:
+		if sub, ok := cat.Subclasses.Get(ref.Slug); ok {
+			if class, ok := cat.Classes.Get(sub.Class); ok {
+				level = domain.SubclassLevel(cat, class)
+			}
+		}
+	}
 	log := s.Log.Clone()
+	if typ == domain.EventClass && len(s.classLevels) > 1 {
+		for i, e := range log.Events {
+			if printed, ok := s.classLevels[e.Ref.Slug]; ok && e.Type == domain.EventClass && e.Observed {
+				log.Events[i].Level = printed
+			}
+		}
+		level = printed
+	}
 	// Structural observations replace their previous observation instead of
 	// appending another class grant each time reconciliation is repeated.
 	replaced := false
@@ -1104,7 +1137,7 @@ func (a *Agent) entityFact(ctx context.Context, s *AgentSession, cat *catalog.Ca
 			break
 		}
 		// A repeated "Sorcerer" without its level is the same sorcerer.
-		if args.Level != nil {
+		if args.Level != nil || typ == domain.EventSubclass {
 			log.Events[i].Level = level
 		}
 		log.Events[i].Observed = true
@@ -1141,8 +1174,12 @@ func (a *Agent) entityFact(ctx context.Context, s *AgentSession, cat *catalog.Ca
 		// a sheet printing "Sorcerer 3" has answered it. A class named without
 		// its level has not: closing the question at level 1 on its behalf is
 		// how a third-level sheet was imported as a first-level character.
-		if projected, err := domain.Project(log, cat); err == nil && projected.Identity.DesiredLevel < projected.Identity.Level() {
-			log = setObserved(log, domain.Change{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(projected.Identity.Level())}, args.Source)
+		total := 0
+		for _, held := range s.classLevels {
+			total += held
+		}
+		if projected, err := domain.Project(log, cat); err == nil && projected.Identity.DesiredLevel < total {
+			log = setNative(log, domain.Change{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(total)}, args.Source)
 		}
 	}
 	return log, map[string]any{"applied": true, "ref": found.Ref, "name": found.Name}, nil
@@ -1236,15 +1273,33 @@ func (a *Agent) valueFact(ctx context.Context, s *AgentSession, cat *catalog.Cat
 		log = clearImportedInventory(log, segments[1])
 	}
 	change := domain.Change{Path: domain.Path(path), Op: op, Value: v}
-	if path == "identity.name" {
-		for i, ch := range log.Events[0].Changes {
+	if strings.HasPrefix(path, "identity.") {
+		return setNative(log, change, args.Source), map[string]any{"applied": true, "path": path}, nil
+	}
+	return setObserved(log, change, args.Source), map[string]any{"applied": true, "path": path}, nil
+}
+
+// setNative writes a fact the builder asks for itself -- the name, the level,
+// the personality, the alignment -- as the builder's own answer to it: an
+// ordinary entry, not a printed value laid over the build. It rewrites the
+// entry that last set the path, so the fact stays one card in the builder
+// however many times an import states it.
+func setNative(log domain.Log, change domain.Change, source string) domain.Log {
+	for i := len(log.Events) - 1; i >= 0; i-- {
+		for j, ch := range log.Events[i].Changes {
 			if ch.Path == change.Path {
-				log.Events[0].Changes[i] = change
-				return log, map[string]any{"applied": true, "path": path}, nil
+				log.Events[i].Changes[j] = change
+				log.Events[i].Observed = false
+				return log
 			}
 		}
 	}
-	return setObserved(log, change, args.Source), map[string]any{"applied": true, "path": path}, nil
+	group := domain.GroupPersonality
+	if change.Path == "identity.desiredLevel" || change.Path == "identity.name" {
+		group = domain.GroupIdentity
+	}
+	_ = log.Append(domain.Event{Type: domain.EventChange, Changes: []domain.Change{change}, Evidence: source, Source: group})
+	return log
 }
 
 // setObserved writes a printed value, replacing what the import said about
@@ -1756,6 +1811,10 @@ func (a *Agent) missing(ctx context.Context, s *AgentSession, cat *catalog.Catal
 			covered = slices.ContainsFunc(customs, func(c domain.CustomOption) bool { return "custom:"+c.ID == key })
 		case !strings.Contains(key, ":"):
 			covered = pathWritten(s.Log, key)
+			// A printed total is held by the session and solved into the build.
+			if rest, ok := strings.CutPrefix(key, "finalAbilities."); ok && !covered {
+				_, covered = s.scores[rules.Ability(rest)]
+			}
 		default:
 			kind, name := entityKind(agentArgs{Ref: key})
 			if _, text, cut := strings.Cut(key, ":"); cut && strings.Count(key, ":") == 1 {

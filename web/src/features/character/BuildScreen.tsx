@@ -1,4 +1,6 @@
 import { characterPath } from '@/lib/api/characters'
+import type { CustomOption } from '@/lib/api/characters'
+import { CustomChoice } from './customChoice'
 import { DEFAULT_BUILD_POLICY } from '@/lib/api/packPolicy'
 import { CatalogScope, RulesEdition, CharacterPolicy } from '@/lib/api/catalogScope'
 import { PackSelector } from '@/features/packs'
@@ -51,7 +53,6 @@ import { resolveRefNames } from './refNames'
 import { settledByStage, settledPickName } from './settled'
 import type { SettledRow } from './settled'
 import { CustomOptionsPanel } from './CustomOptionsPanel'
-import { ImportedFieldsPanel } from './ImportedFieldsPanel'
 import { StagePanel } from './StagePanel'
 import { SpellStagePanel } from './SpellStagePanel'
 import type { SpellSubmission } from './SpellStagePanel'
@@ -117,10 +118,9 @@ interface Preview {
  * to is written by the server too -- so a dropped answer reappears under its
  * own tab without this screen routing it anywhere.
  */
-export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDone?: () => void; trail?: Crumb[] } = {}) {
+export function BuildScreen() {
   const t = useT()
-  const { id: routeId = '' } = useParams()
-  const id = draftId ?? routeId
+  const { id = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   // The folder the character list was filtered to when New character was pressed.
@@ -167,6 +167,9 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
   const [askedOn, setAskedOn] = useState<Stage | null>(null)
   const [nameDraft, setNameDraft] = useState('')
   const [draftRules, setDraftRules] = useState<Change[] | null>(null)
+  // The custom entry being written, opened from a picker's last option or
+  // from the entry's own block.
+  const [customDraft, setCustomDraft] = useState<CustomOption | null>(null)
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [creating, setCreating] = useState(false)
@@ -559,7 +562,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
   if (build.loading && !creating) {
     return (
       <Page
-        trail={trail ?? buildTrail(t, isNew, null)}
+        trail={buildTrail(t, isNew, null)}
         state={{ kind: 'loading', what: t('build.loading') }}
       />
     )
@@ -567,7 +570,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
   if (build.error !== null) {
     return (
       <Page
-        trail={trail ?? buildTrail(t, isNew, null)}
+        trail={buildTrail(t, isNew, null)}
         state={{
           kind: 'failed',
           title: t('build.loadFailed'),
@@ -587,11 +590,11 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
         : revise.fields
 
   return (
-    <CharacterPolicy.Provider value={view.prompts.buildPolicy ?? DEFAULT_BUILD_POLICY}><RulesEdition.Provider value={(isNew ? selectedRules : view.rules)?.edition ?? '2014'}><CatalogScope.Provider value={id ? `${characterPath(id)}/catalog` : ''}><Page
+    <CharacterPolicy.Provider value={view.prompts.buildPolicy ?? DEFAULT_BUILD_POLICY}><RulesEdition.Provider value={(isNew ? selectedRules : view.rules)?.edition ?? '2014'}><CatalogScope.Provider value={id ? `${characterPath(id)}/catalog` : ''}><CustomChoice.Provider value={isNew ? null : (kind) => setCustomDraft({ kind, name: '', description: '', source: '', selected: true })}><Page
       // The draft, while the character it names is being created: the sheet
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
-      trail={trail ?? buildTrail(t, isNew, creating ? nameDraft.trim() : title(view))}
+      trail={buildTrail(t, isNew, creating ? nameDraft.trim() : title(view))}
       /*
        * On the heading line, against the right edge, and only once there is a
        * character to finish.
@@ -609,7 +612,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
             actions: (
               <Button
                 variant={view.prompts.complete ? 'filled' : 'light'}
-                onClick={() => onDone ? onDone() : void navigate(`/characters/${id}`)}
+                onClick={() => void navigate(`/characters/${id}`)}
               >
                 {t('build.finish')}
               </Button>
@@ -654,6 +657,11 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
               // Where Next goes from *this* tab, which is a fact about the tab
               // and not about the one on screen -- every panel is mounted, so
               // every panel's button has to be its own.
+              // Custom entries are blocks of the tab they belong to, above its
+              // Next, not a section of their own under the deck.
+              const customs = (on: Stage) => !isNew && view.sheet !== null
+                ? <CustomOptionsPanel id={id} stage={on} modal={on === stage} sheet={view.sheet} revision={view.prompts.revision ?? view.prompts.seq} onSaved={() => build.refresh()} draft={customDraft} onDraft={setCustomDraft} />
+                : null
               const after = each === 'rules' && isNew && draftRules !== null ? 'personal' : stageAfter(each, open)
               return {
                 value: each,
@@ -675,7 +683,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
                     pending={answer.pending || revise.pending || spellSave.pending || remove.pending || build.loading}
                     revision={view.prompts.revision ?? view.prompts.seq}
                     onNext={() => goToStage(each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : 'equipment')}
-                  />
+                  >{customs(each)}</SpellStagePanel>
                 ) : (
                   <Stack>
                   <StagePanel
@@ -718,7 +726,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
                     rulesSelected={draftRules !== null}
                     focusNext={focusNextStage === each}
                   >
-                  {each === 'rules' && draftId === undefined && <PackSelector key={id} disclosure={{ open: openKey === PACKS_KEY, onOpen: (open) => openBlock(open ? PACKS_KEY : null) }} onDirtyChange={setPackDirty} value={isNew ? selectedRules : view.rules} finalized={!isNew || selectedRules !== undefined} onChange={(rules) => {
+                  {each === 'rules' && <PackSelector key={id} disclosure={{ open: openKey === PACKS_KEY, onOpen: (open) => openBlock(open ? PACKS_KEY : null) }} onDirtyChange={setPackDirty} value={isNew ? selectedRules : view.rules} finalized={!isNew || selectedRules !== undefined} onChange={(rules) => {
                     if (isNew) {
                       setSelectedRules(rules)
                       if (draftRules?.[0]?.value.slug !== rules.edition) { setDraftRules(null); setOpenKey(NEW_RULES_KEY) }
@@ -728,6 +736,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
                   }}>
                   {packError && <Alert color="red">{packError}</Alert>}
                   </PackSelector>}
+                  {customs(each)}
                   </StagePanel>
                   </Stack>
                 ),
@@ -735,10 +744,6 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
             })}
           />
 
-          {!isNew && view.sheet && <>
-            <ImportedFieldsPanel id={id} stage={stage} events={view.events} revision={view.prompts.revision ?? view.prompts.seq} seq={view.prompts.seq} onSaved={() => build.refresh()} />
-            <CustomOptionsPanel id={id} stage={stage} sheet={view.sheet} revision={view.prompts.revision ?? view.prompts.seq} onSaved={() => build.refresh()} />
-          </>}
           {nameError !== undefined && (
             <Text size="sm" c="red">
               {nameError}
@@ -810,7 +815,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
             </ModalSheet>
         </Stack>
       </Panel>
-    </Page></CatalogScope.Provider></RulesEdition.Provider></CharacterPolicy.Provider>
+    </Page></CustomChoice.Provider></CatalogScope.Provider></RulesEdition.Provider></CharacterPolicy.Provider>
   )
 }
 

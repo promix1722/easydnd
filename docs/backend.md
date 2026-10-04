@@ -2229,8 +2229,9 @@ provenance remains in the event choices, so labels survive later editing.
 
 The optional import agent uses a fixed Go worker pool and an OpenAI Responses
 adapter behind the `AgentModel` port. Its authenticated `/v1/agent-sessions`
-routes keep a draft separate from the ordinary character repository until an
-explicit, idempotent Save. Sessions, source bytes and immutable private packs
+routes hold the conversation; the character it builds is an ordinary one in
+the ordinary repository from the first message, committed to after every tool
+call. Sessions, source bytes and immutable private packs
 are process-local, so browser reload resumes but server restart does not.
 See [agent.md](agent.md) for tool contracts, lifecycle, bounds and the `agent`
 YAML configuration. The nginx upload-limit change must be installed separately

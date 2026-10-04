@@ -71,7 +71,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'ai-wizard/:sessionId/:importView?',
+        path: 'ai-wizard/:sessionId',
         element: <Private><ImportCharacterScreen /></Private>,
       },
       { path: 'characters/import', element: <LegacyImportRedirect /> },

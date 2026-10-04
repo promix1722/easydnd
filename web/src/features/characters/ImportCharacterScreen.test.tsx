@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderAt } from '@/test/render'
@@ -13,6 +13,7 @@ const VIEW: AgentView = {
     folder: 'folder1',
     status: 'review',
     revision: 5,
+    characterId: 'chr1',
     events: [
       { id: 1, kind: 'user', text: 'Please import Zephyr' },
       { id: 2, kind: 'assistant', text: 'Draft ready' },
@@ -20,29 +21,6 @@ const VIEW: AgentView = {
     files: [{ name: 'sheet.pdf', mime: 'application/pdf' }],
     manual: [],
     assumptions: ['Matched a misspelled spell name'],
-  },
-  sheet: {
-    identity: { name: 'Zephyr', level: 1, experience: 0 },
-    base: {
-      hitPoints: { current: 9, max: 9 },
-      deathSaves: { successes: 0, failures: 0 },
-    },
-    abilities: {
-      scores: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
-      modifiers: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
-    },
-    skills: {},
-    savingThrows: {},
-    status: {
-      armorClass: 10,
-      initiative: 0,
-      proficiencyBonus: 2,
-      passivePerception: 10,
-    },
-    equipment: { equipped: [], backpack: [], loot: [] },
-    resources: {},
-    spells: {},
-    actions: [],
   },
 }
 class Stream {
@@ -86,44 +64,8 @@ beforeEach(() => {
               ? init.body
               : JSON.parse(String(init.body)),
         })
-        if (url.includes('/finalize'))
-          return Response.json({
-            ...VIEW,
-            session: {
-              ...VIEW.session,
-              revision: 6,
-              status: 'saved',
-              characterId: 'chr1',
-            },
-          })
         return Response.json(VIEW)
       }
-      if (url.includes('/draft/sheet')) return Response.json(VIEW.sheet)
-      if (url.includes('/draft/prompts'))
-        return Response.json({
-          seq: 1,
-          revision: 5,
-          complete: false,
-          prompts: [],
-        })
-      if (url.includes('/draft/events'))
-        return Response.json({
-          seq: 1,
-          revision: 5,
-          events: [
-            {
-              type: 'init',
-              seq: 1,
-              changes: [
-                {
-                  path: 'identity.name',
-                  op: 'set',
-                  value: { kind: 'string', string: 'Zephyr' },
-                },
-              ],
-            },
-          ],
-        })
       if (url.includes('/agent-sessions/session1')) return Response.json(VIEW)
       return Response.json([])
     }),
@@ -131,63 +73,27 @@ beforeEach(() => {
 })
 for (const viewport of ['desktop', 'mobile'] as const)
   describe(`Import workspace ${viewport}`, () => {
-    it('resumes its chat URL and keeps the composer while previewing the sheet', async () => {
+    // The chat writes to a real character, so View and Edit are that
+    // character's own pages rather than pages of the chat.
+    it.each([['View the sheet', 'sheet of chr1'], ['Edit', 'builder of chr1']])('%s opens the real character', async (button, page) => {
       const user = setupUser()
       const result = renderAt(
         viewport,
         <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
           <Routes>
             <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
-            <Route
-              path="/ai-wizard/:sessionId/:importView?"
-              element={<ImportCharacterScreen />}
-            />
+            <Route path="/characters/chr1" element={<p>sheet of chr1</p>} />
+            <Route path="/characters/chr1/build" element={<p>builder of chr1</p>} />
           </Routes>
         </MemoryRouter>,
       )
       expect(await screen.findByText('Draft ready')).toBeInTheDocument()
-      await user.type(
-        screen.getByLabelText('Message the assistant'),
-        'Keep my custom spell',
-      )
-      expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
-      await user.click(screen.getByRole('button', { name: 'View the sheet' }))
-      expect(await screen.findByText('Back to chat')).toBeInTheDocument()
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-      expect(
-        screen.queryByText('Assumptions to review'),
-      ).not.toBeInTheDocument()
-      await user.click(screen.getByRole('button', { name: 'Back to chat' }))
-      expect(screen.getByLabelText('Message the assistant')).toHaveValue(
-        'Keep my custom spell',
-      )
+      expect(screen.queryByRole('button', { name: 'Save character' })).not.toBeInTheDocument()
+      await user.click(screen.getAllByRole('button', { name: button })[0]!)
+      expect(await screen.findByText(page)).toBeInTheDocument()
       expect(writes).toHaveLength(0)
       result.unmount()
       expect(Stream.current.closed).toBe(true)
-    })
-    it('saves once explicitly and makes the conversation read-only', async () => {
-      const user = setupUser()
-      renderAt(
-        viewport,
-        <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
-          <Routes>
-            <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
-            <Route
-              path="/ai-wizard/:sessionId/:importView?"
-              element={<ImportCharacterScreen />}
-            />
-          </Routes>
-        </MemoryRouter>,
-      )
-      await screen.findByText('Draft ready')
-      await user.click(screen.getByRole('button', { name: 'Save character' }))
-      expect(
-        await screen.findByText(/This conversation is now read-only/),
-      ).toBeInTheDocument()
-      expect(
-        screen.queryByLabelText('Message the assistant'),
-      ).not.toBeInTheDocument()
-      expect(writes.filter((v) => v.url.includes('/finalize'))).toHaveLength(1)
     })
   })
 it('deduplicates replayed stream events and restores a coherent snapshot', async () => {
@@ -197,7 +103,7 @@ it('deduplicates replayed stream events and restores a coherent snapshot', async
       <Routes>
         <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
         <Route
-          path="/ai-wizard/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -244,14 +150,15 @@ it('uploads source bytes and optional instructions before creating a session', a
       <Routes>
         <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
         <Route
-          path="/ai-wizard/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId"
           element={<ImportCharacterScreen />}
         />
       </Routes>
     </MemoryRouter>,
   )
-  expect(screen.queryByLabelText('Instructions (optional)')).not.toBeInTheDocument()
-  await user.click(await screen.findByRole('button', { name: 'Confirm' }))
+  // The rules are the assistant's first message, already chosen: nothing
+  // stands between opening the wizard and sending.
+  expect(within(screen.getByRole('log')).getByText('Rule packs')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
   const input = container.querySelector<HTMLInputElement>('input[type="file"]')
   if (!input) throw new Error('File input missing')
@@ -263,6 +170,7 @@ it('uploads source bytes and optional instructions before creating a session', a
     screen.getByLabelText('Instructions (optional)'),
     'Keep the custom items',
   )
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled())
   await user.click(screen.getByRole('button', { name: 'Send' }))
   await screen.findByText('Draft ready')
   expect(writes).toHaveLength(1)
@@ -281,7 +189,7 @@ it('keeps messages in order and waits for the assistant before sending', async (
       <Routes>
         <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
         <Route
-          path="/ai-wizard/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -328,38 +236,6 @@ it('keeps messages in order and waits for the assistant before sending', async (
   })
 })
 
-it('opens the standard editor inside the same chat without saving', async () => {
-  const user = setupUser()
-  renderAt(
-    'desktop',
-    <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
-      <Routes>
-        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
-        <Route
-          path="/ai-wizard/:sessionId/:importView?"
-          element={<ImportCharacterScreen />}
-        />
-      </Routes>
-    </MemoryRouter>,
-  )
-  await screen.findByText('Draft ready')
-  await user.type(
-    screen.getByLabelText('Message the assistant'),
-    'Keep this draft message',
-  )
-  await user.click(screen.getByRole('button', { name: 'Edit' }))
-  expect(
-    await screen.findByRole('tab', { name: 'Personal' }),
-  ).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: 'Equipment' })).toBeInTheDocument()
-  expect(screen.queryByRole('tab', { name: 'Spells' })).not.toBeInTheDocument()
-  await user.click(screen.getByRole('link', { name: 'session1' }))
-  expect(screen.getByLabelText('Message the assistant')).toHaveValue(
-    'Keep this draft message',
-  )
-  expect(writes).toHaveLength(0)
-})
-
 it('renders activity inline, combines attachments with the user message and answers questions', async () => {
   const user = setupUser()
   const { container } = renderAt(
@@ -367,7 +243,7 @@ it('renders activity inline, combines attachments with the user message and answ
     <MemoryRouter initialEntries={['/ai-wizard/session1']}>
       <Routes>
         <Route
-          path="/ai-wizard/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -411,9 +287,8 @@ it('renders activity inline, combines attachments with the user message and answ
   expect(
     screen.queryByText('Do not display this assumption'),
   ).not.toBeInTheDocument()
-  expect(
-    screen.getByText('rogue.pdf').parentElement?.parentElement?.textContent,
-  ).toContain('Import my rogue')
+  // One bubble: the attachment sits on the message that sent it.
+  expect(screen.getByRole('log').textContent).toContain('rogue.pdfImport my rogue')
   await user.click(screen.getByRole('button', { name: 'Keep as custom' }))
   await waitFor(() => expect(writes).toHaveLength(1))
   expect(writes[0]?.body).toMatchObject({
@@ -430,7 +305,7 @@ it('recovers a missed end-of-turn snapshot so the next reply can be sent', async
     <MemoryRouter initialEntries={['/ai-wizard/session1']}>
       <Routes>
         <Route
-          path="/ai-wizard/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -462,31 +337,4 @@ it('recovers a missed end-of-turn snapshot so the next reply can be sent', async
   )
   await user.click(screen.getByRole('button', { name: 'Send' }))
   expect(writes[0]?.body).toMatchObject({ revision: 7, text: 'My answer' })
-})
-
-it('reloads a standalone preview with the import breadcrumbs and no assumptions panel', async () => {
-  renderAt(
-    'desktop',
-    <MemoryRouter initialEntries={['/ai-wizard/session1/character']}>
-      <Routes>
-        <Route
-          path="/ai-wizard/:sessionId/:importView?"
-          element={<ImportCharacterScreen />}
-        />
-      </Routes>
-    </MemoryRouter>,
-  )
-  await screen.findByText('Back to chat')
-  expect(
-    screen.getByRole('link', { name: 'AI Wizard' }),
-  ).toHaveAttribute('href', '/ai-wizard')
-  expect(screen.getByRole('link', { name: 'session1' })).toHaveAttribute(
-    'href',
-    '/ai-wizard/session1',
-  )
-  expect(screen.queryByRole('log')).not.toBeInTheDocument()
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  expect(
-    screen.queryByText('Matched a misspelled spell name'),
-  ).not.toBeInTheDocument()
 })

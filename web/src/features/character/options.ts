@@ -15,6 +15,8 @@ import { abilityName, choiceOptionName } from './labels'
  */
 export interface Choosable {
   provenance?: Entry['provenance']
+  /** An entry the player wrote, rather than one the rules have. */
+  manual?: boolean
   key: string
   label: string
   detail?: string
@@ -60,6 +62,7 @@ export function choosableOptions(
     return [...entries.values()].map((entry) => ({
       key: entry.slug,
       provenance: entry.provenance,
+      ...(entry.manual === true ? { manual: true } : {}),
       label: entry.name,
       ...maybeDetail(entry.desc?.length ? joinProse(entry.desc) : undefined),
       disabled: disabledBy(t, prompt, held, entry.slug) !== undefined,

@@ -65,6 +65,12 @@ func classGrant(class catalog.Class, level int, first bool) grant {
 //
 // Subclass.Levels is deliberately not used: it is empty for all twelve SRD
 // entries, so trusting it would report that no class ever picks a subclass.
+// SubclassLevel is the level at which a class chooses its subclass, or 0 when
+// it has none to choose.
+func SubclassLevel(cat *catalog.Catalog, class catalog.Class) int {
+	return subclassLevel(cat, class)
+}
+
 func subclassLevel(cat *catalog.Catalog, class catalog.Class) int {
 	best := 0
 	for _, slug := range class.Subclasses {

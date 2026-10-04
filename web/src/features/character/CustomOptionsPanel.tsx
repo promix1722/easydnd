@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { upsertCustomOption } from '@/lib/api/characters'
 import type { CustomOption, Sheet } from '@/lib/api/characters'
 import { useAction } from '@/lib/useAction'
@@ -7,6 +6,7 @@ import type { Stage } from '@/domain'
 import {
   Alert,
   Badge,
+  BlockList,
   Button,
   Checkbox,
   Group,
@@ -19,18 +19,6 @@ import {
   TextInput,
 } from '@/ui'
 
-const kinds = {
-  class: ['class', 'subclass', 'feature', 'feat', 'cantrip', 'spell'],
-  race: ['race', 'subrace', 'trait'],
-  background: ['background'],
-  cantrips: ['cantrip'],
-  spells: ['spell'],
-  equipment: ['item'],
-  personal: ['note'],
-  personality: ['note'],
-  rules: [],
-  abilities: [],
-} satisfies Record<Stage, string[]>
 const labels = {
   class: 'agent.field.class',
   subclass: 'agent.field.subclass',
@@ -45,27 +33,44 @@ const labels = {
   item: 'agent.field.item',
   note: 'custom.note',
 } as const
+/** The tab each kind of custom entry is shown on. */
+const shown = {
+  class: ['class', 'subclass', 'feature', 'feat'],
+  race: ['race', 'subrace', 'trait'],
+  background: ['background'],
+  cantrips: ['cantrip'],
+  spells: ['spell'],
+  equipment: ['item'],
+  personal: ['note'],
+  personality: ['note'],
+  rules: [],
+  abilities: [],
+} satisfies Record<Stage, string[]>
 export function CustomOptionsPanel({
   id,
   stage,
   sheet,
   revision,
   onSaved,
+  draft,
+  onDraft: setDraft,
+  modal,
 }: {
   id: string
   stage: Stage
   sheet: Sheet
   revision: number
   onSaved: () => void
+  /** The entry being written. It lives above this panel, because a picker
+   * opens it too. */
+  draft: CustomOption | null
+  onDraft: (draft: CustomOption | null) => void
+  /** Every tab draws its own entries; only the tab on screen draws the form. */
+  modal: boolean
 }) {
   const t = useT()
-  const [draft, setDraft] = useState<CustomOption | null>(null)
   const action = useAction(upsertCustomOption)
-  const choices: readonly string[] = kinds[stage]
-  const items = (sheet.customOptions ?? []).filter(
-    (c) =>
-      choices.includes(c.kind) && !(stage === 'class' && ['spell', 'cantrip'].includes(c.kind)),
-  )
+  const items = (sheet.customOptions ?? []).filter((c) => (shown[stage] as string[]).includes(c.kind))
   const submit = async (option: CustomOption) => {
     const result = await action.run(id, revision, option)
     if (result) {
@@ -73,50 +78,48 @@ export function CustomOptionsPanel({
       onSaved()
     }
   }
-  if (!choices.length) return null
+  if (items.length === 0 && !(modal && draft !== null)) return null
   return (
     <Stack gap="sm">
-      {items.map((option) => (
-        <Group key={option.id} justify="space-between">
-          <Group gap="xs">
-            <Text>{option.name}</Text>
-            <Badge>{t('custom.manual')}</Badge>
-            {!option.selected && (
-              <Text size="xs" c="dimmed">
-                {t('custom.unselected')}
-              </Text>
-            )}
-          </Group>
-          <Button
-            variant="light"
-            onClick={() => {
-              action.reset()
-              setDraft(option)
-            }}
-          >
-            {t('custom.edit')}
-          </Button>
-        </Group>
-      ))}
-      <Group>
-        <Button
-          variant="subtle"
-          onClick={() => {
-            action.reset()
-            setDraft({ kind: choices[0]!, name: '', description: '', source: '', selected: true })
-          }}
-        >
-          {t('custom.add')}
-        </Button>
-      </Group>
+      {/*
+        The same block every other decision on the tab is: what it is, what was
+        chosen, and a way in. It never opens in place -- pressing it opens the
+        entry -- so `open` stays null.
+      */}
+      <BlockList
+        open={null}
+        onOpen={(key) => {
+          const option = items.find((each) => each.id === key)
+          if (option === undefined) return
+          action.reset()
+          setDraft(option)
+        }}
+        items={items.map((option) => ({
+          key: option.id ?? option.name,
+          header: (
+            <Group justify="space-between" wrap="nowrap">
+              <div>
+                <Text size="xs" c="dimmed" tt="uppercase">
+                  {t(labels[option.kind as keyof typeof labels])}
+                  {!option.selected && ` · ${t('custom.unselected')}`}
+                </Text>
+                <Text size="sm">{option.name}</Text>
+              </div>
+              <Badge>{t('custom.manual')}</Badge>
+            </Group>
+          ),
+          body: null,
+        }))}
+      />
+
       <ModalSheet
-        opened={draft !== null}
+        opened={modal && draft !== null}
         onClose={() => {
           if (!action.pending) setDraft(null)
         }}
         title={draft?.id ? t('custom.edit') : t('custom.add')}
       >
-        {draft && (
+        {modal && draft && (
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -130,8 +133,9 @@ export function CustomOptionsPanel({
               <Select
                 label={t('custom.kind')}
                 value={draft.kind}
-                disabled={!!draft.id || action.pending}
-                data={choices.map((kind) => ({
+                // The question it answers has already said what kind it is.
+                disabled
+                data={[draft.kind].map((kind) => ({
                   value: kind,
                   label: t(labels[kind as keyof typeof labels]),
                 }))}

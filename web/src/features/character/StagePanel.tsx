@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useCatalogScope } from '@/lib/api/catalogScope'
+import { slugOf } from '@/domain'
 
 import { describeField, describeError } from '@/lib/api'
 import type { Answer, ApiFieldError, Change, Entry, Equipment, Prompt } from '@/lib/api'
@@ -232,7 +233,7 @@ function FocusedAnswer({ label, children }: { label: string; children: ReactNode
     })
     const focus = () => {
       if (focused || !surface.isConnected || surface.closest('[inert], [aria-hidden="true"]')) return
-      const field = surface.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)')
+      const field = surface.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled):not([data-custom-choice])')
       if (waitingOnOptions && document.activeElement !== surface) {
         // The player moved away while the choices loaded; leave their focus.
         observer.disconnect()
@@ -440,7 +441,11 @@ function AnswerSurface({
     )
   }
 
-  return <PromptWithOptions prompt={prompt} initialAnswers={replaces?.event.choices ?? []} pending={pending} onAnswer={onPicks} />
+  // What the entry being changed already says. A structural entry -- a race,
+  // a class -- says it with its ref rather than with a recorded answer.
+  const ref = replaces?.event.ref
+  const given = [...(replaces?.event.choices ?? []), ...(ref !== undefined ? [{ prompt: prompt.choice.prompt, picks: [slugOf(ref)] }] : [])]
+  return <PromptWithOptions prompt={prompt} initialAnswers={given} pending={pending} onAnswer={onPicks} />
 }
 
 /** The level a settled declaration stated, read back for the form changing it. */

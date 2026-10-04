@@ -645,15 +645,23 @@ for.
 Two kinds of event are still written without a prompt asking for them, and
 both are marked `Observed`:
 
-- The structural entries -- race, subrace, class with its level, subclass,
-  background, feat. A sheet states these outright, so they are facts rather
-  than answers. They open exactly the prompts an ordinary entry opens.
-- `finalAbilities.<ability>`, an explicit source total. Projection installs it
-  before dependent calculations and avoids adding race, ASI or pack ability
-  bonuses again. Save inverts ordinary additive bonuses into base scores,
-  verifying that reprojection preserves the totals. Non-invertible custom rules
-  retain the explicit override; a later ordinary base score assignment clears
-  it. This keeps imported characters compatible with later ability progression.
+- The structural entries -- race, subrace, class, subclass, background, feat.
+  A sheet states these outright, so they are facts rather than answers. They
+  open exactly the prompts an ordinary entry opens, and carry the level an
+  ordinary entry would: 1 for the class, the level the class chooses one at
+  for the subclass.
+- `finalAbilities.<ability>`, an explicit source total, **only where no base
+  score reaches it**. Projection installs it before dependent calculations and
+  avoids adding race, ASI or pack ability bonuses again. Ordinarily it never
+  reaches the log: the import holds the printed totals and after every write
+  inverts the additive bonuses into base scores, verifying that reprojection
+  preserves the totals, and records them as the ability-scores question's own
+  answer (`abilities.method = manual`). Non-invertible custom rules retain the
+  explicit override; a later ordinary base score assignment clears it.
+
+Everything else the builder asks about -- name, desired level, personality,
+alignment -- is written as the builder's own answer, not as an observation.
+See [agent.md](agent.md#the-builders-own-entries).
 
 The sheet's *derived* numbers -- hit points, armor class, skill and save
 bonuses -- are not written at all. They are held beside the draft as a

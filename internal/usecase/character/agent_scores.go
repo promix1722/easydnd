@@ -39,6 +39,16 @@ func rebaseAgentScores(log domain.Log, cat *catalog.Catalog) domain.Log {
 	if len(targets) == 0 {
 		return log
 	}
+	// A total with nothing left to say is not an entry in anybody's history.
+	stripped, err = domain.Rebuild(slices.DeleteFunc(stripped.Events, func(e domain.Event) bool { return e.Observed && saysNothing(e) }))
+	if err != nil {
+		return log
+	}
+	// The answer to the ability-scores question, as the builder's own form
+	// writes it: one entry, rewritten in place when the totals are solved again.
+	at := slices.IndexFunc(stripped.Events, func(e domain.Event) bool {
+		return !e.Observed && e.Type == domain.EventChange && slices.ContainsFunc(e.Changes, func(ch domain.Change) bool { return ch.Path == "abilities.method" })
+	})
 	bases := map[rules.Ability]int{}
 	for ability := range targets {
 		bases[ability] = 10
@@ -65,15 +75,24 @@ func rebaseAgentScores(log domain.Log, cat *catalog.Catalog) domain.Log {
 		}
 	}
 	for attempt := 0; attempt < 5; attempt++ {
-		event := domain.Event{Type: domain.EventChange, Source: domain.GroupAbilities}
+		event := domain.Event{Type: domain.EventChange, Source: domain.GroupAbilities, Changes: []domain.Change{{Path: "abilities.method", Op: domain.OpSet, Value: domain.SlugValue("manual")}}}
 		// Catalogue ability order keeps logs deterministic across map iteration.
 		for _, ability := range cat.AbilityIDs() {
 			if base, ok := bases[ability]; ok {
 				event.Changes = append(event.Changes, domain.Change{Path: domain.Path("abilities." + ability.String()), Op: domain.OpSet, Value: domain.IntValue(base)})
+			} else if at >= 0 {
+				// A score the sheet did not print keeps what the entry held.
+				for _, ch := range stripped.Events[at].Changes {
+					if ch.Path == domain.Path("abilities."+ability.String()) {
+						event.Changes = append(event.Changes, ch)
+					}
+				}
 			}
 		}
 		candidate := stripped.Clone()
-		if err := candidate.Append(event); err != nil {
+		if at >= 0 {
+			candidate.Events[at].Changes = event.Changes
+		} else if err := candidate.Append(event); err != nil {
 			return log
 		}
 		state, err := domain.Project(candidate, cat)
@@ -96,6 +115,8 @@ func rebaseAgentScores(log domain.Log, cat *catalog.Catalog) domain.Log {
 			// changed grants or resources while solving for a base score.
 			before := desired
 			before.Contributions = nil
+			before.Abilities.Method = state.Abilities.Method
+			before.Abilities.Scores = state.Abilities.Scores
 			state.Contributions = nil
 			if !reflect.DeepEqual(before, state) {
 				return log
@@ -104,6 +125,37 @@ func rebaseAgentScores(log domain.Log, cat *catalog.Catalog) domain.Log {
 		}
 	}
 	return log
+}
+
+// settleScores keeps the build at the totals the sheet prints.
+//
+// A tool writes a printed total as finalAbilities.<ability>; this takes it off
+// the character and onto the session, then solves the base scores that reach
+// every total held there. Only a build no base score can reach -- a custom
+// rule that is not additive -- keeps the total pinned over it.
+func (a *Agent) settleScores(s *AgentSession, cat *catalog.Catalog) {
+	for _, e := range s.Log.Events {
+		for _, ch := range e.Changes {
+			if rest, ok := strings.CutPrefix(string(ch.Path), "finalAbilities."); ok && ch.Value.Kind == domain.ValueInt {
+				if ability, ok := rules.ParseAbility(rest); ok {
+					if s.scores == nil {
+						s.scores = map[rules.Ability]int{}
+					}
+					s.scores[ability] = ch.Value.Int
+				}
+			}
+		}
+	}
+	if len(s.scores) == 0 {
+		return
+	}
+	log := s.Log.Clone()
+	for _, ability := range cat.AbilityIDs() {
+		if total, ok := s.scores[ability]; ok {
+			log = setObserved(log, domain.Change{Path: domain.Path("finalAbilities." + ability.String()), Op: domain.OpSet, Value: domain.IntValue(total)}, "")
+		}
+	}
+	s.Log = rebaseAgentScores(log, cat)
 }
 
 // overridePath reports that a path is a printed number or list laid over what

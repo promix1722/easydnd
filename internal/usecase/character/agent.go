@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -64,25 +65,35 @@ type AgentSession struct {
 	// over a build that computes otherwise makes the sheet wrong with authority.
 	printed map[string]int
 	// spells is the cantrips and spells the sheet lists, by printed name.
-	spells      []string
-	operations  map[string]agentOperation
-	ID          string            `json:"id"`
-	Folder      domain.FolderID   `json:"folder"`
-	Status      string            `json:"status"`
-	Revision    int               `json:"revision"`
-	CharacterID domain.ID         `json:"characterId,omitempty"`
-	Events      []AgentEvent      `json:"events"`
-	Files       []AgentFile       `json:"files"`
-	Manual      []AgentManual     `json:"manual"`
-	Assumptions []string          `json:"assumptions"`
-	Owner       domain.OwnerID    `json:"-"`
-	Locale      rules.Locale      `json:"-"`
-	Log         domain.Log        `json:"-"`
-	Generation  int               `json:"-"`
-	Input       []json.RawMessage `json:"-"`
-	Turns       int               `json:"-"`
-	busy        bool
-	cancel      context.CancelFunc
+	spells []string
+	// scores is the six totals the sheet prints. They are never written to the
+	// character: after every tool call the base scores are solved again so the
+	// build comes out at them, whatever order race and improvements arrive in.
+	// A player editing the character ends that -- their numbers win.
+	scores map[rules.Ability]int
+	// classLevels is the level the sheet prints beside each class.
+	classLevels map[rules.Slug]int
+	// characterRevision is the stored character's revision as the agent last
+	// read or wrote it. Any other value means the player edited it meanwhile.
+	characterRevision int
+	operations        map[string]agentOperation
+	ID                string            `json:"id"`
+	Folder            domain.FolderID   `json:"folder"`
+	Status            string            `json:"status"`
+	Revision          int               `json:"revision"`
+	CharacterID       domain.ID         `json:"characterId,omitempty"`
+	Events            []AgentEvent      `json:"events"`
+	Files             []AgentFile       `json:"files"`
+	Manual            []AgentManual     `json:"manual"`
+	Assumptions       []string          `json:"assumptions"`
+	Owner             domain.OwnerID    `json:"-"`
+	Locale            rules.Locale      `json:"-"`
+	Log               domain.Log        `json:"-"`
+	Generation        int               `json:"-"`
+	Input             []json.RawMessage `json:"-"`
+	Turns             int               `json:"-"`
+	busy              bool
+	cancel            context.CancelFunc
 }
 type AgentCall struct{ ID, Name, Arguments string }
 type AgentResponse struct {
@@ -227,22 +238,98 @@ func (a *Agent) Create(ctx context.Context, owner domain.OwnerID, folder domain.
 		ownedFiles[i].Data = append([]byte(nil), files[i].Data...)
 	}
 	s := &AgentSession{ID: hex.EncodeToString(token[:]), Owner: owner, Folder: folder, Locale: locale, Status: "queued", Revision: 1, Files: ownedFiles, Events: []AgentEvent{}, Manual: []AgentManual{}, Assumptions: []string{}}
+	// The same entries the builder writes for a new character: its name, then
+	// the rules it is built under. The wizard's character is an ordinary one
+	// from its first message, so it opens in the ordinary builder.
 	e := initEvent(NewCharacter{Name: "…"})
-	e.Source = domain.GroupIdentity
-	e.Changes = append(e.Changes, domain.Change{Path: "identity.ruleset", Op: domain.OpSet, Value: domain.SlugValue(rules.Slug(cat.Ruleset))})
 	e.RulesLock = cat.Lock.Clone()
-	_ = s.Log.Append(e, domain.Event{Type: domain.EventNote, Note: "import.session:" + s.ID})
+	log := domain.Log{}
+	_ = log.Append(e,
+		domain.Event{Type: domain.EventChange, Source: domain.GroupIdentity, Changes: []domain.Change{{Path: "identity.ruleset", Op: domain.OpSet, Value: domain.SlugValue(rules.Slug(cat.Ruleset))}}},
+		domain.Event{Type: domain.EventNote, Note: "import.session:" + s.ID})
 	s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": instructions + "\nCreate this single character from the description and any attached sources, using the selected rules lock. Read the build context first."}))
 	addAgentEvent(s, "user", instructions, "", nil)
 	s.Events[len(s.Events)-1].Files = agentFileLabels(files)
+	// The repository can commit the initial log atomically. Do not fall back to
+	// Create + Commit, which leaves an empty character after a failed write.
+	repo, ok := a.service.repo.(interface {
+		CreateWithLog(context.Context, domain.OwnerID, domain.FolderID, domain.Log) (domain.Character, error)
+	})
+	if !ok {
+		return AgentSession{}, types.NewNotImplementedError("atomic character creation unavailable")
+	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if len(a.sessions) >= a.config.MaxSessions {
 		return AgentSession{}, types.NewValidationError("session capacity reached").Because("agent.capacity")
 	}
+	created, err := repo.CreateWithLog(ctx, owner, folder, log)
+	if err != nil {
+		return AgentSession{}, err
+	}
+	s.CharacterID, s.Log, s.characterRevision = created.ID, created.Log.Clone(), created.Revision
 	a.sessions[s.ID] = s
 	a.signal()
 	return copyAgentSession(s), nil
+}
+
+// pull re-reads the character, and reports whether the player has changed it
+// since the agent last did. The character is theirs and open in the builder
+// the whole time; the session's log is only the agent's working copy of it.
+func (a *Agent) pull(ctx context.Context, s *AgentSession) (bool, error) {
+	c, err := a.service.repo.Get(ctx, s.CharacterID)
+	if err != nil {
+		return false, err
+	}
+	if c.Revision == s.characterRevision {
+		return false, nil
+	}
+	s.Log, s.characterRevision = c.Log.Clone(), c.Revision
+	return true, nil
+}
+
+// push writes the working copy back, refusing if the player got there first.
+func (a *Agent) push(ctx context.Context, s *AgentSession) error {
+	if err := a.service.repo.Commit(ctx, s.CharacterID, s.characterRevision, s.Log, "", nil); err != nil {
+		return err
+	}
+	c, err := a.service.repo.Get(ctx, s.CharacterID)
+	if err != nil {
+		return err
+	}
+	s.Log, s.characterRevision = c.Log.Clone(), c.Revision
+	return nil
+}
+
+// call runs one tool against the stored character and stores what it changed.
+func (a *Agent) call(ctx context.Context, s *AgentSession, name string, arguments []byte) (any, error) {
+	edited, err := a.pull(ctx, s)
+	if types.IsNotFound(err) {
+		s.Status = "failed"
+		addAgentEvent(s, "status", "failed", "", nil)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if edited {
+		s.scores = nil
+		addAgentEvent(s, "edit", "", "", nil)
+		if name != "get_build_context" {
+			return nil, fmt.Errorf("not run: the player edited the character in the builder. Call get_build_context, treat what it shows as authoritative and preserve their changes, then send this again if it is still needed")
+		}
+	}
+	before := s.Log.Clone()
+	result, err := a.tool(ctx, s, name, arguments)
+	if cat, catErr := a.Catalog(ctx, *s); catErr == nil {
+		a.settleScores(s, cat)
+	}
+	if !reflect.DeepEqual(before, s.Log) {
+		if pushErr := a.push(ctx, s); pushErr != nil {
+			s.Log = before
+			return nil, pushErr
+		}
+	}
+	return result, err
 }
 func (a *Agent) Get(owner domain.OwnerID, id string) (AgentSession, error) {
 	a.mu.Lock()
@@ -282,8 +369,8 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 	if err != nil {
 		return AgentSession{}, err
 	}
-	if s.Status == "saved" || s.Revision != revision {
-		return AgentSession{}, types.NewValidationError("session changed or already saved").Because("agent.changed")
+	if s.Revision != revision {
+		return AgentSession{}, types.NewValidationError("session changed").Because("agent.changed")
 	}
 	switch action {
 	case "stop":
@@ -309,6 +396,11 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 		s.Turns = 0
 		a.signal()
 	case "discard":
+		// Discarding the chat discards what it made. Leaving the chat any other
+		// way leaves the character where it is.
+		if err := a.service.Delete(a.ctx, owner, s.CharacterID); err != nil && !types.IsNotFound(err) {
+			return AgentSession{}, err
+		}
 		a.invalidate(s)
 		delete(a.sessions, id)
 	default:
@@ -326,86 +418,6 @@ func (a *Agent) Sheet(ctx context.Context, s AgentSession) (domain.State, error)
 		return domain.State{}, err
 	}
 	return domain.Project(s.Log, cat)
-}
-func (a *Agent) Edit(ctx context.Context, owner domain.OwnerID, id string, revision int, events []domain.Event) (AgentSession, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	s, err := a.owned(owner, id)
-	if err != nil {
-		return AgentSession{}, err
-	}
-	if s.Status == "saved" || s.Revision != revision {
-		return AgentSession{}, types.NewValidationError("session changed or saved").Because("agent.changed")
-	}
-	cat, err := a.Catalog(ctx, *s)
-	if err != nil {
-		return AgentSession{}, err
-	}
-	err = validateAndAttribute(s.Log, cat, events)
-	if err != nil {
-		return AgentSession{}, err
-	}
-	log := s.Log.Clone()
-	if err = log.Append(events...); err != nil {
-		return AgentSession{}, err
-	}
-	if _, err = domain.Project(log, cat); err != nil {
-		return AgentSession{}, err
-	}
-	a.invalidate(s)
-	s.Log = log
-	s.Status = "paused"
-	addAgentEvent(s, "edit", "", "", nil)
-	s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": "I edited the draft directly. Treat the latest build context as authoritative; preserve my edits. Re-read it before making changes."}))
-	return copyAgentSession(s), nil
-}
-func (a *Agent) Finalize(ctx context.Context, owner domain.OwnerID, id string, revision int) (AgentSession, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	s, err := a.owned(owner, id)
-	if err != nil {
-		return AgentSession{}, err
-	}
-	if s.Status == "saved" {
-		return copyAgentSession(s), nil
-	}
-	if s.Revision != revision || s.Status == "running" || s.Status == "queued" {
-		return AgentSession{}, types.NewValidationError("draft is changing").Because("agent.changed")
-	}
-	cat, err := a.Catalog(ctx, *s)
-	if err != nil {
-		return AgentSession{}, err
-	}
-	state, err := domain.Project(s.Log, cat)
-	if err != nil {
-		return AgentSession{}, err
-	}
-	if strings.TrimSpace(state.Identity.Name) == "" || state.Identity.Name == "…" {
-		return AgentSession{}, types.NewValidationError("character name required").Because("agent.nameRequired")
-	}
-	folder, err := a.service.resolveFolder(ctx, owner, s.Folder)
-	if err != nil {
-		return AgentSession{}, err
-	}
-	// The repository can commit the initial log atomically. Do not fall back to
-	// Create + Commit, which leaves an empty character after a failed write.
-	repo, ok := a.service.repo.(interface {
-		CreateWithLog(context.Context, domain.OwnerID, domain.FolderID, domain.Log) (domain.Character, error)
-	})
-	if !ok {
-		return AgentSession{}, types.NewNotImplementedError("atomic character creation unavailable")
-	}
-	savedLog := pruneAgentOverrides(rebaseAgentScores(s.Log, cat), cat)
-	saved, err := repo.CreateWithLog(ctx, owner, folder, savedLog)
-	if err != nil {
-		return AgentSession{}, err
-	}
-	s.Log = saved.Log.Clone()
-	s.CharacterID = saved.ID
-	s.Status = "saved"
-	a.invalidate(s)
-	addAgentEvent(s, "status", "saved", "", nil)
-	return copyAgentSession(s), nil
 }
 func (a *Agent) worker() {
 	defer a.wg.Done()
@@ -506,7 +518,7 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 			case len(call.Arguments) > 128<<10:
 				err = fmt.Errorf("tool arguments too large")
 			default:
-				result, err = a.tool(ctx, s, call.Name, []byte(call.Arguments))
+				result, err = a.call(ctx, s, call.Name, []byte(call.Arguments))
 			}
 			op = agentOperation{Hash: hash, Result: raw(result)}
 			if err != nil {
@@ -606,8 +618,8 @@ func (a *Agent) AddFiles(owner domain.OwnerID, id string, revision int, files []
 	if err != nil {
 		return AgentSession{}, err
 	}
-	if s.Status == "saved" || s.Revision != revision {
-		return AgentSession{}, types.NewValidationError("session changed or saved").Because("agent.changed")
+	if s.Revision != revision {
+		return AgentSession{}, types.NewValidationError("session changed").Because("agent.changed")
 	}
 	if len(files) == 0 || len(files)+len(s.Files) > 8 || len(text) > 16000 || len(s.Input) > 500 {
 		return AgentSession{}, types.NewValidationError("invalid attachments").Because("agent.files")
