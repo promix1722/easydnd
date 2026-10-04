@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useRulesEdition } from '@/lib/api/catalogScope'
 
 import type { Change } from '@/lib/api'
@@ -23,24 +24,35 @@ const RULESET_2014 = '2014'
 export function RulesetForm({ pending, selected = false, onSubmit }: RulesetFormProps) {
   const t = useT()
   const ruleset = useRulesEdition()
+  const [picked, setPicked] = useState(true)
 
   return (
     <Stack gap="md">
       <Button
-        variant="filled"
-        aria-pressed="true"
-        disabled={pending}
+        variant={picked ? 'light' : 'default'}
+        aria-pressed={picked}
+        justify="space-between"
+        h="auto"
+        py="xs"
+        disabled={pending || selected}
+        onClick={() => setPicked(true)}
       >
-        {ruleset === RULESET_2014 ? t('ruleset.2014') : ruleset}
+        <Text size="sm" style={{ whiteSpace: 'normal', textAlign: 'left' }}>
+          {ruleset === RULESET_2014 ? t('ruleset.2014') : ruleset}
+        </Text>
       </Button>
       {!selected && (
         <Group>
           <Button
             loading={pending}
+            disabled={!picked || pending}
             onClick={() => onSubmit([{ path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: ruleset } }])}
           >
-            {t('answer.confirm')}
+            {picked ? t('answer.confirm') : t('prompt.chooseMore', { count: 1 })}
           </Button>
+          {picked && <Button variant="subtle" disabled={pending} onClick={() => setPicked(false)}>
+            {t('prompt.clear')}
+          </Button>}
         </Group>
       )}
       <Text size="xs" c="dimmed">

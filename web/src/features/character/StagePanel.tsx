@@ -66,6 +66,8 @@ export interface StagePanelProps {
    */
   posing?: boolean
   rulesSelected?: boolean
+  /** Additional choices on this stage, before its Next action. */
+  children?: ReactNode
 }
 
 /**
@@ -113,6 +115,7 @@ export function StagePanel({
   level,
   posing = false,
   rulesSelected = false,
+  children,
 }: StagePanelProps) {
   const t = useT()
   const nextRef = useRef<HTMLButtonElement>(null)
@@ -160,7 +163,7 @@ export function StagePanel({
     return {
       key: block.key,
       header: <OpenHeader prompt={block.prompt} names={names} />,
-      highlighted: !waiting,
+      highlighted: !waiting && !(rulesSelected && block.prompt.choice.prompt === 'character/ruleset'),
       ...(waiting ? {} : { body: open && asking !== null ? surface(asking) : null }),
     }
   }
@@ -187,6 +190,7 @@ export function StagePanel({
           <BlockList items={group.blocks.map(itemFor)} open={openKey} onOpen={onOpen} />
         </Stack>
       ))}
+      {children}
       {equipment !== undefined && <EquipmentSummary equipment={equipment} names={names} />}
       {blocks.length === 0 && equipment === undefined ? (
         <Text size="sm" c="dimmed">

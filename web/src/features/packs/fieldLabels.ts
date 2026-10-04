@@ -1,5 +1,8 @@
 import type { Translate, MessageKey } from '@/lib/i18n'
 const fields: Record<string, MessageKey> = {
+  title: 'packs.title',
+  sources: 'packs.field.sources',
+  provenance: 'packs.field.provenance',
   abilities: 'packs.field.abilities',
   ability: 'packs.field.ability',
   abilityBonusOptions: 'packs.field.abilityBonusOptions',

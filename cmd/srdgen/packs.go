@@ -64,6 +64,30 @@ func (g *generator) writePack(locales []rules.Locale) error {
 		}
 		manifest.Files["locales/"+locale.String()+"/resources"] = name
 	}
+
+	manifest.Title = "SRD 5.1"
+	manifest.Sources = map[string]string{"srd-5.1": "SRD 5.1"}
+	provenance := map[string]map[string][]string{}
+	for _, collection := range []string{"races", "subraces", "traits", "classes", "subclasses", "features", "backgrounds", "feats", "equipment", "magic-items", "spells"} {
+		data, err := os.ReadFile(filepath.Join(g.outDir, collection+".json"))
+		if err != nil {
+			return err
+		}
+		var rows []struct {
+			Slug string `json:"slug"`
+		}
+		if err = json.Unmarshal(data, &rows); err != nil {
+			return err
+		}
+		provenance[collection] = map[string][]string{}
+		for _, row := range rows {
+			provenance[collection][row.Slug] = []string{"srd-5.1"}
+		}
+	}
+	if err = g.write("provenance.json", provenance); err != nil {
+		return err
+	}
+	manifest.Files["provenance"] = "provenance.json"
 	if err = g.write("pack-manifest.json", manifest); err != nil {
 		return err
 	}

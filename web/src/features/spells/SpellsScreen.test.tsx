@@ -15,7 +15,11 @@ it('keeps shared filters in the browse URL and sends them to catalogue search', 
   vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input), 'http://localhost')
     let data: unknown = []
-    if (url.pathname === '/v1/packs') data = { packs: [], defaultRules: { edition: '2014', semantics: '1', packs: [] } }
+    if (url.pathname === '/v1/packs/spell-filters') data = {
+      packs: [{ id: 'library', title: 'My library', version: '1.0.0', versions: ['1.0.0'] }],
+      sources: [{ id: 'library:phb', name: "Player's Handbook", packId: 'library' }],
+      unavailable: [], schools: [{ slug: 'divination', name: 'Divination' }], classes: [{ slug: 'wizard', name: 'Wizard' }],
+    }
     if (url.pathname.endsWith('/magic-schools')) data = [{ slug: 'divination', name: 'Divination' }]
     if (url.pathname.endsWith('/classes')) data = [{ slug: 'wizard', name: 'Wizard' }]
     if (url.pathname.endsWith('/spells')) {
@@ -28,6 +32,12 @@ it('keeps shared filters in the browse URL and sends them to catalogue search', 
   renderAt('desktop', <MemoryRouter initialEntries={['/spells?school=divination&level=1']}><SpellsScreen /><Location /></MemoryRouter>)
   const search = await screen.findByRole('textbox', { name: 'Search spells' })
   expect(screen.getByRole('combobox', { name: 'School' })).toHaveValue('Divination')
+  expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('combobox', { name: 'Pack' }))
+  await user.click(screen.getByRole('option', { name: 'My library' }))
+  await user.click(screen.getByRole('combobox', { name: 'Book / source' }))
+  await user.click(screen.getByRole('option', { name: "PH / My library" }))
+  await user.keyboard('{Escape}')
   await user.click(screen.getByRole('checkbox', { name: 'Ritual' }))
   await user.type(search, 'detect')
   await waitFor(() => {
@@ -36,9 +46,13 @@ it('keeps shared filters in the browse URL and sends them to catalogue search', 
     expect(last?.get('ritual')).toBe('true')
     expect(last?.get('school')).toBe('divination')
     expect(last?.get('level')).toBe('1')
+    expect(last?.get('pack')).toBe('library')
+    expect(last?.get('source')).toBe('library:phb')
   })
   expect(screen.getByTestId('location')).toHaveTextContent('ritual=1')
   expect(screen.getByTestId('location')).toHaveTextContent('q=detect')
+  expect(screen.getByTestId('location')).toHaveTextContent('pack=library')
+  expect(screen.getByTestId('location')).toHaveTextContent('source=library%3Aphb')
   expect(screen.getByRole('textbox', { name: 'Search spells' })).toBe(search)
   expect(screen.getByRole('link', { name: 'Detect Magic' })).toBeInTheDocument()
 })

@@ -1,3 +1,4 @@
+import { sourceOptions } from '@/lib/api'
 import { useCatalogScope } from '@/lib/api/catalogScope'
 import { useState } from 'react'
 
@@ -8,7 +9,7 @@ import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
 import { Button, Group, Stack, Text, Title } from '@/ui'
 import { SpellFilters } from '@/features/spells/SpellFilters'
-import { EMPTY_SPELL_FILTERS, matchesSpellFilters } from '@/features/spells/filterSpells'
+import { EMPTY_SPELL_FILTERS, hasSpellFilters, matchesSpellFilters } from '@/features/spells/filterSpells'
 import { levelText } from '@/features/spells/spellText'
 
 import type { Block } from './blocks'
@@ -160,7 +161,7 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
   const fixedCount = selected.length - picked.length - customCount
   const ruleTotal = rules.filter((rule) => rule.purpose !== 'custom-limit' && rule.purpose !== 'replace' && rule.purpose !== 'forget' && !rule.automatic?.length && (cantripsOnly ? rule.maxLevel === 0 : rule.maxLevel > 0)).reduce((sum, rule) => sum + rule.count, 0)
   const total = (ruleTotal || fixedCount + allowances.reduce((sum, { prompt }) => sum + prompt.choice.choose, 0)) + extra
-  const filtered = !availableOnly || Object.entries(filters).some(([key, value]) => value !== EMPTY_SPELL_FILTERS[key as keyof typeof filters])
+  const filtered = !availableOnly || hasSpellFilters(filters)
 
   function remove(block: Block | undefined, pick: string) {
     if (block === undefined) { setDraft({ ...draft, added: current.added.filter((key) => key !== pick), custom: current.custom.filter((key) => key !== pick) }); return }
@@ -215,7 +216,7 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
     </Group>}
     {catalogue.loading && <Text size="sm">{t('page.loadingEllipsis')}</Text>}
     {catalogue.error !== null && <Group><Text c="red">{catalogue.error}</Text><Button onClick={catalogue.reload}>{t('page.retry')}</Button></Group>}
-    {active && <SpellFilters value={filters} onChange={setFilters} schools={schools} classes={classes}
+    {active && <SpellFilters sourceOptions={sourceOptions([...entries.values()].filter((entry) => 'level' in entry))} value={filters} onChange={setFilters} schools={schools} classes={classes}
       availableOnly={availableOnly} onAvailableOnlyChange={setAvailableOnly} />}
     {browsing && library.loading && <Text size="sm">{t('page.loadingEllipsis')}</Text>}
     {browsing && library.error !== null && <Group><Text c="red">{library.error}</Text><Button onClick={library.reload}>{t('page.retry')}</Button></Group>}

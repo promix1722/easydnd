@@ -124,7 +124,7 @@ func TestDragonbornAncestryGrantsBreathWithoutAnotherChoice(t *testing.T) {
 }
 
 func TestSpellChoicesThroughCharacterService(t *testing.T) {
-	r, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, []file.Dependency{{ID: "srd-2014", Version: "1.0.0"}}, "")
+	r, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^1.0.0"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +189,7 @@ func TestSpellChoicesThroughCharacterService(t *testing.T) {
 
 func TestSpellDraftRevisesSeveralAnswersAtomically(t *testing.T) {
 	ctx := context.Background()
-	r, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, []file.Dependency{{ID: "srd-2014", Version: "1.0.0"}}, "")
+	r, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^1.0.0"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -390,7 +390,7 @@ func TestEarlierSpellAnswersEditAtCurrentClassLevel(t *testing.T) {
 
 func spellBuilderForTest(t *testing.T) *builder {
 	t.Helper()
-	registry, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, []file.Dependency{{ID: "srd-2014", Version: "1.0.0"}}, "")
+	registry, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^1.0.0"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}

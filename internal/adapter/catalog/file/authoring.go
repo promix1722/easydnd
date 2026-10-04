@@ -1,13 +1,17 @@
 package file
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/pack"
@@ -17,14 +21,27 @@ import (
 // Authoring reuses the codec/compiler with immutable request-local registries.
 // Authorization is performed by the pack service before documents reach Resolve.
 type Authoring struct {
-	base    *Registry
-	repo    pack.Repository
-	cache   sync.Map
-	private sync.Map // immutable import releases, excluded from public pack lists
+	base        *Registry
+	repo        pack.Repository
+	cache       sync.Map
+	private     sync.Map // immutable import releases, excluded from public pack lists
+	builtinOnce sync.Once
+	builtins    []pack.Record
+	decoded     sync.Map // keyed by actual document bytes, never a caller-supplied digest
+	compileMu   sync.Mutex
 }
 
 func NewAuthoring(base *Registry, repo pack.Repository) *Authoring {
-	return &Authoring{base: base, repo: repo}
+	a := &Authoring{base: base, repo: repo}
+	a.Builtins() // Encode immutable installed releases once, before serving requests.
+	locales, _ := base.Locales(context.Background())
+	for _, locale := range locales {
+		lock := base.DefaultLock()
+		if c, err := base.LoadLocked(context.Background(), locale, lock); err == nil {
+			a.cache.Store(catalogCacheKey(locale, lock), c)
+		}
+	}
+	return a
 }
 func (a *Authoring) Default() pack.Lock {
 	for _, r := range a.base.defaultLock.Packs {
@@ -36,6 +53,19 @@ func (a *Authoring) Default() pack.Lock {
 	return a.base.DefaultLock()
 }
 func (a *Authoring) Builtins() []pack.Record {
+	a.builtinOnce.Do(func() { a.builtins = a.buildBuiltinRecords() })
+	out := make([]pack.Record, len(a.builtins))
+	for i, record := range a.builtins {
+		out[i] = record
+		out[i].Releases = make([]pack.Document, len(record.Releases))
+		for j, doc := range record.Releases {
+			out[i].Releases[j] = pack.Document{Release: doc.Release, Data: bytes.Clone(doc.Data)}
+		}
+	}
+	return out
+}
+
+func (a *Authoring) buildBuiltinRecords() []pack.Record {
 	out := []pack.Record{}
 	for id, versions := range a.base.releases {
 		r := pack.Record{ID: id, Title: id}
@@ -44,9 +74,20 @@ func (a *Authoring) Builtins() []pack.Record {
 		}
 		for _, d := range versions {
 			b, _ := EncodePack(d)
+			a.decoded.Store(sha256.Sum256(b), decodedRelease{d, a.base.identities[d]})
 			r.Releases = append(r.Releases, pack.Document{Release: a.base.identities[d], Data: b})
 		}
-		sort.Slice(r.Releases, func(i, j int) bool { return r.Releases[i].Release.Version < r.Releases[j].Release.Version })
+		sort.Slice(r.Releases, func(i, j int) bool {
+			a, _ := semver.StrictNewVersion(r.Releases[i].Release.Version)
+			b, _ := semver.StrictNewVersion(r.Releases[j].Release.Version)
+			return a.LessThan(b)
+		})
+		if len(r.Releases) > 0 {
+			latest := versions[r.Releases[len(r.Releases)-1].Release.Version]
+			if latest.Manifest.Title != "" {
+				r.Title = latest.Manifest.Title
+			}
+		}
 		out = append(out, r)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
@@ -176,13 +217,13 @@ func (a *Authoring) Fork(b []byte, id string, mappings map[string]string) ([]byt
 func (a *Authoring) registry(docs []pack.Document) (*Registry, error) {
 	r := &Registry{releases: map[string]map[string]*PackDocument{}, identities: map[*PackDocument]pack.Release{}, contexts: map[string]*catalog.Catalog{}}
 	for _, x := range docs {
-		d, err := DecodePack(x.Data)
+		parsed, err := a.decodeRelease(x.Data)
 		if err != nil {
 			return nil, err
 		}
-		identity, err := d.Release()
-		if err != nil {
-			return nil, err
+		d, identity := parsed.document, parsed.identity
+		if identity != x.Release {
+			return nil, fmt.Errorf("release identity does not match document")
 		}
 		if r.releases[identity.ID] == nil {
 			r.releases[identity.ID] = map[string]*PackDocument{}
@@ -231,7 +272,7 @@ func (a *Authoring) Resolve(ctx context.Context, docs []pack.Document, roots []p
 		return l, err
 	}
 	for _, locale := range locales {
-		if _, err = r.LoadLocked(ctx, locale, l); err != nil {
+		if _, err = a.compiled(locale, l, func() (*catalog.Catalog, error) { return r.LoadLocked(ctx, locale, l) }); err != nil {
 			return l, err
 		}
 	}
@@ -269,23 +310,63 @@ func (a *Authoring) LoadLocked(ctx context.Context, locale rules.Locale, l pack.
 	if err := l.Validate(); err != nil {
 		return nil, err
 	}
-	keyBytes, _ := json.Marshal(struct {
+	return a.compiled(locale, l, func() (*catalog.Catalog, error) {
+		r, err := a.registryForLock(ctx, l)
+		if err != nil {
+			return nil, err
+		}
+		return r.LoadLocked(ctx, locale, l)
+	})
+}
+
+func catalogCacheKey(locale rules.Locale, lock pack.Lock) string {
+	key, _ := json.Marshal(struct {
 		Lock   pack.Lock
 		Locale rules.Locale
-	}{l, locale})
-	key := string(keyBytes)
+	}{lock, locale})
+	return string(key)
+}
+
+// Compilation is shared by exact immutable lock and locale. Authorization stays
+// in the service, and Resolve still solves against only currently allowed releases.
+func (a *Authoring) compiled(locale rules.Locale, lock pack.Lock, load func() (*catalog.Catalog, error)) (*catalog.Catalog, error) {
+	key := catalogCacheKey(locale, lock)
 	if v, ok := a.cache.Load(key); ok {
 		return v.(*catalog.Catalog), nil
 	}
-	r, err := a.registryForLock(ctx, l)
-	if err != nil {
-		return nil, err
+	a.compileMu.Lock()
+	defer a.compileMu.Unlock()
+	if v, ok := a.cache.Load(key); ok {
+		return v.(*catalog.Catalog), nil
 	}
-	c, err := r.LoadLocked(ctx, locale, l)
+	c, err := load()
 	if err == nil {
 		a.cache.Store(key, c)
 	}
 	return c, err
+}
+
+type decodedRelease struct {
+	document *PackDocument
+	identity pack.Release
+}
+
+func (a *Authoring) decodeRelease(data []byte) (decodedRelease, error) {
+	key := sha256.Sum256(data)
+	if v, ok := a.decoded.Load(key); ok {
+		return v.(decodedRelease), nil
+	}
+	d, err := DecodePack(data)
+	if err != nil {
+		return decodedRelease{}, err
+	}
+	identity, err := d.Release()
+	if err != nil {
+		return decodedRelease{}, err
+	}
+	parsed := decodedRelease{d, identity}
+	actual, _ := a.decoded.LoadOrStore(key, parsed)
+	return actual.(decodedRelease), nil
 }
 
 func (a *Authoring) registryForLock(ctx context.Context, l pack.Lock) (*Registry, error) {
@@ -429,7 +510,7 @@ func (a *Authoring) Schema() []byte {
 	for k, f := range collectionTypes {
 		entities[k] = describe(reflect.TypeOf(f()).Elem())
 	}
-	root := EditorField{Type: "object", Properties: map[string]EditorField{"manifest": describe(reflect.TypeOf(PackManifest{})), "entities": {Type: "object", Properties: entities}, "mechanics": describe(reflect.TypeOf(PackMechanics{})), "locales": describe(reflect.TypeOf(map[string]map[string]Bundle{}))}}
+	root := EditorField{Type: "object", Properties: map[string]EditorField{"manifest": describe(reflect.TypeOf(PackManifest{})), "provenance": describe(reflect.TypeOf(map[string]map[string][]string{})), "entities": {Type: "object", Properties: entities}, "mechanics": describe(reflect.TypeOf(PackMechanics{})), "locales": describe(reflect.TypeOf(map[string]map[string]Bundle{}))}}
 	b, _ := json.Marshal(struct {
 		Root        EditorField            `json:"root"`
 		Definitions map[string]EditorField `json:"definitions"`

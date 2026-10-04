@@ -1,6 +1,6 @@
 import type { Entry, Spell } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Markdown, SimpleGrid, Stack, Text, Title } from '@/ui'
+import { Markdown, SourceTags, SimpleGrid, Stack, Text, Title } from '@/ui'
 
 import { castingTimeText, componentsAbbrev, durationText, rangeText } from './spellText'
 
@@ -18,6 +18,7 @@ export function SpellDetails({ spell, entries }: { spell: Spell; entries: Readon
   ].filter((fact) => fact.value !== '')
   return (
     <Stack gap="md">
+      <SourceTags provenance={spell.provenance} />
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
         {facts.map((fact) => <div key={fact.key}>
           <Text size="xs" c="dimmed" tt="uppercase">{fact.label}</Text>

@@ -109,7 +109,7 @@ func validatePackNamespaces(p *PackDocument) error {
 			}
 		}
 		for collection, bundle := range collections {
-			if collection != "terms" && collection != "actions" && collection != "resources" && len(bundle) > 0 && p.Entities[collection] == nil {
+			if collection != "sources" && collection != "terms" && collection != "actions" && collection != "resources" && len(bundle) > 0 && p.Entities[collection] == nil {
 				return fmt.Errorf("translations for absent collection %s", collection)
 			}
 		}

@@ -2,6 +2,7 @@ package pack
 
 import (
 	"context"
+
 	"github.com/promix1722/easydnd/internal/domain/user"
 )
 
@@ -38,6 +39,7 @@ type Engine interface {
 	Default() Lock
 	Schema() []byte
 	NewDraft(string) []byte
+	ImportZIP([]byte) ([]byte, error)
 	Fork([]byte, string, map[string]string) ([]byte, error)
 	CheckDraft([]byte, string) error
 	Resolve(context.Context, []Document, []Release) (Lock, error)

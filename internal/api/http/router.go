@@ -207,6 +207,8 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 				packs := authed.Group("/packs", middleware.NoStore())
 				packs.GET("", h.Pack.List)
 				packs.POST("", h.Pack.Create)
+				packs.GET("/spells", h.Pack.Spells)
+				packs.GET("/spell-filters", h.Pack.SpellFilters)
 				packs.GET("/schema", h.Pack.Schema)
 				packs.POST("/import", h.Pack.Import)
 				packs.POST("/resolve", h.Pack.Resolve)

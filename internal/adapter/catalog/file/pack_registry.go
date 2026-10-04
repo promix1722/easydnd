@@ -462,6 +462,7 @@ func compilePacks(docs []*PackDocument, locale rules.Locale, lock pack.Lock) (*c
 		return nil, err
 	}
 	c.Lock = lock.Clone()
+	applyProvenance(c, docs, locale, lock)
 	c.Mechanics, err = mechanics.domain(prose["resources"], prose["actions"])
 	if err != nil {
 		return nil, err

@@ -13,12 +13,27 @@
 // lint cannot catch is the one that rots.
 package catalog
 
-// Entry is the part every catalogue entry has, already in the requested
-// locale.
+// Provenance identifies the exact pack release and its published sources.
+type Provenance struct {
+	PackID    string       `json:"packId"`
+	PackTitle string       `json:"packTitle"`
+	Version   string       `json:"version"`
+	Digest    string       `json:"digest"`
+	Sources   []BookSource `json:"sources"`
+}
+
+// BookSource names one source in a pack's source registry.
+type BookSource struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// Entry is the part every catalogue entry has, already in the requested locale.
 type Entry struct {
-	Slug string   `json:"slug"`
-	Name string   `json:"name"`
-	Desc []string `json:"desc,omitempty"`
+	Provenance *Provenance `json:"provenance,omitempty"`
+	Slug       string      `json:"slug"`
+	Name       string      `json:"name"`
+	Desc       []string    `json:"desc,omitempty"`
 }
 
 // Choice is a prompt: choose N of these.
@@ -390,6 +405,7 @@ type MagicItem struct {
 // 319 spells at full fidelity is a payload nobody needs in order to browse.
 // The prose and the effect detail come from the same endpoint with ?slugs=.
 type Spell struct {
+	CatalogPacks string `json:"catalogPacks,omitempty"`
 	Entry
 	Source        string            `json:"source,omitempty"`
 	Level         int               `json:"level"`

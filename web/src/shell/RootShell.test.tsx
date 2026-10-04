@@ -129,18 +129,19 @@ describe('RootShell', () => {
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
   })
 
-  it('opens every section from the mobile header dropdown', async () => {
+  it('omits Homebrew from the mobile header dropdown', async () => {
     const user = setupUser()
     shellAt('mobile')
 
     await user.click(screen.getByRole('button', { name: 'Characters' }))
 
-    for (const section of SECTIONS) {
+    for (const section of SECTIONS.filter((item) => !item.desktopOnly)) {
       expect(screen.getByRole('menuitem', { name: named(section) })).toHaveAttribute(
         'href',
         section.to,
       )
     }
+    expect(screen.queryByRole('menuitem', { name: 'Homebrew' })).not.toBeInTheDocument()
     // Exactly one row is marked as where you already are.
     expect(screen.getAllByRole('menuitem').filter((el) => el.getAttribute('aria-current'))).toEqual([
       screen.getByRole('menuitem', { name: 'Characters' }),

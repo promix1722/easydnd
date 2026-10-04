@@ -14,6 +14,7 @@ import (
 // is not a substring search. Every zero field matches everything, so the zero
 // filter is the whole collection.
 type SpellFilter struct {
+	PackIDs, Sources []string
 	// Name matches case-insensitively anywhere in the localized name.
 	Name string
 
@@ -63,6 +64,23 @@ func (f SpellFilter) Matches(s Spell) bool {
 	}
 	if f.Material != nil && s.Components.Material != *f.Material {
 		return false
+	}
+	if len(f.PackIDs) > 0 && (s.Provenance == nil || !slices.Contains(f.PackIDs, s.Provenance.PackID)) {
+		return false
+	}
+	if len(f.Sources) > 0 {
+		found := false
+		if s.Provenance != nil {
+			for _, source := range s.Provenance.Sources {
+				if slices.Contains(f.Sources, source.ID) {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			return false
+		}
 	}
 	return true
 }

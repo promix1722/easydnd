@@ -13,6 +13,7 @@ import { abilityName, choiceOptionName } from './labels'
  * client cannot get it wrong.
  */
 export interface Choosable {
+  provenance?: Entry['provenance']
   key: string
   label: string
   detail?: string
@@ -57,6 +58,7 @@ export function choosableOptions(
   if (set.kind !== 'explicit') {
     return [...entries.values()].map((entry) => ({
       key: entry.slug,
+      provenance: entry.provenance,
       label: entry.name,
       ...maybeDetail(entry.desc?.join("\n\n")),
       disabled: disabledBy(t, prompt, held, entry.slug) !== undefined,
@@ -68,6 +70,7 @@ export function choosableOptions(
     const reason = disabledBy(t, prompt, held, option.key)
     return {
       key: option.key,
+      provenance: option.ref ? entries.get(slugOf(option.ref))?.provenance : undefined,
       label: optionLabel(t, option, entries),
       ...maybeDetail(detailOf(t, option, entries)),
       disabled: reason !== undefined,

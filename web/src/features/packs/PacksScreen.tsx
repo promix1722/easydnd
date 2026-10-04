@@ -40,7 +40,7 @@ export function PacksScreen() {
             </Button>
             <FileInput
               label={t('packs.import')}
-              accept="application/json,.json"
+              accept="application/json,application/zip,.json,.zip"
               disabled={pending}
               onChange={(file) => {
                 if (file) void create(file)

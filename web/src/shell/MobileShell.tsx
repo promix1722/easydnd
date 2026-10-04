@@ -149,7 +149,7 @@ export function MobileShell() {
                 navbar's entries are links, and a section should be the same
                 kind of thing to a browser on both. */}
             <Menu.Dropdown>
-              {SECTIONS.map((section) => (
+              {SECTIONS.filter((section) => !section.desktopOnly).map((section) => (
                 <Menu.Item
                   key={section.to}
                   component={Link}

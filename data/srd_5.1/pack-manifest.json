@@ -1,7 +1,11 @@
 {
+  "title": "SRD 5.1",
+  "sources": {
+    "srd-5.1": "SRD 5.1"
+  },
   "schemaVersion": 1,
   "id": "srd-2014",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "edition": "2014",
   "semantics": "1",
   "requires": [
@@ -83,6 +87,7 @@
     "locales/ru/terms": "i18n/ru/terms.json",
     "locales/ru/traits": "i18n/ru/traits.json",
     "locales/ru/weapon-properties": "i18n/ru/weapon-properties.json",
-    "mechanics": "mechanics.json"
+    "mechanics": "mechanics.json",
+    "provenance": "provenance.json"
   }
 }

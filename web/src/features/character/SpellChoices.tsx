@@ -1,3 +1,4 @@
+import { sourceOptions } from '@/lib/api'
 import { useState, type ReactNode } from 'react'
 
 import { slugOf } from '@/domain'
@@ -6,7 +7,7 @@ import { useT } from '@/lib/i18n'
 import { Button, Group, Stack, Text, Title } from '@/ui'
 import { SpellChoiceRow } from './SpellChoiceRow'
 import { SpellFilters } from '@/features/spells/SpellFilters'
-import { matchesSpellFilters, EMPTY_SPELL_FILTERS } from '@/features/spells/filterSpells'
+import { matchesSpellFilters, hasSpellFilters, EMPTY_SPELL_FILTERS } from '@/features/spells/filterSpells'
 import { levelText } from '@/features/spells/spellText'
 
 import type { Choosable } from './options'
@@ -44,7 +45,7 @@ export function SpellChoices({ choice, options, entries, picked, pending, onTogg
     : matchesSpellFilters(spell, filters)))
     .sort((a, b) => (a.spell?.level ?? -1) - (b.spell?.level ?? -1) || a.option.label.localeCompare(b.option.label))
   const selectedLevels = [...new Set(selected.map(({ spell }) => spell?.level ?? -1))].sort((a, b) => a - b)
-  const filtered = Object.entries(filters).some(([key, value]) => value !== EMPTY_SPELL_FILTERS[key as keyof typeof filters])
+  const filtered = hasSpellFilters(filters)
 
   function renderRow({ option, slug, spell }: typeof rows[number], isSelected: boolean) {
     return <SpellChoiceRow key={option.key} option={option} slug={slug} spell={spell} entries={entries}
@@ -65,7 +66,7 @@ export function SpellChoices({ choice, options, entries, picked, pending, onTogg
         ))}
       </Stack>
       {confirmation}
-      <SpellFilters value={filters} onChange={setFilters} schools={schools} classes={classes} />
+      <SpellFilters sourceOptions={sourceOptions([...entries.values()].filter((entry) => 'level' in entry))} value={filters} onChange={setFilters} schools={schools} classes={classes} />
       <Group gap="sm" justify="space-between">
         <Text size="sm" c="dimmed" aria-live="polite">{t('spells.count', { count: visible.length })}</Text>
         {filtered && <Button variant="subtle" onClick={() => setFilters(EMPTY_SPELL_FILTERS)}>{t('prompt.resetSpellFilters')}</Button>}

@@ -37,10 +37,11 @@ const maxPackBytes = 64 << 20
 // PackDocument is the portable, lossless pack representation. Locale keys are
 // collection -> local ID -> prose; mechanics labels use the resources collection.
 type PackDocument struct {
-	Manifest  PackManifest                 `json:"manifest"`
-	Entities  map[string]json.RawMessage   `json:"entities"`
-	Mechanics PackMechanics                `json:"mechanics,omitempty"`
-	Locales   map[string]map[string]Bundle `json:"locales"`
+	Provenance map[string]map[string][]string `json:"provenance,omitempty"`
+	Manifest   PackManifest                   `json:"manifest"`
+	Entities   map[string]json.RawMessage     `json:"entities"`
+	Mechanics  PackMechanics                  `json:"mechanics,omitempty"`
+	Locales    map[string]map[string]Bundle   `json:"locales"`
 }
 
 func strictJSON(data []byte, out any) error {
@@ -162,7 +163,7 @@ func (p *PackDocument) Validate() error {
 			return fmt.Errorf("locale %q: %w", tag, err)
 		}
 		for collection, bundle := range collections {
-			if collection != "resources" && collection != "actions" && collection != "terms" {
+			if collection != "resources" && collection != "actions" && collection != "terms" && collection != "sources" {
 				if _, ok := collectionTypes[collection]; !ok {
 					return fmt.Errorf("unknown locale collection %q", collection)
 				}
@@ -240,6 +241,9 @@ func (p *PackDocument) Validate() error {
 	if err := validatePackNamespaces(p); err != nil {
 		return err
 	}
+	if err := p.validateProvenance(); err != nil {
+		return err
+	}
 	return validateMechanics(p.Mechanics)
 }
 
@@ -265,6 +269,13 @@ func PackDigest(p *PackDocument) (string, error) {
 	for _, value := range doc["entities"].(map[string]any) {
 		a := value.([]any)
 		slices.SortFunc(a, func(x, y any) int { bx, _ := json.Marshal(x); by, _ := json.Marshal(y); return bytes.Compare(bx, by) })
+	}
+	if collections, ok := doc["provenance"].(map[string]any); ok {
+		for _, value := range collections {
+			for _, sources := range value.(map[string]any) {
+				slices.SortFunc(sources.([]any), func(a, b any) int { return strings.Compare(a.(string), b.(string)) })
+			}
+		}
 	}
 	if m, ok := doc["mechanics"].(map[string]any); ok {
 		for _, key := range []string{"resources", "rules", "actions", "overrides"} {
@@ -306,7 +317,7 @@ func LoadPack(path string) (*PackDocument, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		b, err := io.ReadAll(io.LimitReader(f, maxPackBytes+1))
 		if err != nil {
 			return nil, err
@@ -317,12 +328,31 @@ func LoadPack(path string) (*PackDocument, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
+	read := func(name string) ([]byte, error) {
+		f, err := root.Open(name)
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _ = f.Close() }()
+		return io.ReadAll(io.LimitReader(f, maxPackBytes+1))
+	}
+	p, err := readPackDirectory(read)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.Validate(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return p, nil
+}
+
+func readPackDirectory(read func(string) ([]byte, error)) (*PackDocument, error) {
 	name := "pack-manifest.json"
-	b, err := root.ReadFile(name)
+	b, err := read(name)
 	if os.IsNotExist(err) {
 		name = "manifest.json"
-		b, err = root.ReadFile(name)
+		b, err = read(name)
 	}
 	if err != nil {
 		return nil, err
@@ -337,12 +367,7 @@ func LoadPack(path string) (*PackDocument, error) {
 		if !fs.ValidPath(physical) {
 			return nil, fmt.Errorf("invalid pack path %q", physical)
 		}
-		f, err := root.Open(physical)
-		if err != nil {
-			return nil, err
-		}
-		data, err := io.ReadAll(io.LimitReader(f, int64(maxPackBytes-total+1)))
-		_ = f.Close()
+		data, err := read(physical)
 		if err != nil {
 			return nil, err
 		}
@@ -351,6 +376,10 @@ func LoadPack(path string) (*PackDocument, error) {
 			return nil, fmt.Errorf("pack exceeds size limit")
 		}
 		switch {
+		case logical == "provenance":
+			if err = strictJSON(data, &p.Provenance); err != nil {
+				return nil, err
+			}
 		case logical == "mechanics":
 			if err = strictJSON(data, &p.Mechanics); err != nil {
 				return nil, err
@@ -374,9 +403,6 @@ func LoadPack(path string) (*PackDocument, error) {
 			return nil, fmt.Errorf("unknown pack file key %q", logical)
 		}
 	}
-	if err := p.Validate(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
-	}
 	return p, nil
 }
 
@@ -397,7 +423,7 @@ func SavePackDirectory(path string, p *PackDocument) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(temp)
+	defer func() { _ = os.RemoveAll(temp) }()
 	manifest := p.Manifest
 	manifest.Files = map[string]string{}
 	write := func(logical, name string, v any) error {
@@ -413,6 +439,11 @@ func SavePackDirectory(path string, p *PackDocument) error {
 		}
 		manifest.Files[logical] = name
 		return nil
+	}
+	if len(p.Provenance) > 0 {
+		if err = write("provenance", "provenance.json", p.Provenance); err != nil {
+			return err
+		}
 	}
 	for name, data := range p.Entities {
 		if err = write("entities/"+name, "entities/"+name+".json", data); err != nil {

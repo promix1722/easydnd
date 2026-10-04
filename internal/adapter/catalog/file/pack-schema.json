@@ -8,9 +8,10 @@
    "schemaVersion":{"const":1},"id":{"type":"string","pattern":"^[a-z][a-z0-9-]{0,79}$"},"version":{"type":"string"},"edition":{"type":"string","minLength":1},"semantics":{"const":"1"},"defaultLocale":{"type":"string","minLength":2},
    "requires":{"type":"array","items":{"enum":["effects.v1","resources.v1","progressions.v1","overrides.v1","actions.v1"]},"uniqueItems":true},
    "dependencies":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["id","version"],"properties":{"id":{"type":"string"},"version":{"type":"string"}}}},
-   "source":{"type":"string"},"attribution":{"type":"string"},"files":{"type":"object","additionalProperties":{"type":"string"}}
+   "title":{"type":"string"},"sources":{"type":"object","additionalProperties":{"type":"string"}},"source":{"type":"string"},"attribution":{"type":"string"},"files":{"type":"object","additionalProperties":{"type":"string"}}
   }},
   "entities":{"type":"object","additionalProperties":{"type":"array","items":{"type":"object"}}},
+  "provenance":{"type":"object","additionalProperties":{"type":"object","additionalProperties":{"type":"array","items":{"type":"string"},"uniqueItems":true}}},
   "mechanics":{"type":"object"},
   "locales":{"type":"object","additionalProperties":{"type":"object","additionalProperties":{"type":"object"}}}
  }

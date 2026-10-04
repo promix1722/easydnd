@@ -13,7 +13,7 @@ import (
 
 func spellCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
-	registry, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, []file.Dependency{{ID: "srd-2014", Version: "1.0.0"}}, "")
+	registry, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^1.0.0"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}

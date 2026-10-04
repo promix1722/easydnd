@@ -222,7 +222,7 @@ describe('PromptCard', () => {
     expect(stealth).toBeEnabled()
     await user.click(stealth)
 
-    expect(stealth).toHaveAttribute('data-variant', 'filled')
+    expect(stealth).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /Acrobatics/ })).toHaveAttribute(
       'data-variant',
       'default',

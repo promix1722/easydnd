@@ -1,5 +1,5 @@
 import type { Icon } from '@tabler/icons-react'
-import { IconDice5, IconShield, IconUsers, IconWand } from '@tabler/icons-react'
+import { IconDice5, IconSettings, IconShield, IconUsers, IconWand } from '@tabler/icons-react'
 
 import type { MessageKey } from '@/lib/i18n'
 
@@ -17,6 +17,8 @@ import type { MessageKey } from '@/lib/i18n'
 export interface Section {
   /** Where the section links: the navbar's entry, and the first crumb's. */
   to: string
+  /** Omit authoring tools from the phone navigation. */
+  desktopOnly?: boolean
   /**
    * What to call it -- a message key, not a word.
    *
@@ -66,7 +68,7 @@ export const SECTIONS: readonly Section[] = [
   { to: '/', label: 'section.characters', icon: IconUsers, owns: ['/characters'] },
   { to: '/groups', label: 'section.groups', icon: IconShield, owns: ['/groups'] },
   { to: '/games', label: 'section.games', icon: IconDice5, owns: ['/games'] },
-  { to: '/homebrew', label: 'section.homebrew', icon: IconWand, owns: ['/homebrew'] },
+  { to: '/homebrew', label: 'section.homebrew', icon: IconSettings, owns: ['/homebrew'], desktopOnly: true },
   { to: '/spells', label: 'section.spells', icon: IconWand, owns: ['/spells'] },
 ]
 

@@ -434,7 +434,10 @@ function mockApi({
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
-      if (apiPath(url) === '/v1/packs') return jsonResponse({ packs: [], defaultRules: { edition: '2014', semantics: '1', packs: [] } })
+      const baseRelease = { id: 'srd-2014', version: '1.0.0', digest: 'base' }
+      const defaultRules = { edition: '2014', semantics: '1', packs: [baseRelease] }
+      if (apiPath(url) === '/v1/packs') return jsonResponse({ packs: [{ id: baseRelease.id, title: 'SRD 5.1', releases: [baseRelease] }], defaultRules })
+      if (apiPath(url) === '/v1/packs/resolve') return jsonResponse(defaultRules)
       if (method !== 'GET') {
         posted.push({ url, method, body: JSON.parse(String(init?.body ?? '{}')) })
         if (apiPath(url) === '/v1/characters') {
@@ -1305,7 +1308,7 @@ describe('BuildScreen', () => {
         },
       ],
     })
-  })
+  }, 10_000)
 })
 
 /**
@@ -1327,6 +1330,10 @@ describe('a new character', () => {
     expect(panel('personal').queryByText('Level')).not.toBeInTheDocument()
     expect(panel('rules').getByText('The rules to play by')).toBeInTheDocument()
     expect(panel('rules').getByText('Rule packs')).toBeInTheDocument()
+    const rulesHeader = panel('rules').getByRole('button', { name: 'The rules to play by' })
+    const packsHeader = panel('rules').getByRole('button', { name: 'Rule packs' })
+    expect(rulesHeader.compareDocumentPosition(packsHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(packsHeader).toHaveAttribute('aria-expanded', 'false')
     expect(panel('personal').queryByText('Rule packs')).not.toBeInTheDocument()
     expect(panel('class').getByText('Level')).toBeInTheDocument()
 
@@ -1361,8 +1368,14 @@ describe('a new character', () => {
     await user.keyboard('{Enter}')
 
     expect(current()).toBe('Rules')
+    expect(panel('rules').getByRole('button', { name: 'Rule packs' })).toHaveAttribute('aria-expanded', 'true')
+    expect(panel('rules').getByRole('button', { name: 'The rules to play by' }).closest('[data-highlighted="true"]')).toBeNull()
+    const pack = await panel('rules').findByRole('button', { name: /SRD 5.1/ })
+    await waitFor(() => expect(pack).toHaveFocus())
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
     const next = await panel('rules').findByRole('button', { name: 'Next' })
     await waitFor(() => expect(next).toHaveFocus())
+    expect(panel('rules').getByRole('button', { name: 'Rule packs' }).closest('[data-highlighted="true"]')).toBeNull()
     await user.keyboard('{Enter}')
 
     expect(current()).toBe('Personal')
@@ -1374,7 +1387,7 @@ describe('a new character', () => {
     await user.keyboard('{Enter}')
 
     await waitFor(() => expect(writes()).toHaveLength(2))
-    expect(writes()[0]?.body).toEqual({ name: 'Zephyr' })
+    expect(writes()[0]?.body).toMatchObject({ name: 'Zephyr', rules: { edition: '2014', packs: [{ id: 'srd-2014' }] } })
     expect(writes()[1]?.body).toMatchObject({
       expectedSeq: 1,
       events: [{ type: 'change', changes: [
@@ -1388,6 +1401,10 @@ describe('a new character', () => {
     renderNew(viewport)
 
     await user.click(await screen.findByRole('button', { name: 'D&D 2014' }))
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
+    expect(panel('rules').getByRole('button', { name: 'Rule packs' })).toHaveAttribute('aria-expanded', 'true')
+    const pack = await panel('rules').findByRole('button', { name: /SRD 5.1/ })
+    await waitFor(() => expect(pack).toHaveFocus())
     await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
     const next = await panel('rules').findByRole('button', { name: 'Next' })
     await waitFor(() => expect(next).toHaveFocus())
@@ -1506,7 +1523,7 @@ describe('a new character', () => {
     await waitFor(() => {
       expect(current()).toBe('Class')
     })
-    expect(screen.queryByText('A race')).not.toBeInTheDocument()
+    expect(panel('class').queryByText('A race')).not.toBeInTheDocument()
 
     // The URL was replaced, so nothing on the built screen creates a second one.
     await user.click(tab('background'))

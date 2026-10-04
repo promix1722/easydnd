@@ -8,6 +8,8 @@ import (
 
 // PackManifest is shared by directory and single-file representations.
 type PackManifest struct {
+	Title         string            `json:"title,omitempty"`
+	Sources       map[string]string `json:"sources,omitempty"`
 	SchemaVersion int               `json:"schemaVersion"`
 	ID            string            `json:"id"`
 	Version       string            `json:"version"`

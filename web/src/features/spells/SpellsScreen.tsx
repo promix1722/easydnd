@@ -1,13 +1,13 @@
-import { PackSelector } from '@/features/packs'
-import type { RulesLock } from '@/lib/api/packs'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import type { Entry, Spell, SpellPage, SpellSearch } from '@/lib/api'
-import { bySlug, getCollection, searchSpells } from '@/lib/api'
+import { bySlug, getCollection, getSpellBrowseOptions, searchSpells, sourceOptions } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
 import {
+  Alert,
+  SourceTags,
   Anchor,
   Badge,
   Box,
@@ -58,25 +58,33 @@ const PAGE_SIZE = 50
 export function SpellsScreen() {
   const t = useT()
   const [params, setParams] = useSearchParams()
-  const packQuery = params.get('packs') ?? ''
-  const scope = packQuery ? `/packs/catalog?packs=${encodeURIComponent(packQuery)}` : ''
-  const selectedLock: RulesLock | undefined = packQuery ? { edition: '2014', semantics: '1', packs: packQuery.split(',').map((p) => { const [id, version] = p.split('@'); return { id: id!, version: version!, digest: '' } }) } : undefined
-  const spellURL = (slug: string) => `/spells/${encodeURIComponent(slug)}${packQuery ? `?packs=${encodeURIComponent(packQuery)}` : ''}`
+  const pendingParams = useRef(params)
+  useEffect(() => { pendingParams.current = params }, [params])
 
-  function setParam(key: string, value: string | null) {
-    setParams(
-      (previous) => {
-        const next = new URLSearchParams(previous)
-        if (value === null || value === '') next.delete(key)
-        else next.set(key, value)
-        return next
-      },
-      { replace: true },
-    )
+  function changeParams(update: (next: URLSearchParams) => void) {
+    // useSearchParams does not queue functional updates. Keep the latest
+    // requested URL until navigation commits so quick edits accumulate.
+    const next = new URLSearchParams(pendingParams.current)
+    update(next)
+    pendingParams.current = next
+    setParams(next, { replace: true })
+  }
+  const packQuery = params.get('packs') ?? ''
+  const scope = packQuery ? `/packs/catalog?packs=${encodeURIComponent(packQuery)}` : 'browse'
+  const versions = params.get('versions') ?? ''
+  const packIds = params.get('pack')?.split(',').filter(Boolean) ?? []
+  const sources = params.get('source')?.split(',').filter(Boolean) ?? []
+  const spellURL = (spell: Spell) => {
+    const context = spell.catalogPacks ?? packQuery
+    return `/spells/${encodeURIComponent(spell.slug)}${context ? `?packs=${encodeURIComponent(context)}` : ''}`
   }
 
-  const packSelector = <Panel><PackSelector value={selectedLock} onChange={(lock) => { const next = new URLSearchParams(); next.set('packs', lock.packs.map((p) => `${p.id}@${p.version}`).join(',')); setParams(next) }} /></Panel>
-
+  function setParam(key: string, value: string | null) {
+    changeParams((next) => {
+      if (value === null || value === '') next.delete(key)
+      else next.set(key, value)
+    })
+  }
   const query = (params.get('q') ?? '').trim()
   const level = params.get('level')
   const school = params.get('school')
@@ -101,20 +109,30 @@ export function SpellsScreen() {
 
   function updateFilters(value: SpellFilterValues) {
     setDraft(value.query)
-    setParams((previous) => {
-      const next = new URLSearchParams(previous)
+    // Router navigation may still be pending when another control changes.
+    // Only write fields changed by this interaction so it cannot overwrite
+    // another control's newer URL value with a previous render's value.
+    const current = {
+      pack: packIds.join(',') || null, source: sources.join(',') || null,
+      level, school, class: casterClass, time,
+      conc: concentration ? '1' : null,
+      ritual: ritual ? '1' : null,
+      nomat: noMaterial ? '1' : null,
+    }
+    changeParams((next) => {
       const fields = {
+        pack: value.packIds?.join(',') || null, source: value.sources?.join(',') || null,
         level: value.level, school: value.school, class: value.casterClass, time: value.time,
         conc: value.concentration ? '1' : null,
         ritual: value.ritual ? '1' : null,
         nomat: value.noMaterial ? '1' : null,
       }
       for (const [key, field] of Object.entries(fields)) {
+        if (field === current[key as keyof typeof current]) continue
         if (field === null) next.delete(key)
         else next.set(key, field)
       }
-      return next
-    }, { replace: true })
+    })
   }
 
   const search: SpellSearch = {
@@ -126,6 +144,9 @@ export function SpellsScreen() {
     ...(concentration ? { concentration: true } : {}),
     ...(ritual ? { ritual: true } : {}),
     ...(noMaterial ? { material: false } : {}),
+    ...(packIds.length ? { pack: packIds.join(',') } : {}),
+    ...(sources.length ? { source: sources.join(',') } : {}),
+    ...(scope === 'browse' && versions ? { versions } : {}),
     limit: PAGE_SIZE,
   }
   const searchKey = JSON.stringify([scope, search])
@@ -136,13 +157,20 @@ export function SpellsScreen() {
   // the list of schools and the list of classes are the same whatever is being
   // searched for. Both are served from the catalogue cache after the first
   // visit, so this is usually not a request at all.
-  const options = useResource(`spells:options:${scope}`, async () => {
-    const [schools, classes] = await Promise.all([
-      getCollection<Entry>('magic-schools', scope),
-      getCollection<Entry>('classes', scope),
+  const options = useResource(`spells:options:${scope}:${versions}`, async () => {
+    if (scope === 'browse') return getSpellBrowseOptions(versions)
+    const [schools, classes, spells] = await Promise.all([
+      getCollection<Entry>('magic-schools', scope), getCollection<Entry>('classes', scope), getCollection<Spell>('spells', scope),
     ])
-    return { schools, classes }
+    return { schools, classes, ...sourceOptions(spells), unavailable: [] }
   })
+  useEffect(() => {
+    if (!options.data) return
+    const valid = sources.filter((id) => options.data?.sources.some((s) => s.id === id && (!packIds.length || packIds.includes(s.packId))))
+    if (valid.length !== sources.length) setParam('source', valid.join(','))
+    // Source options follow the requested release; keep unrelated URL filters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.data, params.get('pack'), params.get('source')])
 
   const found = useResource(`spells:${searchKey}`, (signal) => searchSpells(search, signal, scope))
 
@@ -173,7 +201,7 @@ export function SpellsScreen() {
     onRetry: options.reload,
   })
   if (state.kind !== 'ready' || options.data === null) {
-    return <Page trail={[]}>{packSelector}<PageBody state={state}>{null}</PageBody></Page>
+    return <Page trail={[]}><PageBody state={state}>{null}</PageBody></Page>
   }
 
   const { schools, classes } = options.data
@@ -203,16 +231,23 @@ export function SpellsScreen() {
 
   return (
     <Page trail={[]}>
-      {packSelector}
+
       <Panel>
         <Stack gap="md">
           <SpellFilters
-            value={{ query: draft, level, school, casterClass, time, concentration, ritual, noMaterial }}
+            value={{ query: draft, level, school, casterClass, time, concentration, ritual, noMaterial, packIds, sources }}
+            sourceOptions={options.data}
+            {...(scope === 'browse' ? { onVersionChange: (pack: string, version: string) => {
+              const selected = new Map(versions.split(',').filter(Boolean).map((s) => s.split('@') as [string, string]))
+              selected.set(pack, version)
+              setParam('versions', [...selected].map(([id, v]) => `${id}@${v}`).join(','))
+            } } : {})}
             onChange={updateFilters}
             schools={schools}
             classes={classes}
           />
 
+          {options.data.unavailable.length > 0 && <Alert color="orange">{t('spells.unavailablePacks')} {options.data.unavailable.map((p) => `${p.id}@${p.version}`).join(', ')}</Alert>}
           {/* Everything below here, and nothing above it, answers to the
               search. `found.loading` dims it rather than replacing it: the
               rows on screen are the previous answer, not a wrong one, and a
@@ -231,21 +266,27 @@ export function SpellsScreen() {
 
                   <DataList
                     items={rows}
-                    getKey={(spell) => spell.slug}
+                    getKey={(spell) => `${spell.provenance?.packId}@${spell.provenance?.version}/${spell.slug}`}
                     leading={(spell) => <SpellIcon slug={spell.slug} size={32} />}
-                    badges={(spell) => <Group gap="xs"><SpellTags spell={spell} /><Badge variant="light">{spell.slug.includes('/') ? spell.slug.split('/')[0] : t('packs.srd')}</Badge></Group>}
+                    badges={(spell) => <SpellTags spell={spell} />}
                     columns={[
                       {
                         key: 'name',
                         header: t('spells.name'),
                         primary: true,
                         text: (spell) => spell.name,
-                        to: (spell) => spellURL(spell.slug),
+                        to: (spell) => spellURL(spell),
                         render: (spell) => (
-                          <Anchor component={Link} to={spellURL(spell.slug)}>
+                          <Anchor component={Link} to={spellURL(spell)}>
                             <Text size="sm">{spell.name}</Text>
                           </Anchor>
                         ),
+                      },
+                      {
+                        key: 'source',
+                        header: t('spells.filter.source'),
+                        slot: 'block',
+                        render: (spell) => <SourceTags provenance={spell.provenance} />,
                       },
                       {
                         key: 'level',

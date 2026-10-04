@@ -107,7 +107,7 @@ func (h *Handler) Import(c *gin.Context) {
 		return
 	}
 	title := c.Query("title")
-	r, err := h.service.Create(c.Request.Context(), actor(c), title, b, nil)
+	r, err := h.service.Import(c.Request.Context(), actor(c), title, b, c.ContentType() == "application/zip")
 	respond(c, recordOf(r, actor(c).ID, true), err)
 }
 func (h *Handler) Save(c *gin.Context) {

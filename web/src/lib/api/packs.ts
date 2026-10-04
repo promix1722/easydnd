@@ -14,6 +14,7 @@ export interface RulesLock {
 export type PackValue =
   string | number | boolean | null | PackValue[] | { [key: string]: PackValue }
 export interface PackDocument {
+  provenance?: Record<string, Record<string, string[]>>
   manifest: { id: string; version: string; [key: string]: PackValue }
   entities: Record<string, PackValue>
   mechanics?: Record<string, PackValue>
@@ -58,8 +59,8 @@ export const createPack = (title: string, document?: PackDocument) =>
   request<PackRecord>('/packs', { method: 'POST', body: { title, document } })
 export const importPack = async (file: File) =>
   request<PackRecord>(
-    `/packs/import?title=${encodeURIComponent(file.name.replace(/\.json$/i, ''))}`,
-    { method: 'POST', rawBody: await file.text() },
+    `/packs/import?title=${encodeURIComponent(file.name.replace(/\.(json|zip)$/i, ''))}`,
+    { method: 'POST', rawBody: /\.zip$/i.test(file.name) ? file : await file.text(), contentType: /\.zip$/i.test(file.name) ? 'application/zip' : 'application/json' },
   )
 export const savePack = (
   pack: PackRecord,

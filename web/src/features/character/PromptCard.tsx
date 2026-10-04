@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Answer, Choice, Entry, Option, Prompt } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
-import { Button, Group, Stack, Text } from '@/ui'
+import { Button, Group, SourceTags, Stack, Text } from '@/ui'
 
 import { SpellChoices } from './SpellChoices'
 
@@ -154,8 +154,12 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
           return (
             <Button
               key={option.key}
-              variant={count > 0 ? 'filled' : 'default'}
+              aria-label={stacked(t, stage, option.key, count, entries) ?? option.label}
+              variant={count > 0 ? 'light' : 'default'}
+              c="var(--mantine-color-text)"
+              aria-pressed={count > 0}
               justify="space-between"
+              styles={{ label: { width: '100%', minWidth: 0 } }}
               // The description underneath makes a picked option two or three
               // lines tall, and a button that fixes its own height would crop
               // it. Padded rather than sized.
@@ -178,16 +182,19 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
                 ) : null
               }
             >
-              <Stack gap={2} style={{ textAlign: 'left' }}>
-                <Text size="sm" style={{ whiteSpace: 'normal' }}>
-                  {/*
-                    Two points into Strength reads "Strength +2". It used to
-                    read "Strength +1" with a ×2 badge beside it, which is the
-                    number the option is worth and the number of them, left for
-                    the player to multiply.
-                  */}
-                  {stacked(t, stage, option.key, count, entries) ?? option.label}
-                </Text>
+              <Stack gap={2} w="100%" style={{ textAlign: 'left', minWidth: 0 }}>
+                <Group justify="space-between" wrap="nowrap" w="100%">
+                  <Text size="sm" style={{ whiteSpace: 'normal', minWidth: 0, flex: 1 }}>
+                    {/*
+                      Two points into Strength reads "Strength +2". It used to
+                      read "Strength +1" with a ×2 badge beside it, which is the
+                      number the option is worth and the number of them, left for
+                      the player to multiply.
+                    */}
+                    {stacked(t, stage, option.key, count, entries) ?? option.label}
+                  </Text>
+                  <SourceTags provenance={option.provenance} rightAligned />
+                </Group>
                 {/*
                   Only under the one that was picked. Every option carrying its
                   own paragraph turns a list of six into a page nobody reads,

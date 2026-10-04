@@ -355,3 +355,15 @@ func (s *Service) Unshare(ctx context.Context, u user.ID, g, id string) error {
 	}
 	return denied()
 }
+
+// Import converts a directory archive before creating the same independent draft as JSON.
+func (s *Service) Import(ctx context.Context, u user.User, title string, data []byte, zip bool) (domain.Record, error) {
+	if zip {
+		var err error
+		data, err = s.engine.ImportZIP(data)
+		if err != nil {
+			return domain.Record{}, invalid(err)
+		}
+	}
+	return s.Create(ctx, u, title, data, nil)
+}

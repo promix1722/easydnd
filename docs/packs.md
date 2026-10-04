@@ -285,13 +285,30 @@ it. A private dependency owned by somebody else must already be available to the
 group before it can be included. Group members can export accessible releases
 and import independent copies; sharing is not a restriction on redistribution.
 
-Browser import/export supports **one portable JSON document**, with no dependency
-bundles or directory uploads. Import creates an owned draft with a new ID and
-version 1.0.0, rewrites self-references, and preserves translations and source
-attribution. External dependencies remain declarations. Import missing packs
-separately, then use dependency mapping to point at their new identities; adjust
-version ranges in the manifest when necessary. Missing dependencies block
-publication, not draft saving. No remote fetching or executable content is added.
+Browser import accepts **one portable JSON document or one ZIP containing a
+pack directory**. Export remains portable JSON. A ZIP may put the manifest and
+referenced files at its root or inside one enclosing folder; package the pack
+folder itself, not a repository containing several packs. `pack-manifest.json`
+takes precedence over `manifest.json` in the same root. Archives have a 64 MiB
+upload/expanded-content limit and at most 4,096 entries. Absolute/traversal paths,
+symlinks, duplicate paths, missing referenced files and multiple pack roots are
+rejected. Files are read directly from the archive, never extracted.
+
+Import creates an owned draft with a new ID and version 1.0.0, rewrites
+self-references, and preserves translations and source attribution. External
+dependencies remain declarations. Import dependencies separately, then use
+mapping to point at their new identities and adjust version ranges as needed.
+Missing dependencies block publication, not draft saving. Failed imports do not
+create partial drafts. No remote fetching or executable content is added.
+
+For an existing directory pack, the CLI can still produce the JSON upload:
+
+```sh
+go run ./cmd/pack -in /path/to/pack -out /tmp/my-pack.json
+```
+
+Supply dependency paths after the first input when required; the output must be
+new. A standalone replacement core needs only its own directory.
 
 The authoring API is `/v1/packs`: list/create, `schema`, `import`, `resolve`,
 `catalog[/collection]`, and per-ID `draft`, `validate`, `publish`, `archive`,
@@ -301,3 +318,55 @@ Every request checks current access before compiling or returning cached content
 Drafts and all private authoring/catalogue responses use `Cache-Control: no-store`.
 Validation has localized reason codes, document locations, and expandable compiler
 details for diagnosing unsupported mechanics.
+
+## Pack and book provenance
+
+`manifest.title` optionally provides a release display name. `manifest.sources`
+maps pack-local source IDs to default display names; IDs use lowercase letters,
+digits, hyphens and dots (for example `srd-5.1`). Localized names live in
+`locales.<locale>.sources.<id>.name`, with normal locale fallback.
+
+The optional `provenance` field maps collection names to local entity IDs to
+arrays of source IDs. A directory references it as `files.provenance`:
+
+```json
+{
+  "manifest": {"title": "My 2014 books", "sources": {"phb": "Player’s Handbook", "xge": "Xanathar’s Guide to Everything"}},
+  "provenance": {"spells": {"example-spell": ["phb", "xge"]}}
+}
+```
+
+This is an excerpt, not a complete pack. Source mappings must name existing
+entities and declared sources. Membership ordering is not semantic. Provenance
+is part of the immutable release digest, survives JSON/directory/ZIP round trips,
+and requires a version bump when changed. Importing a copy retains book
+memberships but derives its owning identity from the new pack. Legacy spells'
+`source` field supplies a fallback; other untagged entities expose only their pack.
+No book is inferred merely from a matching display name.
+
+Catalogue entries return `provenance` with `packId`, `packTitle`, `version`,
+`digest`, and `sources` (`id`, `name`). Source IDs are scoped as `pack-id:book-id`.
+Player-facing races, subraces, classes, subclasses, features, traits, backgrounds,
+feats, equipment, magic items and spells receive provenance. Progression rows
+and structural constants do not get visible tags.
+
+`GET /v1/packs/spell-filters` returns accessible published packs and versions,
+book options, schools, classes and unavailable releases. `GET /v1/packs/spells`
+searches across those releases, independently resolving each dependency closure;
+incompatible cores are never combined. The latest accessible semantic version
+of each non-archived pack is the default. `versions=id@version,...` overrides it.
+`pack=id,...` and `source=pack:book,...` narrow results (OR within a field, AND
+between fields and other spell filters). Existing spell query and pagination
+parameters apply. Scoped catalogue searches accept these filters too.
+
+Aggregate spell rows include `catalogPacks`, the exact dependency versions for
+their detail link. Entries are emitted once from their owning release, so shared
+dependencies do not duplicate results. Access is checked on every request and
+responses use `no-store`. An unavailable release is reported rather than
+silently replaced; explicitly requested inaccessible versions return an error.
+
+Pack confirmations reuse decoded immutable documents by a hash of their actual
+bytes and compiled catalogues by exact lock and locale. Installed release JSON
+is encoded once at startup. Available releases and permissions are still checked
+on every resolve; cached content cannot restore revoked access. The same compiled
+context is reused when the player confirms the name and creates the character.

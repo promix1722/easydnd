@@ -1,6 +1,6 @@
 import type { Entry, Spell } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { ActionIcon, Badge, Button, ChoiceDetails, Group, IconPlus, IconTrash, Paper, Stack, Text, useIsDesktop } from '@/ui'
+import { ActionIcon, Badge, Button, ChoiceDetails, SourceTags, Group, IconPlus, IconTrash, Paper, Stack, Text, useIsDesktop } from '@/ui'
 import { SpellIcon } from '@/features/spells/spellIcon'
 import { SpellTags } from '@/features/spells/SpellTags'
 import { SpellDetails } from '@/features/spells/SpellDetails'
@@ -55,11 +55,14 @@ export function SpellChoiceRow({ option, slug, spell, entries, isSelected, pendi
             <Group gap="xs" wrap="nowrap" align="flex-start" w="100%">
               <SpellIcon slug={slug} size={32} />
               <Stack gap={2} style={{ textAlign: 'left', minWidth: 0, flex: 1 }}>
-                <Group gap="xs">
-                  <Text size="sm" fw={600}>{option.label}</Text>
-                  {spell?.level !== undefined && <Badge size="sm" variant="default">{levelText(t, spell.level)}</Badge>}
-                  {spell !== undefined && <SpellTags spell={spell} />}
-                  {custom && <Badge size="xs" color="orange" variant="light">{t('spellRules.custom')}</Badge>}
+                <Group gap="xs" wrap="nowrap" justify="space-between">
+                  <Group gap="xs" style={{ minWidth: 0, flex: 1 }}>
+                    <Text size="sm" fw={600}>{option.label}</Text>
+                    {spell?.level !== undefined && <Badge size="sm" variant="default">{levelText(t, spell.level)}</Badge>}
+                    {spell !== undefined && <SpellTags spell={spell} />}
+                    {custom && <Badge size="xs" color="orange" variant="light">{t('spellRules.custom')}</Badge>}
+                  </Group>
+                  <SourceTags provenance={spell?.provenance} rightAligned />
                 </Group>
                 {facts.length > 0 && <Text size="xs" c="dimmed">{facts.join(' · ')}</Text>}
                 {option.reason !== undefined && <Text size="xs" c="dimmed">{option.reason}</Text>}

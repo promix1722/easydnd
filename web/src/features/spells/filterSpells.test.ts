@@ -31,3 +31,14 @@ describe('builder spell filters', () => {
     }
   })
 })
+
+it('combines pack and any matching book with other spell filters', () => {
+  const spell = { slug: 'test', name: 'Test spell', level: 0, provenance: {
+    packId: 'personal', packTitle: 'Personal', version: '1.0.0', digest: 'x',
+    sources: [{ id: 'personal:phb', name: 'PHB' }, { id: 'personal:xge', name: 'XGE' }],
+  } }
+  expect(matchesSpellFilters(spell, { ...EMPTY_SPELL_FILTERS, packIds: ['personal'], sources: ['personal:xge'] })).toBe(true)
+  expect(matchesSpellFilters(spell, { ...EMPTY_SPELL_FILTERS, packIds: ['other'], sources: ['personal:xge'] })).toBe(false)
+  expect(matchesSpellFilters(spell, { ...EMPTY_SPELL_FILTERS, sources: ['other:xge'] })).toBe(false)
+  expect(matchesSpellFilters(spell, { ...EMPTY_SPELL_FILTERS, sources: ['personal:phb'], level: '1' })).toBe(false)
+})

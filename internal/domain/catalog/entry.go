@@ -27,6 +27,8 @@ import "github.com/promix1722/easydnd/internal/domain/rules"
 // adapter has to carry a locale or perform a fallback. Where a locale has no
 // translation for a key, these hold the English text.
 type Entry struct {
+	Provenance *Provenance
+
 	// Slug is the stable, language-neutral identity.
 	Slug rules.Slug
 
@@ -72,3 +74,12 @@ const (
 	// PrerequisiteEntry is "the Extra Attack feature".
 	PrerequisiteEntry
 )
+
+// Provenance identifies the immutable owner and the publications describing an entry.
+type Provenance struct {
+	PackID, PackTitle, Version, Digest string
+	Sources                            []BookSource
+}
+
+// BookSource is a publication identifier scoped to its owning pack and its localized name.
+type BookSource struct{ ID, Name string }

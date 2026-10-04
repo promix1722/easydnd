@@ -34,7 +34,8 @@ export interface RequestOptions {
    * parses, and the signature covers those bytes -- re-encoding it here would
    * risk changing them.
    */
-  rawBody?: string
+  rawBody?: string | Blob
+  contentType?: string
 }
 
 function newRequestId(): string {
@@ -99,10 +100,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   if (options.formData !== undefined) {
     init.body = options.formData
   } else if (options.rawBody !== undefined) {
-    headers['Content-Type'] = 'application/json'
+    headers['Content-Type'] = options.contentType ?? 'application/json'
     init.body = options.rawBody
   } else if (options.body !== undefined) {
-    headers['Content-Type'] = 'application/json'
+    headers['Content-Type'] = options.contentType ?? 'application/json'
     init.body = JSON.stringify(options.body)
   }
 

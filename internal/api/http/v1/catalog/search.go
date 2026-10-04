@@ -35,7 +35,7 @@ const (
 const maxPageSize = 200
 
 var searchParams = []string{
-	ParamQuery, ParamLevel, ParamSchool, ParamClass, ParamCastingTime,
+	"pack", "source", ParamQuery, ParamLevel, ParamSchool, ParamClass, ParamCastingTime,
 	ParamConcentration, ParamRitual, ParamMaterial, ParamLimit, ParamOffset,
 }
 
@@ -60,6 +60,12 @@ func hasSpellSearch(c *gin.Context) bool {
 
 func parseSpellSearch(c *gin.Context) (spellSearch, error) {
 	var s spellSearch
+	if v := c.Query("pack"); v != "" {
+		s.filter.PackIDs = strings.Split(v, ",")
+	}
+	if v := c.Query("source"); v != "" {
+		s.filter.Sources = strings.Split(v, ",")
+	}
 	s.filter.Name = strings.TrimSpace(c.Query(ParamQuery))
 	s.filter.School = rules.Slug(c.Query(ParamSchool))
 	s.filter.Class = rules.Slug(c.Query(ParamClass))
@@ -153,4 +159,10 @@ func (h *Handler) searchSpells(c *gin.Context, search spellSearch) {
 		out.Spells = append(out.Spells, conv.spellSummary(spell))
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// ParseSpellSearch shares validation between scoped and aggregate catalogue searches.
+func ParseSpellSearch(c *gin.Context) (domain.SpellFilter, int, int, error) {
+	s, err := parseSpellSearch(c)
+	return s.filter, s.limit, s.offset, err
 }

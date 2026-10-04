@@ -1,9 +1,8 @@
 import { characterPath } from '@/lib/api/characters'
 import { DEFAULT_BUILD_POLICY } from '@/lib/api/packPolicy'
 import { CatalogScope, RulesEdition, CharacterPolicy } from '@/lib/api/catalogScope'
-import { PackSelector, PackMigrationPreview } from '@/features/packs'
-import { migratePackSelection, type RulesLock, type PackMigration } from '@/lib/api/packs'
-import { describeError } from '@/lib/api'
+import { PackSelector } from '@/features/packs'
+import { type RulesLock } from '@/lib/api/packs'
 import { useState } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 
@@ -152,10 +151,8 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
   })
 
   const [selectedRules, setSelectedRules] = useState<RulesLock | undefined>(undefined)
-  const [packPreview, setPackPreview] = useState<(PackMigration & { rules: RulesLock }) | null>(null)
   const [packError, setPackError] = useState('')
   const [packDirty, setPackDirty] = useState(false)
-  const [packPending, setPackPending] = useState(false)
   const create = useAction(createCharacter)
   const answer = useAction(appendEvents)
   const revise = useAction(replaceEvent)
@@ -214,7 +211,6 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
   const arriving = shownId !== id
   if (arriving) {
     setPackDirty(false)
-    setPackPreview(null)
     setPackError('')
     if (!creating) orders.clear()
     setShownId(id)
@@ -680,17 +676,6 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
                   />
                 ) : (
                   <Stack>
-                  {each === 'rules' && draftId === undefined && <Panel><PackSelector key={id} onDirtyChange={setPackDirty} value={isNew ? selectedRules : view.rules} disabled={packPending} onChange={(rules) => {
-                    if (isNew) { setSelectedRules(rules); setDraftRules(null); return }
-                    setPackPending(true); setPackError('')
-                    void migratePackSelection(id, view.prompts.revision ?? view.prompts.seq, rules, true).then((preview) => setPackPreview({ ...preview, rules })).catch((e: unknown) => setPackError(describeError(t, e))).finally(() => setPackPending(false))
-                  }} />
-                  {packError && <Alert color="red">{packError}</Alert>}
-                  {packPreview && <Stack><PackMigrationPreview before={packPreview.before} after={packPreview.after} />{packPreview.issues?.map((issue) => <Text key={issue.eventId} c="red">{issue.eventId}: {issue.reason}</Text>)}<Group><Button disabled={packPending || (packPreview.issues?.length ?? 0) > 0} onClick={() => {
-                    setPackPending(true)
-                    void migratePackSelection(id, packPreview.revision, packPreview.rules, false).then(() => { setPackPreview(null); build.refresh() }).catch((e: unknown) => setPackError(describeError(t, e))).finally(() => setPackPending(false))
-                  }}>{t('packs.applySelection')}</Button><Button variant="subtle" onClick={() => setPackPreview(null)}>{t('packs.cancel')}</Button></Group></Stack>}
-                  </Panel>}
                   <StagePanel
                     blocks={blocksByStage.get(each) ?? []}
                     openKey={openKey}
@@ -711,8 +696,8 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
                     onAnswerChanges={(asked, changes) => {
                       if (isNew && asked.prompt.choice.prompt === 'character/ruleset') {
                         setDraftRules(changes)
-                        setOpenKey(null)
-                        setFocusNextStage('rules')
+                        setOpenKey(PACKS_KEY)
+                        setFocusNextStage(null)
                       } else submitEvent(asked, { type: asked.prompt.event.type, changes })
                     }}
                     pending={
@@ -730,7 +715,18 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
                     posing={posingName}
                     rulesSelected={draftRules !== null}
                     focusNext={focusNextStage === each}
-                  />
+                  >
+                  {each === 'rules' && draftId === undefined && <PackSelector key={id} disclosure={{ open: openKey === PACKS_KEY, onOpen: (open) => openBlock(open ? PACKS_KEY : null) }} onDirtyChange={setPackDirty} value={isNew ? selectedRules : view.rules} finalized={!isNew || selectedRules !== undefined} onChange={(rules) => {
+                    if (isNew) {
+                      setSelectedRules(rules)
+                      if (draftRules?.[0]?.value.slug !== rules.edition) { setDraftRules(null); setOpenKey(NEW_RULES_KEY) }
+                      else { setOpenKey(null); setFocusNextStage('rules') }
+                      return
+                    }
+                  }}>
+                  {packError && <Alert color="red">{packError}</Alert>}
+                  </PackSelector>}
+                  </StagePanel>
                   </Stack>
                 ),
               }
@@ -911,6 +907,7 @@ const NEW_INITIAL_PROMPTS: Prompt[] = [
 ]
 
 const NEW_NAME_KEY = keyFor({ prompt: NEW_NAME_PROMPT, replaces: null })
+const PACKS_KEY = 'rule-packs'
 const NEW_RULES_KEY = keyFor({ prompt: NEW_RULES_PROMPT, replaces: null })
 
 /**

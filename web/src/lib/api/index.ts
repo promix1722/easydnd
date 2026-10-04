@@ -152,3 +152,6 @@ export type { GameDetail, GameSummary, TableCharacter, GameEntry, EntryStats, En
 // Seeded identities, available only on the development server.
 export { loginDevelopmentAccount } from './development'
 export type { DevelopmentAccount } from './development'
+
+export { getSpellBrowseOptions, sourceOptions } from './catalog'
+export type { Provenance, SourceOptions, SpellBrowseOptions } from './catalog'

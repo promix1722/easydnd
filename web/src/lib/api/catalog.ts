@@ -9,7 +9,24 @@ import { requestLocale } from './locale'
  * and every option carries the key an answer names it by.
  */
 
+export interface Provenance {
+  packId: string
+  packTitle: string
+  version: string
+  digest: string
+  sources: { id: string; name: string }[]
+}
+export interface SourceOptions {
+  packs: { id: string; title: string; version: string; versions: string[] }[]
+  sources: { id: string; name: string; packId: string }[]
+}
+export interface SpellBrowseOptions extends SourceOptions {
+  schools: Entry[]
+  classes: Entry[]
+  unavailable: { id: string; version: string; reason: string }[]
+}
 export interface Entry {
+  provenance?: Provenance
   slug: string
   name: string
   desc?: string[]
@@ -173,6 +190,7 @@ export interface SpellComponents {
  * `level` is optional because the wire omits its zero value.
  */
 export interface Spell extends Entry {
+  catalogPacks?: string
   source?: string
   level: number
   school?: string
@@ -286,6 +304,9 @@ export function bySlug<T extends Entry>(entries: T[]): Map<string, T> {
 
 /** One search over the spells collection. Every field optional; see search.go. */
 export interface SpellSearch {
+  pack?: string
+  source?: string
+  versions?: string
   q?: string
   level?: number
   school?: string
@@ -316,5 +337,19 @@ export function searchSpells(search: SpellSearch, signal?: AbortSignal, scope = 
   for (const [key, value] of Object.entries(search)) {
     if (value !== undefined && value !== '') params.set(key, String(value))
   }
-  return request<SpellPage>(queryURL(catalogURL('spells', scope), params.toString()), signal ? { signal } : {})
+  return request<SpellPage>(queryURL(scope === 'browse' ? '/packs/spells' : catalogURL('spells', scope), params.toString()), signal ? { signal } : {})
+}
+
+export const getSpellBrowseOptions = (versions = '') => request<SpellBrowseOptions>(`/packs/spell-filters?versions=${encodeURIComponent(versions)}`)
+
+export function sourceOptions(entries: readonly Entry[]): SourceOptions {
+ const packs = new Map<string, SourceOptions['packs'][number]>()
+ const sources = new Map<string, SourceOptions['sources'][number]>()
+ for (const entry of entries) {
+  const p = entry.provenance
+  if (!p) continue
+  packs.set(p.packId, { id: p.packId, title: p.packTitle, version: p.version, versions: [p.version] })
+  for (const s of p.sources) sources.set(s.id, { ...s, packId: p.packId })
+ }
+ return { packs: [...packs.values()], sources: [...sources.values()] }
 }

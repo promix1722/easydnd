@@ -4060,17 +4060,34 @@ uses a recursive typed form driven by `/v1/packs/schema`, including reference
 pickers, ordered rows, expressions and locale maps. Closed sections are expanded
 lazily so large imported catalogues do not render every field at once. Saving
 keeps an incomplete draft; validating and publishing use the server compiler.
-Import/export uses single JSON files. Dependency replacement is explicit and
+Import accepts JSON or a ZIP containing one pack directory; export uses JSON. Dependency replacement is explicit and
 preserves external version constraints. Every caption ships in English and Russian.
 
-Pack selection appears in the builder's first Rules tab and the spell browser.
-The import draft editor keeps its session's pack lock and loads catalogue entries
-through the authenticated draft route; pack selection is available after saving
-the character.
-Apply the selection before creating a character. For an existing character, Apply
-opens the rules migration preview and blocks committing invalid choices. The spell
-browser stores exact root versions in its URL and carries them into detail links.
-The selection and dependency closure are shown separately; SRD 5.1 starts selected.
+The builder's first Rules tab shows the rules edition followed by compatible
+pack selection, using the same collapsible cards and Confirm/Clear actions as
+race selection. Confirming packs preserves the previously confirmed edition.
+Confirmed pack selections are final in the builder. Existing characters show
+their pinned releases read-only; migration controls are not offered here.
+The import draft editor retains its session's lock until the character is saved.
+
+The standalone spell browser searches all accessible published packs. Pack and
+Book/source multiselects live beside the other spell filters, apply immediately,
+and preserve their selections in the URL. The latest accessible release is the
+default; packs with older versions offer a version selector in the filter area.
+Changing one filter preserves the others and resets pagination. Book choices
+follow selected packs/releases; unavailable book selections are removed. Exact
+release contexts travel into spell detail links, including existing `packs=` URLs.
+
+Character spell and cantrip selectors reuse those filters over their pinned
+catalogue without changing rules or eligibility. Filtering never discards picks.
+Pack/book tags appear once on catalogue and choice rows and in details. Source
+tags use the theme’s light blue variant; full book names and release versions are
+available on hover. Selected choices use a light background with readable text.
+Book multiselect labels use compact codes and pack names (for example
+`PH / D&D 2014`), and a selected value replaces the empty placeholder without
+forcing a second input line.
+Character-sheet summaries remain compact. All source names use the catalogue's
+locale fallback. Packs without book metadata still show their owning pack.
 
 Catalogue functions accept an explicit request scope. Builder descendants receive
 the character scope through React context; spell pages receive a URL selection.
@@ -4082,3 +4099,10 @@ The prompts response also supplies the selected core's build policy: score
 bounds, standard array, point-buy prices/budget and maximum level. Builder forms
 consume that policy; legacy responses retain the SRD defaults. The sheet's level-up
 button uses the same maximum rather than a fixed level 20.
+
+Character creation treats confirmed rules and rule packs as final: the Rules tab
+shows the pinned pack selection read-only, with no migration controls. Final
+choices use neutral borders; red highlights indicate outstanding choices only.
+Choice rows place their source badges on the right beside the name.
+Homebrew uses a gear icon in desktop navigation and is omitted from the mobile
+menu; its direct routes remain available.
