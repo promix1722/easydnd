@@ -31,7 +31,7 @@ for (const viewport of ['desktop', 'mobile'] as const) {
     it('previews before adding, keeps selected spells above filters, and enforces the limit', async () => {
       const user = setupUser()
       const onAnswer = vi.fn()
-      const { container } = renderAt(viewport, <PromptCard prompt={prompt} entries={entries} pending={false} onAnswer={onAnswer} />)
+      renderAt(viewport, <PromptCard prompt={prompt} entries={entries} pending={false} onAnswer={onAnswer} />)
       const selected = screen.getByRole('region', { name: 'Selected spells' })
       const available = screen.getByRole('region', { name: 'Available spells' })
       const detect = within(available).getByRole('button', { name: 'Detect Magic' })
@@ -39,7 +39,6 @@ for (const viewport of ['desktop', 'mobile'] as const) {
       expect(within(detect).getByLabelText('Concentration')).toBeInTheDocument()
       expect(within(detect).getByLabelText('Ritual')).toBeInTheDocument()
       expect(within(detect).getByText('Divination · 1 action · V, S')).toBeInTheDocument()
-      expect(container.querySelector('img[src="/spells/detect-magic.webp"]')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Fireball' })).not.toBeInTheDocument()
       expect(within(available).queryByRole('heading')).not.toBeInTheDocument()
       expect(screen.getByRole('textbox', { name: 'Search spells' }).compareDocumentPosition(available) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

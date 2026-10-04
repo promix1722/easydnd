@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/base64"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+
+	imagegen "github.com/promix1722/easydnd/internal/adapter/imagegen/openai"
 )
 
 func imagesCmd(args []string) error {
@@ -58,13 +60,14 @@ func imagesCmd(args []string) error {
 		}
 	}
 
-	body := map[string]any{"model": *model, "size": *size}
-	if *quality != "" {
-		body["quality"] = *quality
-	}
-	if *background != "" {
-		body["background"] = *background
-	}
+	// The generator gets exactly what the flags say: an empty quality or
+	// background stays empty so the API's own default applies, the semantics
+	// the flags have always had.
+	generator := imagegen.New(key, *model, imagegen.WithImageOptions(imagegen.ImageOptions{
+		Size:       *size,
+		Quality:    *quality,
+		Background: *background,
+	}))
 
 	// The skip/dry-run pass stays sequential and quiet-fast; only the paid
 	// network calls go to the pool. A semaphore rather than worker goroutines
@@ -94,7 +97,7 @@ func imagesCmd(args []string) error {
 		go func(n, dst string) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			err := generate(key, body, prompts[n], dst)
+			err := generate(generator, prompts[n], dst)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -115,23 +118,11 @@ func imagesCmd(args []string) error {
 	return nil
 }
 
-// generate requests one image and writes it only after a full decode, so an
-// interrupted run never leaves a truncated file the next run would skip.
-func generate(key string, body map[string]any, prompt, dst string) error {
-	req := maps.Clone(body)
-	req["prompt"] = prompt
-	var resp struct {
-		Data []struct {
-			B64 string `json:"b64_json"`
-		} `json:"data"`
-	}
-	if err := post(key, "/images/generations", req, &resp); err != nil {
-		return err
-	}
-	if len(resp.Data) == 0 {
-		return fmt.Errorf("response carried no image")
-	}
-	png, err := base64.StdEncoding.DecodeString(resp.Data[0].B64)
+// generate requests one image and writes it only after a full decode inside
+// the provider call, so an interrupted run never leaves a truncated file the
+// next run would skip.
+func generate(generator *imagegen.Generator, prompt, dst string) error {
+	png, err := generator.Generate(context.Background(), prompt)
 	if err != nil {
 		return err
 	}

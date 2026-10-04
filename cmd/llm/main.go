@@ -3,19 +3,19 @@
 // producing entity artwork and draft translations is a re-runnable command
 // instead of a copy-paste session with a chat window.
 //
-// Both subcommands are generic input-to-output: they read a JSON file (or a
-// flag) and write plain files, deliberately unaware of where in the repo --
-// or outside it -- the result belongs.
+// The image and translation commands are generic input-to-output. Spell
+// prompts use the same art direction as the service's generation usecase.
 //
 //	llm images    -prompt "an acid arrow" [-name acid-arrow]   one image
 //	llm images    -in prompts.json                             many images
+//	llm spell-prompts -in data/srd_5.1 -out prompts.json        spell artwork prompts
 //	llm translate -in en.json -out ru.json -to ru              translated copy
 //	llm translate -in en.json -out ru.json -to ru \
 //	  -existing ru.json -glossary glossary.json                resumable update
 //
 // The batch prompts file is a flat object, name to prompt; a name becomes the
-// output filename. The spell icons build theirs with
-// `node web/scripts/spell-icons.mjs prompts` and run the whole chain through
+// output filename. The spell icons build theirs with `llm spell-prompts`
+// and run the whole chain through
 // `make spell-icons`; a one-off can still be built by hand:
 //
 //	jq 'map({(.slug): ("icon of " + .slug)}) | add' data/srd_5.1/spells.json
@@ -53,16 +53,18 @@ func main() {
 	log.SetPrefix("llm: ")
 
 	if len(os.Args) < 2 {
-		log.Fatal("usage: llm images|translate [flags]; -h on either lists them")
+		log.Fatal("usage: llm images|spell-prompts|translate [flags]; -h lists options")
 	}
 	var err error
 	switch os.Args[1] {
 	case "images":
 		err = imagesCmd(os.Args[2:])
+	case "spell-prompts":
+		err = spellPromptsCmd(os.Args[2:])
 	case "translate":
 		err = translateCmd(os.Args[2:])
 	default:
-		err = fmt.Errorf("unknown subcommand %q; want images or translate", os.Args[1])
+		err = fmt.Errorf("unknown subcommand %q; want images, spell-prompts or translate", os.Args[1])
 	}
 	if err != nil {
 		log.Fatal(err)

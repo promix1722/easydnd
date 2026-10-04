@@ -39,6 +39,7 @@ KEEP=5
 # The SRD compendium is read from disk at startup, so a release without it
 # refuses to boot.
 [ -d "$NEW/data/srd_5.1" ] || { echo "no SRD data at $NEW/data/srd_5.1"; exit 1; }
+[ -d "$NEW/data/spell-icons" ] || { echo "no image seeds at $NEW/data/spell-icons"; exit 1; }
 
 # Same for the config file, which now carries every setting including the
 # session signing key. It is not part of a release -- it is installed once by

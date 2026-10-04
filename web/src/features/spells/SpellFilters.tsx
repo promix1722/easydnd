@@ -21,6 +21,7 @@ export function SpellFilters({ value, onChange, schools, classes, availableOnly,
   onAvailableOnlyChange?: (value: boolean) => void
 }) {
   const t = useT()
+  const selectedPack = sourceOptions?.packs.find((pack) => pack.id === value.packIds?.at(-1))
   return (
     <Stack gap="sm">
       <TextInput
@@ -31,21 +32,19 @@ export function SpellFilters({ value, onChange, schools, classes, availableOnly,
       />
       <Group gap="sm">
         {sourceOptions && <>
-          <SummaryMultiSelect
+          <Select
             w={{ base: '100%', sm: 240 }} miw={0} maw="100%"
             aria-label={t('spells.filter.pack')} placeholder={t('spells.filter.allPacks')}
             data={sourceOptions.packs.flatMap((p) => (onVersionChange ? p.versions : [p.version])
               .map((version) => ({ value: `${p.id}@${version}`, label: `${p.title} v${version}` })))}
-            value={(value.packIds ?? []).flatMap((id) => {
-              const pack = sourceOptions.packs.find((p) => p.id === id)
-              return pack ? [`${id}@${pack.version}`] : []
-            })} searchable clearable
-            onChange={(releases) => {
-              const selected = new Map(releases.map((release) => release.split('@') as [string, string]))
-              const packIds = [...selected.keys()]
-              onChange({ ...value, packIds, sources: (value.sources ?? []).filter((id) => !packIds.length || sourceOptions.sources.some((s) => s.id === id && packIds.includes(s.packId))) })
-              for (const [id, version] of selected) {
-                if (sourceOptions.packs.find((p) => p.id === id)?.version !== version) onVersionChange?.(id, version)
+            value={selectedPack ? `${selectedPack.id}@${selectedPack.version}` : null}
+            searchable clearable
+            onChange={(release) => {
+              const [id, version] = release?.split('@') ?? []
+              const packIds = id ? [id] : []
+              onChange({ ...value, packIds, sources: (value.sources ?? []).filter((source) => !packIds.length || sourceOptions.sources.some((s) => s.id === source && s.packId === id)) })
+              if (id && version && sourceOptions.packs.find((pack) => pack.id === id)?.version !== version) {
+                onVersionChange?.(id, version)
               }
             }}
           />

@@ -199,6 +199,7 @@ jobs:
             easydnd
             deploy/deploy.sh
             data/srd_5.1
+            data/spell-icons
           retention-days: 7
 
   build-frontend:
@@ -429,10 +430,9 @@ jobs:
           printf '%s\n' "${RELEASE_VERSION}" \
             | ssh -i ~/.ssh/id_deploy "deploy@$HOST" "cat > $REL/VERSION"
 
-          # The SRD data is ~1.7 MB across 50-odd files in nested directories.
-          # One tar beats fifty scp round trips, and lands the tree atomically
-          # enough that deploy.sh's existence check is meaningful.
-          tar -czf srd.tgz -C data srd_5.1
+          # Ship the compendium and locally generated image seed pack together.
+          # The service imports seed images into PostgreSQL at startup.
+          tar -czf srd.tgz -C data srd_5.1 spell-icons
           scp -i ~/.ssh/id_deploy srd.tgz "deploy@$HOST:$REL/srd.tgz"
           ssh -i ~/.ssh/id_deploy "deploy@$HOST" \
             "tar -xzf $REL/srd.tgz -C $REL/data && rm -f $REL/srd.tgz"

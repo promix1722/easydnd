@@ -3,9 +3,11 @@ import { Link, useSearchParams } from 'react-router'
 
 import type { Entry, Spell, SpellPage, SpellSearch } from '@/lib/api'
 import { bySlug, getCollection, getSpellBrowseOptions, searchSpells, sourceOptions } from '@/lib/api'
+import { useSpellIconGeneration } from './useSpellIconGeneration'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
 import {
+  ACTION_ICON_SIZE,
   Alert,
   SourceTags,
   Anchor,
@@ -14,6 +16,7 @@ import {
   Button,
   DataList,
   Group,
+  IconWand,
   Page,
   PageBody,
   Panel,
@@ -24,6 +27,8 @@ import {
 
 import { SpellFilters } from './SpellFilters'
 import type { SpellFilterValues } from './filterSpells'
+import { SpellIconTools, SpellIconJobBadge } from './SpellIconTools'
+import type { SpellIconTarget } from './SpellIconTools'
 import { SpellTags } from './SpellTags'
 import { SpellIcon } from './spellIcon'
 import { castingTimeText, componentsAbbrev, levelText } from './spellText'
@@ -72,7 +77,7 @@ export function SpellsScreen() {
   const packQuery = params.get('packs') ?? ''
   const scope = packQuery ? `/packs/catalog?packs=${encodeURIComponent(packQuery)}` : 'browse'
   const versions = params.get('versions') ?? ''
-  const packIds = params.get('pack')?.split(',').filter(Boolean) ?? []
+  const packIds = (params.get('pack')?.split(',').filter(Boolean) ?? []).slice(-1)
   const sources = params.get('source')?.split(',').filter(Boolean) ?? []
   const spellURL = (spell: Spell) => {
     const context = spell.catalogPacks ?? packQuery
@@ -135,7 +140,10 @@ export function SpellsScreen() {
     })
   }
 
-  const search: SpellSearch = {
+  // What the current filters ask the catalogue for, minus this screen's own
+  // paging. `filters` is kept separate because the dev icon generator takes
+  // the same shape -- it pages the whole filtered set server-side itself.
+  const filters: SpellSearch = {
     ...(query === '' ? {} : { q: query }),
     ...(level === null ? {} : { level: Number(level) }),
     ...(school === null ? {} : { school }),
@@ -147,8 +155,27 @@ export function SpellsScreen() {
     ...(packIds.length ? { pack: packIds.join(',') } : {}),
     ...(sources.length ? { source: sources.join(',') } : {}),
     ...(scope === 'browse' && versions ? { versions } : {}),
-    limit: PAGE_SIZE,
   }
+  const search: SpellSearch = { ...filters, limit: PAGE_SIZE }
+
+  // The dev server's icon queue: fetched at mount and polled while running,
+  // inert when import.meta.env.DEV folds to a literal false.
+  const icons = useSpellIconGeneration()
+  const [iconTarget, setIconTarget] = useState<SpellIconTarget | null>(null)
+  const [iconToolsVisible, setIconToolsVisible] = useState(false)
+  useEffect(() => {
+    if (!import.meta.env.DEV) return undefined
+    function toggleIconTools(event: KeyboardEvent) {
+      // Physical U also works with the Russian keyboard layout.
+      if (event.code !== 'KeyU' || !event.metaKey || !event.shiftKey || event.ctrlKey || event.altKey) return
+      event.preventDefault()
+      if (event.repeat || event.isComposing) return
+      setIconToolsVisible((visible) => !visible)
+      setIconTarget(null)
+    }
+    window.addEventListener('keydown', toggleIconTools)
+    return () => window.removeEventListener('keydown', toggleIconTools)
+  }, [])
   const searchKey = JSON.stringify([scope, search])
   const activeSearch = useRef(searchKey)
   useEffect(() => { activeSearch.current = searchKey }, [searchKey])
@@ -166,6 +193,8 @@ export function SpellsScreen() {
   })
   useEffect(() => {
     if (!options.data) return
+    // Old multi-pack URLs retain the last choice, like selecting a new pack.
+    if (params.get('pack') && params.get('pack') !== packIds.join(',')) setParam('pack', packIds.join(','))
     const valid = sources.filter((id) => options.data?.sources.some((s) => s.id === id && (!packIds.length || packIds.includes(s.packId))))
     if (valid.length !== sources.length) setParam('source', valid.join(','))
     // Source options follow the requested release; keep unrelated URL filters.
@@ -248,6 +277,22 @@ export function SpellsScreen() {
           />
 
           {options.data.unavailable.length > 0 && <Alert color="orange">{t('spells.unavailablePacks')} {options.data.unavailable.map((p) => `${p.id}@${p.version}`).join(', ')}</Alert>}
+          {/* Development-only artwork tooling: generates spell icons through
+              a development route on the service, behind this screen's own
+              filters. The guard is what a production bundle eliminates --
+              the component and its queue talk to a route that is not
+              registered there. */}
+          {import.meta.env.DEV && iconToolsVisible && (
+            <SpellIconTools
+              generation={icons}
+              total={page?.total ?? 0}
+              bulk={{ scope, search: filters }}
+              available={!found.loading && found.error === null && page !== null && draft.trim() === query}
+              target={iconTarget}
+              onTarget={setIconTarget}
+              onCloseTarget={() => setIconTarget(null)}
+            />
+          )}
           {/* Everything below here, and nothing above it, answers to the
               search. `found.loading` dims it rather than replacing it: the
               rows on screen are the previous answer, not a wrong one, and a
@@ -267,8 +312,50 @@ export function SpellsScreen() {
                   <DataList
                     items={rows}
                     getKey={(spell) => `${spell.provenance?.packId}@${spell.provenance?.version}/${spell.slug}`}
-                    leading={(spell) => <SpellIcon slug={spell.slug} size={32} />}
-                    badges={(spell) => <SpellTags spell={spell} />}
+                    leading={(spell) => {
+                      // The queue reports a fresh revision when new art lands;
+                      // it cache-busts the URL and re-arms a row that hid.
+                      const revision = import.meta.env.DEV ? icons.state?.items?.[spell.slug]?.revision : undefined
+                      return <SpellIcon slug={spell.slug} size={32} {...(revision === undefined ? {} : { revision })} />
+                    }}
+                    badges={(spell) => {
+                      const job = import.meta.env.DEV ? icons.state?.items?.[spell.slug] : undefined
+                      return (
+                        <>
+                          <SpellTags spell={spell} />
+                          {import.meta.env.DEV && iconToolsVisible && job !== undefined && <SpellIconJobBadge job={job} />}
+                        </>
+                      )
+                    }}
+                    actions={(spell) =>
+                      // Development-only -- the route it asks for is not
+                      // registered in production, so a production bundle
+                      // draws no actions column on this table at all.
+                      import.meta.env.DEV && iconToolsVisible
+                        ? [
+                            {
+                              key: 'icon',
+                              label: t('spells.icons.generate'),
+                              icon: <IconWand size={ACTION_ICON_SIZE} />,
+                              onClick: () =>
+                                setIconTarget({
+                                  name: spell.name,
+                                  request: {
+                                    // The catalogue that listed this row, not
+                                    // necessarily the screen's scope: a browse
+                                    // row can belong to a selected pack.
+                                    scope: (spell.catalogPacks ?? packQuery)
+                                      ? `/packs/catalog?packs=${encodeURIComponent(spell.catalogPacks ?? packQuery)}`
+                                      : 'browse',
+                                    search: {},
+                                    slug: spell.slug,
+                                    replace: true,
+                                  },
+                                }),
+                            },
+                          ]
+                        : []
+                    }
                     columns={[
                       {
                         key: 'name',
@@ -328,6 +415,7 @@ export function SpellsScreen() {
               </Box>
             )}
           </PageBody>
+
         </Stack>
       </Panel>
     </Page>

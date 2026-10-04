@@ -27,6 +27,7 @@ import (
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
+	spelliconapi "github.com/promix1722/easydnd/internal/api/http/v1/spellicon"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	"github.com/promix1722/easydnd/internal/types"
@@ -44,6 +45,14 @@ type Handlers struct {
 	Game        *gameapi.Handler
 	Group       *groupapi.Handler
 	Pack        *packapi.Handler
+	// SpellIcons is the development artwork generator. Built only for the
+	// development environment by internal/app, and the routes below also gate
+	// on cfg.Env, so a production build holds nil here and serves nothing.
+	SpellIcons *spelliconapi.Handler
+	// SpellImages serves generated spell artwork. Present in every
+	// environment -- the route is public because the icons are public site
+	// content, addressed by slug rather than by anything an account owns.
+	SpellImages *spelliconapi.ImageHandler
 	// Authenticator resolves the session cookie for the guarded routes. It is
 	// the same object Auth is built over; the router takes it separately
 	// because middleware and handler need different halves of it.
@@ -134,6 +143,13 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// nginx happens to have no proxy_cache configured.
 		v1.GET("/version", middleware.NoStore(), h.System.Version)
 		v1.GET("/health", h.System.Health)
+		// Public artwork. No session: the browser asks for these from <img>
+		// tags on pages a signed-out visitor can land on, and the path carries
+		// a slug, never a credential. Caching is the handler's own business --
+		// it stamps ETag/no-cache itself -- so no NoStore middleware here.
+		if h.SpellImages != nil {
+			v1.GET("/spell-icons/*slug", h.SpellImages.Get)
+		}
 		if cfg.Env == config.EnvDevelopment && h.Development != nil {
 			v1.POST("/dev/login", middleware.NoStore(), h.Development.Login)
 		}
@@ -256,6 +272,18 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// to stage across two releases.
 			if cfg.Env == config.EnvDevelopment {
 				authed.POST("/characters/stub", h.Character.Stub)
+
+				// The spell-icon generator is the other development-only
+				// tool: it spends paid API calls building artwork for the
+				// shipped icon set, so like the stub it is simply absent in
+				// production rather than present and refusing. The session
+				// guard and the /v1 SameOrigin check above do the
+				// authentication; NoStore because a cached queue state would
+				// misreport a run that finished between polls.
+				if h.SpellIcons != nil {
+					authed.GET("/dev/spell-icons", middleware.NoStore(), h.SpellIcons.Get)
+					authed.POST("/dev/spell-icons", middleware.NoStore(), h.SpellIcons.Post)
+				}
 			}
 			authed.GET("/characters/:id", h.Character.Get)
 			authed.DELETE("/characters/:id", h.Character.Delete)

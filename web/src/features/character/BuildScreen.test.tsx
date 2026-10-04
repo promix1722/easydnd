@@ -1579,8 +1579,10 @@ describe('a new character', () => {
     renderNew(viewport)
 
     await user.click(await screen.findByRole('tab', { name: 'Personal' }))
-    await user.type(await screen.findByLabelText('Name'), 'Rurik')
-    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+    const name = await screen.findByLabelText('Name')
+    await waitFor(() => expect(name).toHaveFocus())
+    await user.type(name, 'Rurik')
+    await user.click(await screen.findByRole('button', { name: 'Confirm' }))
 
     await waitFor(() => {
       expect(posted.filter((write) => apiPath(write.url) === '/v1/characters')).toHaveLength(1)

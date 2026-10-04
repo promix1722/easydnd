@@ -66,6 +66,14 @@ data:
   # Optional persistent archive, outside current/; make writable by the service.
   # pack_archive: /var/lib/easydnd/packs
 
+image_generation:
+  # Seeds are read in every environment; paid generation routes exist only in development.
+  output_dir: /opt/easydnd/current/data/spell-icons
+  # External packs keep artwork in their own checked-out repositories.
+  # pack_dirs:
+  #   dnd-2014: /opt/easydnd-2014/spell-icons
+  # No OpenAI key is needed to import or serve the seed pack.
+
 auth:
   # A ONE-WAY DOOR. The RP id is burned into every passkey when the passkey is
   # created, and changing it orphans all of them with no migration. It must stay

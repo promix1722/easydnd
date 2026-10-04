@@ -24,6 +24,8 @@ import (
 
 	agentmodel "github.com/promix1722/easydnd/internal/adapter/agent/openai"
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	imagefile "github.com/promix1722/easydnd/internal/adapter/imagegen/file"
+	imagemodel "github.com/promix1722/easydnd/internal/adapter/imagegen/openai"
 	oidcadapter "github.com/promix1722/easydnd/internal/adapter/oidc"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	"github.com/promix1722/easydnd/internal/adapter/repository/postgres"
@@ -40,11 +42,13 @@ import (
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
+	spelliconapi "github.com/promix1722/easydnd/internal/api/http/v1/spellicon"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/buildinfo"
 	"github.com/promix1722/easydnd/internal/config"
 	authdomain "github.com/promix1722/easydnd/internal/domain/auth"
 	"github.com/promix1722/easydnd/internal/domain/group"
+	"github.com/promix1722/easydnd/internal/domain/imageasset"
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
@@ -53,14 +57,16 @@ import (
 	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
 	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
 	packuc "github.com/promix1722/easydnd/internal/usecase/pack"
+	spelliconuc "github.com/promix1722/easydnd/internal/usecase/spellicon"
 )
 
 // App owns the wired object graph and the HTTP server lifecycle.
 type App struct {
-	agent *charuc.Agent
-	cfg   *config.Config
-	log   *slog.Logger
-	srv   *http.Server
+	spellIcons *spelliconuc.Service
+	agent      *charuc.Agent
+	cfg        *config.Config
+	log        *slog.Logger
+	srv        *http.Server
 	// pool is nil when no db.url was configured, which only development
 	// permits. Close releases it.
 	pool *pgxpool.Pool
@@ -248,12 +254,41 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	}
 	agent := charuc.NewAgent(characterService, model, charuc.AgentConfig{Workers: cfg.Agent.Workers, MaxTurns: cfg.Agent.MaxTurns, MaxSessions: cfg.Agent.MaxSessions, Timeout: cfg.Agent.RequestTimeout})
 
+	var imageRepo imageasset.Repository = memory.NewImageRepository()
+	if pool != nil {
+		imageRepo = postgres.NewImageRepository(pool)
+	}
+	// The seed pack is split across repositories: OutputDir owns the SRD
+	// icons, and each PackDirs entry owns one namespaced pack's icons in
+	// whatever tree that pack lives in -- an unmapped namespace is a
+	// configuration error there, never a write into the wrong repo.
+	imagePack := imagefile.New(cfg.ImageGeneration.OutputDir, cfg.ImageGeneration.CacheDir, cfg.ImageGeneration.PackDirs)
+	imageSeeds := spelliconuc.NewSeedStore(imagePack, imageRepo)
+	if err := imageSeeds.Seed(ctx); err != nil {
+		agent.Close()
+		return fail(fmt.Errorf("seed spell images: %w", err))
+	}
+
+	var spellIcons *spelliconuc.Service
+	var spellIconHandler *spelliconapi.Handler
+	if cfg.Env == config.EnvDevelopment {
+		var generator spelliconuc.Generator
+		if cfg.ImageGeneration.APIKey != "" {
+			generator = imagemodel.New(cfg.ImageGeneration.APIKey, cfg.ImageGeneration.Model,
+				imagemodel.WithRequestsPerMinute(cfg.ImageGeneration.RequestsPerMinute))
+		}
+		spellIcons = spelliconuc.NewService(generator, imageSeeds, cfg.ImageGeneration.Workers, cfg.ImageGeneration.RequestTimeout, log.With("usecase", "spell-icons"))
+		spellIconHandler = spelliconapi.New(spellIcons, spelliconuc.NewSelector(packService, packSource))
+	}
+
 	// Inbound adapters. The character routes are declared behind
 	// RequireSession, and the handler reads the owner from the account that
 	// middleware resolved -- which is the honest source the comment that
 	// stood here was waiting for.
 	router, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		Development:   devHandler,
+		SpellIcons:    spellIconHandler,
+		SpellImages:   spelliconapi.NewImages(imageSeeds),
 		System:        system.New(buildinfo.Version),
 		Version:       buildinfo.Version,
 		WebDir:        opts.WebDir,
@@ -268,15 +303,19 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	})
 	if err != nil {
 		agent.Close()
+		if spellIcons != nil {
+			spellIcons.Close()
+		}
 		return fail(fmt.Errorf("build router: %w", err))
 	}
 
 	return &App{
-		agent: agent,
-		cfg:   cfg,
-		log:   log,
-		srv:   httpapi.NewServer(cfg.HTTP, router),
-		pool:  pool,
+		spellIcons: spellIcons,
+		agent:      agent,
+		cfg:        cfg,
+		log:        log,
+		srv:        httpapi.NewServer(cfg.HTTP, router),
+		pool:       pool,
 	}, nil
 }
 
@@ -386,6 +425,9 @@ func (a *App) Run(ctx context.Context) error {
 // every connection is handed back, and the requests still draining in
 // Shutdown are holding some of them.
 func (a *App) Close() {
+	if a.spellIcons != nil {
+		a.spellIcons.Close()
+	}
 	if a.agent != nil {
 		a.agent.Close()
 	}

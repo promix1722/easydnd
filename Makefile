@@ -189,6 +189,12 @@ test/db:
 # the loader defaults for. Copy the data section from config.dev.yaml so
 # folder-autoload settings also apply to worktree and preview servers.
 #
+# rp_origins lists both loopback spellings of the web port: `make ports` and
+# `make dev` print the 127.0.0.1 URL while the passkey rp_id is localhost, and
+# middleware.SameOrigin compares the browser's Origin byte for byte. Omitting
+# either is what made POST /v1/dev/login answer access_denied when the site
+# was reached from the printed URL.
+#
 # No auth.session_secret: development invents one per process and says so,
 # which is honest given that a restart also empties the character store.
 config/dev:
@@ -196,7 +202,7 @@ config/dev:
 	   printf 'log:\n  format: text\n  level: debug\n'; \
 	   awk '/^data:/ { copying=1 } copying && /^[^[:space:]#]/ && !/^data:/ { exit } copying { print }' $(DEV_CONFIG); \
 	   printf 'http:\n  port: "%s"\n' '$(API_PORT)'; \
-	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - http://localhost:%s\n' '$(RP_ID)' '$(WEB_PORT)'; \
+	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - http://localhost:%s\n    - http://127.0.0.1:%s\n' '$(RP_ID)' '$(WEB_PORT)' '$(WEB_PORT)'; \
 	   $(if $(WEB_PUBLIC_URL),printf '    - %s\n' '$(WEB_PUBLIC_URL)';) \
 	   $(if $(DEV_DB_URL),printf 'db:\n  url: %s\n' '$(DEV_DB_URL)';) } > $(DEV_RUN_CONFIG)
 	@chmod 600 $(DEV_RUN_CONFIG)
@@ -206,13 +212,16 @@ config/dev:
 # Same shape as config/dev and a different pair of answers: one port, because
 # Go is serving the bundle as well as the API, and an https origin, because
 # middleware.SameOrigin compares auth.rp_origins against the browser's Origin
-# byte for byte and the browser will say https here.
+# byte for byte and the browser will say https here. The plain-HTTP listener
+# the preview line prints beside it -- 127.0.0.1:8090 -- answers the same
+# pages, so its origin is listed too or every POST it carries is refused.
 config/preview:
 	@{ printf 'env: development\n'; \
 	   printf 'log:\n  format: text\n  level: debug\n'; \
 	   awk '/^data:/ { copying=1 } copying && /^[^[:space:]#]/ && !/^data:/ { exit } copying { print }' $(DEV_CONFIG); \
 	   printf 'http:\n  port: "%s"\n' '$(PREVIEW_PORT)'; \
 	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - %s\n' '$(RP_ID)' '$(PREVIEW_URL)'; \
+	   printf '    - http://127.0.0.1:%s\n' '$(PREVIEW_PORT)'; \
 	   printf 'db:\n  url: %s\n' '$(TEST_DATABASE_URL)'; } > $(PREVIEW_CONFIG)
 	@chmod 600 $(PREVIEW_CONFIG)
 	@echo "wrote $(PREVIEW_CONFIG)"
@@ -397,19 +406,19 @@ web/release: web/build
 	tar -czf web.tar.gz -C web/dist .
 
 ## spell-icons: generate the per-spell icons -- manual, costs OpenAI credit
-# Three steps: build the prompts from the SRD, generate 1024px PNGs into a
-# cache outside the repo (the expensive artifact, so it survives worktrees and
-# reruns), downscale to the 128px webp the client imports. Every step skips
-# what already exists, so an interrupted run resumes for free; rerolling one
-# icon means deleting its webp here and its PNG in the cache. Never part of
-# `verify` -- icons are art, and art has no drift check.
+# Offline pipeline: shared Go prompts, PNG masters outside the repo, then
+# 128px WebPs in data/spell-icons. The service seeds them into the database
+# on startup. PNG cache misses incur paid requests even if final WebPs exist;
+# the development screen's missing-only batch avoids that extra spend.
+# Never part of verify: artwork has no deterministic drift check.
 SPELL_ICON_CACHE := $(HOME)/.cache/easydnd/spell-icons
 spell-icons:
 	@test -n "$$OPENAI_API_KEY" || { \
 	  echo "OPENAI_API_KEY is not set; source your secrets file first."; exit 1; }
-	node web/scripts/spell-icons.mjs prompts $(SPELL_ICON_CACHE)/prompts.json
+	go run ./cmd/llm spell-prompts -in $(SRD_DIR) -out $(SPELL_ICON_CACHE)/prompts.json
 	go run ./cmd/llm images -in $(SPELL_ICON_CACHE)/prompts.json \
-	  -out $(SPELL_ICON_CACHE)/png -quality low -background transparent
+	  -out $(SPELL_ICON_CACHE)/png -model gpt-image-2.5-sunburst \
+	  -quality low -background transparent
 	node web/scripts/spell-icons.mjs convert $(SPELL_ICON_CACHE)/png
 
 ## translate/ru: re-translate the Russian spell prose -- manual, costs OpenAI credit

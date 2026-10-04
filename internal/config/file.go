@@ -22,13 +22,14 @@ const EnvConfigPath = "EASYDND_CONFIG"
 // Durations are strings ("10s") rather than time.Duration so that a malformed
 // value produces our own error naming the key, not a yaml type error.
 type fileConfig struct {
-	Agent fileAgent `yaml:"agent"`
-	Env   string    `yaml:"env"`
-	HTTP  fileHTTP  `yaml:"http"`
-	Log   fileLog   `yaml:"log"`
-	Data  fileData  `yaml:"data"`
-	Auth  fileAuth  `yaml:"auth"`
-	DB    fileDB    `yaml:"db"`
+	ImageGeneration fileImageGeneration `yaml:"image_generation"`
+	Agent           fileAgent           `yaml:"agent"`
+	Env             string              `yaml:"env"`
+	HTTP            fileHTTP            `yaml:"http"`
+	Log             fileLog             `yaml:"log"`
+	Data            fileData            `yaml:"data"`
+	Auth            fileAuth            `yaml:"auth"`
+	DB              fileDB              `yaml:"db"`
 }
 
 type fileAgent struct {
@@ -38,6 +39,20 @@ type fileAgent struct {
 	MaxTurns       int    `yaml:"max_turns"`
 	MaxSessions    int    `yaml:"max_sessions"`
 	RequestTimeout string `yaml:"request_timeout"`
+}
+
+type fileImageGeneration struct {
+	APIKey    string `yaml:"api_key"`
+	Model     string `yaml:"model"`
+	OutputDir string `yaml:"output_dir"`
+	// PackDirs maps a catalogue pack id to the directory that owns its icons
+	// -- a repository of its own, outside output_dir. Everything not listed
+	// here is a flat file in output_dir.
+	PackDirs          map[string]string `yaml:"pack_dirs"`
+	CacheDir          string            `yaml:"cache_dir"`
+	Workers           int               `yaml:"workers"`
+	RequestsPerMinute int               `yaml:"requests_per_minute"`
+	RequestTimeout    string            `yaml:"request_timeout"`
 }
 
 type fileHTTP struct {

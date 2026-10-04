@@ -13,7 +13,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -47,14 +52,31 @@ type AgentConfig struct {
 	RequestTimeout                 time.Duration
 }
 
+// ImageGenerationConfig configures development artwork, never browser credentials.
+type ImageGenerationConfig struct {
+	APIKey, Model, OutputDir, CacheDir string
+	// PackDirs maps a catalogue pack id ("dnd-2014") to the directory that
+	// owns its icons, outside OutputDir and often outside this repository.
+	// Slugs qualified with a pack id are routed flat into that directory;
+	// bare SRD slugs stay in OutputDir.
+	PackDirs map[string]string
+	// Workers bounds the icon queue's pool: each worker is one paid
+	// provider call in flight, so the ceiling stays low on purpose.
+	Workers int
+	// RequestsPerMinute caps provider attempts across all workers and retries.
+	RequestsPerMinute int
+	RequestTimeout    time.Duration
+}
+
 type Config struct {
-	Agent AgentConfig
-	Env   string
-	HTTP  HTTPConfig
-	Auth  AuthConfig
-	Log   LogConfig
-	Data  DataConfig
-	DB    DBConfig
+	ImageGeneration ImageGenerationConfig
+	Agent           AgentConfig
+	Env             string
+	HTTP            HTTPConfig
+	Auth            AuthConfig
+	Log             LogConfig
+	Data            DataConfig
+	DB              DBConfig
 
 	// Source is the config file this was loaded from, logged at startup so the
 	// log stream answers "which config is this process running?".
@@ -226,7 +248,25 @@ func Load(path string) (*Config, error) {
 	if f.Agent.Workers < 0 || f.Agent.Workers > 32 || f.Agent.MaxTurns < 0 || f.Agent.MaxTurns > 200 || f.Agent.MaxSessions < 0 || f.Agent.MaxSessions > 1000 {
 		return nil, fmt.Errorf("invalid agent limits")
 	}
+	cacheDir := strings.TrimSpace(f.ImageGeneration.CacheDir)
+	if cacheDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("image_generation.cache_dir: %w", err)
+		}
+		cacheDir = filepath.Join(home, ".cache", "easydnd", "spell-icons", "png")
+	}
 	cfg := &Config{
+		ImageGeneration: ImageGenerationConfig{
+			APIKey:            strings.TrimSpace(f.ImageGeneration.APIKey),
+			Model:             p.str(f.ImageGeneration.Model, "gpt-image-2.5-sunburst"),
+			OutputDir:         p.str(f.ImageGeneration.OutputDir, "data/spell-icons"),
+			PackDirs:          f.ImageGeneration.PackDirs,
+			CacheDir:          cacheDir,
+			Workers:           p.intVal(f.ImageGeneration.Workers, 10),
+			RequestsPerMinute: p.intVal(f.ImageGeneration.RequestsPerMinute, 20),
+			RequestTimeout:    p.duration("image_generation.request_timeout", f.ImageGeneration.RequestTimeout, 5*time.Minute),
+		},
 		Agent:         AgentConfig{APIKey: strings.TrimSpace(f.Agent.APIKey), Model: strings.TrimSpace(f.Agent.Model), Workers: p.intVal(f.Agent.Workers, 4), MaxTurns: p.intVal(f.Agent.MaxTurns, 40), MaxSessions: p.intVal(f.Agent.MaxSessions, 100), RequestTimeout: p.duration("agent.request_timeout", f.Agent.RequestTimeout, 2*time.Minute)},
 		Env:           env,
 		Auth:          auth,
@@ -290,6 +330,45 @@ func Load(path string) (*Config, error) {
 }
 
 func (c *Config) validate() error {
+	if c.ImageGeneration.RequestTimeout <= 0 || c.ImageGeneration.RequestTimeout > 10*time.Minute {
+		return fmt.Errorf("image_generation.request_timeout must be positive and at most 10m")
+	}
+	if c.ImageGeneration.Workers < 1 || c.ImageGeneration.Workers > 10 {
+		return fmt.Errorf("image_generation.workers must be between 1 and 10, got %d", c.ImageGeneration.Workers)
+	}
+	if c.ImageGeneration.RequestsPerMinute < 1 {
+		return fmt.Errorf("image_generation.requests_per_minute must be positive")
+	}
+	if strings.TrimSpace(c.ImageGeneration.Model) == "" || strings.TrimSpace(c.ImageGeneration.OutputDir) == "" {
+		return fmt.Errorf("image_generation.model and output_dir must not be blank")
+	}
+	// A pack_dirs key is a catalogue pack id -- the namespace a spell slug is
+	// qualified by -- and its value is the whole directory that owns the
+	// pack's icons. "srd-2014" is refused by name: it is the legacy alias
+	// that produces bare slugs, so it could only ever shadow the base
+	// directory. Two roots may not nest or repeat -- generation writes each
+	// namespace flat into its root, and overlapping roots would file the
+	// same art under two keys.
+	for _, pack := range slices.Sorted(maps.Keys(c.ImageGeneration.PackDirs)) {
+		dir := c.ImageGeneration.PackDirs[pack]
+		if !packIDPattern.MatchString(pack) || pack == "srd-2014" {
+			return fmt.Errorf("image_generation.pack_dirs: %q is not a valid pack id", pack)
+		}
+		if strings.TrimSpace(dir) == "" {
+			return fmt.Errorf("image_generation.pack_dirs[%q] must not be blank", pack)
+		}
+	}
+	roots := []string{c.ImageGeneration.OutputDir}
+	for _, pack := range slices.Sorted(maps.Keys(c.ImageGeneration.PackDirs)) {
+		roots = append(roots, c.ImageGeneration.PackDirs[pack])
+	}
+	for i := range roots {
+		for j := i + 1; j < len(roots); j++ {
+			if pathsOverlap(roots[i], roots[j]) {
+				return fmt.Errorf("image_generation directories %q and %q overlap", roots[i], roots[j])
+			}
+		}
+	}
 	if c.Agent.RequestTimeout <= 0 || c.Agent.RequestTimeout > 10*time.Minute {
 		return fmt.Errorf("agent.request_timeout must be positive and at most 10m")
 	}
@@ -350,13 +429,36 @@ func (c *Config) validate() error {
 	return nil
 }
 
+// packIDPattern is the shape a catalogue pack id has -- the same rule
+// internal/adapter/catalog/file applies to pack manifest ids, duplicated here
+// because config imports nothing domain- or adapter-side. A key that fails it
+// could never name a pack, so the directory it maps would sit idle while the
+// slugs it was meant to catch are refused as unconfigured.
+var packIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,119}$`)
+
+// pathsOverlap reports whether a and b name the same directory or one inside
+// the other. Comparison is on absolute, cleaned paths; Rel returns ".." or a
+// path climbing out of the parent when the child sits outside it.
+func pathsOverlap(a, b string) bool {
+	absA, errA := filepath.Abs(a)
+	absB, errB := filepath.Abs(b)
+	if errA != nil || errB != nil {
+		return filepath.Clean(a) == filepath.Clean(b)
+	}
+	inside := func(parent, child string) bool {
+		rel, err := filepath.Rel(parent, child)
+		return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	}
+	return inside(absA, absB) || inside(absB, absA)
+}
+
 // loadAuth resolves the passkey configuration.
 //
 // The RP id and origins default to easydnd.org in production and to the Vite
 // dev server in development, so that config.dev.yaml can stay almost empty
 // while production still fails loudly on a missing secret.
 func loadAuth(p *parser, f fileAuth, production bool) (AuthConfig, error) {
-	defaultRPID, defaultOrigins := "localhost", []string{"http://localhost:5173"}
+	defaultRPID, defaultOrigins := "localhost", []string{"http://localhost:5173", "http://127.0.0.1:5173"}
 	if production {
 		defaultRPID, defaultOrigins = "easydnd.org", []string{"https://easydnd.org"}
 	}

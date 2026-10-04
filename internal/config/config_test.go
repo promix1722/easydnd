@@ -329,8 +329,17 @@ func TestRelyingPartyDefaultsDifferByEnvironment(t *testing.T) {
 	if dev.Auth.SecureCookies {
 		t.Error("development sets Secure cookies, which the dev server can never deliver")
 	}
-	if dev.Auth.RPOrigins[0] != "http://localhost:5173" {
-		t.Errorf("development origin = %q, want the Vite dev server", dev.Auth.RPOrigins[0])
+	// Both spellings of loopback are allowed: the Vite dev server answers on
+	// localhost and 127.0.0.1 alike, and a browser that landed on the other
+	// one must not be refused for it.
+	want := []string{"http://localhost:5173", "http://127.0.0.1:5173"}
+	if len(dev.Auth.RPOrigins) != len(want) {
+		t.Fatalf("development origins = %v, want %v", dev.Auth.RPOrigins, want)
+	}
+	for i, o := range want {
+		if dev.Auth.RPOrigins[i] != o {
+			t.Errorf("development origin[%d] = %q, want %q", i, dev.Auth.RPOrigins[i], o)
+		}
 	}
 }
 

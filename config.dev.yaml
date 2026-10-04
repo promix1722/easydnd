@@ -32,8 +32,14 @@ auth:
   # Passkeys created against this config are bound to localhost and are
   # therefore useless in production, which is exactly what we want.
   rp_id: localhost
+  # Both loopback spellings: `make ports` and `make dev` print the 127.0.0.1
+  # URL while a passkey's rp_id is localhost, and middleware.SameOrigin
+  # compares the browser's Origin header byte for byte. An origin listed as a
+  # hostname does not cover the same port reached as an IP -- which is exactly
+  # how a dev-login POST from the printed URL was being refused.
   rp_origins:
     - http://localhost:5173
+    - http://127.0.0.1:5173
 
   # NO session_secret here, deliberately. Development generates a random key per
   # process and logs a warning: every restart signs everyone out, which matches
@@ -76,3 +82,16 @@ auth:
 #   max_turns: 40
 #   max_sessions: 100
 #   request_timeout: 2m
+
+# Optional local asynchronous spell artwork generation. Keep the key private.
+# Every startup imports the seed pack into the image repository without OpenAI.
+# image_generation:
+#   api_key: "..."
+#   model: gpt-image-2.5-sunburst
+#   workers: 10
+#   requests_per_minute: 20
+#   output_dir: data/spell-icons
+#   pack_dirs:
+#     dnd-2014: /absolute/path/to/easydnd-2014/spell-icons
+#   cache_dir: /absolute/path/to/spell-icon-masters
+#   request_timeout: 5m

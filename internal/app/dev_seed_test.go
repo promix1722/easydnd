@@ -33,6 +33,7 @@ func developmentAppAtPort(t *testing.T, env, port string) *App {
 	cfg.Env = env
 	cfg.HTTP.Port = port
 	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "srd_5.1")
+	cfg.ImageGeneration.OutputDir = filepath.Join("..", "..", "data", "spell-icons")
 	// Development's optional local dataset is not a dependency of these tests.
 	cfg.Data.AutoloadPacks = nil
 	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
@@ -146,6 +147,31 @@ func TestDevelopmentLoginAbsentInProduction(t *testing.T) {
 	rec := devRequest(t, a, "POST", "/v1/dev/login", map[string]any{"account": "master"}, nil)
 	if rec.Code != http.StatusNotFound || len(rec.Result().Cookies()) != 0 {
 		t.Fatal("production exposed development login")
+	}
+}
+
+func TestDevelopmentLoginAcceptsBothLoopbackOrigins(t *testing.T) {
+	a := developmentApp(t, config.EnvDevelopment)
+	for _, origin := range []string{"http://localhost:5173", "http://127.0.0.1:5173"} {
+		t.Run(origin, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/v1/dev/login", strings.NewReader(`{"account":"master"}`))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Origin", origin)
+			req.Header.Set("X-Request-Id", "loopback-login")
+			rec := httptest.NewRecorder()
+			a.srv.Handler.ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("login from %s: HTTP %d: %s", origin, rec.Code, rec.Body)
+			}
+			cookies := rec.Result().Cookies()
+			if len(cookies) != 1 {
+				t.Fatalf("login did not establish a session: %d cookies", len(cookies))
+			}
+			me := devDecode[authapi.SessionResponse](t, devRequest(t, a, http.MethodGet, "/v1/auth/me", nil, cookies[0]))
+			if me.User.DisplayName != "master" || me.User.Anonymous {
+				t.Fatal("loopback login did not authenticate the selected development account")
+			}
+		})
 	}
 }
 
