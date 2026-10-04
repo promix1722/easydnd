@@ -31,6 +31,60 @@ func iconPack(t *testing.T) *PackDocument {
 	return p
 }
 
+func TestRepositoryArtworkJoinsPackAndSurvivesIdentityOverride(t *testing.T) {
+	p := iconPack(t)
+	art := p.Icons.Spells["guiding-mark"]
+	p.Icons = nil
+	root := t.TempDir()
+	if err := SavePackDirectory(filepath.Join(root, "pack"), p); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(root, "spell-icons")
+	if err := os.Mkdir(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "guiding-mark.webp"), art, 0600); err != nil {
+		t.Fatal(err)
+	}
+	// Artwork for spells absent from this pack is not adopted.
+	if err := os.WriteFile(filepath.Join(dir, "unknown.webp"), []byte("invalid"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := loadPackFolder(PackFolder{Path: root, ID: "renamed"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Manifest.ID != "renamed" || len(loaded.Icons.Spells) != 1 || !bytes.Equal(loaded.Icons.Spells["guiding-mark"], art) {
+		t.Fatal("repository artwork lost")
+	}
+	encoded, err := EncodePack(loaded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePack(encoded)
+	if err != nil || !bytes.Equal(decoded.Icons.Spells["guiding-mark"], art) {
+		t.Fatalf("export lost artwork: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "guiding-mark.webp"), []byte("invalid"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadPackFolder(PackFolder{Path: root}); err == nil {
+		t.Fatal("accepted invalid artwork")
+	}
+	// An explicit pack icon takes precedence over the repository fallback.
+	p.Icons = &PackIcons{Spells: map[string][]byte{"guiding-mark": art}}
+	other := t.TempDir()
+	if err := SavePackDirectory(filepath.Join(other, "pack"), p); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(dir, filepath.Join(other, "spell-icons")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadPackFolder(PackFolder{Path: other}); err != nil {
+		t.Fatalf("fallback replaced explicit artwork: %v", err)
+	}
+}
+
 func TestIconPackRoundTrips(t *testing.T) {
 	p := iconPack(t)
 	before, err := PackDigest(p)

@@ -135,6 +135,20 @@ func (p *projector) run(log Log) (State, error) {
 		}
 		p.state.Status.ProficiencyBonus = n
 	}
+	// Equipped items are explicit inputs to pack conditions as well as AC.
+	// Apply that independent list before rules; carried-item changes still
+	// follow rule grants and starting-equipment choices.
+	var carriedChanges []seqChange
+	for _, change := range p.equipment {
+		if change.Change.Path == "equipment.equipped" {
+			if err := p.applyChanges([]seqChange{change}); err != nil {
+				return State{}, err
+			}
+		} else {
+			carriedChanges = append(carriedChanges, change)
+		}
+	}
+	p.equipment = carriedChanges
 	if err := p.applyPackRules(); err != nil {
 		return State{}, err
 	}
@@ -456,7 +470,7 @@ func (p *projector) addHitPoints(hitDie, level int, first bool) {
 
 	gained := 0
 	if core := p.cat.Mechanics.Core; core.HitPointFirst.Op != "" {
-		vars := variables(p.state)
+		vars := variables(p.state, p.cat)
 		vars["hitDie"] = hitDie
 		firstHP, err := core.HitPointFirst.Eval(vars)
 		if err != nil {

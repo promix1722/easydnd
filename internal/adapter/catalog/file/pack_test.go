@@ -370,6 +370,119 @@ func TestExplicitCasterProfilesAndTypedParameters(t *testing.T) {
 	}
 }
 
+func TestSubclassCastingProfileCompilesAndProjects(t *testing.T) {
+	p, err := file.LoadPack(addonPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Entities["class-levels"], _ = json.Marshal([]file.ClassLevel{
+		{Class: "srd-2014:class:fighter", Subclass: "tactician", Level: 3, CantripsKnown: 2, SpellsKnown: 3, SpellSlots: map[string]int{"1": 2}},
+		{Class: "srd-2014:class:fighter", Subclass: "tactician", Level: 4, CantripsKnown: 2, SpellsKnown: 4, SpellSlots: map[string]int{"1": 3}},
+	})
+	p.Mechanics.Casting = map[string]file.CastingProfile{"tactician": {Selection: "known", List: "srd-2014:class:wizard", Ability: "srd-2014:ability:int", Kind: "shared", Numerator: 1, Denominator: 3, Rounding: "floor", StartsAt: 3, ReplaceKnown: true}}
+	r, err := file.NewRegistry([]string{basePath(), writeDocument(t, p)}, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cat, err := r.Load(context.Background(), rules.LocaleEN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := cat.Mechanics.Casting["example/tactician"]
+	if profile.List != "wizard" || profile.Ability != rules.Intelligence {
+		t.Fatalf("profile refs were not normalized: %+v", profile)
+	}
+	log := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 4}, character.Event{Type: character.EventSubclass, Ref: ref(rules.RefSubclass, "example/tactician")})
+	sheet, err := character.Project(log, cat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sheet.Resources.Pools["spell-slots/1"].Max != 3 || len(sheet.Status.Spellcasting) != 1 || sheet.Status.Spellcasting[0].Ability != rules.Intelligence {
+		t.Fatalf("subclass did not cast: %+v", sheet.Status.Spellcasting)
+	}
+	limits, err := character.SpellRules(log, cat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, limit := range limits {
+		if limit.Source == ref(rules.RefSubclass, "example/tactician") && limit.Purpose == "known" {
+			found = true
+			if limit.Class != "fighter" || limit.ClassLevel != 4 || limit.Count != 4 || limit.MaxLevelCount == nil || *limit.MaxLevelCount != 4 || len(limit.ListClasses) != 1 || limit.ListClasses[0] != "wizard" {
+				t.Fatalf("wrong subclass spell limits: %+v", limit)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("missing subclass spell limits")
+	}
+	for _, invalid := range []file.CastingProfile{
+		{Selection: "known", List: "srd-2014:class:missing", Ability: "int", Kind: "shared", Numerator: 1, Denominator: 3, Rounding: "floor", StartsAt: 3},
+		{Selection: "known", List: "srd-2014:class:wizard", Ability: "luck", Kind: "shared", Numerator: 1, Denominator: 3, Rounding: "floor", StartsAt: 3},
+		{Selection: "known", Kind: "shared", Numerator: 1, Denominator: 3, Rounding: "floor", StartsAt: 3},
+	} {
+		p.Mechanics.Casting["tactician"] = invalid
+		data, err := file.EncodePack(p)
+		if err != nil {
+			continue
+		}
+		path := filepath.Join(t.TempDir(), "invalid.json")
+		if err := os.WriteFile(path, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := file.NewRegistry([]string{basePath(), path}, nil, ""); err == nil {
+			t.Fatalf("accepted invalid subclass casting: %+v", invalid)
+		}
+	}
+}
+
+func TestEquipmentConditionsApplyDuringProjection(t *testing.T) {
+	p, err := file.LoadPack(addonPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Mechanics.Rules = append(p.Mechanics.Rules, file.RuleDefinition{
+		ID: "unarmored", Owner: "srd-2014:class:fighter", MinimumLevel: 1,
+		When:    &file.Expression{Op: "not", Args: []file.Expression{{Op: "or", Args: []file.Expression{{Op: "read", Ref: "equipped:armor"}, {Op: "read", Ref: "equipped:shield"}}}}},
+		Effects: []file.Effect{{Op: "add", Target: "status.armorClass", Value: file.Expression{Op: "constant", Value: 3}}},
+	})
+	r, err := file.NewRegistry([]string{basePath(), writeDocument(t, p)}, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cat, err := r.Load(context.Background(), rules.LocaleEN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		item string
+		ac   int
+	}{{"", 13}, {"leather-armor", 11}, {"shield", 12}} {
+		log := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 1}, character.Event{Type: character.EventChange, Changes: []character.Change{{Path: "abilities.dex", Op: character.OpSet, Value: character.IntValue(10)}}})
+		if tc.item != "" {
+			if err := log.Append(character.Event{Type: character.EventChange, Changes: []character.Change{{Path: "equipment.equipped", Op: character.OpAdd, Value: character.SlugValue(rules.Slug(tc.item))}}}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		sheet, err := character.Project(log, cat)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if sheet.Status.ArmorClass != tc.ac {
+			t.Fatalf("equipped %q: AC %d, want %d", tc.item, sheet.Status.ArmorClass, tc.ac)
+		}
+		if tc.item != "" {
+			if err := log.Append(character.Event{Type: character.EventChange, Changes: []character.Change{{Path: "equipment.equipped", Op: character.OpRemove, Value: character.SlugValue(rules.Slug(tc.item))}}}); err != nil {
+				t.Fatal(err)
+			}
+			sheet, err = character.Project(log, cat)
+			if err != nil || sheet.Status.ArmorClass != 13 {
+				t.Fatalf("unequipping failed to restore bonus: AC %d, %v", sheet.Status.ArmorClass, err)
+			}
+		}
+	}
+}
+
 func TestPacksRejectCustomAbilityScores(t *testing.T) {
 	p, err := file.LoadPack(addonPath())
 	if err != nil {

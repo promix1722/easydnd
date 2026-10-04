@@ -53,7 +53,7 @@ func Project(log Log, cat *catalog.Catalog) (State, error) {
 			if err := applyActionEvent(&state, cat, e); err != nil {
 				return State{}, types.NewValidationError("event %d: %v", e.Seq, err)
 			}
-		} else if err := applyResourceEvent(&state, e); err != nil {
+		} else if err := applyResourceEvent(&state, cat, e); err != nil {
 			return State{}, types.NewValidationError("event %d: %v", e.Seq, err)
 		}
 		for id, pool := range state.Resources.Pools {
@@ -66,7 +66,7 @@ func Project(log Log, cat *catalog.Catalog) (State, error) {
 	return state, nil
 }
 
-func applyResourceEvent(s *State, e Event) error {
+func applyResourceEvent(s *State, cat *catalog.Catalog, e Event) error {
 	if len(e.Changes) > 0 || len(e.Choices) > 0 || !e.Ref.IsZero() {
 		return fmt.Errorf("resource event contains unrelated changes")
 	}
@@ -83,7 +83,7 @@ func applyResourceEvent(s *State, e Event) error {
 			for i, policy := range pool.Recovery {
 				if policy.Trigger == e.Trigger {
 					if policy.When != nil {
-						v, err := policy.When.Eval(variables(*s))
+						v, err := policy.When.Eval(variables(*s, cat))
 						if err != nil {
 							return err
 						}
@@ -106,7 +106,7 @@ func applyResourceEvent(s *State, e Event) error {
 			case "all":
 				pool.Used = 0
 			case "amount":
-				amount, err := policy.Amount.Eval(variables(*s))
+				amount, err := policy.Amount.Eval(variables(*s, cat))
 				if err != nil {
 					return err
 				}
@@ -115,7 +115,7 @@ func applyResourceEvent(s *State, e Event) error {
 				}
 				pool.Used = max(0, pool.Used-amount)
 			case "budget":
-				amount, err := policy.Amount.Eval(variables(*s))
+				amount, err := policy.Amount.Eval(variables(*s, cat))
 				if err != nil {
 					return err
 				}
@@ -170,7 +170,7 @@ func applyResourceEvent(s *State, e Event) error {
 		found := false
 		for _, policy := range pool.Recovery {
 			if policy.When != nil {
-				v, err := policy.When.Eval(variables(*s))
+				v, err := policy.When.Eval(variables(*s, cat))
 				if err != nil {
 					return err
 				}
@@ -188,7 +188,7 @@ func applyResourceEvent(s *State, e Event) error {
 			if policy.Operation == "all" {
 				allowed = pool.Used
 			} else {
-				n, err := policy.Amount.Eval(variables(*s))
+				n, err := policy.Amount.Eval(variables(*s, cat))
 				if err != nil {
 					return err
 				}
@@ -221,7 +221,7 @@ func applyActionEvent(s *State, cat *catalog.Catalog, e Event) error {
 		}
 		costs := map[rules.Slug]int{}
 		for _, cost := range a.Costs {
-			n, err := cost.Amount.Eval(variables(*s))
+			n, err := cost.Amount.Eval(variables(*s, cat))
 			if err != nil {
 				return err
 			}

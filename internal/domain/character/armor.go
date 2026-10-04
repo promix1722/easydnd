@@ -22,11 +22,8 @@ const unarmoredBaseAC = 10
 // backpack would put a rogue's spare shield on their arm alongside a
 // two-handed weapon and produce a wrong number with no rule to appeal to.
 //
-// Not implemented: the Unarmored Defense of monks and barbarians, which
-// replaces the base with 10 + DEX + WIS or 10 + DEX + CON. Both are class
-// features and neither is expressible from the catalogue data, which records
-// them as prose. A character with either gets the plain unarmored number
-// until features carry mechanics.
+// Pack effects can adjust this base result for features such as Unarmored
+// Defense, using equipped:armor and equipped:shield to express eligibility.
 func armorClass(equipped []ItemStack, cat *catalog.Catalog, dexModifier int) int {
 	base := unarmoredBaseAC
 	if cat.Mechanics.Core.BaseArmorClass != 0 {

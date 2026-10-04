@@ -1,7 +1,9 @@
 package file
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -35,6 +37,12 @@ func loadPackFolder(folder PackFolder) (*PackDocument, error) {
 		path = filepath.Join(path, "pack")
 	}
 	p, err := LoadPack(path)
+	if err == nil && !found {
+		// Repository packs may keep authored artwork beside their generated
+		// pack/ folder. Adopt it into the release so exports and archives carry
+		// the bytes, just as manifest-declared artwork does.
+		err = loadRepositoryIcons(p, filepath.Join(folder.Path, "spell-icons"))
+	}
 	if err != nil || folder.ID == "" || folder.ID == p.Manifest.ID {
 		return p, err
 	}
@@ -47,4 +55,62 @@ func loadPackFolder(folder PackFolder) (*PackDocument, error) {
 		return nil, err
 	}
 	return DecodePack(b)
+}
+
+func loadRepositoryIcons(p *PackDocument, dir string) error {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	var spells []struct {
+		Slug string `json:"slug"`
+	}
+	if err := json.Unmarshal(p.Entities["spells"], &spells); err != nil {
+		if p.Entities["spells"] == nil {
+			return nil
+		}
+		return err
+	}
+	var total int
+	if p.Icons != nil {
+		for _, data := range p.Icons.Spells {
+			total += len(data)
+		}
+	}
+	for _, spell := range spells {
+		if !validLocalID(spell.Slug) {
+			return fmt.Errorf("invalid spell icon identity %q", spell.Slug)
+		}
+		if p.Icons != nil && p.Icons.Spells[spell.Slug] != nil {
+			continue
+		}
+		f, err := os.Open(filepath.Join(dir, spell.Slug+".webp"))
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		data, err := io.ReadAll(io.LimitReader(f, int64(maxPackBytes-total+1)))
+		closeErr := f.Close()
+		if err != nil {
+			return err
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+		total += len(data)
+		if total > maxPackBytes {
+			return fmt.Errorf("repository spell icons exceed pack size limit")
+		}
+		if p.Icons == nil {
+			p.Icons = &PackIcons{Spells: map[string][]byte{}}
+		}
+		if p.Icons.Spells == nil {
+			p.Icons.Spells = map[string][]byte{}
+		}
+		p.Icons.Spells[spell.Slug] = data
+	}
+	return p.validateIcons()
 }

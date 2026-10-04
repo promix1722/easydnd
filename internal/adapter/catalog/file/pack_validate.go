@@ -284,7 +284,7 @@ func normalizeRef(packID, value string) string {
 	return value
 }
 
-var slugFields = map[string]bool{"slug": true, "class": true, "classes": true, "subclass": true, "subclasses": true, "race": true, "races": true, "subrace": true, "subraces": true, "traits": true, "features": true, "feature": true, "parent": true, "spell": true, "spells": true, "skills": true, "languages": true, "ability": true, "savingThrows": true, "spellcastingAbility": true, "proficiencies": true, "startingProficiencies": true, "multiclassProficiencies": true, "invocations": true, "variants": true, "item": true, "school": true, "damageType": true, "twoHandedDamageType": true, "damageResistance": true, "properties": true}
+var slugFields = map[string]bool{"list": true, "slug": true, "class": true, "classes": true, "subclass": true, "subclasses": true, "race": true, "races": true, "subrace": true, "subraces": true, "traits": true, "features": true, "feature": true, "parent": true, "spell": true, "spells": true, "skills": true, "languages": true, "ability": true, "savingThrows": true, "spellcastingAbility": true, "proficiencies": true, "startingProficiencies": true, "multiclassProficiencies": true, "invocations": true, "variants": true, "item": true, "school": true, "damageType": true, "twoHandedDamageType": true, "damageResistance": true, "properties": true}
 
 func normalizeValue(packID, key string, v any) any {
 	switch x := v.(type) {
@@ -434,7 +434,7 @@ func validateReferences(docs []*PackDocument, entities map[string][]any, m PackM
 				return check(kind, strings.TrimPrefix(value, prefix))
 			}
 		}
-		if value == "level" || value == "proficiency" || value == "score" || value == "hitDie" {
+		if value == "equipped:armor" || value == "equipped:shield" || value == "level" || value == "proficiency" || value == "score" || value == "hitDie" {
 			return nil
 		}
 		return fmt.Errorf("unknown expression input %q", value)
@@ -573,8 +573,22 @@ func validateReferences(docs []*PackDocument, entities map[string][]any, m PackM
 		}
 	}
 	for id, p := range m.Casting {
-		if err := check("class", id); err != nil {
+		if known["subclasses"][id] {
+			if p.List == "" || p.Ability == "" {
+				return fmt.Errorf("subclass casting %s requires list and ability", id)
+			}
+		} else if err := check("class", id); err != nil {
 			return err
+		}
+		if p.List != "" {
+			if err := check("class", p.List); err != nil {
+				return err
+			}
+		}
+		if p.Ability != "" {
+			if err := check("ability", p.Ability); err != nil {
+				return err
+			}
 		}
 		if p.Resource != "" {
 			if err := check("resource", p.Resource); err != nil {

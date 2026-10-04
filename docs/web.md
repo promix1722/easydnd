@@ -981,9 +981,11 @@ which is where the prose and the remaining rule values live.
 **Spell artwork belongs to its pack release.** The SRD's 319 WebPs live in
 `data/srd_5.1/spell-icons/`, imported from the matching spell IDs in
 `easydnd-2014/spell-icons/`. Existing catalog summaries and details expose an
-optional `icon` WebP data URL. Lists draw it at 32px and details at 40px;
-character spell choices use the same component. Packs without artwork show
-no image. Changing packs or releases changes the artwork with the catalog.
+optional `icon` WebP data URL. The same 44px slate rounded square is used in
+spell lists, spell details and character spell choices. A small inset keeps
+transparent artwork inside the tile, and the dark background makes glowing
+runes readable on both light and dark pages. Packs without artwork show no
+image. Changing packs or releases changes the artwork with the catalog.
 
 **Adjusting a filter must not take the filters down.** `useResource` blanks
 itself when its key changes, which is correct for a key naming a different

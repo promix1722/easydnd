@@ -118,6 +118,8 @@ type Effect struct {
 	Value  Expression `json:"value,omitempty"`
 }
 type CastingProfile struct {
+	List             string `json:"list,omitempty"`
+	Ability          string `json:"ability,omitempty"`
 	Selection        string `json:"selection,omitempty"`
 	PrepareDivisor   int    `json:"prepareDivisor,omitempty"`
 	BookStart        int    `json:"bookStart,omitempty"`
@@ -210,7 +212,7 @@ func (w PackMechanics) domain(prose, actionProse Bundle) (catalog.Mechanics, err
 		}
 	}
 	for k, v := range w.Casting {
-		out.Casting[rules.Slug(k)] = catalog.CastingProfile{Selection: v.Selection, PrepareDivisor: v.PrepareDivisor, BookStart: v.BookStart, BookPerLevel: v.BookPerLevel, ReplaceKnown: v.ReplaceKnown, ExpandedSubclass: v.ExpandedSubclass, Kind: v.Kind, Numerator: v.Numerator, Denominator: v.Denominator, Rounding: v.Rounding, StartsAt: v.StartsAt, Resource: rules.Slug(v.Resource)}
+		out.Casting[rules.Slug(k)] = catalog.CastingProfile{List: rules.Slug(v.List), Ability: rules.Ability(v.Ability), Selection: v.Selection, PrepareDivisor: v.PrepareDivisor, BookStart: v.BookStart, BookPerLevel: v.BookPerLevel, ReplaceKnown: v.ReplaceKnown, ExpandedSubclass: v.ExpandedSubclass, Kind: v.Kind, Numerator: v.Numerator, Denominator: v.Denominator, Rounding: v.Rounding, StartsAt: v.StartsAt, Resource: rules.Slug(v.Resource)}
 	}
 	for _, r := range w.ChoiceRequirements {
 		out.ChoiceRequirements = append(out.ChoiceRequirements, catalog.ChoiceRequirement{Prompt: rules.Slug(r.Prompt), Pick: rules.Slug(r.Pick), AnyProficiency: slugs(r.AnyProficiency)})

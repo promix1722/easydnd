@@ -15,7 +15,7 @@ const (
 	// fullCaster gains slots at every level: bard, cleric, druid, sorcerer,
 	// wizard.
 	fullCaster
-	// halfCaster gains them at half rate: paladin and ranger.
+	// halfCaster gains them at a fractional rate, including third-caster archetypes.
 	halfCaster
 	// pactCaster uses Pact Magic, which is a separate pool that never merges
 	// with spell slots: the warlock.
@@ -93,13 +93,13 @@ func kindOfCaster(cat *catalog.Catalog, class rules.Slug) casterKind {
 }
 
 // casterLevel is the level at which a multiclassed character reads the
-// multiclass spellcaster table: full-caster levels count whole, half-caster
-// levels count halved and rounded down, and Pact Magic does not count at all.
+// multiclass spellcaster table. Each selected class or subclass contributes
+// its declared fraction and rounding; Pact Magic does not count.
 func casterLevel(cat *catalog.Catalog, classes []ClassLevel) int {
 	total := 0
 	for _, c := range classes {
 		if len(cat.Mechanics.Casting) > 0 {
-			profile, ok := cat.Mechanics.Casting[c.Class]
+			_, profile, ok := castingProfile(cat, c)
 			if !ok || profile.Kind != "shared" || c.Level < profile.StartsAt {
 				continue
 			}
@@ -135,12 +135,13 @@ func spellSlots(cat *catalog.Catalog, classes []ClassLevel) ([MaxSpellLevel + 1]
 
 	var casting []ClassLevel
 	for _, c := range classes {
-		if profile, ok := cat.Mechanics.Casting[c.Class]; ok && c.Level < profile.StartsAt {
+		owner, profile, hasProfile := castingProfile(cat, c)
+		if hasProfile && c.Level < profile.StartsAt {
 			continue
 		}
-		switch kindOfCaster(cat, c.Class) {
+		switch kindOfCaster(cat, owner) {
 		case pactCaster:
-			row, ok := cat.ClassLevel(c.Class, c.Level)
+			row, ok := cat.ClassLevel(owner, c.Level)
 			if !ok {
 				continue
 			}
@@ -165,7 +166,8 @@ func spellSlots(cat *catalog.Catalog, classes []ClassLevel) ([MaxSpellLevel + 1]
 	case 0:
 		return slots, pact
 	case 1:
-		row, ok = cat.ClassLevel(casting[0].Class, casting[0].Level)
+		owner, _, _ := castingProfile(cat, casting[0])
+		row, ok = cat.ClassLevel(owner, casting[0].Level)
 	default:
 		if len(cat.Mechanics.Core.MulticlassSlots) > 0 {
 			values, found := cat.Mechanics.Core.MulticlassSlots[casterLevel(cat, casting)]
@@ -204,19 +206,25 @@ func spellcastingSummaries(
 ) []SpellcastingSummary {
 	var out []SpellcastingSummary
 	for _, c := range classes {
-		class, ok := cat.Classes.Get(c.Class)
-		if !ok || class.Spellcasting == nil {
+		_, profile, hasProfile := castingProfile(cat, c)
+		ability := castingAbility(cat, c.Class, profile)
+		if ability == "" {
 			continue
 		}
-		// Paladins and rangers do not cast until 2nd level; listing a save DC
-		// for a level-1 paladin would be a number they cannot use.
-		if c.Level < class.Spellcasting.Level {
-			continue
+		if hasProfile {
+			if c.Level < profile.StartsAt {
+				continue
+			}
+		} else {
+			class, ok := cat.Classes.Get(c.Class)
+			if !ok || class.Spellcasting == nil || c.Level < class.Spellcasting.Level {
+				continue
+			}
 		}
-		modifier := abilities.Modifier(class.Spellcasting.Ability)
+		modifier := abilities.Modifier(ability)
 		out = append(out, SpellcastingSummary{
 			Class:       c.Class,
-			Ability:     class.Spellcasting.Ability,
+			Ability:     ability,
 			SaveDC:      spellSaveBase(cat) + proficiencyBonus + modifier,
 			AttackBonus: proficiencyBonus + modifier,
 		})

@@ -64,11 +64,20 @@ describe('copyText', () => {
     await expect(copyText('hello')).resolves.toBe(false)
   })
 
-  it('leaves no scratch element behind either way', async () => {
+  it.each([true, false])('removes its scratch element when copying returns %s', async (copied) => {
     withClipboard(undefined)
-    document.execCommand = (() => true) as unknown as typeof document.execCommand
+    document.execCommand = (() => copied) as unknown as typeof document.execCommand
 
-    await copyText('hello')
-    expect(document.querySelectorAll('textarea')).toHaveLength(0)
+    const existing = document.createElement('textarea')
+    existing.value = 'keep this input'
+    document.body.appendChild(existing)
+    const before = Array.from(document.querySelectorAll('textarea'))
+    try {
+      await expect(copyText('hello')).resolves.toBe(copied)
+      expect(Array.from(document.querySelectorAll('textarea'))).toEqual(before)
+      expect(existing.value).toBe('keep this input')
+    } finally {
+      existing.remove()
+    }
   })
 })

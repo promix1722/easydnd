@@ -36,14 +36,28 @@ type Contribution struct {
 	Amount  int
 }
 
-func variables(s State) rules.Variables {
-	out := rules.Variables{"level": s.Identity.Level(), "proficiency": s.Status.ProficiencyBonus}
+func variables(s State, cat *catalog.Catalog) rules.Variables {
+	out := rules.Variables{"level": s.Identity.Level(), "proficiency": s.Status.ProficiencyBonus, "equipped:armor": 0, "equipped:shield": 0}
 	for _, c := range s.Identity.Classes {
 		out["class:"+c.Class.String()] = c.Level
 	}
 	for a, score := range s.Abilities.Scores {
 		out["ability:"+a.String()] = score
 		out["modifier:"+a.String()] = s.Abilities.Modifier(a)
+	}
+	for _, stack := range s.Equipment.Equipped {
+		if stack.Count <= 0 {
+			continue
+		}
+		item, ok := cat.Items.Get(stack.Item)
+		if !ok || item.Armor == nil {
+			continue
+		}
+		if item.Armor.Category == catalog.Shield {
+			out["equipped:shield"] = 1
+		} else {
+			out["equipped:armor"] = 1
+		}
 	}
 	return out
 }
@@ -96,7 +110,7 @@ func activeRule(s State, cat *catalog.Catalog, r catalog.RuleDefinition) (bool, 
 		return false, nil
 	}
 	if r.When != nil {
-		n, err := r.When.Eval(variables(s))
+		n, err := r.When.Eval(variables(s, cat))
 		return n != 0, err
 	}
 	return true, nil
@@ -104,7 +118,7 @@ func activeRule(s State, cat *catalog.Catalog, r catalog.RuleDefinition) (bool, 
 func (p *projector) resourceDefinitions() error {
 	p.state.Resources.Pools = map[rules.Slug]ResourcePool{}
 	p.state.Resources.Parameters = map[rules.Slug]Parameter{}
-	vars := variables(p.state)
+	vars := variables(p.state, p.cat)
 	for _, def := range p.cat.Mechanics.Resources {
 		if n := ownerLevel(p.state, p.cat, def.Owner); n == 0 || n < def.MinimumLevel {
 			continue
@@ -272,7 +286,7 @@ type pendingEffect struct {
 }
 
 func (p *projector) applyEffect(r catalog.RuleDefinition, e catalog.Effect) error {
-	value, err := e.Value.Eval(variables(p.state))
+	value, err := e.Value.Eval(variables(p.state, p.cat))
 	if err != nil {
 		return err
 	}
@@ -358,7 +372,7 @@ func actionOffers(s *State, cat *catalog.Catalog) error {
 		}
 		offer := ActionOffer{ID: a.Slug, Owner: a.Owner, Name: a.Name, Manual: a.Manual, Available: true, Costs: map[rules.Slug]int{}}
 		for _, cost := range a.Costs {
-			n, err := cost.Amount.Eval(variables(*s))
+			n, err := cost.Amount.Eval(variables(*s, cat))
 			if err != nil {
 				return err
 			}

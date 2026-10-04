@@ -148,6 +148,12 @@ Missing folders and invalid packs fail startup. Restart after changing files;
 there is no file watcher. These packs appear in Homebrew, the pack selector and
 spell browsing alongside SRD, and need no database import or publication step.
 
+When `autoload_packs` points at a repository containing `pack/`, matching
+`spell-icons/<local-spell-slug>.webp` files beside `pack/` are adopted into that
+release. Manifest-declared icons take precedence. The same 128×128 WebP and
+pack-size validation applies; artwork travels in exports and archives. No
+files are written back to the source repository.
+
 An optional `id` overrides the source manifest ID and rewrites internal references
 using the same rules as pack import. It preserves the source version, translations
 and attribution, and computes a new digest. The source files remain untouched.
@@ -228,7 +234,7 @@ indexes, so adding a subclass/subrace does not edit a parent release.
 | `core` | One provider: score limits/generation metadata, proficiency/modifier and HP formulas, base AC/save DC, senses, multiclass slots, recovery |
 | `rules` | Owner, minimum level, optional condition, choices, grants and numeric effects |
 | `resources` | Spendable pools or derived parameters, thresholds/expressions, recovery and sharing |
-| `casting` | Explicit shared/independent profiles; contribution numerator/denominator, start level and floor/ceil rounding per class |
+| `casting` | Explicit class or subclass shared/independent profiles; contribution numerator/denominator, start level and floor/ceil rounding per class |
 | `actions` | Owner, condition, resource costs and manual outcomes |
 | `overrides` | Version-guarded replacement of a dependency's complete rule/resource definition |
 
@@ -360,7 +366,20 @@ Casting profiles may set `selection` (`known`, `prepared`, `spellbook`),
 slot progression. `spellBenefits` attach automatic spells or counted spell
 choices to an owner at a minimum level, with class/any-list/spellbook eligibility
 and a separate purpose such as Arcanum or mastery. Racial benefits can declare
-their casting ability. `choiceRequirements` gate conditional equipment offers
+their casting ability. Casting profiles may be keyed by a subclass to use its
+advancement rows at the parent class's level. A selected subclass profile takes
+precedence over the class profile. Subclass profiles require `list` (a spell-list
+class) and `ability` (one of the six standard scores); class profiles may also
+use these overrides. Spell acquisition and single-caster slots use the owner's
+advancement table, while multiclass slots use the profile's contribution and
+rounding. Choice IDs and sources belong to the subclass, so changing an
+archetype cannot reuse its previous spell choices.
+
+Expressions can read `equipped:armor` and `equipped:shield` as 0/1 flags for
+catalog body armor and shields currently equipped. Backpack items do not set
+these flags.
+
+`choiceRequirements` gate conditional equipment offers
 on any of a list of proficiencies. Referenced owners, classes, spells and
 proficiencies must resolve in the pinned catalogue.
 

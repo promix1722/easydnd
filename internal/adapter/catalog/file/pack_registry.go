@@ -622,6 +622,8 @@ func normalizeMechanics(p *PackDocument) (PackMechanics, error) {
 	}
 	casting := map[string]CastingProfile{}
 	for id, v := range m.Casting {
+		v.List = normalizeID(p.Manifest.ID, v.List)
+		v.Ability = normalizeAbility(v.Ability)
 		v.Resource = normalizeID(p.Manifest.ID, v.Resource)
 		casting[normalizeID(p.Manifest.ID, id)] = v
 	}

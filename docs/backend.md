@@ -2139,8 +2139,11 @@ Sheet spell state adds `sources`, preserving source reference, class, casting
 ability, cantrips, known spells, spellbook entries, preparation, special Arcanum
 and mastery selections, and preparation limits. Existing aggregate fields remain.
 Pack casting profiles describe learning mode, spellbook additions, preparation
-and replacement policy. Source-specific spell benefits and conditional equipment
-requirements are validated with their referenced catalogue entries.
+and replacement policy. Profiles may belong to a selected subclass, with explicit
+spell-list and ability overrides; parent class identity and level remain intact.
+Repository autoload adopts matching sibling `spell-icons/` artwork into the
+release, so exports and archives contain the same icons as catalog responses.
+Source-specific spell benefits and conditional equipment requirements are validated with their referenced catalogue entries.
 
 Append and revision use the same offered options and held/blocked checks. Replay
 removes invalid dependent answers through the existing preview mechanism; it does

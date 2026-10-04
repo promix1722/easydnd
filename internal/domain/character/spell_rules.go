@@ -64,8 +64,12 @@ func SpellRules(log Log, cat *catalog.Catalog) ([]SpellRule, error) {
 		if r.MinLevel == 10 {
 			r.MinLevel = 0
 		}
-		if r.Source.Kind == rules.RefClass {
-			r.ListClasses = []rules.Slug{r.Class}
+		if r.Source.Kind == rules.RefClass || r.Source.Kind == rules.RefSubclass {
+			list := r.Class
+			if profile, ok := cat.Mechanics.Casting[r.Source.Slug]; ok && profile.List != "" {
+				list = profile.List
+			}
+			r.ListClasses = []rules.Slug{list}
 		}
 		merged := false
 		for i := range out {
@@ -98,18 +102,18 @@ func SpellRules(log Log, cat *catalog.Catalog) ([]SpellRule, error) {
 	}
 	for i := range out {
 		r := &out[i]
-		profile, ok := cat.Mechanics.Casting[r.Class]
-		if !ok || r.Source.Kind != rules.RefClass || (r.Purpose != "known" && r.Purpose != "spellbook") || (profile.Selection != "known" && profile.Selection != "spellbook") {
+		profile, ok := cat.Mechanics.Casting[r.Source.Slug]
+		if !ok || (r.Source.Kind != rules.RefClass && r.Source.Kind != rules.RefSubclass) || (r.Purpose != "known" && r.Purpose != "spellbook") || (profile.Selection != "known" && profile.Selection != "spellbook") {
 			continue
 		}
 		base, changes := 0, 0
 		for _, prompt := range prompts {
-			if prompt.Source == r.Source && prompt.Purpose == r.Purpose && maxSpellLevel(cat, r.Class, prompt.Level) == r.MaxLevel {
+			if prompt.Source == r.Source && prompt.Purpose == r.Purpose && maxSpellLevel(cat, r.Source.Slug, prompt.Level) == r.MaxLevel {
 				base += prompt.Choice.Choose
 			}
 		}
 		for level := profile.StartsAt + 1; level <= r.ClassLevel; level++ {
-			if profile.ReplaceKnown && maxSpellLevel(cat, r.Class, level) == r.MaxLevel {
+			if profile.ReplaceKnown && maxSpellLevel(cat, r.Source.Slug, level) == r.MaxLevel {
 				changes++
 			}
 		}

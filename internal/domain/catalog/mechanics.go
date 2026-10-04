@@ -35,7 +35,9 @@ type SenseGrant struct {
 }
 
 type CastingProfile struct {
-	Selection               string // known, prepared, or spellbook
+	List                    rules.Slug    // optional spell-list class, defaulting to the casting class
+	Ability                 rules.Ability // optional override, required for subclass casting
+	Selection               string        // known, prepared, or spellbook
 	PrepareDivisor          int
 	BookStart, BookPerLevel int
 	ReplaceKnown            bool

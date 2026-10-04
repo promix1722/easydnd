@@ -127,17 +127,25 @@ func maxSpellLevel(cat *catalog.Catalog, class rules.Slug, level int) int {
 }
 
 func (b *spellBuilder) class(taken ClassLevel) {
-	profile, ok := b.cat.Mechanics.Casting[taken.Class]
+	owner, profile, ok := castingProfile(b.cat, taken)
 	if !ok || profile.Selection == "" || taken.Level < profile.StartsAt {
 		return
 	}
-	class, ok := b.cat.Classes.Get(taken.Class)
-	if !ok || class.Spellcasting == nil {
+	ability := castingAbility(b.cat, taken.Class, profile)
+	if ability == "" {
 		return
 	}
-	source := SpellSource{Source: rules.NewRef(rules.RefClass, taken.Class), Class: taken.Class, Ability: class.Spellcasting.Ability}
+	kind := rules.RefClass
+	if owner != taken.Class {
+		kind = rules.RefSubclass
+	}
+	list := profile.List
+	if list == "" {
+		list = taken.Class
+	}
+	source := SpellSource{Source: rules.NewRef(kind, owner), Class: taken.Class, Ability: ability}
 	var automatic, extra []rules.Slug
-	currentMax := maxSpellLevel(b.cat, taken.Class, taken.Level)
+	currentMax := maxSpellLevel(b.cat, owner, taken.Level)
 	subclass, _ := b.cat.Subclasses.Get(taken.Subclass)
 	for _, grant := range subclass.Spells {
 		if grant.Level <= taken.Level && profile.ExpandedSubclass {
@@ -145,7 +153,7 @@ func (b *spellBuilder) class(taken ClassLevel) {
 		}
 	}
 	for level := 1; level <= taken.Level; level++ {
-		maxLevel := maxSpellLevel(b.cat, taken.Class, level)
+		maxLevel := maxSpellLevel(b.cat, owner, level)
 		// Automatic subclass spells live in explicit benefits, so a flattened
 		// terrain table cannot accidentally grant every Circle of the Land spell.
 		knownBonus := 0
@@ -167,10 +175,10 @@ func (b *spellBuilder) class(taken ClassLevel) {
 		if level < profile.StartsAt {
 			continue
 		}
-		row, _ := b.cat.ClassLevel(taken.Class, level)
-		previous, _ := b.cat.ClassLevel(taken.Class, level-1)
-		cantrips := b.pick(source.Source, taken.Class, spellPrompt(taken.Class, "cantrip", level), "cantrip", level, row.CantripsKnown-previous.CantripsKnown,
-			b.pool(taken.Class, 0, 0, nil), source.Cantrips, false, false)
+		row, _ := b.cat.ClassLevel(owner, level)
+		previous, _ := b.cat.ClassLevel(owner, level-1)
+		cantrips := b.pick(source.Source, taken.Class, spellPrompt(owner, "cantrip", level), "cantrip", level, row.CantripsKnown-previous.CantripsKnown,
+			b.pool(list, 0, 0, nil), source.Cantrips, false, false)
 		source.Cantrips = appendUnique(source.Cantrips, cantrips...)
 		count := row.SpellsKnown - previous.SpellsKnown - knownBonus
 		mode := "known"
@@ -183,7 +191,7 @@ func (b *spellBuilder) class(taken ClassLevel) {
 			}
 			held = source.Spellbook
 		}
-		learned := b.pick(source.Source, taken.Class, spellPrompt(taken.Class, mode, level), mode, level, count, b.pool(taken.Class, 1, currentMax, extra), held, false, false)
+		learned := b.pick(source.Source, taken.Class, spellPrompt(owner, mode, level), mode, level, count, b.pool(list, 1, currentMax, extra), held, false, false)
 		if mode == "spellbook" {
 			source.Spellbook = appendUnique(source.Spellbook, learned...)
 		} else {
@@ -194,7 +202,7 @@ func (b *spellBuilder) class(taken ClassLevel) {
 				b.benefit(&source, benefit, level, maxLevel)
 			}
 		}
-		if profile.ReplaceKnown && level > profile.StartsAt && (b.all || len(b.answers.picks(spellPrompt(taken.Class, "forget", level))) > 0) {
+		if profile.ReplaceKnown && level > profile.StartsAt && (b.all || len(b.answers.picks(spellPrompt(owner, "forget", level))) > 0) {
 			// Read old swaps for compatibility, but never offer a new replacement workflow.
 			promptStart := len(b.prompts)
 			// One optional replacement per gained class level. Both answers live in
@@ -206,9 +214,9 @@ func (b *spellBuilder) class(taken ClassLevel) {
 					replaceable = slices.DeleteFunc(replaceable, func(s rules.Slug) bool { return slices.Contains(benefit.Spells, s) })
 				}
 			}
-			forgotten := b.pick(source.Source, taken.Class, spellPrompt(taken.Class, "forget", level), "forget", level, 1, replaceable, nil, true, false)
+			forgotten := b.pick(source.Source, taken.Class, spellPrompt(owner, "forget", level), "forget", level, 1, replaceable, nil, true, false)
 			if len(forgotten) > 0 {
-				replacement := b.pick(source.Source, taken.Class, spellPrompt(taken.Class, "replace", level), "replace", level, 1, b.pool(taken.Class, 1, maxLevel, extra), before, false, false)
+				replacement := b.pick(source.Source, taken.Class, spellPrompt(owner, "replace", level), "replace", level, 1, b.pool(list, 1, maxLevel, extra), before, false, false)
 				if len(replacement) > 0 {
 					source.Known = slices.DeleteFunc(source.Known, func(s rules.Slug) bool { return s == forgotten[0] })
 					source.Known = appendUnique(source.Known, replacement...)
@@ -225,12 +233,12 @@ func (b *spellBuilder) class(taken ClassLevel) {
 	automatic = appendUnique(automatic, source.Prepared...)
 	if profile.PrepareDivisor > 0 {
 		source.PreparationLimit = max(1, taken.Level/profile.PrepareDivisor+b.state.Abilities.Modifier(source.Ability))
-		pool := b.pool(taken.Class, 1, maxSpellLevel(b.cat, taken.Class, taken.Level), nil)
+		pool := b.pool(list, 1, maxSpellLevel(b.cat, owner, taken.Level), nil)
 		if profile.Selection == "spellbook" {
 			pool = slices.Clone(source.Spellbook)
 		}
 		pool = slices.DeleteFunc(pool, func(s rules.Slug) bool { return slices.Contains(automatic, s) })
-		prepared := b.pick(source.Source, taken.Class, spellPrompt(taken.Class, "prepared", taken.Level), "prepared", taken.Level, source.PreparationLimit, pool, nil, true, true)
+		prepared := b.pick(source.Source, taken.Class, spellPrompt(owner, "prepared", taken.Level), "prepared", taken.Level, source.PreparationLimit, pool, nil, true, true)
 		source.Prepared = appendUnique(source.Prepared, prepared...)
 	}
 	source.Prepared = appendUnique(source.Prepared, automatic...)

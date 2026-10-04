@@ -521,6 +521,18 @@ fields remain for compatibility. Identical spells from separate classes retain
 separate ownership. Eligibility follows the individual class's level and spell
 list; combined multiclass slots do not unlock higher-level spells to learn.
 
+A selected subclass can supply its own casting profile and advancement table.
+Eldritch Knight and Arcane Trickster in the D&D 2014 pack learn from the Wizard
+list and cast with Intelligence, while their acquisition totals and single-class
+slots follow their subclass rows at the parent class's level. Multiclass slots
+use the profile's fraction and rounding. Spell-choice IDs and sources belong to
+the subclass, preventing an archetype change from carrying its old selections.
+
+Pack expressions can read whether body armor or a shield is equipped. Equipped
+changes apply before rule conditions; backpack and loot changes follow grants.
+This allows packs to implement equipment-dependent features such as Unarmored
+Defense without interpreting their prose.
+
 | Casting mode | Acquisition | Preparation |
 | --- | --- | --- |
 | Bard, ranger, sorcerer, warlock | Current table total, using the current class-level spell pool | Known spells are available |
