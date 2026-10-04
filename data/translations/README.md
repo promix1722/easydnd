@@ -65,6 +65,12 @@ out and it falls back on its own.
   here is the difference between a five-second fix and a word nobody ever sees.
 - A directory that is not a known language tag fails the same way.
 - Nothing checks how *much* is translated. A locale is allowed to be one line.
+- `make data/lint` reads the generated bundles the way a player would and
+  reports what the build cannot know is wrong: English left inside a sentence,
+  two entries with the same name, a `DC` that should be `Сл`, a table row
+  without its pipes, a glossary term the translation never uses. `make verify`
+  runs the subset of those checks that is at zero (`data/lint/check`). See
+  `docs/packs.md#linting-the-prose`.
 
 Russian is the exception to that last general rule: it is a complete locale,
 and `cmd/srdgen` has a test that requires every non-empty English leaf to have a

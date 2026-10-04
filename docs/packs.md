@@ -26,6 +26,61 @@ go run ./cmd/pack -in data/packs/examples/tactician.json,data/srd_5.1 -out /tmp/
 go run ./cmd/pack -in data/packs/examples/tactician.json,data/srd_5.1 -out /tmp/tactician-pack -directory
 ```
 
+### Prose formats
+
+A locale entry is `{name, desc, fields, blocks}`, and each of those is one of
+two formats. The format belongs to the field; nothing on the wire marks it.
+
+| Field | Format |
+|---|---|
+| `name`, every `fields.*` value, and the name-only bundles (`terms`, `resources`, `actions`) | **plain text**: one line, shown as written |
+| `desc[]` and every `blocks.*[]` | **Markdown**, one array element per line-level block |
+
+A Markdown element is exactly one of: a paragraph, a `##### ` heading, one
+`- ` list item, or one table row. A table is a run of elements, each with outer
+pipes, whose second element is the `|---|---|` separator. Inline, `***Name.***`
+opens a named paragraph and `**bold**` is bold. There is no HTML and there are
+no links; the client renders with `skipHtml`.
+
+One block per element rather than one string per table is what keeps a
+translation aligned with its source path by path -- `/desc/7` is the same row
+in every locale. The client puts the document back together with `joinProse`
+(`web/src/ui/prose.ts`): a blank line between blocks, a single newline between
+adjacent rows or adjacent list items, which is what GFM needs to see one table
+rather than a column of paragraphs.
+
+### Linting the prose
+
+`cmd/pack` proves a pack loads; it says nothing about whether its text reads.
+`cmd/packlint` reads `i18n/<locale>/*.json` of a pack *directory* and reports
+what a loader cannot see:
+
+- converter markup that leaked into a sentence (`{@item ...}`, a bare `phb`),
+  punctuation debris, stray whitespace;
+- breaches of the formats above -- `malformed-table` for a row without outer
+  pipes or a table without its separator, `markdown-in-plain-field` for
+  Markdown in a name or a `fields.*` value;
+- for every locale other than the default one, a coverage table plus what is
+  missing, what was copied instead of translated, and descriptions whose dice
+  or distances disagree with the source -- the cheap sign that a translation
+  was attached to the wrong entry;
+- with `-glossary`, source terms whose preferred translation the entry never
+  uses (`glossary-term`).
+
+```sh
+make data/lint                                   # the SRD, report only
+make data/lint PACK=../easydnd-2014/pack         # any pack directory
+make data/lint/check                             # the gate `make verify` runs
+go run ./cmd/packlint -in <dir> -check values-differ   # every finding of one check
+```
+
+It exits 0 unless `-fail` names a check with findings. `data/lint/check` is
+that list for the SRD: the checks that have been driven to zero and are held
+there. `glossary-term` is not in it and is not meant to be -- it matches word
+stems, so it is a reading list, not a verdict. The Russian-only checks
+(Cyrillic dice, metric units, `[english]` in brackets, `nonstandard-abbreviation`)
+encode the rules in `data/translations/README.md`.
+
 Configure the server through the existing YAML file:
 
 ```yaml

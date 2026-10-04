@@ -1,6 +1,6 @@
 import type { Entry, Spell } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Markdown, SourceTags, SimpleGrid, Stack, Text, Title } from '@/ui'
+import { joinProse, Markdown, SourceTags, SimpleGrid, Stack, Text, Title } from '@/ui'
 
 import { castingTimeText, componentsAbbrev, durationText, rangeText } from './spellText'
 
@@ -25,10 +25,10 @@ export function SpellDetails({ spell, entries }: { spell: Spell; entries: Readon
           <Text size="sm">{fact.value}</Text>
         </div>)}
       </SimpleGrid>
-      <Markdown>{(spell.desc ?? []).join('\n\n')}</Markdown>
+      <Markdown>{joinProse(spell.desc ?? [])}</Markdown>
       {(spell.higherLevel?.length ?? 0) > 0 && <Stack gap="sm">
         <Title order={4}>{t('spell.higherLevel')}</Title>
-        <Markdown>{spell.higherLevel!.join('\n\n')}</Markdown>
+        <Markdown>{joinProse(spell.higherLevel!)}</Markdown>
       </Stack>}
     </Stack>
   )

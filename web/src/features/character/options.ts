@@ -1,6 +1,7 @@
 import type { Entry, Item, Option, Prompt } from '@/lib/api'
 import { slugOf, titleCase } from '@/domain'
 import type { Translate } from '@/lib/i18n'
+import { joinProse } from '@/ui'
 
 import { abilityName, choiceOptionName } from './labels'
 
@@ -60,7 +61,7 @@ export function choosableOptions(
       key: entry.slug,
       provenance: entry.provenance,
       label: entry.name,
-      ...maybeDetail(entry.desc?.join("\n\n")),
+      ...maybeDetail(entry.desc?.length ? joinProse(entry.desc) : undefined),
       disabled: disabledBy(t, prompt, held, entry.slug) !== undefined,
       ...maybeReason(disabledBy(t, prompt, held, entry.slug)),
     }))
@@ -179,7 +180,7 @@ export function optionLabel(
 function detailOf(t: Translate, option: Option, entries: Map<string, Entry>): string | undefined {
   if (option.kind === 'bundle') return (option.items ?? []).map((item) => {
     const detail = detailOf(t, item, entries)
-    return detail === undefined ? optionLabel(t, item, entries) : `${optionLabel(t, item, entries)}\n${detail}`
+    return detail === undefined ? optionLabel(t, item, entries) : `${optionLabel(t, item, entries)}\n\n${detail}`
   }).join('\n\n')
   if (option.kind !== 'ref' || option.ref === undefined) return undefined
   const entry = entries.get(slugOf(option.ref))
@@ -206,7 +207,7 @@ function detailOf(t: Translate, option: Option, entries: Map<string, Entry>): st
     if (item.cost) lines.push(t('equipment.cost', { value: item.cost.amount, unit: coinName(t, item.cost.unit) }))
     if (item.gear?.contents?.length) lines.push(t('equipment.contents', { items: item.gear.contents.map((item) => `${entries.get(item.item)?.name ?? titleCase(item.item)} ×${item.count}`).join(', ') }))
   }
-  return lines.length === 0 ? undefined : lines.join('\n\n')
+  return lines.length === 0 ? undefined : joinProse(lines)
 }
 
 function coinName(t: Translate, unit: string): string {

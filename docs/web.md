@@ -3916,6 +3916,17 @@ answer. Adding returns to the list with its filters intact. The detail view and
 the standalone spell page share a Markdown renderer, including emphasis, lists,
 tables and higher-level rules. Catalogue HTML is not executed.
 
+Every description the client shows goes through that one renderer: spell
+details, and the detail under a picked option in the builder (a background, a
+feat, an item). `desc` and `blocks.*` arrive as an array with one line-level
+block per element -- a table is one row per element -- so they are never joined
+by hand: `joinProse` (`web/src/ui/prose.ts`) puts a blank line between blocks
+and a single newline between adjacent rows or list items, which is the
+difference between a table and a column of pipes. `name` and `fields.*` are
+plain text and are rendered as written. The contract is in
+`docs/packs.md#prose-formats`. An option's detail sits below its button, not
+inside it, because a table is not something a button may contain.
+
 The Cantrips and Spells tabs each show one combined selected list immediately,
 without collapsed question boxes or a per-level choice selector. Only the
 selected list is grouped by spell level. Available spells form one flat,

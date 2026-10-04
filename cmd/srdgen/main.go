@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -293,6 +294,7 @@ func (g *generator) writeLocales(locales []rules.Locale) error {
 	english[file.FileTerms] = g.terms
 
 	for _, name := range file.ProseFiles() {
+		tidyBundle(english[name])
 		path := filepath.Join(file.LocaleDir, rules.DefaultLocale.String(), name)
 		if err := g.write(path, english[name]); err != nil {
 			return err
@@ -312,6 +314,7 @@ func (g *generator) writeLocales(locales []rules.Locale) error {
 			if !ok {
 				continue
 			}
+			tidyBundle(bundle)
 			path := filepath.Join(file.LocaleDir, locale.String(), name)
 			if err := g.write(path, bundle); err != nil {
 				return err
@@ -319,6 +322,50 @@ func (g *generator) writeLocales(locales []rules.Locale) error {
 		}
 	}
 	return nil
+}
+
+var (
+	spaceRuns  = regexp.MustCompile(` {2,}`)
+	doubleStop = regexp.MustCompile(`([^.])\.\.$`)
+)
+
+// tidyBundle removes what the upstream dump and a translator's keyboard leave
+// behind and no reader should see: edge whitespace, runs of spaces, a doubled
+// full stop, an empty paragraph, and a table row its author forgot to close --
+// which GFM reads as a row with one cell too few.
+//
+// It runs on every locale, English included, so a path means the same
+// paragraph in each of them afterwards. Dropping an empty paragraph shifts the
+// indexes after it; the translation has to drop the same one, and the coverage
+// test in translations_test.go fails if it does not.
+func tidyBundle(bundle file.Bundle) {
+	tidy := func(s string) string {
+		s = doubleStop.ReplaceAllString(spaceRuns.ReplaceAllString(strings.TrimSpace(s), " "), "$1.")
+		if strings.HasPrefix(s, "|") && !strings.HasSuffix(s, "|") {
+			s += " |"
+		}
+		return s
+	}
+	paragraphs := func(in []string) []string {
+		out := in[:0]
+		for _, p := range in {
+			if p = tidy(p); p != "" {
+				out = append(out, p)
+			}
+		}
+		return out
+	}
+	for slug, prose := range bundle {
+		prose.Name = tidy(prose.Name)
+		prose.Desc = paragraphs(prose.Desc)
+		for k, v := range prose.Fields {
+			prose.Fields[k] = tidy(v)
+		}
+		for k, v := range prose.Blocks {
+			prose.Blocks[k] = paragraphs(v)
+		}
+		bundle[slug] = prose
+	}
 }
 
 // translationFor reads one locale's hand-edited files, checking as it goes.

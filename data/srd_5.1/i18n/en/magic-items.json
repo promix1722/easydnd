@@ -87,7 +87,7 @@
       "| 7 | The apparatus turns 90 degrees left. | The apparatus turns 90 degrees right. |",
       "| 8 | Eyelike fixtures emit bright light in a 30-foot radius and dim light for an additional 30 feet. | The light turns off. |",
       "| 9 | The apparatus sinks as much as 20 feet in liquid. | The apparatus rises up to 20 feet in liquid. |",
-      "| 10 | The rear hatch unseals and opens. |  The rear hatch closes and seals. |"
+      "| 10 | The rear hatch unseals and opens. | The rear hatch closes and seals. |"
     ]
   },
   "armor": {
@@ -148,7 +148,7 @@
     "name": "Armor of Vulnerability",
     "desc": [
       "Armor (plate), rare (requires attunement)",
-      "While wearing this armor, you have resistance to  one of the following damage types: bludgeoning, piercing, or slashing. The GM chooses the type or determines it randomly.",
+      "While wearing this armor, you have resistance to one of the following damage types: bludgeoning, piercing, or slashing. The GM chooses the type or determines it randomly.",
       "***Curse.*** This armor is cursed, a fact that is revealed only when an identify spell is cast on the armor or you attune to it. Attuning to the armor curses you until you are targeted by the remove curse spell or similar magic; removing the armor fails to end the curse. While cursed, you have vulnerability to two of the three damage types associated with the armor (not the one to which it grants resistance)."
     ]
   },
@@ -173,8 +173,8 @@
     "desc": [
       "Wondrous item, rare",
       "Inside this heavy cloth bag are 3d4 dry beans. The bag weighs 1/2 pound plus 1/4 pound for each bean it contains.",
-      "If you dump the bag's contents out on the ground,  they explode in a 10-foot radius, extending from the beans. Each creature in the area, including you, must  make a DC 15 Dexterity saving throw, taking 5d4 fire  damage on a failed save, or half as much damage on  a successful one. The fire ignites flammable objects  in the area that aren't being worn or carried.",
-      "If you remove a bean from the bag, plant it in dirt  or sand, and then water it, the bean produces an  effect 1 minute later from the ground where it was  planted. The GM can choose an effect from the  following table, determine it randomly, or create an  effect.",
+      "If you dump the bag's contents out on the ground, they explode in a 10-foot radius, extending from the beans. Each creature in the area, including you, must make a DC 15 Dexterity saving throw, taking 5d4 fire damage on a failed save, or half as much damage on a successful one. The fire ignites flammable objects in the area that aren't being worn or carried.",
+      "If you remove a bean from the bag, plant it in dirt or sand, and then water it, the bean produces an effect 1 minute later from the ground where it was planted. The GM can choose an effect from the following table, determine it randomly, or create an effect.",
       "| d100 | Effect |",
       "|---|---|",
       "| 01 | 5d4 toadstools sprout. If a creature eats a toadstool, roll any die. On an odd roll, the eater must succeed on a DC 15 Constitution saving throw or take 5d6 poison damage and become poisoned for 1 hour. On an even roll, the eater gains 5d6 temporary hit points for 1 hour. |",
@@ -521,7 +521,7 @@
     "name": "Carpet of Flying",
     "desc": [
       "Wondrous item, very rare",
-      "You can speak the carpet's command word as an  action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
+      "You can speak the carpet's command word as an action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
       "Four sizes of carpet of flying exist. The GM chooses the size of a given carpet or determines it randomly.",
       "| d100 | Size | Capacity | Flying Speed |",
       "|---|---|---|---|",
@@ -536,7 +536,7 @@
     "name": "Carpet of Flying (3 ft. × 5 ft.)",
     "desc": [
       "Wondrous item, very rare",
-      "You can speak the carpet's command word as an  action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
+      "You can speak the carpet's command word as an action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
       "This carpet is 3 feet by 5 feet and has a flying speed of 80 feet. It can carry up to 400 pounds, but its flying speed becomes 40 feet while carrying over 200 pounds."
     ]
   },
@@ -544,7 +544,7 @@
     "name": "Carpet of Flying (4 ft. × 6 ft.)",
     "desc": [
       "Wondrous item, very rare",
-      "You can speak the carpet's command word as an  action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
+      "You can speak the carpet's command word as an action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
       "This carpet is 4 feet by 6 feet and has a flying speed of 60 feet. It can carry up to 800 pounds, but its flying speed becomes 30 feet while carrying over 400 pounds."
     ]
   },
@@ -552,7 +552,7 @@
     "name": "Carpet of Flying (5 ft. × 7 ft.)",
     "desc": [
       "Wondrous item, very rare",
-      "You can speak the carpet's command word as an  action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
+      "You can speak the carpet's command word as an action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
       "This carpet is 5 feet by 7 feet and has a flying speed of 40 feet. It can carry up to 1200 pounds, but its flying speed becomes 20 feet while carrying over 600 pounds."
     ]
   },
@@ -560,7 +560,7 @@
     "name": "Carpet of Flying (6 ft. × 9 ft.)",
     "desc": [
       "Wondrous item, very rare",
-      "You can speak the carpet's command word as an  action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
+      "You can speak the carpet's command word as an action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it.",
       "This carpet is 6 feet by 9 feet and has a flying speed of 30 feet. It can carry up to 1600 pounds, but its flying speed becomes 15 feet while carrying over 800 pounds."
     ]
   },
@@ -680,12 +680,12 @@
       "Cube of Force Faces",
       "| Face | Charges | Effect |",
       "|---|---|---|",
-      "| 1 | 1 | Gases, wind, and fog can't pass through the barrier.",
-      "| 2 | 2 | Nonliving matter can't pass through the barrier. Walls, floors, and ceilings can pass through at your discretion.",
-      "| 3 | 3 | Living matter can't pass through the barrier.",
-      "| 4 | 4 | Spell effects can't pass through the barrier.",
-      "| 5 | 5 | Nothing can pass through the barrier. Walls, floors, and ceilings can pass through at your discretion.",
-      "| 6 | 0 | The barrier deactivates.",
+      "| 1 | 1 | Gases, wind, and fog can't pass through the barrier. |",
+      "| 2 | 2 | Nonliving matter can't pass through the barrier. Walls, floors, and ceilings can pass through at your discretion. |",
+      "| 3 | 3 | Living matter can't pass through the barrier. |",
+      "| 4 | 4 | Spell effects can't pass through the barrier. |",
+      "| 5 | 5 | Nothing can pass through the barrier. Walls, floors, and ceilings can pass through at your discretion. |",
+      "| 6 | 0 | The barrier deactivates. |",
       "The cube loses charges when the barrier is targeted by certain spells or comes into contact with certain spell or magic item effects, as shown in the table below.",
       "| Spell or Item | Charges Lost |",
       "|---|---|",

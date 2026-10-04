@@ -325,6 +325,22 @@ data/srd/check:
 	 rm -rf $$tmp; \
 	 echo "srd data current"
 
+## data/lint: report suspicious prose in a pack (PACK=dir, default the SRD)
+# See docs/packs.md#linting-the-prose.
+PACK ?= $(SRD_DIR)
+LINT_GLOSSARY ?= data/translations/ru.glossary.json
+data/lint:
+	go run ./cmd/packlint -in $(PACK) -glossary $(LINT_GLOSSARY)
+
+## data/lint/check: fail if the SRD prose regresses on a check that is at zero
+# A check joins this list when its last finding is fixed, not before: a gate
+# that starts red is a gate people learn to skip.
+LINT_GATED ?= markup-leftover,source-code-leak,stray-punctuation,space-before-punctuation,double-space,html,edge-whitespace,empty-string,malformed-table,markdown-in-plain-field,cyrillic-dice,metric-units,inline-table,heading-glued-to-paragraph,english-in-brackets,nonstandard-abbreviation,untranslated-words,same-as-default-locale,slug-not-in-default-locale,missing-name,missing-desc,missing-fields,missing-blocks,paragraph-count-differs,values-differ
+data/lint/check:
+	@go run ./cmd/packlint -in $(SRD_DIR) -samples 0 -fail "$(LINT_GATED)" >/dev/null \
+	  || { go run ./cmd/packlint -in $(SRD_DIR) | sed -n '/^[a-z][a-z] /,$$p'; echo "PROSE LINT: a gated check has findings; see above"; exit 1; }
+	@echo "srd prose clean"
+
 ## fmt: format all Go source
 fmt:
 	gofmt -s -w .
@@ -484,8 +500,8 @@ tidy:
 VERIFY_JOBS ?= 2
 verify:
 	@$(MAKE) --no-print-directory -j$(VERIFY_JOBS) --output-sync=target \
-	  web/test web/build web/lint vet test/unit build/release data/srd/check web/icons/check \
-	  fmt/check lint/layers
+	  web/test web/build web/lint vet test/unit build/release data/srd/check data/lint/check \
+	  web/icons/check fmt/check lint/layers
 
 ## clean: remove build artefacts
 clean:
@@ -498,7 +514,7 @@ clean:
         dev dev/up dev/down slots ports config/dev \
         preview preview/up config/preview \
         db/up db/down db/psql test/db \
-        data/srd data/srd/check \
+        data/srd data/srd/check data/lint data/lint/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \
         web/deps web/dev web/lint web/test web/check web/build web/release \
         web/icons web/icons/check spell-icons

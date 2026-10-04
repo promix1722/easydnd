@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Answer, Choice, Entry, Option, Prompt } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
-import { Button, Group, SourceTags, Stack, Text } from '@/ui'
+import { Box, Button, Group, Markdown, SourceTags, Stack, Text } from '@/ui'
 
 import { SpellChoices } from './SpellChoices'
 
@@ -152,8 +152,8 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
           // only one is wanted -- there the rest are how you change it.
           const spent = picked.length === target && !one && count === 0
           return (
+            <Stack key={option.key} gap={4}>
             <Button
-              key={option.key}
               aria-label={stacked(t, stage, option.key, count, entries) ?? option.label}
               variant={count > 0 ? 'light' : 'default'}
               c="var(--mantine-color-text)"
@@ -195,19 +195,22 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
                   </Text>
                   <SourceTags provenance={option.provenance} rightAligned />
                 </Group>
-                {/*
-                  Only under the one that was picked. Every option carrying its
-                  own paragraph turns a list of six into a page nobody reads,
-                  and the same text cut to fit one line stops mid-word -- so it
-                  is shown where it is being decided about, in full.
-                */}
-                {count > 0 && option.detail !== undefined && (
-                  <Text size="xs" style={{ whiteSpace: 'pre-line', opacity: 0.8 }}>
-                    {option.detail}
-                  </Text>
-                )}
               </Stack>
             </Button>
+            {/*
+              Only under the one that was picked. Every option carrying its
+              own paragraph turns a list of six into a page nobody reads, and
+              the same text cut to fit one line stops mid-word -- so it is
+              shown where it is being decided about, in full. Beside the
+              button rather than inside it: the description is Markdown, and a
+              table or a list is not something a button may contain.
+            */}
+            {count > 0 && option.detail !== undefined && (
+              <Box px="sm" opacity={0.8}>
+                <Markdown>{option.detail}</Markdown>
+              </Box>
+            )}
+            </Stack>
           )
         })}
         {options.length === 0 && (
