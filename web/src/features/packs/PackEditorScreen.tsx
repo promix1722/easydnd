@@ -318,7 +318,7 @@ export function PackEditorScreen() {
                     value={mappings[source] ?? null}
                     data={(loaded.data?.available.packs ?? [])
                       .filter((p) => p.id !== id && p.releases.length > 0)
-                      .map((p) => ({ value: p.id, label: p.title }))}
+                      .map((p) => ({ value: p.id, label: `${p.title} v${p.releases.at(-1)!.version}` }))}
                     onChange={(v) => {
                       const next = { ...mappings }
                       if (v) next[source] = v

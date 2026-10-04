@@ -1,6 +1,6 @@
 import type { Entry, SourceOptions } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Checkbox, Group, MultiSelect, Select, Stack, TextInput, sourceAbbreviation } from '@/ui'
+import { Checkbox, Group, SummaryMultiSelect, Select, Stack, TextInput } from '@/ui'
 
 import { castingTimeText, levelText } from './spellText'
 
@@ -31,26 +31,34 @@ export function SpellFilters({ value, onChange, schools, classes, availableOnly,
       />
       <Group gap="sm">
         {sourceOptions && <>
-          <MultiSelect
+          <SummaryMultiSelect
             w={{ base: '100%', sm: 240 }} miw={0} maw="100%"
-            styles={{ inputField: { minWidth: 0 }, option: { whiteSpace: 'nowrap' } }}
-            aria-label={t('spells.filter.pack')} placeholder={value.packIds?.length ? undefined : t('spells.filter.allPacks')}
-            data={sourceOptions.packs.map((p) => ({ value: p.id, label: p.title }))}
-            value={value.packIds ?? []} searchable clearable
-            onChange={(packIds) => onChange({ ...value, packIds, sources: (value.sources ?? []).filter((id) => !packIds.length || sourceOptions.sources.some((s) => s.id === id && packIds.includes(s.packId))) })}
+            aria-label={t('spells.filter.pack')} placeholder={t('spells.filter.allPacks')}
+            data={sourceOptions.packs.flatMap((p) => (onVersionChange ? p.versions : [p.version])
+              .map((version) => ({ value: `${p.id}@${version}`, label: `${p.title} v${version}` })))}
+            value={(value.packIds ?? []).flatMap((id) => {
+              const pack = sourceOptions.packs.find((p) => p.id === id)
+              return pack ? [`${id}@${pack.version}`] : []
+            })} searchable clearable
+            onChange={(releases) => {
+              const selected = new Map(releases.map((release) => release.split('@') as [string, string]))
+              const packIds = [...selected.keys()]
+              onChange({ ...value, packIds, sources: (value.sources ?? []).filter((id) => !packIds.length || sourceOptions.sources.some((s) => s.id === id && packIds.includes(s.packId))) })
+              for (const [id, version] of selected) {
+                if (sourceOptions.packs.find((p) => p.id === id)?.version !== version) onVersionChange?.(id, version)
+              }
+            }}
           />
-          <MultiSelect
+          <SummaryMultiSelect
             w={{ base: '100%', sm: 240 }} miw={0} maw="100%"
-            styles={{ inputField: { minWidth: 0 }, option: { whiteSpace: 'nowrap' } }}
-            aria-label={t('spells.filter.source')} placeholder={value.sources?.length ? undefined : t('spells.filter.allSources')}
-            data={sourceOptions.sources.filter((s) => !value.packIds?.length || value.packIds.includes(s.packId)).map((s) => ({ value: s.id, label: `${sourceAbbreviation(s.id)} / ${sourceOptions.packs.find((p) => p.id === s.packId)?.title ?? s.packId}` }))}
+            aria-label={t('spells.filter.source')} placeholder={t('spells.filter.allSources')}
+            data={sourceOptions.sources.filter((s) => !value.packIds?.length || value.packIds.includes(s.packId)).map((s) => {
+              const pack = sourceOptions.packs.find((p) => p.id === s.packId)
+              return { value: s.id, label: `${s.name} / ${pack ? `${pack.title} v${pack.version}` : s.packId}` }
+            })}
             value={value.sources ?? []} searchable clearable onChange={(sources) => onChange({ ...value, sources })}
           />
-          {onVersionChange && sourceOptions.packs.filter((p) => p.versions.length > 1 && (!value.packIds?.length || value.packIds.includes(p.id))).map((p) => <Select key={p.id}
-            maw="100%"
-            label={`${p.title} · ${t('packs.version')}`} data={p.versions} value={p.version}
-            onChange={(version) => { if (version) onVersionChange(p.id, version) }}
-          />)}
+
         </>}
         <Select
           aria-label={t('spells.filter.level')}

@@ -386,6 +386,17 @@ func localeBundle(p *PackDocument, locale rules.Locale, collection string) Bundl
 }
 
 func compilePacks(docs []*PackDocument, locale rules.Locale, lock pack.Lock) (*catalog.Catalog, error) {
+	// Replacement cores also share localized ability identities. Report the
+	// actionable core conflict before merging their entities and translations.
+	coreProviders := 0
+	for _, p := range docs {
+		if p.Mechanics.Core != nil {
+			coreProviders++
+			if coreProviders > 1 {
+				return nil, fmt.Errorf("multiple core rule providers")
+			}
+		}
+	}
 	entities := map[string][]any{}
 	prose := map[string]Bundle{}
 	mechanics := PackMechanics{Casting: map[string]CastingProfile{}}
@@ -414,9 +425,6 @@ func compilePacks(docs []*PackDocument, locale rules.Locale, lock pack.Lock) (*c
 			return nil, err
 		}
 		if m.Core != nil {
-			if mechanics.Core != nil {
-				return nil, fmt.Errorf("multiple core rule providers")
-			}
 			mechanics.Core = m.Core
 		}
 		mechanics.Actions = append(mechanics.Actions, m.Actions...)

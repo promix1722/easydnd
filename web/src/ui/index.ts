@@ -166,4 +166,5 @@ export { ChoiceDetails } from './ChoiceDetails'
 export { DevAccounts } from './DevAccounts'
 
 export { SourceTags } from './SourceTags'
+export { SummaryMultiSelect } from './SummaryMultiSelect'
 export { sourceAbbreviation } from './sourceAbbreviation'

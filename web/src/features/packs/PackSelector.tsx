@@ -4,7 +4,7 @@ import { listPacks, resolvePacks, type RulesLock, type PackRelease } from '@/lib
 import { describeError } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
 import { useT } from '@/lib/i18n'
-import { Alert, BlockList, Button, Group, Select, Stack, Text } from '@/ui'
+import { Alert, BlockList, Button, Group, Stack, Text } from '@/ui'
 
 export function PackSelector({
   value,
@@ -49,6 +49,7 @@ export function PackSelector({
   function select(next: PackRelease[]) {
     if (finalized) return
     setRoots(next)
+    setFailure('')
     onDirtyChange?.(true)
   }
   async function apply() {
@@ -67,8 +68,7 @@ export function PackSelector({
   const form = finalized ? (
     <Stack gap="sm">
       {(value?.packs ?? []).map((release) => <Group key={release.id} justify="space-between">
-        <Text size="sm">{list.data?.packs.find((p) => p.id === release.id)?.title ?? release.id}</Text>
-        <Text size="xs" c="dimmed">{release.version}</Text>
+        <Text size="sm">{list.data?.packs.find((p) => p.id === release.id)?.title ?? release.id} v{release.version}</Text>
       </Group>)}
       <Text size="xs" c="dimmed">{t('ruleset.final')}</Text>
       {children}
@@ -79,39 +79,26 @@ export function PackSelector({
       <Stack gap="xs">
         {(list.data?.packs ?? [])
           .filter((p) => !p.archived && p.releases.length > 0)
-          .map((p) => {
-            const release = selected.find((r) => r.id === p.id)
+          .flatMap((p) => [...p.releases].reverse().map((release) => {
+            const chosen = selected.some((r) => r.id === p.id && r.version === release.version)
             return (
-              <Stack key={p.id} gap="xs">
-                <Button
-                  variant={release ? 'light' : 'default'}
-                  aria-pressed={!!release}
-                  justify="space-between"
-                  h="auto"
-                  py="xs"
-                  rightSection={<Text size="xs">{release?.version ?? p.releases.at(-1)?.version}</Text>}
-                  disabled={disabled || pending}
-                  onClick={() => select(release
-                    ? selected.filter((r) => r.id !== p.id)
-                    : [...selected, p.releases[p.releases.length - 1]!])}
-                >
-                  <Text size="sm" style={{ whiteSpace: 'normal', textAlign: 'left' }}>{p.title}</Text>
-                </Button>
-                {release && p.releases.length > 1 && (
-                  <Select
-                    label={t('packs.version')}
-                    value={release.version}
-                    data={p.releases.map((r) => r.version)}
-                    disabled={disabled || pending}
-                    onChange={(version) => {
-                      const next = p.releases.find((r) => r.version === version)
-                      if (next) select(selected.map((r) => (r.id === p.id ? next : r)))
-                    }}
-                  />
-                )}
-              </Stack>
+              <Button
+                key={`${p.id}@${release.version}`}
+                variant={chosen ? 'light' : 'default'}
+                aria-pressed={chosen}
+                justify="flex-start"
+                h="auto"
+                py="xs"
+                disabled={disabled || pending}
+                onClick={() => {
+                  const remaining = selected.filter((r) => r.id !== p.id)
+                  select(chosen ? remaining : [...remaining, release])
+                }}
+              >
+                <Text size="sm" style={{ whiteSpace: 'normal', textAlign: 'left' }}>{p.title} v{release.version}</Text>
+              </Button>
             )
-          })}
+          }))}
       </Stack>
       <Group>
         <Button

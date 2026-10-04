@@ -3,6 +3,58 @@ import { renderAt } from '@/test/render'
 import { PackSelector } from './PackSelector'
 const base = { id: 'srd-2014', version: '1.0.0', digest: 'base' }
 const extra = { id: 'extra', version: '1.0.0', digest: 'extra' }
+
+it('selects a pack release directly and replaces another version of the same pack', async () => {
+  const newer = { ...base, version: '2.0.0', digest: 'newer' }
+  const resolved: unknown[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.includes('/resolve')) {
+      const packs = JSON.parse(String(init?.body)).packs
+      resolved.push(packs)
+      return new Response(JSON.stringify({ edition: '2014', semantics: '1', packs }), { headers: { 'Content-Type': 'application/json' } })
+    }
+    return new Response(JSON.stringify({
+      defaultRules: { edition: '2014', semantics: '1', packs: [base] },
+      packs: [{ id: base.id, title: 'SRD 5.1', releases: [base, newer] }],
+    }), { headers: { 'Content-Type': 'application/json' } })
+  }))
+  renderAt('desktop', <PackSelector onChange={vi.fn()} />)
+  const current = await screen.findByRole('button', { name: 'SRD 5.1 v1.0.0' })
+  const next = screen.getByRole('button', { name: 'SRD 5.1 v2.0.0' })
+  expect(current).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+  expect(screen.queryByText('Version')).not.toBeInTheDocument()
+  fireEvent.click(next)
+  expect(current).toHaveAttribute('aria-pressed', 'false')
+  expect(next).toHaveAttribute('aria-pressed', 'true')
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+  await waitFor(() => expect(resolved).toEqual([[newer]]))
+})
+
+it('explains incompatible core packs and clears the error when the selection changes', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.includes('/resolve')) return new Response(JSON.stringify({
+      error: { code: 'validation_error', reason: 'pack.coreConflict' },
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({
+      defaultRules: { edition: '2014', semantics: '1', packs: [base] },
+      packs: [
+        { id: base.id, title: 'SRD 5.1', releases: [base] },
+        { id: extra.id, title: 'D&D 2014', releases: [extra] },
+      ],
+    }), { headers: { 'Content-Type': 'application/json' } })
+  }))
+  const changed = vi.fn()
+  renderAt('desktop', <PackSelector onChange={changed} />)
+  fireEvent.click(await screen.findByRole('button', { name: /D&D 2014/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+  const message = 'These packs cannot be used together because more than one provides the base game rules. Deselect one of the base rule packs, then confirm again.'
+  expect(await screen.findByText(message)).toBeInTheDocument()
+  expect(changed).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: /SRD 5.1/ }))
+  expect(screen.queryByText(message)).not.toBeInTheDocument()
+})
+
 it('starts with SRD and resolves a selected addon before applying', async () => {
   const lock = { edition: '2014', semantics: '1', packs: [extra, base] }
   const available = {
@@ -75,7 +127,7 @@ it('shows finalized packs without any editing controls or attention border', asy
   }), { headers: { 'Content-Type': 'application/json' } })))
   const changed = vi.fn()
   renderAt('desktop', <PackSelector finalized value={{ edition: '2014', semantics: '1', packs: [base] }} onChange={changed} disclosure={{ open: true, onOpen: vi.fn() }} />)
-  expect(await screen.findByText('SRD 5.1')).toBeInTheDocument()
+  expect(await screen.findByText('SRD 5.1 v1.0.0')).toBeInTheDocument()
   expect(screen.getByText('This choice is final.')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument()

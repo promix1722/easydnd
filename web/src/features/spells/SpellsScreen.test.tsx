@@ -16,7 +16,7 @@ it('keeps shared filters in the browse URL and sends them to catalogue search', 
     const url = new URL(String(input), 'http://localhost')
     let data: unknown = []
     if (url.pathname === '/v1/packs/spell-filters') data = {
-      packs: [{ id: 'library', title: 'My library', version: '1.0.0', versions: ['1.0.0'] }],
+      packs: [{ id: 'library', title: 'My library', version: url.searchParams.get('versions')?.split('@')[1] ?? '1.0.0', versions: ['1.0.0', '2.0.0'] }],
       sources: [{ id: 'library:phb', name: "Player's Handbook", packId: 'library' }],
       unavailable: [], schools: [{ slug: 'divination', name: 'Divination' }], classes: [{ slug: 'wizard', name: 'Wizard' }],
     }
@@ -34,9 +34,9 @@ it('keeps shared filters in the browse URL and sends them to catalogue search', 
   expect(screen.getByRole('combobox', { name: 'School' })).toHaveValue('Divination')
   expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument()
   await user.click(screen.getByRole('combobox', { name: 'Pack' }))
-  await user.click(screen.getByRole('option', { name: 'My library' }))
+  await user.click(screen.getByRole('option', { name: 'My library v1.0.0' }))
   await user.click(screen.getByRole('combobox', { name: 'Book / source' }))
-  await user.click(screen.getByRole('option', { name: "PH / My library" }))
+  await user.click(screen.getByRole('option', { name: "Player's Handbook / My library v1.0.0" }))
   await user.keyboard('{Escape}')
   await user.click(screen.getByRole('checkbox', { name: 'Ritual' }))
   await user.type(search, 'detect')
@@ -55,4 +55,13 @@ it('keeps shared filters in the browse URL and sends them to catalogue search', 
   expect(screen.getByTestId('location')).toHaveTextContent('source=library%3Aphb')
   expect(screen.getByRole('textbox', { name: 'Search spells' })).toBe(search)
   expect(screen.getByRole('link', { name: 'Detect Magic' })).toBeInTheDocument()
+  expect(screen.queryByText('Version')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('combobox', { name: 'Pack' }))
+  await user.click(screen.getByRole('option', { name: 'My library v2.0.0' }))
+  await waitFor(() => {
+    expect(searches.at(-1)?.get('pack')).toBe('library')
+    expect(searches.at(-1)?.get('versions')).toBe('library@2.0.0')
+  })
+  expect((await screen.findAllByText('My library v2.0.0')).length).toBeGreaterThan(0)
+  expect(screen.queryByText('Version')).not.toBeInTheDocument()
 })

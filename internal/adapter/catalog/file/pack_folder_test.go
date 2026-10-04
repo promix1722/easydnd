@@ -7,7 +7,38 @@ import (
 	"testing"
 
 	file "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/domain/pack"
+	packuc "github.com/promix1722/easydnd/internal/usecase/pack"
 )
+
+func TestIndependentCoresReportSelectionConflict(t *testing.T) {
+	r, err := file.NewRegistry([]string{basePath()}, nil, "", file.PackFolder{Path: basePath(), ID: "another-core"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := file.NewAuthoring(r, nil)
+	roots := []pack.Release{}
+	docs := []pack.Document{}
+	for _, record := range engine.Builtins() {
+		docs = append(docs, record.Releases...)
+	}
+	for _, record := range engine.Builtins() {
+		release := record.Releases[0].Release
+		if _, err := engine.Resolve(context.Background(), docs, []pack.Release{release}); err != nil {
+			t.Fatalf("individual core should be usable: %v", err)
+		}
+		roots = append(roots, release)
+	}
+	for _, selection := range [][]pack.Release{roots, {roots[1], roots[0]}} {
+		_, err := engine.Resolve(context.Background(), docs, selection)
+		if err == nil {
+			t.Fatal("accepted two core rule providers")
+		}
+		if diagnostic := packuc.Diagnose(err); diagnostic.Reason != "pack.coreConflict" {
+			t.Fatalf("expected actionable core conflict, got %+v", diagnostic)
+		}
+	}
+}
 
 func TestAutoloadIndependentCoreAndArchive(t *testing.T) {
 	archive := t.TempDir()

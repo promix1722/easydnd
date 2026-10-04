@@ -1,5 +1,6 @@
 import { request } from './client'
 import { requestLocale } from './locale'
+import { bookSources } from '../bookSources'
 
 /**
  * The compendium.
@@ -349,7 +350,7 @@ export function sourceOptions(entries: readonly Entry[]): SourceOptions {
   const p = entry.provenance
   if (!p) continue
   packs.set(p.packId, { id: p.packId, title: p.packTitle, version: p.version, versions: [p.version] })
-  for (const s of p.sources) sources.set(s.id, { ...s, packId: p.packId })
+  for (const s of bookSources(p)) sources.set(s.id, { ...s, packId: p.packId })
  }
  return { packs: [...packs.values()], sources: [...sources.values()] }
 }

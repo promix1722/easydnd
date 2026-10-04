@@ -43,7 +43,7 @@ export function GroupPacks({ group, canManage }: { group: string; canManage: boo
             .flatMap((p) =>
               p.releases.map((r) => ({
                 value: `${p.id}@${r.version}`,
-                label: `${p.title} · ${r.version}`,
+                label: `${p.title} v${r.version}`,
               })),
             )}
         />
@@ -61,7 +61,7 @@ export function GroupPacks({ group, canManage }: { group: string; canManage: boo
         <Panel key={s.pack}>
           <Group justify="space-between">
             <Text>
-              {loaded.data?.available.packs.find((p) => p.id === s.pack)?.title ?? s.pack} ·{' '}
+              {loaded.data?.available.packs.find((p) => p.id === s.pack)?.title ?? s.pack} v
               {s.rules.packs.find((p) => p.id === s.pack)?.version}
             </Text>
             {(canManage || s.contributor === user?.id) && (
