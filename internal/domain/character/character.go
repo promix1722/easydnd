@@ -322,6 +322,22 @@ func (l Log) Clone() Log {
 	out := Log{Events: slices.Clone(l.Events)}
 	for i := range out.Events {
 		e := &out.Events[i]
+		if e.Custom != nil {
+			c := *e.Custom
+			if c.Level != nil {
+				n := *c.Level
+				c.Level = &n
+			}
+			if c.HitDie != nil {
+				n := *c.HitDie
+				c.HitDie = &n
+			}
+			if c.Speed != nil {
+				n := *c.Speed
+				c.Speed = &n
+			}
+			e.Custom = &c
+		}
 		e.RulesLock = e.RulesLock.Clone()
 		e.Allocations = maps.Clone(e.Allocations)
 		e.Choices = slices.Clone(e.Choices)

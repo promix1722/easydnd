@@ -134,7 +134,7 @@ func TestAgentFactsFinalScoresManualAndIdempotentSave(t *testing.T) {
 			{ID: "race", Name: "resolve_import_facts", Arguments: `{"ref":"race:half-elf"}`},
 			{ID: "cha", Name: "resolve_import_facts", Arguments: `{"path":"finalAbilities.cha","value":18}`},
 			{ID: "custom", Name: "upsert_custom_option", Arguments: `{"id":"spell","kind":"spell","name":"Unknown spell","description":"Original mechanics","source":"page 2"}`},
-			{ID: "review", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
+			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "review", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
 	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
@@ -188,7 +188,7 @@ func TestAgentSavedScoresCanBeImprovedNormally(t *testing.T) {
 			{ID: "n", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Leveling hero"}`},
 			{ID: "r", Name: "resolve_import_facts", Arguments: `{"ref":"race:half-elf"}`},
 			{ID: "a", Name: "resolve_import_facts", Arguments: `{"path":"finalAbilities.cha","value":16}`},
-			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
+			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
 	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
@@ -300,7 +300,7 @@ func TestAgentQuestionsKeepRequiredChoicesInChat(t *testing.T) {
 		case 1:
 			return charuc.AgentResponse{Calls: []charuc.AgentCall{
 				{ID: "name", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Hero"}`},
-				{ID: "review", Name: "prepare_review", Arguments: `{"text":"Ready"}`},
+				{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "review", Name: "prepare_review", Arguments: `{"text":"Ready"}`},
 			}}, nil
 		case 2:
 			// A partial sheet cannot skip required choices straight into review.

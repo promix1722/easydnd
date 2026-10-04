@@ -2,6 +2,7 @@ package character
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/agnivade/levenshtein"
 	"github.com/promix1722/easydnd/internal/domain/catalog"
+	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
@@ -90,6 +92,7 @@ func (a *Agent) search(ctx context.Context, s *AgentSession, kind, query string,
 		if err != nil {
 			return nil, err
 		}
+		cat = domain.WithCustomCatalog(s.Log, cat)
 		for _, c := range catalogCandidates(cat, kind) {
 			if level != nil && c.Level != nil && *level != *c.Level {
 				continue
@@ -126,4 +129,35 @@ func (a *Agent) search(ctx context.Context, s *AgentSession, kind, query string,
 		out = out[:8]
 	}
 	return out, nil
+}
+
+// Bare tool identifiers are local aliases within the selected rules lock.
+// Explicit pack-qualified references never silently switch packs.
+func resolveAgentReference(cat *catalog.Catalog, input string) (rules.Ref, error) {
+	ref, ok := rules.ParseRef(input)
+	if !ok {
+		return rules.Ref{}, fmt.Errorf("invalid reference %q; use a canonical reference from search_catalog", input)
+	}
+	matches := []rules.Ref{}
+	for _, candidate := range catalogCandidates(cat, ref.Kind.String()) {
+		available, _ := rules.ParseRef(candidate.Ref)
+		if available == ref {
+			return available, nil
+		}
+		local := available.Slug.String()
+		if _, tail, qualified := strings.Cut(local, "/"); qualified {
+			local = tail
+		}
+		if local == ref.Slug.String() {
+			matches = append(matches, available)
+		}
+	}
+	if strings.Count(input, ":") == 1 && !strings.Contains(ref.Slug.String(), "/") && len(matches) == 1 {
+		return matches[0], nil
+	}
+	suggestions := []string{}
+	for _, match := range matches {
+		suggestions = append(suggestions, match.Canonical())
+	}
+	return rules.Ref{}, fmt.Errorf("reference %q is not available in the selected rules; use an exact search_catalog reference (local matches: %v)", input, suggestions)
 }

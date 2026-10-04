@@ -78,7 +78,9 @@ func characterOf(c domain.Character) Character {
 
 func eventOf(e domain.Event) Event {
 	out := Event{
-		ID: e.ID, SchemaVersion: e.SchemaVersion, Resource: e.Resource.String(), Amount: e.Amount, Trigger: e.Trigger,
+		Observed: e.Observed,
+		Evidence: e.Evidence,
+		ID:       e.ID, SchemaVersion: e.SchemaVersion, Resource: e.Resource.String(), Amount: e.Amount, Trigger: e.Trigger,
 		Seq:    e.Seq,
 		Type:   e.Type.String(),
 		Source: sourceString(e.Source),
@@ -153,8 +155,12 @@ func valueKindName(k domain.ValueKind) string {
 // apart -- the same argument the write handlers make for reading a record back
 // through its own detail path.
 func SheetOf(s domain.State) Sheet {
+	customs := []CustomOption{}
+	for _, c := range s.CustomOptions {
+		customs = append(customs, customOf(c))
+	}
 	out := Sheet{
-		ImportSession: s.ImportSession, CatalogNames: s.CatalogNames,
+		CustomOptions: customs, ImportSession: s.ImportSession, CatalogNames: s.CatalogNames,
 		ImportedNotes: s.ImportedNotes,
 		Identity:      identityOf(s.Identity),
 		Base:          baseOf(s.Base),
@@ -283,7 +289,7 @@ func equipmentOf(e domain.Equipment) Equipment {
 	if len(e.Purse) > 0 {
 		out.Purse = make(map[string]int, len(e.Purse))
 		for unit, amount := range e.Purse {
-			out.Purse[string(unit)] = amount
+			out.Purse[unit.String()] = amount
 		}
 	}
 	return out

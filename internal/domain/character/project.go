@@ -55,6 +55,7 @@ func projectBuild(log Log, cat *catalog.Catalog) (State, error) {
 		return State{}, err
 	}
 
+	cat = WithCustomCatalog(log, cat)
 	p := projector{cat: cat, answers: foldAnswers(log)}
 	p.state.Abilities.ModifierRule = cat.Mechanics.Core.AbilityModifier
 	return p.run(log)
@@ -113,6 +114,22 @@ func (p *projector) run(log Log) (State, error) {
 	// non-obvious one: deriveAbilities applies the improvement every fourth
 	// level grants, so a character who declared 4th level but had not been
 	// raised to it yet had their improvement silently do nothing.
+	// A source may describe a subclass before its parent class is imported.
+	for _, custom := range CustomOptions(log) {
+		if !custom.Selected {
+			continue
+		}
+		if custom.Kind == "subclass" {
+			for _, taken := range p.state.Identity.Classes {
+				if taken.Class.String() == custom.Parent && taken.Subclass.IsZero() {
+					p.customStructure(custom)
+				}
+			}
+		}
+		if custom.Kind == "subrace" && p.state.Identity.Subrace.IsZero() && p.state.Identity.Race.String() == custom.Parent {
+			p.customStructure(custom)
+		}
+	}
 	p.advanceToDesiredLevel()
 
 	// Ability scores are finalised before anything that reads them. The hit
@@ -192,6 +209,7 @@ func (p *projector) run(log Log) (State, error) {
 		}
 	}
 	p.privateNames()
+	p.customDetails(log)
 	return p.state, p.err
 }
 
@@ -199,7 +217,18 @@ func (p *projector) run(log Log) (State, error) {
 // derived here: this stage only says which catalogue entries the character
 // named and which changes were requested.
 func (p *projector) replay(log Log) {
+	custom := CustomOptions(log)
 	for _, e := range log.Events {
+		if e.Custom != nil {
+			// Only the latest definition applies, at its original selection position.
+			for i, c := range custom {
+				if c.ID == e.Custom.ID {
+					p.customStructure(c)
+					custom = append(custom[:i], custom[i+1:]...)
+					break
+				}
+			}
+		}
 		switch e.Type {
 		case EventInit, EventChange:
 			for _, ch := range e.Changes {
@@ -416,7 +445,9 @@ func (p *projector) applyClasses() {
 			}
 		}
 
-		p.addHitPoints(class.HitDie, taken.Level, first)
+		if class.HitDie > 0 {
+			p.addHitPoints(class.HitDie, taken.Level, first)
+		}
 		p.addHitDice(class.HitDie, taken.Level)
 
 		features := featuresThrough(p.cat, taken.Class, taken.Level)

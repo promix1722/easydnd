@@ -27,6 +27,7 @@ export interface SpellBrowseOptions extends SourceOptions {
   unavailable: { id: string; version: string; reason: string }[]
 }
 export interface Entry {
+ manual?: boolean
   provenance?: Provenance
   slug: string
   name: string

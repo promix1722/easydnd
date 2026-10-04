@@ -1,6 +1,6 @@
-# Character import agent
+# AI Wizard
 
-The import workspace creates **one character draft** from uploaded sources.
+The AI Wizard creates **one character draft** from a description or uploaded sources.
 It does not create a character record until the owner presses **Save character**.
 The same session contains its attachments, conversation, tool results, draft,
 custom definitions and eventual character ID. A model never receives an owner,
@@ -8,8 +8,10 @@ character or session ID parameter with which to target another record.
 
 ## User flow
 
-Each folder offers Import, which opens one assistant conversation on desktop and
-mobile. The server needs `agent.api_key` and `agent.model` configured to process
+The desktop and mobile menu has **AI Wizard / AI Помощник**. Folder actions link
+to the same workspace while preserving the destination folder. The owner first
+selects and confirms rules and pack releases; only then can they describe a
+character or upload sources. The HTTP API also requires this pinned rules lock. The server needs `agent.api_key` and `agent.model` configured to process
 uploads. Without the provider, imports report that AI import is not configured;
 the workspace does not fall back to the legacy HexSheet JSON screen.
 
@@ -19,15 +21,19 @@ later in the conversation. Filenames identify sources; new attachments must not
 reuse a filename. The server checks the content type rather than trusting the
 browser's filename or MIME header.
 
-Chat is one chronological, always-visible message log. Assistant text and
-individual activity steps appear inline without accordions. Each user message
+Chat is one chronological message log. Assistant text and factual progress
+appear inline. Progress comes from validated writes, such as “Class imported:
+Sorcerer, level 3” or “Name imported: Vas Pup”. Catalogue searches and internal
+tool labels are hidden. Consecutive progress updates share one compact block.
+View, Edit and Save buttons appear inside assistant messages when relevant. Each user message
 contains its own attachments and text; filenames are not a separate global row.
 Source/page evidence and assumptions remain internal metadata, not transcript
 labels or a preview warning panel. The compact composer sits at the bottom;
 Enter sends and Shift+Enter inserts a line break. Scrolling up stops following.
 
-Routes are `/characters/import/:sessionId`, with `/character` and `/editor`
-child pages. Breadcrumbs are Characters / Chatbot Creation / ID / View or Edit.
+Routes are `/ai-wizard/:sessionId`, with `/character` and `/editor` child pages.
+Old `/characters/import` routes redirect, retaining the session and query.
+Breadcrumbs start at AI Wizard.
 Legacy `?session=...` links still open. The preview uses the standard `SheetBody`;
 the editor uses the complete standard `BuildScreen` against the same draft.
 Opening a page does not save the character. Editor changes enter the transcript
@@ -39,7 +45,12 @@ suggested text answers. The latest unanswered question shows clickable replies;
 the composer always permits a different free-text answer. A reply is an ordinary
 user message, and the assistant applies it using validated choice tools. The
 model must ask a direct question instead of narrating that it is paused.
-`prepare_review` returns unresolved required prompts without ending the run;
+`plan_import` records the six printed ability scores immediately and a checklist
+of documented source facts. Unknown sheet
+paths become custom-entry keys. `import_facts` writes batches and reports errors
+for rejected facts; it publishes progress only for successful writes.
+`prepare_review` refuses missing checklist entries even for a partial draft,
+and returns unresolved required prompts without ending the run;
 it accepts a partial draft only when the model explicitly sets `allow_incomplete`
 after the user has chosen to leave choices incomplete. This flag is a model
 assertion of that conversation, not a separate server-verified consent record.
@@ -102,10 +113,12 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 | `search_catalog` | Ranked identities across supported locales within the pinned rules lock |
 | `get_option_details` | Exact catalogue mechanics and, when available, a pack wire example |
 | `list_choice_options` | Available keys and choice constraints, paged 60 keys at a time |
+| `plan_import` | Record documented source facts and custom-entry keys |
+| `import_facts` | Batch observations, with errors for individual rejected facts |
 | `resolve_import_facts` | Upsert an observed structural reference or supported sheet field |
 | `answer_choice` | Apply an answer through the existing character validator |
 | `revise_choice` | Replace a prior choice and report invalidated dependent entries |
-| `upsert_custom_option` | Preserve manual content or compile a complete private definition set |
+| `upsert_custom_option` | Preserve an editable typed custom definition with known details |
 | `reconcile_import` | Reproject the current draft for comparison with sources |
 | `ask_user` | Ask a blocking question and release the worker |
 | `prepare_review` | Mark the draft ready for the owner's review |
@@ -154,17 +167,33 @@ created as an intermediate step.
 
 ### Custom content
 
-Incomplete definitions use stable, updatable manual entries with their original
-name, description and source. They are stored as character notes and projected
-on saved, copied and shared sheets. They do not pretend to automate unknown
-mechanics.
+Custom classes, races, subraces, backgrounds, subclasses, spells, cantrips,
+equipment, feats, features and traits are stable definitions in the character
+log. Names, descriptions, provenance and explicitly known numeric details are
+editable in both AI drafts and the ordinary creation/edit wizard. Unknown
+mechanics remain unknown; an unknown class hit die does not generate HP or dice.
 
-Complete definitions use the existing strict pack codec/compiler for every
-supported pack entity kind. The model supplies the full custom `entities`,
-`mechanics` and `locales` set as JSON, with wire examples available from option
-details. The server assigns an `import-<session>` namespace, immutable version,
-edition and exact dependencies. Core-rule overrides are rejected. Compilation
-and projection must succeed before the draft adopts the new lock.
+Definitions overlay only that character's catalogue. Canonical references can
+retain spell identity even when a source exceeds normal eligibility or counts.
+Selected custom spells retain their source, ability and known/prepared/granted/spellbook
+status; equipment retains its quantity and location. Definitions survive save,
+copy, reopen and later edits. Imported observations keep their editor group and
+are not discarded merely because they do not reconstruct historical choices.
+Changing a parent reports invalid child selections through normal revision
+handling. Older import metadata gains editor groups on read; old manual notes
+remain available as editable custom definitions without automatically selecting
+them. Direct name edits merge the opening fields, preserving bundled legacy
+facts.
+
+The normal wizard offers **Custom…** on applicable tabs and **Edit custom
+option** for saved definitions. Observed fields have direct edit controls on
+their corresponding tabs. Custom choices can be deselected to return to
+catalogue selection.
+
+The backend retains compatibility with complete private pack definitions through
+the existing strict compiler. The standard model tool schema favors typed
+definitions instead of asking the model to manufacture a pack. Compilation
+and projection must succeed before a complete definition changes the lock.
 
 Private releases never enter the default catalogue. Older versions remain
 available for older locks; copied/shared characters retain the attached lock
@@ -180,7 +209,7 @@ Owners are taken from authentication, never from a request body.
 | Method and route | Input / result |
 | --- | --- |
 | `GET /v1/agent-capabilities` | Whether the provider is configured |
-| `POST /v1/agent-sessions?folder=...` | Multipart `files`, optional `instructions`; creates the draft |
+| `POST /v1/agent-sessions?folder=...` | Multipart required `rules` JSON, optional `files` and `instructions`; at least a description or file is required |
 | `GET /v1/agent-sessions` | Owner's import sessions |
 | `GET /v1/agent-sessions/:id` | Session snapshot and projected sheet |
 | `GET /v1/agent-sessions/:id/events` | SSE snapshots, updates and cursor recovery |
@@ -189,8 +218,13 @@ Owners are taken from authentication, never from a request body.
 | `POST /v1/agent-sessions/:id/edit` | Revision and ordinary event DTOs |
 | `POST /v1/agent-sessions/:id/finalize` | Revision; idempotently saves the character |
 
+Normal characters expose GET/POST `/v1/characters/:id/custom-options`.
+GET returns `{revision, options}`; POST accepts `{revision, option}` and returns
+the updated sheet and revision. Writes check ownership and optimistic revision.
+Definitions cannot be erased by generic note replacement.
+
 The standard editor also uses `/v1/agent-sessions/:id/draft`: GET `sheet`,
-`events`, and `prompts`; POST `events` and `events/revise`; PUT/DELETE
+`events`, `prompts` and `custom-options`; POST `custom-options`, `events` and `events/revise`; PUT/DELETE
 `events/:seq`. These routes reuse ordinary character handlers and validation with
 a scoped draft repository. Reads/commits run under the coordinator lock, reject
 foreign owners and stale revisions, and never create a normal character record.
@@ -220,7 +254,7 @@ workers are bounded at 32, turns at 200, sessions at 1000 and request timeout at
 must be sized for this memory-first deployment. Unsaved drafts can be discarded.
 
 Additional fixed bounds are 8 files / 20 MiB per session, 256 KiB per text/JSON
-file, 16,000 UTF-8 bytes per message, 128 KiB per tool argument payload, 6,000
+file, 16,000 UTF-8 bytes per message, 128 KiB per tool argument payload, 12,000
 output tokens per response and two SDK retries. Conversation growth is bounded
 by item/event counts and a 2 MiB transcript threshold. Turns pause at the run
 limit; manual Resume starts another bounded run. These are request/run limits,
@@ -247,5 +281,25 @@ Durable restart recovery is deliberately later. It must persist attachments,
 transcript/provider state, operation outcomes, revision/generation, draft log,
 private releases and final character linkage together, with transactional
 claims/leases and a unique finalization key. Persisting only messages cannot
-resume this runtime correctly. A future MCP adapter and file-free character
-creation can reuse these bounded tools, but neither is exposed in this release.
+resume this runtime correctly. Text-only character creation uses the same bounded tools. A future MCP adapter
+can reuse them.
+
+
+## Opt-in PDF regression
+
+The real-provider regression is deliberately outside default tests and CI.
+Run it on request or after deep changes to the AI Wizard. It needs an already
+configured development API, the source PDF and the expected source snapshot:
+
+```sh
+node scripts/check-ai-wizard.mjs --pdf /tmp/Arya.pdf \
+  --expected testdata/agent/arya.expected.json \
+  --api http://localhost:18083/v1 --origin http://localhost:8083
+```
+
+It checks source values, spell identities, inventory counts, custom content and
+source discrepancies, then saves, reopens, edits the name and a custom definition
+and verifies that facts survive. Test edits are restored; the imported character
+remains saved. It uses the configured provider and can incur provider charges.
+No provider credentials or session cookies are stored by the script. The PDF
+itself is not committed.

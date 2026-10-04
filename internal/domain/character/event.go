@@ -94,6 +94,10 @@ func ParseEventType(s string) (EventType, bool) {
 // a given type are zero. That uniformity is what lets the whole log be one
 // JSON array in one database record.
 type Event struct {
+	Evidence string
+	Custom   *CustomOption
+	// Observed is assigned by import, never accepted from an ordinary event request.
+	Observed      bool
 	ID            string
 	SchemaVersion int
 	RulesLock     pack.Lock

@@ -24,6 +24,10 @@ func (h *Handler) AgentDraft(c *gin.Context) {
 		dispatch = func(d *Handler) { d.Sheet(c) }
 	case "GET prompts":
 		dispatch = func(d *Handler) { d.Prompts(c) }
+	case "GET custom-options":
+		dispatch = func(d *Handler) { d.CustomOptions(c) }
+	case "POST custom-options":
+		dispatch = func(d *Handler) { d.UpsertCustomOption(c) }
 	case "GET events":
 		dispatch = func(d *Handler) { d.Events(c) }
 	case "POST events":

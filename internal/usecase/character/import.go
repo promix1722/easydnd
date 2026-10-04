@@ -133,6 +133,7 @@ func (s *Service) Import(
 // catches a change addressing a path that does not exist. Doing it here means
 // a bad import is a 400 rather than a character that cannot be read back.
 func validateImported(cat *catalog.Catalog, log domain.Log) error {
+	cat = domain.WithCustomCatalog(log, cat)
 	if err := log.Validate(); err != nil {
 		return err
 	}

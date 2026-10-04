@@ -1,0 +1,131 @@
+package character
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	domain "github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/rules"
+)
+
+func firstChangePath(e domain.Event) string {
+	if len(e.Changes) == 0 {
+		return ""
+	}
+	return string(e.Changes[0].Path)
+}
+func observedGroup(typ domain.EventType, path string) domain.PromptGroup {
+	switch typ {
+	case domain.EventRace, domain.EventSubrace:
+		return domain.GroupRace
+	case domain.EventBackground:
+		return domain.GroupBackground
+	case domain.EventClass, domain.EventSubclass, domain.EventLevel, domain.EventFeat:
+		return domain.GroupClass
+	}
+	if strings.HasPrefix(path, "finalAbilities.") || strings.HasPrefix(path, "abilities.") {
+		return domain.GroupAbilities
+	}
+	if strings.HasPrefix(path, "identity.") {
+		return domain.GroupIdentity
+	}
+	return domain.PromptGroupNone
+}
+
+type agentProgress struct {
+	Operation string `json:"operation"`
+	Field     string `json:"field"`
+	Value     string `json:"value"`
+	Level     int    `json:"level,omitempty"`
+}
+
+// Public progress describes validated writes. Catalogue reads and model/tool
+// implementation details remain in the internal transcript.
+func (a *Agent) recordProgress(ctx context.Context, s *AgentSession, tool string, args agentArgs, result json.RawMessage) {
+	p := agentProgress{Operation: "imported"}
+	switch tool {
+	case "resolve_import_facts":
+		if args.Ref != "" {
+			ref, ok := rules.ParseRef(args.Ref)
+			if !ok {
+				return
+			}
+			p.Field = ref.Kind.String()
+			p.Value = ref.Slug.String()
+			cat, err := a.Catalog(ctx, *s)
+			if err == nil {
+				if selected, resolveErr := resolveAgentReference(cat, args.Ref); resolveErr == nil {
+					ref = selected
+				}
+				for _, entry := range catalogCandidates(cat, ref.Kind.String()) {
+					if entry.Ref == ref.Canonical() {
+						p.Value = entry.Name
+						break
+					}
+				}
+			}
+			if args.Level != nil {
+				p.Level = *args.Level
+			}
+		} else {
+			p.Field = args.Path
+			var value any
+			_ = json.Unmarshal(args.Value, &value)
+			if values, ok := value.([]any); ok {
+				parts := []string{}
+				for _, v := range values {
+					parts = append(parts, fmt.Sprint(v))
+				}
+				p.Value = strings.Join(parts, ", ")
+			} else {
+				p.Value = fmt.Sprint(value)
+			}
+		}
+	case "upsert_custom_option":
+		p.Operation = "custom"
+		p.Field = args.Kind
+		p.Value = args.Name
+		if p.Value == "" {
+			p.Field = "definitions"
+			p.Value = ""
+		}
+	case "answer_choice", "revise_choice":
+		p.Field = "choice"
+		p.Value = strings.Join(args.Picks, ", ")
+		if args.Ref != "" {
+			p.Value = args.Ref
+		}
+		if tool == "revise_choice" {
+			p.Operation = "updated"
+		}
+		cat, err := a.Catalog(ctx, *s)
+		if err == nil {
+			names := map[string]string{}
+			for _, kind := range []string{"spell", "feature", "proficiency", "race", "class", "subrace", "subclass", "background", "item", "feat"} {
+				for _, entry := range catalogCandidates(cat, kind) {
+					ref, _ := rules.ParseRef(entry.Ref)
+					names[ref.Slug.String()] = entry.Name
+					names[entry.Ref] = entry.Name
+				}
+			}
+			values := []string{}
+			for _, pick := range args.Picks {
+				if name := names[pick]; name != "" {
+					values = append(values, name)
+				} else {
+					values = append(values, pick)
+				}
+			}
+			if len(values) > 0 {
+				p.Value = strings.Join(values, ", ")
+			}
+		}
+	default:
+		return
+	}
+	if p.Field != "" {
+		addAgentEvent(s, "progress", "", "", p)
+	}
+}

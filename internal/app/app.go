@@ -237,7 +237,17 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 
 	var devHandler *development.Handler
 	if cfg.Env == config.EnvDevelopment {
-		seed, err := seedDevelopment(ctx, userRepo, groupRepo, characterService, gameService, signer, cfg.Auth.SessionTTL)
+		// Demo selections are authored against the base dataset. A different
+		// default pack must not change those choices or prevent startup.
+		basePack, err := catalogfile.LoadPack(cfg.Data.SRDDir)
+		if err != nil {
+			return fail(fmt.Errorf("load development seed rules: %w", err))
+		}
+		seedRules, err := catalogSource.Resolve([]catalogfile.Dependency{{ID: basePack.Manifest.ID, Version: basePack.Manifest.Version}})
+		if err != nil {
+			return fail(fmt.Errorf("resolve development seed rules: %w", err))
+		}
+		seed, err := seedDevelopment(ctx, userRepo, groupRepo, characterService, gameService, signer, cfg.Auth.SessionTTL, seedRules)
 		if err != nil {
 			return fail(fmt.Errorf("seed development game: %w", err))
 		}

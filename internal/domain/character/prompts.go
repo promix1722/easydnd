@@ -161,6 +161,7 @@ func Complete(prompts []Prompt) bool {
 // it does not depend on the order the player answered in, which is what makes
 // a Back button safe.
 func Prompts(log Log, cat *catalog.Catalog) ([]Prompt, error) {
+	cat = WithCustomCatalog(log, cat)
 	state, err := Project(log, cat)
 	if err != nil {
 		return nil, err

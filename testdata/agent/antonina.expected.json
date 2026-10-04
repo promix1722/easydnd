@@ -1,0 +1,12 @@
+{
+ "name":"Антонина","class":"barbarian","level":3,"race":"tiefling",
+ "scores":{"str":15,"dex":14,"con":13,"int":11,"wis":12,"cha":10},
+ "hp":29,"ac":15,
+ "customNames":["Criminal"],
+ "cantrips":["thaumaturgy"],"spells":["hellish-rebuke"],
+ "inventory":{"shield":1,"net":1,"longsword":1,"javelin":4,"handaxe":1,"oil-flask":1,"rope-hempen-50-feet":1,"backpack":1,"bedroll":1,"flask-or-tankard":1,"rations-1-day":10,"waterskin":1,"crowbar":1,"manacles":2,"mess-kit":1,"whetstone":1},
+ "inventoryAliases":{"rope-hempen-50-feet":["Hempen Rope","Rope, Hempen"],"rations-1-day":["Rations"]},
+ "purse":{"cp":7,"sp":4,"gp":1},
+ "skills":{"athletics":4,"stealth":4,"perception":3,"deception":2},
+ "saves":{"str":4,"dex":2,"con":3,"int":0,"wis":1,"cha":0}
+}

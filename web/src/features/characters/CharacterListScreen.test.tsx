@@ -85,7 +85,7 @@ function renderList(viewport: 'mobile' | 'desktop') {
       <Routes>
         <Route path="/" element={<CharacterListScreen />} />
         <Route path="/characters/new" element={<Landed label="new character screen" />} />
-        <Route path="/characters/import" element={<Landed label="import screen" />} />
+        <Route path="/ai-wizard" element={<Landed label="import screen" />} />
         <Route path="/characters/:id" element={<div>character sheet</div>} />
       </Routes>
     </MemoryRouter>,

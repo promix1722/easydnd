@@ -1,7 +1,9 @@
+import type { RulesLock } from './packs'
 import type { CharacterEvent as Event, Sheet } from './characters'
 import { request } from './client'
 
 export interface AgentEvent {
+  actions?: ('view' | 'edit' | 'save')[]
   files?: { name: string; mime: string }[]
   options?: string[]
   source?: string
@@ -50,10 +52,12 @@ export function createAgentSession(
   files: File[],
   instructions: string,
   folder?: string,
+  rules?: RulesLock,
 ) {
   const formData = new FormData()
   for (const file of files) formData.append('files', file)
   formData.append('instructions', instructions)
+  if (rules) formData.append('rules', JSON.stringify(rules))
   return request<AgentView>(
     `/agent-sessions${folder ? `?folder=${encodeURIComponent(folder)}` : ''}`,
     { method: 'POST', formData },

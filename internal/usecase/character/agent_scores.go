@@ -63,7 +63,7 @@ func rebaseAgentScores(log domain.Log, cat *catalog.Catalog) domain.Log {
 		}
 	}
 	for attempt := 0; attempt < 5; attempt++ {
-		event := domain.Event{Type: domain.EventChange}
+		event := domain.Event{Type: domain.EventChange, Source: domain.GroupAbilities}
 		// Catalogue ability order keeps logs deterministic across map iteration.
 		for _, ability := range cat.AbilityIDs() {
 			if base, ok := bases[ability]; ok {

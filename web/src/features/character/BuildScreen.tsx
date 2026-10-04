@@ -50,6 +50,8 @@ import { eventLabel, stageLabel } from './labels'
 import { resolveRefNames } from './refNames'
 import { settledByStage, settledPickName } from './settled'
 import type { SettledRow } from './settled'
+import { CustomOptionsPanel } from './CustomOptionsPanel'
+import { ImportedFieldsPanel } from './ImportedFieldsPanel'
 import { StagePanel } from './StagePanel'
 import { SpellStagePanel } from './SpellStagePanel'
 import type { SpellSubmission } from './SpellStagePanel'
@@ -248,7 +250,7 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
   // through empty Cantrips and Spells tabs.
   const visibleStages = STAGES.filter((each) => each !== 'cantrips' && each !== 'spells' ||
     open.some((prompt) => stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each) ||
-    (settled.get(each)?.length ?? 0) > 0)
+    (settled.get(each)?.length ?? 0) > 0 || view.sheet?.customOptions?.some((option) => option.kind === (each === 'cantrips' ? 'cantrip' : 'spell')))
   const preferredStage = chosenStage ?? (isNew ? 'rules' : firstUnfinished(open))
   const stage = visibleStages.includes(preferredStage) ? preferredStage : firstUnfinished(open)
 
@@ -733,6 +735,10 @@ export function BuildScreen({ draftId, onDone, trail }: { draftId?: string; onDo
             })}
           />
 
+          {!isNew && view.sheet && <>
+            <ImportedFieldsPanel id={id} stage={stage} events={view.events} revision={view.prompts.revision ?? view.prompts.seq} seq={view.prompts.seq} onSaved={() => build.refresh()} />
+            <CustomOptionsPanel id={id} stage={stage} sheet={view.sheet} revision={view.prompts.revision ?? view.prompts.seq} onSaved={() => build.refresh()} />
+          </>}
           {nameError !== undefined && (
             <Text size="sm" c="red">
               {nameError}

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { SECTIONS, sectionFor } from './sections'
 
 describe('the section table', () => {
-  it('has Characters, Groups, Games, Homebrew and Spells', () => {
-    expect(SECTIONS.map((section) => section.to)).toEqual(['/', '/groups', '/games', '/homebrew', '/spells'])
+  it('has Characters, AI Wizard, Groups, Games, Homebrew and Spells', () => {
+    expect(SECTIONS.map((section) => section.to)).toEqual(['/', '/ai-wizard', '/groups', '/games', '/homebrew', '/spells'])
   })
 
   // Labels are message keys, not words -- the navbar, the tab bar and the
@@ -35,6 +35,7 @@ describe('sectionFor', () => {
   it('keeps a section lit on its nested routes', () => {
     // The bug this replaced: the desktop navbar matched exactly, so opening a
     // group blanked the highlight while the mobile chrome kept it.
+    expect(sectionFor('/ai-wizard/session1/editor')?.label).toBe('section.aiWizard')
     expect(sectionFor('/groups')?.label).toBe('section.groups')
     expect(sectionFor('/groups/grp_1')?.label).toBe('section.groups')
     expect(sectionFor('/groups/join')?.label).toBe('section.groups')

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	domain "github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
@@ -44,15 +45,16 @@ func (s *Service) CreateStub(
 // CreateLevelOneStub builds a finished first-level character for development seeds.
 // It uses the same validated selections as the reference rogue, stopping before
 // the third-level subclass and declaring the actual first-level build target.
-func (s *Service) CreateLevelOneStub(ctx context.Context, owner domain.OwnerID, name string, locale rules.Locale) (domain.Character, error) {
-	return s.createStub(ctx, owner, "", locale, name, 1)
+func (s *Service) CreateLevelOneStub(ctx context.Context, owner domain.OwnerID, name string, locale rules.Locale, selected ...pack.Lock) (domain.Character, error) {
+	return s.createStub(ctx, owner, "", locale, name, 1, selected...)
 }
 
-func (s *Service) createStub(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, name string, level int) (domain.Character, error) {
-	created, err := s.Create(ctx, owner, folder, NewCharacter{
-		Name:      name,
-		Alignment: "neutral",
-	})
+func (s *Service) createStub(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, name string, level int, selected ...pack.Lock) (domain.Character, error) {
+	opening := NewCharacter{Name: name, Alignment: "neutral"}
+	if len(selected) > 0 {
+		opening.Rules = selected[0]
+	}
+	created, err := s.Create(ctx, owner, folder, opening)
 	if err != nil {
 		return domain.Character{}, err
 	}

@@ -27,6 +27,9 @@ import {
   Text,
   Textarea,
 } from '@/ui'
+import { PackSelector } from '../packs/PackSelector'
+import type { RulesLock } from '@/lib/api/packs'
+import { progressText } from './agentProgress'
 import { BuildScreen } from '../character/BuildScreen'
 import { SheetBody } from '../character/SheetBody'
 import { loadCompendium } from '../character/compendium'
@@ -41,33 +44,6 @@ const STATUS_LABELS = {
   review: 'agent.status.review',
   saved: 'agent.status.saved',
 } as const
-const TOOL_LABELS: Record<
-  string,
-  | 'agent.tool.context'
-  | 'agent.tool.source'
-  | 'agent.tool.search'
-  | 'agent.tool.details'
-  | 'agent.tool.options'
-  | 'agent.tool.facts'
-  | 'agent.tool.choice'
-  | 'agent.tool.custom'
-  | 'agent.tool.reconcile'
-  | 'agent.tool.question'
-  | 'agent.tool.review'
-> = {
-  get_build_context: 'agent.tool.context',
-  read_source: 'agent.tool.source',
-  search_catalog: 'agent.tool.search',
-  get_option_details: 'agent.tool.details',
-  list_choice_options: 'agent.tool.options',
-  resolve_import_facts: 'agent.tool.facts',
-  answer_choice: 'agent.tool.choice',
-  revise_choice: 'agent.tool.choice',
-  upsert_custom_option: 'agent.tool.custom',
-  reconcile_import: 'agent.tool.reconcile',
-  ask_user: 'agent.tool.question',
-  prepare_review: 'agent.tool.review',
-}
 
 /** Stream events are rendered from recorded state, so reconnect/reload never
  * creates a second conversation or restarts an import. Chat, view and editor
@@ -82,6 +58,8 @@ export function AgentImportScreen() {
   const [view, setView] = useState<AgentView | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const [message, setMessage] = useState('')
+  const [selectedRules, setSelectedRules] = useState<RulesLock>()
+  const [rulesDirty, setRulesDirty] = useState(false)
   const subview = importView ?? params.get('view')
   const [connected, setConnected] = useState(true)
   const [drafts, setDrafts] = useState<AgentSession[]>([])
@@ -116,11 +94,7 @@ export function AgentImportScreen() {
       void listAgentSessions().then(
         (s) => {
           if (live)
-            setDrafts(
-              s.filter(
-                (v) => v.status !== 'saved' && (!folder || v.folder === folder),
-              ),
-            )
+            setDrafts(s.filter((v) => v.status !== 'saved' && (!folder || v.folder === folder)))
         },
         () => {},
       )
@@ -191,23 +165,22 @@ export function AgentImportScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, folder])
   useEffect(() => {
-    if (follow.current)
-      end.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+    if (follow.current) end.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
   }, [view?.session.events.length, view?.session.status])
   const session = view?.session
   const active = session?.status === 'running' || session?.status === 'queued'
   const saved = session?.status === 'saved'
   const currentSessionId = session?.id
   useEffect(() => {
-    if (currentSessionId && !active && !saved && !subview)
-      composer.current?.focus()
+    if (currentSessionId && !active && !saved && !subview) composer.current?.focus()
   }, [active, saved, subview, currentSessionId])
   async function send(answer = message) {
     if (
       active ||
       action.pending ||
       saved ||
-      (session ? !answer.trim() && !files.length : !files.length)
+      (!answer.trim() && !files.length) ||
+      (!session && (!selectedRules || rulesDirty))
     )
       return
     follow.current = true
@@ -216,36 +189,28 @@ export function AgentImportScreen() {
         ? files.length
           ? addAgentFiles(session.id, session.revision, files, answer)
           : controlAgent(session.id, session.revision, 'message', answer)
-        : createAgentSession(files, answer, folder),
+        : createAgentSession(files, answer, folder, selectedRules),
     )
     if (result) {
       setMessage('')
       setFiles([])
       if (!id)
         void navigate(
-          `/characters/import/${result.session.id}${folder ? `?folder=${encodeURIComponent(folder)}` : ''}`,
+          `/ai-wizard/${result.session.id}${folder ? `?folder=${encodeURIComponent(folder)}` : ''}`,
           { replace: true },
         )
     }
   }
   async function control(kind: string) {
     if (!session) return
-    const result = await action.run(() =>
-      controlAgent(session.id, session.revision, kind),
-    )
+    const result = await action.run(() => controlAgent(session.id, session.revision, kind))
     if (result && kind === 'discard') void navigate('/characters')
   }
-  const chatPath = id
-    ? `/characters/import/${encodeURIComponent(id)}`
-    : '/characters/import'
-  const trail = [
-    { label: t('agent.creation'), ...(id ? { to: '/characters/import' } : {}) },
-    ...(id ? [{ label: id, ...(subview ? { to: chatPath } : {}) }] : []),
-  ]
+  const chatPath = id ? `/ai-wizard/${encodeURIComponent(id)}` : '/ai-wizard'
+  const trail = [...(id ? [{ label: id, ...(subview ? { to: chatPath } : {}) }] : [])]
   function openSubview(value: 'character' | 'editor' | null) {
     void navigate(`${chatPath}${value ? `/${value}` : ''}`)
-    if (value !== 'editor' && session)
-      void action.run(() => getAgentSession(session.id))
+    if (value !== 'editor' && session) void action.run(() => getAgentSession(session.id))
   }
   if (subview && !view && !action.error)
     return (
@@ -264,17 +229,13 @@ export function AgentImportScreen() {
       return (
         <Page trail={[...trail, { label: t('common.edit') }]}>
           <Text>{t('agent.waitForReply')}</Text>
-          <Button onClick={() => openSubview(null)}>
-            {t('agent.backToChat')}
-          </Button>
+          <Button onClick={() => openSubview(null)}>{t('agent.backToChat')}</Button>
         </Page>
       )
     return (
       <BuildScreen
         key={session?.id}
-        draftId={
-          saved && session?.characterId ? session.characterId : `import:${id}`
-        }
+        draftId={saved && session?.characterId ? session.characterId : `import:${id}`}
         trail={[...trail, { label: t('common.edit') }]}
         onDone={() => openSubview(null)}
       />
@@ -326,223 +287,202 @@ export function AgentImportScreen() {
                 {t('agent.chatId', { id: session.id.slice(0, 8) })}
               </Text>
             </Group>
-            <Group gap="xs">
-              <Button variant="light" onClick={() => openSubview('character')}>
-                {t('import.viewSheet')}
-              </Button>
-              <Button
-                variant="light"
-                disabled={active || action.pending}
-                onClick={() => openSubview('editor')}
-              >
-                {t('common.edit')}
-              </Button>
-              {!saved && (
-                <Button
-                  disabled={
-                    active ||
-                    action.pending ||
-                    view?.sheet.identity.name === '…'
-                  }
-                  onClick={() =>
-                    void action.run(() =>
-                      finalizeAgent(session.id, session.revision),
-                    )
-                  }
-                >
-                  {t('agent.save')}
-                </Button>
-              )}
-            </Group>
           </Group>
         )}
-        <Card withBorder padding="md" radius="md">
-          <Stack gap="md">
-            <div
-              role="log"
-              aria-label={t('agent.chat')}
-              aria-live="polite"
-              style={{
-                height: 'min(55dvh, 640px)',
-                minHeight: 240,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                padding: 8,
-              }}
-              onScroll={(event) => {
-                const el = event.currentTarget
-                follow.current =
-                  el.scrollHeight - el.scrollTop - el.clientHeight < 80
-              }}
-            >
-              {session ? (
-                <>
-                  <Conversation
-                    events={session.events}
-                    files={session.files}
-                    canAnswer={!active && !saved && !action.pending}
-                    onAnswer={(answer) => void send(answer)}
-                  />
-                  {active && (
-                    <Text size="sm" c="dimmed" mt="md">
-                      {t('agent.thinking')}
-                    </Text>
-                  )}
-                </>
-              ) : (
-                <Stack>
-                  <Text>{t('agent.lead')}</Text>
-                  {drafts.map((draft) => (
-                    <Button
-                      key={draft.id}
-                      variant="subtle"
-                      onClick={() =>
-                        void navigate(`/characters/import/${draft.id}`)
-                      }
-                    >
-                      {t('agent.resumeDraft')} · {draft.id.slice(0, 8)}
-                    </Button>
-                  ))}
-                </Stack>
-              )}
-              <div ref={end} />
-            </div>
-            {saved ? (
-              <Alert>{t('agent.saved')}</Alert>
-            ) : (
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  void send()
+        {!id && (
+          <Stack gap="xs">
+            <Text c="dimmed" size="sm">
+              {t('agent.rulesRequired')}
+            </Text>
+            <PackSelector
+              value={selectedRules}
+              onChange={setSelectedRules}
+              onDirtyChange={setRulesDirty}
+            />
+          </Stack>
+        )}
+        {(id || selectedRules) && (
+          <Card withBorder padding="md" radius="md">
+            <Stack gap="md">
+              <div
+                role="log"
+                aria-label={t('agent.chat')}
+                aria-live="polite"
+                style={{
+                  height: 'calc(100dvh - 320px)',
+                  minHeight: 240,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  padding: 8,
+                }}
+                onScroll={(event) => {
+                  const el = event.currentTarget
+                  follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
                 }}
               >
-                <Stack
-                  gap="xs"
-                  p="sm"
-                  style={{
-                    border: '1px solid var(--mantine-color-default-border)',
-                    borderRadius: 18,
-                  }}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => {
+                {session ? (
+                  <>
+                    <Conversation
+                      events={session.events}
+                      files={session.files}
+                      canAnswer={!active && !saved && !action.pending}
+                      onAnswer={(answer) => void send(answer)}
+                      onAction={(kind) => {
+                        if (kind === 'save' && session)
+                          void action.run(() => finalizeAgent(session.id, session.revision))
+                        else if (saved && session.characterId)
+                          void navigate(
+                            `/characters/${session.characterId}${kind === 'edit' ? '/build' : ''}`,
+                          )
+                        else openSubview(kind === 'view' ? 'character' : 'editor')
+                      }}
+                      saved={!!saved}
+                      canSave={view?.sheet.identity.name !== '…'}
+                      review={session.status === 'review'}
+                    />
+                    {active && (
+                      <Text size="sm" c="dimmed" mt="md">
+                        {t('agent.thinking')}
+                      </Text>
+                    )}
+                  </>
+                ) : (
+                  <Stack>
+                    <Text>{t('agent.lead')}</Text>
+                    {drafts.map((draft) => (
+                      <Button
+                        key={draft.id}
+                        variant="subtle"
+                        onClick={() => void navigate(`/ai-wizard/${draft.id}`)}
+                      >
+                        {t('agent.resumeDraft')} · {draft.id.slice(0, 8)}
+                      </Button>
+                    ))}
+                  </Stack>
+                )}
+                <div ref={end} />
+              </div>
+              {saved ? (
+                <Alert>{t('agent.saved')}</Alert>
+              ) : (
+                <form
+                  onSubmit={(event) => {
                     event.preventDefault()
-                    if (!active && !action.pending)
-                      setFiles((old) =>
-                        [...old, ...Array.from(event.dataTransfer.files)].slice(
-                          0,
-                          8,
-                        ),
-                      )
+                    void send()
                   }}
                 >
-                  {!!files.length && (
-                    <Group gap="xs">
-                      {files.map((file, index) => (
-                        <Button
-                          key={`${file.name}-${index}`}
-                          variant="light"
-                          size="compact-xs"
-                          aria-label={t('agent.removeFile', {
-                            name: file.name,
-                          })}
-                          onClick={() =>
-                            setFiles((old) => old.filter((_, i) => i !== index))
-                          }
-                        >
-                          {file.name} ×
-                        </Button>
-                      ))}
-                    </Group>
-                  )}
-                  <Textarea
-                    variant="unstyled"
-                    ref={composer}
-                    aria-label={
-                      session ? t('agent.message') : t('agent.instructions')
-                    }
-                    placeholder={t('agent.messagePlaceholder')}
-                    value={message}
-                    onChange={(event) => setMessage(event.currentTarget.value)}
-                    autosize
-                    minRows={2}
-                    maxRows={6}
-                    maxLength={16000}
-                    onKeyDown={(event) => {
-                      if (
-                        event.key === 'Enter' &&
-                        !event.shiftKey &&
-                        !event.nativeEvent.isComposing
-                      ) {
-                        event.preventDefault()
-                        void send()
-                      }
+                  <Stack
+                    gap="xs"
+                    p="sm"
+                    style={{
+                      border: '1px solid var(--mantine-color-default-border)',
+                      borderRadius: 18,
                     }}
-                  />
-                  <Group align="end" justify="space-between">
-                    <FileButton
-                      multiple
-                      accept=".pdf,.png,.jpg,.jpeg,.webp,.json,.txt"
-                      disabled={active || action.pending}
-                      onChange={(incoming) =>
-                        setFiles((old) => [...old, ...incoming].slice(0, 8))
-                      }
-                    >
-                      {(props) => (
-                        <Button
-                          {...props}
-                          variant="subtle"
-                          leftSection={<IconPaperclip size={18} />}
-                          disabled={active || action.pending}
-                        >
-                          {t('agent.attach')}
-                        </Button>
-                      )}
-                    </FileButton>
-                    <Button
-                      type="submit"
-                      loading={action.pending}
-                      disabled={
-                        active ||
-                        (session
-                          ? !message.trim() && !files.length
-                          : !files.length)
-                      }
-                    >
-                      {session ? t('agent.send') : t('characters.import')}
-                    </Button>
-                  </Group>
-                  {active && (
-                    <Text size="xs" c="dimmed">
-                      {t('agent.waitForReply')}
-                    </Text>
-                  )}
-                  {session &&
-                    (session.status === 'failed' ||
-                      session.status === 'paused') && (
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      if (!active && !action.pending)
+                        setFiles((old) =>
+                          [...old, ...Array.from(event.dataTransfer.files)].slice(0, 8),
+                        )
+                    }}
+                  >
+                    {!!files.length && (
+                      <Group gap="xs">
+                        {files.map((file, index) => (
+                          <Button
+                            key={`${file.name}-${index}`}
+                            variant="light"
+                            size="compact-xs"
+                            aria-label={t('agent.removeFile', {
+                              name: file.name,
+                            })}
+                            onClick={() => setFiles((old) => old.filter((_, i) => i !== index))}
+                          >
+                            {file.name} ×
+                          </Button>
+                        ))}
+                      </Group>
+                    )}
+                    <Textarea
+                      variant="unstyled"
+                      ref={composer}
+                      aria-label={session ? t('agent.message') : t('agent.instructions')}
+                      placeholder={t('agent.messagePlaceholder')}
+                      value={message}
+                      onChange={(event) => setMessage(event.currentTarget.value)}
+                      autosize
+                      minRows={2}
+                      maxRows={6}
+                      maxLength={16000}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === 'Enter' &&
+                          !event.shiftKey &&
+                          !event.nativeEvent.isComposing
+                        ) {
+                          event.preventDefault()
+                          void send()
+                        }
+                      }}
+                    />
+                    <Group align="end" justify="space-between">
+                      <FileButton
+                        multiple
+                        accept=".pdf,.png,.jpg,.jpeg,.webp,.json,.txt"
+                        disabled={active || action.pending}
+                        onChange={(incoming) =>
+                          setFiles((old) => [...old, ...incoming].slice(0, 8))
+                        }
+                      >
+                        {(props) => (
+                          <Button
+                            {...props}
+                            variant="subtle"
+                            leftSection={<IconPaperclip size={18} />}
+                            disabled={active || action.pending}
+                          >
+                            {t('agent.attach')}
+                          </Button>
+                        )}
+                      </FileButton>
+                      <Button
+                        type="submit"
+                        loading={action.pending}
+                        disabled={
+                          active || (session ? !message.trim() && !files.length : !files.length)
+                        }
+                      >
+                        {t('agent.send')}
+                      </Button>
+                    </Group>
+                    {active && (
+                      <Text size="xs" c="dimmed">
+                        {t('agent.waitForReply')}
+                      </Text>
+                    )}
+                    {session && (session.status === 'failed' || session.status === 'paused') && (
                       <Button
                         variant="subtle"
                         disabled={action.pending}
                         onClick={() =>
-                          void control(
-                            session.status === 'failed' ? 'retry' : 'resume',
-                          )
+                          void control(session.status === 'failed' ? 'retry' : 'resume')
                         }
                       >
-                        {session.status === 'failed'
-                          ? t('agent.retry')
-                          : t('agent.resume')}
+                        {session.status === 'failed' ? t('agent.retry') : t('agent.resume')}
                       </Button>
                     )}
-                </Stack>
-                {!session && (
-                  <Text size="xs" c="dimmed" mt="xs">
-                    {t('agent.fileHint')}
-                  </Text>
-                )}
-              </form>
-            )}
-          </Stack>
-        </Card>
+                  </Stack>
+                  {!session && (
+                    <Text size="xs" c="dimmed" mt="xs">
+                      {t('agent.fileHint')}
+                    </Text>
+                  )}
+                </form>
+              )}
+            </Stack>
+          </Card>
+        )}
         <Group justify="space-between">
           <Text size="xs" c="dimmed">
             {t('agent.memory')}
@@ -568,11 +508,19 @@ function Conversation({
   files,
   canAnswer,
   onAnswer,
+  onAction,
+  saved,
+  canSave,
+  review,
 }: {
   events: AgentEvent[]
   files: AgentSession['files']
   canAnswer: boolean
   onAnswer: (answer: string) => void
+  onAction: (action: 'view' | 'edit' | 'save') => void
+  saved: boolean
+  canSave: boolean
+  review: boolean
 }) {
   const t = useT()
   type Row = {
@@ -581,6 +529,7 @@ function Conversation({
     text: string
     files?: AgentEvent['files']
     options?: string[] | undefined
+    actions?: AgentEvent['actions']
   }
   const rows: Row[] = []
   const firstUser = events.find((event) => event.kind === 'user')?.id
@@ -593,22 +542,17 @@ function Conversation({
       else rows.push({ key: event.id, kind: 'delta', text: event.text ?? '' })
     } else if (event.kind === 'response') {
       if (rows.at(-1)?.kind === 'delta') rows.pop()
-      if (event.text)
-        rows.push({ key: event.id, kind: 'assistant', text: event.text })
+      if (event.text) rows.push({ key: event.id, kind: 'assistant', text: event.text })
     } else if (event.kind === 'status') {
-      if (rows.at(-1)?.kind === 'delta')
-        rows[rows.length - 1]!.kind = 'assistant'
+      if (rows.at(-1)?.kind === 'delta') rows[rows.length - 1]!.kind = 'assistant'
     } else if (event.kind === 'tool') {
-      // Questions and review already have their own assistant message. Source
-      // evidence stays in recorded data, not in the conversation UI.
-      if (event.tool === 'ask_user' || event.tool === 'prepare_review') continue
-      rows.push({
-        key: event.id,
-        kind: 'activity',
-        text:
-          t(TOOL_LABELS[event.tool ?? ''] ?? 'agent.step') +
-          (event.text === 'invalid' ? ` · ${t('agent.correcting')}` : ''),
-      })
+      continue
+    } else if (event.kind === 'progress') {
+      const label = progressText(t, event.data)
+      if (!label) continue
+      const previous = rows.at(-1)
+      if (previous?.kind === 'activity') previous.text += '\n' + label
+      else rows.push({ key: event.id, kind: 'activity', text: label })
     } else if (event.kind === 'attachments') {
       // Older sessions recorded attachment markers separately from the user.
       continue
@@ -619,13 +563,15 @@ function Conversation({
         text: event.text ?? '',
         files:
           event.files ??
-          (event.id === firstUser && !events.some((item) => item.files)
-            ? files
-            : undefined),
+          (event.id === firstUser && !events.some((item) => item.files) ? files : undefined),
         options: event.options,
+        actions: event.actions,
       })
     }
   }
+  const lastAssistant = rows.findLast((row) => ['assistant', 'question'].includes(row.kind))
+  if (review && lastAssistant && !lastAssistant.actions)
+    lastAssistant.actions = ['view', 'edit', 'save']
   return (
     <Stack gap="md">
       {rows.map((row) => (
@@ -637,14 +583,11 @@ function Conversation({
             overflowWrap: 'anywhere',
             borderRadius: 16,
             padding: row.kind === 'user' ? '12px 16px' : '4px 0',
-            background:
-              row.kind === 'user'
-                ? 'var(--mantine-color-default-hover)'
-                : undefined,
+            background: row.kind === 'user' ? 'var(--mantine-color-default-hover)' : undefined,
           }}
         >
           {row.kind === 'activity' ? (
-            <Text size="sm" c="dimmed">
+            <Text size="sm" c="dimmed" style={{ whiteSpace: 'pre-line' }}>
               {row.text}
             </Text>
           ) : (
@@ -665,29 +608,49 @@ function Conversation({
               ) : row.text ? (
                 <Markdown>{row.text}</Markdown>
               ) : null}
-              {row.kind === 'question' &&
-                row.key === lastQuestion &&
-                row.key > lastUser && (
-                  <>
-                    {!!row.options?.length && (
-                      <Group gap="xs">
-                        {row.options.map((option) => (
-                          <Button
-                            key={option}
-                            variant="light"
-                            disabled={!canAnswer}
-                            onClick={() => onAnswer(option)}
-                          >
-                            {option}
-                          </Button>
-                        ))}
-                      </Group>
-                    )}
-                    <Text size="xs" c="dimmed">
-                      {t('agent.answerHint')}
-                    </Text>
-                  </>
-                )}
+              {!!row.actions?.length && (
+                <Group gap="xs">
+                  {row.actions
+                    .filter((kind) => kind !== 'save' || !saved)
+                    .map((kind) => (
+                      <Button
+                        key={kind}
+                        variant="light"
+                        disabled={
+                          (!canAnswer && !saved && kind !== 'view') || (kind === 'save' && !canSave)
+                        }
+                        onClick={() => onAction(kind)}
+                      >
+                        {kind === 'view'
+                          ? t('import.viewSheet')
+                          : kind === 'edit'
+                            ? t('common.edit')
+                            : t('agent.save')}
+                      </Button>
+                    ))}
+                </Group>
+              )}
+              {row.kind === 'question' && row.key === lastQuestion && row.key > lastUser && (
+                <>
+                  {!!row.options?.length && (
+                    <Group gap="xs">
+                      {row.options.map((option) => (
+                        <Button
+                          key={option}
+                          variant="light"
+                          disabled={!canAnswer}
+                          onClick={() => onAnswer(option)}
+                        >
+                          {option}
+                        </Button>
+                      ))}
+                    </Group>
+                  )}
+                  <Text size="xs" c="dimmed">
+                    {t('agent.answerHint')}
+                  </Text>
+                </>
+              )}
             </Stack>
           )}
         </div>

@@ -236,6 +236,7 @@ func (s *Service) owned(
 	if character.Owner != owner {
 		return domain.Character{}, types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
+	character.Log = normalizeImportLog(character.Log)
 	return character, nil
 }
 
@@ -401,7 +402,7 @@ func (s *Service) load(
 	if err != nil {
 		return domain.Character{}, nil, err
 	}
-	return character, cat, nil
+	return character, domain.WithCustomCatalog(character.Log, cat), nil
 }
 
 func (s *Service) CharacterCatalog(ctx context.Context, owner domain.OwnerID, id domain.ID, locale rules.Locale) (*catalog.Catalog, error) {

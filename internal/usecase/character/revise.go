@@ -141,11 +141,29 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 	var dropped []Dropped
 	for _, event := range log.Events {
 		if replacement, edited := replacements[event.Seq]; edited {
+			if event.Custom != nil {
+				if replacement == nil {
+					return domain.Log{}, nil, types.NewValidationError("edit custom definitions through custom options")
+				}
+				copied := *event.Custom
+				replacement.Custom = &copied
+			}
 			if replacement == nil {
 				continue
 			}
 			staged := *replacement
 			staged.ID = event.ID
+			staged.Observed = event.Observed
+			staged.Evidence = event.Evidence
+			if event.Type == domain.EventInit && staged.Type == domain.EventInit {
+				// A field edit must not erase other observations stored in older init events.
+				merged := slices.Clone(event.Changes)
+				for _, ch := range staged.Changes {
+					merged = slices.DeleteFunc(merged, func(old domain.Change) bool { return old.Path == ch.Path })
+					merged = append(merged, ch)
+				}
+				staged.Changes = merged
+			}
 			staged.Seq = 0
 			if event.Seq == 1 {
 				staged.RulesLock = log.RulesLock()
@@ -162,6 +180,9 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 				return domain.Log{}, nil, err
 			}
 			staged.Source = sourceOf(rebuilt, cat, open, staged)
+			if staged.Observed && staged.Source == domain.PromptGroupNone {
+				staged.Source = event.Source
+			}
 			if err := stage(staged); err != nil {
 				return domain.Log{}, nil, err
 			}
@@ -181,12 +202,16 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 			}
 			continue
 		}
+		if event.Observed && !observedAssociation(rebuilt, cat, event) {
+			dropped = append(dropped, droppedEntry(event, DropNotOffered, nil))
+			continue
+		}
 		open, err := domain.Prompts(rebuilt, cat)
 		if err != nil {
 			return domain.Log{}, nil, err
 		}
 
-		if requiredRef(event) {
+		if requiredRef(event) && !event.Observed {
 			if _, ok := answersAnOpenPrompt(open, event); !ok {
 				dropped = append(dropped, droppedEntry(event, DropNotOffered, nil))
 				continue
@@ -212,6 +237,9 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 			dropped = append(dropped, droppedEntry(event, DropAnswersDropped, lost))
 		}
 		staged.Source = sourceOf(rebuilt, cat, open, staged)
+		if staged.Observed && staged.Source == domain.PromptGroupNone {
+			staged.Source = event.Source
+		}
 		if err := stage(staged); err != nil {
 			return domain.Log{}, nil, err
 		}

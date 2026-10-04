@@ -35,7 +35,7 @@ func NewConverter(cat *domain.Catalog) Converter {
 func (c Converter) ChoiceValue(ch rules.Choice) Choice { return c.inner.choiceValue(ch) }
 
 func entryOf(e domain.Entry) Entry {
-	out := Entry{Slug: e.Slug.String(), Name: e.Name, Desc: e.Desc}
+	out := Entry{Manual: e.Manual, Slug: e.Slug.String(), Name: e.Name, Desc: e.Desc}
 	if p := e.Provenance; p != nil {
 		out.Provenance = &Provenance{PackID: p.PackID, PackTitle: p.PackTitle, Version: p.Version, Digest: p.Digest, Sources: []BookSource{}}
 		for _, source := range p.Sources {

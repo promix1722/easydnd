@@ -27,6 +27,8 @@ import "github.com/promix1722/easydnd/internal/domain/rules"
 // adapter has to carry a locale or perform a fallback. Where a locale has no
 // translation for a key, these hold the English text.
 type Entry struct {
+	// Manual marks character-scoped content whose missing mechanics remain unknown.
+	Manual     bool
 	Provenance *Provenance
 
 	// Slug is the stable, language-neutral identity.

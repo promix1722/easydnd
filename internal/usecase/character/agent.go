@@ -15,7 +15,9 @@ import (
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
 )
 
@@ -25,6 +27,7 @@ type AgentFile struct {
 	Data []byte `json:"-"`
 }
 type AgentEvent struct {
+	Actions    []string        `json:"actions,omitempty"`
 	Files      []AgentFile     `json:"files,omitempty"`
 	Options    []string        `json:"options,omitempty"`
 	Source     string          `json:"source,omitempty"`
@@ -49,6 +52,7 @@ type agentOperation struct {
 }
 
 type AgentSession struct {
+	expected    []string
 	operations  map[string]agentOperation
 	ID          string            `json:"id"`
 	Folder      domain.FolderID   `json:"folder"`
@@ -148,12 +152,14 @@ func copyAgentSession(s *AgentSession) AgentSession {
 	for i := range out.Events {
 		out.Events[i].Data = append(json.RawMessage(nil), out.Events[i].Data...)
 		out.Events[i].Files = agentFileLabels(out.Events[i].Files)
+		out.Events[i].Actions = append([]string(nil), out.Events[i].Actions...)
 		out.Events[i].Options = append([]string(nil), out.Events[i].Options...)
 	}
 	out.Files = append([]AgentFile{}, s.Files...)
 	for i := range out.Files {
 		out.Files[i].Data = nil
 	}
+	out.expected = append([]string(nil), s.expected...)
 	out.Manual = append([]AgentManual{}, s.Manual...)
 	out.Assumptions = append([]string{}, s.Assumptions...)
 	out.Log = s.Log.Clone()
@@ -162,11 +168,11 @@ func copyAgentSession(s *AgentSession) AgentSession {
 	out.cancel = nil
 	return out
 }
-func (a *Agent) Create(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, files []AgentFile, instructions string) (AgentSession, error) {
+func (a *Agent) Create(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, files []AgentFile, instructions string, selected ...pack.Lock) (AgentSession, error) {
 	if a.model == nil {
 		return AgentSession{}, types.NewNotImplementedError("agent is not configured").Because("agent.disabled")
 	}
-	if len(files) == 0 || len(files) > 8 || len(instructions) > 16000 {
+	if (len(files) == 0 && strings.TrimSpace(instructions) == "") || len(files) > 8 || len(instructions) > 16000 {
 		return AgentSession{}, types.NewValidationError("invalid import input").Because("agent.files")
 	}
 	total := 0
@@ -185,7 +191,18 @@ func (a *Agent) Create(ctx context.Context, owner domain.OwnerID, folder domain.
 	if err != nil {
 		return AgentSession{}, err
 	}
-	cat, err := a.service.catalog.Load(ctx, locale)
+	var cat *catalog.Catalog
+	if len(selected) > 0 && !selected[0].IsZero() {
+		if a.service.packAccess == nil {
+			return AgentSession{}, types.NewAccessDeniedError("pack selection unavailable")
+		}
+		if err := a.service.packAccess.AuthorizeLock(ctx, user.ID(owner), selected[0], pack.Lock{}); err != nil {
+			return AgentSession{}, err
+		}
+		cat, err = catalog.LoadLocked(ctx, a.service.catalog, locale, selected[0])
+	} else {
+		cat, err = a.service.catalog.Load(ctx, locale)
+	}
 	if err != nil {
 		return AgentSession{}, err
 	}
@@ -199,9 +216,11 @@ func (a *Agent) Create(ctx context.Context, owner domain.OwnerID, folder domain.
 	}
 	s := &AgentSession{ID: hex.EncodeToString(token[:]), Owner: owner, Folder: folder, Locale: locale, Status: "queued", Revision: 1, Files: ownedFiles, Events: []AgentEvent{}, Manual: []AgentManual{}, Assumptions: []string{}}
 	e := initEvent(NewCharacter{Name: "…"})
+	e.Source = domain.GroupIdentity
+	e.Changes = append(e.Changes, domain.Change{Path: "identity.ruleset", Op: domain.OpSet, Value: domain.SlugValue(rules.Slug(cat.Ruleset))})
 	e.RulesLock = cat.Lock.Clone()
 	_ = s.Log.Append(e, domain.Event{Type: domain.EventNote, Note: "import.session:" + s.ID})
-	s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": instructions + "\nImport the attached sources into this single character. Read the build context first."}))
+	s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": instructions + "\nCreate this single character from the description and any attached sources, using the selected rules lock. Read the build context first."}))
 	addAgentEvent(s, "user", instructions, "", nil)
 	s.Events[len(s.Events)-1].Files = agentFileLabels(files)
 	a.mu.Lock()
@@ -286,7 +305,8 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 	return copyAgentSession(s), nil
 }
 func (a *Agent) Catalog(ctx context.Context, s AgentSession) (*catalog.Catalog, error) {
-	return catalog.LoadLocked(ctx, a.service.catalog, s.Locale, s.Log.RulesLock())
+	cat, err := catalog.LoadLocked(ctx, a.service.catalog, s.Locale, s.Log.RulesLock())
+	return domain.WithCustomCatalog(s.Log, cat), err
 }
 func (a *Agent) Sheet(ctx context.Context, s AgentSession) (domain.State, error) {
 	cat, err := a.Catalog(ctx, s)
@@ -475,6 +495,7 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 			}
 			op = agentOperation{Hash: hash, Result: raw(result)}
 			if err != nil {
+				a.service.log.Warn("AI wizard tool rejected", "tool", call.Name, "error", err)
 				op.Error = true
 				op.Result = raw(map[string]string{"error": err.Error()})
 			}
@@ -497,6 +518,12 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 			summary = "invalid"
 		}
 		addAgentEvent(s, "tool", summary, call.Name, nil)
+		if op.Error {
+			s.Events[len(s.Events)-1].Data = op.Result
+		}
+		if !op.Error && !known {
+			a.recordProgress(ctx, s, call.Name, args, op.Result)
+		}
 		s.Events[len(s.Events)-1].Source = args.Source
 		s.Events[len(s.Events)-1].Assumption = args.Assumption
 	}

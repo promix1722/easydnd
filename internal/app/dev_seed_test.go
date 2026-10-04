@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
@@ -235,4 +236,28 @@ func TestDevelopmentBrowserSessionIsolation(t *testing.T) {
 		t.Fatal("unknown tab inherited normal session")
 	}
 	assertUser(first, "18082", "", "master")
+}
+
+// A default core with another namespace must not invalidate the SRD demo log.
+func TestDevelopmentSeedWithAnotherDefaultPack(t *testing.T) {
+	cfg, err := config.Load(filepath.Join("..", "..", "config.dev.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "srd_5.1")
+	base, err := catalogfile.LoadPack(cfg.Data.SRDDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Data.AutoloadPacks = []config.PackFolder{{Path: cfg.Data.SRDDir, ID: "another-core"}}
+	cfg.Data.DefaultPacks = map[string]string{"another-core": base.Manifest.Version}
+	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	rec := devRequest(t, a, http.MethodPost, "/v1/dev/login", map[string]string{"account": "master"}, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("demo login unavailable: %d %s", rec.Code, rec.Body.String())
+	}
 }

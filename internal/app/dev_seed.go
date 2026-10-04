@@ -7,6 +7,7 @@ import (
 	authdomain "github.com/promix1722/easydnd/internal/domain/auth"
 	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/group"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
@@ -46,7 +47,7 @@ func (d *devLogin) Login(ctx context.Context, account string) (string, []string,
 // seedDevelopment reuses durable demo accounts and their group after an API
 // restart. Characters and games are process-local, so every new process builds
 // them through the normal usecases, with real ownership and permission checks.
-func seedDevelopment(ctx context.Context, users user.Repository, groups group.Repository, chars *charuc.Service, games *gameuc.Service, signer authdomain.Signer, ttl time.Duration) (*devLogin, error) {
+func seedDevelopment(ctx context.Context, users user.Repository, groups group.Repository, chars *charuc.Service, games *gameuc.Service, signer authdomain.Signer, ttl time.Duration, seedRules pack.Lock) (*devLogin, error) {
 	now := time.Now().UTC()
 	for _, name := range []string{"master", "player1", "player2"} {
 		id := devAccounts[name]
@@ -78,7 +79,7 @@ func seedDevelopment(ctx context.Context, users user.Repository, groups group.Re
 	var players []character.ID
 	var masterCharacter character.ID
 	for _, account := range []string{"master", "player1", "player2"} {
-		c, err := chars.CreateLevelOneStub(ctx, character.OwnerID(devAccounts[account]), account+" rogue", rules.DefaultLocale)
+		c, err := chars.CreateLevelOneStub(ctx, character.OwnerID(devAccounts[account]), account+" rogue", rules.DefaultLocale, seedRules)
 		if err != nil {
 			return nil, err
 		}

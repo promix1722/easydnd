@@ -30,6 +30,7 @@ type BookSource struct {
 
 // Entry is the part every catalogue entry has, already in the requested locale.
 type Entry struct {
+	Manual     bool        `json:"manual,omitempty"`
 	Provenance *Provenance `json:"provenance,omitempty"`
 	Slug       string      `json:"slug"`
 	Name       string      `json:"name"`

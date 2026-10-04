@@ -18,6 +18,7 @@ import { HomeRoute } from './HomeRoute'
 import { JoinRoute } from './JoinRoute'
 import { NotFoundPage } from './NotFoundPage'
 import { Private } from './Private'
+import { LegacyImportRedirect } from './LegacyImportRedirect'
 
 /**
  * The complete route table -- one tree for both viewports and for both sides
@@ -62,7 +63,7 @@ export const router = createBrowserRouter([
       },
       // Ahead of characters/:id so the literal wins over the parameter.
       {
-        path: 'characters/import',
+        path: 'ai-wizard',
         element: (
           <Private>
             <ImportCharacterScreen />
@@ -70,9 +71,11 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'characters/import/:sessionId/:importView?',
+        path: 'ai-wizard/:sessionId/:importView?',
         element: <Private><ImportCharacterScreen /></Private>,
       },
+      { path: 'characters/import', element: <LegacyImportRedirect /> },
+      { path: 'characters/import/:sessionId/:importView?', element: <LegacyImportRedirect /> },
       {
         path: 'characters/:id',
         element: (

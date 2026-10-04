@@ -62,11 +62,14 @@ func validateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.
 func validateEvent(
 	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event, index int,
 ) error {
+	if event.Observed && !observedAssociation(log, cat, event) {
+		return types.NewValidationError("observed choice has a different parent")
+	}
 	if requiredRef(event) {
 		if err := validateRef(cat, event, index); err != nil {
 			return err
 		}
-		if _, ok := answersAnOpenPrompt(open, event); !ok {
+		if _, ok := answersAnOpenPrompt(open, event); !ok && !event.Observed {
 			return types.NewFieldValidationError("some answers are not valid", types.FieldError{
 				Field: fmt.Sprintf("events[%d].ref", index), Rule: "not-offered",
 				Reason: "field.answer.notAsked",
@@ -233,6 +236,9 @@ func offers(from rules.OptionSet, ref rules.Ref) bool {
 func sourceOf(
 	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event,
 ) domain.PromptGroup {
+	if event.Observed {
+		return observedGroup(event.Type, firstChangePath(event))
+	}
 	if event.Type == domain.EventInit {
 		return domain.GroupIdentity
 	}

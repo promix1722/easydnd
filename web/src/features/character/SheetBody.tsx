@@ -210,7 +210,7 @@ export function SheetBody({
   if (s.spells.sources?.length) sections.push({
     key: 'spells', title: t('sheet.spells'), desktop: 'panel', content: <Stack gap="md">
       {s.spells.sources.map((source) => <Stack key={source.source} gap="xs">
-        <Text fw={600}>{source.source === 'rule:custom-spells' ? t('spellRules.custom') : named(collectionOfKind(kindOf(source.source)) ?? 'classes', slugOf(source.source))}</Text>
+        <Text fw={600}>{source.source.startsWith('rule:custom-spells') ? t('spellRules.custom') : named(collectionOfKind(kindOf(source.source)) ?? 'classes', slugOf(source.source))}</Text>
         {(['cantrips', 'known', 'spellbook', 'prepared', 'arcanum', 'mastery'] as const).map((mode) => {
           const spells = source[mode] ?? []
           return spells.length === 0 ? null : <ItemList key={mode} label={spellChoiceName(t, mode === 'cantrips' ? 'cantrip' : mode, mode === 'prepared' ? source.preparationLimit ?? spells.length : spells.length)} items={spells.map((slug) => named('spells', slug))} />

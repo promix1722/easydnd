@@ -139,7 +139,27 @@ export interface SpellSource {
   preparationLimit?: number
 }
 
+export interface CustomOption {
+ ref?: string
+ id?: string
+ kind: string
+ name: string
+ description: string
+ source: string
+ parent?: string
+ ability?: string
+ mode?: string
+ placement?: string
+ level?: number
+ hitDie?: number
+ speed?: number
+ count?: number
+ selected: boolean
+}
+export const upsertCustomOption = (id: string, revision: number, option: CustomOption) =>
+ request<WriteResponse>(`${characterPath(id)}/custom-options`, { method: 'POST', body: { revision, option } })
 export interface Sheet {
+ customOptions?: CustomOption[]
  importSession?: string
  catalogNames?: Record<string,string>
  importedNotes?: string[]
@@ -180,6 +200,8 @@ export interface Change {
 }
 
 export interface CharacterEvent {
+ observed?: boolean
+ evidence?: string
   choiceSource?: string
   choiceKind?: string
   purpose?: string

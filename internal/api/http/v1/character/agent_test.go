@@ -18,9 +18,12 @@ import (
 	"github.com/gin-gonic/gin"
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"github.com/promix1722/easydnd/internal/api/http/middleware"
 	api "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/pack"
+	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
@@ -28,11 +31,20 @@ import (
 type reviewModel struct{}
 
 func (reviewModel) Respond(context.Context, charuc.AgentRequest, func(string)) (charuc.AgentResponse, error) {
-	return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: "name", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Hero"}`}, {ID: "review", Name: "prepare_review", Arguments: `{"text":"Review","allow_incomplete":true}`}}}, nil
+	return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: "name", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Hero"}`}, {ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "review", Name: "prepare_review", Arguments: `{"text":"Review","allow_incomplete":true}`}}}, nil
 }
 func TestImportHTTPUploadResumeOwnershipAndSSE(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "..", "data", "srd_5.1")), nil, nil, slog.New(slog.DiscardHandler))
+	source, err := catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "..", "..", "data", "srd_5.1")}, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, nil, slog.New(slog.DiscardHandler))
+	cat, err := source.Load(context.Background(), rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc.SetPackAccess(testAgentAccess{})
 	agent := charuc.NewAgent(svc, reviewModel{}, charuc.AgentConfig{Workers: 1})
 	defer agent.Close()
 	h := api.New(svc, slog.New(slog.DiscardHandler)).WithAgent(agent)
@@ -57,6 +69,8 @@ func TestImportHTTPUploadResumeOwnershipAndSSE(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, _ = file.Write([]byte("Hero, half elf"))
+	lock, _ := json.Marshal(helpers.RulesLockOf(cat.Lock))
+	_ = writer.WriteField("rules", string(lock))
 	_ = writer.Close()
 	response, err := http.Post(server.URL+"/sessions", writer.FormDataContentType(), &upload)
 	if err != nil {
@@ -133,3 +147,10 @@ func TestImportHTTPUploadResumeOwnershipAndSSE(t *testing.T) {
 		t.Fatalf("reload failed %s", b)
 	}
 }
+
+type testAgentAccess struct{}
+
+func (testAgentAccess) AuthorizeLock(context.Context, user.ID, pack.Lock, pack.Lock) error {
+	return nil
+}
+func (testAgentAccess) Default() pack.Lock { return pack.Lock{} }

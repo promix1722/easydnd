@@ -6,6 +6,7 @@ import { setupUser } from '@/test/user'
 import type { AgentView } from '@/lib/api/agent'
 import { ImportCharacterScreen } from './ImportCharacterScreen'
 
+const RULES = { edition: '2014', semantics: '1', packs: [{ id: 'srd-2014', version: '1.0.0', digest: 'a'.repeat(64) }] }
 const VIEW: AgentView = {
   session: {
     id: 'session1',
@@ -73,6 +74,8 @@ beforeEach(() => {
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+      if (url.includes('/packs/resolve')) return Response.json(RULES)
+      if (url.includes('/packs')) return Response.json({ defaultRules: RULES, packs: [{ id: 'srd-2014', title: 'D&D 2014', releases: RULES.packs, archived: false }] })
       if (url.includes('/agent-capabilities'))
         return Response.json({ enabled: false })
       if (init?.method === 'POST') {
@@ -132,11 +135,11 @@ for (const viewport of ['desktop', 'mobile'] as const)
       const user = setupUser()
       const result = renderAt(
         viewport,
-        <MemoryRouter initialEntries={['/characters/import?session=session1']}>
+        <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
           <Routes>
-            <Route path="/characters/import" element={<ImportCharacterScreen />} />
+            <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
             <Route
-              path="/characters/import/:sessionId/:importView?"
+              path="/ai-wizard/:sessionId/:importView?"
               element={<ImportCharacterScreen />}
             />
           </Routes>
@@ -166,11 +169,11 @@ for (const viewport of ['desktop', 'mobile'] as const)
       const user = setupUser()
       renderAt(
         viewport,
-        <MemoryRouter initialEntries={['/characters/import?session=session1']}>
+        <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
           <Routes>
-            <Route path="/characters/import" element={<ImportCharacterScreen />} />
+            <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
             <Route
-              path="/characters/import/:sessionId/:importView?"
+              path="/ai-wizard/:sessionId/:importView?"
               element={<ImportCharacterScreen />}
             />
           </Routes>
@@ -190,11 +193,11 @@ for (const viewport of ['desktop', 'mobile'] as const)
 it('deduplicates replayed stream events and restores a coherent snapshot', async () => {
   renderAt(
     'desktop',
-    <MemoryRouter initialEntries={['/characters/import?session=session1']}>
+    <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
       <Routes>
-        <Route path="/characters/import" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
         <Route
-          path="/characters/import/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId/:importView?"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -237,17 +240,19 @@ it('uploads source bytes and optional instructions before creating a session', a
   const user = setupUser()
   const { container } = renderAt(
     'desktop',
-    <MemoryRouter initialEntries={['/characters/import?folder=folder1']}>
+    <MemoryRouter initialEntries={['/ai-wizard?folder=folder1']}>
       <Routes>
-        <Route path="/characters/import" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
         <Route
-          path="/characters/import/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId/:importView?"
           element={<ImportCharacterScreen />}
         />
       </Routes>
     </MemoryRouter>,
   )
-  expect(screen.getByRole('button', { name: 'Import' })).toBeDisabled()
+  expect(screen.queryByLabelText('Instructions (optional)')).not.toBeInTheDocument()
+  await user.click(await screen.findByRole('button', { name: 'Confirm' }))
+  expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
   const input = container.querySelector<HTMLInputElement>('input[type="file"]')
   if (!input) throw new Error('File input missing')
   await user.upload(
@@ -258,12 +263,13 @@ it('uploads source bytes and optional instructions before creating a session', a
     screen.getByLabelText('Instructions (optional)'),
     'Keep the custom items',
   )
-  await user.click(screen.getByRole('button', { name: 'Import' }))
+  await user.click(screen.getByRole('button', { name: 'Send' }))
   await screen.findByText('Draft ready')
   expect(writes).toHaveLength(1)
   expect(writes[0]?.url).toContain('folder=folder1')
   const form = writes[0]?.body as FormData
   expect(form.get('instructions')).toBe('Keep the custom items')
+  expect(JSON.parse(String(form.get('rules')))).toEqual(RULES)
   expect((form.get('files') as File).name).toBe('hero.txt')
 })
 
@@ -271,11 +277,11 @@ it('keeps messages in order and waits for the assistant before sending', async (
   const user = setupUser()
   renderAt(
     'desktop',
-    <MemoryRouter initialEntries={['/characters/import?session=session1']}>
+    <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
       <Routes>
-        <Route path="/characters/import" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
         <Route
-          path="/characters/import/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId/:importView?"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -326,11 +332,11 @@ it('opens the standard editor inside the same chat without saving', async () => 
   const user = setupUser()
   renderAt(
     'desktop',
-    <MemoryRouter initialEntries={['/characters/import?session=session1']}>
+    <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
       <Routes>
-        <Route path="/characters/import" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
         <Route
-          path="/characters/import/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId/:importView?"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -358,10 +364,10 @@ it('renders activity inline, combines attachments with the user message and answ
   const user = setupUser()
   const { container } = renderAt(
     'desktop',
-    <MemoryRouter initialEntries={['/characters/import/session1']}>
+    <MemoryRouter initialEntries={['/ai-wizard/session1']}>
       <Routes>
         <Route
-          path="/characters/import/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId/:importView?"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -399,7 +405,7 @@ it('renders activity inline, combines attachments with the user message and answ
       },
     }),
   )
-  expect(screen.getByText('Reading the draft')).toBeVisible()
+  expect(screen.queryByText('Reading the draft')).not.toBeInTheDocument()
   expect(container.querySelector('details')).toBeNull()
   expect(screen.queryByText(/private source/)).not.toBeInTheDocument()
   expect(
@@ -421,10 +427,10 @@ it('recovers a missed end-of-turn snapshot so the next reply can be sent', async
   const user = setupUser()
   renderAt(
     'desktop',
-    <MemoryRouter initialEntries={['/characters/import/session1']}>
+    <MemoryRouter initialEntries={['/ai-wizard/session1']}>
       <Routes>
         <Route
-          path="/characters/import/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId/:importView?"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -461,10 +467,10 @@ it('recovers a missed end-of-turn snapshot so the next reply can be sent', async
 it('reloads a standalone preview with the import breadcrumbs and no assumptions panel', async () => {
   renderAt(
     'desktop',
-    <MemoryRouter initialEntries={['/characters/import/session1/character']}>
+    <MemoryRouter initialEntries={['/ai-wizard/session1/character']}>
       <Routes>
         <Route
-          path="/characters/import/:sessionId/:importView?"
+          path="/ai-wizard/:sessionId/:importView?"
           element={<ImportCharacterScreen />}
         />
       </Routes>
@@ -472,11 +478,11 @@ it('reloads a standalone preview with the import breadcrumbs and no assumptions 
   )
   await screen.findByText('Back to chat')
   expect(
-    screen.getByRole('link', { name: 'Chatbot Creation' }),
-  ).toHaveAttribute('href', '/characters/import')
+    screen.getByRole('link', { name: 'AI Wizard' }),
+  ).toHaveAttribute('href', '/ai-wizard')
   expect(screen.getByRole('link', { name: 'session1' })).toHaveAttribute(
     'href',
-    '/characters/import/session1',
+    '/ai-wizard/session1',
   )
   expect(screen.queryByRole('log')).not.toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

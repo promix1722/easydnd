@@ -46,6 +46,8 @@ type Character struct {
 
 // Event is one entry in a character's log.
 type Event struct {
+	Evidence      string              `json:"evidence,omitempty"`
+	Observed      bool                `json:"observed,omitempty"`
 	ChoiceSource  string              `json:"choiceSource,omitempty"`
 	ChoiceKind    string              `json:"choiceKind,omitempty"`
 	Purpose       string              `json:"purpose,omitempty"`
@@ -113,6 +115,7 @@ type Value struct {
 
 // Sheet is the projected character.
 type Sheet struct {
+	CustomOptions []CustomOption         `json:"customOptions,omitempty"`
 	ImportSession string                 `json:"importSession,omitempty"`
 	CatalogNames  map[string]string      `json:"catalogNames,omitempty"`
 	ImportedNotes []string               `json:"importedNotes,omitempty"`

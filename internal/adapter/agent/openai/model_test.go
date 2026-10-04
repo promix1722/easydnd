@@ -22,6 +22,12 @@ func TestResponsesStreamUsesCompleteToolArguments(t *testing.T) {
 		if body["store"] != false || body["stream"] != true {
 			t.Errorf("unexpected privacy/stream config: %v", body)
 		}
+		for _, value := range body["tools"].([]any) {
+			declaration := value.(map[string]any)
+			if declaration["strict"] != false {
+				t.Errorf("optional tool fields can become required: %v", declaration["name"])
+			}
+		}
 		encoded, _ := json.Marshal(body["input"])
 		if !strings.Contains(string(encoded), "image_url") || !strings.Contains(string(encoded), "input_file") {
 			t.Error("missing multimodal inputs")

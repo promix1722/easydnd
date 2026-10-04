@@ -47,7 +47,12 @@ func (h *Handler) AgentCreate(c *gin.Context) {
 	if !ok {
 		return
 	}
-	s, err := h.agent.Create(c.Request.Context(), h.owner(c), folderOf(c), helpers.Locale(c), files, c.PostForm("instructions"))
+	var selected helpers.RulesLock
+	if err := json.Unmarshal([]byte(c.PostForm("rules")), &selected); err != nil || selected.Domain().Validate() != nil {
+		helpers.FormatError(c, types.NewValidationError("select rules before starting").Because("agent.rulesRequired"))
+		return
+	}
+	s, err := h.agent.Create(c.Request.Context(), h.owner(c), folderOf(c), helpers.Locale(c), files, c.PostForm("instructions"), selected.Domain())
 	h.agentResult(c, s, err)
 }
 func (h *Handler) AgentList(c *gin.Context) {

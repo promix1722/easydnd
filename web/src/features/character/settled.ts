@@ -51,6 +51,7 @@ export interface SettledView {
 export function settledByStage(t: Translate, view: SettledView): Map<Stage, SettledRow[]> {
   const byStage = new Map<Stage, SettledRow[]>()
   for (const event of view.events) {
+    if (event.observed && event.type !== 'init' && event.changes?.length) continue
     const input = event.changes?.some((change) => change.path === 'identity.ruleset')
       ? 'character/ruleset'
       : event.changes?.some((change) => change.path === 'identity.desiredLevel')
