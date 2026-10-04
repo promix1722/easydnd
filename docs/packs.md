@@ -33,6 +33,9 @@ data:
   srd_dir: data/srd_5.1
   pack_files:
     - data/packs/examples/tactician.json
+  autoload_packs:
+    - path: /path/to/another-pack-repository
+      id: another-core # optional namespace override
   default_packs:
     srd-2014: "1.0.0"
     example: "2.0.0"
@@ -46,6 +49,30 @@ portable releases by digest and makes older locks loadable after restart. Keep
 it outside a deployment's release directory. Changing content under an archived
 ID/version is an error. Bump the version instead. The archive never supplies
 new default roots by itself, and startup makes no network requests.
+
+`autoload_packs` installs additional public packs at startup without adding them
+to the default roots. Each entry's `path` names a pack directory, or a repository
+whose `pack/` child is the pack directory. A manifest at the configured root
+takes precedence; the loader does not recursively scan vendor or source folders.
+Missing folders and invalid packs fail startup. Restart after changing files;
+there is no file watcher. These packs appear in Homebrew, the pack selector and
+spell browsing alongside SRD, and need no database import or publication step.
+
+An optional `id` overrides the source manifest ID and rewrites internal references
+using the same rules as pack import. It preserves the source version, translations
+and attribution, and computes a new digest. The source files remain untouched.
+This lets a replacement core whose source ID is `srd-2014` coexist with the built-in
+SRD as a separately selectable pack. Dependencies on another renamed pack must
+already declare its installed ID. Independent cores are selected separately;
+combining two core providers still fails validation. Autoloaded releases use the
+same immutable archive policy as `pack_files`.
+
+Development config points to `/home/orca-personal/projects/easydnd-2014` with ID
+`dnd-2014`, giving SRD 5.1 and D&D 2014 as two packs while retaining SRD as the
+default. Adjust or remove that entry on machines without this checkout.
+Generated worktree and preview configs copy the `data` section of
+`config.dev.yaml`; a private `config.local.yaml` remains a complete override
+and must include the same setting if desired.
 
 The archive preserves packs, **not characters**. Character logs, checkpoints,
 folders, shares and games still live in memory. Durable character storage is a

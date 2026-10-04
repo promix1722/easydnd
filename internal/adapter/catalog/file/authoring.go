@@ -129,6 +129,10 @@ func (a *Authoring) CheckDraft(b []byte, id string) error {
 // Fork rewrites references, never prose. It handles qualified refs, compatibility
 // slugs, expression inputs and keyed casting definitions throughout mechanics.
 func (a *Authoring) Fork(b []byte, id string, mappings map[string]string) ([]byte, error) {
+	return rewritePackIdentity(b, id, mappings, true)
+}
+
+func rewritePackIdentity(b []byte, id string, mappings map[string]string, resetVersion bool) ([]byte, error) {
 	var v map[string]any
 	if err := strictJSON(b, &v); err != nil {
 		return nil, err
@@ -208,7 +212,7 @@ func (a *Authoring) Fork(b []byte, id string, mappings map[string]string) ([]byt
 		}
 	}
 	m["id"] = id
-	if old != id {
+	if old != id && resetVersion {
 		m["version"] = "1.0.0"
 	}
 	delete(m, "files")

@@ -3715,7 +3715,16 @@ for.
 
 ### The dialog is blocking, and that is the design
 
-`src/lib/version` watches for a deploy. Two signals feed it:
+`src/lib/version` watches for a deploy in production builds. Vite development
+mode (`import.meta.env.DEV`) disables both API-header detection and visibility
+checks, regardless of `VITE_APP_VERSION`. `make web/dev` supplies a commit hash
+at startup; rebuilding the API at a later commit does not change that value,
+and reloading the tab cannot reconcile the two. Comparing hashes in development
+therefore caused an endless blocking reload prompt. HMR handles development
+updates; commit hashes remain visible for diagnostics. Tests exercise mismatched
+hashes in both modes so production checks remain active.
+
+Two signals feed the production watch:
 
 - **Every API response carries `X-App-Version`.** `lib/api/client.ts` compares
   it against `WEB_VERSION` at the one point every request passes through, so any
@@ -3838,9 +3847,9 @@ Two things about that are the frontend's to keep working:
    build without it. The value is a tag on a release and a short commit SHA
    anywhere else, decided by `deploy/release-version.sh` and passed in by
    `make web/build` -- and by `make web/dev`, so a dev session reports its
-   commit rather than the word "dev"; it must equal what the binary reports, or the update
-   dialog above would fire against a version that disagrees with it for reasons
-   that have nothing to do with a deploy. See
+   commit rather than the word "dev". Production bundles must match the binary;
+   development mode allows the two processes to restart independently without
+   a release dialog. See
    [backend.md](backend.md#what-a-release-is-called-and-where-it-lives).
 2. **A bad bundle goes live silently.** The API-side health gate cannot see the
    frontend, so `deploy.sh` checks the bundle exists *before* the symlink swap.

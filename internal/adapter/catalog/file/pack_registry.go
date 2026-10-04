@@ -28,7 +28,7 @@ type Registry struct {
 	contexts    map[string]*catalog.Catalog
 }
 
-func NewRegistry(paths []string, roots []Dependency, archive string) (*Registry, error) {
+func NewRegistry(paths []string, roots []Dependency, archive string, folders ...PackFolder) (*Registry, error) {
 	r := &Registry{releases: map[string]map[string]*PackDocument{}, contexts: map[string]*catalog.Catalog{}, identities: map[*PackDocument]pack.Release{}}
 	install := func(p *PackDocument) error {
 		release, err := p.Release()
@@ -71,35 +71,24 @@ func NewRegistry(paths []string, roots []Dependency, archive string) (*Registry,
 			}
 		}
 	}
-	configured := map[string]string{}
-	configuredReleases := []Dependency{}
-	for _, path := range paths {
-		p, err := LoadPack(path)
-		if err != nil {
-			return nil, err
+	register := func(p *PackDocument) error {
+		if err := install(p); err != nil {
+			return err
 		}
-		if err = install(p); err != nil {
-			return nil, err
-		}
-		if previous, ok := configured[p.Manifest.ID]; ok && previous != p.Manifest.Version && len(roots) == 0 {
-			return nil, fmt.Errorf("multiple configured versions of %s require explicit default_packs", p.Manifest.ID)
-		}
-		configured[p.Manifest.ID] = p.Manifest.Version
-		configuredReleases = append(configuredReleases, Dependency{ID: p.Manifest.ID, Version: p.Manifest.Version})
 		if archive != "" {
 			release, err := p.Release()
 			if err != nil {
-				return nil, err
+				return err
 			}
 			name := filepath.Join(archive, release.Digest+".json")
 			if _, err = os.Stat(name); os.IsNotExist(err) {
 				b, err := EncodePack(p)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				temp, err := os.CreateTemp(archive, ".pack-")
 				if err != nil {
-					return nil, err
+					return err
 				}
 				tmpName := temp.Name()
 				_, writeErr := temp.Write(b)
@@ -107,19 +96,46 @@ func NewRegistry(paths []string, roots []Dependency, archive string) (*Registry,
 				closeErr := temp.Close()
 				if writeErr != nil || syncErr != nil || closeErr != nil {
 					_ = os.Remove(tmpName)
-					return nil, fmt.Errorf("archiving pack: write=%v sync=%v close=%v", writeErr, syncErr, closeErr)
+					return fmt.Errorf("archiving pack: write=%v sync=%v close=%v", writeErr, syncErr, closeErr)
 				}
 				if err = os.Rename(tmpName, name); err != nil {
 					_ = os.Remove(tmpName)
-					return nil, err
+					return err
 				}
 			}
 		}
+		return nil
+	}
+	configured := map[string]string{}
+	configuredReleases := []Dependency{}
+	for _, path := range paths {
+		p, err := LoadPack(path)
+		if err != nil {
+			return nil, err
+		}
+		if err = register(p); err != nil {
+			return nil, err
+		}
+		if previous, ok := configured[p.Manifest.ID]; ok && previous != p.Manifest.Version && len(roots) == 0 {
+			return nil, fmt.Errorf("multiple configured versions of %s require explicit default_packs", p.Manifest.ID)
+		}
+		configured[p.Manifest.ID] = p.Manifest.Version
+		configuredReleases = append(configuredReleases, Dependency{ID: p.Manifest.ID, Version: p.Manifest.Version})
 	}
 	if len(roots) == 0 {
 		for id, version := range configured {
 			roots = append(roots, Dependency{ID: id, Version: version})
 		}
+	}
+	for _, folder := range folders {
+		p, err := loadPackFolder(folder)
+		if err != nil {
+			return nil, fmt.Errorf("autoload pack %s: %w", folder.Path, err)
+		}
+		if err := register(p); err != nil {
+			return nil, fmt.Errorf("autoload pack %s: %w", folder.Path, err)
+		}
+		configuredReleases = append(configuredReleases, Dependency{ID: p.Manifest.ID, Version: p.Manifest.Version})
 	}
 	lock, err := r.Resolve(roots)
 	if err != nil {

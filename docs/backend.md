@@ -11,11 +11,18 @@ over HTTP.
 
 ## Rule pack runtime
 
-Startup now registers the generated base pack plus `data.pack_files`, resolves
+Startup registers the generated base pack plus `data.pack_files` and
+`data.autoload_packs`, resolves
 `data.default_packs`, and compiles the selected contexts before readiness.
 `data.pack_archive` retains immutable releases by digest outside deployment
 folders. [packs.md](packs.md) documents the file format, CLI and new migration
-and contextual catalogue routes. No pack upload/authoring service is installed.
+and contextual catalogue routes. Autoloaded folders are additional public
+catalogue choices, excluded from implicit default roots so replacement cores
+can coexist. Each path accepts a pack directory or a repository with a `pack/`
+child; an optional ID override gives replacement datasets their own namespace.
+Missing or invalid configured packs fail startup. Changes require a restart.
+The authoring service separately manages private drafts, published releases,
+imports and group sharing.
 
 All application character writes use repository revision CAS. `expectedSeq`
 identifies positions; `expectedRevision` detects concurrent same-length edits.
@@ -1202,6 +1209,7 @@ rather than quietly defaulted.
 | `log.level` | `info` | `debug`, `info`, `warn`, `error` |
 | `log.format` | `json` | `json` or `text` |
 | `data.pack_files` | `[]` | additional installed pack files/directories |
+| `data.autoload_packs` | `[]` | additional public packs, each with a folder `path` and optional `id` override; root manifest or `pack/` child; does not add default roots |
 | `data.default_packs` | `{}` | selected root IDs and version constraints; omitted means configured inputs |
 | `data.pack_archive` | empty | optional persistent digest-addressed release directory |
 | `data.srd_dir` | `data/srd_5.1` | read at startup; a missing or malformed directory is a fatal error, by design. Absolute in production, through `current/` so it follows the symlink swap |

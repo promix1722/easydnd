@@ -97,10 +97,17 @@ type DataConfig struct {
 	// directory rather than an embedded blob so the data can be corrected
 	// without rebuilding the binary -- which also means deploy.sh must ship
 	// it alongside the binary.
-	SRDDir       string
-	PackFiles    []string
-	DefaultPacks map[string]string
-	PackArchive  string
+	SRDDir        string
+	PackFiles     []string
+	AutoloadPacks []PackFolder
+	DefaultPacks  map[string]string
+	PackArchive   string
+}
+
+// PackFolder installs a public pack from a directory, optionally under a new ID.
+type PackFolder struct {
+	Path string `yaml:"path"`
+	ID   string `yaml:"id"`
 }
 
 // AuthConfig configures passkey sign-in.
@@ -254,6 +261,7 @@ func Load(path string) (*Config, error) {
 			// root; the deploy sets it to the release directory.
 			SRDDir:    p.str(f.Data.SRDDir, "data/srd_5.1"),
 			PackFiles: f.Data.PackFiles, DefaultPacks: f.Data.DefaultPacks, PackArchive: f.Data.PackArchive,
+			AutoloadPacks: f.Data.AutoloadPacks,
 		},
 		DB: DBConfig{
 			URL:      p.str(f.DB.URL, ""),
@@ -308,6 +316,11 @@ func (c *Config) validate() error {
 	}
 	if c.Data.SRDDir == "" {
 		return fmt.Errorf("data.srd_dir must not be empty")
+	}
+	for i, folder := range c.Data.AutoloadPacks {
+		if strings.TrimSpace(folder.Path) == "" {
+			return fmt.Errorf("data.autoload_packs[%d].path must not be empty", i)
+		}
 	}
 
 	// The same shape as the auth.session_secret rule, and for the same reason:

@@ -10,9 +10,9 @@
  * `npx vite`, and the test suite, which is why the suite can rely on it. It
  * cannot happen in a production build: the plugin fails the build first.
  *
- * The fallback is load-bearing beyond display. @/lib/version treats "dev" as
- * "there is no release to be behind" and does not watch at all, which is what
- * stops every test and every unconfigured dev server from opening the update
- * dialog against an API that reports something real.
+ * @/lib/version disables release checks in Vite development mode, regardless
+ * of this display version. The frontend and API may restart independently;
+ * reloading a dev tab cannot change the version Vite received at startup.
+ * Unversioned bundles are also excluded from release checks.
  */
 export const WEB_VERSION: string = import.meta.env.VITE_APP_VERSION ?? 'dev'

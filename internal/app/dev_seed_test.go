@@ -33,6 +33,8 @@ func developmentAppAtPort(t *testing.T, env, port string) *App {
 	cfg.Env = env
 	cfg.HTTP.Port = port
 	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "srd_5.1")
+	// Development's optional local dataset is not a dependency of these tests.
+	cfg.Data.AutoloadPacks = nil
 	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
 	if err != nil {
 		t.Fatal(err)

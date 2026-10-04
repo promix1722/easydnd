@@ -61,6 +61,7 @@ data:
   # health gate timed out, and the release rolled back.
   srd_dir: /opt/easydnd/current/data/srd_5.1
   pack_files: []
+  autoload_packs: []
   default_packs: {}
   # Optional persistent archive, outside current/; make writable by the service.
   # pack_archive: /var/lib/easydnd/packs

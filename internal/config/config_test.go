@@ -162,6 +162,9 @@ log:
   format: text
 data:
   srd_dir: /srv/srd
+  autoload_packs:
+    - path: /srv/dnd
+      id: dnd-2014
 auth:
   rp_id: example.test
   rp_name: Example
@@ -189,6 +192,9 @@ auth:
 	}
 	if cfg.Data.SRDDir != "/srv/srd" {
 		t.Errorf("SRDDir = %q", cfg.Data.SRDDir)
+	}
+	if len(cfg.Data.AutoloadPacks) != 1 || cfg.Data.AutoloadPacks[0] != (PackFolder{Path: "/srv/dnd", ID: "dnd-2014"}) {
+		t.Errorf("AutoloadPacks = %+v", cfg.Data.AutoloadPacks)
 	}
 	if cfg.Auth.RPID != "example.test" || cfg.Auth.RPDisplayName != "Example" {
 		t.Errorf("RP = %q/%q", cfg.Auth.RPID, cfg.Auth.RPDisplayName)

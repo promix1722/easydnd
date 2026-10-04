@@ -186,13 +186,15 @@ test/db:
 # Written whole rather than appended to config.dev.yaml, because a slot needs
 # http.port and auth.rp_origins -- and a second `auth:` block in one file is a
 # duplicate mapping key, which the loader rejects outright. What it leaves out
-# the loader defaults for; data.srd_dir is already data/srd_5.1.
+# the loader defaults for. Copy the data section from config.dev.yaml so
+# folder-autoload settings also apply to worktree and preview servers.
 #
 # No auth.session_secret: development invents one per process and says so,
 # which is honest given that a restart also empties the character store.
 config/dev:
 	@{ printf 'env: development\n'; \
 	   printf 'log:\n  format: text\n  level: debug\n'; \
+	   awk '/^data:/ { copying=1 } copying && /^[^[:space:]#]/ && !/^data:/ { exit } copying { print }' $(DEV_CONFIG); \
 	   printf 'http:\n  port: "%s"\n' '$(API_PORT)'; \
 	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - http://localhost:%s\n' '$(RP_ID)' '$(WEB_PORT)'; \
 	   $(if $(WEB_PUBLIC_URL),printf '    - %s\n' '$(WEB_PUBLIC_URL)';) \
@@ -208,6 +210,7 @@ config/dev:
 config/preview:
 	@{ printf 'env: development\n'; \
 	   printf 'log:\n  format: text\n  level: debug\n'; \
+	   awk '/^data:/ { copying=1 } copying && /^[^[:space:]#]/ && !/^data:/ { exit } copying { print }' $(DEV_CONFIG); \
 	   printf 'http:\n  port: "%s"\n' '$(PREVIEW_PORT)'; \
 	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - %s\n' '$(RP_ID)' '$(PREVIEW_URL)'; \
 	   printf 'db:\n  url: %s\n' '$(TEST_DATABASE_URL)'; } > $(PREVIEW_CONFIG)
@@ -343,19 +346,9 @@ web/deps:
 	cd web && npm ci
 
 ## web/dev: run the Vite dev server; it proxies /v1 to this worktree's API
-# VITE_APP_VERSION is passed here as well as to web/build, and it has to be the
-# same $(VERSION) the API alongside it was built with. Two reasons.
-#
-# The footer would otherwise read "dev", which is not a version -- it cannot be
-# matched against a bug report or against what the API says. Now it reads this
-# commit, which is the honest answer for a dev build.
-#
-# And the two halves must agree, or `make dev` would open the update dialog on
-# its first request: the client compares its own version against the one the
-# API stamps on every response, and disagreeing is the entire trigger. Both
-# come from $(VERSION) in the same checkout, so they do. Running `make web/dev`
-# against an API left over from another commit will show the dialog, and that
-# is correct rather than a bug -- the bundle really is out of step with it.
+# Keep the commit visible for diagnostics. Development release checks are
+# disabled by Vite's build mode: a long-running Vite process and a rebuilt API
+# can report different commits, and reloading cannot change Vite's startup env.
 web/dev:
 	cd web && EASYDND_WEB_PORT=$(WEB_PORT) \
 	          EASYDND_WEB_PUBLIC_URL=$(WEB_PUBLIC_URL) \

@@ -184,7 +184,11 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	for id, version := range cfg.Data.DefaultPacks {
 		roots = append(roots, catalogfile.Dependency{ID: id, Version: version})
 	}
-	catalogSource, err := catalogfile.NewRegistry(packPaths, roots, cfg.Data.PackArchive)
+	folders := make([]catalogfile.PackFolder, 0, len(cfg.Data.AutoloadPacks))
+	for _, folder := range cfg.Data.AutoloadPacks {
+		folders = append(folders, catalogfile.PackFolder{Path: folder.Path, ID: folder.ID})
+	}
+	catalogSource, err := catalogfile.NewRegistry(packPaths, roots, cfg.Data.PackArchive, folders...)
 	if err != nil {
 		return fail(fmt.Errorf("load rule packs: %w", err))
 	}

@@ -19,6 +19,11 @@ data:
   srd_dir: data/srd_5.1
   # Optional file-defined addons; see docs/packs.md.
   pack_files: []
+  # Autoload this local dataset alongside SRD; accepts a pack or repository folder.
+  # Adjust/remove this entry on machines without the checkout.
+  autoload_packs:
+    - path: /home/orca-personal/projects/easydnd-2014
+      id: dnd-2014
   default_packs: {}
   # Set to .pack-archive when retaining released packs between runs.
   pack_archive: ""
