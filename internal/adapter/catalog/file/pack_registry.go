@@ -30,8 +30,37 @@ type Registry struct {
 
 func NewRegistry(paths []string, roots []Dependency, archive string, folders ...PackFolder) (*Registry, error) {
 	r := &Registry{releases: map[string]map[string]*PackDocument{}, contexts: map[string]*catalog.Catalog{}, identities: map[*PackDocument]pack.Release{}}
+	// A digest validates, encodes and canonicalises the whole pack, and loading
+	// one asks for it up to three times and then for the encoding again to
+	// archive it. Nothing here changes a document once it is read, so each is
+	// encoded and identified once.
+	type identity struct {
+		release pack.Release
+		encoded []byte
+	}
+	known := map[*PackDocument]identity{}
+	encode := func(p *PackDocument) (identity, error) {
+		if id, ok := known[p]; ok {
+			return id, nil
+		}
+		b, err := EncodePack(p)
+		if err != nil {
+			return identity{}, err
+		}
+		digest, err := encodedDigest(b)
+		if err != nil {
+			return identity{}, err
+		}
+		id := identity{pack.Release{ID: p.Manifest.ID, Version: p.Manifest.Version, Digest: digest}, b}
+		known[p] = id
+		return id, nil
+	}
+	identify := func(p *PackDocument) (pack.Release, error) {
+		id, err := encode(p)
+		return id.release, err
+	}
 	install := func(p *PackDocument) error {
-		release, err := p.Release()
+		release, err := identify(p)
 		if err != nil {
 			return err
 		}
@@ -59,7 +88,7 @@ func NewRegistry(paths []string, roots []Dependency, archive string, folders ...
 			if err != nil {
 				return nil, err
 			}
-			release, err := p.Release()
+			release, err := identify(p)
 			if err != nil {
 				return nil, err
 			}
@@ -76,16 +105,17 @@ func NewRegistry(paths []string, roots []Dependency, archive string, folders ...
 			return err
 		}
 		if archive != "" {
-			release, err := p.Release()
+			release, err := identify(p)
 			if err != nil {
 				return err
 			}
 			name := filepath.Join(archive, release.Digest+".json")
 			if _, err = os.Stat(name); os.IsNotExist(err) {
-				b, err := EncodePack(p)
+				id, err := encode(p)
 				if err != nil {
 					return err
 				}
+				b := id.encoded
 				temp, err := os.CreateTemp(archive, ".pack-")
 				if err != nil {
 					return err

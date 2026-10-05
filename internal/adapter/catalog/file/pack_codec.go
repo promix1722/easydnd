@@ -139,11 +139,33 @@ func (p *PackDocument) Validate() error {
 	if err != nil {
 		return err
 	}
-	var value any
 	if len(b) > maxPackBytes {
 		return fmt.Errorf("pack exceeds %d bytes", maxPackBytes)
 	}
-	if err = json.Unmarshal(b, &value); err != nil {
+	// Everything checked below is a function of these bytes and nothing else,
+	// so a document that passed once passes again while it encodes the same.
+	// That is most calls: a pack is validated when it is read, again for its
+	// digest, and again to be written out, and a second of schema checking
+	// each time is what loading the SRD used to cost three times over.
+	// ponytail: the set only grows, by 32 bytes per distinct valid pack ever
+	// seen by the process; bound it if packs are ever generated in bulk.
+	key := sha256.Sum256(b)
+	if _, ok := validPacks.Load(key); ok {
+		return nil
+	}
+	if err = p.validateEncoded(b); err != nil {
+		return err
+	}
+	validPacks.Store(key, struct{}{})
+	return nil
+}
+
+var validPacks sync.Map
+
+func (p *PackDocument) validateEncoded(b []byte) error {
+	var value any
+	err := json.Unmarshal(b, &value)
+	if err != nil {
 		return err
 	}
 	if err = compiledSchema.Validate(value); err != nil {
@@ -263,11 +285,56 @@ func EncodePack(p *PackDocument) ([]byte, error) {
 	copy.Manifest.Files = nil
 	return json.MarshalIndent(copy, "", "  ")
 }
+
+// sortByJSON orders rows by their JSON encoding, encoding each one once. The
+// comparison used to encode both sides every time it was asked, which for the
+// SRD's few thousand rows was most of what a digest cost.
+func sortByJSON(rows []any) {
+	type keyed struct {
+		key []byte
+		row any
+	}
+	sorted := make([]keyed, len(rows))
+	for i, row := range rows {
+		key, _ := json.Marshal(row)
+		sorted[i] = keyed{key, row}
+	}
+	slices.SortFunc(sorted, func(x, y keyed) int { return bytes.Compare(x.key, y.key) })
+	for i := range sorted {
+		rows[i] = sorted[i].row
+	}
+}
+
 func PackDigest(p *PackDocument) (string, error) {
 	b, err := EncodePack(p)
 	if err != nil {
 		return "", err
 	}
+	return encodedDigest(b)
+}
+
+// encodedDigest is the digest of a pack EncodePack has already written out,
+// for a caller that needs both and should not validate and encode it twice.
+//
+// It is remembered by what it was computed from, for the same reason a valid
+// pack is: canonicalising the SRD takes most of a second, and the same bytes
+// come back every time the same pack is loaded.
+func encodedDigest(b []byte) (string, error) {
+	key := sha256.Sum256(b)
+	if digest, ok := packDigests.Load(key); ok {
+		return digest.(string), nil
+	}
+	digest, err := canonicalDigest(b)
+	if err == nil {
+		packDigests.Store(key, digest)
+	}
+	return digest, err
+}
+
+var packDigests sync.Map
+
+func canonicalDigest(b []byte) (string, error) {
+	var err error
 	// Entity collection order is not semantic. Choices and other arrays remain ordered.
 	var doc map[string]any
 	if err = json.Unmarshal(b, &doc); err != nil {
@@ -275,7 +342,7 @@ func PackDigest(p *PackDocument) (string, error) {
 	}
 	for _, value := range doc["entities"].(map[string]any) {
 		a := value.([]any)
-		slices.SortFunc(a, func(x, y any) int { bx, _ := json.Marshal(x); by, _ := json.Marshal(y); return bytes.Compare(bx, by) })
+		sortByJSON(a)
 	}
 	if collections, ok := doc["provenance"].(map[string]any); ok {
 		for _, value := range collections {
@@ -287,14 +354,14 @@ func PackDigest(p *PackDocument) (string, error) {
 	if m, ok := doc["mechanics"].(map[string]any); ok {
 		for _, key := range []string{"resources", "rules", "actions", "overrides"} {
 			if rows, ok := m[key].([]any); ok {
-				slices.SortFunc(rows, func(x, y any) int { bx, _ := json.Marshal(x); by, _ := json.Marshal(y); return bytes.Compare(bx, by) })
+				sortByJSON(rows)
 			}
 		}
 	}
 	if manifest, ok := doc["manifest"].(map[string]any); ok {
 		for _, key := range []string{"dependencies", "requires"} {
 			if rows, ok := manifest[key].([]any); ok {
-				slices.SortFunc(rows, func(x, y any) int { bx, _ := json.Marshal(x); by, _ := json.Marshal(y); return bytes.Compare(bx, by) })
+				sortByJSON(rows)
 			}
 		}
 	}
