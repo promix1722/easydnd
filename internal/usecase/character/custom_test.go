@@ -29,7 +29,7 @@ func TestImportNameEditRetainsObservedClassScoresAndInventory(t *testing.T) {
 			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	session, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, nil, "Create a sorcerer")
 	if err != nil {
@@ -172,7 +172,7 @@ func TestSourceChecklistBlocksPrematureReviewAndBatchRetainsValidFacts(t *testin
 		}}, nil
 	})
 	svc := newService(t)
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "Preserve documented source facts")
 	if err != nil {
@@ -218,7 +218,7 @@ func TestSourceIdentityReuseSubclassOrderAndInventoryCounts(t *testing.T) {
 			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "Preserve source")
 	if err != nil {
@@ -251,7 +251,7 @@ func TestSourceScoresAndInventoryCountsSurviveBatchTools(t *testing.T) {
 		call("gear", "set_inventory", `{"items":[{"name":"Dagger","count":2,"placement":"equipped"},{"name":"2 Dagger","placement":"equipped"},{"name":"Javelins x4","placement":"equipped"},{"name":"Rope, Hempen (50 feet)"},{"name":"Vorpal Spoon"}]}`),
 		call("done", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
 	}}}
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "Preserve source")
 	if err != nil {
@@ -300,7 +300,7 @@ func TestImportedClassUsesSelectedPackNamespaceAndSurvivesEditing(t *testing.T) 
 			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	session, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "Preserve this Sorcerer 3 using the selected pack")
 	if err != nil {

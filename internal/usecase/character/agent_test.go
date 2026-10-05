@@ -3,6 +3,7 @@ package character_test
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -19,6 +20,40 @@ type modelFunc func(context.Context, charuc.AgentRequest, func(string)) (charuc.
 func (f modelFunc) Respond(ctx context.Context, r charuc.AgentRequest, d func(string)) (charuc.AgentResponse, error) {
 	return f(ctx, r, d)
 }
+
+// A finished import ends on a question: what to do with what is still blank.
+// Where a test is not about that question, answering asks it and the wait
+// below replies "leave it blank", so the test reaches the review it is about.
+const (
+	holdQuestion = "Some details are still blank. Fill them in?"
+	holdReply    = "Leave them blank"
+)
+
+type answering struct{ charuc.AgentModel }
+
+var holdCalls atomic.Int64
+
+func (m answering) Respond(ctx context.Context, r charuc.AgentRequest, d func(string)) (charuc.AgentResponse, error) {
+	call := func(name, arguments string) (charuc.AgentResponse, error) {
+		id := "hold-" + strconv.FormatInt(holdCalls.Add(1), 10)
+		return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: id, Name: name, Arguments: arguments}}}, nil
+	}
+	for i := len(r.Input) - 1; i >= 0; i-- {
+		item := string(r.Input[i])
+		if !strings.Contains(item, "function_call_output") {
+			// The refusal quotes the reply too, so only a message says it.
+			if strings.Contains(item, holdReply) {
+				return call("prepare_review", `{"text":"Ready","allow_incomplete":true}`)
+			}
+			break
+		}
+		if strings.Contains(item, `\"unanswered\"`) {
+			return call("ask_user", `{"text":"`+holdQuestion+`","options":["`+holdReply+`"]}`)
+		}
+	}
+	return m.AgentModel.Respond(ctx, r, d)
+}
+
 func agentFile() []charuc.AgentFile {
 	return []charuc.AgentFile{{Name: "sheet.txt", MIME: "text/plain", Data: []byte("A hero")}}
 }
@@ -32,6 +67,15 @@ func waitAgent(t *testing.T, a *charuc.Agent, id string, condition func(charuc.A
 		}
 		if condition(s) {
 			return s
+		}
+		if s.Status == "waiting" {
+			// The question is followed by the record of the call that asked it.
+			for i := len(s.Events) - 1; i >= 0 && s.Events[i].Kind != "user"; i-- {
+				if s.Events[i].Kind == "question" && s.Events[i].Text == holdQuestion {
+					_, _ = a.Control(testOwner, id, "message", holdReply, s.Revision)
+					break
+				}
+			}
 		}
 		time.Sleep(time.Millisecond)
 	}
@@ -49,7 +93,7 @@ func TestAgentCancelFencesLateResponseAndOwner(t *testing.T) {
 		d("late text")
 		return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: "late", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Wrong"}`}}}, nil
 	})
-	a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
@@ -96,7 +140,7 @@ func TestAgentWorkersBoundConcurrency(t *testing.T) {
 		}
 		return charuc.AgentResponse{}, nil
 	})
-	a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 2})
+	a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 2})
 	defer a.Close()
 	for i := 0; i < 5; i++ {
 		if _, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), ""); err != nil {
@@ -139,7 +183,7 @@ func TestAgentFactsFinalScoresManualAndIdempotentSave(t *testing.T) {
 			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "review", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
@@ -181,7 +225,7 @@ func TestAgentSavedScoresCanBeImprovedNormally(t *testing.T) {
 			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
@@ -232,7 +276,7 @@ func TestAgentMatchesTranslatedSpellWithoutChangingIdentity(t *testing.T) {
 		results <- output.Output
 		return charuc.AgentResponse{}, nil
 	})
-	a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	_, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
@@ -276,7 +320,7 @@ func TestAgentWritesTheBuildersOwnEntries(t *testing.T) {
 			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
@@ -284,6 +328,11 @@ func TestAgentWritesTheBuildersOwnEntries(t *testing.T) {
 	}
 	if s.CharacterID == "" {
 		t.Fatal("no character behind the chat")
+	}
+	// The rules were asked and answered before there was a session; the
+	// transcript opens with them all the same.
+	if first := s.Events[0]; first.Kind != "rules" || !strings.Contains(string(first.Data), `"packs":`) {
+		t.Fatalf("the transcript does not open with the rules: %+v %s", first, first.Data)
 	}
 	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
 	c, err := svc.Get(context.Background(), testOwner, s.CharacterID)
@@ -345,14 +394,14 @@ func TestAgentQuestionsKeepRequiredChoicesInChat(t *testing.T) {
 			return charuc.AgentResponse{Text: "I will use your answer."}, nil
 		}
 	})
-	a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "Import my hero")
 	if err != nil {
 		t.Fatal(err)
 	}
 	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "waiting" })
-	if len(s.Events[0].Files) != 1 || s.Events[0].Text != "Import my hero" || len(s.Events[0].Files[0].Data) != 0 {
+	if len(s.Events[1].Files) != 1 || s.Events[1].Text != "Import my hero" || len(s.Events[1].Files[0].Data) != 0 {
 		t.Fatal("user attachment not recorded with its message")
 	}
 	var question *charuc.AgentEvent

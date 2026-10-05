@@ -4038,16 +4038,41 @@ Folder Import buttons open a single assistant chat when the server reports an
 enabled provider; the legacy JSON screen remains the unconfigured fallback.
 `AgentImportScreen` is a chat of message bubbles: the assistant's on the left,
 the owner's on the right, with a message's attachments inside it. A run of
-progress lines is one assistant bubble holding a native `<details>` -- "Changes
-written: 23" -- open while the assistant works and folded afterwards. Source
-labels and internal assumptions are omitted. The compact composer has file
-attachment and Send actions; Enter sends, Shift+Enter adds a newline.
+progress events is one assistant bubble built from `progressEntry`
+(`agentProgress.ts`): each field a bold caption with its values beneath,
+consecutive writes to one field sharing the caption. It is never folded.
+Source labels and internal assumptions are omitted.
 
-The pack selector is not a step before the chat. It is in the assistant's
-opening bubble, in its collapsible form, with the account's default releases
-already chosen (`listPacks().defaultRules`), so Send works as soon as there is
-something to send. An unconfirmed change to it blocks Send, as it does in the
-builder.
+The screen is nothing but the transcript, with the composer as its last
+element. Before a session exists the transcript is drawn from local state:
+the assistant asks for the rules as one button per pack, the press becomes a
+player bubble (with Change), and the assistant then asks for a sheet or a
+description -- answered in the composer, which opens at that point and
+carries a borderless "Attach a sheet" `FileButton` bottom left until a file
+replaces it. Once the session
+exists the same exchange is drawn from its first event, `rules`.
+
+Replies are buttons: a message's prepared answers -- the question's `options`,
+nothing when it offered none -- of which only the latest message's are live. The composer is always rendered, inside
+the `log` after the last message, and is enabled by `myTurn` alone. On
+`review` the last message's buttons are View, Edit, Finish and Delete. With no
+session id the screen takes the owner's latest session that is not
+`finished` as its own (`resumed`, state rather than a redirect); Finish posts
+the `finish` control before navigating, and a finished session renders
+without composer or actions. The composer has no attach
+control: files go with the first message, through the opening's "Attach a
+sheet". The opening's rules question is the same kind of buttons, one per
+pack, resolved through `resolvePacks`.
+
+Each `progress` event is its own bubble: `agent.progress.imported` ("Imported
+field: …") in bold over the value from `progressEntry`. Assistant bubbles have
+a fixed width (85%); the player's fit their text. The card is
+`calc(100dvh - 190px)` tall with the transcript as its flexible part, so the
+chat fills the window whether or not the composer is open.
+
+View, Edit, Finish (on `review`) and Delete are also the page's `actions`,
+shown whenever the session has a character. A paused or failed
+session adds a Resume or Retry bubble. 
 
 `/ai-wizard/:sessionId` identifies a chat and is the only page of it. View and
 Edit navigate to `/characters/:id` and `/characters/:id/build`: the chat writes

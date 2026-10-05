@@ -18,7 +18,12 @@ const fields = {
   trait: 'agent.field.trait',
   'base.languages': 'agent.field.languages',
 } as const
-export function progressText(t: Translate, data: unknown): string | null {
+/**
+ * One thing the assistant wrote, as the name of the field and what it now
+ * holds. Not a sentence: the transcript shows the name as a caption with the
+ * value under it, and several values written to one field share the caption.
+ */
+export function progressEntry(t: Translate, data: unknown): { field: string; value: string } | null {
   if (
     !data ||
     typeof data !== 'object' ||
@@ -52,11 +57,8 @@ export function progressText(t: Translate, data: unknown): string | null {
   const value =
     (raw.length > 100 ? raw.slice(0, 97) + '…' : raw) +
     ('level' in data ? `, ${t('agent.progress.level', { level: data.level })}` : '')
-  const operation =
-    data.operation === 'custom'
-      ? 'agent.progress.custom'
-      : data.operation === 'updated'
-        ? 'agent.progress.updated'
-        : 'agent.progress.imported'
-  return t(operation, { field: label + detail, value })
+  return {
+    field: label + detail + (data.operation === 'custom' ? ` · ${t('custom.manual')}` : ''),
+    value,
+  }
 }

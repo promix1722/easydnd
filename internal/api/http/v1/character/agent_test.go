@@ -30,7 +30,19 @@ import (
 
 type reviewModel struct{}
 
-func (reviewModel) Respond(context.Context, charuc.AgentRequest, func(string)) (charuc.AgentResponse, error) {
+// An import ends on a question about what is still blank; this model asks it
+// and, once the test has answered, finishes.
+func (reviewModel) Respond(_ context.Context, r charuc.AgentRequest, _ func(string)) (charuc.AgentResponse, error) {
+	last := string(r.Input[len(r.Input)-1])
+	one := func(id, name, arguments string) (charuc.AgentResponse, error) {
+		return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: id, Name: name, Arguments: arguments}}}, nil
+	}
+	switch {
+	case !strings.Contains(last, "function_call_output") && strings.Contains(last, "Leave them blank"):
+		return one("done", "prepare_review", `{"text":"Review","allow_incomplete":true}`)
+	case strings.Contains(last, `\"unanswered\"`):
+		return one("ask", "ask_user", `{"text":"Fill in what is blank?","options":["Leave them blank"]}`)
+	}
 	return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: "name", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Hero"}`}, {ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "review", Name: "prepare_review", Arguments: `{"text":"Review","allow_incomplete":true}`}}}, nil
 }
 func TestImportHTTPUploadResumeOwnershipAndSSE(t *testing.T) {
@@ -91,6 +103,9 @@ func TestImportHTTPUploadResumeOwnershipAndSSE(t *testing.T) {
 		s, _ := agent.Get(domain.OwnerID("owner"), view.Session.ID)
 		if s.Status == "review" {
 			break
+		}
+		if s.Status == "waiting" {
+			_, _ = agent.Control(domain.OwnerID("owner"), view.Session.ID, "message", "Leave them blank", s.Revision)
 		}
 		time.Sleep(time.Millisecond)
 	}

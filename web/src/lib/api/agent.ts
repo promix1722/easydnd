@@ -25,6 +25,8 @@ export interface AgentSession {
     | 'review'
   revision: number
   characterId?: string
+  created: string
+  finished: boolean
   events: AgentEvent[]
   files: { name: string; mime: string }[]
   manual: {
@@ -70,18 +72,3 @@ export const controlAgent = (
     method: 'POST',
     body: { revision, action, text },
   })
-export function addAgentFiles(
-  id: string,
-  revision: number,
-  files: File[],
-  instructions: string,
-) {
-  const formData = new FormData()
-  for (const file of files) formData.append('files', file)
-  formData.append('revision', String(revision))
-  formData.append('instructions', instructions)
-  return request<AgentView>(`/agent-sessions/${encodeURIComponent(id)}/files`, {
-    method: 'POST',
-    formData,
-  })
-}

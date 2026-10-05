@@ -130,6 +130,15 @@ func TestAgentRebuildsASheetAsANativeBuild(t *testing.T) {
 				call("kept", "import_facts", `{"facts":[{"path":"base.hitPoints.max","value":26},{"path":"status.armorClass","value":14}]}`),
 				call("context", "get_build_context", `{}`),
 			}, {
+				// The sheet says nothing of personality. Review is refused over
+				// what is unanswered until the owner has been asked about it:
+				// calling again is not consent, asking is.
+				call("unanswered", "prepare_review", `{"text":"Ready"}`),
+			}, {
+				call("again", "prepare_review", `{"text":"Ready"}`),
+			}, {
+				call("ask", "ask_user", `{"text":"A few details are blank. Fill them in?","options":["Fill them in for me","One by one","Leave them blank"]}`),
+			}, {
 				call("review", "prepare_review", `{"text":"Ready"}`),
 			}}}
 			a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
@@ -138,7 +147,17 @@ func TestAgentRebuildsASheetAsANativeBuild(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "waiting" })
+			if s, err = a.Control(testOwner, s.ID, "message", "Leave them blank", s.Revision); err != nil {
+				t.Fatal(err)
+			}
 			s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
+			if out := model.output("again"); !strings.Contains(out, `"ready":false`) {
+				t.Errorf("review passed without the owner being asked: %s", out)
+			}
+			if out := model.output("unanswered"); !strings.Contains(out, `"ready":false`) || !strings.Contains(out, "character/personality-trait") {
+				t.Errorf("review did not hold for the unanswered questions: %s", out)
+			}
 
 			// What the build derives is not owed, and neither is a key nothing
 			// could ever check.
@@ -295,7 +314,7 @@ func TestAgentResolvesSubclassNamesWithinTheirClass(t *testing.T) {
 		model := &script{turns: [][]charuc.AgentCall{{
 			call("facts", "import_facts", `{"facts":[{"kind":"class","name":"`+class+`","level":3},{"kind":"subclass","name":"`+test.printed+`"}]}`),
 		}}}
-		a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 1})
+		a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 1})
 		s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 		if err != nil {
 			t.Fatal(err)
@@ -321,7 +340,7 @@ func TestAgentRejectsWhatItCannotResolveAndStopsAtAQuestion(t *testing.T) {
 		call("ask", "ask_user", `{"text":"Which totem?","options":["Bear","Wolf"]}`),
 		call("late", "import_facts", `{"facts":[{"path":"identity.name","value":"Too late"}]}`),
 	}}}
-	a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
@@ -356,7 +375,7 @@ func TestAgentPruningLeavesTheOwnersEditsAlone(t *testing.T) {
 		call("facts", "import_facts", `{"facts":[{"path":"identity.name","value":"Hero"},{"kind":"class","name":"Fighter","level":1},{"path":"base.hitPoints.max","value":10},{"path":"status.armorClass","value":10}]}`),
 		call("review", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
 	}}}
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
@@ -405,7 +424,7 @@ func TestAgentChecklistRefusesReviewOnceThenLetsItPass(t *testing.T) {
 	}, {
 		call("third", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
 	}}}
-	a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 1})
+	a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
@@ -418,5 +437,46 @@ func TestAgentChecklistRefusesReviewOnceThenLetsItPass(t *testing.T) {
 	// A different list is a new reminder; the same list again is an answer.
 	if out := model.output("second"); !strings.Contains(out, "spell:Wish") || strings.Contains(out, "item:Dagger") {
 		t.Errorf("second review did not re-check: %s", out)
+	}
+}
+
+// A sheet names its feat outright, and that is written down before the
+// question that grants a feat is open. Answering the question with the same
+// feat is the feat finding its place, not a second one -- it used to be
+// refused as already held, and a model went and picked a different feat.
+// The same sheet says "wielded" where the build says "equipped".
+func TestAgentPlacesAStatedFeatAndReadsTheSheetsWords(t *testing.T) {
+	svc := newService(t)
+	model := &script{turns: [][]charuc.AgentCall{{
+		call("plan", "plan_import", `{"expected":["identity.name"],"level":4}`),
+		call("facts", "import_facts", `{"facts":[{"path":"identity.name","value":"Viktor"},{"kind":"class","name":"Fighter","level":4},{"kind":"feat","name":"Grappler"}]}`),
+		call("branch", "answer_choices", `{"answers":[{"prompt":"fighter/ability-score-improvement/4","picks":["feat"]}]}`),
+	}, {
+		call("feat", "answer_choices", `{"answers":[{"prompt":"fighter/ability-score-improvement/4/1","picks":["Grappler"]}]}`),
+		call("gear", "set_inventory", `{"items":[{"name":"Longsword","placement":"wielded"}]}`),
+		call("review", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
+	}}}
+	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
+	defer a.Close()
+	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
+	if out := model.output("feat"); strings.Contains(out, "error") || strings.Contains(out, "alreadyHeld") {
+		t.Fatalf("the stated feat was refused its own question: %s", out)
+	}
+	if out := model.output("gear"); strings.Contains(out, "placement is") {
+		t.Fatalf("a wielded weapon was refused: %s", out)
+	}
+	sheet, err := svc.Sheet(context.Background(), testOwner, s.CharacterID, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sheet.Feats) != 1 || sheet.Feats[0] != "grappler" {
+		t.Errorf("feats = %v", sheet.Feats)
+	}
+	if len(sheet.Equipment.Equipped) != 1 {
+		t.Errorf("equipped = %+v", sheet.Equipment.Equipped)
 	}
 }

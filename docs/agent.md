@@ -18,28 +18,113 @@ writes because nothing but the wizard's own panels ever read it.
 ## User flow
 
 The desktop and mobile menu has **AI Wizard / AI Помощник**. Folder actions link
-to the same workspace while preserving the destination folder. **The rules are
-chosen in the chat, not before it**: the assistant's opening message carries
-the pack selector, collapsed, with the account's default releases already
-chosen, so the owner can send at once or change them there first. The lock
-travels with the first message and is final from then on -- the HTTP API still
-requires it. The server needs `agent.api_key` and `agent.model` configured to
-process uploads. Without the provider, imports report that AI import is not
-configured; the workspace does not fall back to the legacy HexSheet JSON screen.
+to the same workspace while preserving the destination folder. The server
+needs `agent.api_key` and `agent.model` configured to process uploads. Without
+the provider, imports report that AI import is not configured; the workspace
+does not fall back to the legacy HexSheet JSON screen.
+
+**The assistant leads and the player answers.** The conversation opens with
+two questions asked before any session exists:
+
+1. *Which rules?* -- one prepared answer per rule pack, like any other
+   question's; pressing one is the player's reply. What the pack depends on
+   comes with it. The lock travels with the first message and is final from
+   then on; the HTTP API still requires it. It used to be the builder's pack
+   form dropped into a bubble -- toggles, Confirm, Clear -- which was a form
+   in a conversation.
+2. *A sheet to attach, or a description?* -- asked, and answered by writing:
+   the text field opens with this question. Attaching is a quiet control
+   inside the field, bottom left, which the attached file replaces. There are
+   no "attach" and "describe" buttons; describing is just typing.
+
+Both stay in the log: the session's first event is `rules`, carrying the
+confirmed packs, and the client draws it as that same exchange. It used to be
+a card above the chat that disappeared the moment the session began.
+
+**Every turn of the assistant's ends in buttons.** It says what it did, then
+offers prepared answers (`ask_user`, up to ten -- all of a choice's options
+when they fit, never one or two when more exist) or finishes
+(`prepare_review`); it is instructed never to end on a plain message that
+waits for a reply. A turn that ends that way all the same is sent back by the
+server, once per message of the owner's, with a note to keep working or ask
+properly. The app invents no answer of its own -- it used to put a
+**Continue** button under such a message, which is a choice with nothing to
+choose. The model is likewise told not to report a leftover and stop, nor to
+ask anything whose only answer is "go on": it resolves what it can, and asks
+about a concrete problem with its concrete ways out, "Skip it" among them.
+**The text field is always the last thing in
+the conversation**, under the latest message, and is open for writing only
+when the assistant has asked something: disabled while it works and before
+the opening's questions are answered. (For one round it was hidden behind a
+"Tell what to do…" answer; a field that is always there and says by its state
+whose turn it is turned out simpler.) A paused or failed run adds a Resume or
+Retry button.
+
+**Nothing in the log folds away.** Answers already given stay under the
+question that offered them, no longer pressable. Every write the assistant
+makes is a message of its own: "Imported field: Name" in bold, the value on
+the line beneath. The assistant's messages are one column of a fixed width.
+
+**View the sheet, Edit, Finish and Delete.** They sit in the page header, top
+right, whenever there is a character, and the same four, drawn the same, close
+every turn of the assistant's that did not end in a question of its own --
+finished, stopped short or failed alike -- so no conversation ends on nothing
+to press. Finish is offered whenever the assistant has stopped, not only when
+it calls the character ready. Delete deletes the character
+with the chat. **Finish is what closes a chat**: it marks the session
+`finished` (control action `finish`, accepted at any revision -- it was first
+checked like the other controls and silently refused from a page one revision
+behind) and goes to the sheet. A finished chat opened from the sheet's
+history link is a record: no text field, no answers, no Finish or Delete. The character is
+already real, so nothing is saved by it.
+
+**The wizard reopens the chat that was left unfinished.** `/ai-wizard` with no
+session lists the owner's sessions and shows the latest (`created`) that is
+not `finished`, in place; a new conversation starts only when there is none. Unfinished
+means Finish was not pressed -- a character the assistant has declared ready
+is still an open chat, which is the difference from `review`. The sheet's
+header links to its chat as **AI Wizard history**, beside Level up and Edit.
+
+**The assistant cannot finish over unanswered questions without asking.**
+`prepare_review` is refused once while any prompt is still open -- optional
+ones included: alignment, personality traits, ideals, bonds, flaws -- and
+returns them with the instruction to offer the owner *fill them in for me*,
+*one by one*, or *leave them blank*. It stays refused until an `ask_user` has
+actually followed -- calling again is not consent, and neither is
+`allow_incomplete`, which is the model's word that the owner chose and was
+taken at that word until a model set it on its own. The builder's extra-spell
+questions (`custom/spell/*`) are not counted: they are always open.
+This is enforced by the tool rather than left to the
+prompt because the prompt alone was not followed -- and could not have been:
+the written questions were filtered out of the open prompts the model is
+shown, so it never knew they were unanswered. They are listed now, each with
+the `identity.*` path that answers it.
+
+**A sheet is attached to the first message and to no other.** Attaching is one
+of the two answers to the opening's second question; later messages are text.
+(`POST /v1/agent-sessions/:id/files` remains on the server and has no caller
+in the client.)
+
+What the build leaves open is settled the same way, by the assistant asking.
+Once everything the sheet or the description determines is in the build, it
+asks once how to deal with the rest -- *pick them for me*, *one by one*, or
+*leave them open* -- and, one by one, asks each open choice in turn with its
+options as suggested replies. A request such as "a level 6 character who
+fights with their hands" is built as far as it determines and then met with
+that same question, rather than decided in silence. This is instruction in the
+system prompt over the existing `ask_user` and `answer_choices` tools, not new
+machinery.
 
 Upload PDF, PNG, JPEG, WebP, JSON or UTF-8 text and optionally describe what needs
-attention. Multiple files belong to the same character. Files may also be added
-later in the conversation. Filenames identify sources; new attachments must not
+attention. Multiple files belong to the same character and are sent together
+with the first message. Filenames identify sources; new attachments must not
 reuse a filename. The server checks the content type rather than trusting the
 browser's filename or MIME header.
 
 Chat is one chronological log of **messages**: the assistant's on the left,
 the owner's on the right, each in its own bubble. Factual progress comes from
-validated writes, such as “Class imported: Sorcerer, level 3” or “Name
-imported: Vas Pup”, and a run of it is one bubble that reads “Changes written:
-23” and unfolds to the lines -- open while the assistant is working, folded
-once the next message arrives. It used to be the lines themselves, which made
-the transcript a wall of them with the conversation somewhere inside.
+validated writes -- a class imported, a name set -- and a run of it is one
+assistant bubble listing each field and its value, as described above.
 Catalogue searches and internal tool labels are hidden. Each user message
 contains its own attachments and text; filenames are not a separate global row.
 Source/page evidence and assumptions remain internal metadata, not transcript
@@ -78,9 +163,9 @@ the same list a second time passes. It used to block until every entry was
 satisfied, and a model that had worded one in a way nothing could satisfy
 responded by inventing custom content until the list went quiet.
 
-There is no interruption control in the UI. Sending and attaching files wait
-while the assistant is running; typing the next reply remains possible. Terminal
-status snapshots re-enable Send and focus the composer. A three-second snapshot
+There is no interruption control in the UI, and no composer while the
+assistant is running. Terminal status snapshots bring the composer back and
+focus it. A three-second snapshot
 refresh recovers a missed end-of-turn stream update without disabling input.
 Resume continues a paused conversation; Retry continues after a failure.
 The internal stop API remains for cancellation and lifecycle handling.
@@ -103,6 +188,13 @@ this release. A fixed number of goroutines run independent sessions, with one
 active model request per session. Model I/O runs outside the lock; tool
 mutations run inside it. Waiting, review and paused states do not consume
 workers.
+
+**Reads do not take the coordinator's lock.** A response's tool calls hold it
+for seconds, and `Get`/`List` -- the page opening, its three-second poll,
+every SSE tick -- used to queue behind them, which is what made the app appear
+to hang when the wizard was opened mid-import. Readers are served from
+`views`, a published copy of each session under its own read-write lock,
+republished after each tool call, streamed chunk and control.
 
 The session's log is the agent's **working copy** of the character, not the
 character. Around every tool call the coordinator reads the stored character
@@ -295,6 +387,29 @@ The character is created with the session through the repository's atomic
 `CreateWithLog`, so there is never an empty character behind a chat. The name
 and the pruning of overrides the build reproduces are checked at
 `prepare_review`.
+
+### What is not written
+
+A blank is not an answer: `import_facts` refuses an empty value (or the "…"
+placeholder) at an `identity.*` path, because written it closes the question
+with nothing in it. A character with no name is not an error to work around
+either -- `prepare_review` answers that the name must be read off the sheet or
+asked for, with suggestions. And `upsert_custom_option` keeps only what a
+character is built from that the rules lack -- class, subclass, race, subrace,
+background, cantrip, spell, item. A feature, trait, feat or note the catalogue
+does not know is refused: those were what a model wrote to quiet the checklist
+("Versatile", "Languages") or to record that a field was left blank, and the
+owner found them as junk on the sheet. For the same reason the checklist no
+longer lists features and traits as missing; nothing imports one by name.
+
+### A stated feat, and the sheet's own words
+
+A feat is the one structural entry that also answers a question. A sheet names
+it outright, so it is written as a fact before the improvement that grants a
+feat is open; when that question is then answered with the same feat, the fact
+gives way to the answer. It used to be refused as already held, and the model
+picked some other feat to fill the slot. Inventory placement is read in the
+sheet's words too: wielded, held and worn are equipped, carried is the pack.
 
 ### Custom content
 

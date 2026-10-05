@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate, useSearchParams, useParams } from 'react-router'
 import {
-  addAgentFiles,
   controlAgent,
   createAgentSession,
   getAgentSession,
@@ -27,45 +26,43 @@ import {
   Text,
   Textarea,
 } from '@/ui'
-import { PackSelector } from '../packs/PackSelector'
-import { listPacks } from '@/lib/api/packs'
+import { listPacks, resolvePacks } from '@/lib/api/packs'
 import type { RulesLock } from '@/lib/api/packs'
 import { useResource } from '@/lib/useResource'
-import { progressText } from './agentProgress'
-
-const STATUS_LABELS = {
-  queued: 'agent.status.queued',
-  running: 'agent.status.running',
-  waiting: 'agent.status.waiting',
-  paused: 'agent.status.paused',
-  failed: 'agent.status.failed',
-  review: 'agent.status.review',
-} as const
+import { progressEntry } from './agentProgress'
 
 /** Stream events are rendered from recorded state, so reconnect/reload never
  * creates a second conversation or restarts an import. The chat writes to a
  * real character from its first message: View and Edit are that character's
- * own sheet and builder, not pages of this one. */
+ * own sheet and builder, not pages of this one.
+ *
+ * It is a conversation the assistant leads. It asks -- which rules, a sheet or
+ * a description, then whatever the build leaves open -- and the player
+ * answers; so there is something to type into only when it is the player's
+ * turn, and nothing above the transcript but the transcript. */
 export function AgentImportScreen() {
   const t = useT()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const { sessionId } = useParams()
-  const id = sessionId ?? params.get('session')
+  // The chat left unfinished, found when the wizard is opened without one
+  // named. Held here rather than navigated to: the page is the wizard either
+  // way, and there is no second step that can fail to happen.
+  const [resumed, setResumed] = useState<string | null>(null)
+  const id = sessionId ?? params.get('session') ?? resumed
   const folder = params.get('folder') ?? undefined
   const [view, setView] = useState<AgentView | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const [message, setMessage] = useState('')
-  // The rules are part of the conversation: the assistant opens with the ones
-  // it will use, already chosen, and they can be changed there before the
-  // first message carries them to the server.
+  // The opening, before there is a session to record it: the rules the player
+  // confirmed, and whether they have said how they want to start.
   const packs = useResource('pack-selection', listPacks)
-  const [chosenRules, setChosenRules] = useState<RulesLock>()
-  const selectedRules = chosenRules ?? packs.data?.defaultRules
-  const [rulesDirty, setRulesDirty] = useState(false)
-  const [rulesOpen, setRulesOpen] = useState(false)
+  const [selectedRules, setSelectedRules] = useState<RulesLock>()
+  // Choosing the rules is answering a question like any other: one button per
+  // pack, pressed once. What a pack depends on comes with it.
+  const choose = useAction(resolvePacks)
+  const [chosen, setChosen] = useState('')
   const [connected, setConnected] = useState(true)
-  const [drafts, setDrafts] = useState<AgentSession[]>([])
   const composer = useRef<HTMLTextAreaElement>(null)
   const end = useRef<HTMLDivElement>(null)
   const follow = useRef(true)
@@ -88,14 +85,16 @@ export function AgentImportScreen() {
     if (!id) {
       void listAgentSessions().then(
         (s) => {
-          if (live)
-            setDrafts(s.filter((v) => !folder || v.folder === folder))
+          // The wizard opens on the chat that was left unfinished, the latest
+          // if there are several. A finished one is reached from its character.
+          const last = s
+            .filter((v) => !v.finished && (!folder || v.folder === folder))
+            .sort((a, b) => (b.created ?? '').localeCompare(a.created ?? ''))[0]
+          if (last) setResumed(last.id)
         },
         () => {},
       )
-      return () => {
-        live = false
-      }
+      return
     }
     // A periodic snapshot also recovers a missed terminal status after a proxy
     // drops or buffers the stream. Reads never disable the message composer.
@@ -164,24 +163,28 @@ export function AgentImportScreen() {
   }, [view?.session.events.length, view?.session.status])
   const session = view?.session
   const active = session?.status === 'running' || session?.status === 'queued'
-  const currentSessionId = session?.id
+  // The player's turn: the assistant has asked or finished, or the opening has
+  // reached "tell me about the character". Only then is there a composer.
+  const stalled = session?.status === 'paused' || session?.status === 'failed'
+  // A finished chat is a record: nothing more is said in it.
+  const finished = session?.finished === true
+  const myTurn = session ? !active && !finished : selectedRules !== undefined
   useEffect(() => {
-    if (currentSessionId && !active) composer.current?.focus()
-  }, [active, currentSessionId])
+    if (myTurn) composer.current?.focus()
+  }, [myTurn])
   async function send(answer = message) {
     if (
       active ||
       action.pending ||
       (!answer.trim() && !files.length) ||
-      (!session && (!selectedRules || rulesDirty))
+      (!session && !selectedRules)
     )
       return
     follow.current = true
     const result = await action.run(() =>
+      // A sheet is attached to the first message and to no other.
       session
-        ? files.length
-          ? addAgentFiles(session.id, session.revision, files, answer)
-          : controlAgent(session.id, session.revision, 'message', answer)
+        ? controlAgent(session.id, session.revision, 'message', answer)
         : createAgentSession(files, answer, folder, selectedRules),
     )
     if (result) {
@@ -200,12 +203,47 @@ export function AgentImportScreen() {
     if (result && kind === 'discard') void navigate('/characters')
   }
   const trail = id ? [{ label: id }] : []
-  const open = (kind: 'view' | 'edit') => {
-    if (session?.characterId)
-      void navigate(`/characters/${session.characterId}${kind === 'edit' ? '/build' : ''}`)
+  // Finish is View under the name the end of a conversation has: the
+  // character is already real, so there is nothing to save, only somewhere to go.
+  const open = (kind: 'view' | 'edit' | 'finish') => {
+    if (!session?.characterId) return
+    // Finish is what closes the chat: until it is pressed the wizard comes
+    // back here, however done the assistant thinks the character is.
+    if (kind === 'finish') void controlAgent(session.id, session.revision, 'finish').catch(() => {})
+    void navigate(`/characters/${session.characterId}${kind === 'edit' ? '/build' : ''}`)
   }
+  // The same four buttons, drawn the same, beside the page's name and under
+  // the assistant's last message.
+  const actions = session?.characterId ? (
+    <Group gap="xs">
+      <Button variant="default" onClick={() => open('view')}>
+        {t('import.viewSheet')}
+      </Button>
+      <Button variant="default" onClick={() => open('edit')}>
+        {t('common.edit')}
+      </Button>
+      {/* Whenever the assistant has stopped, whatever it stopped on: a chat
+          can always be closed. */}
+      {!active && !finished && <Button onClick={() => open('finish')}>{t('agent.finish')}</Button>}
+      {!finished && (
+        <Button variant="default" disabled={active || action.pending} onClick={() => void control('discard')}>
+          {t('agent.discard')}
+        </Button>
+      )}
+    </Group>
+  ) : undefined
+  const packNames = (releases: readonly { id: string; version: string }[]) =>
+    releases
+      .map((release) => `${packs.data?.packs.find((pack) => pack.id === release.id)?.title ?? release.id} v${release.version}`)
+      .join(', ')
   return (
-    <Page trail={trail}>
+    <Page
+      trail={trail}
+      // What can be done with the character, beside the page's name and not
+      // in the conversation: it is always the same four things, and a chat is
+      // for what changes.
+      actions={actions}
+    >
       <Stack gap="md">
         {action.error && (
           <Alert color="red">
@@ -224,34 +262,18 @@ export function AgentImportScreen() {
           </Alert>
         )}
         {!connected && <Alert color="yellow">{t('agent.reconnecting')}</Alert>}
-        {session && (
-          <Group justify="space-between">
-            <Group gap="xs">
-              <Badge>{t(STATUS_LABELS[session.status])}</Badge>
-              <Text size="xs" c="dimmed">
-                {t('agent.chatId', { id: session.id.slice(0, 8) })}
-              </Text>
-            </Group>
-            <Group gap="xs">
-              <Button variant="subtle" size="compact-sm" onClick={() => open('view')}>
-                {t('import.viewSheet')}
-              </Button>
-              <Button variant="subtle" size="compact-sm" onClick={() => open('edit')}>
-                {t('common.edit')}
-              </Button>
-            </Group>
-          </Group>
-        )}
         {
-          <Card withBorder padding="md" radius="md">
-            <Stack gap="md">
+          // The chat is the page: it takes the height the window has left, and
+          // the transcript takes what the composer does not.
+          <Card withBorder padding="md" radius="md" style={{ height: 'calc(100dvh - 190px)', minHeight: 360 }}>
+            <Stack gap="md" h="100%">
               <div
                 role="log"
                 aria-label={t('agent.chat')}
                 aria-live="polite"
                 style={{
-                  height: 'calc(100dvh - 320px)',
-                  minHeight: 240,
+                  flex: 1,
+                  minHeight: 0,
                   overflowY: 'auto',
                   overflowX: 'hidden',
                   padding: 8,
@@ -262,63 +284,75 @@ export function AgentImportScreen() {
                 }}
               >
                 {session ? (
-                  <>
-                    <Conversation
-                      events={session.events}
-                      files={session.files}
-                      canAnswer={!active && !action.pending}
-                      onAnswer={(answer) => void send(answer)}
-                      onAction={open}
-                      active={active}
-                      review={session.status === 'review'}
-                    />
-                  </>
+                  <Conversation
+                    events={session.events}
+                    files={session.files}
+                    canAnswer={myTurn && !action.pending}
+                    // The assistant has stopped without a question of its own:
+                    // what can be done with the character is what is offered,
+                    // so no conversation ends on nothing to press.
+                    actions={!active && !finished ? actions : null}
+                    onAnswer={(answer) => void send(answer)}
+                    active={active}
+                    packNames={packNames}
+                    stalled={
+                      stalled ? (
+                        <Bubble>
+                          <Button variant="default" disabled={action.pending} onClick={() => void control(session.status === 'failed' ? 'retry' : 'resume')}>
+                            {session.status === 'failed' ? t('agent.retry') : t('agent.resume')}
+                          </Button>
+                        </Bubble>
+                      ) : null
+                    }
+                  />
                 ) : (
                   <Stack gap="md">
                     <Bubble>
                       <Stack gap="sm">
                         <Text>{t('agent.lead')}</Text>
-                        {/* Said in the message itself, so the rules read as
-                            chosen while the selector is folded. */}
-                        {selectedRules && (
-                          <Text size="sm" fw={600}>
-                            {selectedRules.packs
-                              .map(
-                                (release) =>
-                                  `${packs.data?.packs.find((pack) => pack.id === release.id)?.title ?? release.id} v${release.version}`,
+                        <Group gap="xs">
+                          {(packs.data?.packs ?? [])
+                            .filter((pack) => !pack.archived && pack.releases.length > 0)
+                            .map((pack) => {
+                              const release = pack.releases.at(-1)!
+                              return (
+                                <Button
+                                  key={pack.id}
+                                  variant="default"
+                                  disabled={selectedRules !== undefined}
+                                  loading={choose.pending}
+                                  onClick={() => void choose.run([release]).then((lock) => { if (lock) { setSelectedRules(lock); setChosen(`${pack.title} v${release.version}`) } })}
+                                >
+                                  {pack.title} v{release.version}
+                                </Button>
                               )
-                              .join(', ')}
-                          </Text>
-                        )}
-                        <PackSelector
-                          value={selectedRules}
-                          // Confirming is the end of choosing: fold the
-                          // selector and hand the keyboard to the message.
-                          onChange={(lock) => {
-                            setChosenRules(lock)
-                            setRulesOpen(false)
-                            composer.current?.focus()
-                          }}
-                          onDirtyChange={setRulesDirty}
-                          disclosure={{ open: rulesOpen, onOpen: setRulesOpen }}
-                        />
+                            })}
+                        </Group>
+                        {choose.error && <Alert color="red">{choose.error}</Alert>}
                       </Stack>
                     </Bubble>
-                    {drafts.map((draft) => (
-                      <Button
-                        key={draft.id}
-                        variant="subtle"
-                        onClick={() => void navigate(`/ai-wizard/${draft.id}`)}
-                      >
-                        {t('agent.resumeDraft')} · {draft.id.slice(0, 8)}
-                      </Button>
-                    ))}
+                    {selectedRules && (
+                      <>
+                        <Bubble mine>
+                          <Group gap="xs">
+                            <Text>{chosen}</Text>
+                            <Button variant="subtle" size="compact-xs" onClick={() => { setSelectedRules(undefined); setFiles([]) }}>
+                              {t('agent.changeRules')}
+                            </Button>
+                          </Group>
+                        </Bubble>
+                        <Bubble>
+                          <Text>{t('agent.askStart')}</Text>
+                        </Bubble>
+                      </>
+                    )}
                   </Stack>
                 )}
-                <div ref={end} />
-              </div>
-              {
+                {/* The reply is written in the conversation, straight under the
+                    message it answers, not in a box at the foot of the page. */}
+              {!finished && (
                 <form
+                  style={{ marginTop: 'var(--mantine-spacing-md)' }}
                   onSubmit={(event) => {
                     event.preventDefault()
                     void send()
@@ -331,35 +365,16 @@ export function AgentImportScreen() {
                       border: '1px solid var(--mantine-color-default-border)',
                       borderRadius: 18,
                     }}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => {
-                      event.preventDefault()
-                      if (!active && !action.pending)
-                        setFiles((old) =>
-                          [...old, ...Array.from(event.dataTransfer.files)].slice(0, 8),
-                        )
-                    }}
                   >
-                    {!!files.length && (
-                      <Group gap="xs">
-                        {files.map((file, index) => (
-                          <Button
-                            key={`${file.name}-${index}`}
-                            variant="light"
-                            size="compact-xs"
-                            aria-label={t('agent.removeFile', {
-                              name: file.name,
-                            })}
-                            onClick={() => setFiles((old) => old.filter((_, i) => i !== index))}
-                          >
-                            {file.name} ×
-                          </Button>
-                        ))}
-                      </Group>
-                    )}
                     <Textarea
                       variant="unstyled"
+                      // Waiting is said by the cursor and the placeholder, not
+                      // by a grey slab inside the box.
+                      styles={{ input: { background: 'transparent', opacity: 1 } }}
                       ref={composer}
+                      // Always there, at the end of the conversation; open for
+                      // writing when the assistant has asked something.
+                      disabled={!myTurn || action.pending}
                       aria-label={session ? t('agent.message') : t('agent.instructions')}
                       placeholder={t('agent.messagePlaceholder')}
                       value={message}
@@ -380,83 +395,67 @@ export function AgentImportScreen() {
                       }}
                     />
                     <Group align="end" justify="space-between">
-                      <FileButton
-                        multiple
-                        accept=".pdf,.png,.jpg,.jpeg,.webp,.json,.txt"
-                        disabled={active || action.pending}
-                        onChange={(incoming) =>
-                          setFiles((old) => [...old, ...incoming].slice(0, 8))
-                        }
-                      >
-                        {(props) => (
-                          <Button
-                            {...props}
-                            variant="subtle"
-                            leftSection={<IconPaperclip size={18} />}
-                            disabled={active || action.pending}
-                          >
-                            {t('agent.attach')}
-                          </Button>
-                        )}
-                      </FileButton>
+                      {files.length ? (
+                        <Group gap="xs">
+                          {files.map((file, index) => (
+                            <Button
+                              key={`${file.name}-${index}`}
+                              variant="light"
+                              size="compact-sm"
+                              aria-label={t('agent.removeFile', { name: file.name })}
+                              onClick={() => setFiles((old) => old.filter((_, i) => i !== index))}
+                            >
+                              {file.name} ×
+                            </Button>
+                          ))}
+                        </Group>
+                      ) : session ? (
+                        <span />
+                      ) : (
+                        // A sheet goes with the first message and no other, so
+                        // the way to attach one lives in the first message's
+                        // box: a quiet line of its own, replaced by the file.
+                        <FileButton
+                          multiple
+                          accept=".pdf,.png,.jpg,.jpeg,.webp,.json,.txt"
+                          disabled={!myTurn}
+                          onChange={(incoming) => setFiles(incoming.slice(0, 8))}
+                        >
+                          {(props) => (
+                            <Button {...props} variant="transparent" size="compact-sm" px={0} disabled={!myTurn} leftSection={<IconPaperclip size={16} />}>
+                              {t('agent.start.attach')}
+                            </Button>
+                          )}
+                        </FileButton>
+                      )}
+
                       <Button
                         type="submit"
                         loading={action.pending}
-                        disabled={
-                          active ||
-                          (!message.trim() && !files.length) ||
-                          (!session && (!selectedRules || rulesDirty))
-                        }
+                        disabled={!myTurn || (!message.trim() && !files.length)}
                       >
                         {t('agent.send')}
                       </Button>
                     </Group>
-                    {active && (
-                      <Text size="xs" c="dimmed">
-                        {t('agent.waitForReply')}
-                      </Text>
-                    )}
-                    {session && (session.status === 'failed' || session.status === 'paused') && (
-                      <Button
-                        variant="subtle"
-                        disabled={action.pending}
-                        onClick={() =>
-                          void control(session.status === 'failed' ? 'retry' : 'resume')
-                        }
-                      >
-                        {session.status === 'failed' ? t('agent.retry') : t('agent.resume')}
-                      </Button>
-                    )}
                   </Stack>
-                  {!session && (
-                    <Text size="xs" c="dimmed" mt="xs">
-                      {t('agent.fileHint')}
-                    </Text>
-                  )}
                 </form>
-              }
+              )}
+                <div ref={end} />
+              </div>
             </Stack>
           </Card>
         }
-        <Group justify="space-between">
-          <Text size="xs" c="dimmed">
-            {t('agent.memory')}
-          </Text>
-          {session && (
-            <Button
-              variant="subtle"
-              color="red"
-              disabled={active || action.pending}
-              onClick={() => void control('discard')}
-            >
-              {t('agent.discard')}
-            </Button>
-          )}
-        </Group>
       </Stack>
     </Page>
   )
 }
+
+/** A message's text. Memoized because the transcript is rebuilt on every
+ * streamed chunk, and parsing every earlier message's Markdown again each time
+ * is what a long import spends the main thread on. */
+const MessageText = memo(function MessageText({ text }: { text: string }) {
+  return <Markdown>{text}</Markdown>
+})
 
 /** One side of the conversation: the assistant on the left, the player on
  * the right. */
@@ -465,7 +464,9 @@ function Bubble({ mine = false, children }: { mine?: boolean; children: ReactNod
     <div
       style={{
         alignSelf: mine ? 'flex-end' : 'flex-start',
-        maxWidth: '85%',
+        // The assistant's messages are one column: the same width whatever
+        // they hold, so a short line and a long one start and end together.
+        ...(mine ? { maxWidth: '85%' } : { width: '85%' }),
         overflowWrap: 'anywhere',
         padding: '10px 14px',
         borderRadius: 16,
@@ -485,31 +486,33 @@ function Conversation({
   files,
   canAnswer,
   onAnswer,
-  onAction,
   active,
-  review,
+  packNames,
+  stalled,
+  actions,
 }: {
   events: AgentEvent[]
   files: AgentSession['files']
   canAnswer: boolean
   onAnswer: (answer: string) => void
-  onAction: (action: 'view' | 'edit') => void
   active: boolean
-  review: boolean
+  packNames: (releases: readonly { id: string; version: string }[]) => string
+  /** What the last message offers once the character is done. */
+  actions: ReactNode
+  /** What a paused or failed run leaves the player to press. */
+  stalled: ReactNode
 }) {
   const t = useT()
   type Row = {
     key: number
     kind: string
     text: string
-    lines?: string[]
+    field?: string
     files?: AgentEvent['files']
     options?: string[] | undefined
-    actions?: AgentEvent['actions']
   }
   const rows: Row[] = []
   const firstUser = events.find((event) => event.kind === 'user')?.id
-  const lastQuestion = events.findLast((event) => event.kind === 'question')?.id
   const lastUser = events.findLast((event) => event.kind === 'user')?.id ?? 0
   for (const event of events) {
     if (event.kind === 'delta') {
@@ -524,11 +527,17 @@ function Conversation({
     } else if (event.kind === 'tool') {
       continue
     } else if (event.kind === 'progress') {
-      const label = progressText(t, event.data)
-      if (!label) continue
-      const previous = rows.at(-1)
-      if (previous?.kind === 'activity') previous.lines!.push(label)
-      else rows.push({ key: event.id, kind: 'activity', text: '', lines: [label] })
+      // Every write is a message of its own: what was imported, and its value.
+      const entry = progressEntry(t, event.data)
+      if (!entry) continue
+      rows.push({ key: event.id, kind: 'activity', text: entry.value, field: entry.field })
+    } else if (event.kind === 'rules') {
+      // The opening, kept: what the assistant asked before there was a
+      // session, and what the player answered.
+      const chosen = (event.data as { packs?: { id: string; version: string }[] } | undefined)?.packs ?? []
+      rows.push({ key: -3, kind: 'assistant', text: t('agent.lead') })
+      rows.push({ key: -2, kind: 'user', text: packNames(chosen) })
+      rows.push({ key: -1, kind: 'assistant', text: t('agent.askStart') })
     } else if (event.kind === 'attachments') {
       // Older sessions recorded attachment markers separately from the user.
       continue
@@ -543,29 +552,23 @@ function Conversation({
           event.files ??
           (event.id === firstUser && !events.some((item) => item.files) ? files : undefined),
         options: event.options,
-        actions: event.actions,
       })
     }
   }
   const lastAssistant = rows.findLast((row) => ['assistant', 'question'].includes(row.kind))
-  if (review && lastAssistant && !lastAssistant.actions) lastAssistant.actions = ['view', 'edit']
   return (
     <Stack gap="md">
-      {rows.map((row, index) =>
+      {rows.map((row) =>
         row.kind === 'activity' ? (
-          // What the assistant wrote is one line of the conversation, not the
-          // conversation: it folds away once the next message arrives.
+          // What the assistant wrote, in full and never folded: the field as
+          // a caption, what it now holds underneath.
           <Bubble key={row.key}>
-            <details open={active && index === rows.length - 1}>
-              <summary style={{ cursor: 'pointer' }}>
-                <Text span size="sm" c="dimmed">
-                  {t('agent.progress.count', { count: row.lines!.length })}
-                </Text>
-              </summary>
-              <Text size="sm" c="dimmed" mt="xs" style={{ whiteSpace: 'pre-line' }}>
-                {row.lines!.join('\n')}
-              </Text>
-            </details>
+            <Text size="sm" fw={700}>
+              {t('agent.progress.imported', { field: row.field! })}
+            </Text>
+            <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+              {row.text}
+            </Text>
           </Bubble>
         ) : row.kind === 'edit' ? (
           <Text key={row.key} size="xs" c="dimmed" ta="center">
@@ -588,37 +591,32 @@ function Conversation({
                   ))}
                 </Group>
               )}
-              {row.text ? <Markdown>{row.text}</Markdown> : null}
-              {!!row.actions?.length && (
-                <Group gap="xs">
-                  {row.actions.map((kind) => (
-                    <Button key={kind} variant="default" onClick={() => onAction(kind)}>
-                      {kind === 'view' ? t('import.viewSheet') : t('common.edit')}
-                    </Button>
-                  ))}
-                </Group>
-              )}
-              {row.kind === 'question' && row.key === lastQuestion && row.key > lastUser && (
-                <>
-                  {!!row.options?.length && (
-                    <Group gap="xs">
-                      {row.options.map((option) => (
-                        <Button
-                          key={option}
-                          variant="default"
-                          disabled={!canAnswer}
-                          onClick={() => onAnswer(option)}
-                        >
-                          {option}
-                        </Button>
-                      ))}
-                    </Group>
-                  )}
-                  <Text size="xs" c="dimmed">
-                    {t('agent.answerHint')}
-                  </Text>
-                </>
-              )}
+              {row.text ? <MessageText text={row.text} /> : null}
+              {/*
+                Prepared answers, never an open question. They stay under the
+                message that offered them -- pressed or not, nothing in the
+                log folds away -- and only the latest can still be pressed.
+                The last one opens the text field instead of answering.
+              */}
+              {(() => {
+                const latest = row === lastAssistant && row.key > lastUser
+                // Not under the opening, which was answered before the session, nor
+                // under text that is still arriving.
+                if (!['assistant', 'question'].includes(row.kind) || row.key < 0) return null
+                // Only what the assistant actually offered: a button that
+                // says nothing but "go on" is not a choice.
+                const offered = row.options ?? []
+                if (offered.length === 0) return null
+                return (
+                  <Group gap="xs">
+                    {offered.map((option) => (
+                      <Button key={option} variant="default" disabled={!latest || !canAnswer} onClick={() => onAnswer(option)}>
+                        {option}
+                      </Button>
+                    ))}
+                  </Group>
+                )
+              })()}
             </Stack>
           </Bubble>
         ),
@@ -630,6 +628,11 @@ function Conversation({
           </Text>
         </Bubble>
       )}
+      {/* The end of a turn that asked nothing -- finished, stopped short or
+          failed -- is the same four buttons. A question's own answers come
+          first: they are under the question. */}
+      {actions && !(lastAssistant?.options?.length && lastAssistant.key > lastUser) && <Bubble>{actions}</Bubble>}
+      {stalled}
     </Stack>
   )
 }

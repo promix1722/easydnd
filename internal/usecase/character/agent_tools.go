@@ -331,8 +331,8 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		if strings.TrimSpace(args.Text) == "" {
 			return nil, fmt.Errorf("question required")
 		}
-		if len(args.Options) > 6 {
-			return nil, fmt.Errorf("offer at most six concise answers")
+		if len(args.Options) > 10 {
+			return nil, fmt.Errorf("offer at most ten concise answers")
 		}
 		for _, option := range args.Options {
 			if strings.TrimSpace(option) == "" || len(option) > 300 {
@@ -340,9 +340,9 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 			}
 		}
 		s.Status = "waiting"
+		s.asked = s.offered
 		addAgentEvent(s, "question", args.Text, "", nil)
 		s.Events[len(s.Events)-1].Options = append([]string(nil), args.Options...)
-		s.Events[len(s.Events)-1].Actions = []string{"view", "edit"}
 		return map[string]bool{"waiting": true}, nil
 	case "prepare_review":
 		if len(s.Files) > 0 && len(s.expected) == 0 {
@@ -362,7 +362,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 			return map[string]any{"ready": false, "missingSourceFacts": localChecklist(missing), "next": "These checklist entries are not in the draft. Import the ones the sheet really documents, by name. Entries that only restate what the build already shows need nothing: call prepare_review again and it will pass. Do not create custom entries to satisfy this list."}, nil
 		}
 		if state.Identity.Name == "…" || strings.TrimSpace(state.Identity.Name) == "" {
-			return nil, fmt.Errorf(`the character has no name yet: import_facts {"facts":[{"path":"identity.name","value":"<the name on the sheet>"}]}, then prepare_review again`)
+			return map[string]any{"ready": false, "next": `The character has no name. If the sheet prints one, write it: import_facts {"facts":[{"path":"identity.name","value":"<the name>"}]}. If it does not, do not invent a placeholder: call ask_user "What is the character called?" with three or four names that suit the character as answers, write the reply the same way, then prepare_review again.`}, nil
 		}
 		if !args.AllowIncomplete {
 			prompts, err := domain.Prompts(nativeLog(s.Log), cat)
@@ -379,6 +379,23 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 				return map[string]any{"ready": false, "remainingChoices": agentPrompts(cat, required, false), "next": "Resolve these choices from the source or call ask_user with a focused question and suggested answers. Do not send the user to the editor. Only set allow_incomplete if the user explicitly chooses to leave choices incomplete."}, nil
 			}
 		}
+		// Whatever is still unanswered is the owner's to decide about, not the
+		// model's to pass over: optional questions included, once.
+		// Refused until the owner has actually been asked: a second call is
+		// not consent.
+		// allow_incomplete does not skip this: it is the model's word that
+		// the owner chose to leave things open, and the owner was not asked.
+		// The builder's own extra-spell questions are not counted -- they
+		// are always open, and no character is unfinished for them.
+		open, err := a.openPrompts(s, cat)
+		if err != nil {
+			return nil, err
+		}
+		open = slices.DeleteFunc(open, func(entry map[string]any) bool { return entry["purpose"] == "custom" })
+		if len(open) > 0 && !(s.offered && s.asked) {
+			s.offered = true
+			return map[string]any{"ready": false, "unanswered": open, "next": "These are still unanswered. Do not finish yet: call ask_user and offer to settle them, naming them in plain words, with the answers \"Fill them in for me\", \"One by one\" and \"Leave them blank\". Fill them in: answer each from the sheet or the description. One by one: one ask_user per entry, with its options as prepared answers (for a written one such as a personality trait, offer a few suggestions that suit the character). Leave them blank: prepare_review again."}, nil
+		}
 		// The draft goes to its owner as a build, not as a build with the
 		// sheet's numbers pinned on top. What the build reproduces is dropped
 		// here, and with it the checklist entry that asked for it.
@@ -389,7 +406,6 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		s.Log = pruned
 		s.Status = "review"
 		addAgentEvent(s, "assistant", args.Text, "", nil)
-		s.Events[len(s.Events)-1].Actions = []string{"view", "edit"}
 		return map[string]bool{"ready": true}, nil
 	case "upsert_custom_option":
 		return a.customOption(ctx, s, cat, args)
@@ -904,7 +920,11 @@ var identityKinds = map[string]string{"name": "identity.name", "alignment": "ide
 // promptPaths are the questions a build asks that a sheet answers with a
 // number. A model reads the prompt's id and writes it back as a path, so the
 // id is accepted as one.
-var promptPaths = map[string]string{"character/desired-level": "identity.desiredLevel", "character/abilities": "finalAbilities"}
+var promptPaths = map[string]string{
+	"character/desired-level": "identity.desiredLevel", "character/abilities": "finalAbilities",
+	"character/personality-trait": "identity.personalityTraits", "character/ideal": "identity.ideals",
+	"character/bond": "identity.bonds", "character/flaw": "identity.flaws", "character/alignment": "identity.alignment",
+}
 
 // setInventory puts a sheet's items on the character, by printed name.
 func (a *Agent) setInventory(ctx context.Context, s *AgentSession, cat *catalog.Catalog, items []agentArgs) map[string]any {
@@ -940,6 +960,14 @@ func (a *Agent) setInventory(ctx context.Context, s *AgentSession, cat *catalog.
 func (a *Agent) inventoryFact(ctx context.Context, s *AgentSession, cat *catalog.Catalog, item agentArgs) (agentArgs, AgentCandidate, error) {
 	placement := item.Placement
 	if placement == "" {
+		placement = "backpack"
+	}
+	// A sheet says where a thing is in its own words. What is in hand or on
+	// the body is equipped; anything else carried is in the pack.
+	switch strings.ToLower(placement) {
+	case "wielded", "held", "worn", "wearing", "in hand", "hands", "armor", "weapon":
+		placement = "equipped"
+	case "carried", "pack", "bag", "inventory", "stowed":
 		placement = "backpack"
 	}
 	if !slices.Contains([]string{"equipped", "backpack", "loot"}, placement) {
@@ -1272,6 +1300,11 @@ func (a *Agent) valueFact(ctx context.Context, s *AgentSession, cat *catalog.Cat
 	if len(s.Files) > 0 && len(segments) == 3 && segments[0] == "equipment" && segments[1] != "purse" {
 		log = clearImportedInventory(log, segments[1])
 	}
+	// A blank is not an answer. Written, it closes the question with nothing
+	// in it, and the builder then shows a field somebody "filled in".
+	if strings.HasPrefix(path, "identity.") && v.Kind == domain.ValueString && (strings.TrimSpace(v.Str) == "" || strings.TrimSpace(v.Str) == "…") {
+		return domain.Log{}, nil, fmt.Errorf("%s has no value to write. Leave it unwritten if the user wants it blank; if it is needed, ask_user for it", path)
+	}
 	change := domain.Change{Path: domain.Path(path), Op: op, Value: v}
 	if strings.HasPrefix(path, "identity.") {
 		return setNative(log, change, args.Source), map[string]any{"applied": true, "path": path}, nil
@@ -1368,11 +1401,25 @@ func (a *Agent) answer(ctx context.Context, s *AgentSession, cat *catalog.Catalo
 		}
 		keys = append(keys, key)
 	}
+	// A feat the sheet names is first written down as a fact, before the
+	// question that grants it is open. Answering that question with it is the
+	// same feat finding its place, not a second copy: the fact gives way, or
+	// the pick is refused as already held and a model goes off to choose a
+	// different feat nobody asked for.
+	log := s.Log.Clone()
+	stated := func(e domain.Event) bool {
+		return e.Observed && e.Type == domain.EventFeat && len(e.Choices) == 0 && slices.Contains(keys, e.Ref.Slug)
+	}
+	if slices.ContainsFunc(log.Events, stated) {
+		if log, err = domain.Rebuild(slices.DeleteFunc(log.Events, stated)); err != nil {
+			return nil, err
+		}
+		native = nativeLog(log)
+	}
 	events := []domain.Event{{Type: p.Event.Type, Ref: p.Event.Ref, Level: p.Event.Level, Choices: []domain.Answer{{Prompt: p.Choice.Prompt, Picks: keys}}}}
 	if err := validateAndAttribute(native, cat, events); err != nil {
 		return nil, err
 	}
-	log := s.Log.Clone()
 	if err := log.Append(events...); err != nil {
 		return nil, err
 	}
@@ -1586,6 +1633,15 @@ func (a *Agent) customOption(ctx context.Context, s *AgentSession, cat *catalog.
 		}
 	}
 
+	// A custom entry is something the rules lack that a character is built
+	// from: a class, a race, a background, a spell, an item. A feature, a
+	// trait, a feat or a note the catalogue does not know is not that -- it is
+	// what a model writes to quiet a checklist or to record that a field was
+	// left blank, and the owner finds it later as junk on the sheet.
+	if slices.Contains([]string{"feature", "trait", "feat", "note"}, args.Kind) && args.Ref == "" {
+		s.expected = slices.DeleteFunc(s.expected, func(key string) bool { return key == "custom:"+args.ID })
+		return map[string]any{"kept": false, "reason": "Not kept: custom entries are only for a class, subclass, race, subrace, background, cantrip, spell or item the selected rules lack. A feature or trait the build grants needs nothing; anything else worth telling the user goes in your message, not on the character."}, nil
+	}
 	// Optional schema values may arrive as zero/empty from a model. They are
 	// absence of evidence, never asserted mechanics for unrelated kinds.
 	if args.Kind != "class" || args.HitDie != nil && *args.HitDie == 0 {
@@ -1820,6 +1876,12 @@ func (a *Agent) missing(ctx context.Context, s *AgentSession, cat *catalog.Catal
 			if _, text, cut := strings.Cut(key, ":"); cut && strings.Count(key, ":") == 1 {
 				name = text
 			}
+			// Nothing imports a feature or a trait by name -- the build
+			// grants them or it does not -- so listing one as missing only
+			// ever produced a custom copy of it.
+			if kind == "feature" || kind == "trait" {
+				continue
+			}
 			covered = slices.ContainsFunc(customs, func(c domain.CustomOption) bool {
 				return slices.Contains(lookupKinds(c.Kind), lookupKinds(kind)[0]) && nameScore(name, c.Name, false) >= .99
 			})
@@ -1917,8 +1979,11 @@ func agentPrompts(cat *catalog.Catalog, prompts []domain.Prompt, files bool) []m
 	for _, p := range prompts {
 		_, structural := structuralPrompt(p)
 		byFact := p.Event.Type == domain.EventChange && p.Choice.Kind != rules.ChooseSpell
-		// A sheet lists the gear itself, and text prompts are written as facts.
-		if files && p.Choice.Kind == rules.ChooseEquipment || byFact && p.Optional {
+		// A sheet lists the gear itself. The questions answered in words --
+		// personality, ideals, bonds, flaws, alignment -- are listed like any
+		// other: left out, a model never learned they were unanswered and
+		// never offered to fill them.
+		if files && p.Choice.Kind == rules.ChooseEquipment {
 			continue
 		}
 		entry := map[string]any{"id": localKey(cat, p.Choice.Prompt.String()), "choose": p.Choice.Choose, "kind": p.Choice.Kind.String(), "how": "answer_choices"}

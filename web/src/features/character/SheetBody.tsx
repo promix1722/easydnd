@@ -80,7 +80,6 @@ export function SheetBody({
     names?.get(`${collection}:${slug}`) ?? titleCase(slug)
 
   const sections: DeckSection[] = [
- ...(s.importedNotes?.length ? [{key: "imported", desktop: "panel" as const, title: t('agent.manual'), content: <Stack>{s.importedNotes.map((note,i)=><Text key={i} style={{whiteSpace:'pre-wrap'}}>{note}</Text>)}</Stack>}] : []),
     {
       key: 'identity',
       // One section rather than two, and the merge costs the wide screen

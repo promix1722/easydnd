@@ -140,6 +140,12 @@ export function CharacterSheetScreen() {
        */
       actions={
         <Group gap="xs" wrap="nowrap">
+          {/* The chat this character was made in, while the server still has it. */}
+          {s.importSession && (
+            <Button component={Link} variant="light" to={`/ai-wizard/${encodeURIComponent(s.importSession)}`}>
+              {t('agent.history')}
+            </Button>
+          )}
           {/*
             Only for a character with a level to raise: one that has not taken
             its first class yet is still being created, and the build screen is
@@ -166,7 +172,6 @@ export function CharacterSheetScreen() {
         </Group>
       }
     >
-      {s.importSession && <Button component={Link} variant="subtle" to={`/characters/import?session=${encodeURIComponent(s.importSession)}`}>{t('agent.history')}</Button>}
       <SheetBody sheet={s} compendium={sheet.data.compendium} />
 
       <ModalSheet
