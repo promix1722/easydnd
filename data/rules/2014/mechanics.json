@@ -1553,6 +1553,372 @@
         }
       ],
       "group": "class"
+    },
+    {
+      "id": "second-wind",
+      "owner": "class:fighter",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "wild-shape-uses",
+      "owner": "class:druid",
+      "minimumLevel": 2,
+      "kind": "pool",
+      "input": "class:druid",
+      "rows": [
+        {
+          "from": 2,
+          "capacity": 2
+        },
+        {
+          "from": 20,
+          "capacity": 9999
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "lay-on-hands",
+      "owner": "class:paladin",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:paladin",
+      "capacity": {
+        "op": "multiply",
+        "args": [
+          {
+            "op": "read",
+            "ref": "class:paladin"
+          },
+          {
+            "op": "constant",
+            "value": 5
+          }
+        ]
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "divine-sense",
+      "owner": "class:paladin",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:paladin",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "args": [
+              {
+                "op": "constant",
+                "value": 1
+              },
+              {
+                "op": "read",
+                "ref": "modifier:cha"
+              }
+            ]
+          }
+        ]
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "cleansing-touch",
+      "owner": "class:paladin",
+      "minimumLevel": 14,
+      "kind": "pool",
+      "input": "class:paladin",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "modifier:cha"
+          }
+        ]
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "arcane-recovery",
+      "owner": "class:wizard",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:wizard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "signature-spells",
+      "owner": "class:wizard",
+      "minimumLevel": 20,
+      "kind": "pool",
+      "input": "class:wizard",
+      "rows": [
+        {
+          "from": 20,
+          "capacity": 2
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "divine-intervention",
+      "owner": "class:cleric",
+      "minimumLevel": 10,
+      "kind": "pool",
+      "input": "class:cleric",
+      "rows": [
+        {
+          "from": 10,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "stroke-of-luck",
+      "owner": "class:rogue",
+      "minimumLevel": 20,
+      "kind": "pool",
+      "input": "class:rogue",
+      "rows": [
+        {
+          "from": 20,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "eldritch-master",
+      "owner": "class:warlock",
+      "minimumLevel": 20,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 20,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "natural-recovery",
+      "owner": "subclass:land",
+      "minimumLevel": 2,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "wholeness-of-body",
+      "owner": "subclass:open-hand",
+      "minimumLevel": 6,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "dark-ones-own-luck",
+      "owner": "subclass:fiend",
+      "minimumLevel": 6,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "hurl-through-hell",
+      "owner": "subclass:fiend",
+      "minimumLevel": 14,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "breath-weapon",
+      "owner": "trait:breath-weapon",
+      "minimumLevel": 0,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "relentless-endurance",
+      "owner": "trait:relentless-endurance",
+      "minimumLevel": 0,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
     }
   ],
   "rules": [

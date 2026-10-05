@@ -126,6 +126,9 @@ type Entry struct {
 	Tags       []string
 	Locked     bool
 	Monster    *Stats
+	// Used counts spent uses per resource pool id, for this game only. The
+	// character's own log is never written by the tracker.
+	Used map[string]int
 }
 
 // Stats is the compact base block, copied for monsters and projected for players.

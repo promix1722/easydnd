@@ -12,8 +12,8 @@ see Homebrew authoring below. Character imports can also compile temporary,
 session-scoped private definitions; see [agent.md](agent.md#custom-content).
 These releases use the same validator and immutable locks, never enter the
 default catalogue, and live in memory. The
-existing browser still uses its original ability editor and resource displays;
-the new metadata/read contracts are available for that later UI work.
+existing browser still uses its original ability editor; its resource displays
+read `resources.pools` and `resources.parameters`.
 
 ## Spell artwork
 
@@ -291,9 +291,20 @@ must agree. Unrelated resources with identical display names stay separate.
 
 The base data includes Pact Magic, an oath-gated Paladin Channel Divinity grant,
 Cleric sharing, ability-based Bardic Inspiration and conditional recovery.
+Limited-use features are pools too, not prose: Second Wind, Wild Shape uses,
+Lay on Hands (a capacity expression, paladin level times five), Divine Sense,
+Cleansing Touch, Arcane Recovery, Signature Spells, Divine Intervention, Stroke
+of Luck, Eldritch Master, the Land, Open Hand and Fiend subclass uses, and two
+trait-owned ones, Breath Weapon and Relentless Endurance. A pool with no limit
+is declared with capacity 9999, which the browser reads as unlimited.
 Ordinary spell slots and Hit Dice retain family instance IDs. `resources.pools`
 is authoritative for usage; `resources.parameters` separates damage/scaling
 values from consumables. The older slot/class arrays remain compatibility views.
+
+The usage events below are the character's own record. The browser's game
+tracker does not write them: it keeps a spent count per pool on the game entry,
+so a use spent at one table is not spent at another. See
+[backend.md](backend.md#active-game-entries).
 
 ```json
 {"type":"resource.spent","resource":"example/combat-dice","amount":1}

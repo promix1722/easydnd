@@ -52,7 +52,7 @@ called a *session*, which here means being signed in. A folder is one account's
 private shelf for its own characters, shared with nobody.
 
 For development, `make dev` seeds **master**, **player1**, and **player2**,
-a shared group, two games, and first-level characters. Open `/login` and choose
+a shared group, two games, first-level characters and two fifth-level casters. Open `/login` and choose
 an account; use the account icon in the header to switch roles. See
 [Seeded development party](docs/backend.md#seeded-development-party).
 

@@ -23,11 +23,12 @@ as `expectedRevision`, alongside their positional `expectedSeq`. This closes
 the same-length-edit concurrency gap. Legacy test/API fixtures without a
 revision fall back to their sequence.
 
-Pack creation screens remain deferred. The existing ability editor and resource
-widgets still use the base-game presentation. Future consumption work should use
-the pinned character catalogue, generic `resources.pools`/`parameters`,
-`packActions`, and server-provided metadata rather than extending hardcoded
-resource labels. See [packs.md](packs.md) for the read/write contract.
+Pack creation screens remain deferred. The existing ability editor still uses
+the base-game presentation. Resources do not: the sheet and the game page read
+the generic `resources.pools`/`parameters` and take their names from the pack,
+so the client holds no table of resource labels and a homebrew pool shows up
+without a client change. `packActions` is still unread. See
+[packs.md](packs.md) for the read/write contract.
 
 ## Quick start
 
@@ -1090,7 +1091,30 @@ roster captions use «Вр. ОЗ» and «СЗ» to fit the compact grid. Rolled 
 appears in parentheses before the name in the mobile header, and stays visible
 while collapsed. Unset initiative and private NPC values are omitted. A
 chevron in the header expands movement, vision and abilities independently
-for that entry. Tags stay visible in the collapsed row; empty tag lists have no
+for that entry. An entry's **consumables** are a dialog, opened from "Consumable slots" in the row's
+"…" menu and drawn by `features/character/ResourcePools`: one
+row per pool -- spell slots by level, then named pools, then Hit Dice -- with
+`ui/Pips` marking a disc for a use still available and a ring for one spent.
+They are not in the row itself: a paladin has five pools and a table has six
+paladins, and inline the roster stops being a list. Buttons, names and marks
+are three columns of one grid, so each starts on the same line in every row,
+and a slot row says "Spell slots, level 1" in full: under a shared heading
+every row beneath it read as a slot. Where `can_edit` is true a row leads with
+a minus and a plus, spend one and give one back, sent as `PATCH
+.../entries/{entry}` with `{used: {<pool>: n}}`. The marks are not buttons: a
+target that small is hit by accident. A press is drawn at once from a local
+count and saved behind it through the dialog's own `useAction`; the roster's
+shared one would disable every control on the page for the length of each
+request, which read as the whole page redrawing. The local count is dropped
+when the server reports the same number, so a long rest called meanwhile still
+shows. The plus is the whole undo; there is no per-player rest. Masters have
+one **Long rest** button in the toolbar, behind a confirmation because it
+cannot be undone, which returns everybody's spent uses.
+A pool of more than twenty (Lay on Hands, high-level
+ki) is a number rather than a wall of marks, and a capacity
+of 9999 -- how a pack spells "no limit" -- reads "Unlimited". Counts are the
+game's, not the character's: see
+[backend.md](backend.md#active-game-entries). Tags stay visible in the collapsed row; empty tag lists have no
 placeholder or blank row, while editable entries retain the inline add control. The six abilities occupy the first six desktop columns. Row actions use the same “…” menu
 at every width. Owners edit their own unlocked game values; masters can lock
 player entries and move or sort the shared list. Masters can drag an entry by
@@ -2078,6 +2102,16 @@ comma-joined paragraph at the foot of "Traits and features", which is a
 sentence to be read rather than a list to be searched, and which filed a tool a
 player rolls with beside a racial trait they never touch again. It is drawn in
 one place now, not two.
+
+**Consumables have their own panel.** Everything a character spends -- spell
+slots by level, Pact Magic, Channel Divinity, ki -- is drawn by
+`ResourcePools` as rows of marks in a "Consumable slots" section, present only when
+the character has a pool. It is the same component the game page unfolds, here
+without `onChange`, so it is read-only and always full: what has been spent is
+a fact about one game. Hit Dice are left out because they are already a vital.
+"Resources and gear" keeps what is read rather than spent, the scaling values
+from `resources.parameters` (a Sneak Attack die, an aura's range), beside the
+kit.
 
 **"Traits and features" and "Resources and gear" are lists for the same
 reason.** Both were the arrangement that argument was made against and kept it

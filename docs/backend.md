@@ -91,13 +91,20 @@ Every API startup with `env: development`, including `make dev` and
 three test accounts: **master**, **player1**, **player2**. The master owns the
 group; both other accounts are players. Each owns one finished first-level
 half-elf rogue, built through validated events rather than imported stats.
-The player's characters are shared and seated in two games:
+The players' rogues are shared and seated in two games:
 
 - **Training encounter**: both players are unlocked, with initiative rolls,
   temporary HP and a sample tag. Two private monsters demonstrate a character
   copy and a 10/10 HP stub. The master's original character stays private.
 - **Locked encounter**: player2 is locked, so the master can test unlocking
   before that player edits game values.
+
+Both games also seat two more shared characters, one per player: a fifth-level
+paladin and a fifth-level cleric. They exist to show the
+consumables tracker, which a first-level rogue cannot -- spell slots at several
+levels, Channel Divinity, a pool too large for marks (Lay on Hands, 25), Hit
+Dice. They are deliberately *unfinished*: a class event at level 5 and nothing
+else, so their open prompts are expected and they are no reference for a build.
 
 `POST /v1/dev/login` with `{"account":"master"}` (or `player1`, `player2`)
 issues the normal HttpOnly session cookie and returns the seeded `game_ids`.
@@ -425,10 +432,11 @@ that.
 | `DELETE` | `/v1/games/{id}` | DM or owner; the characters stay on the table |
 | `POST` | `/v1/games/{id}/characters` | seat some: `{"character_ids":[...]}`; your own land on the table too |
 | `DELETE` | `/v1/games/{id}/characters` | unseat one: `?character=C` |
-| `PATCH` | `/v1/games/{id}/entries/{entry}` | patch game HP, temp HP, initiative, tags; masters also lock players and edit monster base stats |
+| `PATCH` | `/v1/games/{id}/entries/{entry}` | patch game HP, temp HP, initiative, tags and spent uses (`{"used":{"spell-slots/1":2}}`); masters also lock players and edit monster base stats |
 | `DELETE` | `/v1/games/{id}/entries/{entry}` | remove a player entry or monster; DM or owner |
 | `POST` | `/v1/games/{id}/monsters` | private copy: `{"character_id":"..."}`; `{}` creates a stub; DM or owner |
 | `POST` | `/v1/games/{id}/order` | stable sort: `{"by_initiative":true}`; move: `{"entry_id":"...","direction":-1}` (or `1`); DM or owner |
+| `POST` | `/v1/games/{id}/rest` | long rest: every entry gets all of its spent uses back; DM or owner |
 | `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only |
 
 Three of those need a word about their shape.
@@ -1054,7 +1062,7 @@ indistinguishable from outside.
 | seat somebody else's, not yet shared | — | **400** | **400** | **403** | **404** |
 | edit unlocked game values | yes | yes | yes | own character only | **404** |
 | edit locked game values | **403** | yes | yes | **403** | **404** |
-| lock/unlock, reorder, manage monsters | **403** | yes | yes | **403** | **404** |
+| lock/unlock, reorder, manage monsters, call a long rest | **403** | yes | yes | **403** | **404** |
 
 Two rows are worth saying in prose. **A player may share** — that is the whole
 of what a player does at a table, and it is the half of a group that was missing
@@ -1100,6 +1108,30 @@ their own unlocked entries; group owners and DMs can edit all entries.
 copy under the game repository mutex. Rejected changes leave storage untouched,
 and independent field edits survive concurrent writes. The latest accepted
 write wins when two requests change the same field.
+
+**Consumables are game values too.** A player entry carries `resources`: the
+character's spendable pools -- spell slots by level, Pact Magic, every
+pack-declared pool such as Channel Divinity or ki, and Hit Dice last -- each
+`{id, name, group, max, used, dice?, slot_level?}`. Capacity is projected live
+from the sheet like the other base stats; `used` is stored on the entry, per
+game, and is what `PATCH .../entries/{entry}` sets through `used`, a map of
+pool id to spent count merged key by key so two pools edited at once do not
+overwrite each other. A count below zero, above the pool's capacity, or for a
+pool the character does not have is a 400. It is one of the entry's game
+values, so the same rule decides who may write it: the owner on their unlocked
+entry, a DM or the group owner on any.
+
+This deliberately does **not** use the character log's `resource.spent` and
+`rest.completed` events, which stay available to API clients and unused by the
+browser. A spent slot is a fact about one sitting, exactly as a hit point lost
+is: the same character seated in two games has two independent counts, the
+sheet always shows full pools, and a DM can correct a player's count without a
+write path into somebody else's character. The price is that the tracker does
+not know what a short rest restores. There is one recovery, `POST
+/v1/games/{id}/rest`, master-only, which clears every entry's spent uses -- Hit
+Dice included, where the rules would return half -- and leaves HP alone.
+The row's plus button is the undo for everything smaller. Monsters have
+no pools.
 
 NPCs hold private copies or editable default stats. New stubs are named NPC
 and start with 10 current and maximum HP. The internal kind `monster` and

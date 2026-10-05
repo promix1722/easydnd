@@ -100,5 +100,53 @@
   },
   "bardic-inspiration": {
     "name": "Bardic Inspiration"
+  },
+  "second-wind": {
+    "name": "Second Wind"
+  },
+  "wild-shape-uses": {
+    "name": "Wild Shape Uses"
+  },
+  "lay-on-hands": {
+    "name": "Lay on Hands"
+  },
+  "divine-sense": {
+    "name": "Divine Sense"
+  },
+  "cleansing-touch": {
+    "name": "Cleansing Touch"
+  },
+  "arcane-recovery": {
+    "name": "Arcane Recovery"
+  },
+  "signature-spells": {
+    "name": "Signature Spells"
+  },
+  "divine-intervention": {
+    "name": "Divine Intervention"
+  },
+  "stroke-of-luck": {
+    "name": "Stroke of Luck"
+  },
+  "eldritch-master": {
+    "name": "Eldritch Master"
+  },
+  "natural-recovery": {
+    "name": "Natural Recovery"
+  },
+  "wholeness-of-body": {
+    "name": "Wholeness of Body"
+  },
+  "dark-ones-own-luck": {
+    "name": "Dark One's Own Luck"
+  },
+  "hurl-through-hell": {
+    "name": "Hurl Through Hell"
+  },
+  "breath-weapon": {
+    "name": "Breath Weapon"
+  },
+  "relentless-endurance": {
+    "name": "Relentless Endurance"
   }
 }

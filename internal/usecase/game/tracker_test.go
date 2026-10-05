@@ -220,3 +220,70 @@ func TestDraggingMovesOnlyOneEntryAndPreservesTheRoster(t *testing.T) {
 	}
 	check([]string{c, b, a, d})
 }
+
+func TestSpentUsesBelongToTheGameAndALongRestReturnsThem(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer, "carol": group.RolePlayer})
+	cid := f.character(t, "bob")
+	if err := f.characters.Append(ctx, cid, 0, character.Event{Type: character.EventInit},
+		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "paladin"), Level: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.Share(ctx, "bob", "table", cid); err != nil {
+		t.Fatal(err)
+	}
+	g, _ := f.svc.Create(ctx, "alice", "table", "Game")
+	if err := f.svc.AddCharacters(ctx, "alice", g.ID, []character.ID{cid}); err != nil {
+		t.Fatal(err)
+	}
+	original, _ := f.characters.Get(ctx, cid)
+	pools := func() map[string][2]int {
+		t.Helper()
+		entries, err := f.svc.Participants(ctx, "carol", g.ID, rules.DefaultLocale)
+		if err != nil || len(entries) != 1 {
+			t.Fatalf("entries: %+v, %v", entries, err)
+		}
+		out := map[string][2]int{}
+		for _, p := range entries[0].Pools {
+			out[string(p.ID)] = [2]int{p.Used, p.Max}
+		}
+		return out
+	}
+	// Spell slots first, hit dice last, and the pool this change declared.
+	entries, _ := f.svc.Participants(ctx, "bob", g.ID, rules.DefaultLocale)
+	listed := entries[0].Pools
+	if listed[0].ID != "spell-slots/1" || listed[len(listed)-1].ID != "hit-dice/paladin" || pools()["lay-on-hands"] != [2]int{0, 15} {
+		t.Fatalf("pools: %+v", listed)
+	}
+	eid := entries[0].Entry.ID
+	spend := func(actor user.ID, used map[string]int) error {
+		return f.svc.PatchEntry(ctx, actor, g.ID, eid, gameuc.EntryPatch{Used: used})
+	}
+	if err := spend("bob", map[string]int{"spell-slots/1": 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := spend("alice", map[string]int{"hit-dice/paladin": 1}); err != nil {
+		t.Fatal(err)
+	}
+	assertDenied(t, spend("carol", map[string]int{"spell-slots/1": 0}), "other player")
+	for name, used := range map[string]map[string]int{"over capacity": {"spell-slots/1": 4}, "negative": {"lay-on-hands": -1}, "unknown pool": {"ki-points": 1}} {
+		if err := spend("bob", used); err == nil {
+			t.Fatalf("%s was accepted", name)
+		}
+	}
+	if got := pools(); got["spell-slots/1"] != [2]int{2, 3} || got["hit-dice/paladin"] != [2]int{1, 3} {
+		t.Fatalf("spent: %+v", got)
+	}
+	assertDenied(t, f.svc.LongRest(ctx, "bob", g.ID), "player calling a rest")
+	if err := f.svc.LongRest(ctx, "alice", g.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := pools(); got["spell-slots/1"] != [2]int{0, 3} || got["hit-dice/paladin"] != [2]int{0, 3} {
+		t.Fatalf("after rest: %+v", got)
+	}
+	after, _ := f.characters.Get(ctx, cid)
+	if !reflect.DeepEqual(original.Log, after.Log) {
+		t.Fatal("tracker modified original log")
+	}
+}

@@ -14,7 +14,9 @@ arrays described below remain compatibility paths; installed contexts use the
 base pack's explicit policy and `resources.pools`/`resources.parameters`.
 
 Usage events are temporal: spend/rest/action events validate against the build
-at their position, and later levels preserve spent uses. Rules upgrades are
+at their position, and later levels preserve spent uses. They are not how a
+sitting is tracked -- the game tracker counts spent uses per game entry and
+never writes the log; see [backend.md](backend.md#active-game-entries). Rules upgrades are
 explicit migrations with previews and rollback checkpoints. A new pack version
 never changes an existing build implicitly.
 

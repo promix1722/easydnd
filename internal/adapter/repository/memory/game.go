@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -385,6 +386,7 @@ func cloneEntries(in []domain.Entry) []domain.Entry {
 	for i := range out {
 		e := &out[i]
 		e.Tags = slices.Clone(e.Tags)
+		e.Used = maps.Clone(e.Used)
 		if e.Initiative != nil {
 			value := *e.Initiative
 			e.Initiative = &value

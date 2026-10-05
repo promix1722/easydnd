@@ -100,5 +100,53 @@
   },
   "bardic-inspiration": {
     "name": "Вдохновение барда"
+  },
+  "second-wind": {
+    "name": "Второе дыхание"
+  },
+  "wild-shape-uses": {
+    "name": "Использования Дикого облика"
+  },
+  "lay-on-hands": {
+    "name": "Наложение рук"
+  },
+  "divine-sense": {
+    "name": "Божественное чувство"
+  },
+  "cleansing-touch": {
+    "name": "Очищающее касание"
+  },
+  "arcane-recovery": {
+    "name": "Магическое восстановление"
+  },
+  "signature-spells": {
+    "name": "Фирменные заклинания"
+  },
+  "divine-intervention": {
+    "name": "Божественное вмешательство"
+  },
+  "stroke-of-luck": {
+    "name": "Удача"
+  },
+  "eldritch-master": {
+    "name": "Таинственный мастер"
+  },
+  "natural-recovery": {
+    "name": "Естественное восстановление"
+  },
+  "wholeness-of-body": {
+    "name": "Цельность тела"
+  },
+  "dark-ones-own-luck": {
+    "name": "Удача Тёмного"
+  },
+  "hurl-through-hell": {
+    "name": "Бросок через ад"
+  },
+  "breath-weapon": {
+    "name": "Оружие дыхания"
+  },
+  "relentless-endurance": {
+    "name": "Непоколебимая стойкость"
   }
 }

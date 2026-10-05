@@ -120,7 +120,31 @@ export interface Pool {
   dice?: string
 }
 
+/** A spendable resource a pack declares; `used` on a sheet is always the log's. */
+export interface ResourcePool {
+  id: string
+  name: string
+  group?: string
+  max: number
+  used: number
+  dice?: string
+  slotLevel?: number
+}
+
+/** A scaling value that is read, never spent: a Sneak Attack die, an aura range. */
+export interface ResourceParameter {
+  name: string
+  number: number
+  dice?: string
+  text?: string
+  rational?: { numerator: number; denominator: number }
+  boolean?: boolean
+}
+
 export interface Resources {
+  pools?: Record<string, ResourcePool>
+  parameters?: Record<string, ResourceParameter>
+  /** Compatibility views of the same pools; nothing new should read them. */
   spellSlots?: Record<string, Pool>
   hitDice?: Pool[]
   class?: Pool[]

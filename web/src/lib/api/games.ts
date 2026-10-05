@@ -174,6 +174,18 @@ export interface GameEntry {
   initiative?: number | null
   tags?: string[]
   stats?: EntryStats
+  /** A player's consumables; `used` is this game's count, never the sheet's. */
+  resources?: EntryPool[]
+}
+
+export interface EntryPool {
+  id: string
+  name?: string
+  group?: string
+  max: number
+  used: number
+  dice?: string
+  slot_level?: number
 }
 
 export interface EntryPatch {
@@ -183,10 +195,17 @@ export interface EntryPatch {
   tags?: string[]
   locked?: boolean
   stats?: Partial<EntryStats>
+  /** Spent count per pool id; pools left out keep theirs. */
+  used?: Record<string, number>
 }
 
 export function patchGameEntry(id: string, entry: string, patch: EntryPatch): Promise<GameDetail> {
   return request<GameDetail>(`/games/${encodeURIComponent(id)}/entries/${encodeURIComponent(entry)}`, { method: 'PATCH', body: patch })
+}
+
+/** The table's only recovery: everybody gets every spent use back. */
+export function restGame(id: string): Promise<GameDetail> {
+  return request<GameDetail>(`/games/${encodeURIComponent(id)}/rest`, { method: 'POST' })
 }
 
 export function deleteGameEntry(id: string, entry: string): Promise<GameDetail> {

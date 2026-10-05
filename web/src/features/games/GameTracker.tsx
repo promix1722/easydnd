@@ -2,16 +2,17 @@ import { useId, useRef, useState, type PointerEvent } from 'react'
 import { Link } from 'react-router'
 
 import type { EntryPatch, EntryStats, GameDetail, GameEntry } from '@/lib/api'
-import { addGameMonster, deleteGameEntry, orderGameEntries, patchGameEntry } from '@/lib/api'
+import { addGameMonster, deleteGameEntry, orderGameEntries, patchGameEntry, restGame } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { useT } from '@/lib/i18n'
 import {
   ACTION_ICON_SIZE, ActionIcon, Alert, Anchor, Badge, Box, Button, Card, Divider,
-  Group, IconArrowDown, IconArrowUp, IconDotsVertical, IconGripVertical, IconPencil,
+  Group, IconArrowDown, IconArrowUp, IconDice5, IconDotsVertical, IconGripVertical, IconPencil,
   IconShield, IconTrash, IconPlus, IconChevronDown, Menu, ModalSheet, NumberInput, SimpleGrid, Stack, Text, TextInput, useIsDesktop,
 } from '@/ui'
 import { ABILITY_ORDER, signed, titleCase } from '@/domain'
 import { abilityAbbr, senseName, speedName } from '../character/labels'
+import { ResourcePools } from '../character/ResourcePools'
 import { FolderTreeSheet } from './FolderTreeSheet'
 
 const STAT_COLUMNS = { base: 2, sm: 4, md: 7 } as const
@@ -31,15 +32,19 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
   const gesture = useRef<{ id: string; pointer: number; x: number; y: number; moved: boolean } | null>(null)
   const [over, setOver] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
+  const [consuming, setConsuming] = useState<string | null>(null)
   const [pickingMonster, setPickingMonster] = useState(false)
   const patch = useAction(patchGameEntry)
   const remove = useAction(deleteGameEntry)
   const order = useAction(orderGameEntries)
   const monster = useAction(addGameMonster)
+  const rest = useAction(restGame)
+  const [resting, setResting] = useState(false)
   const entries = game.entries
   const selected = entries.find((entry) => entry.id === editing)
-  const error = patch.error ?? remove.error ?? order.error ?? monster.error
-  const pending = patch.pending || remove.pending || order.pending || monster.pending
+  const consumer = entries.find((entry) => entry.id === consuming)
+  const error = patch.error ?? remove.error ?? order.error ?? monster.error ?? rest.error
+  const pending = patch.pending || remove.pending || order.pending || monster.pending || rest.pending
 
   async function act(work: Promise<unknown | null>) {
     if (await work !== null) onChange()
@@ -113,11 +118,14 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
             <Button variant="light" disabled={pending} onClick={() => setPickingMonster(true)}>{t('game.addMonsterFromMine')}</Button>
             <Button variant="light" disabled={pending} onClick={() => void act(monster.run(game.id))}>{t('game.addMonsterStub')}</Button>
           </Group>
-          <Button variant="subtle" leftSection={<IconArrowDown size={ACTION_ICON_SIZE} />}
-            disabled={pending || entries.length < 2}
-            onClick={() => void act(order.run(game.id, { by_initiative: true }))}>
-            {t('game.orderInitiative')}
-          </Button>
+          <Group gap="xs">
+            <Button variant="subtle" disabled={pending} onClick={() => setResting(true)}>{t('game.longRest')}</Button>
+            <Button variant="subtle" leftSection={<IconArrowDown size={ACTION_ICON_SIZE} />}
+              disabled={pending || entries.length < 2}
+              onClick={() => void act(order.run(game.id, { by_initiative: true }))}>
+              {t('game.orderInitiative')}
+            </Button>
+          </Group>
         </Group>
       )}
       {entries.length === 0 && <Text c="dimmed">{t('game.empty')}</Text>}
@@ -127,6 +135,9 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
           const actions = [
             ...(entry.can_edit ? [{ label: t('common.edit'), icon: IconPencil,
               run: () => { patch.reset(); setEditing(entry.id) } }] : []),
+            // Offered to everyone who can see the entry: without edit rights the dialog is read-only.
+            ...((entry.resources ?? []).length > 0 ? [{ label: t('sheet.consumables'), icon: IconDice5,
+              run: () => setConsuming(entry.id) }] : []),
             ...(master ? [
               ...(entry.kind === 'player' ? [{ label: entry.locked ? t('game.unlock') : t('game.lock'), icon: IconShield,
                 run: () => void act(patch.run(game.id, entry.id, { locked: !entry.locked })) }] : []),
@@ -207,12 +218,23 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
           </Box>
         )}
       </Stack>
+      {consumer && <ConsumablesSheet gameId={game.id} entry={consumer} onClose={() => setConsuming(null)} onChange={onChange} />}
       {selected && <EntryEditor key={selected.id} entry={selected} pending={patch.pending} error={patch.error}
         onClose={() => setEditing(null)} onSave={async (changes) => {
           if (await patch.run(game.id, selected.id, changes) === null) return
           setEditing(null)
           onChange()
         }} />}
+      <ModalSheet opened={resting} onClose={() => setResting(false)} title={t('game.longRest')}
+        onSubmit={() => { setResting(false); void act(rest.run(game.id)) }}>
+        <Stack gap="sm">
+          <Text size="sm">{t('game.longRestHint')}</Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setResting(false)}>{t('common.cancel')}</Button>
+            <Button type="submit">{t('game.apply')}</Button>
+          </Group>
+        </Stack>
+      </ModalSheet>
       {master && pickingMonster && <FolderTreeSheet opened seated={new Set()} pending={monster.pending}
         title={t('game.addMonsterFromMine')} description={t('game.privateMonsterHint')}
         onClose={() => setPickingMonster(false)} onAdd={(ids) => {
@@ -237,7 +259,8 @@ function CompactStats({ entry, expanded, detailsId }: { entry: GameEntry; expand
     [t('game.hp'), `${entry.hp} / ${stats.max_hp}`],
     [t('game.tempHp'), entry.temp_hp ?? 0],
     [t('game.ac'), stats.armor_class],
-    [t('game.spellDc'), (stats.spellcasting ?? []).map((caster) => `${titleCase(caster.class)} ${caster.saveDC}`).join(' · ') || '—'],
+    // A class is named only to tell two DCs apart; one caster's number needs no label.
+    [t('game.spellDc'), (stats.spellcasting ?? []).map((caster, _, all) => all.length > 1 ? `${titleCase(caster.class)} ${caster.saveDC}` : caster.saveDC).join(' · ') || '—'],
     [t('vitals.speed'), (stats.speeds ?? []).map((speed) => `${speedName(t, speed.kind)} ${t('vitals.feet', { distance: speed.distance })}`).join(' · ') || '—'],
     [t('vitals.vision'), (stats.senses ?? []).map((sense) => `${senseName(t, sense.kind)} ${t('vitals.feet', { distance: sense.distance })}`).join(' · ') || t('vitals.normalVision')],
     [t('vitals.initiative'), entry.initiative ?? '—'],
@@ -361,7 +384,7 @@ function EntryEditor({ entry, pending, error, onClose, onSave }: {
     }
     await onSave(patch)
   }
-  return <ModalSheet opened title={entry.name || t('common.unnamed')} onClose={onClose} onSubmit={() => void submit()}>
+  return <ModalSheet opened onClose={onClose} onSubmit={() => void submit()}>
     <Stack gap="sm">
       {error && <Alert color="red">{error}</Alert>}
       {!entry.can_edit && <Alert color="yellow">{t('game.editLocked')}</Alert>}
@@ -408,4 +431,35 @@ function MonsterStatsEditor({ stats, onChange }: { stats: EntryStats; onChange: 
         }} />
     </SimpleGrid>
   </Stack>
+}
+
+/**
+ * One entry's consumables, in a dialog of their own. A press is drawn at once
+ * from a local count and saved behind it, with its own action: sharing the
+ * roster's would grey every control on the page for the length of a request.
+ */
+function ConsumablesSheet({ gameId, entry, onClose, onChange }: {
+  gameId: string; entry: GameEntry; onClose: () => void; onChange: () => void
+}) {
+  const t = useT()
+  const pools = (entry.resources ?? []).map(({ slot_level, ...pool }) => ({ ...pool, ...(slot_level ? { slotLevel: slot_level } : {}) }))
+  const save = useAction(patchGameEntry)
+  const [local, setLocal] = useState<Record<string, number>>({})
+  // A local count has done its job once the server reports the same one; kept
+  // longer it would hide a long rest called while the dialog is open.
+  const settled = pools.filter((pool) => local[pool.id] === pool.used)
+  if (settled.length > 0) setLocal(Object.fromEntries(Object.entries(local).filter(([id]) => !settled.some((pool) => pool.id === id))))
+  const forget = (id: string) => setLocal((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => key !== id)))
+  async function spend(id: string, used: number) {
+    setLocal((previous) => ({ ...previous, [id]: used }))
+    if (await save.run(gameId, entry.id, { used: { [id]: used } }) === null) forget(id)
+    else onChange()
+  }
+  return <ModalSheet opened onClose={onClose} title={t('sheet.consumables')}>
+    <Stack gap="sm">
+      {save.error !== null && <Alert color="red" title={t('group.actionFailed')}>{save.error}</Alert>}
+      <ResourcePools pools={pools.map((pool) => ({ ...pool, used: local[pool.id] ?? pool.used }))}
+        {...(entry.can_edit ? { onChange: (id: string, used: number) => void spend(id, used) } : {})} />
+    </Stack>
+  </ModalSheet>
 }

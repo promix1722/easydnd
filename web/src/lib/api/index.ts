@@ -133,6 +133,7 @@ export type {
 export {
   addToGame,
   patchGameEntry,
+  restGame,
   deleteGameEntry,
   addGameMonster,
   orderGameEntries,
@@ -147,7 +148,7 @@ export {
   shareCharacter,
   unshareCharacter,
 } from './games'
-export type { GameDetail, GameSummary, TableCharacter, GameEntry, EntryStats, EntryPatch } from './games'
+export type { GameDetail, GameSummary, TableCharacter, GameEntry, EntryPool, EntryStats, EntryPatch } from './games'
 
 // Seeded identities, available only on the development server.
 export { loginDevelopmentAccount } from './development'

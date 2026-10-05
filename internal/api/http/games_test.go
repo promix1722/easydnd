@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,7 @@ import (
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
+	"github.com/promix1722/easydnd/internal/config"
 )
 
 // makeCharacter creates one and returns its id.
@@ -500,5 +502,48 @@ func TestTrackerHTTPPermissionsAndMonsterRedaction(t *testing.T) {
 	rec = send(t, r, player, http.MethodGet, "/v1/groups/"+group.ID+"/characters", nil)
 	if len(decode[gameapi.TableResponse](t, rec).Characters) != 1 {
 		t.Fatal("monster source joined shared table")
+	}
+}
+
+func TestSpentUsesOverHTTP(t *testing.T) {
+	// Packs on, as in the running app: only a locked catalogue has resource pools.
+	r, owner, ceremony, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
+	group := createGroup(t, r, owner, "Table")
+	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
+	pc := makeCharacter(t, r, player, "Hero")
+	rec := send(t, r, player, http.MethodPost, "/v1/characters/"+pc+"/events", map[string]any{
+		"expectedSeq": 1, "events": []map[string]any{{"type": "class", "ref": "class:fighter", "level": 1}}})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("class: %d %s", rec.Code, rec.Body.String())
+	}
+	shareCharacter(t, r, player, group.ID, pc)
+	rec = send(t, r, owner, http.MethodPost, "/v1/games", map[string]any{"group_id": group.ID, "name": "Fight"})
+	root := "/v1/games/" + decode[gameapi.Game](t, rec).ID
+	rec = send(t, r, owner, http.MethodPost, root+"/characters", map[string]any{"character_ids": []string{pc}})
+	entry := decode[gameapi.Game](t, rec).Entries[0]
+	used := func(rec *httptest.ResponseRecorder) map[string]int {
+		t.Helper()
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%d %s", rec.Code, rec.Body.String())
+		}
+		out := map[string]int{}
+		for _, pool := range decode[gameapi.Game](t, rec).Entries[0].Resources {
+			out[pool.ID] = pool.Used
+		}
+		return out
+	}
+	path := root + "/entries/" + entry.ID
+	got := used(send(t, r, player, http.MethodPatch, path, map[string]any{"used": map[string]int{"second-wind": 1}}))
+	if got["second-wind"] != 1 || got["hit-dice/fighter"] != 0 {
+		t.Fatalf("spent: %+v", got)
+	}
+	if rec = send(t, r, player, http.MethodPatch, path, map[string]any{"used": map[string]int{"second-wind": 2}}); rec.Code != http.StatusBadRequest {
+		t.Fatalf("overspend: %d", rec.Code)
+	}
+	if rec = send(t, r, player, http.MethodPost, root+"/rest", nil); rec.Code != http.StatusForbidden {
+		t.Fatalf("player rest: %d", rec.Code)
+	}
+	if got = used(send(t, r, owner, http.MethodPost, root+"/rest", nil)); got["second-wind"] != 0 {
+		t.Fatalf("after rest: %+v", got)
 	}
 }

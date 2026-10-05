@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -24,6 +25,12 @@ type fixture struct {
 	groups     group.Repository
 	characters character.Repository
 }
+
+// packs is the registry the app wires, loaded once: only a locked catalogue
+// has resource pools, and compiling it per test costs seconds.
+var packs = sync.OnceValues(func() (*catalogfile.Registry, error) {
+	return catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, nil, "")
+})
 
 // newFixture seeds three accounts and wires the service over empty stores.
 //
@@ -44,6 +51,10 @@ func newFixture(t *testing.T) *fixture {
 	groups := memory.NewGroupRepository(users)
 	characters := memory.NewCharacterRepository()
 	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	source, err := packs()
+	if err != nil {
+		t.Fatalf("load packs: %v", err)
+	}
 
 	return &fixture{
 		svc: gameuc.NewService(
@@ -51,7 +62,7 @@ func newFixture(t *testing.T) *fixture {
 			memory.NewSharedRepository(),
 			groups,
 			characters,
-			catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1")),
+			source,
 			log,
 		),
 		groups:     groups,

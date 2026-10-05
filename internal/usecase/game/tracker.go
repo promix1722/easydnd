@@ -1,6 +1,7 @@
 package game
 
 import (
+	"cmp"
 	"context"
 	"slices"
 	"strings"
@@ -21,12 +22,39 @@ type Participant struct {
 	Entry   domain.Entry
 	Stats   *domain.Stats
 	CanEdit bool
+	// Pools are a player's spendable resources with this game's spent count.
+	Pools []character.ResourcePool
 }
 
 func statsOf(state character.State) domain.Stats {
 	return domain.Stats{Name: state.Identity.Name, MaxHP: state.Base.HitPoints.Max,
 		ArmorClass: state.Status.ArmorClass, Spellcasting: state.Status.Spellcasting,
 		Speeds: state.Base.Speeds, Senses: state.Base.Senses, Abilities: state.Abilities}
+}
+
+// poolsOf orders a character's non-empty pools -- spell slots by level, then
+// named pools, hit dice last -- and fills in what this game has spent.
+func poolsOf(state character.State, used map[string]int) []character.ResourcePool {
+	rank := func(p character.ResourcePool) int {
+		switch p.Group {
+		case "spell-slots":
+			return 0
+		case "hit-dice":
+			return 2
+		}
+		return 1
+	}
+	out := make([]character.ResourcePool, 0, len(state.Resources.Pools))
+	for id, pool := range state.Resources.Pools {
+		if pool.Max > 0 {
+			pool.Used = min(used[string(id)], pool.Max)
+			out = append(out, pool)
+		}
+	}
+	slices.SortFunc(out, func(a, b character.ResourcePool) int {
+		return cmp.Or(cmp.Compare(rank(a), rank(b)), cmp.Compare(a.SlotLevel, b.SlotLevel), cmp.Compare(a.ID, b.ID))
+	})
+	return out
 }
 
 func (s *Service) project(ctx context.Context, id character.ID, locale rules.Locale) (character.Character, character.State, error) {
@@ -75,6 +103,7 @@ func (s *Service) Participants(ctx context.Context, actor user.ID, id domain.ID,
 	out := make([]Participant, 0, len(entries))
 	for _, e := range entries {
 		var stats domain.Stats
+		var pools []character.ResourcePool
 		if e.Kind == "monster" {
 			stats = *e.Monster
 			if !role.AtLeast(group.RoleDM) {
@@ -89,9 +118,9 @@ func (s *Service) Participants(ctx context.Context, actor user.ID, id domain.ID,
 			if err != nil {
 				return nil, err
 			}
-			stats = statsOf(state)
+			stats, pools = statsOf(state), poolsOf(state, e.Used)
 		}
-		out = append(out, Participant{Entry: e, Stats: &stats, CanEdit: role.AtLeast(group.RoleDM) || (e.Kind == "player" && e.Owner == actor && !e.Locked)})
+		out = append(out, Participant{Entry: e, Stats: &stats, Pools: pools, CanEdit: role.AtLeast(group.RoleDM) || (e.Kind == "player" && e.Owner == actor && !e.Locked)})
 	}
 	return out, nil
 }
@@ -106,6 +135,8 @@ type EntryPatch struct {
 	Tags          *[]string
 	Locked        *bool
 	Stats         *StatsPatch
+	// Used sets the spent count of the named pools and leaves the others alone.
+	Used map[string]int
 }
 
 // StatsPatch keeps independent monster base fields from overwriting each other.
@@ -180,6 +211,26 @@ func (s *Service) PatchEntry(ctx context.Context, actor user.ID, id domain.ID, e
 	if err != nil {
 		return err
 	}
+	// Capacities come from the sheet, read before the roster lock is taken.
+	var pools map[rules.Slug]character.ResourcePool
+	if len(patch.Used) > 0 {
+		roster, err := s.games.Characters(ctx, id)
+		if err != nil {
+			return err
+		}
+		index := slices.IndexFunc(roster, func(e domain.Entry) bool { return e.ID == entryID })
+		if index < 0 {
+			return types.NewNotFoundError("entry not found")
+		}
+		if roster[index].Kind != "player" {
+			return types.NewValidationError("only player entries have resources")
+		}
+		_, state, err := s.project(ctx, roster[index].Character, rules.DefaultLocale)
+		if err != nil {
+			return err
+		}
+		pools = state.Resources.Pools
+	}
 	return s.games.MutateEntries(ctx, id, func(entries []domain.Entry) ([]domain.Entry, error) {
 		for i := range entries {
 			e := &entries[i]
@@ -220,6 +271,15 @@ func (s *Service) PatchEntry(ctx context.Context, actor user.ID, id domain.ID, e
 					}
 				}
 				e.Tags = tags
+			}
+			for pool, n := range patch.Used {
+				if n < 0 || n > pools[rules.Slug(pool)].Max {
+					return nil, types.NewValidationError("resource %s has no such use", pool)
+				}
+				if e.Used == nil {
+					e.Used = map[string]int{}
+				}
+				e.Used[pool] = n
 			}
 			if patch.Locked != nil {
 				if e.Kind != "player" {
@@ -270,6 +330,20 @@ func (s *Service) AddMonster(ctx context.Context, actor user.ID, id domain.ID, s
 	}
 	entry := domain.Entry{ID: "mon_" + strings.TrimPrefix(string(eid), gameIDPrefix), Kind: "monster", AddedAt: s.now(), HP: hp, TempHP: tempHP, Monster: &stats}
 	return s.games.MutateEntries(ctx, id, func(entries []domain.Entry) ([]domain.Entry, error) { return append(entries, entry), nil })
+}
+
+// LongRest gives every participant all of their spent uses back. It is the
+// table's only recovery: the tracker does not model what each rest restores.
+func (s *Service) LongRest(ctx context.Context, actor user.ID, id domain.ID) error {
+	if _, err := s.dm(ctx, actor, id, "call a rest"); err != nil {
+		return err
+	}
+	return s.games.MutateEntries(ctx, id, func(entries []domain.Entry) ([]domain.Entry, error) {
+		for i := range entries {
+			entries[i].Used = nil
+		}
+		return entries, nil
+	})
 }
 
 func (s *Service) DeleteEntry(ctx context.Context, actor user.ID, id domain.ID, entryID string) error {

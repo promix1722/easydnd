@@ -16,6 +16,7 @@ import type { DeckSection } from '@/ui'
 import type { Compendium } from './compendium'
 import { IdentityTable } from './IdentityTable'
 import { ProficienciesPanel } from './ProficienciesPanel'
+import { ResourcePools } from './ResourcePools'
 import { SkillsPanel } from './SkillsPanel'
 import { Vitals } from './Vitals'
 import { spellChoiceName } from './promptNames'
@@ -24,7 +25,7 @@ import { collectionOfKind, kindOf, slugOf } from '@/domain'
 import { abilitiesInOrder, signed, titleCase } from '@/domain'
 import { useT } from '@/lib/i18n'
 
-import { abilityAbbr, abilityName, resourceName } from './labels'
+import { abilityAbbr, abilityName } from './labels'
 
 
 /**
@@ -57,6 +58,16 @@ export function SheetBody({
   const { skills, proficiencies } = compendium
  const names = new Map([...(compendium.names ?? new Map<string,string>()), ...Object.entries(s.catalogNames ?? {})])
   const identity = s.identity
+  // Hit Dice are a vital, drawn there; everything else spendable gets the panel.
+  const pools = Object.values(s.resources.pools ?? {}).filter((pool) => pool.max > 0 && pool.group !== 'hit-dice')
+    .sort((a, b) => a.name.localeCompare(b.name))
+  const parameters = Object.values(s.resources.parameters ?? {})
+    .filter((value) => value.boolean !== false)
+    .map((value) => {
+      const amount = value.dice || value.text || (value.rational ? `${value.rational.numerator}/${value.rational.denominator}` : value.boolean ? '' : String(value.number))
+      return amount ? `${value.name}: ${amount}` : value.name
+    })
+    .sort()
 
   /*
    * The one viewport question this file asks, and it is a question about
@@ -163,27 +174,11 @@ export function SheetBody({
       content: (
         <Stack gap="sm">
           {/*
-            The two pools are drawn only when the character has any, unlike the
-            two below them. A backpack with nothing in it is a fact about the
-            character; a rage counter on a character who cannot rage is not a
-            fact at all, it is a row about somebody else.
+            Scaling values only -- a Sneak Attack die, an aura's range. What is
+            spent has its own panel; this list is drawn only when there is one,
+            because a row about somebody else's class is not a fact at all.
           */}
-          {s.resources.class !== undefined && s.resources.class.length > 0 && (
-            <ItemList
-              label={t('sheet.resources')}
-              items={s.resources.class.map(
-                (pool) => `${resourceName(t, pool.key ?? '')}: ${pool.dice ?? pool.max}`,
-              )}
-            />
-          )}
-          {Object.entries(s.resources.spellSlots ?? {}).length > 0 && (
-            <ItemList
-              label={t('sheet.spellSlots')}
-              items={Object.entries(s.resources.spellSlots ?? {}).map(
-                ([level, pool]) => t('sheet.slotLevel', { level, max: pool.max }),
-              )}
-            />
-          )}
+          {parameters.length > 0 && <ItemList label={t('sheet.resources')} items={parameters} />}
           <ItemList
             label={t('sheet.equipped')}
             items={s.equipment.equipped.map((stack) => named('equipment', stack.item ?? ''))}
@@ -206,6 +201,9 @@ export function SheetBody({
   // "Character sheet" rather than the character's name: the name is already the
   // heading above this, and a landmark whose name changed per character would
   // give a screen-reader user a different table of contents on every sheet.
+  if (pools.length > 0) sections.splice(sections.length - 1, 0, {
+    key: 'consumables', title: t('sheet.consumables'), desktop: 'panel', content: <ResourcePools pools={pools} />,
+  })
   if (s.spells.sources?.length) sections.push({
     key: 'spells', title: t('sheet.spells'), desktop: 'panel', content: <Stack gap="md">
       {s.spells.sources.map((source) => <Stack key={source.source} gap="xs">

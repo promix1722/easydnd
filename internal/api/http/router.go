@@ -363,6 +363,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.DELETE("/games/:id/entries/:entry", h.Game.DeleteEntry)
 			authed.POST("/games/:id/monsters", h.Game.AddMonster)
 			authed.POST("/games/:id/order", h.Game.OrderEntries)
+			authed.POST("/games/:id/rest", h.Game.LongRest)
 
 			// One shared character's sheet, and only ever the sheet. It hangs
 			// off nothing because what grants the read is "some group we are

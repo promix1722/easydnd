@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -101,19 +102,26 @@ func TestDevelopmentSeedsAndRoleSwitching(t *testing.T) {
 			t.Fatal("wrong seeded identity")
 		}
 		list := devDecode[characterapi.ListResponse](t, devRequest(t, a, "GET", "/v1/characters", nil, cookie))
-		if len(list.Characters) != 1 || list.Characters[0].Level != 1 {
+		// The players also own one unfinished fifth-level caster each.
+		want := map[string]int{"master": 1, "player1": 2, "player2": 2}[name]
+		if len(list.Characters) != want || !slices.ContainsFunc(list.Characters, func(c characterapi.Summary) bool { return c.Level == 1 }) {
 			t.Fatalf("%s characters = %+v", name, list.Characters)
 		}
 	}
 	training := devDecode[gameapi.Game](t, devRequest(t, a, "GET", "/v1/games/"+games[0], nil, master))
-	if training.Role != "owner" || len(training.Entries) != 4 || len(training.Characters) != 2 {
+	if training.Role != "owner" || len(training.Entries) != 6 || len(training.Characters) != 4 {
 		t.Fatalf("training = %+v", training)
 	}
-	if *training.Entries[3].HP != 10 || training.Entries[3].Stats.MaxHP != 10 {
+	if *training.Entries[5].HP != 10 || training.Entries[5].Stats.MaxHP != 10 {
 		t.Fatal("seeded stub needs 10/10 HP")
 	}
 	view := devDecode[gameapi.Game](t, devRequest(t, a, "GET", "/v1/games/"+games[0], nil, player1))
-	if !view.Entries[0].CanEdit || view.Entries[1].CanEdit || view.Entries[2].Stats != nil || view.Entries[3].Stats != nil {
+	// Entry 2 is player1's paladin, there for the consumables tracker.
+	if !view.Entries[2].CanEdit || view.Entries[3].CanEdit || view.Entries[2].Resources[0].ID != "spell-slots/1" ||
+		!slices.ContainsFunc(view.Entries[2].Resources, func(p gameapi.EntryPool) bool { return p.ID == "lay-on-hands" && p.Max == 25 }) {
+		t.Fatalf("seeded casters = %+v", view.Entries)
+	}
+	if !view.Entries[0].CanEdit || view.Entries[1].CanEdit || view.Entries[4].Stats != nil || view.Entries[5].Stats != nil {
 		t.Fatal("seeded player ownership or monster privacy is wrong")
 	}
 	locked := devDecode[gameapi.Game](t, devRequest(t, a, "GET", "/v1/games/"+games[1], nil, player2))

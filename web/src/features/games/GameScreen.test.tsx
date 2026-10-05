@@ -153,6 +153,38 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     expect(screen.queryByRole('button', { name: 'Order by initiative' })).not.toBeInTheDocument()
   })
 
+  it('opens an entry\'s consumables in a dialog, spends one and rests the table', async () => {
+    const game = gameAs('dm')
+    game.entries[0]!.can_edit = true
+    game.entries[0]!.resources = [
+      { id: 'spell-slots/1', group: 'spell-slots', max: 2, used: 0, slot_level: 1 },
+      { id: 'hit-dice/rogue', group: 'hit-dice', max: 1, used: 1, dice: '1d8' },
+    ]
+    renderGame(viewport, game)
+    await screen.findByText('Ada')
+    const fetch = vi.fn(async (_url: unknown, options?: RequestInit) => {
+      const body = options?.body ? JSON.parse(options.body as string) : {}
+      for (const pool of game.entries[0]!.resources!) pool.used = options?.method === 'POST' ? 0 : body.used?.[pool.id] ?? pool.used
+      return new Response(JSON.stringify(game), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetch)
+    const user = setupUser()
+    await pressRowAction(viewport, 'Ada', 'Consumable slots')
+    const dialog = within(await screen.findByRole('dialog', { name: 'Consumable slots' }))
+    expect(dialog.getByRole('img', { name: 'Hit Dice (d8): 0 of 1 left' })).toBeInTheDocument()
+    expect(dialog.getByRole('button', { name: 'Give one back: Spell slots, level 1' })).toBeDisabled()
+    await user.click(dialog.getByRole('button', { name: 'Spend one: Spell slots, level 1' }))
+    await waitFor(() => expect(dialog.getByRole('img', { name: 'Spell slots, level 1: 1 of 2 left' })).toBeInTheDocument())
+    const spend = fetch.mock.calls.find(([, options]) => options?.method === 'PATCH')!
+    expect(String(spend[0])).toMatch(/\/games\/gam_1\/entries\/pc_chr_1\?locale=en$/)
+    expect(JSON.parse(spend[1]!.body as string)).toEqual({ used: { 'spell-slots/1': 1 } })
+    await user.click(dialog.getByRole('button', { name: 'Close' }))
+
+    await user.click(screen.getByRole('button', { name: 'Long rest' }))
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+    await waitFor(() => expect(fetch.mock.calls.some(([url, options]) => options?.method === 'POST' && /\/games\/gam_1\/rest\?/.test(String(url)))).toBe(true))
+  })
+
   it('lets an unlocked owner edit only changed game fields in the dialog', async () => {
     const game = gameAs('player')
     game.entries[0]!.can_edit = true

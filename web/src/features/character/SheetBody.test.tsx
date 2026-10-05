@@ -222,7 +222,7 @@ describe('the panels that were sentences', () => {
       <SheetBody
         sheet={{
           ...SHEET,
-          resources: { class: [{ key: 'channel-divinity-charges', max: 2 }] },
+          resources: { parameters: { 'sneak-attack': { name: 'Sneak Attack', number: 1, dice: '1d6' } } },
         }}
         compendium={NAMED_COMPENDIUM}
       />,
@@ -235,10 +235,26 @@ describe('the panels that were sentences', () => {
       'Hide Jerkin',
       'Locksmith Kit',
       'Quarrel ×20',
-      'Channel Divinity Uses: 2',
+      'Sneak Attack: 1d6',
     ]) {
       expect.soft(screen.getByText(name)).toBeInTheDocument()
     }
+  })
+
+  // Capacity only: what a sheet has spent is a fact about one game, not the character.
+  it('draws consumables as marks, slots by level, and leaves Hit Dice to the vitals', () => {
+    renderAt('desktop', <SheetBody compendium={NAMED_COMPENDIUM} sheet={{ ...SHEET, resources: { pools: {
+      'spell-slots/2': { id: 'spell-slots/2', name: '', group: 'spell-slots', max: 2, used: 0, slotLevel: 2 },
+      'spell-slots/1': { id: 'spell-slots/1', name: '', group: 'spell-slots', max: 4, used: 0, slotLevel: 1 },
+      'channel-divinity': { id: 'channel-divinity', name: 'Channel Divinity Uses', group: 'class', max: 1, used: 0 },
+      'hit-dice/cleric': { id: 'hit-dice/cleric', name: '', group: 'hit-dice', max: 3, used: 0, dice: '1d8' },
+    } } }} />)
+
+    expect.soft(screen.getByRole('heading', { name: 'Consumable slots' })).toBeInTheDocument()
+    expect.soft(screen.getAllByRole('img', { name: /left$/ }).map((row) => row.getAttribute('aria-label'))).toEqual([
+      'Spell slots, level 1: 4 of 4 left', 'Spell slots, level 2: 2 of 2 left', 'Channel Divinity Uses: 1 of 1 left',
+    ])
+    expect.soft(screen.queryByRole('button', { name: /Spend one/ })).not.toBeInTheDocument()
   })
 
   // A group with nothing in it still says so, because "nothing worn" is the

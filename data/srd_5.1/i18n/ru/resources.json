@@ -2,6 +2,9 @@
   "action-surges": {
     "name": "Всплески действий"
   },
+  "arcane-recovery": {
+    "name": "Магическое восстановление"
+  },
   "arcane-recovery-levels": {
     "name": "Уровни магического восстановления"
   },
@@ -14,14 +17,32 @@
   "bardic-inspiration-die": {
     "name": "Кость бардовского вдохновения"
   },
+  "breath-weapon": {
+    "name": "Оружие дыхания"
+  },
   "brutal-critical-dice": {
     "name": "Кости жестокого критического удара"
   },
   "channel-divinity-charges": {
     "name": "Использования Божественного канала"
   },
+  "cleansing-touch": {
+    "name": "Очищающее касание"
+  },
+  "dark-ones-own-luck": {
+    "name": "Удача Тёмного"
+  },
   "destroy-undead-cr": {
     "name": "ПО уничтожаемой нежити"
+  },
+  "divine-intervention": {
+    "name": "Божественное вмешательство"
+  },
+  "divine-sense": {
+    "name": "Божественное чувство"
+  },
+  "eldritch-master": {
+    "name": "Таинственный мастер"
   },
   "extra-attacks": {
     "name": "Дополнительные атаки"
@@ -32,6 +53,9 @@
   "favored-terrain": {
     "name": "Избранная местность"
   },
+  "hurl-through-hell": {
+    "name": "Бросок через ад"
+  },
   "indomitable-uses": {
     "name": "Использования несгибаемости"
   },
@@ -40,6 +64,9 @@
   },
   "ki-points": {
     "name": "Очки ци"
+  },
+  "lay-on-hands": {
+    "name": "Наложение рук"
   },
   "magical-secrets-max-5": {
     "name": "Магические тайны (макс. 5-й круг)"
@@ -68,6 +95,9 @@
   "mystic-arcanum-level-9": {
     "name": "Мистический арканум (9-й уровень)"
   },
+  "natural-recovery": {
+    "name": "Естественное восстановление"
+  },
   "pact-magic": {
     "name": "Магия договора"
   },
@@ -80,6 +110,15 @@
   "rage-damage-bonus": {
     "name": "Бонус урона ярости"
   },
+  "relentless-endurance": {
+    "name": "Непоколебимая стойкость"
+  },
+  "second-wind": {
+    "name": "Второе дыхание"
+  },
+  "signature-spells": {
+    "name": "Фирменные заклинания"
+  },
   "sneak-attack": {
     "name": "Скрытая атака"
   },
@@ -89,8 +128,14 @@
   "sorcery-points": {
     "name": "Очки чародейства"
   },
+  "stroke-of-luck": {
+    "name": "Удача"
+  },
   "unarmored-movement": {
     "name": "Передвижение без доспехов"
+  },
+  "wholeness-of-body": {
+    "name": "Цельность тела"
   },
   "wild-shape-fly": {
     "name": "Полёт в диком облике"
@@ -100,5 +145,8 @@
   },
   "wild-shape-swim": {
     "name": "Плавание в диком облике"
+  },
+  "wild-shape-uses": {
+    "name": "Использования Дикого облика"
   }
 }

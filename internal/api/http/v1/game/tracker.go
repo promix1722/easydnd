@@ -27,6 +27,18 @@ type GameEntry struct {
 	Initiative  *int        `json:"initiative,omitempty"`
 	Tags        *[]string   `json:"tags,omitempty"`
 	Stats       *EntryStats `json:"stats,omitempty"`
+	Resources   []EntryPool `json:"resources,omitempty"`
+}
+
+// EntryPool is one spendable resource; used is this game's count, not the sheet's.
+type EntryPool struct {
+	ID        string `json:"id"`
+	Name      string `json:"name,omitempty"`
+	Group     string `json:"group,omitempty"`
+	Max       int    `json:"max"`
+	Used      int    `json:"used"`
+	Dice      string `json:"dice,omitempty"`
+	SlotLevel int    `json:"slot_level,omitempty"`
 }
 
 type EntryStats struct {
@@ -108,6 +120,10 @@ func entryOf(p gameuc.Participant, master bool) GameEntry {
 	out.HP, out.TempHP, out.Initiative, out.Tags = &e.HP, &e.TempHP, e.Initiative, &tags
 	out.Stats = &EntryStats{Name: p.Stats.Name, MaxHP: p.Stats.MaxHP, ArmorClass: p.Stats.ArmorClass,
 		Spellcasting: sheet.Status.Spellcasting, Speeds: sheet.Base.Speeds, Senses: sheet.Base.Senses, Abilities: sheet.Abilities}
+	for _, pool := range p.Pools {
+		out.Resources = append(out.Resources, EntryPool{ID: string(pool.ID), Name: pool.Name, Group: pool.Group,
+			Max: pool.Max, Used: pool.Used, Dice: pool.Dice, SlotLevel: pool.SlotLevel})
+	}
 	if e.Kind == "player" {
 		out.CharacterID = string(e.Character)
 		out.Locked = &e.Locked
@@ -155,6 +171,7 @@ func (h *Handler) PatchEntry(c *gin.Context) {
 		Tags       *[]string        `json:"tags"`
 		Locked     *bool            `json:"locked"`
 		Stats      *EntryStatsPatch `json:"stats"`
+		Used       map[string]int   `json:"used"`
 	}
 	decoder := json.NewDecoder(c.Request.Body)
 	decoder.DisallowUnknownFields()
@@ -162,7 +179,7 @@ func (h *Handler) PatchEntry(c *gin.Context) {
 		helpers.FormatError(c, types.NewValidationError("invalid entry patch"))
 		return
 	}
-	patch := gameuc.EntryPatch{HP: params.HP, TempHP: params.TempHP, Tags: params.Tags, Locked: params.Locked, InitiativeSet: len(params.Initiative) > 0}
+	patch := gameuc.EntryPatch{HP: params.HP, TempHP: params.TempHP, Tags: params.Tags, Locked: params.Locked, Used: params.Used, InitiativeSet: len(params.Initiative) > 0}
 	if patch.InitiativeSet {
 		if err := json.Unmarshal(params.Initiative, &patch.Initiative); err != nil {
 			helpers.FormatError(c, types.NewValidationError("invalid initiative"))
@@ -178,6 +195,14 @@ func (h *Handler) PatchEntry(c *gin.Context) {
 		patch.Stats = stats
 	}
 	if err := h.service.PatchEntry(c.Request.Context(), h.actor(c), gameOf(c), c.Param("entry"), patch); err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	h.detail(c, c.Request.Context(), h.actor(c), gameOf(c), http.StatusOK)
+}
+
+func (h *Handler) LongRest(c *gin.Context) {
+	if err := h.service.LongRest(c.Request.Context(), h.actor(c), gameOf(c)); err != nil {
 		helpers.FormatError(c, err)
 		return
 	}

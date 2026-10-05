@@ -92,6 +92,26 @@ func seedDevelopment(ctx context.Context, users user.Repository, groups group.Re
 			}
 		}
 	}
+	// Two casters for the consumables tracker, which a first-level rogue cannot
+	// show. Deliberately unfinished: class levels alone give them their spell
+	// slots, Lay on Hands and Channel Divinity without transcribing two builds.
+	for _, seed := range []struct{ account, class string }{{"player1", "paladin"}, {"player2", "cleric"}} {
+		owner := character.OwnerID(devAccounts[seed.account])
+		c, err := chars.Create(ctx, owner, "", charuc.NewCharacter{Name: seed.account + " " + seed.class, Alignment: "neutral", Rules: seedRules})
+		if err != nil {
+			return nil, err
+		}
+		if _, err := chars.Apply(ctx, owner, c.ID, rules.DefaultLocale, c.Log.LastSeq(),
+			character.Event{Type: character.EventChange, Changes: []character.Change{
+				{Path: "identity.desiredLevel", Op: character.OpSet, Value: character.IntValue(5)}}},
+			character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, rules.Slug(seed.class)), Level: 1}); err != nil {
+			return nil, err
+		}
+		if err := games.Share(ctx, devAccounts[seed.account], devGroupID, c.ID); err != nil {
+			return nil, err
+		}
+		players = append(players, c.ID)
+	}
 	login := &devLogin{users: users, signer: signer, ttl: ttl}
 	for _, name := range []string{"Training encounter", "Locked encounter"} {
 		g, err := games.Create(ctx, master, devGroupID, name)
