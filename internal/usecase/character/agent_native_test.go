@@ -63,17 +63,22 @@ func call(id, name, arguments string) charuc.AgentCall {
 // nothing a model writes does.
 func namespacedService(t *testing.T) *charuc.Service {
 	t.Helper()
-	path := filepath.Join("..", "..", "..", "data", "srd_5.1")
-	base, err := catalogfile.LoadPack(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	registry, err := catalogfile.NewRegistry([]string{path}, []catalogfile.Dependency{{ID: "dnd-2014", Version: base.Manifest.Version}}, "", catalogfile.PackFolder{Path: path, ID: "dnd-2014"})
+	registry, err := namespacedRegistry()
 	if err != nil {
 		t.Fatal(err)
 	}
 	return charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), registry, nil, nil, slog.New(slog.DiscardHandler))
 }
+
+// Loaded once: reading the pack is most of what a test using it costs.
+var namespacedRegistry = sync.OnceValues(func() (*catalogfile.Registry, error) {
+	path := filepath.Join("..", "..", "..", "data", "srd_5.1")
+	base, err := catalogfile.LoadPack(path)
+	if err != nil {
+		return nil, err
+	}
+	return catalogfile.NewRegistry([]string{path}, []catalogfile.Dependency{{ID: "dnd-2014", Version: base.Manifest.Version}}, "", catalogfile.PackFolder{Path: path, ID: "dnd-2014"})
+})
 
 func local(slug rules.Slug) string {
 	return slug.String()[strings.LastIndex(slug.String(), "/")+1:]

@@ -479,7 +479,6 @@
       "size": 30
     },
     "classes": [
-      "cleric",
       "wizard"
     ]
   },
@@ -2307,7 +2306,6 @@
     },
     "classes": [
       "cleric",
-      "druid",
       "paladin"
     ],
     "subclasses": [
@@ -3039,7 +3037,7 @@
     },
     "ritual": true,
     "classes": [
-      "druid"
+      "cleric"
     ],
     "subclasses": [
       "land"
@@ -3650,6 +3648,7 @@
       "size": 20
     },
     "classes": [
+      "bard",
       "druid"
     ],
     "subclasses": [
@@ -7005,7 +7004,8 @@
     },
     "ritual": true,
     "classes": [
-      "cleric"
+      "cleric",
+      "druid"
     ],
     "subclasses": [
       "lore",

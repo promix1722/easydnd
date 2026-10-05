@@ -2008,6 +2008,43 @@
       ]
     },
     {
+      "id": "draconic-resilience",
+      "owner": "feature:draconic-resilience",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "base.hitPoints.max",
+          "value": {
+            "op": "read",
+            "ref": "level"
+          }
+        },
+        {
+          "op": "add",
+          "target": "status.armorClass",
+          "value": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "not",
+                "args": [
+                  {
+                    "op": "read",
+                    "ref": "equipped:armor"
+                  }
+                ]
+              },
+              {
+                "op": "constant",
+                "value": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "dwarven-toughness",
       "owner": "trait:dwarven-toughness",
       "minimumLevel": 1,

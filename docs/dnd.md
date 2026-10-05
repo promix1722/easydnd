@@ -505,7 +505,15 @@ them. The bonus is never negative: a character may always use the plain
 Dwarven Toughness is the same kind of rule, owned by the trait: an `add` on
 `base.hitPoints.max` whose value reads `level`. Until it existed a hill dwarf
 was built one hit point short per level, which nothing noticed until imported
-sheets were compared with what they print.
+sheets were compared with what they print. Draconic Resilience is two such effects on one
+feature: the same hit point per level, and three armor class while no armor is
+worn. Both read the character's level, which is the sorcerer's own only while
+the character has one class.
+
+Spell class lists come from the upstream SRD dump, which gets five of them
+wrong against the SRD 5.1 text (Faerie Fire is not on the bard's list there).
+`srdgen` replaces those five (`spellClassErrata`): a class whose list lacks a
+spell is never offered it, so a wrong list is a wrong build, not a wrong label.
 
 Worn armor counts whether it was equipped as a list entry
 (`equipment.equipped` add `leather-armor`) or as a counted stack

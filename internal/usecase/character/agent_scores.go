@@ -1,7 +1,9 @@
 package character
 
 import (
+	"context"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -240,4 +242,111 @@ func produces(computed any, change domain.Change) bool {
 		return !slices.ContainsFunc(change.Value.Slugs, func(slug rules.Slug) bool { return !slices.Contains(held, slug) })
 	}
 	return false
+}
+
+// sameScores reports that two logs project the same six ability totals.
+func sameScores(x, y domain.Log, cat *catalog.Catalog) bool {
+	before, errX := domain.Project(x, cat)
+	after, errY := domain.Project(y, cat)
+	return errX == nil && errY == nil && maps.Equal(before.Abilities.Scores, after.Abilities.Scores)
+}
+
+// assignAbilities answers the ability-score prompts a sheet cannot answer: an
+// Ability Score Improvement nobody itemised, a half-elf's two +1s.
+//
+// A sheet prints six totals, never how they were reached. Left open, such a
+// prompt keeps the whole total in the base score, and the owner who answers it
+// later in the builder gets the improvement twice -- a level 10 fighter's
+// printed Strength 20 becomes 22. Answering it here costs the totals nothing:
+// settleScores holds them where the sheet has them and moves the bases down.
+//
+// ponytail: where the points go is a guess -- the highest base score first, so
+// the bases end up as flat as a point buy -- because the sheet does not say.
+// A sheet format that itemises its improvements would want them read instead.
+func (a *Agent) assignAbilities(ctx context.Context, s *AgentSession, cat *catalog.Catalog) (any, error) {
+	bases := map[rules.Ability]int{}
+	for _, e := range s.Log.Events {
+		for _, ch := range e.Changes {
+			if rest, ok := strings.CutPrefix(string(ch.Path), "abilities."); ok && ch.Value.Kind == domain.ValueInt {
+				if ability, ok := rules.ParseAbility(rest); ok {
+					bases[ability] = ch.Value.Int
+				}
+			}
+		}
+	}
+	if len(s.scores) == 0 || len(bases) == 0 {
+		return nil, fmt.Errorf("the sheet's ability totals are not in the draft yet: give them to plan_import first")
+	}
+	// take picks the ability with the most base score to give up, among the
+	// ones offered, and never takes a base under 8: no player starts lower.
+	take := func(offered []rules.Ability, not []rules.Ability) (rules.Ability, bool) {
+		best, found := rules.Ability(""), false
+		for _, ability := range cat.AbilityIDs() {
+			if slices.Contains(offered, ability) && !slices.Contains(not, ability) && bases[ability] > 8 && (!found || bases[ability] > bases[best]) {
+				best, found = ability, true
+			}
+		}
+		if found {
+			bases[best]--
+		}
+		return best, found
+	}
+	assigned := []map[string]any{}
+	// An answer opens the next prompt (the improvement's "scores or a feat"
+	// branch, then its two points), so the open prompts are read again after
+	// each one; tried keeps a refused prompt from being asked forever.
+	tried := map[rules.Slug]bool{}
+	for {
+		prompts, err := domain.Prompts(nativeLog(s.Log), cat)
+		if err != nil {
+			return nil, err
+		}
+		i := slices.IndexFunc(prompts, func(p domain.Prompt) bool {
+			return !p.Optional && !tried[p.Choice.Prompt] && (p.Choice.Kind == rules.ChooseAbilityScores || p.Choice.Kind == rules.ChooseAbilityBonus)
+		})
+		if i < 0 {
+			break
+		}
+		p := prompts[i]
+		tried[p.Choice.Prompt] = true
+		picks := []string{}
+		if p.Choice.Kind == rules.ChooseAbilityScores {
+			// "Scores or a feat": the sheet's feats are imported by name
+			// before this, so an improvement still open is the scores.
+			picks = []string{p.Choice.Prompt.String() + "/0"}
+		} else {
+			offered, chosen := []rules.Ability{}, []rules.Ability{}
+			for _, option := range p.Choice.From.Options {
+				if bonus, ok := option.(rules.AbilityBonusOption); ok {
+					offered = append(offered, bonus.Ability)
+				}
+			}
+			for range p.Choice.Choose {
+				not := chosen
+				if p.Choice.Repeatable {
+					not = nil
+				}
+				ability, ok := take(offered, not)
+				if !ok {
+					break
+				}
+				chosen = append(chosen, ability)
+				picks = append(picks, ability.String())
+			}
+			if len(picks) < p.Choice.Choose {
+				continue
+			}
+		}
+		if _, err := a.answer(ctx, s, cat, agentArgs{Prompt: p.Choice.Prompt.String(), Picks: picks}); err != nil {
+			continue
+		}
+		if p.Choice.Kind == rules.ChooseAbilityBonus {
+			assigned = append(assigned, map[string]any{"prompt": localKey(cat, p.Choice.Prompt.String()), "picks": picks})
+		}
+	}
+	open, err := a.openPrompts(s, cat)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"assigned": assigned, "open": open, "next": "The ability totals are unchanged: these answers only say which part of each total is an improvement. The sheet does not print that, so say in the summary that the improvements were placed by inference."}, nil
 }

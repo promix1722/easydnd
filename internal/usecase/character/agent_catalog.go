@@ -25,7 +25,8 @@ type AgentCandidate struct {
 }
 
 func normalizedName(s string) string {
-	return strings.Join(strings.FieldsFunc(strings.ToLower(s), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) }), " ")
+	// Russian prints "ё" or "е" for the same letter, by the typesetter's taste.
+	return strings.Join(strings.FieldsFunc(strings.ReplaceAll(strings.ToLower(s), "ё", "е"), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) }), " ")
 }
 
 // nameScore says how likely a printed name is a catalogue name.
@@ -48,7 +49,7 @@ func nameScore(query, name string, loose bool) float64 {
 	qt, nt := strings.Fields(q), strings.Fields(n)
 	// These words change spell identity rather than spelling. Never normalize
 	// Mass/Greater/Lesser away or rank their absence as a typo.
-	for _, word := range []string{"mass", "greater", "lesser", "масс", "массовое", "высшее", "малое"} {
+	for _, word := range []string{"mass", "greater", "lesser", "масс", "массовое", "массовый", "массовая", "множественное", "множественный", "множественная", "высшее", "высший", "высшая", "малое", "малый", "малая"} {
 		if slices.Contains(qt, word) != slices.Contains(nt, word) {
 			return 0
 		}

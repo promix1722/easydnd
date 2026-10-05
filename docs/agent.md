@@ -309,6 +309,7 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 | `import_facts` | Race, subrace, class with its level, subclass, background and feats **by printed name**; printed values at a path. Per-fact errors with candidates |
 | `assign_skills` | Distribute the sheet's proficient skills over the prompts that grant skills, and its expertise over the expertise prompts |
 | `assign_spells` | Distribute the sheet's cantrips and spells over the build's spell prompts, and keep the ones past the build's count as spells known |
+| `assign_abilities` | Answer the open Ability Score Improvements and chosen racial ability bonuses, which a sheet never itemises, without moving a printed total |
 | `answer_choices` | Answer open prompts in one batch, by option key or printed name, through the existing character validator. Rejections name the pick and the rule |
 | `revise_choice` | Replace a prior choice and report invalidated dependent entries |
 | `list_choice_options` | Page through a prompt with more than 60 options |
@@ -355,8 +356,16 @@ among its prompt's options. That scope is also a correctness requirement, not
 a convenience: "Wild Magic" is exactly the barbarian's path and only loosely
 the sorcerer's origin, and unscoped it picks the wrong one. Outside a scope
 the looser match would turn "Fire Shield" into "Shield". Mass/Greater/Lesser
-variants are never normalized into their ordinary counterparts, and Fire Bolt
-and Fireball stay distinct.
+variants are never normalized into their ordinary counterparts, in English or
+Russian (`Множественное`, `Высшая`), and Fire Bolt and Fireball stay distinct.
+Russian `ё` and `е` are one letter.
+
+`assign_spells` has every spell in the rules as its candidates, so it does not
+use the looser match at all. A printed name that does not resolve is tried
+once more without what sheets add to one -- a parenthesised note ("Detect Magic
+(R)") and the owner's name the SRD drops ("Tasha's Hideous Laughter") -- and
+is otherwise reported as unknown. "A catalogue name inside the printed one"
+would have turned Cause Fear into Fear.
 
 An exact or reordered name wins outright; between two spellings of one name
 the entry that carries mechanics wins (the development pack has some items
@@ -401,6 +410,32 @@ asking the owner about; spells the sheet lists past what the prompts take are
 kept in the builder's extra-spell answers. All of this used to be left to the
 model, which tried Mage Hand in each prompt in turn.
 
+Three things keep a correctly named spell from being lost on the way:
+
+- **A prompt the sheet does not fill keeps its spells.** A prompt takes exactly
+  its count, so four of a wizard's six first spells cannot answer it. It stays
+  open, and the four are kept as known rather than dropped with it.
+- **The top spell level is rationed before matching.** A class learns only so
+  many spells of the highest level it can cast, counted over all its prompts
+  together. A third-level wizard with three second-level spells (one scribed)
+  has the third kept as known, not every prompt holding one refused.
+- **A prepared caster's overflow is `unprepared`, not an extra spell.** A
+  cleric prepares from the whole class list, so a listed spell past the
+  preparation limit is already the character's to prepare another day. Which
+  ones are prepared is what `plan_import`'s optional `prepared` list says the
+  sheet marks; a sheet that marks none gets the first few by name.
+
+`assign_abilities` is the third of the family, for the ability-score prompts
+no sheet answers: an Ability Score Improvement, a half-elf's two +1s. A sheet
+prints six totals and never how they were reached. Left open, such a prompt
+keeps the whole total in the base score, and the owner who answers it later in
+the builder gets the improvement twice -- a level 10 fighter's printed Strength
+20 becomes 22. The tool answers them, taking each point from the highest base
+score left (never under 8), and the totals do not move because `settleScores`
+holds them. Where the points went is an inference, and the tool's result tells
+the model to say so in its summary. Feats the sheet names are imported first,
+so an improvement still open by then is the scores.
+
 Both tools replace the picks of their kind made so far, and remove them
 outright rather than through `Revise`: nothing but another pick of the same
 kind depends on one, and `Revise` would re-judge every later answer.
@@ -443,7 +478,10 @@ the cards a hand-built one has and nowhere as a list of "imported values":
   sheet prints *totals*, and the bonuses that turn a base into a total arrive
   in any order, so the session keeps the totals and after every tool call
   solves the bases that reach them, rewriting that one entry in place
-  (`settleScores`). An edit by the owner ends that: their numbers win. Only a
+  (`settleScores`). An edit by the owner that changes an ability total ends
+  that: their numbers win. Any other edit -- a rename -- does not, because
+  forgetting the totals there put the next race or improvement on top of bases
+  that already included it. Only a
   build no base score can reach -- a custom rule that is not additive -- keeps
   a `finalAbilities` total pinned over it.
 - **Personality traits, ideals, bonds, flaws, alignment.** Ordinary changes in

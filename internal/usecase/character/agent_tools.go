@@ -22,6 +22,7 @@ type agentArgs struct {
 	Skills          map[string]*int `json:"skills"`
 	Saves           map[string]*int `json:"saves"`
 	Spells          []string        `json:"spells"`
+	Prepared        []string        `json:"prepared"`
 	Proficient      []string        `json:"proficient"`
 	Expertise       []string        `json:"expertise"`
 	Coins           map[string]*int `json:"coins"`
@@ -240,6 +241,9 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 				s.expected = append(s.expected, "spell:"+spell)
 			}
 		}
+		if len(args.Prepared) > 0 {
+			s.prepared = args.Prepared
+		}
 		out := map[string]any{"expected": localChecklist(s.expected), "rejected": rejected, "errors": failed, "proficient": printedProficiencies(s.Log, cat, s.printed), "next": "proficient is what the printed bonuses imply. Once race, class, subclass and background are set, assign_skills puts exactly those skills into the prompts that offer them, and assign_spells does the same for the sheet's spells. Resend any unmatched inventory item with set_inventory, by one of its candidate refs."}
 		if len(args.Items) > 0 {
 			out["inventory"] = a.setInventory(ctx, s, cat, args.Items)
@@ -383,7 +387,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		// refuses once per distinct list, and the same list again passes.
 		if missing := a.missing(ctx, s, cat, state); len(missing) > 0 && !slices.Equal(missing, s.nudged) {
 			s.nudged = missing
-			return map[string]any{"ready": false, "missingSourceFacts": localChecklist(missing), "next": "These checklist entries are not in the draft. Import the ones the sheet really documents, by name. Entries that only restate what the build already shows need nothing: call prepare_review again and it will pass. Do not create custom entries to satisfy this list."}, nil
+			return map[string]any{"ready": false, "missingSourceFacts": localChecklist(missing), "next": "These checklist entries are not in the draft. Import the ones the sheet really documents, by name: race, subrace, class, subclass, background and feat with import_facts; a spell with assign_spells {spells} (never import_facts). Features and traits are never imported. Entries that only restate what the build already shows need nothing: call prepare_review again and it will pass. Do not create custom entries to satisfy this list."}, nil
 		}
 		if !s.Unattended && (state.Identity.Name == "…" || strings.TrimSpace(state.Identity.Name) == "") {
 			return map[string]any{"ready": false, "next": `The character has no name. If the sheet prints one, write it: import_facts {"facts":[{"path":"identity.name","value":"<the name>"}]}. If it does not, do not invent a placeholder: call ask_user "What is the character called?" with three or four names that suit the character as answers, write the reply the same way, then prepare_review again.`}, nil
@@ -441,6 +445,8 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		return a.assignSkills(ctx, s, cat, args)
 	case "assign_spells":
 		return a.assignSpells(ctx, s, cat, args)
+	case "assign_abilities":
+		return a.assignAbilities(ctx, s, cat)
 	case "answer_choices":
 		if len(args.Answers) > 100 {
 			return nil, fmt.Errorf("provide 1-100 answers in the answers array")
@@ -637,6 +643,15 @@ func matchPicks(slots []*promptSlot, wanted []rules.Slug) []rules.Slug {
 	return unplaced
 }
 
+var spellNameNoise = regexp.MustCompile(`\([^)]*\)|\[[^\]]*\]|^\s*\S+['’]s\s+`)
+
+// bareSpellName is a printed spell name without what a sheet adds to it: a
+// parenthesised note ("(R)", "(ritual)") and the leading owner's name the SRD
+// drops ("Tasha's", "Melf's").
+func bareSpellName(printed string) string {
+	return strings.TrimSpace(spellNameNoise.ReplaceAllString(printed, " "))
+}
+
 // assignSpells distributes the sheet's cantrips and spells over the build's
 // spell prompts -- the class's per-level picks, a racial cantrip -- and keeps
 // what is left as spells known outside the build's count.
@@ -653,7 +668,9 @@ func (a *Agent) assignSpells(ctx context.Context, s *AgentSession, cat *catalog.
 		names = args.Spells
 	}
 	if len(names) == 0 {
-		return nil, fmt.Errorf("no spells known: give plan_import the sheet's spells, or pass spells [names]")
+		// Not an error: a fighter's sheet lists none, and the procedure calls
+		// this for every character.
+		return map[string]any{"assigned": []any{}, "next": "The sheet lists no spells; nothing to assign. If it does list some, pass spells [names]."}, nil
 	}
 	// The assignment is done whole, so the spell picks made so far are taken
 	// back first. See assignSkills for why they are removed outright.
@@ -676,9 +693,15 @@ func (a *Agent) assignSpells(ctx context.Context, s *AgentSession, cat *catalog.
 	}
 	wanted, unknown := []rules.Slug{}, []map[string]any{}
 	for _, printed := range names {
-		// Loose, because a sheet says "Tasha's Hideous Laughter" where the
-		// rules say "Hideous Laughter"; an ambiguous name is still refused.
-		found, err := a.resolve(ctx, s, cat, []string{"spell"}, printed, nil, true)
+		// A sheet says "Tasha's Hideous Laughter" or "Detect Magic (R)" where
+		// the rules say "Hideous Laughter" and "Detect Magic", so the name is
+		// tried again without its owner and its notes. Nothing looser: every
+		// spell there is is a candidate here, and "a name inside the printed
+		// one" would turn Cause Fear into Fear.
+		found, err := a.resolve(ctx, s, cat, []string{"spell"}, printed, nil, false)
+		if bare := bareSpellName(printed); err != nil && bare != printed {
+			found, err = a.resolve(ctx, s, cat, []string{"spell"}, bare, nil, false)
+		}
 		if err != nil {
 			failure := map[string]any{}
 			_ = json.Unmarshal(agentError(err), &failure)
@@ -711,12 +734,43 @@ func (a *Agent) assignSpells(ctx context.Context, s *AgentSession, cat *catalog.
 			}
 		}
 	}
+	// A class learns only so many spells of the highest level it can cast, and
+	// that allowance is counted over all its prompts together. A sheet with
+	// more -- a wizard's scribed scroll -- would have every prompt holding one
+	// refused, so the surplus is kept out of the prompts and stays known.
+	limits, err := domain.SpellRules(native, cat)
+	if err != nil {
+		return nil, err
+	}
+	for _, limit := range limits {
+		if limit.MaxLevelCount == nil {
+			continue
+		}
+		taken := 0
+		for _, key := range wanted {
+			if spell, ok := cat.Spells.Get(key); !ok || spell.Level != limit.MaxLevel {
+				continue
+			}
+			counted := false
+			for _, slot := range slots {
+				if slot.prompt.Source != limit.Source || slot.prompt.Purpose != limit.Purpose || !slot.offers[key] {
+					continue
+				}
+				if !counted {
+					counted, taken = true, taken+1
+				}
+				if taken > *limit.MaxLevelCount {
+					delete(slot.offers, key)
+				}
+			}
+		}
+	}
 	slices.SortStableFunc(slots, func(x, y *promptSlot) int { return y.prompt.Choice.Choose - x.prompt.Choice.Choose })
 	extra := matchPicks(slots, wanted)
 
 	nameOf := catalogNames(cat)
 	assigned, partial := []map[string]any{}, []map[string]any{}
-	answer := func(p domain.Prompt, picks []rules.Slug) {
+	answer := func(p domain.Prompt, picks []rules.Slug) bool {
 		names, keys := []string{}, []string{}
 		for _, pick := range picks {
 			names, keys = append(names, nameOf(rules.NewRef(rules.RefSpell, pick))), append(keys, pick.String())
@@ -725,17 +779,23 @@ func (a *Agent) assignSpells(ctx context.Context, s *AgentSession, cat *catalog.
 		if len(picks) < p.Choice.Choose && !p.UpTo {
 			entry["choose"] = p.Choice.Choose
 			partial = append(partial, entry)
-			return
+			return false
 		}
 		if _, err := a.answer(ctx, s, cat, agentArgs{Prompt: p.Choice.Prompt.String(), Picks: keys, Source: args.Source}); err != nil {
 			_ = json.Unmarshal(agentError(err), &entry)
 			partial = append(partial, entry)
-			return
+			return false
 		}
 		assigned = append(assigned, entry)
+		return true
 	}
 	for _, slot := range slots {
-		answer(slot.prompt, slot.picks)
+		// A prompt the sheet does not fill stays open, but the spells that
+		// were headed for it are still the character's: they are kept as
+		// known rather than dropped with the unanswered prompt.
+		if !answer(slot.prompt, slot.picks) {
+			extra = append(extra, slot.picks...)
+		}
 	}
 	// A prompt that must be answered and that none of the sheet's remaining
 	// spells fits is a question the sheet leaves open.
@@ -746,6 +806,13 @@ func (a *Agent) assignSpells(ctx context.Context, s *AgentSession, cat *catalog.
 	}
 	// Preparation is chosen from what is now known, and takes the sheet's
 	// spells again rather than what is left of them.
+	marked, unprepared := []rules.Slug{}, []string{}
+	for _, printed := range s.prepared {
+		if found, err := a.resolve(ctx, s, cat, []string{"spell"}, printed, nil, true); err == nil {
+			ref, _ := rules.ParseRef(found.Ref)
+			marked = append(marked, ref.Slug)
+		}
+	}
 	if prompts, err = domain.Prompts(nativeLog(s.Log), cat); err != nil {
 		return nil, err
 	}
@@ -757,10 +824,26 @@ func (a *Agent) assignSpells(ctx context.Context, s *AgentSession, cat *catalog.
 		for key := range offered(p) {
 			picks = append(picks, key)
 		}
-		slices.Sort(picks)
+		// The ones the sheet marks as prepared first; a sheet that marks none
+		// gets the first few by name, which is a guess the owner can change.
+		slices.SortFunc(picks, func(x, y rules.Slug) int {
+			if px, py := slices.Contains(marked, x), slices.Contains(marked, y); px != py {
+				if px {
+					return -1
+				}
+				return 1
+			}
+			return strings.Compare(x.String(), y.String())
+		})
+		// Everything this prompt offers is already the character's to prepare
+		// -- a cleric's whole list, a wizard's book -- so what does not fit is
+		// simply not prepared, not an extra spell known from nowhere.
+		extra = slices.DeleteFunc(extra, func(key rules.Slug) bool { return slices.Contains(picks, key) })
+		for _, key := range picks[min(len(picks), p.Choice.Choose):] {
+			unprepared = append(unprepared, nameOf(rules.NewRef(rules.RefSpell, key)))
+		}
 		if picks = picks[:min(len(picks), p.Choice.Choose)]; len(picks) > 0 {
 			answer(p, picks)
-			extra = slices.DeleteFunc(extra, func(key rules.Slug) bool { return slices.Contains(picks, key) })
 		}
 	}
 	beyond := []string{}
@@ -778,7 +861,7 @@ func (a *Agent) assignSpells(ctx context.Context, s *AgentSession, cat *catalog.
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"assigned": assigned, "partial": partial, "beyond": beyond, "unknown": unknown, "open": open, "next": "partial prompts are ones the sheet's spells do not fill: the build grants a spell the sheet does not list, so ask_user which, offering to leave it open. beyond are spells the sheet lists past what the build's prompts take; they are kept as known. unknown are names the rules do not have: keep each with upsert_custom_option kind spell."}, nil
+	return map[string]any{"assigned": assigned, "partial": partial, "beyond": beyond, "unprepared": unprepared, "unknown": unknown, "open": open, "next": "partial prompts are ones the sheet's spells do not fill: the build grants a spell the sheet does not list, so ask_user which, offering to leave it open; the picks shown there are kept as known meanwhile. beyond are spells the sheet lists past what the build's prompts take; they are kept as known. unprepared are spells on the class's list past its preparation limit: nothing to do. unknown are names the rules do not have or cannot tell apart: pass the right candidate's ref to assign_spells, or keep it with upsert_custom_option kind spell if none is it."}, nil
 }
 
 // assignSkills distributes the sheet's proficient skills over the prompts that
@@ -1486,7 +1569,7 @@ func (a *Agent) knowSpells(ctx context.Context, s *AgentSession, cat *catalog.Ca
 	if err != nil {
 		return nil, err
 	}
-	added := []rules.Slug{}
+	added, held := []rules.Slug{}, []string{}
 	log := s.Log.Clone()
 	for _, pick := range picks {
 		found, err := a.resolve(ctx, s, cat, []string{"spell"}, pick, nil, false)
@@ -1497,7 +1580,8 @@ func (a *Agent) knowSpells(ctx context.Context, s *AgentSession, cat *catalog.Ca
 		// The custom source is for what nothing else grants. A tiefling's
 		// Thaumaturgy is already on the sheet, from the tiefling.
 		if agentHolds(state, cat, ref) {
-			return nil, fmt.Errorf("%s is already granted by the build; it needs no extra entry", found.Name)
+			held = append(held, found.Name)
+			continue
 		}
 		prompt := rules.Slug("custom/spell/known")
 		if spell, _ := cat.Spells.Get(ref.Slug); spell.Level == 0 {
@@ -1516,6 +1600,10 @@ func (a *Agent) knowSpells(ctx context.Context, s *AgentSession, cat *catalog.Ca
 			log.Events[i].Choices[0].Picks = append(slices.Clone(log.Events[i].Choices[0].Picks), ref.Slug)
 		}
 		added = append(added, ref.Slug)
+	}
+	// One spell the build already grants is no reason to refuse the rest.
+	if len(added) == 0 {
+		return nil, fmt.Errorf("%s is already granted by the build; it needs no extra entry", strings.Join(held, ", "))
 	}
 	if err := validateImported(cat, log); err != nil {
 		return nil, err
@@ -1581,6 +1669,14 @@ func (a *Agent) resolvePick(ctx context.Context, s *AgentSession, cat *catalog.C
 	}
 	found, err := a.resolve(ctx, s, cat, kinds, pick, keep, true)
 	if err != nil {
+		// "No spell named Bless" sends a model looking for another spelling.
+		// When the name is a real entry this prompt just does not offer, say
+		// that instead: it is already granted, or not on this list.
+		if keep != nil {
+			if other, otherErr := a.resolve(ctx, s, cat, kinds, pick, nil, true); otherErr == nil {
+				return "", fmt.Errorf("%s is not an option of %s: the build already grants it, or this prompt's list does not have it. Do not retry it here", other.Name, choice.Prompt)
+			}
+		}
 		return "", err
 	}
 	ref, _ := rules.ParseRef(found.Ref)
@@ -1908,8 +2004,12 @@ func (a *Agent) missing(ctx context.Context, s *AgentSession, cat *catalog.Catal
 			}
 		default:
 			kind, name := entityKind(agentArgs{Ref: key})
-			if _, text, cut := strings.Cut(key, ":"); cut && strings.Count(key, ":") == 1 {
-				name = text
+			// A name may hold a colon of its own -- "spell:Слово силы: смерть" --
+			// and is then not a pack:kind:slug reference to be read whole.
+			if _, text, cut := strings.Cut(key, ":"); cut {
+				if _, isRef := rules.ParseRef(key); !isRef || strings.Count(key, ":") == 1 {
+					name = text
+				}
 			}
 			// Nothing imports a feature or a trait by name -- the build
 			// grants them or it does not -- so listing one as missing only
@@ -2068,6 +2168,12 @@ func (a *Agent) openPrompts(s *AgentSession, cat *catalog.Catalog) ([]map[string
 	if err != nil {
 		return nil, err
 	}
+	// The builder's two "any extra spell" questions are always open and offer
+	// every spell there is. Listed, a model tries to close them; extra spells
+	// reach them through assign_spells or a custom option's ref instead.
+	prompts = slices.DeleteFunc(prompts, func(p domain.Prompt) bool {
+		return p.Choice.Kind == rules.ChooseSpell && p.Purpose == "custom"
+	})
 	return agentPrompts(cat, prompts, len(s.Files) > 0), nil
 }
 

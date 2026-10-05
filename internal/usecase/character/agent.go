@@ -66,6 +66,8 @@ type AgentSession struct {
 	printed map[string]int
 	// spells is the cantrips and spells the sheet lists, by printed name.
 	spells []string
+	// prepared is the ones among them the sheet marks as prepared.
+	prepared []string
 	// scores is the six totals the sheet prints. They are never written to the
 	// character: after every tool call the base scores are solved again so the
 	// build comes out at them, whatever order race and improvements arrive in.
@@ -374,6 +376,7 @@ func (a *Agent) push(ctx context.Context, s *AgentSession) error {
 
 // call runs one tool against the stored character and stores what it changed.
 func (a *Agent) call(ctx context.Context, s *AgentSession, name string, arguments []byte) (any, error) {
+	held := s.Log
 	edited, err := a.pull(ctx, s)
 	if types.IsNotFound(err) {
 		s.Status = "failed"
@@ -383,7 +386,13 @@ func (a *Agent) call(ctx context.Context, s *AgentSession, name string, argument
 		return nil, err
 	}
 	if edited {
-		s.scores = nil
+		// The owner's numbers win over the sheet's -- when they changed a
+		// number. A rename is no reason to forget the printed totals: without
+		// them the next race or improvement lands on top of bases that were
+		// solved to already include it.
+		if cat, catErr := a.Catalog(ctx, *s); catErr != nil || !sameScores(held, s.Log, cat) {
+			s.scores = nil
+		}
 		addAgentEvent(s, "edit", "", "", nil)
 		if name != "get_build_context" {
 			return nil, fmt.Errorf("not run: the player edited the character in the builder. Call get_build_context, treat what it shows as authoritative and preserve their changes, then send this again if it is still needed")

@@ -11,6 +11,17 @@ import (
 )
 
 // indexes extracts the slug from each upstream reference.
+// spellClassErrata replaces the class lists the upstream dump gets wrong with
+// the ones the SRD 5.1 spell lists print. A wrong list is not cosmetic: a
+// class whose list lacks a spell is never offered it.
+var spellClassErrata = map[string][]string{
+	"arcane-eye":            {"wizard"},
+	"create-food-and-water": {"cleric", "paladin"},
+	"divination":            {"cleric"},
+	"faerie-fire":           {"bard", "druid"},
+	"meld-into-stone":       {"cleric", "druid"},
+}
+
 func indexes(refs []apiRef) []string {
 	if len(refs) == 0 {
 		return nil
@@ -812,6 +823,9 @@ func (g *generator) spells() error {
 			AttackType:    up.AttackType,
 			Classes:       indexes(up.Classes),
 			Subclasses:    indexes(up.Subclasses),
+		}
+		if classes, ok := spellClassErrata[up.Index]; ok {
+			s.Classes = classes
 		}
 		if up.DC != nil {
 			s.Save = &file.SavingThrow{Ability: up.DC.DCType.Index, Success: saveOutcome(up.DC.DCSuccess)}
