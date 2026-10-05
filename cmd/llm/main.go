@@ -3,7 +3,7 @@
 // producing entity artwork and draft translations is a re-runnable command
 // instead of a copy-paste session with a chat window.
 //
-// Both subcommands are generic input-to-output: they read a JSON file (or a
+// Images and translate are generic input-to-output: they read a JSON file (or a
 // flag) and write plain files, deliberately unaware of where in the repo --
 // or outside it -- the result belongs.
 //
@@ -22,6 +22,8 @@
 //
 // The API key is read from OPENAI_API_KEY. `-dry-run` on either subcommand
 // shows what would be requested without needing the key or spending credit.
+// Agent runs the application's character wizard over JSON lines on stdin;
+// it reads provider settings from the existing YAML config. See docs/agent.md.
 package main
 
 import (
@@ -53,7 +55,7 @@ func main() {
 	log.SetPrefix("llm: ")
 
 	if len(os.Args) < 2 {
-		log.Fatal("usage: llm images|translate [flags]; -h on either lists them")
+		log.Fatal("usage: llm images|translate|agent [flags]; -h lists flags")
 	}
 	var err error
 	switch os.Args[1] {
@@ -61,8 +63,10 @@ func main() {
 		err = imagesCmd(os.Args[2:])
 	case "translate":
 		err = translateCmd(os.Args[2:])
+	case "agent":
+		err = agentCmd(os.Args[2:])
 	default:
-		err = fmt.Errorf("unknown subcommand %q; want images or translate", os.Args[1])
+		err = fmt.Errorf("unknown subcommand %q; want images, translate or agent", os.Args[1])
 	}
 	if err != nil {
 		log.Fatal(err)

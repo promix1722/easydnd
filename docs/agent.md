@@ -1,5 +1,79 @@
 # AI Wizard
 
+## Standalone agent CLI
+
+`go run ./cmd/llm agent -pack /path/to/easydnd-2014/pack -config config.local.yaml`
+runs the same wizard locally, without a web server or database. It reads
+`agent.api_key`, `agent.model`, `agent.max_turns` and `agent.request_timeout`
+from the existing YAML configuration. `-locale` defaults to `en`;
+`-timeout` defaults to `5m` for each start, message or resumption. The supplied
+pack is loaded as an immutable rules lock. Nothing is written to the pack.
+
+Send one JSON object per line on stdin. Keep stdin open while the agent works:
+
+```json
+{"action":"start","files":["/home/me/tmp/dnd-sheets/character.pdf"],"text":"Import everything you can, do not ask me anything"}
+{"action":"inspect"}
+{"action":"message","revision":12,"text":"Leave them blank"}
+{"action":"resume","revision":15}
+{"action":"stop","revision":20}
+{"action":"finish","revision":21}
+```
+
+Use the revision from the latest response or status, not these example numbers.
+`retry` and `discard` are also available; controls use the same revision rules
+as the HTTP wizard. Only one session is active in a process. After `discard`,
+a new session can start. EOF or Ctrl-C closes the process and cancels its work;
+sessions are not persisted. Send `inspect` and save its response before exiting.
+Attachments have the same supported MIME types and size limits as HTTP uploads;
+paths identify local files, and duplicate basenames are rejected.
+
+Stdout is JSON lines: `result` responses (with `action`, `session`, `sheet`,
+`log`, `prompts`, `rules`), `event` entries, `status` updates, `model` timings
+and complete returned tool calls, `error` responses, and `timeout` when a run
+is stopped at its deadline. Stderr contains debug tool arguments and results.
+The inspection's sheet, log, prompts and rules are the existing Go domain JSON
+shape, with capitalized field names; session and event fields use their existing
+lowercase JSON names. Timings cover the complete model request, including
+provider streaming and decoding. An input error leaves the process available
+for another command. A deadline pauses the session; it does not answer questions
+or declare the character complete.
+
+### Opt-in corpus check
+
+Build the CLI once, then run the standard-library Python harness:
+
+```sh
+go build -o /tmp/easydnd-llm ./cmd/llm
+python3 scripts/check-agent-sheets.py --cli /tmp/easydnd-llm \
+  --pack /path/to/easydnd-2014/pack --config config.local.yaml \
+  --manifest /home/me/tmp/dnd-sheets/cases.json \
+  --out /home/me/tmp/dnd-sheets/runs
+```
+
+The manifest is an array of `{id, files, source, pages, expected}` objects.
+`expected.equals` maps dotted domain sheet paths to values;
+`expected.contains` maps paths to required list members;
+`expected.inventory` maps local item slugs to total counts;
+`expected.nativeNames` lists names that should never become custom entries.
+`expected.customNames` requires source content missing from the pack;
+`expected.spells` checks the union of cantrips, known and prepared spells;
+`expected.textContains` checks excerpts in text fields or lists of text.
+Pack namespace prefixes are removed for slug comparison. IDs must be simple
+directory names. Use `--case <id>` (repeatable) for reproduction; use a new
+output directory for each run so prior evidence is preserved.
+
+Every case receives exactly `Import everything you can, do not ask me anything`.
+The harness runs sequentially, flags durations above two minutes, stops at five
+minutes, and allows one turn-budget resumption within that original deadline.
+It never answers a question. Waiting is recorded as a failure with the partial
+character, not concealed by choosing the first suggestion. Each case saves the
+invocation, timestamped transcript, debug log, final inspection and comparison
+summary. Source ambiguity and unsupported pack content require human review
+before a mismatch is called an importer bug. This spends provider credit and
+is deliberately excluded from default tests and CI. A failed case makes the
+harness exit with status 1 after it has processed every selected case.
+
 The AI Wizard creates **one character** from a description or uploaded sources.
 The character is real from the first message: it is created with the session,
 it is in the owner's character list while the assistant is still working, and
