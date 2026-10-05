@@ -133,8 +133,11 @@ type Agent struct {
 	// it changes. mu is held for as long as a response's tool calls take --
 	// seconds -- and a page that only wants to show the chat, or list the
 	// chats, must not queue behind that.
-	viewMu  sync.RWMutex
-	views   map[string]AgentSession
+	viewMu sync.RWMutex
+	views  map[string]AgentSession
+	// changed is closed and replaced, under viewMu, whenever views changes:
+	// the broadcast a long-polling reader sleeps on. See docs/long-polling.md.
+	changed chan struct{}
 	service *Service
 	model   AgentModel
 	config  AgentConfig
@@ -158,7 +161,7 @@ func NewAgent(service *Service, model AgentModel, cfg AgentConfig) *Agent {
 		cfg.Timeout = 2 * time.Minute
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	a := &Agent{views: map[string]AgentSession{}, sessions: map[string]*AgentSession{}, service: service, model: model, config: cfg, wake: make(chan struct{}, 1), ctx: ctx, cancel: cancel}
+	a := &Agent{views: map[string]AgentSession{}, changed: make(chan struct{}), sessions: map[string]*AgentSession{}, service: service, model: model, config: cfg, wake: make(chan struct{}, 1), ctx: ctx, cancel: cancel}
 	for i := 0; i < cfg.Workers; i++ {
 		a.wg.Add(1)
 		go a.worker()
@@ -217,7 +220,14 @@ func (a *Agent) publish(s *AgentSession) {
 	v := copyAgentSession(s)
 	a.viewMu.Lock()
 	a.views[s.ID] = v
+	a.notify()
 	a.viewMu.Unlock()
+}
+
+// notify wakes every Wait. Called with viewMu held for writing.
+func (a *Agent) notify() {
+	close(a.changed)
+	a.changed = make(chan struct{})
 }
 
 func (a *Agent) Create(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, files []AgentFile, instructions string, selected ...pack.Lock) (AgentSession, error) {
@@ -378,6 +388,42 @@ func (a *Agent) Get(owner domain.OwnerID, id string) (AgentSession, error) {
 	// A caller's own copy: the published one is shared by every reader.
 	return copyAgentSession(&v), nil
 }
+
+// Wait is Get for a reader that already holds the session at (revision,
+// after), after being the id of its last event: it returns once the published
+// session differs from that, or changed=false when ctx ends first. A moved
+// revision returns the whole session (full); otherwise only the events past
+// after, which is what keeps a streaming turn's answers small.
+func (a *Agent) Wait(ctx context.Context, owner domain.OwnerID, id string, revision, after int) (s AgentSession, full, changed bool, err error) {
+	for {
+		a.viewMu.RLock()
+		v, ok := a.views[id]
+		wake := a.changed
+		if !ok || v.Owner != owner {
+			a.viewMu.RUnlock()
+			return AgentSession{}, false, false, types.NewNotFoundError("import session not found").Because("agent.notFound")
+		}
+		if v.Revision != revision || after < 0 || after > len(v.Events) {
+			s = copyAgentSession(&v)
+			a.viewMu.RUnlock()
+			return s, true, true, nil
+		}
+		if after < len(v.Events) {
+			// Only the tail is copied: the events before it are the bulk of
+			// a long chat and the reader already has them.
+			v.Events = v.Events[after:]
+			s = copyAgentSession(&v)
+			a.viewMu.RUnlock()
+			return s, false, true, nil
+		}
+		a.viewMu.RUnlock()
+		select {
+		case <-ctx.Done():
+			return AgentSession{}, false, false, nil
+		case <-wake:
+		}
+	}
+}
 func (a *Agent) List(owner domain.OwnerID) []AgentSession {
 	a.viewMu.RLock()
 	defer a.viewMu.RUnlock()
@@ -453,6 +499,7 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 		delete(a.sessions, id)
 		a.viewMu.Lock()
 		delete(a.views, id)
+		a.notify()
 		a.viewMu.Unlock()
 		return copyAgentSession(s), nil
 	default:

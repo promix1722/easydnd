@@ -1,8 +1,8 @@
 package character
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -26,6 +26,12 @@ func (h *Handler) agentAvailable(c *gin.Context) bool {
 	}
 	return true
 }
+
+// agentPollWait is how long AgentGet holds an up-to-date reader. One second is
+// far inside every timeout between the browser and this handler, so a held
+// poll needs no proxy configuration, heartbeat or deadline override.
+const agentPollWait = time.Second
+
 func (h *Handler) agentResult(c *gin.Context, s charuc.AgentSession, err error) {
 	c.Header("Cache-Control", "no-store")
 	if err != nil {
@@ -60,8 +66,29 @@ func (h *Handler) AgentGet(c *gin.Context) {
 	if !h.agentAvailable(c) {
 		return
 	}
-	s, err := h.agent.Get(h.owner(c), c.Param("id"))
-	h.agentResult(c, s, err)
+	raw, polling := c.GetQuery("revision")
+	if !polling {
+		s, err := h.agent.Get(h.owner(c), c.Param("id"))
+		h.agentResult(c, s, err)
+		return
+	}
+	// Long polling: the reader says what it holds and is answered when that is
+	// out of date, or with 204 after agentPollWait. See docs/long-polling.md.
+	revision, _ := strconv.Atoi(raw)
+	after, _ := strconv.Atoi(c.Query("after"))
+	ctx, cancel := context.WithTimeout(c.Request.Context(), agentPollWait)
+	defer cancel()
+	s, full, changed, err := h.agent.Wait(ctx, h.owner(c), c.Param("id"), revision, after)
+	switch {
+	case err != nil || full:
+		h.agentResult(c, s, err)
+	case changed:
+		c.Header("Cache-Control", "no-store")
+		c.JSON(http.StatusOK, gin.H{"events": s.Events})
+	default:
+		c.Header("Cache-Control", "no-store")
+		c.Status(http.StatusNoContent)
+	}
 }
 func (h *Handler) AgentControl(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 32<<10)
@@ -79,69 +106,6 @@ func (h *Handler) AgentControl(c *gin.Context) {
 	}
 	s, err := h.agent.Control(h.owner(c), c.Param("id"), p.Action, p.Text, p.Revision)
 	h.agentResult(c, s, err)
-}
-
-// Every event has a durable-within-process cursor. Reconnect starts with a
-// coherent snapshot; no missed interval exists between snapshot and polling.
-func (h *Handler) AgentEvents(c *gin.Context) {
-	if !h.agentAvailable(c) {
-		return
-	}
-	s, err := h.agent.Get(h.owner(c), c.Param("id"))
-	if err != nil {
-		helpers.FormatError(c, err)
-		return
-	}
-	_ = http.NewResponseController(c.Writer).SetWriteDeadline(time.Time{})
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-store")
-	c.Header("X-Accel-Buffering", "no")
-	cursor, _ := strconv.Atoi(c.GetHeader("Last-Event-ID"))
-	if cursor < 0 || cursor > len(s.Events) {
-		cursor = 0
-	}
-	revision := -1
-	ticker := time.NewTicker(250 * time.Millisecond)
-	defer ticker.Stop()
-	heartbeat := time.NewTicker(10 * time.Second)
-	defer heartbeat.Stop()
-	send := func(event string, id int, data any) bool {
-		b, _ := json.Marshal(data)
-		_, err := fmt.Fprintf(c.Writer, "id: %d\nevent: %s\ndata: %s\n\n", id, event, b)
-		c.Writer.Flush()
-		return err == nil
-	}
-	for {
-		if revision != s.Revision {
-			if !send("snapshot", len(s.Events), gin.H{"session": s}) {
-				return
-			}
-			cursor = len(s.Events)
-			revision = s.Revision
-		}
-		for _, e := range s.Events {
-			if e.ID > cursor {
-				if !send("update", e.ID, e) {
-					return
-				}
-				cursor = e.ID
-			}
-		}
-		select {
-		case <-c.Request.Context().Done():
-			return
-		case <-heartbeat.C:
-			if _, err := fmt.Fprint(c.Writer, ": heartbeat\n\n"); err != nil {
-				return
-			}
-			c.Writer.Flush()
-		case <-ticker.C:
-		}
-		s, err = h.agent.Get(h.owner(c), c.Param("id"))
-		if err != nil {
-			return
-		}
-	}
 }
 
 func readAgentFiles(c *gin.Context) ([]charuc.AgentFile, bool) {

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -36,6 +37,10 @@ func RequestLogger() gin.HandlerFunc {
 			log.Error("http request", attrs...)
 		case status >= 400:
 			log.Warn("http request", attrs...)
+		// A GET with nothing to say is a long poll that timed out -- one a
+		// second from every open AI Wizard tab. See docs/long-polling.md.
+		case status == http.StatusNoContent && c.Request.Method == http.MethodGet:
+			log.Debug("http request", attrs...)
 		default:
 			log.Info("http request", attrs...)
 		}

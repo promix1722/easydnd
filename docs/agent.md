@@ -237,10 +237,11 @@ the same list a second time passes. It used to block until every entry was
 satisfied, and a model that had worded one in a way nothing could satisfy
 responded by inventing custom content until the list went quiet.
 
-There is no interruption control in the UI, and no composer while the
-assistant is running. Terminal status snapshots bring the composer back and
-focus it. A three-second snapshot
-refresh recovers a missed end-of-turn stream update without disabling input.
+There is no interruption control in the UI. The message box stays open while
+the assistant is running, but nothing can be sent from it: Send and the reply
+buttons wait for the turn to end. Terminal status snapshots enable them and
+focus it. The page learns of them by [long polling](long-polling.md), which
+never disables input.
 Resume continues a paused conversation; Retry continues after a failure.
 The internal stop API remains for cancellation and lifecycle handling.
 Waiting for a reply holds no worker. **Discard deletes the character with the
@@ -251,7 +252,8 @@ remaining choices are open is finished in the ordinary builder.
 ## Session lifetime
 
 State is **in memory in one server process**, including attachments and private
-packs. Browser reload or SSE reconnection recovers the session from the URL's
+packs -- which is why the wizard [cannot be run as more than one API
+process](known-caveats.md). Browser reload recovers the session from the URL's
 session ID (or legacy `session` query parameter). The import screen also lists unfinished sessions for the
 selected folder. Server restart loses this state, as it currently loses ordinary
 characters. PostgreSQL account storage does not change that guarantee.
@@ -264,11 +266,12 @@ mutations run inside it. Waiting, review and paused states do not consume
 workers.
 
 **Reads do not take the coordinator's lock.** A response's tool calls hold it
-for seconds, and `Get`/`List` -- the page opening, its three-second poll,
-every SSE tick -- used to queue behind them, which is what made the app appear
+for seconds, and `Get`/`List`/`Wait` -- the page opening and every poll it
+sends after -- used to queue behind them, which is what made the app appear
 to hang when the wizard was opened mid-import. Readers are served from
 `views`, a published copy of each session under its own read-write lock,
-republished after each tool call, streamed chunk and control.
+republished after each tool call, streamed chunk and control. Each republish
+also wakes the readers waiting in `Wait`.
 
 The session's log is the agent's **working copy** of the character, not the
 character. Around every tool call the coordinator reads the stored character
@@ -287,13 +290,12 @@ responses enter the server transcript before tool execution. Partial function
 arguments are never executed. Tool-call IDs have an argument hash and recorded
 outcome; replay returns that outcome and reuse with different arguments fails.
 
-SSE records have increasing event IDs. Reconnection sends a coherent snapshot
-with its cursor, then newer events. In development, EventSource carries the tab cookie selector as `devSession`
-in its URL because native streams cannot set the development session header.
-It is not a credential; authentication still validates the selected HttpOnly
-cookie. Production ignores the selector. The browser deduplicates event IDs and
-rejects older snapshots. A heartbeat keeps the proxy connection open. Closing
-the browser only closes the stream, not the import.
+Events have increasing IDs, and the browser follows a session by long polling
+with the pair it holds -- the session's revision and its last event ID. It is
+answered with the whole session when the revision has moved and with only the
+newer events otherwise; it deduplicates event IDs and rejects older snapshots.
+Closing the browser only ends the polling, not the import. The transport is
+described in [long-polling.md](long-polling.md).
 
 ## Tools and rules
 
@@ -554,8 +556,7 @@ Owners are taken from authentication, never from a request body.
 | `GET /v1/agent-capabilities` | Whether the provider is configured |
 | `POST /v1/agent-sessions?folder=...` | Multipart required `rules` JSON, optional `files` and `instructions`; at least a description or file is required |
 | `GET /v1/agent-sessions` | Owner's import sessions |
-| `GET /v1/agent-sessions/:id` | Session snapshot, including `characterId` |
-| `GET /v1/agent-sessions/:id/events` | SSE snapshots, updates and cursor recovery |
+| `GET /v1/agent-sessions/:id` | Session snapshot, including `characterId`. With `?revision=R&after=N` it is a [long poll](long-polling.md): held up to a second, answered with the session, the newer events, or `204` |
 | `POST /v1/agent-sessions/:id/files` | Multipart files, revision and optional instructions |
 | `POST /v1/agent-sessions/:id/control` | Revision plus `message`, `stop`, `resume`, `retry` or `discard` action; `discard` deletes the character too |
 
@@ -599,8 +600,8 @@ not a billed-token accounting system.
 
 The checked-in nginx configuration raises `/v1/`'s body limit to 21 MiB. **Deploying
 a release does not install nginx configuration**: apply that file separately.
-SSE uses `X-Accel-Buffering: no`, heartbeats and a request-specific write deadline
-override, leaving normal HTTP timeouts in place.
+Long polling holds a request for a second at most, so it needs nothing from
+nginx and leaves the normal HTTP timeouts in place.
 
 ## Validation and later milestones
 
@@ -608,14 +609,14 @@ Tests cover translated/fuzzy spell identity, printed-name resolution and its
 scopes, a scripted end-to-end import that ends with no custom entry and nothing
 pinned (on the SRD and on a namespaced pack), skill distribution, the
 one-time checklist reminder, calls after a turn has ended, worker bounds,
-cancellation, owner isolation, HTTP uploads/SSE recovery, score preservation
+cancellation, owner isolation, HTTP uploads and long-poll recovery, score preservation
 and rebasing, the builder's own entries on the stored character (name apart
 from rules, class at 1 and subclass at its level, one manual ability-scores
 entry, nothing printed pinned over an identity field), discard deleting the
 character, private definition isolation/versioning, the Responses streaming
 adapter, and desktop/mobile chat, View and Edit opening the real character,
 rules preselected inside the chat, explicit questions and suggested answers,
-required-choice review guards and missed terminal status recovery.
+required-choice review guards and the end of a turn arriving by poll.
 The provider adapter is tested against a local HTTP fixture; a live provider
 smoke test requires deployment credentials and a configured model.
 

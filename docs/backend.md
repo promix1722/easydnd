@@ -113,9 +113,8 @@ development database. Characters and games are rebuilt because their stores
 are process-local. Signing in again within the same run does not reseed or
 reset game changes. Open separate tabs and choose master, player1 and player2
 in each: development shortcuts keep a random cookie selector in tab-local
-`sessionStorage` and send it as `X-EasyDnD-Dev-Session`. Native EventSource
-uses the `devSession` query parameter on GET instead, since it cannot set
-headers; both select a signed HttpOnly cookie and are ignored in production.
+`sessionStorage` and send it as `X-EasyDnD-Dev-Session`. It selects a signed
+HttpOnly cookie and is ignored in production.
 Each successful switch
 uses a new selector, including in duplicated tabs; a failed switch keeps the
 previous identity. The signed token stays in an HttpOnly cookie. This header
@@ -2235,7 +2234,11 @@ call. Sessions, source bytes and immutable private packs
 are process-local, so browser reload resumes but server restart does not.
 See [agent.md](agent.md) for tool contracts, lifecycle, bounds and the `agent`
 YAML configuration. The nginx upload-limit change must be installed separately
-from a release; SSE disables buffering per response and sends heartbeats.
+from a release. The browser follows a session by
+[long polling](long-polling.md), which needs no proxy configuration; an idle
+poll -- a `GET` answered `204` -- is logged at Debug rather than Info, since
+every open wizard tab sends one a second. The wizard is also why the API
+[runs as one process](known-caveats.md).
 
 ## User-authored rule packs
 

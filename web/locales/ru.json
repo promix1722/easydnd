@@ -770,6 +770,7 @@
   "agent.finish": "Готово",
   "agent.message": "Сообщение помощнику",
   "agent.instructions": "Указания (необязательно)",
+  "agent.scrollDown": "К последнему сообщению",
   "agent.send": "Отправить",
   "agent.retry": "Повторить",
   "agent.resume": "Продолжить",

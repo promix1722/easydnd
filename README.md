@@ -64,6 +64,8 @@ an account; use the account icon in the header to switch roles. See
 | [docs/packs.md](docs/packs.md) | JSON packs, version locks, extensible resources, configuration and migration APIs |
 | [docs/packs-plan.md](docs/packs-plan.md) | Original design and later milestones |
 | [docs/agent.md](docs/agent.md) | Character import tools, chat workspace, private content, configuration and resumability |
+| [docs/long-polling.md](docs/long-polling.md) | How the AI Wizard page follows a running import: one held request, a one-second wait |
+| [docs/known-caveats.md](docs/known-caveats.md) | Limits that are known and deliberate, starting with the AI Wizard not scaling horizontally |
 | [docs/backend.md](docs/backend.md) | The Go service: layout, layer rules, configuration, deployment |
 | [docs/web.md](docs/web.md) | The browser client: layout, layer rules, how it ships |
 | [docs/seo.md](docs/seo.md) | Search-engine and answer-engine discovery, submission, and monitoring |

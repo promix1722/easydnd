@@ -718,6 +718,7 @@
   "agent.finish": "Finish",
   "agent.message": "Message the assistant",
   "agent.instructions": "Instructions (optional)",
+  "agent.scrollDown": "Scroll to the latest message",
   "agent.send": "Send",
   "agent.retry": "Retry",
   "agent.resume": "Resume",

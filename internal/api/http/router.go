@@ -241,7 +241,6 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.POST("/agent-sessions", h.Character.AgentCreate)
 			authed.GET("/agent-sessions", h.Character.AgentList)
 			authed.GET("/agent-sessions/:id", h.Character.AgentGet)
-			authed.GET("/agent-sessions/:id/events", h.Character.AgentEvents)
 			authed.POST("/agent-sessions/:id/files", h.Character.AgentFiles)
 			authed.POST("/agent-sessions/:id/control", h.Character.AgentControl)
 			authed.GET("/characters", h.Character.List)

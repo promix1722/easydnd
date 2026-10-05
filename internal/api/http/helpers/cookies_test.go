@@ -39,27 +39,3 @@ func TestDevelopmentSeparatesAllAuthCookieNames(t *testing.T) {
 		t.Fatal("development servers share auth cookies")
 	}
 }
-
-func TestStreamDevelopmentCookieSelector(t *testing.T) {
-	scope := strings.Repeat("a", 32)
-	for _, tc := range []struct {
-		name, method, header  string
-		development, selected bool
-	}{
-		{"stream", "GET", "", true, true},
-		{"production", "GET", "", false, false},
-		{"post query ignored", "POST", "", true, false},
-		{"header wins", "GET", strings.Repeat("b", 32), true, false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			options := CookieOptions{Development: tc.development}
-			c, _ := gin.CreateTestContext(httptest.NewRecorder())
-			c.Request = httptest.NewRequest(tc.method, "/events?devSession="+scope, nil)
-			c.Request.Header.Set(HeaderDevelopmentSession, tc.header)
-			selected := options.sessionName(c) == options.SessionCookieName()+"_"+scope
-			if selected != tc.selected {
-				t.Fatal("incorrect stream cookie selection")
-			}
-		})
-	}
-}

@@ -6,18 +6,21 @@ import {
   createAgentSession,
   getAgentSession,
   listAgentSessions,
+  pollAgentSession,
 } from '@/lib/api/agent'
 import type { AgentEvent, AgentView, AgentSession } from '@/lib/api/agent'
-import { developmentSession } from '@/lib/api/devSession'
-import { requestLocale } from '@/lib/api/locale'
+import { ApiError } from '@/lib/api/errors'
 import { useAction } from '@/lib/useAction'
+import { useReveal } from './useReveal'
 import { useT } from '@/lib/i18n'
 import {
+  ActionIcon,
   Alert,
   Badge,
   Button,
   Card,
   FileButton,
+  IconArrowDown,
   IconPaperclip,
   Group,
   Markdown,
@@ -40,6 +43,30 @@ import { progressEntry } from './agentProgress'
  * a description, then whatever the build leaves open -- and the player
  * answers; so there is something to type into only when it is the player's
  * turn, and nothing above the transcript but the transcript. */
+// What the tab shows after an answer arrives. A whole session replaces the one
+// held unless it is older -- a slow read must not undo a newer write -- and a
+// tail of events is appended past the ones already here. Event ids are 1..n.
+function merge(
+  old: AgentView | null,
+  next: AgentView | { events: AgentEvent[] },
+): AgentView | null {
+  if ('session' in next)
+    return old &&
+      old.session.id === next.session.id &&
+      (old.session.revision > next.session.revision ||
+        (old.session.revision === next.session.revision &&
+          old.session.events.length > next.session.events.length))
+      ? old
+      : next
+  if (!old) return old
+  const added = next.events.filter((e) => e.id > old.session.events.length)
+  return added.length
+    ? { session: { ...old.session, events: [...old.session.events, ...added] } }
+    : old
+}
+
+const EMPTY: AgentEvent[] = []
+
 export function AgentImportScreen() {
   const t = useT()
   const navigate = useNavigate()
@@ -66,21 +93,18 @@ export function AgentImportScreen() {
   const composer = useRef<HTMLTextAreaElement>(null)
   const end = useRef<HTMLDivElement>(null)
   const follow = useRef(true)
+  // What the poll loop holds, which is the view one render early: its cursor
+  // has to move with an answer, or the next request would ask for the same
+  // thing again before React has drawn it.
+  const latest = useRef(view)
+  latest.current = view
   const action = useAction(async (work: () => Promise<AgentView>) => {
     const result = await work()
-    setView((old) =>
-      old &&
-      old.session.id === result.session.id &&
-      (old.session.revision > result.session.revision ||
-        (old.session.revision === result.session.revision &&
-          old.session.events.length > result.session.events.length))
-        ? old
-        : result,
-    )
+    latest.current = merge(latest.current, result)
+    setView((old) => merge(old, result))
     return result
   })
   useEffect(() => {
-    let live = true
     setView((old) => (old?.session.id === id ? old : null))
     if (!id) {
       void listAgentSessions().then(
@@ -96,76 +120,98 @@ export function AgentImportScreen() {
       )
       return
     }
-    // A periodic snapshot also recovers a missed terminal status after a proxy
-    // drops or buffers the stream. Reads never disable the message composer.
-    const refresh = () =>
-      void getAgentSession(id).then(
-        (next) => {
-          if (!live) return
-          setView((old) =>
-            !old ||
-            old.session.id !== next.session.id ||
-            next.session.revision > old.session.revision ||
-            (next.session.revision === old.session.revision &&
-              next.session.events.length >= old.session.events.length)
-              ? next
-              : old,
-          )
-        },
-        () => {},
-      )
-    void action.run(() => getAgentSession(id))
-    const poll = window.setInterval(refresh, 3000)
-    const scope = developmentSession()
-    const stream = new EventSource(
-      `/v1/agent-sessions/${encodeURIComponent(id)}/events?locale=${requestLocale()}${scope ? `&devSession=${encodeURIComponent(scope)}` : ''}`,
-    )
-    stream.onopen = () => setConnected(true)
-    stream.onerror = () => setConnected(false)
-    stream.addEventListener('snapshot', (event: MessageEvent<string>) => {
-      if (!live) return
-      const next = JSON.parse(event.data) as AgentView
-      setView((old) =>
-        old &&
-        old.session.id === next.session.id &&
-        (old.session.revision > next.session.revision ||
-          (old.session.revision === next.session.revision &&
-            old.session.events.length > next.session.events.length))
-          ? old
-          : next,
-      )
-    })
-    stream.addEventListener('update', (event: MessageEvent<string>) => {
-      if (!live) return
-      const next = JSON.parse(event.data) as AgentEvent
-      setView((old) =>
-        !old || old.session.events.some((e) => e.id === next.id)
-          ? old
-          : {
-              ...old,
-              session: {
-                ...old.session,
-                events: [...old.session.events, next],
-              },
-            },
-      )
-    })
-    return () => {
-      live = false
-      window.clearInterval(poll)
-      stream.close()
-    }
+    // One long poll at a time, each answered when the session changes or
+    // after a second, and the next sent at once. Reads never disable the
+    // message composer. See docs/long-polling.md.
+    const stop = new AbortController()
+    const pause = (ms: number) => new Promise((done) => window.setTimeout(done, ms))
+    const visible = () =>
+      new Promise<void>((done) => {
+        if (!document.hidden) return done()
+        const shown = () => {
+          if (document.hidden && !stop.signal.aborted) return
+          document.removeEventListener('visibilitychange', shown)
+          stop.signal.removeEventListener('abort', shown)
+          done()
+        }
+        document.addEventListener('visibilitychange', shown)
+        stop.signal.addEventListener('abort', shown)
+      })
+    void (async () => {
+      await action.run(() => getAgentSession(id)).catch(() => {})
+      while (!stop.signal.aborted) {
+        await visible()
+        const held = latest.current?.session.id === id ? latest.current.session : undefined
+        // A finished chat is a record: nothing will ever be added to it.
+        if (held?.finished) return
+        try {
+          const next = held
+            ? await pollAgentSession(id, held.revision, held.events.length, stop.signal)
+            : await getAgentSession(id)
+          if (stop.signal.aborted) return
+          setConnected(true)
+          if (!next) continue
+          latest.current = merge(latest.current, next)
+          setView((old) => merge(old, next))
+        } catch (cause) {
+          if (stop.signal.aborted) return
+          // Discarded, or never this account's: nothing left to wait for.
+          if (cause instanceof ApiError && cause.status === 404) return
+          setConnected(false)
+          await pause(1000)
+        }
+      }
+    })()
+    return () => stop.abort()
     // action.run is stable; switching session is the only subscription boundary.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, folder])
-  useEffect(() => {
-    if (follow.current) end.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
-  }, [view?.session.events.length, view?.session.status])
   const session = view?.session
-  const active = session?.status === 'running' || session?.status === 'queued'
+  // The transcript as it is shown: one bubble at a time, the assistant's words
+  // typed out. Until all of it is on screen the turn is still the assistant's.
+  const reveal = useReveal(session?.id, session?.events ?? EMPTY)
+  // The page follows the conversation for as long as the reader is at the
+  // end of it, and stops the moment they scroll up to read something.
+  //
+  // Only scrolling *up* stops it. Being far from the end does not: a bubble
+  // taller than any threshold arrives in one step, and the smooth scroll that
+  // follows it reports every position on the way down -- taking those for the
+  // reader's would stop following exactly when there was most to follow.
+  const [away, setAway] = useState(false)
+  useEffect(() => {
+    let last = window.scrollY
+    const scrolled = () => {
+      const page = document.documentElement
+      const y = window.scrollY
+      if (page.scrollHeight - y - window.innerHeight < 80) follow.current = true
+      else if (y < last) follow.current = false
+      last = y
+      setAway(!follow.current)
+    }
+    window.addEventListener('scroll', scrolled, { passive: true })
+    return () => window.removeEventListener('scroll', scrolled)
+  }, [])
+  // Text is laid out after it is rendered -- Markdown, fonts, a wrapping
+  // line -- so the end moves without anything React knows of having changed.
+  // Watching the chat's height is what keeps the page at the end regardless,
+  // from the moment it is opened.
+  const chat = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!chat.current) return
+    const grown = new ResizeObserver(() => {
+      if (follow.current) end.current?.scrollIntoView?.({ block: 'end' })
+    })
+    grown.observe(chat.current)
+    return () => grown.disconnect()
+  }, [])
+  const typedTo = reveal.events.at(-1)?.text?.length
+  useEffect(() => {
+    if (follow.current) end.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' })
+  }, [reveal.events.length, typedTo, reveal.settled, session?.status])
+  const active = session?.status === 'running' || session?.status === 'queued' || !reveal.settled
   // The player's turn: the assistant has asked or finished, or the opening has
   // reached "tell me about the character". Only then is there a composer.
-  const stalled = session?.status === 'paused' || session?.status === 'failed'
+  const stalled = reveal.settled && (session?.status === 'paused' || session?.status === 'failed')
   // A finished chat is a record: nothing more is said in it.
   const finished = session?.finished === true
   const myTurn = session ? !active && !finished : selectedRules !== undefined
@@ -226,7 +272,7 @@ export function AgentImportScreen() {
           can always be closed. */}
       {!active && !finished && <Button onClick={() => open('finish')}>{t('agent.finish')}</Button>}
       {!finished && (
-        <Button variant="default" disabled={active || action.pending} onClick={() => void control('discard')}>
+        <Button disabled={active || action.pending} onClick={() => void control('discard')}>
           {t('agent.discard')}
         </Button>
       )}
@@ -263,29 +309,22 @@ export function AgentImportScreen() {
         )}
         {!connected && <Alert color="yellow">{t('agent.reconnecting')}</Alert>}
         {
-          // The chat is the page: it takes the height the window has left, and
-          // the transcript takes what the composer does not.
-          <Card withBorder padding="md" radius="md" style={{ height: 'calc(100dvh - 190px)', minHeight: 360 }}>
-            <Stack gap="md" h="100%">
+          // The chat is the page: the transcript is as long as it is and the
+          // page scrolls. The card is the chat's own ground over the page's
+          // pattern, and the message box is a box of its own underneath it --
+          // two blocks one after the other, which can never cover each other.
+          // A short chat still fills the window, so the box starts at its foot.
+          <div ref={chat}>
+          <Card withBorder padding="md" radius="md" style={{ background: 'var(--mantine-color-body)' }}>
               <div
                 role="log"
                 aria-label={t('agent.chat')}
                 aria-live="polite"
-                style={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  padding: 8,
-                }}
-                onScroll={(event) => {
-                  const el = event.currentTarget
-                  follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
-                }}
+                style={{ minHeight: 'calc(100dvh - 360px)' }}
               >
                 {session ? (
                   <Conversation
-                    events={session.events}
+                    events={reveal.events}
                     files={session.files}
                     canAnswer={myTurn && !action.pending}
                     // The assistant has stopped without a question of its own:
@@ -309,7 +348,10 @@ export function AgentImportScreen() {
                   <Stack gap="md">
                     <Bubble>
                       <Stack gap="sm">
-                        <Text>{t('agent.lead')}</Text>
+                        {/* The same component the session's messages are
+                            drawn with, so sending the first one changes
+                            nothing about how these three look. */}
+                        <MessageText text={t('agent.lead')} />
                         <Group gap="xs">
                           {(packs.data?.packs ?? [])
                             .filter((pack) => !pack.archived && pack.releases.length > 0)
@@ -335,24 +377,28 @@ export function AgentImportScreen() {
                       <>
                         <Bubble mine>
                           <Group gap="xs">
-                            <Text>{chosen}</Text>
+                            <MessageText text={chosen} />
                             <Button variant="subtle" size="compact-xs" onClick={() => { setSelectedRules(undefined); setFiles([]) }}>
                               {t('agent.changeRules')}
                             </Button>
                           </Group>
                         </Bubble>
                         <Bubble>
-                          <Text>{t('agent.askStart')}</Text>
+                          <MessageText text={t('agent.askStart')} />
                         </Bubble>
                       </>
                     )}
                   </Stack>
                 )}
-                {/* The reply is written in the conversation, straight under the
-                    message it answers, not in a box at the foot of the page. */}
+              </div>
+          </Card>
               {!finished && (
                 <form
-                  style={{ marginTop: 'var(--mantine-spacing-md)' }}
+                  style={{
+                    marginTop: 'var(--mantine-spacing-md)',
+                    background: 'var(--mantine-color-body)',
+                    borderRadius: 18,
+                  }}
                   onSubmit={(event) => {
                     event.preventDefault()
                     void send()
@@ -372,9 +418,9 @@ export function AgentImportScreen() {
                       // by a grey slab inside the box.
                       styles={{ input: { background: 'transparent', opacity: 1 } }}
                       ref={composer}
-                      // Always there, at the end of the conversation; open for
-                      // writing when the assistant has asked something.
-                      disabled={!myTurn || action.pending}
+                      // Always there and always open for writing, the
+                      // assistant's turn included: only sending waits.
+                      disabled={!session && !selectedRules}
                       aria-label={session ? t('agent.message') : t('agent.instructions')}
                       placeholder={t('agent.messagePlaceholder')}
                       value={message}
@@ -441,9 +487,28 @@ export function AgentImportScreen() {
                 </form>
               )}
                 <div ref={end} />
-              </div>
-            </Stack>
-          </Card>
+                {/* Back to the end of the conversation, for a reader who
+                    scrolled up and has been left behind by it. It rides the
+                    foot of the window and takes up no room of its own. */}
+                {away && (
+                  <div style={{ position: 'sticky', bottom: 16, height: 0, display: 'flex', justifyContent: 'center' }}>
+                    <ActionIcon
+                      variant="default"
+                      radius="xl"
+                      size="lg"
+                      aria-label={t('agent.scrollDown')}
+                      style={{ transform: 'translateY(-100%)' }}
+                      onClick={() => {
+                        follow.current = true
+                        setAway(false)
+                        end.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' })
+                      }}
+                    >
+                      <IconArrowDown size={18} />
+                    </ActionIcon>
+                  </div>
+                )}
+          </div>
         }
       </Stack>
     </Page>
@@ -462,6 +527,7 @@ const MessageText = memo(function MessageText({ text }: { text: string }) {
 function Bubble({ mine = false, children }: { mine?: boolean; children: ReactNode }) {
   return (
     <div
+      className="chat-bubble"
       style={{
         alignSelf: mine ? 'flex-end' : 'flex-start',
         // The assistant's messages are one column: the same width whatever
@@ -623,9 +689,11 @@ function Conversation({
       )}
       {active && (
         <Bubble>
-          <Text size="sm" c="dimmed">
-            {t('agent.thinking')}
-          </Text>
+          <span className="chat-typing" role="status" aria-label={t('agent.thinking')}>
+            <span />
+            <span />
+            <span />
+          </span>
         </Bubble>
       )}
       {/* The end of a turn that asked nothing -- finished, stopped short or

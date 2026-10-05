@@ -47,6 +47,19 @@ export const listAgentSessions = () =>
   request<AgentSession[]>('/agent-sessions')
 export const getAgentSession = (id: string) =>
   request<AgentView>(`/agent-sessions/${encodeURIComponent(id)}`)
+// One long-poll request: what this tab holds goes up, and the answer is the
+// whole session if its revision moved, the events past `after` if only those
+// did, or nothing (204) once the server has waited. See docs/long-polling.md.
+export const pollAgentSession = (
+  id: string,
+  revision: number,
+  after: number,
+  signal: AbortSignal,
+) =>
+  request<AgentView | { events: AgentEvent[] } | undefined>(
+    `/agent-sessions/${encodeURIComponent(id)}?revision=${revision}&after=${after}`,
+    { signal },
+  )
 export function createAgentSession(
   files: File[],
   instructions: string,

@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderAt } from '@/test/render'
+import { pacing } from './useReveal'
 import { setupUser } from '@/test/user'
 import type { AgentView } from '@/lib/api/agent'
 import { ImportCharacterScreen } from './ImportCharacterScreen'
@@ -25,33 +26,45 @@ const VIEW: AgentView = {
     assumptions: ['Matched a misspelled spell name'],
   },
 }
-class Stream {
-  static current: Stream
-  listeners = new Map<string, (e: MessageEvent<string>) => void>()
-  onopen: (() => void) | null = null
-  onerror: (() => void) | null = null
-  closed = false
-  constructor() {
-    Stream.current = this
-  }
-  addEventListener(name: string, listener: (e: MessageEvent<string>) => void) {
-    this.listeners.set(name, listener)
-  }
-  close() {
-    this.closed = true
-  }
-  emit(name: string, value: unknown) {
-    this.listeners.get(name)?.(
-      new MessageEvent(name, { data: JSON.stringify(value) }),
-    )
-  }
+// The server's side of the long poll: a request the screen makes is held until
+// a test answers it. `emit` resolves once the screen has taken every answer
+// and asked again, so what follows it sees them applied.
+const Stream = {
+  closed: false,
+  waiting: null as ((r: Response) => void) | null,
+  queue: [] as unknown[],
+  taken: [] as (() => void)[],
+  reset() {
+    Object.assign(this, { closed: false, waiting: null, queue: [], taken: [] })
+  },
+  poll(signal?: AbortSignal | null) {
+    return new Promise<Response>((resolve, reject) => {
+      signal?.addEventListener('abort', () => {
+        this.closed = true
+        reject(new DOMException('aborted', 'AbortError'))
+      })
+      if (this.queue.length) return resolve(Response.json(this.queue.shift()))
+      this.taken.splice(0).forEach((done) => done())
+      this.waiting = resolve
+    })
+  },
+  emit(name: 'snapshot' | 'update', value: unknown) {
+    const body = name === 'update' ? { events: [value] } : value
+    if (this.waiting) {
+      this.waiting(Response.json(body))
+      this.waiting = null
+    } else this.queue.push(body)
+    return new Promise<void>((done) => this.taken.push(done))
+  },
 }
 let writes: { url: string; body: unknown }[]
 let sessions: AgentView['session'][]
 beforeEach(() => {
   writes = []
   sessions = []
-  vi.stubGlobal('EventSource', Stream)
+  Stream.reset()
+  // The pacing of the chat is one test's subject and every other's delay.
+  pacing.on = false
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -70,6 +83,7 @@ beforeEach(() => {
         })
         return Response.json(VIEW)
       }
+      if (url.includes('revision=')) return Stream.poll(init?.signal)
       if (url.includes('/agent-sessions/session1')) return Response.json(VIEW)
       if (/\/agent-sessions(\?|$)/.test(url)) return Response.json(sessions)
       return Response.json([])
@@ -99,10 +113,10 @@ for (const viewport of ['desktop', 'mobile'] as const)
       // Only Finish tells the server anything: it is what closes the chat.
       expect(writes.map((write) => (write.body as { action: string }).action)).toEqual(button === 'Finish' ? ['finish'] : [])
       result.unmount()
-      expect(Stream.current.closed).toBe(true)
+      expect(Stream.closed).toBe(true)
     })
   })
-it('deduplicates replayed stream events and restores a coherent snapshot', async () => {
+it('deduplicates replayed events and restores a coherent snapshot', async () => {
   renderAt(
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
@@ -116,21 +130,21 @@ it('deduplicates replayed stream events and restores a coherent snapshot', async
     </MemoryRouter>,
   )
   await screen.findByText('Draft ready')
-  act(() => {
-    Stream.current.emit('update', {
+  await act(async () => {
+    void Stream.emit('update', {
       id: 3,
       kind: 'delta',
       text: 'Checking the spell',
     })
-    Stream.current.emit('update', {
+    await Stream.emit('update', {
       id: 3,
       kind: 'delta',
       text: 'Checking the spell',
     })
   })
   expect(screen.getAllByText('Checking the spell')).toHaveLength(1)
-  act(() =>
-    Stream.current.emit('snapshot', {
+  await act(() =>
+    Stream.emit('snapshot', {
       ...VIEW,
       session: {
         ...VIEW.session,
@@ -177,7 +191,7 @@ it('uploads source bytes and optional instructions before creating a session', a
   // Describing needs no button: the box is simply open. Attaching is a quiet
   // control inside it, which the file then replaces.
   expect(screen.getByRole('textbox')).toBeEnabled()
-  expect(log.getByRole('button', { name: 'Attach a sheet' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Attach a sheet' })).toBeInTheDocument()
   const input = container.querySelector<HTMLInputElement>('input[type="file"]')
   if (!input) throw new Error('File input missing')
   await user.upload(
@@ -199,7 +213,7 @@ it('uploads source bytes and optional instructions before creating a session', a
   expect((form.get('files') as File).name).toBe('hero.txt')
 })
 
-it('offers the composer only on the player\'s turn, and keeps the opening in the log', async () => {
+it('lets a message be sent only on the player\'s turn, and keeps the opening in the log', async () => {
   const user = setupUser()
   renderAt(
     'desktop',
@@ -212,8 +226,8 @@ it('offers the composer only on the player\'s turn, and keeps the opening in the
   await screen.findByText('Draft ready')
   // No line above the transcript: no status, no chat id.
   expect(screen.queryByText(/Chat ·/)).not.toBeInTheDocument()
-  act(() =>
-    Stream.current.emit('snapshot', {
+  await act(() =>
+    Stream.emit('snapshot', {
       ...VIEW,
       session: {
         ...VIEW.session,
@@ -223,14 +237,15 @@ it('offers the composer only on the player\'s turn, and keeps the opening in the
       },
     }),
   )
-  // While the assistant works there is nothing to type into.
-  await waitFor(() => expect(screen.getByRole('textbox')).toBeDisabled())
+  // While the assistant works the box stays open; only sending waits.
+  await waitFor(() => expect(screen.getByRole('status', { name: 'The assistant is working…' })).toBeInTheDocument())
+  expect(screen.getByRole('textbox')).toBeEnabled()
   expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
   // What was asked and answered before the session began is still there.
   const transcript = screen.getByRole('log')
   expect(transcript.textContent).toMatch(/Which rules should I use.*D&D 2014 v1\.0\.0.*describe the character.*Please import Zephyr/)
-  act(() =>
-    Stream.current.emit('snapshot', {
+  await act(() =>
+    Stream.emit('snapshot', {
       ...VIEW,
       session: {
         ...VIEW.session,
@@ -255,8 +270,9 @@ it('offers the composer only on the player\'s turn, and keeps the opening in the
   expect(within(transcript).getByRole('button', { name: 'Finish' })).toBeInTheDocument()
   // Every message of the assistant's ends with it; only the latest is live.
 
-  // The reply is written in the conversation, under the message it answers.
-  expect(within(screen.getByRole('log')).getByLabelText('Message the assistant')).toBeInTheDocument()
+  // The message box is a block of its own under the transcript, not part of it.
+  expect(within(screen.getByRole('log')).queryByLabelText('Message the assistant')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Message the assistant')).toBeInTheDocument()
   // No attaching after the first message.
   expect(document.querySelector('input[type="file"]')).toBeNull()
   await user.type(await screen.findByLabelText('Message the assistant'), 'My next message{Enter}')
@@ -282,8 +298,8 @@ it('renders activity inline, combines attachments with the user message and answ
     </MemoryRouter>,
   )
   await screen.findByText('Draft ready')
-  act(() =>
-    Stream.current.emit('snapshot', {
+  await act(() =>
+    Stream.emit('snapshot', {
       ...VIEW,
       session: {
         ...VIEW.session,
@@ -330,7 +346,7 @@ it('renders activity inline, combines attachments with the user message and answ
   })
 })
 
-it('recovers a missed end-of-turn snapshot so the next reply can be sent', async () => {
+it('takes the end of a turn from the poll so the next reply can be sent', async () => {
   const user = setupUser()
   renderAt(
     'desktop',
@@ -344,27 +360,23 @@ it('recovers a missed end-of-turn snapshot so the next reply can be sent', async
     </MemoryRouter>,
   )
   await screen.findByText('Draft ready')
-  act(() =>
-    Stream.current.emit('snapshot', {
+  await act(() =>
+    Stream.emit('snapshot', {
       ...VIEW,
       session: { ...VIEW.session, status: 'running', revision: 6 },
     }),
   )
-  await waitFor(() => expect(screen.getByRole('textbox')).toBeDisabled())
-  const original = vi.mocked(fetch).getMockImplementation()!
-  vi.mocked(fetch).mockImplementation((input, init) =>
-    String(input).includes('/agent-sessions/session1') && (!init?.method || init.method === 'GET')
-      ? Promise.resolve(
-          Response.json({
-            ...VIEW,
-            session: { ...VIEW.session, status: 'waiting', revision: 7 },
-          }),
-        )
-      : original(input, init),
-  )
-  await waitFor(() => expect(screen.getByRole('textbox')).toBeEnabled(), { timeout: 4500 })
-
+  // The answer can be written while the assistant is still working, and sent
+  // once it has finished.
   await user.type(await screen.findByLabelText('Message the assistant'), 'My answer')
+  expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+  await act(() =>
+    Stream.emit('snapshot', {
+      ...VIEW,
+      session: { ...VIEW.session, status: 'waiting', revision: 7 },
+    }),
+  )
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled())
   await user.click(screen.getByRole('button', { name: 'Send' }))
   expect(writes[0]?.body).toMatchObject({ revision: 7, text: 'My answer' })
 })
@@ -379,8 +391,8 @@ it('gives every import its own message and keeps answered choices', async () => 
     </MemoryRouter>,
   )
   await screen.findByText('Draft ready')
-  act(() =>
-    Stream.current.emit('snapshot', {
+  await act(() =>
+    Stream.emit('snapshot', {
       ...VIEW,
       session: {
         ...VIEW.session,
@@ -481,4 +493,43 @@ it('shows a finished chat as a record: nothing to type, finish or delete', async
   expect(screen.queryByRole('button', { name: 'Finish' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'View the sheet' })).toBeInTheDocument()
+})
+
+it('shows what arrives in one answer a message at a time, and its answers after the last', async () => {
+  pacing.on = true
+  renderAt(
+    'desktop',
+    <MemoryRouter initialEntries={['/ai-wizard/session1']}>
+      <Routes>
+        <Route path="/ai-wizard/:sessionId" element={<ImportCharacterScreen />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+  // What was there when the chat was opened is history: shown at once.
+  await screen.findByText('Draft ready')
+  await act(() =>
+    Stream.emit('snapshot', {
+      ...VIEW,
+      session: {
+        ...VIEW.session,
+        status: 'waiting',
+        revision: 6,
+        events: [
+          ...VIEW.session.events,
+          { id: 3, kind: 'assistant', text: 'I have read the whole sheet' },
+          { id: 4, kind: 'question', text: 'Which subclass is it?', options: ['Champion'] },
+        ],
+      },
+    }),
+  )
+  // Both arrived together; neither is on screen whole, and the dots are.
+  expect(screen.queryByText('I have read the whole sheet')).not.toBeInTheDocument()
+  expect(screen.queryByText('Which subclass is it?')).not.toBeInTheDocument()
+  expect(screen.getByRole('status', { name: 'The assistant is working…' })).toBeInTheDocument()
+  // The first is typed out before the second begins.
+  await screen.findByText('I have read the whole sheet')
+  expect(screen.queryByText('Which subclass is it?')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Champion' })).not.toBeInTheDocument()
+  await screen.findByText('Which subclass is it?')
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Champion' })).toBeEnabled())
 })

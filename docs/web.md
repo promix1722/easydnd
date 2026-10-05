@@ -4053,8 +4053,9 @@ replaces it. Once the session
 exists the same exchange is drawn from its first event, `rules`.
 
 Replies are buttons: a message's prepared answers -- the question's `options`,
-nothing when it offered none -- of which only the latest message's are live. The composer is always rendered, inside
-the `log` after the last message, and is enabled by `myTurn` alone. On
+nothing when it offered none -- of which only the latest message's are live. The composer is always rendered, under
+the `log`, and is open for writing from the moment
+the rules are chosen; `myTurn` enables only Send. On
 `review` the last message's buttons are View, Edit, Finish and Delete. With no
 session id the screen takes the owner's latest session that is not
 `finished` as its own (`resumed`, state rather than a redirect); Finish posts
@@ -4066,9 +4067,28 @@ pack, resolved through `resolvePacks`.
 
 Each `progress` event is its own bubble: `agent.progress.imported` ("Imported
 field: …") in bold over the value from `progressEntry`. Assistant bubbles have
-a fixed width (85%); the player's fit their text. The card is
-`calc(100dvh - 190px)` tall with the transcript as its flexible part, so the
-chat fills the window whether or not the composer is open.
+a fixed width (85%); the player's fit their text.
+
+The chat sits on a bordered card, its own plain ground over the page's
+pattern, but has no scroll of its own: the transcript is as long as it is and
+the **page** scrolls, as in any chat application. The composer is a second
+block straight under the card -- outside the `log`, in normal flow, not
+`sticky` -- so the two can never cover each other; a pinned composer hid the
+end of the newest message whenever the page was a few pixels short of the
+bottom. The `log` is at least `calc(100dvh - 360px)` tall, so a short chat
+puts the composer at the foot of the window
+too. The page follows the conversation until the reader scrolls **up**, and
+picks it up again when they come back within 80px of the end, send a message,
+or press the round arrow that appears at the foot of the window while they are
+away.
+Distance from the end alone does not stop it: a tall bubble arrives in one
+step, and the smooth scroll after it reports every position on the way down,
+which once read as the reader having left and cut the newest message off under
+the composer. A `ResizeObserver` on the chat keeps the page at the end as well:
+text is laid out after it is rendered (Markdown, fonts, wrapping), which moves
+the end without any state having changed -- that is what left a freshly opened
+chat short of its last message. The arrow rides the foot of the window in a
+zero-height `sticky` row.
 
 View, Edit, Finish (on `review`) and Delete are also the page's `actions`,
 shown whenever the session has a character. A paused or failed
@@ -4082,8 +4102,31 @@ has one shape.
 
 Questions and unresolved choices are handled in chat with suggested reply
 buttons and free-text input. Sending waits for the current assistant run to end;
-there is no Stop control. SSE snapshots update turn status, and a periodic read
-recovers missed terminal updates without making the composer busy. New messages
+there is no Stop control. One [long poll](long-polling.md) at a time brings
+turn status and new messages, without making the composer busy: the screen
+sends the revision and last event id it holds, applies the answer through one
+`merge` function, and asks again. It stops while the tab is hidden, for a
+finished chat, and on a 404; a failed request shows the reconnecting notice and
+is retried after a second.
+
+**What arrives is not what is drawn.** The server answers in bursts: one model
+response is a batch of writes and the question that follows them, and all of
+it lands in a single poll. Drawn as it landed, that is a wall of bubbles at
+once. `useReveal` (`features/characters/useReveal.ts`) stands between the
+session and `Conversation` and hands the events on the way a messenger would:
+each "imported ..." line after a 300 ms beat, the assistant's words typed out a
+word at a time (no message taking longer than 2.4 s). Only a backlog of more
+than twenty-five is hurried, and only to twice the pace. The player's own messages, and
+text the model already streamed chunk by chunk, are not delayed. While
+anything is still to come the screen treats the turn as the assistant's --
+typing dots, Send and the reply buttons disabled -- so nobody answers a
+question that is still being written. The message box itself is never closed:
+the next message can be written while the assistant works, and sent when it
+has finished. Two things skip the pacing: the transcript that was there when
+the chat was opened, and a hidden tab. Reduced motion does not -- a pause is
+not motion -- and changes only the CSS in `ui/app.css`, where the bubble's
+slide and the dots' bounce become plain fades. Tests switch the pacing off
+through the hook's exported `pacing.on`. New messages
 scroll into view unless the user has scrolled up.
 
 Source notes and private catalogue names appear in the shared `SheetBody`, so
