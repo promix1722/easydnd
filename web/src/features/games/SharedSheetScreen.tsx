@@ -4,7 +4,7 @@ import type { Sheet } from '@/lib/api'
 import { getGroup, getSharedSheet } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
 import { useLocale, useT } from '@/lib/i18n'
-import { Badge, Page, pageState } from '@/ui'
+import { Avatar, characterAvatar, Badge, Page, pageState } from '@/ui'
 
 import { titleCase } from '@/domain'
 
@@ -87,6 +87,7 @@ export function SharedSheetScreen() {
 
   return (
     <Page
+      mark={<Avatar image={identity.image} fallback={characterAvatar(identity.classes)} size={48} />}
       trail={[group, { label: identity.name || 'Unnamed' }]}
       badge={<Badge variant="light">{t('sharedSheet.readOnly')}</Badge>}
       subtitle={

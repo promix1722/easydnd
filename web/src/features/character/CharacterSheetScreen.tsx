@@ -5,7 +5,7 @@ import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent } from '@/l
 import type { Prompt, Sheet } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
-import { Badge, Button, Group, ModalSheet, NumberInput, Page, Stack, Text, pageState } from '@/ui'
+import { Avatar, characterAvatar, Badge, Button, Group, ModalSheet, NumberInput, Page, Stack, Text, pageState } from '@/ui'
 
 import type { Compendium } from './compendium'
 import { loadCompendium } from './compendium'
@@ -112,6 +112,7 @@ export function CharacterSheetScreen() {
 
   return (
     <Page
+      mark={<Avatar image={identity.image} fallback={characterAvatar(identity.classes)} size={48} />}
       trail={[{ label: identity.name || 'Unnamed' }]}
       /*
        * A mark, and only while the character is unfinished.

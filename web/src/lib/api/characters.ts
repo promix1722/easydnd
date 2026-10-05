@@ -18,6 +18,7 @@ export interface ClassLevel {
 }
 
 export interface Summary {
+  image?: string
   id: string
   /** The folder the character is filed in. Always set: a character is never
    * in no folder, so a listing can group by this without a fallback bucket. */
@@ -28,6 +29,7 @@ export interface Summary {
 }
 
 export interface Identity {
+  image?: string
   name: string
   alignment?: string
   race?: string
@@ -374,6 +376,7 @@ export interface CreateResponse {
  * now, answered from their own tabs and each written as its own entry.
  */
 export interface NewCharacter {
+  image?: string
   rules?: RulesLock
   name: string
   alignment?: string

@@ -9,6 +9,7 @@ import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
+  Avatar, playerAvatar,
   ACTION_ICON_SIZE,
   Alert,
   Badge,
@@ -174,6 +175,7 @@ export function GroupScreen() {
           <DataList
             items={group.members}
             getKey={(member) => member.user_id}
+            leading={(member) => <Avatar image={member.image} fallback={playerAvatar(member.user_id)} />}
             badges={(member: GroupMember) => (
               <>
                 {member.user_id === me && (

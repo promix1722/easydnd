@@ -41,6 +41,7 @@ import (
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
+	profileapi "github.com/promix1722/easydnd/internal/api/http/v1/profile"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/buildinfo"
 	"github.com/promix1722/easydnd/internal/config"
@@ -55,6 +56,7 @@ import (
 	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
 	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
 	packuc "github.com/promix1722/easydnd/internal/usecase/pack"
+	profileuc "github.com/promix1722/easydnd/internal/usecase/profile"
 )
 
 // App owns the wired object graph and the HTTP server lifecycle.
@@ -271,6 +273,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		WebDir:        opts.WebDir,
 		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)),
 		Appearance:    appearanceapi.New(appearanceuc.NewService(userRepo)),
+		Profile:       profileapi.New(profileuc.NewService(userRepo)),
 		Authenticator: authService,
 		Pack:          packapi.New(packService, packSource),
 		Catalog:       catalogapi.New(packSource, log.With("handler", "catalog")),

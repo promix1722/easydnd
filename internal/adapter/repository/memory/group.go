@@ -122,6 +122,7 @@ func (r *GroupRepository) Members(ctx context.Context, id domain.ID) ([]domain.M
 		// name. Dropping the row instead would silently shrink a roster.
 		if u, err := r.users.ByID(ctx, uid); err == nil {
 			member.DisplayName = u.DisplayName
+			member.Image = u.Image
 		} else if !types.IsNotFound(err) {
 			return nil, err
 		}

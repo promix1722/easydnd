@@ -8,6 +8,7 @@ import (
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/types"
+	"github.com/promix1722/easydnd/internal/usecase/portrait"
 )
 
 // validateAndAttribute checks a batch of events against what the character
@@ -371,6 +372,12 @@ const (
 func validateChanges(cat *catalog.Catalog, event domain.Event, index int) []types.FieldError {
 	var fields []types.FieldError
 	for i, change := range event.Changes {
+		if change.Path == "identity.image" {
+			if change.Op != domain.OpSet || change.Value.Kind != domain.ValueString || !portrait.Valid(change.Value.Str) {
+				fields = append(fields, portrait.FieldError())
+			}
+			continue
+		}
 		if change.Path == "identity.desiredLevel" {
 			if change.Value.Kind == domain.ValueInt &&
 				(change.Value.Int < 1 || change.Value.Int > maxLevel(cat)) {

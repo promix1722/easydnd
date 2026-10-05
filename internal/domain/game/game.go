@@ -51,6 +51,7 @@ import (
 
 	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/group"
+	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
 )
 
@@ -133,6 +134,8 @@ type Entry struct {
 
 // Stats is the compact base block, copied for monsters and projected for players.
 type Stats struct {
+	Image        string
+	Class        rules.Slug
 	Name         string
 	MaxHP        int
 	ArmorClass   int

@@ -19,6 +19,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
+	"github.com/promix1722/easydnd/internal/usecase/portrait"
 )
 
 // Service holds the character usecases. Every dependency arrives through the
@@ -97,6 +98,7 @@ func (s *Service) now() time.Time {
 type NewCharacter struct {
 	Rules     pack.Lock
 	Name      string
+	Image     string
 	Alignment rules.Slug
 }
 
@@ -147,9 +149,11 @@ func (s *Service) Create(
 	return s.repo.Get(ctx, created.ID)
 }
 
-// validateOpening checks what creation is now allowed to carry: a name, and
-// nothing that has a prompt of its own.
+// validateOpening checks the name and optional portrait carried at creation.
 func validateOpening(opening NewCharacter) error {
+	if !portrait.Valid(opening.Image) {
+		return types.NewFieldValidationError("invalid portrait", portrait.FieldError())
+	}
 	if opening.Name == "" {
 		return types.NewFieldValidationError("the character could not be created",
 			types.FieldError{
@@ -170,6 +174,9 @@ func validateOpening(opening NewCharacter) error {
 func initEvent(opening NewCharacter) domain.Event {
 	changes := []domain.Change{
 		{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue(opening.Name)},
+	}
+	if opening.Image != "" {
+		changes = append(changes, domain.Change{Path: "identity.image", Op: domain.OpSet, Value: domain.StringValue(opening.Image)})
 	}
 	if !opening.Alignment.IsZero() {
 		changes = append(changes, domain.Change{

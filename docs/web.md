@@ -4249,3 +4249,43 @@ choices use neutral borders; red highlights indicate outstanding choices only.
 Choice rows place their source badges on the right beside the name.
 Homebrew uses a gear icon in desktop navigation and is omitted from the mobile
 menu; its direct routes remain available.
+
+### Portraits
+
+Character portraits have their own choice on the Personal tab. The shared avatar
+editor also appears in Account's Profile section. JPEG, PNG and WebP uploads up
+to 5 MiB open a rounded-square crop preview with dragging, position sliders and zoom.
+Confirming produces a 256 × 256 WebP; cancelling keeps the saved image. New
+character portraits remain drafts until creation; existing portraits save
+independently of the name and retain drafts on failure.
+
+The shared avatar displays character and account portraits as 48 px rounded squares with
+a 1 px black border and the spell tiles’ slate background (`#252c3b`) and 8 px corners, including placeholders. Character headers, lists, group
+rosters, game trackers and pickers use it. Names remain visible without redundant
+Name column headings or tracker labels. Captions and errors are localized.
+
+
+Default portraits are generated WebP emblems bundled in `web/public/avatars/`,
+using the spell artwork's luminous illustrated style: soft colored shading,
+bright highlights and restrained edge glow. Readability comes from one large
+class symbol with broad structural shapes, generous gaps and little ornament,
+checked at 48 px; the shading and highlights remain part of the artwork.
+A character's starting
+class selects the emblem, including multiclass characters; pack-qualified class
+slugs use their final class name. Missing or unsupported character classes use the person placeholder. NPC copies
+retain the starting class for their emblem; classless NPCs select a stable random
+avatar from their entry ID. Accounts and classless NPCs share 24 generated icons
+in `web/public/avatars/random/`, including animal heads and fantasy objects.
+Their IDs determine a stable selection; the pool and its order remain fixed
+to preserve assignments. Entries from older API versions also get this fallback.
+Tracker players can use classes from the game's existing roster.
+
+Defaults are display-only and never written into `image`. Uploads override them;
+removing an upload reveals the default without offering removal of the default
+itself. The app makes no generation requests at runtime. Assets are 128 × 128,
+transparent WebPs. Generation prompts are in `docs/avatar-prompts.json` and
+`docs/random-avatar-prompts.json`. Placeholders use a centered, integer-sized
+SVG glyph inside the same tile.
+
+The public `/avatar-gallery` page shows all 12 class emblems and 24 random icons
+in separate responsive grids with localized names and larger rounded-square previews.

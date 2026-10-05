@@ -422,6 +422,20 @@ describe.each(['mobile', 'desktop'] as const)('tracker ordering and layout (%s)'
 })
 
 describe.each(['mobile', 'desktop'] as const)('tracker refinements (%s)', (viewport) => {
+  it('shows class artwork for copied NPCs and a stable random icon for stubs', async () => {
+    const game = gameAs('player')
+    game.entries = [
+      { id: 'copied', kind: 'monster', name: 'Copied rogue', class: 'dnd-2014/rogue', can_edit: false },
+      { id: 'stub', kind: 'monster', name: 'NPC', can_edit: false },
+      { id: 'uploaded', kind: 'monster', name: 'Portrait NPC', image: '/custom.webp', class: 'wizard', can_edit: false },
+    ]
+    renderGame(viewport, game)
+    const copied = await screen.findByRole('article', { name: 'Copied rogue' })
+    expect(within(copied).getByAltText('')).toHaveAttribute('src', '/avatars/rogue.webp')
+    expect(within(screen.getByRole('article', { name: 'NPC' })).getByAltText('').getAttribute('src')).toMatch(/^\/avatars\/random\/\w+\.webp$/)
+    expect(within(screen.getByRole('article', { name: 'Portrait NPC' })).getByAltText('')).toHaveAttribute('src', '/custom.webp')
+  })
+
   it('puts character and NPC add buttons in the toolbar above the roster', async () => {
     renderGame(viewport, gameAs('dm'))
     const button = await screen.findByRole('button', { name: 'Add NPC from my characters' })

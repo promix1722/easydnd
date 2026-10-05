@@ -22,6 +22,7 @@ import type { GroupRole } from './groups'
 
 /** One character on a group's table, or seated at a game. */
 export interface TableCharacter {
+  image?: string
   id: string
   owner_id: string
   name: string
@@ -163,6 +164,8 @@ export interface EntryStats {
 }
 
 export interface GameEntry {
+  image?: string
+  class?: string
   id: string
   kind: 'player' | 'monster'
   name: string

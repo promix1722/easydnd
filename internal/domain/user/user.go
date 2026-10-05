@@ -44,6 +44,7 @@ const AnonymousIDPrefix = "anon:"
 type User struct {
 	ID          ID
 	DisplayName string
+	Image       string
 	CreatedAt   time.Time
 	Appearance  Appearance
 	// Credentials holds every passkey registered to this account. It is a
@@ -135,6 +136,7 @@ type Identity struct {
 	// account keeps its own DisplayName; this is only ever informational, so
 	// that a later rename upstream cannot silently rewrite what we show.
 	DisplayName string
+	Image       string
 
 	CreatedAt  time.Time
 	LastUsedAt time.Time
@@ -144,6 +146,7 @@ type Identity struct {
 // internal/adapter/repository; internal/app picks the concrete one, and that
 // assignment is what proves conformance at compile time.
 type Repository interface {
+	SetImage(ctx context.Context, id ID, image string) error
 	SetAppearance(ctx context.Context, id ID, appearance Appearance) error
 
 	// Create stores u together with its initial credentials. Implementations

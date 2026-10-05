@@ -52,6 +52,7 @@ type State struct {
 
 // Identity is who the character is, as opposed to what they can do.
 type Identity struct {
+	Image      string
 	Name       string
 	Alignment  rules.Slug
 	Race       rules.Slug

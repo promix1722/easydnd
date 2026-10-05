@@ -24,6 +24,7 @@ import (
 type CreateParams struct {
 	Rules     helpers.RulesLock `json:"rules"`
 	Name      string            `json:"name"`
+	Image     string            `json:"image"`
 	Alignment string            `json:"alignment"`
 
 	// Folder files the character. Empty means the caller's default folder,
@@ -51,6 +52,7 @@ func (h *Handler) Create(c *gin.Context) {
 	locale := helpers.Locale(c)
 	created, err := h.service.Create(ctx, h.owner(c), domain.FolderID(params.Folder), charuc.NewCharacter{
 		Name:      params.Name,
+		Image:     params.Image,
 		Rules:     params.Rules.Domain(),
 		Alignment: rules.Slug(params.Alignment),
 	})

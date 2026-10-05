@@ -39,6 +39,7 @@ export interface SessionIdentity {
 
 /** The signed-in account -- or, when `anonymous`, the guest standing in for one. */
 export interface SessionUser {
+  image?: string
   id: string
   display_name: string
   created_at: string
@@ -164,4 +165,9 @@ export async function unlinkProvider(provider: string, subject: string): Promise
 /** Clears the session cookie. */
 export async function signOut(): Promise<void> {
   await request<{ signed_out: boolean }>('/auth/logout', { method: 'POST', body: {} })
+}
+
+/** Empty removes the current account's avatar. */
+export function setProfileImage(image: string): Promise<void> {
+  return request<void>('/profile/image', { method: 'PUT', body: { image } })
 }

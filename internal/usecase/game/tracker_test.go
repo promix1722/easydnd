@@ -100,6 +100,10 @@ func TestPrivateMonstersAndStableOrdering(t *testing.T) {
 	ctx := context.Background()
 	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer})
 	source := f.character(t, "alice")
+	if err := f.characters.Append(ctx, source, 0, character.Event{Type: character.EventInit},
+		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 1}); err != nil {
+		t.Fatal(err)
+	}
 	g, _ := f.svc.Create(ctx, "alice", "table", "Game")
 	for range 2 {
 		if err := f.svc.AddMonster(ctx, "alice", g.ID, source, rules.DefaultLocale); err != nil {
@@ -117,6 +121,9 @@ func TestPrivateMonstersAndStableOrdering(t *testing.T) {
 	monsters, _ := f.svc.Participants(ctx, "alice", g.ID, rules.DefaultLocale)
 	if len(monsters) != 3 || monsters[0].Entry.ID == monsters[1].Entry.ID {
 		t.Fatal("duplicate copies missing")
+	}
+	if monsters[0].Stats.Class != "rogue" || monsters[1].Stats.Class != "rogue" || monsters[2].Stats.Class != "" {
+		t.Fatal("copies must preserve the starting class while stubs have no class")
 	}
 	if monsters[2].Entry.HP != 10 || monsters[2].Stats.MaxHP != 10 {
 		t.Fatal("stub should start at 10/10 HP")
@@ -141,6 +148,9 @@ func TestPrivateMonstersAndStableOrdering(t *testing.T) {
 		t.Fatal("sort did not preserve ties and put unset last")
 	}
 	public, _ := f.svc.Participants(ctx, "bob", g.ID, rules.DefaultLocale)
+	if public[0].Stats.Class != "rogue" || public[1].Stats.Class != "rogue" {
+		t.Fatal("public portraits lost their class")
+	}
 	for _, p := range public {
 		if p.CanEdit || p.Entry.Monster != nil || p.Entry.Character != "" || p.Entry.HP != 0 || p.Entry.Initiative != nil || len(p.Entry.Tags) != 0 || p.Stats.ArmorClass != 0 {
 			t.Fatal("private monster data leaked")

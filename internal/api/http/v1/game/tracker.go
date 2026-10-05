@@ -19,6 +19,8 @@ type GameEntry struct {
 	ID          string      `json:"id"`
 	Kind        string      `json:"kind"`
 	Name        string      `json:"name"`
+	Image       string      `json:"image,omitempty"`
+	Class       string      `json:"class,omitempty"`
 	CharacterID string      `json:"character_id,omitempty"`
 	CanEdit     bool        `json:"can_edit"`
 	Locked      *bool       `json:"locked,omitempty"`
@@ -107,7 +109,7 @@ func (patch EntryStatsPatch) domain() (*gameuc.StatsPatch, error) {
 
 func entryOf(p gameuc.Participant, master bool) GameEntry {
 	e := p.Entry
-	out := GameEntry{ID: e.ID, Kind: e.Kind, Name: p.Stats.Name, CanEdit: p.CanEdit}
+	out := GameEntry{ID: e.ID, Kind: e.Kind, Name: p.Stats.Name, Image: p.Stats.Image, Class: p.Stats.Class.String(), CanEdit: p.CanEdit}
 	if e.Kind == "monster" && !master {
 		return out
 	}

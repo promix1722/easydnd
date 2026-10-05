@@ -59,6 +59,7 @@ func summaryOf(s domain.Summary) Summary {
 		ID:      s.ID.String(),
 		Folder:  s.Folder.String(),
 		Name:    s.Name,
+		Image:   s.Image,
 		Level:   s.Level,
 		Classes: classLevels(s.Classes),
 	}
@@ -195,6 +196,7 @@ func SheetOf(s domain.State) Sheet {
 func identityOf(i domain.Identity) Identity {
 	return Identity{
 		Name:              i.Name,
+		Image:             i.Image,
 		Alignment:         i.Alignment.String(),
 		Race:              i.Race.String(),
 		Subrace:           i.Subrace.String(),

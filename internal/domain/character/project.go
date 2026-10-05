@@ -337,7 +337,7 @@ func (p *projector) setSubclass(subclass rules.Slug) {
 // and the ruling would vanish.
 func isInputPath(path Path) bool {
 	switch path {
-	case "identity.name", "identity.alignment", "identity.desiredLevel",
+	case "identity.image", "identity.name", "identity.alignment", "identity.desiredLevel",
 		"identity.ruleset", "abilities.method":
 		return true
 	}

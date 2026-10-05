@@ -18,7 +18,7 @@ import type { Folder, Summary } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
-import {
+import { Avatar, characterAvatar,
   ACTION_ICON_SIZE,
   Alert,
   Anchor,
@@ -253,12 +253,13 @@ export function CharacterListScreen() {
                 <DataList
                   items={inFolder}
                   getKey={(character) => character.id}
+                  leading={(character) => <Avatar image={character.image} fallback={characterAvatar(character.classes)} />}
                   actions={actionsFor}
                   menuActions
                   columns={[
                     {
                       key: 'name',
-                      header: t('common.name'),
+                      header: '',
                       primary: true,
                       text: (character) => character.name || t('common.unnamed'),
                       to: (character) => `/characters/${character.id}`,

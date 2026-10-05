@@ -13,3 +13,11 @@ func TestImportedCoinsUseReadableDenominations(t *testing.T) {
 		t.Fatalf("invalid coin keys: %#v", sheet.Equipment.Purse)
 	}
 }
+
+func TestSheetIncludesPortrait(t *testing.T) {
+	portrait := "data:image/webp;base64,cG9ydHJhaXQ="
+	sheet := api.SheetOf(domain.State{Identity: domain.Identity{Image: portrait}})
+	if sheet.Identity.Image != portrait {
+		t.Fatal("sheet response lost portrait")
+	}
+}

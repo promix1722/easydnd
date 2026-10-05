@@ -1,6 +1,7 @@
 import { PacksScreen, PackEditorScreen } from '@/features/packs'
 import { createBrowserRouter } from 'react-router'
 
+import { AvatarGalleryScreen } from '@/features/avatars'
 import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
 import { BuildScreen, CharacterLogScreen, CharacterSheetScreen } from '@/features/character'
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
     element: <RootGate />,
     children: [
       { index: true, element: <HomeRoute /> },
+      { path: 'avatar-gallery', element: <AvatarGalleryScreen /> },
       { path: 'homebrew', element: <Private><PacksScreen /></Private> },
       { path: 'homebrew/:id', element: <Private><PackEditorScreen /></Private> },
 

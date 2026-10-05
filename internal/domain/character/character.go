@@ -70,6 +70,7 @@ type Summary struct {
 	ID     ID
 	Owner  OwnerID
 	Folder FolderID
+	Image  string
 	Name   string
 	Level  int
 

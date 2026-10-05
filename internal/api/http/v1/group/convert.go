@@ -27,6 +27,7 @@ func memberOf(m domain.Member) Member {
 	return Member{
 		UserID:      string(m.UserID),
 		DisplayName: m.DisplayName,
+		Image:       m.Image,
 		Role:        string(m.Role),
 		JoinedAt:    m.JoinedAt.UTC().Format(time.RFC3339),
 		Anonymous:   m.Anonymous(),

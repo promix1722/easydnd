@@ -19,6 +19,7 @@ type Summary struct {
 	// a fallback bucket.
 	Folder  string       `json:"folder"`
 	Name    string       `json:"name"`
+	Image   string       `json:"image,omitempty"`
 	Level   int          `json:"level"`
 	Classes []ClassLevel `json:"classes,omitempty"`
 }
@@ -147,6 +148,7 @@ type Sheet struct {
 // Identity is who the character is.
 type Identity struct {
 	Name              string       `json:"name"`
+	Image             string       `json:"image,omitempty"`
 	Alignment         string       `json:"alignment,omitempty"`
 	Race              string       `json:"race,omitempty"`
 	Subrace           string       `json:"subrace,omitempty"`

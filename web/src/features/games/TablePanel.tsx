@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth'
 import { useResource } from '@/lib/useResource'
 import { useT } from '@/lib/i18n'
 import {
+  Avatar, characterAvatar,
   ACTION_ICON_SIZE,
   Alert,
   Anchor,
@@ -87,6 +88,7 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
       <DataList
         items={characters}
         getKey={(character) => character.id}
+        leading={(character) => <Avatar image={character.image} fallback={characterAvatar(character.classes)} />}
         // "Yours" is a mark on the name rather than a column: no table here
         // ever gave it a header, and it used to be hand-built inside the name
         // cell -- which is what put a `div` inside a `<Text>`'s paragraph.
@@ -203,12 +205,15 @@ function ShareSheet({
           const shared = already.includes(character.id)
           return (
             <Group key={character.id} justify="space-between">
-              <div>
-                <Text size="sm">{character.name || t('common.unnamed')}</Text>
-                <Text size="xs" c="dimmed">
-                  {classLine(character.classes)}
-                </Text>
-              </div>
+              <Group gap="sm" wrap="nowrap">
+                <Avatar image={character.image} fallback={characterAvatar(character.classes)} />
+                <div>
+                  <Text size="sm">{character.name || t('common.unnamed')}</Text>
+                  <Text size="xs" c="dimmed">
+                    {classLine(character.classes)}
+                  </Text>
+                </div>
+              </Group>
               <Button
                 variant="light"
                 disabled={shared}

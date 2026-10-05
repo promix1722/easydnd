@@ -24,6 +24,7 @@ export {
   ssoStartUrl,
   startGuestSession,
   unlinkProvider,
+  setProfileImage,
 } from './auth'
 export type { AuthProviderInfo, SessionCredential, SessionIdentity, SessionUser } from './auth'
 

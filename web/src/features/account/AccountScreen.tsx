@@ -3,9 +3,11 @@ import { useState } from 'react'
 import { useAppearance } from '@/lib/appearance'
 import { isAppearance } from '@/lib/appearance/preferences'
 import { useAuth } from '@/lib/auth'
+import { setProfileImage } from '@/lib/api'
+import { useAction } from '@/lib/useAction'
 import { formatDate, useLocale, useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
-import { Alert, Badge, Button, Card, Group, Page, Select, Stack, Text, Title } from '@/ui'
+import { AvatarEditor, playerAvatar, Alert, Badge, Button, Card, Group, Page, Select, Stack, Text, Title } from '@/ui'
 
 /**
  * Personal appearance and the ways this account is reached.
@@ -42,7 +44,9 @@ import { Alert, Badge, Button, Card, Group, Page, Select, Stack, Text, Title } f
 export function AccountScreen() {
   const t = useT()
   const locale = useLocale()
-  const { user, providers, linkProvider, unlinkProvider, busy, error } = useAuth()
+  const { user, providers, linkProvider, unlinkProvider, busy, error, refresh } = useAuth()
+  const avatar = useAction(setProfileImage)
+  const [imageDraft, setImageDraft] = useState<string | undefined>(undefined)
   const [confirming, setConfirming] = useState<string | null>(null)
 
   if (!user) return null
@@ -64,6 +68,17 @@ export function AccountScreen() {
   return (
     <Page trail={trail(t)} namedByChrome>
       <Stack gap="lg">
+        <Card withBorder padding="md">
+          <Stack gap="sm">
+            <Title order={4}>{t('account.profile')}</Title>
+            <Text size="sm">{user.display_name}</Text>
+            <AvatarEditor fallback={playerAvatar(user.id)} image={imageDraft ?? user.image} pending={avatar.pending} error={avatar.error} onSave={async (image) => {
+              setImageDraft(image)
+              const saved = await avatar.run(image)
+              if (saved !== null) { await refresh(); setImageDraft(undefined) }
+            }} />
+          </Stack>
+        </Card>
         <AppearanceCard />
         {error ? (
           <Alert color="red" title={t('group.actionFailed')}>

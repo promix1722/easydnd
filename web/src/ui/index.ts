@@ -171,3 +171,9 @@ export { DevAccounts } from './DevAccounts'
 export { SourceTags } from './SourceTags'
 export { SummaryMultiSelect } from './SummaryMultiSelect'
 export { sourceAbbreviation } from './sourceAbbreviation'
+
+export { Avatar } from './Avatar'
+
+export { AvatarEditor } from './AvatarEditor'
+
+export { AVATAR_CLASSES, AVATAR_RANDOM, characterAvatar, playerAvatar } from './avatarDefaults'

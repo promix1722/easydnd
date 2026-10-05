@@ -94,7 +94,8 @@ ties, with unset entries last.
 
 NPCs are independent private copies of the master's characters, or stubs
 named NPC starting at 10/10 HP with editable stats. Copying one grants no access to the original sheet.
-Players see NPC names and their place in the order; the master sees stats
+Copies retain their starting class for their portrait. Players see NPC names,
+portraits and their place in the order; the master sees stats
 and tags. Removing an NPC affects only the game, and copying the same source
 again creates another independent creature.
 
@@ -693,3 +694,11 @@ never change an existing character implicitly. If group access to a pack ends,
 already pinned characters remain playable and can gain levels, while new
 characters and copies require current release access. Group shares are exact
 versions and advance only when explicitly replaced.
+
+### Portraits
+
+An optional portrait is an identity input, represented by an `identity.image`
+string set in the character log alongside the name. Empty means no portrait.
+It has no effect on rules or completion and is projected onto sheets and
+summaries. Portrait and Name choices save independently through the existing revision
+mechanism, preserving the other identity fields.

@@ -6,6 +6,7 @@ import { addGameMonster, deleteGameEntry, orderGameEntries, patchGameEntry, rest
 import { useAction } from '@/lib/useAction'
 import { useT } from '@/lib/i18n'
 import {
+  Avatar, characterAvatar, playerAvatar,
   ACTION_ICON_SIZE, ActionIcon, Alert, Anchor, Badge, Box, Button, Card, Divider,
   Group, IconArrowDown, IconArrowUp, IconDice5, IconDotsVertical, IconGripVertical, IconPencil,
   IconShield, IconTrash, IconPlus, IconChevronDown, Menu, ModalSheet, NumberInput, SimpleGrid, Stack, Text, TextInput, useIsDesktop,
@@ -132,6 +133,8 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
       <Stack gap="xs" data-game-roster={game.id}>
         {entries.map((entry, index) => {
           const name = entry.name || t('common.unnamed')
+          const classes = entry.class ? [{ class: entry.class }] : game.characters.find((character) => character.id === entry.character_id)?.classes
+          const fallback = characterAvatar(classes) ?? (entry.kind === 'monster' ? playerAvatar(entry.id) : undefined)
           const actions = [
             ...(entry.can_edit ? [{ label: t('common.edit'), icon: IconPencil,
               run: () => { patch.reset(); setEditing(entry.id) } }] : []),
@@ -168,8 +171,8 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
                       aria-label={t('vitals.initiative')} title={t('vitals.initiative')}
                       style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>({entry.initiative})</Text>}
                     <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
-                      <Text size="xs" c="dimmed" visibleFrom="md">{t('common.name')}</Text>
                       <Group gap="xs">
+                        <Avatar image={entry.image} fallback={fallback} />
                         {entry.character_id ? (
                           <Anchor component={Link} draggable={false} size="sm" fw={500}
                             style={{ overflowWrap: 'anywhere' }}

@@ -33,7 +33,7 @@ import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
-import { Alert, Badge, Button, Group, ModalSheet, Page, Panel, Stack, TabDeck, Text } from '@/ui'
+import { Avatar, characterAvatar, AvatarEditor, BlockList, Alert, Badge, Button, Group, ModalSheet, Page, Panel, Stack, TabDeck, Text } from '@/ui'
 import type { Crumb } from '@/ui'
 
 import {
@@ -166,6 +166,7 @@ export function BuildScreen() {
   const [seeded, setSeeded] = useState(false)
   const [askedOn, setAskedOn] = useState<Stage | null>(null)
   const [nameDraft, setNameDraft] = useState('')
+  const [imageDraft, setImageDraft] = useState<string | undefined>(undefined)
   const [draftRules, setDraftRules] = useState<Change[] | null>(null)
   // The custom entry being written, opened from a picker's last option or
   // from the entry's own block.
@@ -218,6 +219,7 @@ export function BuildScreen() {
     setPackDirty(false)
     setPackError('')
     if (!creating) orders.clear()
+    if (!creating) setImageDraft(undefined)
     setShownId(id)
     setChosenStage(landingStage(location.state))
     setOpenKey(creating ? NEW_NAME_KEY : null)
@@ -365,6 +367,7 @@ export function BuildScreen() {
     }
     const created = await create.run({
       name: nameDraft.trim(),
+      ...(imageDraft ? { image: imageDraft } : {}),
       ...(selectedRules ? { rules: selectedRules } : {}),
       ...(folder ? { folder } : {}),
     })
@@ -536,7 +539,18 @@ export function BuildScreen() {
       return
     }
     // A rename starts from the name it is changing rather than from nothing.
-    if (question.choice.kind === 'text') setNameDraft(block.row.value)
+    if (question.choice.kind === 'text') {
+      setNameDraft(block.row.value)
+    }
+  }
+
+  const savePortrait = async (image: string) => {
+    setImageDraft(image)
+    if (isNew) return
+    const written = await revise.run(id, 1, view.prompts.seq, {
+      type: 'init', changes: [{ path: 'identity.image', op: 'set', value: { kind: 'string', string: image } }],
+    }, false, view.prompts.revision ?? view.prompts.seq)
+    if (written) { setImageDraft(undefined); build.refresh() }
   }
 
   const submitEvent = (asked: Asking, event: CharacterEvent) => {
@@ -562,6 +576,7 @@ export function BuildScreen() {
   if (build.loading && !creating) {
     return (
       <Page
+        mark={<Avatar image={isNew ? imageDraft : view.sheet?.identity.image} fallback={characterAvatar(isNew ? undefined : view.sheet?.identity.classes)} size={48} />}
         trail={buildTrail(t, isNew, null)}
         state={{ kind: 'loading', what: t('build.loading') }}
       />
@@ -570,6 +585,7 @@ export function BuildScreen() {
   if (build.error !== null) {
     return (
       <Page
+        mark={<Avatar image={isNew ? imageDraft : view.sheet?.identity.image} fallback={characterAvatar(isNew ? undefined : view.sheet?.identity.classes)} size={48} />}
         trail={buildTrail(t, isNew, null)}
         state={{
           kind: 'failed',
@@ -594,6 +610,7 @@ export function BuildScreen() {
       // The draft, while the character it names is being created: the sheet
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
+      mark={<Avatar image={isNew ? imageDraft : view.sheet?.identity.image} fallback={characterAvatar(isNew ? undefined : view.sheet?.identity.classes)} size={48} />}
       trail={buildTrail(t, isNew, creating ? nameDraft.trim() : title(view))}
       /*
        * On the heading line, against the right edge, and only once there is a
@@ -736,6 +753,11 @@ export function BuildScreen() {
                   }}>
                   {packError && <Alert color="red">{packError}</Alert>}
                   </PackSelector>}
+                  {each === 'personal' && <BlockList open={openKey} onOpen={openBlock} items={[{
+                    key: 'portrait',
+                    header: <Text size="sm">{t('avatar.portrait')}</Text>,
+                    body: <AvatarEditor fallback={characterAvatar(isNew ? undefined : view.sheet?.identity.classes)} image={imageDraft ?? view.sheet?.identity.image} pending={revise.pending || creating} error={revise.error} onSave={savePortrait} />,
+                  }]} />}
                   {customs(each)}
                   </StagePanel>
                   </Stack>
@@ -1183,7 +1205,9 @@ function maybeLines(row: SettledRow | null): { lines?: readonly string[] } {
 function initEventFor(name: string): CharacterEvent {
   return {
     type: 'init',
-    changes: [{ path: 'identity.name', op: 'set', value: { kind: 'string', string: name } }],
+    changes: [
+      { path: 'identity.name', op: 'set', value: { kind: 'string', string: name } },
+    ],
   }
 }
 

@@ -28,6 +28,7 @@ import (
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
 	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
+	profileapi "github.com/promix1722/easydnd/internal/api/http/v1/profile"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	"github.com/promix1722/easydnd/internal/types"
@@ -40,6 +41,7 @@ type Handlers struct {
 	System      *system.Handler
 	Auth        *auth.Handler
 	Appearance  *appearanceapi.Handler
+	Profile     *profileapi.Handler
 	Catalog     *catalogapi.Handler
 	Character   *characterapi.Handler
 	Folder      *folderapi.Handler
@@ -205,6 +207,9 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// in a comment that it is deliberate.
 		authed := v1.Group("", middleware.RequireSession(h.Authenticator, cookies))
 		{
+			if h.Profile != nil {
+				authed.PUT("/profile/image", middleware.NoStore(), h.Profile.PutImage)
+			}
 			if h.Appearance != nil {
 				resource := authed.Group("/appearance", middleware.NoStore())
 				resource.GET("", h.Appearance.Get)

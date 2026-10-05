@@ -25,8 +25,8 @@ const RETIRED = { id: 'fld_000003', name: 'Retired', default: false }
 
 const STUB_ID = 'chr_000009'
 
-const ADA = { id: 'chr_000001', folder: DEFAULT_FOLDER.id, name: 'Ada', level: 3, classes: [] }
-const BRAM = { id: 'chr_000002', folder: CAMPAIGN.id, name: 'Bram', level: 1, classes: [] }
+const ADA = { id: 'chr_000001', folder: DEFAULT_FOLDER.id, name: 'Ada', image: 'data:image/webp;base64,cG9ydHJhaXQ=', level: 3, classes: [] }
+const BRAM = { id: 'chr_000002', folder: CAMPAIGN.id, name: 'Bram', level: 1, classes: [{ class: 'wizard', level: 1 }] }
 
 interface Call {
   url: string
@@ -144,11 +144,13 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     renderList(viewport)
 
     expect(await screen.findByText('Ada')).toBeInTheDocument()
+    expect(screen.getAllByAltText('').find((avatar) => avatar.getAttribute('src') === ADA.image)).toBeInTheDocument()
 
     // Not "Ada is on the page and says Default beside her" -- Ada is *inside*
     // the Default folder's panel, which is the claim the layout now makes.
     expect(within(folderBody(DEFAULT_FOLDER.id)).getByText('Ada')).toBeInTheDocument()
     expect(within(folderBody(CAMPAIGN.id)).getByText('Bram')).toBeInTheDocument()
+    expect(within(folderBody(CAMPAIGN.id)).getByAltText('')).toHaveAttribute('src', '/avatars/wizard.webp')
     expect(within(folderBody(CAMPAIGN.id)).queryByText('Ada')).not.toBeInTheDocument()
 
     // An empty folder still draws, and says so.

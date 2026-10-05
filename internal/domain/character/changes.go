@@ -113,6 +113,8 @@ func (p *projector) changeIdentity(sc seqChange, rest []string) error {
 		return p.unresolved(sc)
 	}
 	switch rest[0] {
+	case "image":
+		return setString(p, sc, &p.state.Identity.Image)
 	case "name":
 		return setString(p, sc, &p.state.Identity.Name)
 	case "alignment":

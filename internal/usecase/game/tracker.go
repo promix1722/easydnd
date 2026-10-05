@@ -27,9 +27,13 @@ type Participant struct {
 }
 
 func statsOf(state character.State) domain.Stats {
-	return domain.Stats{Name: state.Identity.Name, MaxHP: state.Base.HitPoints.Max,
+	stats := domain.Stats{Name: state.Identity.Name, Image: state.Identity.Image, MaxHP: state.Base.HitPoints.Max,
 		ArmorClass: state.Status.ArmorClass, Spellcasting: state.Status.Spellcasting,
 		Speeds: state.Base.Speeds, Senses: state.Base.Senses, Abilities: state.Abilities}
+	if len(state.Identity.Classes) > 0 {
+		stats.Class = state.Identity.Classes[0].Class
+	}
+	return stats
 }
 
 // poolsOf orders a character's non-empty pools -- spell slots by level, then
@@ -107,7 +111,7 @@ func (s *Service) Participants(ctx context.Context, actor user.ID, id domain.ID,
 		if e.Kind == "monster" {
 			stats = *e.Monster
 			if !role.AtLeast(group.RoleDM) {
-				out = append(out, Participant{Entry: domain.Entry{ID: e.ID, Kind: "monster"}, Stats: &domain.Stats{Name: stats.Name}})
+				out = append(out, Participant{Entry: domain.Entry{ID: e.ID, Kind: "monster"}, Stats: &domain.Stats{Name: stats.Name, Image: stats.Image, Class: stats.Class}})
 				continue
 			}
 		} else {

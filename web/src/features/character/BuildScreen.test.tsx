@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -1135,6 +1135,42 @@ describe('BuildScreen', () => {
     })
   })
 
+  it('edits the portrait as a separate choice without opening the name form', async () => {
+    const user = setupUser()
+    const image = 'data:image/webp;base64,cG9ydHJhaXQ='
+    mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [], sheet: { ...SHEET, identity: { ...SHEET.identity, image } } })
+    renderBuild(viewport)
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+    await user.click(block(/Portrait/))
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
+    expect(panel('personal').getByAltText('')).toHaveAttribute('src', image)
+    await user.click(screen.getByRole('button', { name: 'Remove image' }))
+    await waitFor(() => expect(writes()).toHaveLength(1))
+    expect(writes()[0]?.body).toMatchObject({ event: { changes: [
+      { path: 'identity.image', op: 'set', value: { kind: 'string', string: '' } },
+    ] } })
+  })
+
+  it('keeps the portrait-removal draft after a failed save', async () => {
+    const user = setupUser()
+    const image = 'data:image/webp;base64,cG9ydHJhaXQ='
+    mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [], sheet: { ...SHEET, identity: { ...SHEET.identity, image } } })
+    const api = fetch
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'PUT') return new Response(JSON.stringify({ error: { code: 'validation_error', fields: [
+        { field: 'image', reason: 'field.character.image.invalid' },
+      ] } }), { status: 422 })
+      return api(input, init)
+    })
+    renderBuild(viewport)
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+    await user.click(block(/Portrait/))
+    await user.click(screen.getByRole('button', { name: 'Remove image' }))
+    await screen.findAllByText('Choose a valid JPEG, PNG or WebP image up to 5 MB.')
+    expect(panel('personal').queryByAltText('')).not.toBeInTheDocument()
+    expect(screen.getAllByAltText('').filter((avatar) => avatar.getAttribute('src') === image)).toHaveLength(1)
+  })
+
   it('settles an alignment as the change that settles it, not as a reference', async () => {
     const user = setupUser()
     mockApi({ prompts: ALIGNMENT, events: BACKGROUND_LOG })
@@ -1394,6 +1430,33 @@ describe('a new character', () => {
         { path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } },
       ] }],
     })
+  })
+
+  it('creates a character with its uploaded portrait', async () => {
+    const user = setupUser()
+    const image = 'data:image/webp;base64,cG9ydHJhaXQ='
+    vi.stubGlobal('Image', class { src = ''; naturalWidth = 256; naturalHeight = 256; decode = async () => {} })
+    vi.stubGlobal('URL', class extends URL {
+      static override createObjectURL = () => 'blob:portrait'
+      static override revokeObjectURL = () => {}
+    })
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: () => {} } as unknown as CanvasRenderingContext2D)
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(image)
+    try {
+      renderNew(viewport)
+      await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+      await user.type(await screen.findByLabelText('Name'), 'Portrait hero')
+      await user.click(block(/Portrait/))
+      const input = document.querySelector('input[type=file]')!
+      fireEvent.change(input, { target: { files: [new File(['image'], 'hero.png', { type: 'image/png' })] } })
+      await user.click(await screen.findByRole('button', { name: 'Use image' }))
+      await user.click(block(/A name/))
+      await user.click(screen.getByRole('button', { name: 'Confirm' }))
+      await waitFor(() => expect(writes()).toHaveLength(1))
+      expect(writes()[0]?.body).toMatchObject({ name: 'Portrait hero', image })
+    } finally {
+      vi.restoreAllMocks()
+    }
   })
 
   it('keeps the rules choice selected while the name is still a draft', async () => {

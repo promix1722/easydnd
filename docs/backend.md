@@ -1094,7 +1094,7 @@ before characters are durable; the two move to Postgres together or not at all.
 
 Game detail responses include ordered `entries`, separate from the legacy player
 `characters` summaries used by character pickers. Each entry has a game entry
-`id`, `kind`, `name`, and caller-specific `can_edit`. Player entries additionally
+`id`, `kind`, `name`, optional portrait `image` and starting `class`, and caller-specific `can_edit`. Player entries additionally
 carry `character_id`, `locked`, `hp`, `temp_hp`, optional `initiative`, `tags`, and
 compact `stats`. The stats block contains `name`, `max_hp`, `armor_class`,
 `spellcasting`, `speeds`, `senses`, and `abilities`; nested fields reuse sheet
@@ -1137,7 +1137,8 @@ NPCs hold private copies or editable default stats. New stubs are named NPC
 and start with 10 current and maximum HP. The internal kind `monster` and
 `/monsters` API route remain stable. Copying checks source
 ownership and does not share the source. Multiple copies have separate IDs.
-Players receive only a monster's ID, kind, name, and `can_edit: false`; private
+Copies retain their starting class for the default portrait. Players receive only
+a monster's ID, kind, name, portrait image, starting class, and `can_edit: false`; private
 fields and source links are omitted server-side. Source deletion/unsharing
 removes linked player entries but does not remove copied monsters. Monster
 `stats` patches update only supplied base fields and recalculate ability
@@ -2305,3 +2306,23 @@ The authoring adapter also retains the import agent's generated private releases
 in memory. They stay outside pack listings and the default catalogue. Existing
 imported characters and their copies resolve those exact definitions; copying
 still checks current access to any ordinary homebrew releases in the same lock.
+
+### Character portraits
+
+Optional `image` values in character creation, sheet identity, summaries and game
+rosters are inline raster data URLs. The existing log stores `identity.image` as
+a string set; an empty string removes it. Editing the init event preserves fields
+not included in the replacement, so a rename does not discard the portrait.
+Copies retain it. Character portraits use the existing log storage.
+
+Creation and event writes validate the image before committing: only JPEG, PNG
+and WebP data URLs, at most 256 KiB including base64, with valid decoded pixels
+and dimensions from 1 to 256 on each axis. URLs and SVG are rejected. Existing
+character access checks also protect portraits. Monster entries inherit the
+portrait when copied from a character and follow the existing privacy filtering.
+
+
+Account portraits use the same validation. `PUT /v1/profile/image` accepts an
+`image` string, including empty for removal, and updates only the signed-in
+account. Guests cannot upload avatars. Migration 00006 adds the bounded image
+column to users. Session and group-member responses include optional portraits.

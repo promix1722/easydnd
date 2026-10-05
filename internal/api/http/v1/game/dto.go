@@ -46,6 +46,7 @@ type Summary struct {
 type Character struct {
 	ID      string `json:"id"`
 	OwnerID string `json:"owner_id"`
+	Image   string `json:"image,omitempty"`
 	Name    string `json:"name"`
 	Level   int    `json:"level"`
 

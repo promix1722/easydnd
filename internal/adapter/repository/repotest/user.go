@@ -52,6 +52,7 @@ func RunUserRepository(t *testing.T, newRepo NewUserRepository) {
 	}{
 		{"CreateAndLookup", testCreateAndLookup},
 		{"Appearance", testAppearance},
+		{"Avatar", testAvatar},
 		{"CreateRejectsEmptyID", testCreateRejectsEmptyID},
 		{"CreateRejectsDuplicateAccount", testCreateRejectsDuplicateAccount},
 		{"CreateRejectsCredentialClaimedByAnother", testCreateRejectsCredentialClaimedByAnother},
@@ -725,5 +726,45 @@ func testAppearance(t *testing.T, r domain.Repository) {
 	loaded, err := r.ByID(ctx, b.ID)
 	if err != nil || loaded.Appearance != b.Appearance {
 		t.Fatalf("creation lost appearance: %v, %v", loaded.Appearance, err)
+	}
+}
+
+func testAvatar(t *testing.T, r domain.Repository) {
+	ctx := context.Background()
+	a := Account("alice", "cred-a")
+	a.Image = "first portrait"
+	a.Identities = []domain.Identity{{Provider: domain.ProviderGoogle, Subject: "alice", CreatedAt: a.CreatedAt}}
+	if err := r.Create(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := r.ByID(ctx, a.ID)
+	if err != nil || loaded.Image != a.Image {
+		t.Fatalf("creation lost image: %v", err)
+	}
+	for _, image := range []string{"replacement portrait", ""} {
+		if err := r.SetImage(ctx, a.ID, image); err != nil {
+			t.Fatal(err)
+		}
+		byID, err := r.ByID(ctx, a.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		byCredential, err := r.ByCredentialID(ctx, []byte("cred-a"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		byIdentity, err := r.ByIdentity(ctx, domain.ProviderGoogle, "alice")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, value := range []domain.User{byID, byCredential, byIdentity} {
+			if value.Image != image || value.DisplayName != a.DisplayName || len(value.Credentials) != 1 || len(value.Identities) != 1 {
+				t.Fatal("avatar write lost account fields")
+			}
+		}
+	}
+	var missing *types.NotFoundError
+	if err := r.SetImage(ctx, "missing", ""); !errors.As(err, &missing) {
+		t.Fatalf("missing account: %v", err)
 	}
 }
