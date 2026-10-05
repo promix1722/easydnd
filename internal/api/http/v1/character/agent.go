@@ -53,7 +53,11 @@ func (h *Handler) AgentCreate(c *gin.Context) {
 		helpers.FormatError(c, types.NewValidationError("select rules before starting").Because("agent.rulesRequired"))
 		return
 	}
-	s, err := h.agent.Create(c.Request.Context(), h.owner(c), folderOf(c), helpers.Locale(c), files, c.PostForm("instructions"), selected.Domain())
+	create := h.agent.Create
+	if c.PostForm("unattended") == "true" {
+		create = h.agent.CreateUnattended
+	}
+	s, err := create(c.Request.Context(), h.owner(c), folderOf(c), helpers.Locale(c), files, c.PostForm("instructions"), selected.Domain())
 	h.agentResult(c, s, err)
 }
 func (h *Handler) AgentList(c *gin.Context) {

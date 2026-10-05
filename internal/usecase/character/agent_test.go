@@ -423,7 +423,8 @@ func TestAgentQuestionsKeepRequiredChoicesInChat(t *testing.T) {
 	if _, err = a.Control(testOwner, s.ID, "message", "Rogue", s.Revision); err != nil {
 		t.Fatal(err)
 	}
-	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "waiting" && len(s.Events) > len(fresh.Events) })
+	// A reply with nothing to press is a response cut short, not a question.
+	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "paused" && len(s.Events) > len(fresh.Events) })
 	found := false
 	for _, event := range s.Events {
 		if event.Kind == "user" && event.Text == "Rogue" {

@@ -72,6 +72,7 @@ auth:
 # agent:
 #   api_key: "..."
 #   model: "your-responses-model"
+#   reasoning_effort: low
 #   workers: 4
 #   max_turns: 40
 #   max_sessions: 100

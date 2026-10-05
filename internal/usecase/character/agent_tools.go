@@ -25,6 +25,11 @@ type agentArgs struct {
 	Proficient      []string        `json:"proficient"`
 	Expertise       []string        `json:"expertise"`
 	Coins           map[string]*int `json:"coins"`
+	Alignment       string          `json:"alignment"`
+	Traits          []string        `json:"personality_traits"`
+	Ideals          []string        `json:"ideals"`
+	Bonds           []string        `json:"bonds"`
+	Flaws           []string        `json:"flaws"`
 	HitPoints       *int            `json:"hit_points"`
 	ArmorClass      *int            `json:"armor_class"`
 	Facts           []agentArgs     `json:"facts"`
@@ -171,6 +176,22 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		for _, unit := range slices.Sorted(maps.Keys(args.Coins)) {
 			if value := args.Coins[unit]; value != nil {
 				inputs = append(inputs, agentArgs{Path: "equipment.purse." + unit, Value: json.RawMessage(strconv.Itoa(*value)), Source: args.Source})
+			}
+		}
+		// What the sheet says about who the character is has a slot each too:
+		// asked for as a separate fact, the second personality trait was the
+		// one a model left out. An empty slot writes nothing.
+		for _, text := range []struct{ path, value string }{{"identity.name", args.Name}, {"identity.alignment", args.Alignment}} {
+			if strings.TrimSpace(text.value) != "" {
+				inputs = append(inputs, agentArgs{Path: text.path, Value: raw(text.value), Source: args.Source})
+			}
+		}
+		for _, list := range []struct {
+			path   string
+			values []string
+		}{{"identity.personalityTraits", args.Traits}, {"identity.ideals", args.Ideals}, {"identity.bonds", args.Bonds}, {"identity.flaws", args.Flaws}} {
+			if values := slices.DeleteFunc(slices.Clone(list.values), func(v string) bool { return strings.TrimSpace(v) == "" }); len(values) > 0 {
+				inputs = append(inputs, agentArgs{Path: list.path, Value: raw(values), Source: args.Source})
 			}
 		}
 		for _, fact := range inputs {
@@ -328,6 +349,9 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		}
 		return nil, fmt.Errorf("prompt not open")
 	case "ask_user":
+		if s.Unattended {
+			return nil, fmt.Errorf("the user asked not to be asked anything: leave this open, import what the sources state, and call prepare_review")
+		}
 		if strings.TrimSpace(args.Text) == "" {
 			return nil, fmt.Errorf("question required")
 		}
@@ -361,10 +385,10 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 			s.nudged = missing
 			return map[string]any{"ready": false, "missingSourceFacts": localChecklist(missing), "next": "These checklist entries are not in the draft. Import the ones the sheet really documents, by name. Entries that only restate what the build already shows need nothing: call prepare_review again and it will pass. Do not create custom entries to satisfy this list."}, nil
 		}
-		if state.Identity.Name == "…" || strings.TrimSpace(state.Identity.Name) == "" {
+		if !s.Unattended && (state.Identity.Name == "…" || strings.TrimSpace(state.Identity.Name) == "") {
 			return map[string]any{"ready": false, "next": `The character has no name. If the sheet prints one, write it: import_facts {"facts":[{"path":"identity.name","value":"<the name>"}]}. If it does not, do not invent a placeholder: call ask_user "What is the character called?" with three or four names that suit the character as answers, write the reply the same way, then prepare_review again.`}, nil
 		}
-		if !args.AllowIncomplete {
+		if !args.AllowIncomplete && !s.Unattended {
 			prompts, err := domain.Prompts(nativeLog(s.Log), cat)
 			if err != nil {
 				return nil, err
@@ -392,7 +416,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 			return nil, err
 		}
 		open = slices.DeleteFunc(open, func(entry map[string]any) bool { return entry["purpose"] == "custom" })
-		if len(open) > 0 && !(s.offered && s.asked) {
+		if len(open) > 0 && !s.Unattended && !(s.offered && s.asked) {
 			s.offered = true
 			return map[string]any{"ready": false, "unanswered": open, "next": "These are still unanswered. Do not finish yet: call ask_user and offer to settle them, naming them in plain words, with the answers \"Fill them in for me\", \"One by one\" and \"Leave them blank\". Fill them in: answer each from the sheet or the description. One by one: one ask_user per entry, with its options as prepared answers (for a written one such as a personality trait, offer a few suggestions that suit the character). Leave them blank: prepare_review again."}, nil
 		}
@@ -406,6 +430,10 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		s.Log = pruned
 		s.Status = "review"
 		addAgentEvent(s, "assistant", args.Text, "", nil)
+		// Nobody was asked, so the handoff says what was left for the owner.
+		if s.Unattended && len(open) > 0 {
+			s.Events[len(s.Events)-1].Data = raw(map[string]any{"open": open})
+		}
 		return map[string]bool{"ready": true}, nil
 	case "upsert_custom_option":
 		return a.customOption(ctx, s, cat, args)
@@ -1254,6 +1282,9 @@ func (a *Agent) factPath(ctx context.Context, s *AgentSession, cat *catalog.Cata
 // factLists are the paths whose value is a list of catalogue entries, by the
 // kind of entry. A sheet's list is added to what the build grants rather than
 // replacing it, so the override it leaves is only what the build lacks.
+// formLabels are the captions a character sheet prints on its name boxes.
+var formLabels = map[string]bool{"character name": true, "player name": true, "name": true, "имя персонажа": true, "имя игрока": true, "имя": true}
+
 var factLists = map[string]string{"base.languages": "language", "proficiencies": "proficiency"}
 
 func (a *Agent) valueFact(ctx context.Context, s *AgentSession, cat *catalog.Catalog, args agentArgs) (domain.Log, map[string]any, error) {
@@ -1304,6 +1335,10 @@ func (a *Agent) valueFact(ctx context.Context, s *AgentSession, cat *catalog.Cat
 	// in it, and the builder then shows a field somebody "filled in".
 	if strings.HasPrefix(path, "identity.") && v.Kind == domain.ValueString && (strings.TrimSpace(v.Str) == "" || strings.TrimSpace(v.Str) == "…") {
 		return domain.Log{}, nil, fmt.Errorf("%s has no value to write. Leave it unwritten if the user wants it blank; if it is needed, ask_user for it", path)
+	}
+	// A blank name box still prints its caption, and that is what gets read.
+	if path == "identity.name" && formLabels[strings.ToLower(strings.TrimSpace(v.Str))] {
+		return domain.Log{}, nil, fmt.Errorf("%q is the caption of the name box, not a name: the box is blank, so leave the name unwritten", v.Str)
 	}
 	change := domain.Change{Path: domain.Path(path), Op: op, Value: v}
 	if strings.HasPrefix(path, "identity.") {

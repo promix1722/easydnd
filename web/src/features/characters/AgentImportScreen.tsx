@@ -19,6 +19,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   FileButton,
   IconArrowDown,
   IconPaperclip,
@@ -81,6 +82,7 @@ export function AgentImportScreen() {
   const [view, setView] = useState<AgentView | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const [message, setMessage] = useState('')
+  const [unattended, setUnattended] = useState(false)
   // The opening, before there is a session to record it: the rules the player
   // confirmed, and whether they have said how they want to start.
   const packs = useResource('pack-selection', listPacks)
@@ -231,7 +233,7 @@ export function AgentImportScreen() {
       // A sheet is attached to the first message and to no other.
       session
         ? controlAgent(session.id, session.revision, 'message', answer)
-        : createAgentSession(files, answer, folder, selectedRules),
+        : createAgentSession(files, answer, folder, selectedRules, unattended),
     )
     if (result) {
       setMessage('')
@@ -440,6 +442,17 @@ export function AgentImportScreen() {
                         }
                       }}
                     />
+                    {/* Said once, with the first message: it is the session's
+                        and cannot be turned on or off by a later one. */}
+                    {!session && (
+                      <Checkbox
+                        size="xs"
+                        label={t('agent.start.unattended')}
+                        disabled={!myTurn}
+                        checked={unattended}
+                        onChange={(event) => setUnattended(event.currentTarget.checked)}
+                      />
+                    )}
                     <Group align="end" justify="space-between">
                       {files.length ? (
                         <Group gap="xs">

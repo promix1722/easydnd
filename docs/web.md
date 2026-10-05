@@ -4077,6 +4077,11 @@ progress events is one assistant bubble built from `progressEntry`
 consecutive writes to one field sharing the caption. It is never folded.
 Source labels and internal assumptions are omitted.
 
+Under the first message's text there is one checkbox, *Don't ask me anything*,
+sent as the `unattended` field of the request that creates the session. It is
+shown only before a session exists, because it is the session's and no later
+message can change it; see [agent.md](agent.md#unattended-sessions).
+
 The screen is nothing but the transcript, with the composer as its last
 element. Before a session exists the transcript is drawn from local state:
 the assistant asks for the rules as one button per pack, the press becomes a

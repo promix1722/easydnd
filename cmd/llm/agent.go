@@ -27,10 +27,13 @@ import (
 )
 
 type agentCommand struct {
-	Action   string   `json:"action"`
-	Files    []string `json:"files"`
-	Text     string   `json:"text"`
-	Revision int      `json:"revision"`
+	Action string   `json:"action"`
+	Files  []string `json:"files"`
+	Text   string   `json:"text"`
+	// Unattended starts a session that asks nothing and leaves open what the
+	// sources do not state.
+	Unattended bool `json:"unattended"`
+	Revision   int  `json:"revision"`
 }
 
 // Writes from the model worker and the command loop share one JSON stream.
@@ -53,7 +56,7 @@ type timedAgentModel struct {
 func (m timedAgentModel) Respond(ctx context.Context, r charuc.AgentRequest, delta func(string)) (charuc.AgentResponse, error) {
 	start := time.Now()
 	response, err := m.AgentModel.Respond(ctx, r, delta)
-	_ = m.out.emit(map[string]any{"kind": "model", "durationMs": time.Since(start).Milliseconds(), "calls": response.Calls, "text": response.Text, "failed": err != nil})
+	_ = m.out.emit(map[string]any{"kind": "model", "durationMs": time.Since(start).Milliseconds(), "calls": response.Calls, "text": response.Text, "usage": response.Usage, "failed": err != nil})
 	return response, err
 }
 
@@ -91,7 +94,7 @@ func agentCmd(args []string) error {
 	service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, nil, logger)
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-	return runAgentCLI(ctx, os.Stdin, os.Stdout, service, agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model), lang, charuc.AgentConfig{Workers: 1, MaxTurns: cfg.Agent.MaxTurns, Timeout: cfg.Agent.RequestTimeout}, *timeout)
+	return runAgentCLI(ctx, os.Stdin, os.Stdout, service, agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model, cfg.Agent.ReasoningEffort), lang, charuc.AgentConfig{Workers: 1, MaxTurns: cfg.Agent.MaxTurns, Timeout: cfg.Agent.RequestTimeout}, *timeout)
 }
 
 func agentFiles(paths []string) ([]charuc.AgentFile, error) {
@@ -196,7 +199,11 @@ func runAgentCLI(ctx context.Context, input io.Reader, output io.Writer, service
 					var files []charuc.AgentFile
 					files, err = agentFiles(command.Files)
 					if err == nil {
-						s, err = agent.Create(ctx, owner, "", locale, files, command.Text)
+						create := agent.Create
+						if command.Unattended {
+							create = agent.CreateUnattended
+						}
+						s, err = create(ctx, owner, "", locale, files, command.Text)
 					}
 					if err == nil {
 						id = s.ID

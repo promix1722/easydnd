@@ -319,7 +319,7 @@ func TestAgentResolvesSubclassNamesWithinTheirClass(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "waiting" })
+		s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "paused" })
 		sheet, err := a.Sheet(context.Background(), s)
 		if err != nil {
 			t.Fatal(err)
@@ -478,5 +478,67 @@ func TestAgentPlacesAStatedFeatAndReadsTheSheetsWords(t *testing.T) {
 	}
 	if len(sheet.Equipment.Equipped) != 1 {
 		t.Errorf("equipped = %+v", sheet.Equipment.Equipped)
+	}
+}
+
+// An owner who asked not to be asked gets what the sheet states and a list of
+// what it does not, never a question -- and a blank name box stays blank
+// rather than taking its own caption for a name.
+func TestAgentUnattendedLeavesOpenWhatTheSheetDoesNotState(t *testing.T) {
+	model := &script{turns: [][]charuc.AgentCall{{
+		call("plan", "plan_import", `{"name":"Character Name","personality_traits":["I watch.","I place no stock in wealthy folk."],"scores":{},"level":3,"skills":{},"saves":{},"coins":{},"items":[],"spells":[],"expected":["class:Sorcerer"]}`),
+		call("facts", "import_facts", `{"facts":[{"kind":"class","name":"Sorcerer","level":3}]}`),
+		call("ask", "ask_user", `{"text":"What is the character called?","options":["Brom"]}`),
+		call("review", "prepare_review", `{"text":"Done."}`),
+	}, {}}}
+	a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 1})
+	defer a.Close()
+	s, err := a.CreateUnattended(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
+	sheet, err := a.Sheet(context.Background(), s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sheet.Identity.Name != "…" || len(sheet.Identity.PersonalityTraits) != 2 {
+		t.Fatalf("identity: %q %q", sheet.Identity.Name, sheet.Identity.PersonalityTraits)
+	}
+	last := s.Events[len(s.Events)-2]
+	for _, event := range s.Events {
+		if event.Kind == "question" {
+			t.Fatal("asked a question")
+		}
+		if event.Kind == "assistant" {
+			last = event
+		}
+	}
+	if !strings.Contains(string(last.Data), `"open"`) {
+		t.Fatalf("handoff does not list what is open: %s", last.Data)
+	}
+}
+
+// Dwarven Toughness is one hit point per level, which the sheet of a hill
+// dwarf prints and a build of one used to come up short of.
+func TestHillDwarfBuildsWithDwarvenToughness(t *testing.T) {
+	hitPoints := func(facts string) int {
+		model := &script{turns: [][]charuc.AgentCall{{call("facts", "import_facts", `{"facts":[`+facts+`]}`)}}}
+		a := charuc.NewAgent(namespacedService(t), model, charuc.AgentConfig{Workers: 1})
+		defer a.Close()
+		s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "paused" })
+		sheet, err := a.Sheet(context.Background(), s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return sheet.Base.HitPoints.Max
+	}
+	dwarf := `{"kind":"race","name":"Dwarf"},{"kind":"class","name":"Cleric","level":8}`
+	if plain, hill := hitPoints(dwarf), hitPoints(dwarf+`,{"kind":"subrace","name":"Hill Dwarf"}`); hill-plain != 8 {
+		t.Errorf("hill dwarf cleric 8 has %d hit points, a dwarf without the subrace %d; want 8 apart", hill, plain)
 	}
 }

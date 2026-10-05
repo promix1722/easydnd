@@ -2790,6 +2790,21 @@
           }
         }
       ]
+    },
+    {
+      "id": "dwarven-toughness",
+      "owner": "trait:dwarven-toughness",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "base.hitPoints.max",
+          "value": {
+            "op": "read",
+            "ref": "level"
+          }
+        }
+      ]
     }
   ],
   "casting": {

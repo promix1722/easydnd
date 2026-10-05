@@ -65,11 +65,13 @@ export function createAgentSession(
   instructions: string,
   folder?: string,
   rules?: RulesLock,
+  unattended = false,
 ) {
   const formData = new FormData()
   for (const file of files) formData.append('files', file)
   formData.append('instructions', instructions)
   if (rules) formData.append('rules', JSON.stringify(rules))
+  if (unattended) formData.append('unattended', 'true')
   return request<AgentView>(
     `/agent-sessions${folder ? `?folder=${encodeURIComponent(folder)}` : ''}`,
     { method: 'POST', formData },

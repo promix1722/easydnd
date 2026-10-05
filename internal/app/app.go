@@ -258,7 +258,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	}
 	var model charuc.AgentModel
 	if cfg.Agent.APIKey != "" {
-		model = agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model)
+		model = agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model, cfg.Agent.ReasoningEffort)
 	}
 	agent := charuc.NewAgent(characterService, model, charuc.AgentConfig{Workers: cfg.Agent.Workers, MaxTurns: cfg.Agent.MaxTurns, MaxSessions: cfg.Agent.MaxSessions, Timeout: cfg.Agent.RequestTimeout})
 

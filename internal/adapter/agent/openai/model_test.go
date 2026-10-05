@@ -22,6 +22,10 @@ func TestResponsesStreamUsesCompleteToolArguments(t *testing.T) {
 		if body["store"] != false || body["stream"] != true {
 			t.Errorf("unexpected privacy/stream config: %v", body)
 		}
+		reasoning, _ := body["reasoning"].(map[string]any)
+		if body["tool_choice"] != "required" || reasoning["effort"] != "low" || body["prompt_cache_key"] != "session-1" || !strings.Contains(body["instructions"].(string), "Unattended:") {
+			t.Errorf("unexpected turn config: %v %v %v", body["tool_choice"], body["reasoning"], body["prompt_cache_key"])
+		}
 		for _, value := range body["tools"].([]any) {
 			declaration := value.(map[string]any)
 			if declaration["strict"] != false {
@@ -35,16 +39,16 @@ func TestResponsesStreamUsesCompleteToolArguments(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprint(w, "data: {\"type\":\"response.output_text.delta\",\"delta\":\"Reading\"}\n\n")
 		fmt.Fprint(w, "data: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"{bad partial\"}\n\n")
-		fmt.Fprint(w, `data: {"type":"response.completed","response":{"id":"r1","output":[{"type":"function_call","call_id":"call1","name":"get_build_context","arguments":"{}"}]}}`+"\n\n")
+		fmt.Fprint(w, `data: {"type":"response.completed","response":{"id":"r1","usage":{"input_tokens":100,"input_tokens_details":{"cached_tokens":80},"output_tokens":7},"output":[{"type":"function_call","call_id":"call1","name":"get_build_context","arguments":"{}"}]}}`+"\n\n")
 	}))
 	defer server.Close()
-	m := &Model{client: sdk.NewClient(option.WithAPIKey("test"), option.WithBaseURL(server.URL), option.WithMaxRetries(0)), model: "configured-model"}
+	m := &Model{client: sdk.NewClient(option.WithAPIKey("test"), option.WithBaseURL(server.URL), option.WithMaxRetries(0)), model: "configured-model", effort: "low"}
 	text := ""
-	got, err := m.Respond(context.Background(), charuc.AgentRequest{Locale: "en", Files: []charuc.AgentFile{{Name: "sheet.png", MIME: "image/png", Data: []byte("image")}, {Name: "sheet.pdf", MIME: "application/pdf", Data: []byte("pdf")}}}, func(s string) { text += s })
+	got, err := m.Respond(context.Background(), charuc.AgentRequest{Locale: "en", Session: "session-1", Unattended: true, Files: []charuc.AgentFile{{Name: "sheet.png", MIME: "image/png", Data: []byte("image")}, {Name: "sheet.pdf", MIME: "application/pdf", Data: []byte("pdf")}}}, func(s string) { text += s })
 	if err != nil {
 		t.Fatal(err)
 	}
-	if text != "Reading" || len(got.Calls) != 1 || got.Calls[0].Arguments != "{}" {
+	if text != "Reading" || len(got.Calls) != 1 || got.Calls[0].Arguments != "{}" || got.Usage != (charuc.AgentUsage{Input: 100, Cached: 80, Output: 7}) {
 		t.Fatalf("bad stream: %+v %q", got, text)
 	}
 }

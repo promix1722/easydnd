@@ -71,9 +71,6 @@ type AgentSession struct {
 	// build comes out at them, whatever order race and improvements arrive in.
 	// A player editing the character ends that -- their numbers win.
 	scores map[rules.Ability]int
-	// prodded is that the model ended a turn on a plain message and was sent
-	// back once to end it properly, with prepared answers.
-	prodded bool
 	// offered is that review has been refused once over unanswered questions,
 	// so that the owner is asked about them and a model cannot loop on it.
 	offered bool
@@ -94,7 +91,12 @@ type AgentSession struct {
 	Created time.Time `json:"created"`
 	// Finished is the owner pressing Finish. Until then the wizard reopens
 	// this chat, however done the assistant thinks the character is.
-	Finished    bool              `json:"finished"`
+	Finished bool `json:"finished"`
+	// Unattended is the owner asking, when the chat began, not to be asked
+	// anything: what the sources state is imported, the rest is left open and
+	// listed at review. It is set with the session and never by the model --
+	// a model's own word that the owner chose this was not reliable.
+	Unattended  bool              `json:"unattended,omitempty"`
 	Events      []AgentEvent      `json:"events"`
 	Files       []AgentFile       `json:"files"`
 	Manual      []AgentManual     `json:"manual"`
@@ -113,11 +115,24 @@ type AgentResponse struct {
 	Text   string
 	Output []json.RawMessage
 	Calls  []AgentCall
+	Usage  AgentUsage
+}
+
+// AgentUsage is what one model request was billed for. Cached is the part of
+// Input the provider served from its prompt cache.
+type AgentUsage struct {
+	Input  int64 `json:"input"`
+	Cached int64 `json:"cached"`
+	Output int64 `json:"output"`
 }
 type AgentRequest struct {
 	Input  []json.RawMessage
 	Files  []AgentFile
 	Locale string
+	// Session keys the provider's prompt cache: every request of one session
+	// repeats the same sources, instructions and tools.
+	Session    string
+	Unattended bool
 }
 type AgentModel interface {
 	Respond(context.Context, AgentRequest, func(string)) (AgentResponse, error)
@@ -231,6 +246,15 @@ func (a *Agent) notify() {
 }
 
 func (a *Agent) Create(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, files []AgentFile, instructions string, selected ...pack.Lock) (AgentSession, error) {
+	return a.create(ctx, owner, folder, locale, files, instructions, false, selected...)
+}
+
+// CreateUnattended starts a session whose owner asked not to be asked.
+func (a *Agent) CreateUnattended(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, files []AgentFile, instructions string, selected ...pack.Lock) (AgentSession, error) {
+	return a.create(ctx, owner, folder, locale, files, instructions, true, selected...)
+}
+
+func (a *Agent) create(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, files []AgentFile, instructions string, unattended bool, selected ...pack.Lock) (AgentSession, error) {
 	if a.model == nil {
 		return AgentSession{}, types.NewNotImplementedError("agent is not configured").Because("agent.disabled")
 	}
@@ -276,7 +300,7 @@ func (a *Agent) Create(ctx context.Context, owner domain.OwnerID, folder domain.
 	for i := range ownedFiles {
 		ownedFiles[i].Data = append([]byte(nil), files[i].Data...)
 	}
-	s := &AgentSession{Created: a.service.now(), ID: hex.EncodeToString(token[:]), Owner: owner, Folder: folder, Locale: locale, Status: "queued", Revision: 1, Files: ownedFiles, Events: []AgentEvent{}, Manual: []AgentManual{}, Assumptions: []string{}}
+	s := &AgentSession{Unattended: unattended, Created: a.service.now(), ID: hex.EncodeToString(token[:]), Owner: owner, Folder: folder, Locale: locale, Status: "queued", Revision: 1, Files: ownedFiles, Events: []AgentEvent{}, Manual: []AgentManual{}, Assumptions: []string{}}
 	// The same entries the builder writes for a new character: its name, then
 	// the rules it is built under. The wizard's character is an ordinary one
 	// from its first message, so it opens in the ordinary builder.
@@ -483,7 +507,6 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 			return AgentSession{}, types.NewValidationError("invalid message")
 		}
 		a.invalidate(s)
-		s.prodded = false
 		s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": text}))
 		addAgentEvent(s, "user", text, "", nil)
 		s.Status = "queued"
@@ -570,7 +593,7 @@ func (a *Agent) worker() {
 	}
 }
 func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
-	response, err := a.model.Respond(ctx, AgentRequest{Input: snap.Input, Files: snap.Files, Locale: snap.Locale.String()}, func(delta string) {
+	response, err := a.model.Respond(ctx, AgentRequest{Input: snap.Input, Files: snap.Files, Locale: snap.Locale.String(), Session: snap.ID, Unattended: snap.Unattended}, func(delta string) {
 		a.mu.Lock()
 		defer a.mu.Unlock()
 		s := a.sessions[snap.ID]
@@ -598,6 +621,7 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 	// Commit a complete response before executing any tool. Partial streamed
 	// arguments are never interpreted. The transcript is the operation ledger.
 	s.Input = append(s.Input, response.Output...)
+	a.service.log.Info("AI wizard model request", "session", s.ID, "inputTokens", response.Usage.Input, "cachedTokens", response.Usage.Cached, "outputTokens", response.Usage.Output)
 	addAgentEvent(s, "response", response.Text, "", nil)
 	s.Turns++
 	if s.operations == nil {
@@ -666,15 +690,12 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 
 	s.Revision++
 	if s.Status == "running" {
-		if len(response.Calls) == 0 && !s.prodded {
-			// A turn that ends on a plain message leaves the owner with
-			// nothing to press. Once per message of theirs, send it back.
-			s.prodded = true
-			s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": "(app) That message ended your turn without anything for me to press. Do not repeat it. If work remains that you can do yourself, do it now. If you need my decision, call ask_user with the question and prepared answers. If the character is done, call prepare_review."}))
-			s.Status = "queued"
-			a.signal()
-		} else if len(response.Calls) == 0 {
-			s.Status = "waiting"
+		if len(response.Calls) == 0 {
+			// The request demands a tool call, so this is a response cut short.
+			// It is not a question: waiting would leave the owner with nothing
+			// to answer. Paused has a Resume button.
+			s.Status = "paused"
+			addAgentEvent(s, "status", "paused", "", nil)
 		} else if s.Turns >= a.config.MaxTurns || len(s.Input) > 500 || len(s.Events) > 10000 || transcriptSize(s.Input) > 2<<20 {
 			s.Status = "paused"
 			addAgentEvent(s, "status", "budget", "", nil)

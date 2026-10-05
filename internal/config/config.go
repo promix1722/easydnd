@@ -42,7 +42,7 @@ const GoogleRedirectPath = "/v1/auth/sso/google/callback"
 
 // Config is the fully resolved runtime configuration.
 type AgentConfig struct {
-	APIKey, Model                  string
+	APIKey, Model, ReasoningEffort string
 	Workers, MaxTurns, MaxSessions int
 	RequestTimeout                 time.Duration
 }
@@ -227,7 +227,7 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("invalid agent limits")
 	}
 	cfg := &Config{
-		Agent:         AgentConfig{APIKey: strings.TrimSpace(f.Agent.APIKey), Model: strings.TrimSpace(f.Agent.Model), Workers: p.intVal(f.Agent.Workers, 4), MaxTurns: p.intVal(f.Agent.MaxTurns, 40), MaxSessions: p.intVal(f.Agent.MaxSessions, 100), RequestTimeout: p.duration("agent.request_timeout", f.Agent.RequestTimeout, 2*time.Minute)},
+		Agent:         AgentConfig{APIKey: strings.TrimSpace(f.Agent.APIKey), Model: strings.TrimSpace(f.Agent.Model), ReasoningEffort: strings.TrimPrefix(p.str(strings.TrimSpace(f.Agent.ReasoningEffort), "low"), "default"), Workers: p.intVal(f.Agent.Workers, 4), MaxTurns: p.intVal(f.Agent.MaxTurns, 40), MaxSessions: p.intVal(f.Agent.MaxSessions, 100), RequestTimeout: p.duration("agent.request_timeout", f.Agent.RequestTimeout, 2*time.Minute)},
 		Env:           env,
 		Auth:          auth,
 		Source:        src.path,

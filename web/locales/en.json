@@ -695,6 +695,7 @@
   "agent.lead": "Hi! I’ll build your character with you. Which rules should I use?",
   "agent.askStart": "Do you have a character sheet to attach, or would you rather describe the character?",
   "agent.start.attach": "Attach a sheet",
+  "agent.start.unattended": "Don't ask me anything — leave open what the sheet doesn't say",
   "agent.changeRules": "Change",
   "agent.finish": "Finish",
   "agent.message": "Message the assistant",

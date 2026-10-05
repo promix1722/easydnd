@@ -4,8 +4,8 @@
 
 `go run ./cmd/llm agent -pack /path/to/easydnd-2014/pack -config config.local.yaml`
 runs the same wizard locally, without a web server or database. It reads
-`agent.api_key`, `agent.model`, `agent.max_turns` and `agent.request_timeout`
-from the existing YAML configuration. `-locale` defaults to `en`;
+`agent.api_key`, `agent.model`, `agent.reasoning_effort`, `agent.max_turns`
+and `agent.request_timeout` from the existing YAML configuration. `-locale` defaults to `en`;
 `-timeout` defaults to `5m` for each start, message or resumption. The supplied
 pack is loaded as an immutable rules lock. Nothing is written to the pack.
 
@@ -21,6 +21,7 @@ Send one JSON object per line on stdin. Keep stdin open while the agent works:
 ```
 
 Use the revision from the latest response or status, not these example numbers.
+`"unattended": true` on `start` begins an [unattended session](#unattended-sessions).
 `retry` and `discard` are also available; controls use the same revision rules
 as the HTTP wizard. Only one session is active in a process. After `discard`,
 a new session can start. EOF or Ctrl-C closes the process and cancels its work;
@@ -29,8 +30,8 @@ Attachments have the same supported MIME types and size limits as HTTP uploads;
 paths identify local files, and duplicate basenames are rejected.
 
 Stdout is JSON lines: `result` responses (with `action`, `session`, `sheet`,
-`log`, `prompts`, `rules`), `event` entries, `status` updates, `model` timings
-and complete returned tool calls, `error` responses, and `timeout` when a run
+`log`, `prompts`, `rules`), `event` entries, `status` updates, `model` timings,
+token `usage` (`input`, `cached`, `output`) and complete returned tool calls, `error` responses, and `timeout` when a run
 is stopped at its deadline. Stderr contains debug tool arguments and results.
 The inspection's sheet, log, prompts and rules are the existing Go domain JSON
 shape, with capitalized field names; session and event fields use their existing
@@ -38,41 +39,6 @@ lowercase JSON names. Timings cover the complete model request, including
 provider streaming and decoding. An input error leaves the process available
 for another command. A deadline pauses the session; it does not answer questions
 or declare the character complete.
-
-### Opt-in corpus check
-
-Build the CLI once, then run the standard-library Python harness:
-
-```sh
-go build -o /tmp/easydnd-llm ./cmd/llm
-python3 scripts/check-agent-sheets.py --cli /tmp/easydnd-llm \
-  --pack /path/to/easydnd-2014/pack --config config.local.yaml \
-  --manifest /home/me/tmp/dnd-sheets/cases.json \
-  --out /home/me/tmp/dnd-sheets/runs
-```
-
-The manifest is an array of `{id, files, source, pages, expected}` objects.
-`expected.equals` maps dotted domain sheet paths to values;
-`expected.contains` maps paths to required list members;
-`expected.inventory` maps local item slugs to total counts;
-`expected.nativeNames` lists names that should never become custom entries.
-`expected.customNames` requires source content missing from the pack;
-`expected.spells` checks the union of cantrips, known and prepared spells;
-`expected.textContains` checks excerpts in text fields or lists of text.
-Pack namespace prefixes are removed for slug comparison. IDs must be simple
-directory names. Use `--case <id>` (repeatable) for reproduction; use a new
-output directory for each run so prior evidence is preserved.
-
-Every case receives exactly `Import everything you can, do not ask me anything`.
-The harness runs sequentially, flags durations above two minutes, stops at five
-minutes, and allows one turn-budget resumption within that original deadline.
-It never answers a question. Waiting is recorded as a failure with the partial
-character, not concealed by choosing the first suggestion. Each case saves the
-invocation, timestamped transcript, debug log, final inspection and comparison
-summary. Source ambiguity and unsupported pack content require human review
-before a mismatch is called an importer bug. This spends provider credit and
-is deliberately excluded from default tests and CI. A failed case makes the
-harness exit with status 1 after it has processed every selected case.
 
 The AI Wizard creates **one character** from a description or uploaded sources.
 The character is real from the first message: it is created with the session,
@@ -119,9 +85,12 @@ a card above the chat that disappeared the moment the session began.
 offers prepared answers (`ask_user`, up to ten -- all of a choice's options
 when they fit, never one or two when more exist) or finishes
 (`prepare_review`); it is instructed never to end on a plain message that
-waits for a reply. A turn that ends that way all the same is sent back by the
-server, once per message of the owner's, with a note to keep working or ask
-properly. The app invents no answer of its own -- it used to put a
+waits for a reply, and the request carries `tool_choice: required`, so the
+provider does not allow one either. A response with no tool call can then only
+be one cut short, and it ends the run `paused`, with Resume -- never `waiting`,
+which would show a text field under a question nobody asked. (It used to be
+sent back once with a note and then left `waiting`; two imports in twenty-one
+ended that way, with nothing to answer.) The app invents no answer of its own -- it used to put a
 **Continue** button under such a message, which is a choice with nothing to
 choose. The model is likewise told not to report a leftover and stop, nor to
 ask anything whose only answer is "go on": it resolves what it can, and asks
@@ -173,6 +142,32 @@ prompt because the prompt alone was not followed -- and could not have been:
 the written questions were filtered out of the open prompts the model is
 shown, so it never knew they were unanswered. They are listed now, each with
 the `identity.*` path that answers it.
+
+### Unattended sessions
+
+An owner who does not want to be asked says so when the chat begins: the
+checkbox under the first message, `unattended=true` in the multipart request,
+`"unattended": true` on the CLI's `start`. The session then imports what the
+sources state and leaves the rest open:
+
+- `ask_user` is refused, with the reason.
+- `prepare_review` no longer refuses a blank name, an open required choice or
+  an unanswered optional one. Its checklist reminder and the requirement that
+  `plan_import` ran still apply. The review event carries the prompts left
+  open in its `data.open`.
+- The instructions gain a paragraph saying the same, so the model does not
+  spend a turn finding out.
+
+Nothing is picked or invented on the owner's behalf; the character is finished
+in the builder. The flag belongs to the session and is set only when it is
+created. It is deliberately not something the model can assert -- the
+sentence "do not ask me anything" in a message does not set it -- because a
+model's word that the owner chose to leave things open is exactly what
+`allow_incomplete` was, and that was set by models on their own.
+
+Before this existed the instruction could not be followed at all: with any
+prompt open, review was unreachable without a question, and all twenty-one
+sheets of the first corpus run stopped to ask one -- nine of them for a name.
 
 **A sheet is attached to the first message and to no other.** Attaching is one
 of the two answers to the opening's second question; later messages are text.
@@ -310,7 +305,7 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 | --- | --- |
 | `get_build_context` | The draft by fact path, open prompts **with their options**, the answers given so far, custom entries, differences from the sheet's printed numbers, checklist entries not yet covered |
 | `read_source` | Text/JSON source contents, or reference to an attached image/PDF |
-| `plan_import` | Transcribe the sheet in one typed call: final ability totals, level, hit points, armor class, speed, every skill and save bonus, coins, inventory and spells, plus a checklist of what else it documents |
+| `plan_import` | Transcribe the sheet in one typed call: name, alignment, personality traits, ideals, bonds and flaws, final ability totals, level, hit points, armor class, speed, every skill and save bonus, coins, inventory and spells, plus a checklist of what else it documents |
 | `import_facts` | Race, subrace, class with its level, subclass, background and feats **by printed name**; printed values at a path. Per-fact errors with candidates |
 | `assign_skills` | Distribute the sheet's proficient skills over the prompts that grant skills, and its expertise over the expertise prompts |
 | `assign_spells` | Distribute the sheet's cantrips and spells over the build's spell prompts, and keep the ones past the build's count as spells known |
@@ -383,8 +378,12 @@ it no longer records a sheet as overrides.
 each thing a sheet prints -- six scores, level, hit points, armor class,
 speed, a bonus per skill and per save, coins, items. A number asked for one
 fact at a time is a number a model skips; a form with an empty field is
-harder to leave half done. Level, coins and items are written to the
-character. The six scores are held by the session and *solved into* it (see
+harder to leave half done. The name, alignment and the four personality
+lists have slots for that reason: asked for afterwards as separate facts, a
+field's second paragraph was what got left out. The name slot is nullable, and
+a value that is only the box's caption ("Character Name") is refused, since a
+blank box still prints one. Level, coins, items and those identity fields are
+written to the character. The six scores are held by the session and *solved into* it (see
 below). The derived numbers are kept as a reference and never written.
 
 **The server does the arithmetic and the matching.** From the printed bonuses
@@ -580,11 +579,41 @@ out of version control. No provider model is silently selected for operators.
 agent:
   api_key: "YOUR_API_KEY"
   model: "YOUR_RESPONSES_MODEL_WITH_PDF_IMAGE_AND_TOOL_SUPPORT"
+  reasoning_effort: low
   workers: 4
   max_turns: 40
   max_sessions: 100
   request_timeout: 2m
 ```
+
+`reasoning_effort` is passed to the provider as written and defaults to
+`low`; `default` sends none, for a model that takes no such setting. An
+import is transcription and matching, and the server does the arithmetic, so
+more effort mostly buys latency. Every request also carries the session id as
+`prompt_cache_key`: the sources, instructions and tool schemas are resent
+unchanged each time, and that prefix is what the provider can cache. Token
+usage per request is logged at info (`AI wizard model request`).
+
+### Which model
+
+Use **`gpt-6-luna`**. On 2026-10-05 three models imported the same eleven
+sheets from the corpus, unattended, at `reasoning_effort: low`:
+
+| Model | Sheets fully matched | Median seconds | Dollars per import |
+| --- | ---: | ---: | ---: |
+| `gpt-6-luna` | 6 of 11 | 55 | 0.004 |
+| `gpt-6.1-sol` | 8 of 11 | 71 | 0.076 |
+| `gpt-5.4-mini` (the model until then) | 1 of 11 | 56 | 0.043 |
+
+`gpt-5.4-mini` read the gold box as zero on nine of the eleven; neither newer
+model did once. `gpt-6.1-sol` matched two more sheets than `gpt-6-luna`, which
+on eleven is within noise, and was sixteen seconds slower at eighteen times the
+price. It is the one to switch to if accuracy is ever worth that. Five of each
+newer model's mismatches were on one sheet (the Tabaxi bard), and the rest were
+mostly skill bonuses on sheets both got wrong -- the server's skill assignment
+or the expectations, not the reading. The harness that measured this is not in
+the repository; the CLI's `model` records carry the token usage a new
+comparison needs.
 
 The key's absence disables AI import. Limits default to the values above;
 workers are bounded at 32, turns at 200, sessions at 1000 and request timeout at
@@ -627,41 +656,3 @@ claims/leases and a unique finalization key. Persisting only messages cannot
 resume this runtime correctly. Text-only character creation uses the same bounded tools. A future MCP adapter
 can reuse them.
 
-
-## Opt-in PDF regression
-
-The real-provider regression is deliberately outside default tests and CI.
-Run it on request or after deep changes to the AI Wizard. It needs an already
-configured development API, the source PDF and the expected source snapshot:
-
-```sh
-node scripts/check-ai-wizard.mjs --pdf /tmp/Arya.pdf \
-  --expected testdata/agent/arya.expected.json \
-  --api http://localhost:18083/v1 --origin http://localhost:8083
-```
-
-It sends one neutral instruction, answers a question with its first suggested
-option, and then checks two things. That the draft **is the sheet**: name,
-scores, class and level, hit points, armor class, spells, inventory counts,
-coins, skill and save bonuses. And that it is **a build**: `subclass` and
-`background` are catalogue entries, no custom option exists outside
-`allowedCustom`, no printed value is pinned over the build outside
-`allowedOverrides`, and no required choice is open outside `openPrompts`. It
-then reopens the character, edits the name and, where one exists, a custom
-definition, and verifies that facts survive. Test edits are restored; the
-imported character remains.
-
-The three expectation files are written for the development pack
-(`dnd-2014`), which has the subclasses and backgrounds the sheets use; against
-the bare SRD they fail by design, because there those are not in the rules.
-`itemAlternatives` names the second slug of items that pack carries twice. The
-run uses the configured provider and can incur provider charges. No provider
-credentials or session cookies are stored by the script. The PDFs themselves
-are not committed.
-
-What the regression cannot make deterministic is the model's reading. The
-tooling removes the errors a server can catch -- unknown names, illegal
-picks, a wrong skill split, a misread number pinned over a correct build --
-but a line the model skips in an equipment list is simply not imported, and a
-small model does skip one now and then. When a run fails that way and the tool
-log shows no rejection, `agent.model` is the lever.

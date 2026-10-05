@@ -32,12 +32,15 @@ type fileConfig struct {
 }
 
 type fileAgent struct {
-	APIKey         string `yaml:"api_key"`
-	Model          string `yaml:"model"`
-	Workers        int    `yaml:"workers"`
-	MaxTurns       int    `yaml:"max_turns"`
-	MaxSessions    int    `yaml:"max_sessions"`
-	RequestTimeout string `yaml:"request_timeout"`
+	APIKey string `yaml:"api_key"`
+	Model  string `yaml:"model"`
+	// ReasoningEffort is passed to the provider as written. Empty is "low";
+	// "default" sends nothing, for a model that takes no such setting.
+	ReasoningEffort string `yaml:"reasoning_effort"`
+	Workers         int    `yaml:"workers"`
+	MaxTurns        int    `yaml:"max_turns"`
+	MaxSessions     int    `yaml:"max_sessions"`
+	RequestTimeout  string `yaml:"request_timeout"`
 }
 
 type fileHTTP struct {

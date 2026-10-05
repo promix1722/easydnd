@@ -502,6 +502,11 @@ shield is. See [packs.md](packs.md#file-contract) for the two inputs,
 them. The bonus is never negative: a character may always use the plain
 `10 + DEX`.
 
+Dwarven Toughness is the same kind of rule, owned by the trait: an `add` on
+`base.hitPoints.max` whose value reads `level`. Until it existed a hill dwarf
+was built one hit point short per level, which nothing noticed until imported
+sheets were compared with what they print.
+
 Worn armor counts whether it was equipped as a list entry
 (`equipment.equipped` add `leather-armor`) or as a counted stack
 (`equipment.equipped.leather-armor` set `1`). The second is how an import
