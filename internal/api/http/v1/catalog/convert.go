@@ -67,7 +67,7 @@ func costOf(c rules.Coins) *Cost {
 	if c.Amount == 0 {
 		return nil
 	}
-	return &Cost{Amount: c.Amount, Unit: string(c.Unit)}
+	return &Cost{Amount: c.Amount, Unit: c.Unit.String()}
 }
 
 func damageOf(d *rules.Damage) *Damage {

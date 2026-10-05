@@ -259,9 +259,9 @@ beforeEach(() => {
  *
  * They used to be four tests at two viewports -- eight mounts of the whole
  * sheet for assertions that never touch it twice. This whole file now runs at
- * desktop: what branches on width is `ui/SectionDeck`, which draws the six
- * sections `SheetBody` builds, and `SheetBody` itself, which orders the first
- * of them two ways. Both are tested where they live -- `SectionDeck.test.tsx`
+ * desktop: what branches on width is `ui/TabDeck`, which draws the tabs
+ * `SheetBody` builds, and `SheetBody` itself, which orders the head of the
+ * overview two ways. Both are tested where they live -- `TabDeck.test.tsx`
  * and `SheetBody.test.tsx`. What is left here is the seam: that the screen
  * fetches the projection, the prompts and the compendium and hands all three
  * on.

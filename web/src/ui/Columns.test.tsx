@@ -34,7 +34,7 @@ describe('Columns', () => {
   })
 
   // Pressing a control closes the section it heads, which is the whole of what
-  // the accordion is for and the thing `SectionDeck` deliberately does not do.
+  // the accordion is for and the thing `TabDeck` deliberately does not do.
   it('closes a section that was open', async () => {
     renderAt('mobile', <Columns sections={sections} />)
 

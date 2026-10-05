@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Entry, Prompt } from '@/lib/api'
 import { testT } from '@/test/i18n'
 
-import { choosableOptions } from './options'
+import { choosableOptions, equipmentTitle } from './options'
 
 function prompt(overrides: Partial<Prompt>): Prompt {
   return {
@@ -162,4 +162,30 @@ it('describes armor statistics and every item of a bundle', () => {
   expect(got[0]?.detail).toContain('Armor class: 16')
   expect(got[0]?.detail).toContain('Strength required: 13')
   expect(got[0]?.detail).toContain('Arrow ×20')
+})
+
+// A warlock's four equipment questions were all headed "Starting equipment";
+// each is named by what it offers, and the one with no alternative says "also".
+describe('equipmentTitle', () => {
+  const names = new Map([['item:component-pouch', 'Component pouch'], ['item:dagger', 'Dagger']])
+  const asks = (from: Prompt['choice']['from'], kind = 'equipment'): Prompt => ({
+    choice: { prompt: 'warlock/starting-equipment/0', choose: 1, kind, from },
+    group: 'class', optional: true, heldOnly: false, event: { type: 'class' },
+  } as Prompt)
+  const focus = { key: 'arcane-foci', kind: 'nested' as const, choice: { prompt: 'x/1', choose: 1, kind: 'equipment', from: { kind: 'explicit' as const, category: 'dnd-2014/arcane-foci', options: [] } } }
+
+  it('names a card by its options', () => {
+    expect(equipmentTitle(testT, asks({ kind: 'explicit', options: [{ key: 'component-pouch', kind: 'ref', ref: 'item:component-pouch', count: 1 }, focus] }), names))
+      .toBe('Component pouch or one of: Arcane Foci')
+  })
+
+  it('says "also" for a category with no alternative', () => {
+    expect(equipmentTitle(testT, asks({ kind: 'explicit', category: 'simple-weapons', options: [{ key: 'dagger', kind: 'ref', ref: 'item:dagger', count: 1 }] }), names))
+      .toBe('Also one of: Simple Weapons')
+  })
+
+  it('leaves other questions, and long lists, to their usual name', () => {
+    expect(equipmentTitle(testT, asks({ kind: 'explicit', options: [] }), names)).toBeUndefined()
+    expect(equipmentTitle(testT, asks({ kind: 'explicit', category: 'simple-weapons', options: [] }, 'proficiency'), names)).toBeUndefined()
+  })
 })

@@ -1,10 +1,9 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Answer, Choice, Entry, Option, Prompt } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { Badge, Box, Button, Group, Markdown, SourceTags, Stack, Text } from '@/ui'
-import { CUSTOM_KINDS, CustomChoice } from './customChoice'
 
 import { SpellChoices } from './SpellChoices'
 
@@ -53,7 +52,6 @@ export interface PromptCardProps {
  */
 export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers = [] }: PromptCardProps) {
   const t = useT()
-  const custom = useContext(CustomChoice)
   const confirmRef = useRef<HTMLButtonElement>(null)
   const lastOptionRef = useRef<HTMLElement | null>(null)
   const [touched, setTouched] = useState(false)
@@ -153,11 +151,22 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
           // pressable but does nothing reads as a broken button. Not where
           // only one is wanted -- there the rest are how you change it.
           const spent = picked.length === target && !one && count === 0
+          // A picked option and what it says about itself are one box: the
+          // box takes the picked colour and the button inside it goes bare.
+          const detail = count > 0 ? option.detail : undefined
+          const described = detail !== undefined
           return (
-            <Stack key={option.key} gap={4}>
+            // The box owns the horizontal padding and the button gives its own
+            // up, so the name and the description share a left edge by
+            // construction. 15px is where an unpicked button puts its label,
+            // so picking does not nudge the name sideways.
+            <Stack key={option.key} gap={0} px={described ? 15 : 0} style={described ? {
+              background: 'var(--mantine-primary-color-light)',
+              borderRadius: 'var(--mantine-radius-default)',
+            } : undefined}>
             <Button
               aria-label={stacked(t, stage, option.key, count, entries) ?? option.label}
-              variant={count > 0 ? 'light' : 'default'}
+              variant={described ? 'transparent' : count > 0 ? 'light' : 'default'}
               c="var(--mantine-color-text)"
               aria-pressed={count > 0}
               justify="space-between"
@@ -166,6 +175,7 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
               // lines tall, and a button that fixes its own height would crop
               // it. Padded rather than sized.
               h="auto"
+              {...(described ? { px: 0 } : {})}
               py="xs"
               disabled={pending || option.disabled || spent}
               // Once the answer is ready, Tab should reach Confirm from the
@@ -204,13 +214,16 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
               Only under the one that was picked. Every option carrying its
               own paragraph turns a list of six into a page nobody reads, and
               the same text cut to fit one line stops mid-word -- so it is
-              shown where it is being decided about, in full. Beside the
-              button rather than inside it: the description is Markdown, and a
-              table or a list is not something a button may contain.
+              shown where it is being decided about, in full. In the same box
+              as the button but not inside the button: the description is
+              Markdown, and a table or a list is not something a button may
+              contain.
             */}
-            {count > 0 && option.detail !== undefined && (
-              <Box px="sm" opacity={0.8}>
-                <Markdown>{option.detail}</Markdown>
+            {detail !== undefined && (
+              // Smaller and dimmed, so it reads as about the option rather
+              // than as another one.
+              <Box pb="xs" pl={1} c="dimmed">
+                <Markdown size="xs">{detail}</Markdown>
               </Box>
             )}
             </Stack>
@@ -220,18 +233,6 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
           <Text size="sm" c="dimmed">
             {t('prompt.nothingOffered')}
           </Text>
-        )}
-        {/*
-          The last option of the list rather than a control somewhere else on
-          the page: a race the rules do not have is still an answer to "which
-          race", and is looked for where the races are.
-        */}
-        {custom !== null && CUSTOM_KINDS[stage.kind] !== undefined && (
-          // Marked so that opening the question focuses its first real option,
-          // which may still be loading, rather than this.
-          <Button data-custom-choice variant="default" justify="flex-start" disabled={pending} onClick={() => custom(CUSTOM_KINDS[stage.kind]!)}>
-            {t('custom.add')}
-          </Button>
         )}
       </Stack>}
 

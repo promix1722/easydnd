@@ -5,7 +5,7 @@
  * file that exports both a component and a function loses fast refresh -- and
  * because both sheet screens import this without wanting the component.
  */
-import type { CatalogProficiency, CatalogSkill, Entry } from '@/lib/api'
+import type { CatalogProficiency, CatalogSkill, Entry, Item } from '@/lib/api'
 import { bySlug, getCollection } from '@/lib/api'
 
 /**
@@ -51,6 +51,11 @@ export interface Compendium {
   names: Map<string, string> | null
   skills: Map<string, CatalogSkill> | null
   proficiencies: Map<string, CatalogProficiency> | null
+  /**
+   * Equipment and magic items by slug: what the Equipment tab sorts and slots
+   * by. Optional so a caller that draws no equipment need not load it.
+   */
+  items?: Map<string, Item> | null
 }
 
 /**
@@ -63,10 +68,20 @@ export interface Compendium {
  * rather than failing the sheet -- title-cased slugs are worth drawing.
  */
 export async function loadCompendium(scope = ''): Promise<Compendium> {
-  const [skills, proficiencies, names] = await Promise.all([
+  const [skills, proficiencies, names, items] = await Promise.all([
     getCollection<CatalogSkill>('skills', scope).then(bySlug, () => null),
     getCollection<CatalogProficiency>('proficiencies', scope).then(bySlug, () => null),
     namesOf(scope),
+    loadItems(scope).catch(() => null),
   ])
-  return { names, skills, proficiencies }
+  return { names, skills, proficiencies, items }
+}
+
+/** Every item a character could hold, mundane and magic, by slug. */
+export async function loadItems(scope = ''): Promise<Map<string, Item>> {
+  const [equipment, magic] = await Promise.all([
+    getCollection<Item>('equipment', scope),
+    getCollection<Item>('magic-items', scope),
+  ])
+  return bySlug([...magic, ...equipment])
 }

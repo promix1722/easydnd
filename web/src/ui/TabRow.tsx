@@ -32,7 +32,7 @@ export interface TabRowProps {
  * the way `ColumnsSection`'s `aside` did; see docs/web.md.
  *
  * It is a responsive primitive whose **two renderings are the same markup**.
- * `ModalSheet`, `Columns`, `SectionDeck` and `TabDeck` genuinely swap components at the
+ * `ModalSheet`, `Columns` and `TabDeck` genuinely swap components at the
  * breakpoint; this one does not need to. A `ScrollArea type="never"` is inert
  * at a width the content fits in, so the desktop rendering is the mobile one
  * with nothing to scroll -- which means there is no second tree to keep
@@ -70,7 +70,7 @@ export interface TabRowProps {
  *
  * That measurement is the one thing here the suite cannot press. jsdom computes
  * no layout, so `scrollWidth` and `clientWidth` are both 0 and the mask is
- * always absent -- the same bargain `SectionDeck.test.tsx` records about which
+ * always absent -- the same bargain `TabDeck.test.tsx` records about which
  * slide is showing. What the tests do hold is that the absence is identical at
  * both viewports.
  */

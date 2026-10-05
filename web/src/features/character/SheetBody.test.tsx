@@ -1,5 +1,5 @@
-import { screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, screen, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { Sheet } from '@/lib/api'
 import { renderAt } from '@/test/render'
@@ -17,9 +17,9 @@ import { SheetBody } from './SheetBody'
  * three things and hands them here -- and is desktop-only for that reason.
  *
  * Both viewports here, because this is the one screen-level tree whose two
- * renderings differ, and it differs twice over: `ui/SectionDeck` draws the
- * sections as a page on a wide screen and as a deck of tabs on a phone, and
- * `SheetBody` itself orders the two halves of the main section by width.
+ * renderings differ, and it differs twice over: `ui/TabDeck` mounts only the
+ * showing tab on a wide screen and every tab as a swiped deck on a phone, and
+ * `SheetBody` itself orders the two halves of the overview's head by width.
  */
 
 /** Enough of a character to fill all six sections, and no more. */
@@ -93,14 +93,19 @@ const NAMED_COMPENDIUM: Compendium = {
  * character is and what everything else is derived from, the body's state, then
  * what they are trained in and what they carry.
  */
-const SECTIONS = [
-  'Main',
-  'Vitals',
-  'Skills',
-  'Proficiencies',
-  'Traits and features',
-  'Resources and gear',
-]
+// No Spells tab: this character casts nothing, and a tab with nothing under
+// it is a question the sheet should not ask.
+const SECTIONS = ['Overview', 'Actions', 'Equipment']
+
+/** What the Equipment tab sorts and slots by. */
+const ITEMS: Compendium = {
+  ...NO_COMPENDIUM,
+  items: new Map([
+    ['leather-armor', { slug: 'leather-armor', name: 'Leather Armor', category: 'armor', armor: { category: 'light', baseAC: 11 } }],
+    ['thieves-tools', { slug: 'thieves-tools', name: "Thieves' Tools", category: 'tools' }],
+    ['crossbow-bolt', { slug: 'crossbow-bolt', name: 'Crossbow Bolt', category: 'adventuring-gear', gear: { gearCategory: 'ammunition' } }],
+  ]),
+}
 
 function body(viewport: 'mobile' | 'desktop') {
   return renderAt(viewport, <SheetBody sheet={SHEET} compendium={NO_COMPENDIUM} />)
@@ -133,8 +138,9 @@ describe('the sheet body on a phone', () => {
   it('is a deck of named tabs in the order the sheet reads', () => {
     body('mobile')
 
+    // The first tab list is the sheet's; the Equipment tab holds one of its own.
     expect
-      .soft(screen.getAllByRole('tab').map((tab) => tab.textContent))
+      .soft(within(screen.getAllByRole('tablist')[0]!).getAllByRole('tab').map((tab) => tab.textContent))
       .toEqual(SECTIONS)
     for (const name of SECTIONS) {
       expect.soft(screen.getByRole('group', { name })).toBeInTheDocument()
@@ -187,7 +193,7 @@ describe('the sheet body on a phone', () => {
  *
  * Asserted at one viewport, because the rows are the same markup either way:
  * what differs between the two is which container the panel sits in, and that
- * is `SectionDeck`'s business and tested there.
+ * is `TabDeck`'s business and tested there.
  */
 describe('the panels that were sentences', () => {
   /** The rows drawn under one uppercase group label. */
@@ -209,16 +215,40 @@ describe('the panels that were sentences', () => {
     expect.soft(under('Languages')).toEqual(['Common'])
   })
 
-  it('draws what is worn and what is carried as rows, with the counts', () => {
-    body('desktop')
+  it('draws what is worn in its slot, and what is owned by group', () => {
+    renderAt('mobile', <SheetBody sheet={SHEET} compendium={ITEMS} />)
 
-    expect.soft(under('Equipped')).toEqual(['Leather Armor'])
-    expect.soft(under('Carried')).toEqual(['Thieves Tools', 'Crossbow Bolt ×20'])
+    const slots = screen.getByRole('region', { name: 'Worn and wielded' })
+    expect.soft(within(slots).getByText('Leather Armor')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Consumables' }))
+    expect.soft(screen.getByText('Crossbow Bolt')).toBeInTheDocument()
+    expect.soft(screen.getByText('×20')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Other gear' }))
+    expect.soft(screen.getByText("Thieves' Tools")).toBeInTheDocument()
+    // One of a thing is the thing: no "×1".
+    expect.soft(screen.queryByText('×1')).not.toBeInTheDocument()
+  })
+
+  // Only the owner's screen passes `onEquipment`; without it the test above
+  // -- and "offers nothing to press but the tabs" -- hold.
+  it('takes off what a slot holds', () => {
+    const onEquipment = vi.fn()
+    renderAt('mobile', <SheetBody sheet={SHEET} compendium={ITEMS} onEquipment={onEquipment} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Armor' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Take off Leather Armor' }))
+
+    expect(onEquipment).toHaveBeenCalledWith([
+      { path: 'equipment.equipped', op: 'set', value: { kind: 'slugs', slugs: [] } },
+      { path: 'equipment.equipped.leather-armor', op: 'set', value: { kind: 'int', int: 0 } },
+      { path: 'equipment.backpack.leather-armor', op: 'set', value: { kind: 'int', int: 1 } },
+    ])
   })
 
   it('uses localized catalogue names and a localized class-resource label', () => {
+    // A phone mounts every tab, so one render reaches all four.
     renderAt(
-      'desktop',
+      'mobile',
       <SheetBody
         sheet={{
           ...SHEET,
@@ -228,22 +258,24 @@ describe('the panels that were sentences', () => {
       />,
     )
 
+    // No item details in this compendium, so nothing is known to be wearable.
+    fireEvent.click(screen.getByRole('tab', { name: 'Other gear' }))
     for (const name of [
       'Night Sight',
       'Surprise Strike',
       'Trade Tongue',
       'Hide Jerkin',
       'Locksmith Kit',
-      'Quarrel ×20',
+      'Quarrel',
       'Sneak Attack: 1d6',
     ]) {
-      expect.soft(screen.getByText(name)).toBeInTheDocument()
+      expect.soft(screen.getAllByText(name).length).toBeGreaterThan(0)
     }
   })
 
   // Capacity only: what a sheet has spent is a fact about one game, not the character.
   it('draws consumables as marks, slots by level, and leaves Hit Dice to the vitals', () => {
-    renderAt('desktop', <SheetBody compendium={NAMED_COMPENDIUM} sheet={{ ...SHEET, resources: { pools: {
+    renderAt('mobile', <SheetBody compendium={NAMED_COMPENDIUM} sheet={{ ...SHEET, resources: { pools: {
       'spell-slots/2': { id: 'spell-slots/2', name: '', group: 'spell-slots', max: 2, used: 0, slotLevel: 2 },
       'spell-slots/1': { id: 'spell-slots/1', name: '', group: 'spell-slots', max: 4, used: 0, slotLevel: 1 },
       'channel-divinity': { id: 'channel-divinity', name: 'Channel Divinity Uses', group: 'class', max: 1, used: 0 },
@@ -273,10 +305,12 @@ describe('the sheet body on a wide screen', () => {
     expect(leads()).toBe('who')
   })
 
-  it('draws the whole page at once, with no tabs', () => {
+  it('draws the same tabs, and the whole overview under the first', () => {
     body('desktop')
 
-    expect.soft(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect
+      .soft(screen.getAllByRole('tab').map((tab) => tab.textContent))
+      .toEqual(SECTIONS)
     expect.soft(screen.getByTitle('Strength')).toBeInTheDocument()
     expect.soft(screen.getByText('Hit points')).toBeInTheDocument()
     expect.soft(skillRows()).toHaveLength(6)
@@ -291,10 +325,10 @@ describe('the sheet body on a wide screen', () => {
   it('heads the panels and nothing above them', () => {
     body('desktop')
 
-    for (const named of ['Skills', 'Proficiencies', 'Traits and features', 'Resources and gear']) {
+    for (const named of ['Skills', 'Proficiencies', 'Traits and features']) {
       expect.soft(screen.getByRole('heading', { name: named })).toBeInTheDocument()
     }
-    for (const bare of ['Main', 'Vitals']) {
+    for (const bare of ['Overview', 'Vitals']) {
       expect.soft(screen.queryByRole('heading', { name: bare })).not.toBeInTheDocument()
     }
   })

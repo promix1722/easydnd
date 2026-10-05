@@ -34,7 +34,7 @@ function deck(viewport: Viewport, value = 'class', onChange = vi.fn()) {
  *
  * Nothing below asserts which slide is *showing*. jsdom computes no layout and
  * embla measures the DOM, so a scroll position is not a claim this suite can
- * make -- the same bargain `SectionDeck.test.tsx` records. What is assertable
+ * make. What is assertable
  * is that the strip reads the `value` it was handed and reports the presses it
  * gets, and that is true at both widths.
  */

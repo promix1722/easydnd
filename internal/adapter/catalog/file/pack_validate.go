@@ -284,7 +284,7 @@ func normalizeRef(packID, value string) string {
 	return value
 }
 
-var slugFields = map[string]bool{"list": true, "slug": true, "class": true, "classes": true, "subclass": true, "subclasses": true, "race": true, "races": true, "subrace": true, "subraces": true, "traits": true, "features": true, "feature": true, "parent": true, "spell": true, "spells": true, "skills": true, "languages": true, "ability": true, "savingThrows": true, "spellcastingAbility": true, "proficiencies": true, "startingProficiencies": true, "multiclassProficiencies": true, "invocations": true, "variants": true, "item": true, "school": true, "damageType": true, "twoHandedDamageType": true, "damageResistance": true, "properties": true}
+var slugFields = map[string]bool{"alignments": true, "list": true, "slug": true, "class": true, "classes": true, "subclass": true, "subclasses": true, "race": true, "races": true, "subrace": true, "subraces": true, "traits": true, "features": true, "feature": true, "parent": true, "spell": true, "spells": true, "skills": true, "languages": true, "ability": true, "savingThrows": true, "spellcastingAbility": true, "proficiencies": true, "startingProficiencies": true, "multiclassProficiencies": true, "invocations": true, "variants": true, "item": true, "school": true, "damageType": true, "twoHandedDamageType": true, "damageResistance": true, "properties": true}
 
 func normalizeValue(packID, key string, v any) any {
 	switch x := v.(type) {
@@ -310,6 +310,15 @@ func normalizeValue(packID, key string, v any) any {
 	case map[string]any:
 		for k, v := range x {
 			x[k] = normalizeValue(packID, k, v)
+		}
+		// An option set drawn from an equipment category names it by slug.
+		// "category" is not a slug field in general -- a weapon's is "simple"
+		// -- so it is qualified only here; left bare, a namespaced pack asks
+		// for "arcane-foci", holds "pack/arcane-foci", and offers nothing.
+		if x["kind"] == "equipment-category" {
+			if category, ok := x["category"].(string); ok {
+				x["category"] = normalizeID(packID, category)
+			}
 		}
 	}
 	return v
@@ -385,7 +394,7 @@ func validateReferences(docs []*PackDocument, entities map[string][]any, m PackM
 		}
 		return check(r.Kind.String(), r.Slug.String())
 	}
-	fields := map[string]string{"class": "class", "classes": "class", "subclass": "subclass", "subclasses": "subclass", "race": "race", "races": "race", "subrace": "subrace", "subraces": "subrace", "traits": "trait", "features": "feature", "feature": "feature", "spell": "spell", "spells": "spell", "skills": "skill", "languages": "language", "ability": "ability", "savingThrows": "ability", "spellcastingAbility": "ability", "proficiencies": "proficiency", "startingProficiencies": "proficiency", "multiclassProficiencies": "proficiency", "invocations": "feature", "variants": "magic-item", "item": "item", "school": "magic-school", "damageType": "damage-type", "twoHandedDamageType": "damage-type", "damageResistance": "damage-type", "properties": "weapon-property"}
+	fields := map[string]string{"alignments": "alignment", "class": "class", "classes": "class", "subclass": "subclass", "subclasses": "subclass", "race": "race", "races": "race", "subrace": "subrace", "subraces": "subrace", "traits": "trait", "features": "feature", "feature": "feature", "spell": "spell", "spells": "spell", "skills": "skill", "languages": "language", "ability": "ability", "savingThrows": "ability", "spellcastingAbility": "ability", "proficiencies": "proficiency", "startingProficiencies": "proficiency", "multiclassProficiencies": "proficiency", "invocations": "feature", "variants": "magic-item", "item": "item", "school": "magic-school", "damageType": "damage-type", "twoHandedDamageType": "damage-type", "damageResistance": "damage-type", "properties": "weapon-property"}
 	var walk func(string, any) error
 	walk = func(key string, value any) error {
 		switch x := value.(type) {
@@ -411,6 +420,14 @@ func validateReferences(docs []*PackDocument, entities map[string][]any, m PackM
 		case map[string]any:
 			for k, v := range x {
 				if err := walk(k, v); err != nil {
+					return err
+				}
+			}
+			// "Any item in this category" with no such category is a choice
+			// with nothing to choose; say so at load, not on the build screen.
+			if x["kind"] == "equipment-category" {
+				category, _ := x["category"].(string)
+				if err := check("equipment-category", category); err != nil {
 					return err
 				}
 			}

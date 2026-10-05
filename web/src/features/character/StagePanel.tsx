@@ -4,7 +4,7 @@ import { useCatalogScope } from '@/lib/api/catalogScope'
 import { slugOf } from '@/domain'
 
 import { describeField, describeError } from '@/lib/api'
-import type { Answer, ApiFieldError, Change, Entry, Equipment, Prompt } from '@/lib/api'
+import type { Answer, ApiFieldError, Change, Entry, Prompt } from '@/lib/api'
 import { useT, useLocale } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { Badge, BlockList, Button, Group, Loader, Stack, Text } from '@/ui'
@@ -17,12 +17,11 @@ import type { Asking, Block } from './blocks'
 import { DesiredLevelForm } from './DesiredLevelForm'
 import { NameForm } from './NameForm'
 import { RulesetForm } from './RulesetForm'
-import { offersOptions } from './options'
+import { equipmentTitle, offersOptions } from './options'
 import { PromptCard } from './PromptCard'
 import { choiceName, writtenAs } from './promptNames'
 import { refName } from './refNames'
 import type { SettledRow } from './settled'
-import { EquipmentSummary } from './EquipmentSummary'
 import { WrittenForm } from './WrittenForm'
 
 import { loadEntries } from './choiceEntries'
@@ -30,7 +29,6 @@ import { loadEntries } from './choiceEntries'
 export interface StagePanelProps {
   /** Everything on this tab: what was decided, and what is still asked. */
   blocks: readonly Block[]
-  equipment?: Equipment
   openKey: string | null
   onOpen: (key: string | null) => void
   /** The question the open block is asking, where it has one. */
@@ -96,7 +94,6 @@ export interface StagePanelProps {
  */
 export function StagePanel({
   blocks,
-  equipment,
   openKey,
   onOpen,
   asking,
@@ -192,8 +189,7 @@ export function StagePanel({
         </Stack>
       ))}
       {children}
-      {equipment !== undefined && <EquipmentSummary equipment={equipment} names={names} />}
-      {blocks.length === 0 && equipment === undefined ? (
+      {blocks.length === 0 ? (
         <Text size="sm" c="dimmed">
           {t('stagePanel.nothingYet')}
         </Text>
@@ -290,7 +286,7 @@ function OpenHeader({ prompt, names }: { prompt: Prompt; names: ReadonlyMap<stri
   return (
     <Group gap={8} wrap="nowrap" justify="space-between" w="100%">
       <Text size="sm" fw={600} style={{ whiteSpace: 'normal', textAlign: 'left' }}>
-        {choiceName(t, prompt)}
+        {equipmentTitle(t, prompt, names) ?? choiceName(t, prompt)}
         {prompt.source !== undefined && (
           <Text span size="xs" c="dimmed" fw={400}>
             {' '}
@@ -489,6 +485,7 @@ function PromptWithOptions({
   const locale = useLocale()
   const [entries, setEntries] = useState<Map<string, Entry>>(new Map())
   const [loading, setLoading] = useState(true)
+  const [drawn, setDrawn] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
 
@@ -502,9 +499,9 @@ function PromptWithOptions({
   useEffect(() => {
     let live = true
     void loadEntries(prompt, scope).then((loaded) => {
-      if (live) { setEntries(loaded); setLoading(false) }
+      if (live) { setEntries(loaded); setLoading(false); setDrawn(true) }
     }).catch((cause: unknown) => {
-      if (live) { setError(describeError(t, cause)); setLoading(false) }
+      if (live) { setError(describeError(t, cause)); setLoading(false); setDrawn(true) }
     })
     return () => {
       live = false
@@ -514,6 +511,13 @@ function PromptWithOptions({
   return <Stack gap="sm">
     {loading && <Text size="sm">{t('page.loadingEllipsis')}</Text>}
     {error !== null && <><Text c="red">{error}</Text><Button onClick={() => setAttempt((n) => n + 1)}>{t('page.retry')}</Button></>}
-    <PromptCard prompt={prompt} initialAnswers={initialAnswers} entries={entries} pending={pending || loading || error !== null} onAnswer={onAnswer} />
+    {/*
+      Not before the first load: an option drawn without its entry is named by
+      its slug, and then renamed under the player's eyes -- "Scholars Pack"
+      becoming "Scholar's Pack" with its source tags. Once drawn it stays:
+      a later reload (a new language, a refreshed prompt) must not unmount the
+      card and drop the picks in hand.
+    */}
+    {drawn && <PromptCard prompt={prompt} initialAnswers={initialAnswers} entries={entries} pending={pending || loading || error !== null} onAnswer={onAnswer} />}
   </Stack>
 }

@@ -97,7 +97,7 @@ policed them.
 ## Three rules about writing a test here
 
 **A test runs at one viewport unless the tree branches on width.** Exactly seven
-components do: `Columns`, `DataList`, `ModalSheet`, `SectionDeck`, `TabDeck`,
+components do: `Columns`, `DataList`, `ModalSheet`, `TabDeck`,
 `SheetBody` and `RootShell`.
 
 It stayed seven when the controls grew a per-width size, and stayed seven when
@@ -122,11 +122,11 @@ That was 72 of the suite's 433 cases, weighted toward the slowest files --
 `BuildScreen.test.tsx` alone ran 48 cases where 26 say the same thing. Where a
 block runs at one width, the comment above it names this rule, so the next
 reader knows it was a decision. Where a block still runs at both -- the group
-screens, `ModalSheet`, `Columns` and `SectionDeck` themselves, and the rows of
+screens, `ModalSheet` and `Columns` themselves, and the rows of
 `CharacterListScreen` -- it is because the swap is what the test is about.
-`SheetBody` is there twice over: the deck it hands its sections to draws a
-different tree at each width, and the sheet itself puts the two halves of its
-first section in a different order on a phone.
+`SheetBody` is there twice over: the deck it hands its tabs to draws a
+different tree at each width, and the sheet itself puts the two halves of the
+overview's head in a different order on a phone.
 
 The criterion is what the test *presses*, not what screen it is on.
 `CharacterListScreen`'s row actions live inside `DataList`, so a test that
@@ -342,8 +342,8 @@ rather than a range, so the four Mantine packages now move as a unit. A
 lockfile diff that bumps `@mantine/core` is a UI-wide upgrade wearing a
 carousel's clothes, and should be reviewed as one.
 
-They are two surfaces now: the landing page, and `ui/SectionDeck` -- which is
-what the character sheet becomes on a phone. That does not re-open the decision,
+They are two surfaces now: the landing page, and `ui/TabDeck` -- which is
+what the character sheet and the build screen become on a phone. That does not re-open the decision,
 it settles it. The +10 kB is amortised over the page a visitor meets the app on
 and the page they spend the most time on, and the second use is the one that
 justifies a real carousel rather than a `scroll-snap` flexbox, because it is the
@@ -614,8 +614,7 @@ would be testing the stub. A carousel is therefore asserted on its structure --
 its panels named, in order, in a named region, and whatever the call site does
 about height -- and never on which panel is scrolled into view. That is why
 `LandingPage.test.tsx` pins a height expression that still mentions both shell
-offsets, and why `SectionDeck.test.tsx` pins the exact opposite: that
-`--carousel-height` is never set at all.
+offsets, while a `TabDeck` never sets `--carousel-height` at all.
 
 It is also why the deck's tab strip reads React state rather than embla's
 `selectedScrollSnap()`. Pressing a tab is therefore observable in jsdom and
@@ -894,7 +893,7 @@ heading on a narrow screen because the row is allowed to wrap, and the cap is
 inert below 1024px. `Page.test.tsx` pins that by comparing the two renderings
 byte for byte, the way `TabRow.test.tsx` does. What may branch on the width is
 the handful of components that genuinely have to -- `Columns`, `DataList`,
-`ModalSheet`, `SectionDeck`, `TabDeck`, `RootShell` and `SheetBody`.
+`ModalSheet`, `TabDeck`, `RootShell` and `SheetBody`.
 `ScoreAssignment` was briefly one of them and is not: its gesture is the same at
 every width now.
 
@@ -1264,8 +1263,8 @@ This is the same object the character sheet's phone rendering already was, and
 that is why it moved into `ui/`: five stage tabs a player leafs between are
 seven sheet sections under a different name, and two copies of a two-way embla
 sync are two copies of the one thing in it that goes subtly wrong.
-`ui/SectionDeck` is now the *desktop* half of a sheet -- where a section knows
-whether it is a bare row or a bordered panel -- and hands the phone half here.
+The sheet has since stopped having a desktop half of its own: it is four tabs
+at every width, and this primitive draws both.
 
 Two things follow from every panel being mounted, and both are worth knowing.
 Where a block sits is remembered per tab rather than for the screen as a whole
@@ -1818,11 +1817,54 @@ whole class of real decisions off the screen.
 
 ## The sheet decides what order things come in
 
-Six sections, in one list, in the order a player reads them: who the character
-is and the abilities everything else is derived from, the body's state, then the
-skills, the proficiencies, the traits and the gear. `features/character/SheetBody`
-is that list, and `ui/SectionDeck` draws it -- across the page on a wide screen,
-and as a deck of tabs on a phone.
+Four tabs, at every width: **Overview**, **Actions**, **Spells**, **Equipment**.
+`features/character/SheetBody` builds them and `ui/TabDeck` draws them -- a tab
+row over the showing panel on a wide screen, the same row over a swiped deck on
+a phone. They are named for what a player is doing rather than for a table of
+the rulebook: looking the character up, taking a turn, casting, gearing up.
+
+- **Overview** is who the character is and the abilities everything else is
+  derived from, the body's state, then skills, proficiencies and traits as
+  headed panels -- two abreast on a wide screen, stacked on a phone.
+- **Actions** lists what the server derived (`sheet.actions`), the scaling
+  values a class brings, and the spendable pools. The server does not yet turn
+  an equipped weapon into an attack, so a fresh fighter's list is honestly
+  short; that is a gap in the projection (see docs/dnd.md), not in this tab.
+- **Spells** is drawn only for a character with a spell source.
+- **Equipment** is described [below](#equipment-is-slots-then-three-groups).
+
+A wide screen used to draw every section at once with no tabs, and a phone a tab
+per section -- eight of them. Both were the same list read two ways, and the
+phone's strip had grown past what a thumb could scan. Four is one layout to
+learn, and the cost is deliberate: the phone's Overview is a scroll rather than
+five slides.
+
+### Equipment is slots, then three groups
+
+On top, a panel of **slots** -- Armor, Main hand, Off hand, Neck, Rings (two),
+Worn -- each showing what is equipped there. Below it, everything the character
+owns in three tabs: **Wearable**, **Consumables**, **Other gear**, one row per
+entity however many lists the server splits it across, then the purse.
+
+Neither the group nor the slot is in the catalogue. Both are derived in
+`domain/equipment.ts` from what an item *is* (armor, weapon, gear category,
+magic-item category) plus two short slug lists for SRD gear that is used up or
+worn as clothing. The honest ceiling: homebrew the rules miss lands in *Other
+gear* with no slot, and there are no head/cloak/boots slots because SRD wondrous
+items carry no body part. A catalogue field is the upgrade path.
+
+The server keeps one `equipped` list, so which item sits in which slot is derived
+too: a second held item takes the off hand, and anything equipped beyond a
+slot's capacity is shown under *Worn* rather than hidden.
+
+The tab is **read-only unless `SheetBody` is given `onEquipment`**. Only the
+owner's `CharacterSheetScreen` passes it; `SharedSheetScreen` does not, so a
+sheet shared with a table has nothing to press. With it, a slot opens a sheet
+offering what in the backpack fits, a row has a count stepper, and the purse is
+five fields. Every edit is
+one `change` event on `equipment.*` paths, appended to the log. Equipping writes
+the equipped list both whole and per slug -- see the comment on
+`equippedChanges` for why the server needs both.
 
 ### What the sheet says about an unfinished character
 
@@ -1853,45 +1895,32 @@ on that answer and is drawn either way.
 
 ### On a phone the sheet is a deck, not an accordion
 
-One row of tabs under the character's name, one section on screen, and a swipe
-between them. **Nothing opens and nothing closes**, which is the change: the
-carousel decides what is visible, so a section has no shut state to be in.
+The same four tabs under the character's name, one on screen, and a swipe
+between them. **Nothing opens and nothing closes**: the carousel decides what is
+visible, so a tab has no shut state to be in.
 
-What it replaces is a `Columns` accordion, and the two answer different
-questions. An accordion is right for a page of two or three panels where the
-answer is usually in the first and the rest are detail. A character sheet is
-not that shape. It is six things
-a player leafs between at a table, none of them subordinate to the others, and
-an accordion made reading one of them a gesture: open it, and possibly shut
-three others first. It also put the headline numbers -- identity, the ability
-cards, the vitals -- above the accordion where they were never reachable except
-by scrolling past them. As slides they are tabs like any other.
+What it replaced, two designs ago, was a `Columns` accordion, and the two answer
+different questions. An accordion is right for a page of two or three panels
+where the answer is usually in the first and the rest are detail. A character
+sheet is not that shape: its tabs are peers a player leafs between at a table.
 
-The strip and the carousel are `ui/TabDeck`, which the build screen's five
-stage tabs also draw -- see [the tabs are a
-deck](#the-tabs-are-a-deck-so-a-phone-can-swipe-between-them). Under it is
-`ui/TabRow`, unchanged, because six tabs do not fit across a 390px screen and a
-strip that scrolls sideways is the whole of what it is. It
-scrolls away with the page rather than pinning under the header: that is one
-fewer row of chrome on a screen this app has already spent an argument buying
-back (see [Two views, one codebase](#two-views-one-codebase)), and a swipe
-changes section from anywhere on the slide, so the strip is not the only way
-through.
+The strip and the carousel are `ui/TabDeck`, which the build screen's stage tabs
+also draw -- see [the tabs are a
+deck](#the-tabs-are-a-deck-so-a-phone-can-swipe-between-them). It scrolls away
+with the page rather than pinning under the header: one fewer row of chrome on a
+screen this app has already spent an argument buying back (see [Two views, one
+codebase](#two-views-one-codebase)), and a swipe changes tab from anywhere on
+the slide, so the strip is not the only way through.
 
-**A slide is as tall as the tallest slide**, and a section sits at the top of
-its own rather than being stretched down it. Eighteen skill rows therefore leave
-a screen of blank space under the three rows of proficiencies. The alternative
-is to measure whichever slide is showing and size the viewport to it, and that
-is a `ResizeObserver` reading a layout -- which jsdom does not compute, so the
-suite could neither exercise it nor catch it breaking. The honest cost of that
-plus the non-sticky strip: scroll to the foot of Skills, swipe, and you are a
-long way down a mostly empty Identity with the tabs off-screen above.
+**A slide is as tall as the tallest slide**, which is now the Overview. Swipe
+from its foot to Actions and you are a long way down a mostly empty slide with
+the tabs off-screen above. The alternative is to measure the showing slide and
+size the viewport to it -- a `ResizeObserver` reading a layout jsdom does not
+compute, so the suite could neither exercise it nor catch it breaking.
 
-The tab and the panel heading are one string, written once in `SheetBody` --
-which is what [a category's word appears exactly
-once](#a-categorys-word-appears-exactly-once) asks for here. On the phone the
-heading is not drawn at all: the tab is on screen naming the section, and the
-slide repeating it underneath would be the word twice in two inches.
+The Equipment tab holds a second, inner tab row (the three groups). It is a
+plain `TabRow`, not a deck, so a swipe there still moves between the sheet's
+four tabs.
 
 The first tab is **`Main`**, and it is the one label here that names a place
 rather than its contents. The section holds two things -- the identity table and
@@ -2886,7 +2915,6 @@ rather than at the call site:
 | `ModalSheet` | centred modal | bottom drawer |
 | `DataList` | table | a card: name, marks, one dimmed line of facts, a `⋮` menu |
 | `Columns` | side-by-side panels | accordion |
-| `SectionDeck` | full-width blocks, then side-by-side panels | a `TabDeck` |
 | `TabDeck` | tab strip, and the active panel | tab strip over a carousel of every panel |
 | `TabRow` | tab strip | the same, scrolled sideways, ends faded |
 | `BlockList` | a list of blocks, one open | the same |
@@ -2978,21 +3006,14 @@ Four things follow, and each is a rule rather than a detail:
   has no menu runs 44px wider than its neighbours, and a ragged edge down a list
   reads as a bug.
 
-`Columns` and `SectionDeck` are the same idea answering two different questions,
+`Columns` and `TabDeck` are the same idea answering two different questions,
 and both are kept rather than one winning. `Columns` collapses: a section is a
 disclosure, which is right where a page has two or three panels and the answer
-is usually in the first. `SectionDeck` leafs: nothing
+is usually in the first. `TabDeck` leafs: nothing
 collapses, and a swipe or a tab decides what is on screen, which is right where
 the sections are peers and a reader moves between them rather than down them.
 The character sheet is the second kind; see [the sheet is a deck, not an
 accordion](#on-a-phone-the-sheet-is-a-deck-not-an-accordion).
-
-A section handed to `SectionDeck` says where it sits on a wide screen --
-`'full'` for its own bare row, `'panel'` for a bordered card in the grid -- and
-that is the primitive's whole knowledge of the screens above it. It is the same
-kind of thing as `Columns`' `cols`: a layout hint, not a fact about a character
-sheet. Consecutive `'panel'` sections share one grid, so the order of the list
-is the order of the page.
 
 Neither takes a control of its own. A section is a title and its content, and
 that is all -- there is nothing on a sheet panel to press. `ColumnsSection` used
@@ -3882,8 +3903,7 @@ Two things about that are the frontend's to keep working:
 ## Builder choice behavior
 
 Creation and level-up use the same nine tabs and server prompts. Cantrips and
-Spells have separate tabs; all equipment choices live in the final Equipment tab, followed by
-a summary of the projected inventory and coins, including fixed grants. A selection
+Spells have separate tabs; all equipment choices live in the final Equipment tab, and nothing else does. A selection
 changes a card in place: choosing, confirming, reopening, or replacing it must
 not sort the wizard's question cards. Spell choices have an explicit selected
 list above their filters; other option lists retain their original order. Answered choices use the original
@@ -3901,13 +3921,46 @@ API slug limit. Failed requests cannot be
 confirmed as if the catalogue were complete.
 
 Starting-equipment cards show complete descriptions plus armor and weapon facts,
-weight, cost and pack contents for the selected option. Bundles describe each
+weight and pack contents for the selected option. Bundles describe each
 component. Equipment-category choices support their full membership, and a
 multi-item category permits repeated copies. Confirmation still requires the
 requested number of items. Conditional cleric gear stays visible but disabled
 until its proficiency requirement is satisfied. Fixed equipment is granted by
 the rules; choosing equipment puts it in the backpack, without automatically
 wearing it. Starting wealth shopping is not part of this screen.
+
+A pack's contents are a list under the selected option, one item per line, with
+a count only where it is more than one. "×1" is printed nowhere: one of a thing
+is the thing.
+
+The tab is its questions and nothing else. There is no inventory list, no coin
+fields and no way to add an item here: what the character ends up holding is
+decided by the choices (and the fixed grants behind them), and it is read -- and
+worn, and counted -- on the sheet's Equipment tab. A list of the projected
+inventory under the questions repeated every answer a second time and invited
+editing a starting kit by hand; custom items will get their own flow.
+
+An option is not drawn until its catalogue entry has loaded. Drawn early it is
+named by its slug and then renamed in place -- "Scholars Pack" becoming
+"Scholar's Pack" with its source tags -- which read as the card flashing.
+
+An equipment card is **titled by what it offers** -- "Component pouch or one of:
+Arcane Foci" -- rather than "Starting equipment": a warlock has four such
+questions and under one shared title nothing said the fourth is a second
+weapon. A question that is only a category has no alternative, so it reads
+"Also one of: Simple Weapons", which is what tells it from the card above that
+offers the same category as one of two options. The rulebook really does grant
+both. No price is shown on an option: starting equipment is granted, not
+bought.
+
+A picked option and its description are one box, in the picked colour; the
+description is beside the button rather than inside it only because it is
+Markdown. The box owns the horizontal padding, so the name and the description
+start on one left edge, and the description is smaller and dimmed so it reads as
+being about the option rather than as another one. An item's numbers (damage,
+range, weight, cost) are one line joined by middle dots, not a paragraph each;
+a bundle heads each component with its name in bold. One of a category is named by the category: "Arcane Foci", not
+"1 × Arcane Foci"
 
 A held trait, feat, fighting style or proficiency cannot be selected again where
 it would duplicate a benefit. Expertise offers proficient skills/tools that have
@@ -4184,23 +4237,18 @@ writes: an imported character's scores are the ability-scores card and open
 level is the Level card. What an import still lays over the build (inventory,
 coins) is shown by the Equipment tab's ordinary summary.
 
-### A custom entry is the last option of its list
+### Nothing in the builder writes a custom entry
 
-Nothing custom sits at the end of a tab. `CustomChoice`
-(`features/character/customChoice.ts`) is a context the builder provides, and
-the lists that read it end with **Custom…**: `PromptCard` for a race, class,
-background or equipment choice (`CUSTOM_KINDS` maps the question's kind to the
-entry's, so `equipment` makes an `item`), and `SpellStagePanel` at the end of
-its available-spells list, making a cantrip or a spell by tab. That is the
-whole set. The option is marked `data-custom-choice` so that opening a question
-still focuses its first real option, which may be loading. Catalogue entries
-flagged `manual` are offered in the list with a Custom badge.
+A picker used to end with **Custom…**, a way to write a race, class, background,
+item or spell the rules do not have. It is gone from every list: it was offered
+on every question, read as one more answer to it, and custom items are to get a
+flow of their own. Catalogue entries flagged `manual` are still offered in the
+list with a Custom badge.
 
-`CustomOptionsPanel` only *shows*: it draws a character's custom entries as
-`BlockList` blocks -- the same card every other decision is -- inside the tab's
-panel, above Next, and owns the form. It has no add button. It is mounted once
-per tab, so only the tab on screen (`modal`) draws the form, whose state lives
-in `BuildScreen` because the pickers open it too.
+`CustomOptionsPanel` remains for entries a character already has -- an AI Wizard
+import writes them for anything it could not match -- and draws them as
+`BlockList` blocks inside the tab's panel, above Next, with the form to edit
+one. It has no add button, and nothing else opens it.
 
 ## Homebrew
 

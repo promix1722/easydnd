@@ -524,7 +524,7 @@ const current = () =>
  * passing after the screen stops filtering anything at all.
  *
  * A slide is a `role="group"` named by its tab, which is the same handle
- * `SectionDeck.test.tsx` uses on the sheet's own deck.
+ * `SheetBody.test.tsx` uses on the sheet's own deck.
  */
 const panel = (name: string) =>
   within(screen.getByRole('group', { name: stageLabel(testT, name as Stage) }))
@@ -680,7 +680,9 @@ describe('BuildScreen', () => {
     expect(before.indexOf('1 more language')).toBeLessThan(before.indexOf('A subrace'))
 
     await user.click(screen.getByRole('button', { name: /A subrace/ }))
-    await user.click(await screen.findByRole('button', { name: 'Hill Dwarf' }))
+    // The only option there is arrives picked: the card is drawn once its
+    // entries are known, and a question with one answer answers itself.
+    expect(await screen.findByRole('button', { name: 'Hill Dwarf' })).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
     await waitFor(() => {
@@ -1808,7 +1810,7 @@ it('edits saved spells from the existing picks without deleting them on open or 
 })
 
 
-it('places spell and equipment questions in their own tabs and shows granted gear last', async () => {
+it('places spell and equipment questions in their own tabs', async () => {
   const user = setupUser()
   const question = (kind: string, group: string, owner: string) => ({
     choice: { prompt: `${owner}/${kind}/0`, kind, choose: 1, from: { kind: 'explicit', options: [] } },
@@ -1827,9 +1829,8 @@ it('places spell and equipment questions in their own tabs and shows granted gea
   expect(current()).toBe('Spells')
   expect(panel('spells').queryByRole('combobox', { name: 'Spell selection' })).not.toBeInTheDocument()
   expect(panel('equipment').getAllByRole('button', { name: /Starting equipment/ })).toHaveLength(2)
-  expect(panel('equipment').getByText('Dagger')).toBeInTheDocument()
-  expect(panel('equipment').getByText('×2')).toBeInTheDocument()
-  expect(panel('equipment').getByText('15 gp')).toBeInTheDocument()
+  // The tab is its questions and nothing else: what they grant is on the sheet.
+  expect(panel('equipment').queryByText('Dagger')).not.toBeInTheDocument()
   for (const name of ['class', 'race', 'background']) {
     expect(panel(name).queryByRole('button', { name: /Starting equipment|1 spell/ })).not.toBeInTheDocument()
   }

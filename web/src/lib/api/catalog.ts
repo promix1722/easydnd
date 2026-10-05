@@ -139,7 +139,7 @@ export interface Item extends Entry {
   cost?: { amount: number; unit: string }
   weight?: number
   armor?: { category?: string; baseAC: number; addsDexBonus?: boolean; maxDexBonus?: number; strengthMinimum?: number; stealthDisadvantage?: boolean }
-  gear?: { contents?: { item: string; count: number }[] }
+  gear?: { gearCategory?: string; contents?: { item: string; count: number }[] }
   weapon?: { category?: string; range?: string; damage?: { dice: string; type?: string }; normalRange?: number; longRange?: number; properties?: string[]; twoHandedDamage?: { dice: string; type?: string }; throwNormalRange?: number; throwLongRange?: number }
 }
 

@@ -5,7 +5,6 @@ import type { Entry, Prompt } from '@/lib/api'
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 
-import { CustomChoice } from './customChoice'
 import { PromptCard } from './PromptCard'
 
 const entries = new Map<string, Entry>([
@@ -41,32 +40,21 @@ function skillPrompt(overrides: Partial<Prompt> = {}): Prompt {
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */
 describe('PromptCard', () => {
   const viewport = 'desktop'
 
-  // A race the rules do not have is still an answer to "which race", so the
-  // way to write one is the last option of that list -- and of no list whose
-  // answer cannot be custom.
-  it('ends a race list, and only such a list, with the custom option', async () => {
-    const user = setupUser()
-    const custom = vi.fn()
+  // Writing an entry of your own is not offered while building: an entry the
+  // player (or an import) already has is still listed, marked, and nothing
+  // in the list makes a new one.
+  it('lists an existing custom entry and offers no way to write another', () => {
     const race = skillPrompt({ choice: { prompt: 'character/race', choose: 1, kind: 'race', from: { kind: 'collection', collection: 'race' } } })
     const races = new Map<string, Entry>([['elf', { slug: 'elf', name: 'Elf' }], ['custom-xxx', { slug: 'custom-xxx', name: 'Xxx', manual: true }]])
-    const { unmount } = renderAt(viewport, <CustomChoice.Provider value={custom}>
-      <PromptCard prompt={race} entries={races} pending={false} onAnswer={vi.fn()} />
-    </CustomChoice.Provider>)
-    // An entry the player wrote earlier is offered beside the catalogue's, marked.
+    renderAt(viewport, <PromptCard prompt={race} entries={races} pending={false} onAnswer={vi.fn()} />)
     expect(screen.getByRole('button', { name: /Xxx/ })).toHaveTextContent('Custom')
-    await user.click(screen.getByRole('button', { name: 'Custom…' }))
-    expect(custom).toHaveBeenCalledWith('race')
-    unmount()
-    renderAt(viewport, <CustomChoice.Provider value={custom}>
-      <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />
-    </CustomChoice.Provider>)
     expect(screen.queryByRole('button', { name: 'Custom…' })).not.toBeInTheDocument()
   })
 

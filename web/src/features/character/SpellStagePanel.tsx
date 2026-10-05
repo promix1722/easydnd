@@ -1,10 +1,9 @@
 import { sourceOptions } from '@/lib/api'
 import { useCatalogScope } from '@/lib/api/catalogScope'
-import { useContext, useState } from 'react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { slugOf } from '@/domain'
-import { CustomChoice } from './customChoice'
 import { getCollection, getEntries } from '@/lib/api'
 import type { Change, Entry, Prompt, Spell, SpellRule } from '@/lib/api'
 import { useT } from '@/lib/i18n'
@@ -40,7 +39,6 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
   children?: ReactNode
 }) {
   const t = useT()
-  const custom = useContext(CustomChoice)
   const scope = useCatalogScope()
   const limit = 20
   const [shownCount, setShownCount] = useState(limit)
@@ -240,7 +238,6 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
       </Group>}
       {available.length === 0 && <Text size="sm" c="dimmed">{t('spells.empty')}</Text>}
       {/* A spell the rules do not have is the last entry of the list of spells. */}
-      {active && custom !== null && <Button variant="default" justify="flex-start" disabled={busy} onClick={() => custom(cantripsOnly ? 'cantrip' : 'spell')}>{t('custom.add')}</Button>}
     </Stack>
   </Stack>
 }

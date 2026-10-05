@@ -1,6 +1,5 @@
 import { characterPath } from '@/lib/api/characters'
 import type { CustomOption } from '@/lib/api/characters'
-import { CustomChoice } from './customChoice'
 import { DEFAULT_BUILD_POLICY } from '@/lib/api/packPolicy'
 import { CatalogScope, RulesEdition, CharacterPolicy } from '@/lib/api/catalogScope'
 import { PackSelector } from '@/features/packs'
@@ -146,6 +145,11 @@ export function BuildScreen() {
       names: await resolveRefNames([
         ...log.events, ...prompts.prompts,
         ...(prompts.spellRules ?? []).flatMap((rule) => [{ source: rule.source }, ...(rule.automatic ?? []).map((slug) => ({ ref: `spell:${slug}` })), ...(rule.listClasses ?? []).map((slug) => ({ ref: `class:${slug}` }))]),
+        // An equipment card is titled by what it offers, so those items are
+        // named before any card is opened.
+        ...prompts.prompts.filter((prompt) => prompt.choice.kind === 'equipment')
+          .flatMap((prompt) => (prompt.choice.from.options ?? []).flatMap((option) => [option, ...(option.items ?? [])]))
+          .flatMap((option) => option.ref === undefined ? [] : [{ ref: option.ref }]),
         ...[...sheet.equipment.equipped, ...sheet.equipment.backpack, ...sheet.equipment.loot]
           .flatMap((stack) => stack.item === undefined ? [] : [{ ref: `item:${stack.item}` }]),
       ], `${characterPath(id)}/catalog`),
@@ -606,7 +610,7 @@ export function BuildScreen() {
         : revise.fields
 
   return (
-    <CharacterPolicy.Provider value={view.prompts.buildPolicy ?? DEFAULT_BUILD_POLICY}><RulesEdition.Provider value={(isNew ? selectedRules : view.rules)?.edition ?? '2014'}><CatalogScope.Provider value={id ? `${characterPath(id)}/catalog` : ''}><CustomChoice.Provider value={isNew ? null : (kind) => setCustomDraft({ kind, name: '', description: '', source: '', selected: true })}><Page
+    <CharacterPolicy.Provider value={view.prompts.buildPolicy ?? DEFAULT_BUILD_POLICY}><RulesEdition.Provider value={(isNew ? selectedRules : view.rules)?.edition ?? '2014'}><CatalogScope.Provider value={id ? `${characterPath(id)}/catalog` : ''}><Page
       // The draft, while the character it names is being created: the sheet
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
@@ -731,7 +735,6 @@ export function BuildScreen() {
                       creating || create.pending || answer.pending || revise.pending || remove.pending
                     }
                     fields={fields}
-                    {...(each === 'equipment' && view.sheet !== null ? { equipment: view.sheet.equipment } : {})}
                     {...(after === null ? {} : { onNext: () => goToStage(after) })}
                     {...(posingName || asking?.prompt.choice.kind === 'text'
                       ? { name: nameDraft }
@@ -837,7 +840,7 @@ export function BuildScreen() {
             </ModalSheet>
         </Stack>
       </Panel>
-    </Page></CustomChoice.Provider></CatalogScope.Provider></RulesEdition.Provider></CharacterPolicy.Provider>
+    </Page></CatalogScope.Provider></RulesEdition.Provider></CharacterPolicy.Provider>
   )
 }
 

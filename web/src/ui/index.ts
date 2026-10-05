@@ -15,7 +15,7 @@ export { Accordion, AppShell, Burger, NavLink, Tabs } from '@mantine/core'
 // Its own package, and the one component here that is not core's. Re-exported
 // plainly as well as wrapped: a carousel's two renderings are the same markup --
 // the same slides, a narrower viewport -- so `routes/LandingPage.tsx` draws one
-// directly. `SectionDeck` wraps it for the other reason a primitive exists here,
+// directly. `TabDeck` wraps it for the other reason a primitive exists here,
 // which is that its *desktop* rendering is not a carousel at all.
 // `Carousel.Slide` rides along as a static member.
 export { Carousel } from '@mantine/carousel'
@@ -141,8 +141,6 @@ export type { PageState } from './pageState'
 export { NO_SWIPE } from './swipe'
 export { SECTIONS, sectionFor } from './sections'
 export type { Section } from './sections'
-export { SectionDeck } from './SectionDeck'
-export type { DeckSection, SectionDeckProps } from './SectionDeck'
 export { TabDeck } from './TabDeck'
 export type { DeckPanel, TabDeckProps } from './TabDeck'
 export { TabRow } from './TabRow'

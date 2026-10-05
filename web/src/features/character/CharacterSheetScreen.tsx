@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 
 import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent } from '@/lib/api'
-import type { Prompt, Sheet } from '@/lib/api'
+import type { Change, Prompt, Sheet } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import { Avatar, characterAvatar, Badge, Button, Group, ModalSheet, NumberInput, Page, Stack, Text, pageState } from '@/ui'
@@ -85,6 +85,15 @@ export function CharacterSheetScreen() {
       loadCompendium(`/characters/${id}/catalog`),
     ])
     return { sheet: projected, prompts: prompts?.prompts ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL, compendium }
+  })
+
+  // Read the log's head at the moment of writing: the sheet does not carry a
+  // sequence, and an edit made in another tab should conflict rather than vanish.
+  const editEquipment = useAction(async (changes: Change[]) => {
+    if (changes.length === 0) return
+    const log = await getEvents(id)
+    await appendEvents(id, log.seq, [{ type: 'change', changes }], log.revision ?? log.seq)
+    sheet.refresh()
   })
 
   const state = pageState(sheet, {
@@ -173,7 +182,17 @@ export function CharacterSheetScreen() {
         </Group>
       }
     >
-      <SheetBody sheet={s} compendium={sheet.data.compendium} />
+      {editEquipment.error !== null && (
+        <Text size="sm" c="red">
+          {editEquipment.error}
+        </Text>
+      )}
+      <SheetBody
+        sheet={s}
+        compendium={sheet.data.compendium}
+        pending={editEquipment.pending}
+        onEquipment={(changes) => void editEquipment.run(changes)}
+      />
 
       <ModalSheet
         opened={pickingLevel !== null}

@@ -117,7 +117,7 @@ export function CustomOptionsPanel({
         onClose={() => {
           if (!action.pending) setDraft(null)
         }}
-        title={draft?.id ? t('custom.edit') : t('custom.add')}
+        title={t('custom.edit')}
       >
         {modal && draft && (
           <form

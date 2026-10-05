@@ -198,12 +198,24 @@ export interface Sheet {
   equipment: Equipment
   resources: Resources
   spells: { sources?: SpellSource[]; cantrips?: string[]; known?: string[]; prepared?: string[]; ability?: string }
-  actions: unknown[]
+  actions?: SheetAction[]
   feats?: string[]
   traits?: string[]
   features?: string[]
   conditions?: string[]
   proficiencies?: string[]
+}
+
+/** Something the character can do on their turn, as the server derived it. */
+export interface SheetAction {
+  source: string
+  kind: string
+  name: string
+  range?: number
+  toHit?: number
+  damage?: string
+  uses?: string
+  notes?: string
 }
 
 export interface Answer {

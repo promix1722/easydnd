@@ -611,17 +611,11 @@ its background is Urchin, which SRD 5.1 does not publish. Nothing at all is
 left open: the stub declares a desired level of 3, which *is* the rogue's
 third level, and answers what those levels open.
 
-One of the seven records an answer and buys nothing, and it is a gap in the
-model rather than in the stub. `acolyte/starting-equipment/0` draws its options
-from an equipment *category* (`rules.OptionsFromEquipmentCategory`, "any item in
-holy-symbols"), and nothing outside the catalogue DTO reads that option-set
-kind. `rules.OptionKeys` returns no keys for it, so `validateAnswer` skips the
-membership check and **any slug at all is accepted** -- a nonexistent one, or a
-rapier as a holy symbol -- and `Project` materialises none of them. The prompt
-closes, so the build screen is right to show it settled; the item simply never
-reaches the sheet. Every category-drawn equipment prompt in the compendium
-behaves this way, and `TestStubOptionalAnswersReachTheSheet` asserts the gap so
-that closing it fails loudly.
+`acolyte/starting-equipment/0` draws its options from an equipment *category*
+(`rules.OptionsFromEquipmentCategory`, "any item in holy-symbols"). The answer is
+checked against the category's membership and the chosen item lands in the
+backpack like any other pick; `TestStubOptionalAnswersReachTheSheet` and
+`TestEquipmentCategoriesValidateAndProject` hold both.
 
 The route exists **only when `env` is `development`**, which is why there is no
 check inside the handler: a guard in two places is a guard that can disagree

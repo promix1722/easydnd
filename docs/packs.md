@@ -140,6 +140,16 @@ it outside a deployment's release directory. Changing content under an archived
 ID/version is an error. Bump the version instead. The archive never supplies
 new default roots by itself, and startup makes no network requests.
 
+Every pack other than the base SRD has its slugs qualified with its ID at load
+(`dnd-2014/wizard`), and so has every field that *refers* to one. Two references
+are qualified by shape rather than by key, because the key means other things
+elsewhere: an option set of kind `equipment-category` has its `category`
+qualified (a weapon's `category` is "simple" and is left alone), and an ideal's
+`alignments` are qualified like any slug list. Both are checked: a category or
+an alignment that does not exist fails the load. Left bare, "any arcane focus"
+asked a namespaced pack for `arcane-foci`, found only `pack/arcane-foci`, and
+offered the player nothing to choose.
+
 `autoload_packs` installs additional public packs at startup without adding them
 to the default roots. Each entry's `path` names a pack directory, or a repository
 whose `pack/` child is the pack directory. A manifest at the configured root

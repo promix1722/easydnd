@@ -545,6 +545,12 @@ Cleric warhammer and chain-mail choices require appropriate proficiency. Pack
 contents are presented as contents of the granted pack, without also granting a
 second loose copy of every contained item.
 
+The catalogue says what an item *is* -- armor, weapon, a gear category -- and
+nothing about whether it is used up or where on the body it goes. The client's
+Wearable / Consumables / Other gear groups and its equipment slots are derived
+from those facts (`web/src/domain/equipment.ts`), not stored; the character
+still has one `equipped` list and no per-slot state.
+
 ### Spell acquisition and preparation
 
 Spell sources retain their own cantrips, known spells, spellbook, prepared spells,
