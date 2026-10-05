@@ -121,6 +121,7 @@ afterEach(() => {
   // would otherwise hand it to the next file that autodetects.
   try {
     window.sessionStorage.clear()
+    window.localStorage.clear()
   } catch {
     // A jsdom without storage is still a jsdom worth running tests in.
   }

@@ -45,6 +45,7 @@ type User struct {
 	ID          ID
 	DisplayName string
 	CreatedAt   time.Time
+	Appearance  Appearance
 	// Credentials holds every passkey registered to this account. It is a
 	// slice rather than a single value because the only defence against a
 	// lost device is a second registered authenticator.
@@ -143,6 +144,8 @@ type Identity struct {
 // internal/adapter/repository; internal/app picks the concrete one, and that
 // assignment is what proves conformance at compile time.
 type Repository interface {
+	SetAppearance(ctx context.Context, id ID, appearance Appearance) error
+
 	// Create stores u together with its initial credentials. Implementations
 	// report a *types.ValidationError if the id or any credential id is
 	// already taken.

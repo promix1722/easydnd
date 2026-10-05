@@ -3143,40 +3143,48 @@ a thumb has to hit *precisely* -- `ScoreAssignment`'s drag targets, which worked
 the number out for themselves before it was a token -- and not as the size of
 every control.
 
-## The palette is one line in theme/tokens.ts
+## Personal appearance settings
 
-The app's colour is data, in `theme/palettes.ts`, and which palette it wears is
-one constant:
+`/account` offers an Appearance card for account holders and guests. Color theme
+chooses Dragon, Parchment, Midnight or Moss; Display mode chooses Light, Dark or
+System. Changes apply immediately without remounting the page. While loading or
+saving account appearance the selectors are disabled; a failed save restores
+the previous preference
+and shows a translated error. System follows the device's current color scheme.
 
-```ts
-export const PALETTE_NAME: PaletteName = 'dragon'
-```
+`lib/appearance` owns the preference and persistence, below the UI layer.
+`AppearanceProvider` sits inside `AuthProvider` and wraps `AppTheme`, which builds
+Mantine's accent ramp and surface variables from the active palette. Mantine's
+separate localStorage color scheme manager is disabled so there is one authority.
+Default appearance is Dragon with System mode.
 
-**It is a development tool, not a setting.** There is no picker, no environment
-variable and nothing to strip from a production build. Change the word, Vite
-repaints, and you are looking at another skin. A user never chooses one, because
-a user was never the audience: the point is to be able to try the app four ways
-while designing it without editing forty files.
+Account preferences load through `GET /v1/appearance` after login and session
+refresh, and save through `PUT /v1/appearance`, replacing the complete resource.
+Appearance is independent of authentication response DTOs. A failed read keeps
+the cached theme and offers Retry; successful reads are authoritative.
+There is no background polling or offline write queue. Confirmed values are
+cached in localStorage under `easydnd.appearance.account.<id>`, with the last
+account ID in `easydnd.appearance.account` to restore appearance while the session
+loads or is offline. Sign-out restores the browser preference and clears that
+pointer. Switching accounts cancels old saves and keeps caches separate.
+Guests and signed-out visitors use `easydnd.appearance.browser`; guest choices
+are never uploaded at sign-in. Invalid or unavailable storage falls back safely.
 
-A `Palette` is a ten-step accent ramp, the one step that is *the* brand colour,
-the mark's light field, and two `Scheme`s of five surfaces each -- background,
-surface, text, dimmed, border. Four ship: `dragon` (the deep red the app has
-always worn, and the default), `parchment`, `midnight` and `moss`.
+The palettes remain framework-free data in `theme/palettes.ts`. Each defines
+both light and dark surfaces. `PALETTE_NAME` in `theme/tokens.ts` remains the
+default brand palette for generated icons, the PWA manifest, logos and dice
+artwork. Personal settings do not regenerate those assets. Runtime browser
+`theme-color` follows the selected palette's brand color.
 
-**Every palette defines both schemes**, and that is not tidiness.
-`AppTheme` runs `defaultColorScheme="auto"`, so the app never gets to choose
-which scheme a visitor sees; one that defined only `light` would be unreadable
-to half the people who opened it.
-
-**The binding is five CSS variables, not a stylesheet.** `createTheme` takes
+**The binding uses semantic CSS variables and surface aliases.** `createTheme` takes
 colour *ramps* and has no way to say "the page's background"; `cssVariablesResolver`
-in `ui/theme.ts` is the lever, and it takes light and dark separately. Because
-those are Mantine's *own* variable names, every `Card`, `Table`, `Paper`,
-`Alert`, `Modal` and `Drawer` follows with no per-component override -- and this
-repo still has no CSS file, which only `ui/AppTheme.tsx` would have been allowed
-to import.
+in `ui/theme.ts` is the lever, and it takes light and dark separately. Mantine's
+components also read ramp colors directly, so light white and
+gray border shades and dark surface/border shades receive palette-specific
+aliases. Paper's background binds to the semantic surface variable in the theme.
+This makes cards, inputs, tables and panels follow the active palette.
 
-**Nothing in the suite can assert on any of it.** Vitest runs with `css: false`
+**Computed colors need a browser check.** Vitest runs with `css: false`
 and jsdom lays nothing out, so no test can read a computed colour. That leaves
 the data as the only surface to hold, and `theme/palettes.test.ts` holds it:
 ten valid steps, a brand colour drawn from its own ramp, both schemes complete,
@@ -3362,7 +3370,8 @@ connect card, because connecting is the whole of its recovery. A guest gets
 neither, and no longer gets an alert about it either: the subtitle says the
 session is a guest's, and a paragraph under it listing what a guest session
 lacks was the page scolding somebody for the way they came in, on the one screen
-where there is nothing they can do about it.
+where there is nothing they can do about it. Both account holders and guests
+now have the Appearance card above this inventory.
 
 **The way in is a row in the navigation, and it is still not a section.** The
 desktop navbar draws it under the same rule that separates the collapse control

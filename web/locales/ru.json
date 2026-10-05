@@ -1137,5 +1137,17 @@
   "spells.filter.allSources": "Все книги / источники",
   "spells.unavailablePacks": "Не удалось загрузить некоторые версии наборов:",
   "packs.field.sources": "Книги / источники",
-  "packs.field.provenance": "Источники сущностей"
+  "packs.field.provenance": "Источники сущностей",
+  "appearance.title": "Оформление",
+  "appearance.palette": "Цветовая тема",
+  "appearance.mode": "Режим отображения",
+  "appearance.dragon": "Дракон",
+  "appearance.parchment": "Пергамент",
+  "appearance.midnight": "Полночь",
+  "appearance.moss": "Мох",
+  "appearance.system": "Как в системе",
+  "appearance.light": "Светлый",
+  "appearance.dark": "Тёмный",
+  "appearance.saveFailed": "Не удалось сохранить оформление. Попробуйте ещё раз.",
+  "appearance.loadFailed": "Не удалось загрузить оформление. Попробуйте ещё раз."
 }

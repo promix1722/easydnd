@@ -155,3 +155,5 @@ export type { DevelopmentAccount } from './development'
 
 export { getSpellBrowseOptions, sourceOptions } from './catalog'
 export type { Provenance, SourceOptions, SpellBrowseOptions } from './catalog'
+
+export { getAppearance, saveAppearance } from './appearance'

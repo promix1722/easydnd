@@ -32,6 +32,7 @@ import (
 	webauthnadapter "github.com/promix1722/easydnd/internal/adapter/webauthn"
 	httpapi "github.com/promix1722/easydnd/internal/api/http"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	appearanceapi "github.com/promix1722/easydnd/internal/api/http/v1/appearance"
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
@@ -48,6 +49,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
+	appearanceuc "github.com/promix1722/easydnd/internal/usecase/appearance"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
@@ -258,6 +260,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		Version:       buildinfo.Version,
 		WebDir:        opts.WebDir,
 		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)),
+		Appearance:    appearanceapi.New(appearanceuc.NewService(userRepo)),
 		Authenticator: authService,
 		Pack:          packapi.New(packService, packSource),
 		Catalog:       catalogapi.New(packSource, log.With("handler", "catalog")),

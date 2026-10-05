@@ -20,12 +20,14 @@ import (
 	httpapi "github.com/promix1722/easydnd/internal/api/http"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"github.com/promix1722/easydnd/internal/api/http/middleware"
+	appearanceapi "github.com/promix1722/easydnd/internal/api/http/v1/appearance"
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	domain "github.com/promix1722/easydnd/internal/domain/auth"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
+	appearanceuc "github.com/promix1722/easydnd/internal/usecase/appearance"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 )
 
@@ -180,6 +182,7 @@ func newTestRouterOver(
 		System:        system.New(testVersion),
 		Version:       testVersion,
 		Auth:          authapi.New(svc, cookies),
+		Appearance:    appearanceapi.New(appearanceuc.NewService(repo)),
 		Authenticator: svc,
 	})
 	if err != nil {
@@ -681,5 +684,82 @@ func TestRegisteringIsNotAnonymous(t *testing.T) {
 	}
 	if body.User.Anonymous {
 		t.Error("a registered account is reported as anonymous")
+	}
+}
+
+func TestAppearanceEndpoint(t *testing.T) {
+	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
+	session := register(t, r, cookies)
+	write := func(body string, cookie *http.Cookie) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPut, "/v1/appearance", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", testOrigin)
+		req.Header.Set("X-Request-Id", "test")
+		if cookie != nil {
+			req.AddCookie(cookie)
+		}
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		return rec
+	}
+	body := `{"palette":"parchment","color_scheme":"dark"}`
+	if rec := write(body, nil); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("signed out: %d %s", rec.Code, rec.Body)
+	}
+	if rec := write(body, session); rec.Code != http.StatusOK {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body)
+	}
+	for _, invalid := range []string{`{}`, `{"palette":"other","color_scheme":"auto"}`, `{"palette":"dragon","color_scheme":"other"}`, `{"palette":"dragon"}`, `null`, `{`} {
+		if rec := write(invalid, session); rec.Code != http.StatusBadRequest {
+			t.Fatalf("invalid %s: %d %s", invalid, rec.Code, rec.Body)
+		}
+	}
+
+	read := func(cookie *http.Cookie) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "/v1/appearance", nil)
+		if cookie != nil {
+			req.AddCookie(cookie)
+		}
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		return rec
+	}
+	current := read(session)
+	if current.Code != http.StatusOK || current.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("read: %d %s", current.Code, current.Body)
+	}
+	var response appearanceapi.Appearance
+	if err := json.Unmarshal(current.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response != (appearanceapi.Appearance{Palette: "parchment", ColorScheme: "dark"}) {
+		t.Fatalf("appearance: %+v", response)
+	}
+	if rec := write(body, session); rec.Code != http.StatusOK {
+		t.Fatal("repeated PUT failed")
+	}
+	if after := read(session); after.Body.String() != current.Body.String() {
+		t.Fatal("PUT was not idempotent")
+	}
+	if rec := read(nil); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("signed-out GET: %d", rec.Code)
+	}
+	guestSession := guest(t, r, cookies)
+	if rec := write(body, guestSession); rec.Code != http.StatusForbidden {
+		t.Fatalf("guest PUT: %d", rec.Code)
+	}
+	if rec := read(guestSession); rec.Code != http.StatusForbidden {
+		t.Fatalf("guest GET: %d", rec.Code)
+	}
+	var sessionWire map[string]json.RawMessage
+	if err := json.Unmarshal(me(t, r, session).Body.Bytes(), &sessionWire); err != nil {
+		t.Fatal(err)
+	}
+	var accountWire map[string]json.RawMessage
+	if err := json.Unmarshal(sessionWire["user"], &accountWire); err != nil {
+		t.Fatal(err)
+	}
+	if _, included := accountWire["appearance"]; included {
+		t.Fatal("appearance remains in session response")
 	}
 }

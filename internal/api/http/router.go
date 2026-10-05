@@ -19,6 +19,7 @@ import (
 
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"github.com/promix1722/easydnd/internal/api/http/middleware"
+	appearanceapi "github.com/promix1722/easydnd/internal/api/http/v1/appearance"
 	"github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
@@ -38,6 +39,7 @@ type Handlers struct {
 	Development *development.Handler
 	System      *system.Handler
 	Auth        *auth.Handler
+	Appearance  *appearanceapi.Handler
 	Catalog     *catalogapi.Handler
 	Character   *characterapi.Handler
 	Folder      *folderapi.Handler
@@ -203,6 +205,11 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// in a comment that it is deliberate.
 		authed := v1.Group("", middleware.RequireSession(h.Authenticator, cookies))
 		{
+			if h.Appearance != nil {
+				resource := authed.Group("/appearance", middleware.NoStore())
+				resource.GET("", h.Appearance.Get)
+				resource.PUT("", h.Appearance.Put)
+			}
 			if h.Pack != nil {
 				packs := authed.Group("/packs", middleware.NoStore())
 				packs.GET("", h.Pack.List)

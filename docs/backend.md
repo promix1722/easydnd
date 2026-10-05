@@ -1333,6 +1333,21 @@ is in [web.md](web.md#one-button-means-both-halves).
 | `GET /v1/auth/sso/{provider}/link` | session | same, but attaches to the signed-in account |
 | `POST /v1/auth/sso/{provider}/unlink` | session | disconnects an external account |
 | `GET /v1/auth/me` | session | the signed-in account, or 401 |
+| `GET /v1/appearance` | account session | read the current account's appearance |
+| `PUT /v1/appearance` | account session | replace `{ "palette": "dragon", "color_scheme": "auto" }`; return saved appearance |
+
+**Appearance is a separate resource for the current account.** Both methods
+return the same representation, with a palette (`dragon`, `parchment`,
+`midnight`, `moss`) and `color_scheme`
+(`light`, `dark`, `auto`). The account aggregate and both repositories store
+these fields; migration `00005_appearance.sql` defaults existing accounts to
+Dragon/System and constrains the allowed values. The appearance endpoint requires
+both fields, validates them in the appearance usecase, returns 400 for invalid input,
+401 without a session and 403 for guests. GET and PUT use `Cache-Control: no-store`.
+Appearance does not appear in authentication responses. PUT only changes the
+current account's
+appearance; credentials and identities remain intact. Guests store appearance
+in their browser without creating an account row.
 
 ### Sign in with Google
 

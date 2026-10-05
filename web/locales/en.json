@@ -1085,5 +1085,17 @@
   "spells.filter.allSources": "All books / sources",
   "spells.unavailablePacks": "Some pack releases could not be loaded:",
   "packs.field.sources": "Books / sources",
-  "packs.field.provenance": "Entity sources"
+  "packs.field.provenance": "Entity sources",
+  "appearance.title": "Appearance",
+  "appearance.palette": "Color theme",
+  "appearance.mode": "Display mode",
+  "appearance.dragon": "Dragon",
+  "appearance.parchment": "Parchment",
+  "appearance.midnight": "Midnight",
+  "appearance.moss": "Moss",
+  "appearance.system": "System",
+  "appearance.light": "Light",
+  "appearance.dark": "Dark",
+  "appearance.saveFailed": "Could not save your appearance. Please try again.",
+  "appearance.loadFailed": "Could not load your appearance. Please try again."
 }
