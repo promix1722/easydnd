@@ -70,7 +70,7 @@ func (s *Service) Import(
 			"importing sheets is not configured")
 	}
 
-	folder, err := s.resolveFolder(ctx, owner, folder)
+	folder, err := s.ResolveFolder(ctx, owner, folder)
 	if err != nil {
 		return domain.Character{}, ImportReport{}, err
 	}
@@ -80,14 +80,14 @@ func (s *Service) Import(
 		return domain.Character{}, ImportReport{}, err
 	}
 
-	log, report, err := s.importer.Import(r, cat, s.now())
+	log, report, err := s.importer.Import(r, cat, s.Now())
 	if err != nil {
 		return domain.Character{}, ImportReport{}, err
 	}
 	if len(log.Events) > 0 {
 		log.Events[0].RulesLock = cat.Lock.Clone()
 	}
-	if err := validateImported(cat, log); err != nil {
+	if err := ValidateImported(cat, log); err != nil {
 		return domain.Character{}, ImportReport{}, err
 	}
 
@@ -132,7 +132,7 @@ func (s *Service) Import(
 // The projection is run as well, and that is the substantive check: it is what
 // catches a change addressing a path that does not exist. Doing it here means
 // a bad import is a 400 rather than a character that cannot be read back.
-func validateImported(cat *catalog.Catalog, log domain.Log) error {
+func ValidateImported(cat *catalog.Catalog, log domain.Log) error {
 	cat = domain.WithCustomCatalog(log, cat)
 	if err := log.Validate(); err != nil {
 		return err

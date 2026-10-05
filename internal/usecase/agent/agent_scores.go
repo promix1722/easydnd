@@ -1,4 +1,4 @@
-package character
+package agent
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
 // During import, final totals must survive adding race/ASI/pack observations in
@@ -42,7 +43,7 @@ func rebaseAgentScores(log domain.Log, cat *catalog.Catalog) domain.Log {
 		return log
 	}
 	// A total with nothing left to say is not an entry in anybody's history.
-	stripped, err = domain.Rebuild(slices.DeleteFunc(stripped.Events, func(e domain.Event) bool { return e.Observed && saysNothing(e) }))
+	stripped, err = domain.Rebuild(slices.DeleteFunc(stripped.Events, func(e domain.Event) bool { return e.Observed && charuc.SaysNothing(e) }))
 	if err != nil {
 		return log
 	}
@@ -110,7 +111,7 @@ func rebaseAgentScores(log domain.Log, cat *catalog.Catalog) domain.Log {
 			}
 		}
 		if equal {
-			if len(validateChanges(cat, event, 0)) > 0 {
+			if len(charuc.ValidateChanges(cat, event, 0)) > 0 {
 				return log
 			}
 			// The same totals are insufficient if a custom conditional rule
@@ -213,7 +214,7 @@ func pruneAgentOverrides(log domain.Log, cat *catalog.Catalog) domain.Log {
 	}
 	// An observation with nothing left to say is not an entry in anybody's
 	// history; the log is renumbered without it.
-	events := slices.DeleteFunc(out.Events, func(e domain.Event) bool { return e.Observed && saysNothing(e) })
+	events := slices.DeleteFunc(out.Events, func(e domain.Event) bool { return e.Observed && charuc.SaysNothing(e) })
 	rebuilt, err := domain.Rebuild(events)
 	if err != nil {
 		return log

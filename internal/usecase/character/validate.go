@@ -24,7 +24,7 @@ import (
 // the prompts open before the event. Splitting them would mean projecting the
 // log twice per event to reach the same answer, and would leave two places
 // where "which prompt is this?" is decided.
-func validateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.Event) error {
+func ValidateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.Event) error {
 	working := domain.Log{Events: slices.Clone(log.Events)}
 
 	for i := range events {
@@ -77,7 +77,7 @@ func validateEvent(
 			})
 		}
 	}
-	fields := validateChanges(cat, event, index)
+	fields := ValidateChanges(cat, event, index)
 
 	_, lost, err := surviving(log, cat, event, index)
 	if err != nil {
@@ -238,7 +238,7 @@ func sourceOf(
 	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event,
 ) domain.PromptGroup {
 	if event.Observed {
-		return observedGroup(event.Type, firstChangePath(event))
+		return ObservedGroup(event.Type, firstChangePath(event))
 	}
 	if event.Type == domain.EventInit {
 		return domain.GroupIdentity
@@ -369,7 +369,7 @@ const (
 // and the ruleset must be the compendium's own -- which is what makes the
 // rules selection final: the only value a change can ever set is the one
 // already in effect.
-func validateChanges(cat *catalog.Catalog, event domain.Event, index int) []types.FieldError {
+func ValidateChanges(cat *catalog.Catalog, event domain.Event, index int) []types.FieldError {
 	var fields []types.FieldError
 	for i, change := range event.Changes {
 		if change.Path == "identity.image" {
@@ -380,7 +380,7 @@ func validateChanges(cat *catalog.Catalog, event domain.Event, index int) []type
 		}
 		if change.Path == "identity.desiredLevel" {
 			if change.Value.Kind == domain.ValueInt &&
-				(change.Value.Int < 1 || change.Value.Int > maxLevel(cat)) {
+				(change.Value.Int < 1 || change.Value.Int > MaxLevel(cat)) {
 				fields = append(fields, types.FieldError{
 					Field:  fmt.Sprintf("events[%d].changes[%d].value", index, i),
 					Rule:   "range",
@@ -518,7 +518,7 @@ func findPrompt(open []domain.Prompt, id rules.Slug) (domain.Prompt, bool) {
 	return domain.Prompt{}, false
 }
 
-func maxLevel(cat *catalog.Catalog) int {
+func MaxLevel(cat *catalog.Catalog) int {
 	if cat.Mechanics.Core.MaxLevel > 0 {
 		return cat.Mechanics.Core.MaxLevel
 	}

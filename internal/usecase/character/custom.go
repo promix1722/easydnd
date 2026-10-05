@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -27,7 +28,7 @@ func (s *Service) UpsertCustomOption(ctx context.Context, owner domain.OwnerID, 
 	if err = checkRevision(ctx, character); err != nil {
 		return Revision{}, err
 	}
-	log, err := upsertCustom(character.Log, cat, option)
+	log, err := UpsertCustom(character.Log, cat, option)
 	if err != nil {
 		return Revision{}, err
 	}
@@ -40,7 +41,7 @@ func (s *Service) UpsertCustomOption(ctx context.Context, owner domain.OwnerID, 
 	}
 	return Revision{Revision: character.Revision + max(1, log.Len()-character.Log.Len()), Seq: log.LastSeq(), Sheet: sheet}, nil
 }
-func upsertCustom(log domain.Log, cat *catalog.Catalog, option domain.CustomOption) (domain.Log, error) {
+func UpsertCustom(log domain.Log, cat *catalog.Catalog, option domain.CustomOption) (domain.Log, error) {
 	if option.ID == "" {
 		var id [12]byte
 		if _, err := rand.Read(id[:]); err != nil {
@@ -62,7 +63,7 @@ func upsertCustom(log domain.Log, cat *catalog.Catalog, option domain.CustomOpti
 			return log, types.NewValidationError("invalid custom value")
 		}
 	}
-	if option.Level != nil && (option.Kind == "spell" && *option.Level > 9 || option.Kind == "class" && (*option.Level < 1 || *option.Level > maxLevel(cat))) {
+	if option.Level != nil && (option.Kind == "spell" && *option.Level > 9 || option.Kind == "class" && (*option.Level < 1 || *option.Level > MaxLevel(cat))) {
 		return log, types.NewValidationError("invalid custom level")
 	}
 	if option.HitDie != nil && *option.HitDie != 4 && *option.HitDie != 6 && *option.HitDie != 8 && *option.HitDie != 10 && *option.HitDie != 12 {
@@ -100,7 +101,7 @@ func upsertCustom(log domain.Log, cat *catalog.Catalog, option domain.CustomOpti
 			return log, types.NewValidationError("custom reference kind mismatch")
 		}
 		valid := false
-		for _, c := range catalogCandidates(cat, expected) {
+		for _, c := range CatalogCandidates(cat, expected) {
 			if c.Ref == ref.Canonical() {
 				valid = true
 			}
@@ -156,8 +157,48 @@ func upsertCustom(log domain.Log, cat *catalog.Catalog, option domain.CustomOpti
 	if !replaced {
 		_ = updated.Append(domain.Event{Type: domain.EventNote, Custom: &option, Note: note, At: time.Now().UTC()})
 	}
-	if err := validateImported(cat, updated); err != nil {
+	if err := ValidateImported(cat, updated); err != nil {
 		return log, err
 	}
 	return updated, nil
+}
+
+// Candidates describe identity only. A separate choice validation determines
+// whether this character may select the identified entry for a given purpose.
+type Candidate struct {
+	Ref     string  `json:"ref"`
+	Name    string  `json:"name"`
+	Score   float64 `json:"score"`
+	Level   *int    `json:"level,omitempty"`
+	Details any     `json:"details,omitempty"`
+}
+
+// CatalogCandidates lists every entry of one kind in the selected rules.
+func CatalogCandidates(cat *catalog.Catalog, kind string) []Candidate {
+	fields := map[string]string{"race": "Races", "subrace": "Subraces", "class": "Classes", "subclass": "Subclasses", "background": "Backgrounds", "feat": "Feats", "feature": "Features", "trait": "Traits", "spell": "Spells", "item": "Items", "magic-item": "MagicItems", "language": "Languages", "skill": "Skills", "proficiency": "Proficiencies", "alignment": "Alignments"}
+	field, ok := fields[kind]
+	if !ok {
+		return nil
+	}
+	rk, ok := rules.ParseRefKind(kind)
+	if !ok {
+		return nil
+	}
+	collection := reflect.ValueOf(cat).Elem().FieldByName(field)
+	if !collection.IsValid() {
+		return nil
+	}
+	entries := collection.MethodByName("All").Call(nil)[0]
+	out := []Candidate{}
+	for i := 0; i < entries.Len(); i++ {
+		v := entries.Index(i)
+		entry := v.FieldByName("Entry").Interface().(catalog.Entry)
+		c := Candidate{Ref: rules.NewRef(rk, entry.Slug).Canonical(), Name: entry.Name, Details: v.Interface()}
+		if l := v.FieldByName("Level"); l.IsValid() && l.Kind() == reflect.Int {
+			n := int(l.Int())
+			c.Level = &n
+		}
+		out = append(out, c)
+	}
+	return out
 }

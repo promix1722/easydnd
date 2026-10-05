@@ -148,7 +148,7 @@ func (s *Service) MoveCharacter(
 	// Both ends are checked. Without the second, a caller could file their
 	// own character into a folder belonging to somebody else and make it
 	// vanish from their own listing.
-	folder, err := s.resolveFolder(ctx, owner, folder)
+	folder, err := s.ResolveFolder(ctx, owner, folder)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func (s *Service) CopyCharacter(
 	if target.IsZero() {
 		target = source.Folder
 	}
-	target, err = s.resolveFolder(ctx, owner, target)
+	target, err = s.ResolveFolder(ctx, owner, target)
 	if err != nil {
 		return domain.Character{}, err
 	}
@@ -230,7 +230,7 @@ func (s *Service) CopyCharacter(
 
 // resolveFolder turns a caller's folder into one owner definitely has: the
 // zero value becomes their default, and anything else must be theirs.
-func (s *Service) resolveFolder(
+func (s *Service) ResolveFolder(
 	ctx context.Context, owner domain.OwnerID, folder domain.FolderID,
 ) (domain.FolderID, error) {
 	if folder.IsZero() {

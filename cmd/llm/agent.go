@@ -23,6 +23,7 @@ import (
 	"github.com/promix1722/easydnd/internal/config"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
@@ -49,11 +50,11 @@ func (o *agentOutput) emit(v any) error {
 }
 
 type timedAgentModel struct {
-	charuc.AgentModel
+	agentuc.AgentModel
 	out *agentOutput
 }
 
-func (m timedAgentModel) Respond(ctx context.Context, r charuc.AgentRequest, delta func(string)) (charuc.AgentResponse, error) {
+func (m timedAgentModel) Respond(ctx context.Context, r agentuc.AgentRequest, delta func(string)) (agentuc.AgentResponse, error) {
 	start := time.Now()
 	response, err := m.AgentModel.Respond(ctx, r, delta)
 	_ = m.out.emit(map[string]any{"kind": "model", "durationMs": time.Since(start).Milliseconds(), "calls": response.Calls, "text": response.Text, "usage": response.Usage, "failed": err != nil})
@@ -94,14 +95,14 @@ func agentCmd(args []string) error {
 	service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, nil, logger)
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-	return runAgentCLI(ctx, os.Stdin, os.Stdout, service, agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model, cfg.Agent.ReasoningEffort), lang, charuc.AgentConfig{Workers: 1, MaxTurns: cfg.Agent.MaxTurns, Timeout: cfg.Agent.RequestTimeout}, *timeout)
+	return runAgentCLI(ctx, os.Stdin, os.Stdout, service, agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model, cfg.Agent.ReasoningEffort), lang, agentuc.AgentConfig{Workers: 1, MaxTurns: cfg.Agent.MaxTurns, Timeout: cfg.Agent.RequestTimeout}, *timeout)
 }
 
-func agentFiles(paths []string) ([]charuc.AgentFile, error) {
+func agentFiles(paths []string) ([]agentuc.AgentFile, error) {
 	if len(paths) > 8 {
 		return nil, fmt.Errorf("at most eight attachments")
 	}
-	files := []charuc.AgentFile{}
+	files := []agentuc.AgentFile{}
 	total := 0
 	for _, path := range paths {
 		f, err := os.Open(path)
@@ -131,14 +132,14 @@ func agentFiles(paths []string) ([]charuc.AgentFile, error) {
 		default:
 			return nil, fmt.Errorf("unsupported attachment %s", path)
 		}
-		files = append(files, charuc.AgentFile{Name: filepath.Base(path), MIME: mime, Data: data})
+		files = append(files, agentuc.AgentFile{Name: filepath.Base(path), MIME: mime, Data: data})
 	}
 	return files, nil
 }
 
-func runAgentCLI(ctx context.Context, input io.Reader, output io.Writer, service *charuc.Service, model charuc.AgentModel, locale rules.Locale, cfg charuc.AgentConfig, timeout time.Duration) error {
+func runAgentCLI(ctx context.Context, input io.Reader, output io.Writer, service *charuc.Service, model agentuc.AgentModel, locale rules.Locale, cfg agentuc.AgentConfig, timeout time.Duration) error {
 	out := &agentOutput{writer: output}
-	agent := charuc.NewAgent(service, timedAgentModel{model, out}, cfg)
+	agent := agentuc.NewAgent(service, timedAgentModel{model, out}, cfg)
 	defer agent.Close()
 	const owner domain.OwnerID = "cli"
 	lines := make(chan string)
@@ -163,7 +164,7 @@ func runAgentCLI(ctx context.Context, input io.Reader, output io.Writer, service
 	seen, revision := 0, -1
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	inspect := func(s charuc.AgentSession, action string) error {
+	inspect := func(s agentuc.AgentSession, action string) error {
 		state, err := agent.Sheet(ctx, s)
 		if err != nil {
 			return err
@@ -188,7 +189,7 @@ func runAgentCLI(ctx context.Context, input io.Reader, output io.Writer, service
 			}
 			var command agentCommand
 			err := json.Unmarshal([]byte(line), &command)
-			var s charuc.AgentSession
+			var s agentuc.AgentSession
 			if err == nil {
 				switch command.Action {
 				case "start":
@@ -196,7 +197,7 @@ func runAgentCLI(ctx context.Context, input io.Reader, output io.Writer, service
 						err = fmt.Errorf("one session per process")
 						break
 					}
-					var files []charuc.AgentFile
+					var files []agentuc.AgentFile
 					files, err = agentFiles(command.Files)
 					if err == nil {
 						create := agent.Create

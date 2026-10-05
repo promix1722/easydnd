@@ -50,6 +50,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 	appearanceuc "github.com/promix1722/easydnd/internal/usecase/appearance"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
@@ -61,7 +62,7 @@ import (
 
 // App owns the wired object graph and the HTTP server lifecycle.
 type App struct {
-	agent *charuc.Agent
+	agent *agentuc.Agent
 	cfg   *config.Config
 	log   *slog.Logger
 	srv   *http.Server
@@ -256,11 +257,11 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		devHandler = development.New(seed, helpers.NewCookieOptions(cfg), cfg.Auth.SessionTTL)
 		log.Info("development party seeded", "accounts", []string{"master", "player1", "player2"}, "group_id", devGroupID, "game_ids", seed.games)
 	}
-	var model charuc.AgentModel
+	var model agentuc.AgentModel
 	if cfg.Agent.APIKey != "" {
 		model = agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model, cfg.Agent.ReasoningEffort)
 	}
-	agent := charuc.NewAgent(characterService, model, charuc.AgentConfig{Workers: cfg.Agent.Workers, MaxTurns: cfg.Agent.MaxTurns, MaxSessions: cfg.Agent.MaxSessions, Timeout: cfg.Agent.RequestTimeout})
+	agent := agentuc.NewAgent(characterService, model, agentuc.AgentConfig{Workers: cfg.Agent.Workers, MaxTurns: cfg.Agent.MaxTurns, MaxSessions: cfg.Agent.MaxSessions, Timeout: cfg.Agent.RequestTimeout})
 
 	// Inbound adapters. The character routes are declared behind
 	// RequireSession, and the handler reads the owner from the account that

@@ -25,6 +25,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
@@ -32,10 +33,10 @@ type reviewModel struct{}
 
 // An import ends on a question about what is still blank; this model asks it
 // and, once the test has answered, finishes.
-func (reviewModel) Respond(_ context.Context, r charuc.AgentRequest, _ func(string)) (charuc.AgentResponse, error) {
+func (reviewModel) Respond(_ context.Context, r agentuc.AgentRequest, _ func(string)) (agentuc.AgentResponse, error) {
 	last := string(r.Input[len(r.Input)-1])
-	one := func(id, name, arguments string) (charuc.AgentResponse, error) {
-		return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: id, Name: name, Arguments: arguments}}}, nil
+	one := func(id, name, arguments string) (agentuc.AgentResponse, error) {
+		return agentuc.AgentResponse{Calls: []agentuc.AgentCall{{ID: id, Name: name, Arguments: arguments}}}, nil
 	}
 	switch {
 	case !strings.Contains(last, "function_call_output") && strings.Contains(last, "Leave them blank"):
@@ -43,7 +44,7 @@ func (reviewModel) Respond(_ context.Context, r charuc.AgentRequest, _ func(stri
 	case strings.Contains(last, `\"unanswered\"`):
 		return one("ask", "ask_user", `{"text":"Fill in what is blank?","options":["Leave them blank"]}`)
 	}
-	return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: "name", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Hero"}`}, {ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "review", Name: "prepare_review", Arguments: `{"text":"Review","allow_incomplete":true}`}}}, nil
+	return agentuc.AgentResponse{Calls: []agentuc.AgentCall{{ID: "name", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Hero"}`}, {ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "review", Name: "prepare_review", Arguments: `{"text":"Review","allow_incomplete":true}`}}}, nil
 }
 func TestImportHTTPUploadResumeOwnershipAndLongPoll(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -57,7 +58,7 @@ func TestImportHTTPUploadResumeOwnershipAndLongPoll(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc.SetPackAccess(testAgentAccess{})
-	agent := charuc.NewAgent(svc, reviewModel{}, charuc.AgentConfig{Workers: 1})
+	agent := agentuc.NewAgent(svc, reviewModel{}, agentuc.AgentConfig{Workers: 1})
 	defer agent.Close()
 	h := api.New(svc, slog.New(slog.DiscardHandler)).WithAgent(agent)
 	r := gin.New()
@@ -88,7 +89,7 @@ func TestImportHTTPUploadResumeOwnershipAndLongPoll(t *testing.T) {
 		t.Fatal(err)
 	}
 	var view struct {
-		Session charuc.AgentSession `json:"session"`
+		Session agentuc.AgentSession `json:"session"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&view); err != nil {
 		t.Fatal(err)
@@ -142,7 +143,7 @@ func TestImportHTTPUploadResumeOwnershipAndLongPoll(t *testing.T) {
 	}
 	// On the current revision it gets only the events it lacks.
 	var tail struct {
-		Events []charuc.AgentEvent `json:"events"`
+		Events []agentuc.AgentEvent `json:"events"`
 	}
 	status, body = poll(current.Revision, 2)
 	if err := json.Unmarshal([]byte(body), &tail); status != 200 || err != nil || strings.Contains(body, `"session"`) ||

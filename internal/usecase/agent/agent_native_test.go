@@ -1,4 +1,4 @@
-package character_test
+package agent_test
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
@@ -21,11 +22,11 @@ import (
 // test reads is never the last one.
 type script struct {
 	mu      sync.Mutex
-	turns   [][]charuc.AgentCall
+	turns   [][]agentuc.AgentCall
 	outputs map[string]string
 }
 
-func (sc *script) Respond(_ context.Context, r charuc.AgentRequest, _ func(string)) (charuc.AgentResponse, error) {
+func (sc *script) Respond(_ context.Context, r agentuc.AgentRequest, _ func(string)) (agentuc.AgentResponse, error) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	if sc.outputs == nil {
@@ -41,11 +42,11 @@ func (sc *script) Respond(_ context.Context, r charuc.AgentRequest, _ func(strin
 		}
 	}
 	if len(sc.turns) == 0 {
-		return charuc.AgentResponse{}, nil
+		return agentuc.AgentResponse{}, nil
 	}
 	calls := sc.turns[0]
 	sc.turns = sc.turns[1:]
-	return charuc.AgentResponse{Calls: calls}, nil
+	return agentuc.AgentResponse{Calls: calls}, nil
 }
 
 func (sc *script) output(id string) string {
@@ -54,8 +55,8 @@ func (sc *script) output(id string) string {
 	return sc.outputs[id]
 }
 
-func call(id, name, arguments string) charuc.AgentCall {
-	return charuc.AgentCall{ID: id, Name: name, Arguments: arguments}
+func call(id, name, arguments string) agentuc.AgentCall {
+	return agentuc.AgentCall{ID: id, Name: name, Arguments: arguments}
 }
 
 // namespacedService serves the SRD under another pack id, which is how the
@@ -95,7 +96,7 @@ func TestAgentRebuildsASheetAsANativeBuild(t *testing.T) {
 	for name, newService := range map[string]func(*testing.T) *charuc.Service{"srd": newService, "namespaced pack": namespacedService} {
 		t.Run(name, func(t *testing.T) {
 			svc := newService(t)
-			model := &script{turns: [][]charuc.AgentCall{{
+			model := &script{turns: [][]agentuc.AgentCall{{
 				// The sheet's numbers, as a model reads them. Perception is the
 				// sheet's one real disagreement with the rules: an elf is
 				// proficient, and this sheet prints the bare Wisdom modifier.
@@ -146,17 +147,17 @@ func TestAgentRebuildsASheetAsANativeBuild(t *testing.T) {
 			}, {
 				call("review", "prepare_review", `{"text":"Ready"}`),
 			}}}
-			a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+			a := agentuc.NewAgent(svc, model, agentuc.AgentConfig{Workers: 1})
 			defer a.Close()
 			s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "Import my sheet")
 			if err != nil {
 				t.Fatal(err)
 			}
-			s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "waiting" })
+			s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "waiting" })
 			if s, err = a.Control(testOwner, s.ID, "message", "Leave them blank", s.Revision); err != nil {
 				t.Fatal(err)
 			}
-			s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
+			s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "review" })
 			if out := model.output("again"); !strings.Contains(out, `"ready":false`) {
 				t.Errorf("review passed without the owner being asked: %s", out)
 			}
@@ -316,15 +317,15 @@ func TestAgentResolvesSubclassNamesWithinTheirClass(t *testing.T) {
 		"Wizard":    {"School of Evocation", "evocation"},
 		"Cleric":    {"Life Domain", "life"},
 	} {
-		model := &script{turns: [][]charuc.AgentCall{{
+		model := &script{turns: [][]agentuc.AgentCall{{
 			call("facts", "import_facts", `{"facts":[{"kind":"class","name":"`+class+`","level":3},{"kind":"subclass","name":"`+test.printed+`"}]}`),
 		}}}
-		a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 1})
+		a := agentuc.NewAgent(newService(t), answering{model}, agentuc.AgentConfig{Workers: 1})
 		s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "paused" })
+		s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "paused" })
 		sheet, err := a.Sheet(context.Background(), s)
 		if err != nil {
 			t.Fatal(err)
@@ -340,18 +341,18 @@ func TestAgentResolvesSubclassNamesWithinTheirClass(t *testing.T) {
 // never dropped in silence, and neither is the turn's remaining work once the
 // turn has ended.
 func TestAgentRejectsWhatItCannotResolveAndStopsAtAQuestion(t *testing.T) {
-	model := &script{turns: [][]charuc.AgentCall{{
+	model := &script{turns: [][]agentuc.AgentCall{{
 		call("bad", "upsert_custom_option", `{"id":"x","kind":"spell","name":"Mystery","ref":"spell:no-such-spell"}`),
 		call("ask", "ask_user", `{"text":"Which totem?","options":["Bear","Wolf"]}`),
 		call("late", "import_facts", `{"facts":[{"path":"identity.name","value":"Too late"}]}`),
 	}}}
-	a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 1})
+	a := agentuc.NewAgent(newService(t), answering{model}, agentuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "waiting" })
+	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "waiting" })
 	sheet, err := a.Sheet(context.Background(), s)
 	if err != nil {
 		t.Fatal(err)
@@ -362,7 +363,7 @@ func TestAgentRejectsWhatItCannotResolveAndStopsAtAQuestion(t *testing.T) {
 	if _, err = a.Control(testOwner, s.ID, "message", "Bear", s.Revision); err != nil {
 		t.Fatal(err)
 	}
-	waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return model.output("late") != "" })
+	waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return model.output("late") != "" })
 	if out := model.output("bad"); !strings.Contains(out, "candidates") {
 		t.Errorf("unresolvable ref was not reported with candidates: %s", out)
 	}
@@ -375,18 +376,18 @@ func TestAgentRejectsWhatItCannotResolveAndStopsAtAQuestion(t *testing.T) {
 // import itself wrote down and the build then reproduced.
 func TestAgentPruningLeavesTheOwnersEditsAlone(t *testing.T) {
 	svc := newService(t)
-	model := &script{turns: [][]charuc.AgentCall{{
+	model := &script{turns: [][]agentuc.AgentCall{{
 		call("plan", "plan_import", `{"expected":["identity.name"],"scores":{"str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10}}`),
 		call("facts", "import_facts", `{"facts":[{"path":"identity.name","value":"Hero"},{"kind":"class","name":"Fighter","level":1},{"path":"base.hitPoints.max","value":10},{"path":"status.armorClass","value":10}]}`),
 		call("review", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
 	}}}
-	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
+	a := agentuc.NewAgent(svc, answering{model}, agentuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
+	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "review" })
 	// The owner pins the armor class to the very number the build computes.
 	edit(t, svc, s.CharacterID, domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "status.armorClass", Op: domain.OpSet, Value: domain.IntValue(10)}}})
 	saved, err := a.Get(testOwner, s.ID)
@@ -418,7 +419,7 @@ func TestAgentPruningLeavesTheOwnersEditsAlone(t *testing.T) {
 // draft hostage over an entry nothing can satisfy: that is how an import ends
 // in a loop of invented custom content.
 func TestAgentChecklistRefusesReviewOnceThenLetsItPass(t *testing.T) {
-	model := &script{turns: [][]charuc.AgentCall{{
+	model := &script{turns: [][]agentuc.AgentCall{{
 		call("plan", "plan_import", `{"expected":["identity.name","spell:Wish","item:Dagger"],"scores":{"str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10}}`),
 		call("facts", "import_facts", `{"facts":[{"path":"identity.name","value":"Hero"}]}`),
 		call("first", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
@@ -429,13 +430,13 @@ func TestAgentChecklistRefusesReviewOnceThenLetsItPass(t *testing.T) {
 	}, {
 		call("third", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
 	}}}
-	a := charuc.NewAgent(newService(t), answering{model}, charuc.AgentConfig{Workers: 1})
+	a := agentuc.NewAgent(newService(t), answering{model}, agentuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
+	waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "review" })
 	if out := model.output("first"); !strings.Contains(out, "spell:Wish") || !strings.Contains(out, "item:Dagger") {
 		t.Errorf("first review did not list what is missing: %s", out)
 	}
@@ -452,7 +453,7 @@ func TestAgentChecklistRefusesReviewOnceThenLetsItPass(t *testing.T) {
 // The same sheet says "wielded" where the build says "equipped".
 func TestAgentPlacesAStatedFeatAndReadsTheSheetsWords(t *testing.T) {
 	svc := newService(t)
-	model := &script{turns: [][]charuc.AgentCall{{
+	model := &script{turns: [][]agentuc.AgentCall{{
 		call("plan", "plan_import", `{"expected":["identity.name"],"level":4}`),
 		call("facts", "import_facts", `{"facts":[{"path":"identity.name","value":"Viktor"},{"kind":"class","name":"Fighter","level":4},{"kind":"feat","name":"Grappler"}]}`),
 		call("branch", "answer_choices", `{"answers":[{"prompt":"fighter/ability-score-improvement/4","picks":["feat"]}]}`),
@@ -461,13 +462,13 @@ func TestAgentPlacesAStatedFeatAndReadsTheSheetsWords(t *testing.T) {
 		call("gear", "set_inventory", `{"items":[{"name":"Longsword","placement":"wielded"}]}`),
 		call("review", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
 	}}}
-	a := charuc.NewAgent(svc, answering{model}, charuc.AgentConfig{Workers: 1})
+	a := agentuc.NewAgent(svc, answering{model}, agentuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
+	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "review" })
 	if out := model.output("feat"); strings.Contains(out, "error") || strings.Contains(out, "alreadyHeld") {
 		t.Fatalf("the stated feat was refused its own question: %s", out)
 	}
@@ -490,19 +491,19 @@ func TestAgentPlacesAStatedFeatAndReadsTheSheetsWords(t *testing.T) {
 // what it does not, never a question -- and a blank name box stays blank
 // rather than taking its own caption for a name.
 func TestAgentUnattendedLeavesOpenWhatTheSheetDoesNotState(t *testing.T) {
-	model := &script{turns: [][]charuc.AgentCall{{
+	model := &script{turns: [][]agentuc.AgentCall{{
 		call("plan", "plan_import", `{"name":"Character Name","personality_traits":["I watch.","I place no stock in wealthy folk."],"scores":{},"level":3,"skills":{},"saves":{},"coins":{},"items":[],"spells":[],"expected":["class:Sorcerer"]}`),
 		call("facts", "import_facts", `{"facts":[{"kind":"class","name":"Sorcerer","level":3}]}`),
 		call("ask", "ask_user", `{"text":"What is the character called?","options":["Brom"]}`),
 		call("review", "prepare_review", `{"text":"Done."}`),
 	}, {}}}
-	a := charuc.NewAgent(newService(t), model, charuc.AgentConfig{Workers: 1})
+	a := agentuc.NewAgent(newService(t), model, agentuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.CreateUnattended(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "review" })
+	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "review" })
 	sheet, err := a.Sheet(context.Background(), s)
 	if err != nil {
 		t.Fatal(err)
@@ -528,14 +529,14 @@ func TestAgentUnattendedLeavesOpenWhatTheSheetDoesNotState(t *testing.T) {
 // dwarf prints and a build of one used to come up short of.
 func TestHillDwarfBuildsWithDwarvenToughness(t *testing.T) {
 	hitPoints := func(facts string) int {
-		model := &script{turns: [][]charuc.AgentCall{{call("facts", "import_facts", `{"facts":[`+facts+`]}`)}}}
-		a := charuc.NewAgent(namespacedService(t), model, charuc.AgentConfig{Workers: 1})
+		model := &script{turns: [][]agentuc.AgentCall{{call("facts", "import_facts", `{"facts":[`+facts+`]}`)}}}
+		a := agentuc.NewAgent(namespacedService(t), model, agentuc.AgentConfig{Workers: 1})
 		defer a.Close()
 		s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "paused" })
+		s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "paused" })
 		sheet, err := a.Sheet(context.Background(), s)
 		if err != nil {
 			t.Fatal(err)

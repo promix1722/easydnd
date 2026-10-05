@@ -1,4 +1,4 @@
-package character
+package agent
 
 import (
 	"context"
@@ -6,33 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
-
-func firstChangePath(e domain.Event) string {
-	if len(e.Changes) == 0 {
-		return ""
-	}
-	return string(e.Changes[0].Path)
-}
-func observedGroup(typ domain.EventType, path string) domain.PromptGroup {
-	switch typ {
-	case domain.EventRace, domain.EventSubrace:
-		return domain.GroupRace
-	case domain.EventBackground:
-		return domain.GroupBackground
-	case domain.EventClass, domain.EventSubclass, domain.EventLevel, domain.EventFeat:
-		return domain.GroupClass
-	}
-	if strings.HasPrefix(path, "finalAbilities.") || strings.HasPrefix(path, "abilities.") {
-		return domain.GroupAbilities
-	}
-	if strings.HasPrefix(path, "identity.") {
-		return domain.GroupIdentity
-	}
-	return domain.PromptGroupNone
-}
 
 type agentProgress struct {
 	Operation string `json:"operation"`
@@ -102,7 +78,7 @@ func (a *Agent) recordProgress(ctx context.Context, s *AgentSession, tool string
 		if err == nil {
 			names := map[string]string{}
 			for _, kind := range []string{"spell", "feature", "proficiency", "race", "class", "subrace", "subclass", "background", "item", "feat"} {
-				for _, entry := range catalogCandidates(cat, kind) {
+				for _, entry := range charuc.CatalogCandidates(cat, kind) {
 					ref, _ := rules.ParseRef(entry.Ref)
 					names[ref.Slug.String()] = entry.Name
 					names[entry.Ref] = entry.Name

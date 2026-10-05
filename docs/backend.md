@@ -144,6 +144,19 @@ instead -- `make db/up` once, then `make run/db` and `make web/dev` -- and
 otherwise `make config/dev` writes `config.dev-run.yaml` for it, carrying this
 worktree's ports and origins.
 
+**The generated config also turns the AI Wizard on, when there is a key to turn
+it on with.** `make config/dev` (and so `make dev`, and `make config/preview`)
+writes an `agent:` section from `OPENAI_API_KEY`; if that is unset it reads the
+variable out of `SECRETS_FILE` (default `~/.config/secrets.env`, a shell file
+with an `OPENAI_API_KEY=...` line), so a fresh worktree gets a working wizard
+without anyone sourcing anything. The model is `AGENT_MODEL` (default
+`gpt-6-luna`). The key is written into the file because the loader reads
+nothing from the environment; the file is gitignored and mode 600. With no key
+in either place the section is left out, the server starts without the feature,
+and the target says so: `wrote config.dev-run.yaml (AI Wizard off: no
+OPENAI_API_KEY)`. A hand-written `config.local.yaml` is never touched -- its
+`agent:` section, like its ports, is yours to keep.
+
 Without `TEST_DATABASE_URL` the Postgres adapter tests skip themselves, which is
 what keeps `go test ./...` and `make verify` green on a machine with no Docker.
 CI sets it against a service container, so they are not skipped there.

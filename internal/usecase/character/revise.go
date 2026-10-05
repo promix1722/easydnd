@@ -225,7 +225,7 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 		staged := event
 		staged.Choices = kept
 		switch {
-		case saysNothing(staged):
+		case SaysNothing(staged):
 			// An entry that was nothing but answers, all of which died. Its
 			// own reason rather than answers-dropped, because the row it
 			// names has gone from the screen rather than got shorter -- and
@@ -246,7 +246,7 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 	}
 
 	appended := slices.Clone(added)
-	if err := validateAndAttribute(rebuilt, cat, appended); err != nil {
+	if err := ValidateAndAttribute(rebuilt, cat, appended); err != nil {
 		return domain.Log{}, nil, err
 	}
 	for _, event := range appended {
@@ -271,7 +271,7 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 // An entry with a Ref never says nothing, which is the guard behind the
 // second property in Revise's comment -- a race entry that lost every answer
 // is still the entry that sets the race.
-func saysNothing(event domain.Event) bool {
+func SaysNothing(event domain.Event) bool {
 	return !requiredRef(event) &&
 		len(event.Choices) == 0 && len(event.Changes) == 0 && event.Note == ""
 }

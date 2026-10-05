@@ -1,9 +1,8 @@
-package character
+package agent
 
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 	"unicode"
@@ -12,17 +11,11 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
-// Candidates describe identity only. A separate choice validation determines
-// whether this character may select the identified entry for a given purpose.
-type AgentCandidate struct {
-	Ref     string  `json:"ref"`
-	Name    string  `json:"name"`
-	Score   float64 `json:"score"`
-	Level   *int    `json:"level,omitempty"`
-	Details any     `json:"details,omitempty"`
-}
+// AgentCandidate is a catalogue entry a name may have meant.
+type AgentCandidate = charuc.Candidate
 
 func normalizedName(s string) string {
 	// Russian prints "ё" or "е" for the same letter, by the typesetter's taste.
@@ -93,52 +86,23 @@ func subset(part, whole []string) bool {
 	return true
 }
 
-func catalogCandidates(cat *catalog.Catalog, kind string) []AgentCandidate {
-	fields := map[string]string{"race": "Races", "subrace": "Subraces", "class": "Classes", "subclass": "Subclasses", "background": "Backgrounds", "feat": "Feats", "feature": "Features", "trait": "Traits", "spell": "Spells", "item": "Items", "magic-item": "MagicItems", "language": "Languages", "skill": "Skills", "proficiency": "Proficiencies", "alignment": "Alignments"}
-	field, ok := fields[kind]
-	if !ok {
-		return nil
-	}
-	rk, ok := rules.ParseRefKind(kind)
-	if !ok {
-		return nil
-	}
-	collection := reflect.ValueOf(cat).Elem().FieldByName(field)
-	if !collection.IsValid() {
-		return nil
-	}
-	entries := collection.MethodByName("All").Call(nil)[0]
-	out := []AgentCandidate{}
-	for i := 0; i < entries.Len(); i++ {
-		v := entries.Index(i)
-		entry := v.FieldByName("Entry").Interface().(catalog.Entry)
-		c := AgentCandidate{Ref: rules.NewRef(rk, entry.Slug).Canonical(), Name: entry.Name, Details: v.Interface()}
-		if l := v.FieldByName("Level"); l.IsValid() && l.Kind() == reflect.Int {
-			n := int(l.Int())
-			c.Level = &n
-		}
-		out = append(out, c)
-	}
-	return out
-}
-
 // search ranks catalogue entries of one kind against a name, across every
 // locale the pinned packs ship. keep narrows the candidates to a scope the
 // caller knows -- the subclasses of the character's class, one prompt's
 // options -- and is what makes a loose match safe.
 func (a *Agent) search(ctx context.Context, s *AgentSession, kind, query string, level *int, keep func(rules.Ref) bool, loose bool) ([]AgentCandidate, error) {
-	locales, err := a.service.catalog.Locales(ctx)
+	locales, err := a.service.Source().Locales(ctx)
 	if err != nil {
 		return nil, err
 	}
 	best := map[string]AgentCandidate{}
 	for _, locale := range locales {
-		cat, err := catalog.LoadLocked(ctx, a.service.catalog, locale, s.Log.RulesLock())
+		cat, err := catalog.LoadLocked(ctx, a.service.Source(), locale, s.Log.RulesLock())
 		if err != nil {
 			return nil, err
 		}
 		cat = domain.WithCustomCatalog(s.Log, cat)
-		for _, c := range catalogCandidates(cat, kind) {
+		for _, c := range charuc.CatalogCandidates(cat, kind) {
 			if level != nil && c.Level != nil && *level != *c.Level {
 				continue
 			}
@@ -200,7 +164,7 @@ var naturalKinds = map[string]string{"cantrip": "spell", "weapon": "item", "armo
 func (a *Agent) resolve(ctx context.Context, s *AgentSession, cat *catalog.Catalog, kinds []string, text string, keep func(rules.Ref) bool, loose bool) (AgentCandidate, error) {
 	text = strings.TrimSpace(text)
 	entry := func(ref rules.Ref) (AgentCandidate, bool) {
-		for _, c := range catalogCandidates(cat, ref.Kind.String()) {
+		for _, c := range charuc.CatalogCandidates(cat, ref.Kind.String()) {
 			if c.Ref == ref.Canonical() {
 				c.Score = 1
 				return c, true
@@ -294,7 +258,7 @@ func resolveAgentReference(cat *catalog.Catalog, input string) (rules.Ref, error
 		return rules.Ref{}, fmt.Errorf("invalid reference %q; use a canonical reference from search_catalog", input)
 	}
 	matches := []rules.Ref{}
-	for _, candidate := range catalogCandidates(cat, ref.Kind.String()) {
+	for _, candidate := range charuc.CatalogCandidates(cat, ref.Kind.String()) {
 		available, _ := rules.ParseRef(candidate.Ref)
 		if available == ref {
 			return available, nil

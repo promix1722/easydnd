@@ -1,4 +1,4 @@
-package character
+package agent
 
 import (
 	"bytes"
@@ -15,6 +15,7 @@ import (
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
 type agentArgs struct {
@@ -159,7 +160,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		// only kept to compare against.
 		failed := []map[string]any{}
 		fail := func(path string, err error) {
-			a.service.log.Warn("AI wizard tool rejected", "tool", "plan_import", "fact", path, "error", err)
+			a.service.Logger().Warn("AI wizard tool rejected", "tool", "plan_import", "fact", path, "error", err)
 			failure := map[string]any{}
 			_ = json.Unmarshal(agentError(err), &failure)
 			failure["path"] = path
@@ -262,7 +263,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		for i, fact := range args.Facts {
 			result, err := a.importFact(ctx, s, cat, fact)
 			if err != nil {
-				a.service.log.Warn("AI wizard tool rejected", "tool", "import_facts", "fact", fact.Path+fact.Ref+fact.Name, "error", err)
+				a.service.Logger().Warn("AI wizard tool rejected", "tool", "import_facts", "fact", fact.Path+fact.Ref+fact.Name, "error", err)
 				failure := map[string]any{}
 				_ = json.Unmarshal(agentError(err), &failure)
 				failure["index"], failure["path"], failure["ref"], failure["name"] = i, fact.Path, fact.Ref, fact.Name
@@ -317,7 +318,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		if mapped, ok := naturalKinds[kind]; ok {
 			kind = mapped
 		}
-		if catalogCandidates(cat, kind) == nil {
+		if charuc.CatalogCandidates(cat, kind) == nil {
 			return nil, fmt.Errorf("unknown kind %q; use spell, race, subrace, class, subclass, background, feat, feature, trait, item, magic-item, language, skill, proficiency or alignment", args.Kind)
 		}
 		candidates, err := a.search(ctx, s, kind, args.Query, args.Level, nil, false)
@@ -330,7 +331,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		if err != nil {
 			return nil, err
 		}
-		if source, ok := a.service.catalog.(interface {
+		if source, ok := a.service.Source().(interface {
 			CustomExample(context.Context, pack.Lock, rules.Ref) (any, error)
 		}); ok {
 			ref, _ := rules.ParseRef(found.Ref)
@@ -460,7 +461,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 			}
 			picks, err := a.answer(ctx, s, cat, answer)
 			if err != nil {
-				a.service.log.Warn("AI wizard tool rejected", "tool", "answer_choices", "prompt", answer.Prompt, "error", err)
+				a.service.Logger().Warn("AI wizard tool rejected", "tool", "answer_choices", "prompt", answer.Prompt, "error", err)
 				failure := map[string]any{}
 				_ = json.Unmarshal(agentError(err), &failure)
 				failure["prompt"] = answer.Prompt
@@ -525,7 +526,7 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 				event.Choices = nil
 			}
 		}
-		log, dropped, err := Revise(s.Log, cat, args.Sequence, &event)
+		log, dropped, err := charuc.Revise(s.Log, cat, args.Sequence, &event)
 		if err != nil {
 			return nil, err
 		}
@@ -1053,7 +1054,7 @@ func (a *Agent) setInventory(ctx context.Context, s *AgentSession, cat *catalog.
 			_, err = a.importFact(ctx, s, cat, fact)
 		}
 		if err != nil {
-			a.service.log.Warn("AI wizard tool rejected", "tool", "set_inventory", "item", item.Name, "error", err)
+			a.service.Logger().Warn("AI wizard tool rejected", "tool", "set_inventory", "item", item.Name, "error", err)
 			failure := map[string]any{}
 			_ = json.Unmarshal(agentError(err), &failure)
 			failure["name"] = item.Name
@@ -1135,14 +1136,14 @@ func (a *Agent) importFact(ctx context.Context, s *AgentSession, cat *catalog.Ca
 	if err != nil {
 		return nil, err
 	}
-	if err := validateImported(cat, log); err != nil {
+	if err := charuc.ValidateImported(cat, log); err != nil {
 		return nil, err
 	}
 	projected, err := domain.Project(log, cat)
 	if err != nil {
 		return nil, err
 	}
-	if projected.Identity.Level() > maxLevel(cat) {
+	if projected.Identity.Level() > charuc.MaxLevel(cat) {
 		return nil, fmt.Errorf("total class levels exceed this ruleset")
 	}
 	if sub, ok := cat.Subraces.Get(projected.Identity.Subrace); ok && sub.Race != projected.Identity.Race {
@@ -1220,7 +1221,7 @@ func (a *Agent) entityFact(ctx context.Context, s *AgentSession, cat *catalog.Ca
 	level := 0
 	if args.Level != nil {
 		level = *args.Level
-		if level < 1 || level > maxLevel(cat) {
+		if level < 1 || level > charuc.MaxLevel(cat) {
 			return domain.Log{}, nil, fmt.Errorf("invalid level")
 		}
 	}
@@ -1269,7 +1270,7 @@ func (a *Agent) entityFact(ctx context.Context, s *AgentSession, cat *catalog.Ca
 		if e.Ref != ref {
 			// Answers given to the old entry name it, and would replay as
 			// selections of it. Revise judges them against the new one.
-			log, _, err = Revise(s.Log, cat, e.Seq, &domain.Event{Type: typ, Ref: ref, Level: level, Source: observedGroup(typ, "")})
+			log, _, err = charuc.Revise(s.Log, cat, e.Seq, &domain.Event{Type: typ, Ref: ref, Level: level, Source: charuc.ObservedGroup(typ, "")})
 			if err != nil {
 				return domain.Log{}, nil, err
 			}
@@ -1281,11 +1282,11 @@ func (a *Agent) entityFact(ctx context.Context, s *AgentSession, cat *catalog.Ca
 		}
 		log.Events[i].Observed = true
 		log.Events[i].Evidence = args.Source
-		log.Events[i].Source = observedGroup(typ, "")
+		log.Events[i].Source = charuc.ObservedGroup(typ, "")
 		break
 	}
 	if !replaced {
-		_ = log.Append(domain.Event{Type: typ, Ref: ref, Level: level, Evidence: args.Source, Observed: true, Source: observedGroup(typ, "")})
+		_ = log.Append(domain.Event{Type: typ, Ref: ref, Level: level, Evidence: args.Source, Observed: true, Source: charuc.ObservedGroup(typ, "")})
 	}
 	if typ == domain.EventRace && found.Score < .99 {
 		// "High Elf" names the race and its subrace at once. The race matched
@@ -1305,7 +1306,7 @@ func (a *Agent) entityFact(ctx context.Context, s *AgentSession, cat *catalog.Ca
 			if log, err = domain.Rebuild(log.Events); err != nil {
 				return domain.Log{}, nil, err
 			}
-			_ = log.Append(domain.Event{Type: domain.EventSubrace, Ref: subrace, Evidence: args.Source, Observed: true, Source: observedGroup(domain.EventSubrace, "")})
+			_ = log.Append(domain.Event{Type: domain.EventSubrace, Ref: subrace, Evidence: args.Source, Observed: true, Source: charuc.ObservedGroup(domain.EventSubrace, "")})
 		}
 	}
 	if typ == domain.EventClass && args.Level != nil {
@@ -1463,7 +1464,7 @@ func setObserved(log domain.Log, change domain.Change, source string) domain.Log
 			return log
 		}
 	}
-	_ = log.Append(domain.Event{Type: domain.EventChange, Changes: []domain.Change{change}, Evidence: source, Observed: true, Source: observedGroup(domain.EventChange, string(change.Path))})
+	_ = log.Append(domain.Event{Type: domain.EventChange, Changes: []domain.Change{change}, Evidence: source, Observed: true, Source: charuc.ObservedGroup(domain.EventChange, string(change.Path))})
 	return log
 }
 
@@ -1535,7 +1536,7 @@ func (a *Agent) answer(ctx context.Context, s *AgentSession, cat *catalog.Catalo
 		native = nativeLog(log)
 	}
 	events := []domain.Event{{Type: p.Event.Type, Ref: p.Event.Ref, Level: p.Event.Level, Choices: []domain.Answer{{Prompt: p.Choice.Prompt, Picks: keys}}}}
-	if err := validateAndAttribute(native, cat, events); err != nil {
+	if err := charuc.ValidateAndAttribute(native, cat, events); err != nil {
 		return nil, err
 	}
 	if err := log.Append(events...); err != nil {
@@ -1605,7 +1606,7 @@ func (a *Agent) knowSpells(ctx context.Context, s *AgentSession, cat *catalog.Ca
 	if len(added) == 0 {
 		return nil, fmt.Errorf("%s is already granted by the build; it needs no extra entry", strings.Join(held, ", "))
 	}
-	if err := validateImported(cat, log); err != nil {
+	if err := charuc.ValidateImported(cat, log); err != nil {
 		return nil, err
 	}
 	s.Log = log
@@ -1698,7 +1699,7 @@ func (a *Agent) customOption(ctx context.Context, s *AgentSession, cat *catalog.
 	refKind, _ := rules.ParseRefKind(args.Kind)
 	_, structural := structuralEvents[refKind]
 	selected := args.Selected == nil || *args.Selected
-	if lookup := lookupKinds(args.Kind); args.Kind != "note" && catalogCandidates(cat, lookup[0]) != nil {
+	if lookup := lookupKinds(args.Kind); args.Kind != "note" && charuc.CatalogCandidates(cat, lookup[0]) != nil {
 		var found AgentCandidate
 		known := false
 		if args.Ref != "" {
@@ -1802,7 +1803,7 @@ func (a *Agent) customOption(ctx context.Context, s *AgentSession, cat *catalog.
 	}
 
 	if args.Definition != "" {
-		compiler, ok := a.service.catalog.(interface {
+		compiler, ok := a.service.Source().(interface {
 			CompilePrivate(context.Context, pack.Lock, string, []byte, rules.Locale) (*catalog.Catalog, error)
 		})
 		if !ok {
@@ -1815,7 +1816,7 @@ func (a *Agent) customOption(ctx context.Context, s *AgentSession, cat *catalog.
 		if err == nil {
 			log := s.Log.Clone()
 			log.Events[0].RulesLock = compiled.Lock.Clone()
-			if err := validateImported(compiled, log); err != nil {
+			if err := charuc.ValidateImported(compiled, log); err != nil {
 				return nil, err
 			}
 			s.Log = log
@@ -1854,7 +1855,7 @@ func (a *Agent) customOption(ctx context.Context, s *AgentSession, cat *catalog.
 		customLog = clearImportedInventory(customLog, args.Placement)
 	}
 	option := domain.CustomOption{ID: args.ID, Kind: args.Kind, Name: args.Name, Description: args.Description, Source: args.Source, Parent: args.Parent, Ability: args.Ability, Mode: args.Mode, Placement: args.Placement, Level: args.Level, HitDie: args.HitDie, Speed: args.Speed, Count: args.Count, Selected: selected, Reference: args.Ref}
-	log, err := upsertCustom(customLog, cat, option)
+	log, err := charuc.UpsertCustom(customLog, cat, option)
 	if err != nil {
 		return nil, err
 	}
@@ -2073,7 +2074,7 @@ func catalogNames(cat *catalog.Catalog) func(rules.Ref) string {
 	return func(ref rules.Ref) string {
 		if kinds[ref.Kind] == nil {
 			kinds[ref.Kind] = map[rules.Slug]string{}
-			for _, c := range catalogCandidates(cat, ref.Kind.String()) {
+			for _, c := range charuc.CatalogCandidates(cat, ref.Kind.String()) {
 				entry, _ := rules.ParseRef(c.Ref)
 				kinds[ref.Kind][entry.Slug] = c.Name
 			}
@@ -2088,7 +2089,7 @@ func promptOptions(cat *catalog.Catalog, p domain.Prompt, nameOf func(rules.Ref)
 	choice := cat.ResolveChoice(p.Choice)
 	out := []agentOption{}
 	if choice.From.Kind != rules.OptionsExplicit {
-		for _, c := range catalogCandidates(cat, choice.From.Collection.String()) {
+		for _, c := range charuc.CatalogCandidates(cat, choice.From.Collection.String()) {
 			ref, _ := rules.ParseRef(c.Ref)
 			out = append(out, agentOption{Key: localKey(cat, ref.Slug.String()), Name: c.Name})
 		}

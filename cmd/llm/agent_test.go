@@ -16,12 +16,13 @@ import (
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
-type cliTestModel func(context.Context, charuc.AgentRequest, func(string)) (charuc.AgentResponse, error)
+type cliTestModel func(context.Context, agentuc.AgentRequest, func(string)) (agentuc.AgentResponse, error)
 
-func (f cliTestModel) Respond(ctx context.Context, r charuc.AgentRequest, delta func(string)) (charuc.AgentResponse, error) {
+func (f cliTestModel) Respond(ctx context.Context, r agentuc.AgentRequest, delta func(string)) (agentuc.AgentResponse, error) {
 	return f(ctx, r, delta)
 }
 
@@ -30,19 +31,19 @@ func TestAgentCLIConversationAndDeadline(t *testing.T) {
 		t.Run(fmt.Sprint(deadline), func(t *testing.T) {
 			service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), catalogfile.NewSource("../../data/srd_5.1"), nil, nil, slog.New(slog.DiscardHandler))
 			turn := 0
-			model := cliTestModel(func(ctx context.Context, r charuc.AgentRequest, _ func(string)) (charuc.AgentResponse, error) {
+			model := cliTestModel(func(ctx context.Context, r agentuc.AgentRequest, _ func(string)) (agentuc.AgentResponse, error) {
 				if deadline {
 					<-ctx.Done()
-					return charuc.AgentResponse{}, ctx.Err()
+					return agentuc.AgentResponse{}, ctx.Err()
 				}
 				turn++
 				if turn == 1 {
-					return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: "ask", Name: "ask_user", Arguments: `{"text":"Name?","options":["Hero"]}`}}}, nil
+					return agentuc.AgentResponse{Calls: []agentuc.AgentCall{{ID: "ask", Name: "ask_user", Arguments: `{"text":"Name?","options":["Hero"]}`}}}, nil
 				}
 				if !strings.Contains(string(r.Input[len(r.Input)-1]), "Hero") {
 					t.Error("reply was not passed to model")
 				}
-				return charuc.AgentResponse{Calls: []charuc.AgentCall{{ID: "ask-again", Name: "ask_user", Arguments: `{"text":"Next?","options":["Done"]}`}}}, nil
+				return agentuc.AgentResponse{Calls: []agentuc.AgentCall{{ID: "ask-again", Name: "ask_user", Arguments: `{"text":"Next?","options":["Done"]}`}}}, nil
 			})
 			in, send := io.Pipe()
 			output, write := io.Pipe()
@@ -50,7 +51,7 @@ func TestAgentCLIConversationAndDeadline(t *testing.T) {
 			defer cancel()
 			done := make(chan error, 1)
 			go func() {
-				done <- runAgentCLI(ctx, in, write, service, model, rules.DefaultLocale, charuc.AgentConfig{Workers: 1}, 150*time.Millisecond)
+				done <- runAgentCLI(ctx, in, write, service, model, rules.DefaultLocale, agentuc.AgentConfig{Workers: 1}, 150*time.Millisecond)
 				_ = write.Close()
 			}()
 			messages := make(chan map[string]json.RawMessage, 100)
@@ -109,7 +110,7 @@ func TestAgentCLIConversationAndDeadline(t *testing.T) {
 				wait("error")
 				command(`{"action":"inspect"}`)
 				result := wait("result")
-				var session charuc.AgentSession
+				var session agentuc.AgentSession
 				if err := json.Unmarshal(result["session"], &session); err != nil {
 					t.Fatal(err)
 				}

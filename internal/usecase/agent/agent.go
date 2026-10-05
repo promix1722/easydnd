@@ -1,4 +1,4 @@
-package character
+package agent
 
 // The import coordinator owns one isolated draft per session. External model
 // calls never hold its mutex; a generation check fences their late results.
@@ -21,6 +21,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
 type AgentFile struct {
@@ -155,7 +156,7 @@ type Agent struct {
 	// changed is closed and replaced, under viewMu, whenever views changes:
 	// the broadcast a long-polling reader sleeps on. See docs/long-polling.md.
 	changed chan struct{}
-	service *Service
+	service *charuc.Service
 	model   AgentModel
 	config  AgentConfig
 	wake    chan struct{}
@@ -164,7 +165,7 @@ type Agent struct {
 	wg      sync.WaitGroup
 }
 
-func NewAgent(service *Service, model AgentModel, cfg AgentConfig) *Agent {
+func NewAgent(service *charuc.Service, model AgentModel, cfg AgentConfig) *Agent {
 	if cfg.Workers <= 0 {
 		cfg.Workers = 4
 	}
@@ -275,21 +276,21 @@ func (a *Agent) create(ctx context.Context, owner domain.OwnerID, folder domain.
 	if total > 20<<20 {
 		return AgentSession{}, types.NewValidationError("attachments too large").Because("agent.files")
 	}
-	folder, err := a.service.resolveFolder(ctx, owner, folder)
+	folder, err := a.service.ResolveFolder(ctx, owner, folder)
 	if err != nil {
 		return AgentSession{}, err
 	}
 	var cat *catalog.Catalog
 	if len(selected) > 0 && !selected[0].IsZero() {
-		if a.service.packAccess == nil {
+		if a.service.PackAccess() == nil {
 			return AgentSession{}, types.NewAccessDeniedError("pack selection unavailable")
 		}
-		if err := a.service.packAccess.AuthorizeLock(ctx, user.ID(owner), selected[0], pack.Lock{}); err != nil {
+		if err := a.service.PackAccess().AuthorizeLock(ctx, user.ID(owner), selected[0], pack.Lock{}); err != nil {
 			return AgentSession{}, err
 		}
-		cat, err = catalog.LoadLocked(ctx, a.service.catalog, locale, selected[0])
+		cat, err = catalog.LoadLocked(ctx, a.service.Source(), locale, selected[0])
 	} else {
-		cat, err = a.service.catalog.Load(ctx, locale)
+		cat, err = a.service.Source().Load(ctx, locale)
 	}
 	if err != nil {
 		return AgentSession{}, err
@@ -302,11 +303,11 @@ func (a *Agent) create(ctx context.Context, owner domain.OwnerID, folder domain.
 	for i := range ownedFiles {
 		ownedFiles[i].Data = append([]byte(nil), files[i].Data...)
 	}
-	s := &AgentSession{Unattended: unattended, Created: a.service.now(), ID: hex.EncodeToString(token[:]), Owner: owner, Folder: folder, Locale: locale, Status: "queued", Revision: 1, Files: ownedFiles, Events: []AgentEvent{}, Manual: []AgentManual{}, Assumptions: []string{}}
+	s := &AgentSession{Unattended: unattended, Created: a.service.Now(), ID: hex.EncodeToString(token[:]), Owner: owner, Folder: folder, Locale: locale, Status: "queued", Revision: 1, Files: ownedFiles, Events: []AgentEvent{}, Manual: []AgentManual{}, Assumptions: []string{}}
 	// The same entries the builder writes for a new character: its name, then
 	// the rules it is built under. The wizard's character is an ordinary one
 	// from its first message, so it opens in the ordinary builder.
-	e := initEvent(NewCharacter{Name: "…"})
+	e := charuc.InitEvent(charuc.NewCharacter{Name: "…"})
 	e.RulesLock = cat.Lock.Clone()
 	log := domain.Log{}
 	_ = log.Append(e,
@@ -324,7 +325,7 @@ func (a *Agent) create(ctx context.Context, owner domain.OwnerID, folder domain.
 	s.Events[len(s.Events)-1].Files = agentFileLabels(files)
 	// The repository can commit the initial log atomically. Do not fall back to
 	// Create + Commit, which leaves an empty character after a failed write.
-	repo, ok := a.service.repo.(interface {
+	repo, ok := a.service.Repository().(interface {
 		CreateWithLog(context.Context, domain.OwnerID, domain.FolderID, domain.Log) (domain.Character, error)
 	})
 	if !ok {
@@ -350,7 +351,7 @@ func (a *Agent) create(ctx context.Context, owner domain.OwnerID, folder domain.
 // since the agent last did. The character is theirs and open in the builder
 // the whole time; the session's log is only the agent's working copy of it.
 func (a *Agent) pull(ctx context.Context, s *AgentSession) (bool, error) {
-	c, err := a.service.repo.Get(ctx, s.CharacterID)
+	c, err := a.service.Repository().Get(ctx, s.CharacterID)
 	if err != nil {
 		return false, err
 	}
@@ -363,10 +364,10 @@ func (a *Agent) pull(ctx context.Context, s *AgentSession) (bool, error) {
 
 // push writes the working copy back, refusing if the player got there first.
 func (a *Agent) push(ctx context.Context, s *AgentSession) error {
-	if err := a.service.repo.Commit(ctx, s.CharacterID, s.characterRevision, s.Log, "", nil); err != nil {
+	if err := a.service.Repository().Commit(ctx, s.CharacterID, s.characterRevision, s.Log, "", nil); err != nil {
 		return err
 	}
-	c, err := a.service.repo.Get(ctx, s.CharacterID)
+	c, err := a.service.Repository().Get(ctx, s.CharacterID)
 	if err != nil {
 		return err
 	}
@@ -541,7 +542,7 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 	return copyAgentSession(s), nil
 }
 func (a *Agent) Catalog(ctx context.Context, s AgentSession) (*catalog.Catalog, error) {
-	cat, err := catalog.LoadLocked(ctx, a.service.catalog, s.Locale, s.Log.RulesLock())
+	cat, err := catalog.LoadLocked(ctx, a.service.Source(), s.Locale, s.Log.RulesLock())
 	return domain.WithCustomCatalog(s.Log, cat), err
 }
 func (a *Agent) Sheet(ctx context.Context, s AgentSession) (domain.State, error) {
@@ -630,7 +631,7 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 	// Commit a complete response before executing any tool. Partial streamed
 	// arguments are never interpreted. The transcript is the operation ledger.
 	s.Input = append(s.Input, response.Output...)
-	a.service.log.Info("AI wizard model request", "session", s.ID, "inputTokens", response.Usage.Input, "cachedTokens", response.Usage.Cached, "outputTokens", response.Usage.Output)
+	a.service.Logger().Info("AI wizard model request", "session", s.ID, "inputTokens", response.Usage.Input, "cachedTokens", response.Usage.Cached, "outputTokens", response.Usage.Output)
 	addAgentEvent(s, "response", response.Text, "", nil)
 	s.Turns++
 	if s.operations == nil {
@@ -658,13 +659,13 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 			}
 			op = agentOperation{Hash: hash, Result: raw(result)}
 			if err != nil {
-				a.service.log.Warn("AI wizard tool rejected", "tool", call.Name, "error", err)
+				a.service.Logger().Warn("AI wizard tool rejected", "tool", call.Name, "error", err)
 				op.Error = true
 				op.Result = agentError(err)
 			}
 			// The only record of what a model actually asked for. Debug, because
 			// the arguments are a player's character sheet.
-			a.service.log.Debug("AI wizard tool call", "session", s.ID, "tool", call.Name, "arguments", clip(call.Arguments), "result", clip(string(op.Result)))
+			a.service.Logger().Debug("AI wizard tool call", "session", s.ID, "tool", call.Name, "arguments", clip(call.Arguments), "result", clip(string(op.Result)))
 			s.operations[call.ID] = op
 		}
 		s.Input = append(s.Input, raw(map[string]any{"type": "function_call_output", "call_id": call.ID, "output": string(op.Result)}))

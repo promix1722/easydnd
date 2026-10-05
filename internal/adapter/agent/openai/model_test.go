@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	sdk "github.com/openai/openai-go/v3"
-	"github.com/openai/openai-go/v3/option"
-	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	sdk "github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 )
 
 func TestResponsesStreamUsesCompleteToolArguments(t *testing.T) {
@@ -44,11 +45,11 @@ func TestResponsesStreamUsesCompleteToolArguments(t *testing.T) {
 	defer server.Close()
 	m := &Model{client: sdk.NewClient(option.WithAPIKey("test"), option.WithBaseURL(server.URL), option.WithMaxRetries(0)), model: "configured-model", effort: "low"}
 	text := ""
-	got, err := m.Respond(context.Background(), charuc.AgentRequest{Locale: "en", Session: "session-1", Unattended: true, Files: []charuc.AgentFile{{Name: "sheet.png", MIME: "image/png", Data: []byte("image")}, {Name: "sheet.pdf", MIME: "application/pdf", Data: []byte("pdf")}}}, func(s string) { text += s })
+	got, err := m.Respond(context.Background(), agentuc.AgentRequest{Locale: "en", Session: "session-1", Unattended: true, Files: []agentuc.AgentFile{{Name: "sheet.png", MIME: "image/png", Data: []byte("image")}, {Name: "sheet.pdf", MIME: "application/pdf", Data: []byte("pdf")}}}, func(s string) { text += s })
 	if err != nil {
 		t.Fatal(err)
 	}
-	if text != "Reading" || len(got.Calls) != 1 || got.Calls[0].Arguments != "{}" || got.Usage != (charuc.AgentUsage{Input: 100, Cached: 80, Output: 7}) {
+	if text != "Reading" || len(got.Calls) != 1 || got.Calls[0].Arguments != "{}" || got.Usage != (agentuc.AgentUsage{Input: 100, Cached: 80, Output: 7}) {
 		t.Fatalf("bad stream: %+v %q", got, text)
 	}
 }

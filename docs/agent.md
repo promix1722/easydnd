@@ -253,7 +253,16 @@ session ID (or legacy `session` query parameter). The import screen also lists u
 selected folder. Server restart loses this state, as it currently loses ordinary
 characters. PostgreSQL account storage does not change that guarantee.
 
-The coordinator in `internal/usecase/character/agent.go` owns the session map and
+The wizard is its own use case package, `internal/usecase/agent` (imported as
+`agentuc`), beside the character one it writes through. It is a second writer
+of the same character rather than a client of the builder's operations, so it
+takes from `charuc.Service` what a writer needs -- the repository, the
+catalogue source, the pack authorisation port, the logger -- and from the
+package the same validators the builder's own writes pass
+(`ValidateAndAttribute`, `ValidateImported`, `Revise`, `UpsertCustom`). The
+dependency runs one way: nothing in `usecase/character` imports the agent.
+
+The coordinator in `internal/usecase/agent/agent.go` owns the session map and
 its mutation lock. It deliberately has no database or durable job framework in
 this release. A fixed number of goroutines run independent sessions, with one
 active model request per session. Model I/O runs outside the lock; tool
@@ -612,6 +621,10 @@ The existing `POST /v1/characters/import` contract is unchanged.
 
 Add this to the YAML file selected by `EASYDND_CONFIG`. Keep the actual API key
 out of version control. No provider model is silently selected for operators.
+
+A development server needs none of this done by hand: `make dev` writes the
+section into its generated config from `OPENAI_API_KEY` or your secrets file.
+See the paragraph on the generated config in [backend.md](backend.md).
 
 ```yaml
 agent:

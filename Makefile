@@ -182,6 +182,25 @@ db/psql:
 test/db:
 	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test -p 1 ./...
 
+# The AI Wizard in a development server. Configuration is one YAML file and the
+# loader reads nothing from the environment, so the key has to be *written*
+# into the generated file -- which is the right place for it: gitignored, mode
+# 600, rebuilt on every `make dev`. It is taken from OPENAI_API_KEY, or failing
+# that from SECRETS_FILE, so a fresh worktree gets a working wizard without
+# anybody sourcing anything first. With neither, the section is left out and
+# the server runs without the feature, as it always did.
+#
+# The model is pinned here rather than defaulted in the loader, which refuses
+# a key without one on purpose. See docs/agent.md#which-model for the choice.
+SECRETS_FILE ?= $(HOME)/.config/secrets.env
+AGENT_MODEL  ?= gpt-6-luna
+define agent_section
+key="$$OPENAI_API_KEY"; \
+	   if [ -z "$$key" ] && [ -f "$(SECRETS_FILE)" ]; then \
+	     key=$$(. "$(SECRETS_FILE)" >/dev/null 2>&1; printf %s "$$OPENAI_API_KEY"); fi; \
+	   if [ -n "$$key" ]; then printf 'agent:\n  api_key: "%s"\n  model: %s\n' "$$key" '$(AGENT_MODEL)'; fi
+endef
+
 ## config/dev: write the generated development config for this worktree
 # Written whole rather than appended to config.dev.yaml, because a slot needs
 # http.port and auth.rp_origins -- and a second `auth:` block in one file is a
@@ -198,9 +217,10 @@ config/dev:
 	   printf 'http:\n  port: "%s"\n' '$(API_PORT)'; \
 	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - http://localhost:%s\n' '$(RP_ID)' '$(WEB_PORT)'; \
 	   $(if $(WEB_PUBLIC_URL),printf '    - %s\n' '$(WEB_PUBLIC_URL)';) \
-	   $(if $(DEV_DB_URL),printf 'db:\n  url: %s\n' '$(DEV_DB_URL)';) } > $(DEV_RUN_CONFIG)
+	   $(if $(DEV_DB_URL),printf 'db:\n  url: %s\n' '$(DEV_DB_URL)';) \
+	   $(agent_section); } > $(DEV_RUN_CONFIG)
 	@chmod 600 $(DEV_RUN_CONFIG)
-	@echo "wrote $(DEV_RUN_CONFIG)"
+	@echo "wrote $(DEV_RUN_CONFIG) ($$(grep -q '^agent:' $(DEV_RUN_CONFIG) && echo 'AI Wizard on, $(AGENT_MODEL)' || echo 'AI Wizard off: no OPENAI_API_KEY'))"
 
 ## config/preview: write the config `make preview` runs the API with
 # Same shape as config/dev and a different pair of answers: one port, because
@@ -213,9 +233,10 @@ config/preview:
 	   awk '/^data:/ { copying=1 } copying && /^[^[:space:]#]/ && !/^data:/ { exit } copying { print }' $(DEV_CONFIG); \
 	   printf 'http:\n  port: "%s"\n' '$(PREVIEW_PORT)'; \
 	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - %s\n' '$(RP_ID)' '$(PREVIEW_URL)'; \
-	   printf 'db:\n  url: %s\n' '$(TEST_DATABASE_URL)'; } > $(PREVIEW_CONFIG)
+	   printf 'db:\n  url: %s\n' '$(TEST_DATABASE_URL)'; \
+	   $(agent_section); } > $(PREVIEW_CONFIG)
 	@chmod 600 $(PREVIEW_CONFIG)
-	@echo "wrote $(PREVIEW_CONFIG)"
+	@echo "wrote $(PREVIEW_CONFIG) ($$(grep -q '^agent:' $(PREVIEW_CONFIG) && echo 'AI Wizard on, $(AGENT_MODEL)' || echo 'AI Wizard off: no OPENAI_API_KEY'))"
 
 ## preview: serve the BUILT bundle and the API on one TLS origin, for PWA testing
 # What the dev server cannot do. `make web/dev` has no service worker at all

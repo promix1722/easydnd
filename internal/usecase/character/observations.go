@@ -19,7 +19,7 @@ func normalizeImportLog(log domain.Log) domain.Log {
 		e := &out.Events[i]
 		if e.Source == domain.PromptGroupNone && len(e.Choices) == 0 && requiredRef(*e) {
 			e.Observed = true
-			e.Source = observedGroup(e.Type, "")
+			e.Source = ObservedGroup(e.Type, "")
 		}
 		if e.Type == domain.EventNote && e.Custom == nil && strings.HasPrefix(e.Note, "import.manual:") {
 			lines := strings.SplitN(e.Note, "\n", 3)
@@ -61,4 +61,30 @@ func observedAssociation(log domain.Log, cat *catalog.Catalog, e domain.Event) b
 		return false
 	}
 	return slices.ContainsFunc(state.Identity.Classes, func(c domain.ClassLevel) bool { return c.Class == sub.Class })
+}
+
+func firstChangePath(e domain.Event) string {
+	if len(e.Changes) == 0 {
+		return ""
+	}
+	return string(e.Changes[0].Path)
+}
+
+// ObservedGroup is the builder group an imported entry belongs to.
+func ObservedGroup(typ domain.EventType, path string) domain.PromptGroup {
+	switch typ {
+	case domain.EventRace, domain.EventSubrace:
+		return domain.GroupRace
+	case domain.EventBackground:
+		return domain.GroupBackground
+	case domain.EventClass, domain.EventSubclass, domain.EventLevel, domain.EventFeat:
+		return domain.GroupClass
+	}
+	if strings.HasPrefix(path, "finalAbilities.") || strings.HasPrefix(path, "abilities.") {
+		return domain.GroupAbilities
+	}
+	if strings.HasPrefix(path, "identity.") {
+		return domain.GroupIdentity
+	}
+	return domain.PromptGroupNone
 }

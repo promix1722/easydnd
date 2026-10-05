@@ -57,7 +57,7 @@ from each open, visible, unfinished chat.
 
 ## The server side
 
-`Agent.Wait` in `internal/usecase/character/agent.go` is `Get` for a reader
+`Agent.Wait` in `internal/usecase/agent/agent.go` is `Get` for a reader
 that says what it already has. It compares the published view with the cursor
 under the read lock, copying nothing unless there is something to return, and
 otherwise sleeps on `changed` -- a channel that `publish` closes and replaces

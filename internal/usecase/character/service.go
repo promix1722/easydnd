@@ -31,6 +31,24 @@ type PackAccess interface {
 
 func (s *Service) SetPackAccess(access PackAccess) { s.packAccess = access }
 
+// What the AI Wizard (internal/usecase/agent) needs of the service it writes
+// characters through. It is a second writer of the same character, not a
+// client of the builder's operations: it commits its own log at its own
+// revision, loads the catalogue a character's rules lock names, and says what
+// it did in the same log stream.
+
+// Source is the catalogue source characters are built against.
+func (s *Service) Source() catalog.Source { return s.catalog }
+
+// Repository is the character store.
+func (s *Service) Repository() domain.Repository { return s.repo }
+
+// Logger is the service's logger.
+func (s *Service) Logger() *slog.Logger { return s.log }
+
+// PackAccess is the pack authorisation port, nil when packs are not gated.
+func (s *Service) PackAccess() PackAccess { return s.packAccess }
+
 type Service struct {
 	packAccess PackAccess
 	repo       domain.Repository
@@ -41,7 +59,7 @@ type Service struct {
 	log        *slog.Logger
 
 	// clock is injected so that an import stamps a time a test can predict.
-	// Nil means the real clock; see the now method.
+	// Nil means the real clock; see the Now method.
 	clock func() time.Time
 }
 
@@ -79,7 +97,7 @@ func NewService(
 }
 
 // now reads the clock, defaulting to the real one.
-func (s *Service) now() time.Time {
+func (s *Service) Now() time.Time {
 	if s.clock != nil {
 		return s.clock()
 	}
@@ -113,7 +131,7 @@ func (s *Service) Create(
 	if err := validateOpening(opening); err != nil {
 		return domain.Character{}, err
 	}
-	folder, err := s.resolveFolder(ctx, owner, folder)
+	folder, err := s.ResolveFolder(ctx, owner, folder)
 	if err != nil {
 		return domain.Character{}, err
 	}
@@ -137,7 +155,7 @@ func (s *Service) Create(
 	if err != nil {
 		return domain.Character{}, err
 	}
-	event := initEvent(opening)
+	event := InitEvent(opening)
 	event.RulesLock = cat.Lock.Clone()
 	log := domain.Log{}
 	if err := log.Append(event); err != nil {
@@ -171,7 +189,7 @@ func validateOpening(opening NewCharacter) error {
 // that is a statement rather than a lookup: no prompt offers an init event to
 // a character that already exists, because the way to change a name is to
 // replace this entry.
-func initEvent(opening NewCharacter) domain.Event {
+func InitEvent(opening NewCharacter) domain.Event {
 	changes := []domain.Change{
 		{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue(opening.Name)},
 	}
@@ -326,7 +344,7 @@ func (s *Service) Apply(
 
 	// Validating stamps each event with the source of the prompt it answers,
 	// so the slice handed to the repository is not the slice that arrived.
-	if err := validateAndAttribute(character.Log, cat, events); err != nil {
+	if err := ValidateAndAttribute(character.Log, cat, events); err != nil {
 		return 0, err
 	}
 	working := character.Log.Clone()

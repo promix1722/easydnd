@@ -11,7 +11,7 @@ import (
 	sdk "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
-	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 )
 
 type Model struct {
@@ -110,7 +110,7 @@ func tools() []map[string]any {
 		tool("prepare_review", "Hand the draft to the user. Refused while checklist entries or required prompts are open, and says which. allow_incomplete only when the user explicitly chose to leave prompts open. text is the summary of assumptions and differences.", map[string]any{"text": str(), "allow_incomplete": map[string]string{"type": "boolean"}}),
 	}
 }
-func (m *Model) Respond(ctx context.Context, r charuc.AgentRequest, delta func(string)) (charuc.AgentResponse, error) {
+func (m *Model) Respond(ctx context.Context, r agentuc.AgentRequest, delta func(string)) (agentuc.AgentResponse, error) {
 	content := []map[string]any{}
 	for _, f := range r.Files {
 		switch {
@@ -139,7 +139,7 @@ func (m *Model) Respond(ctx context.Context, r charuc.AgentRequest, delta func(s
 	}
 	stream := m.client.Responses.NewStreaming(ctx, responses.ResponseNewParams{Model: m.model, Instructions: sdk.String(prompt + "\nUser locale: " + r.Locale), Store: sdk.Bool(false), MaxOutputTokens: sdk.Int(12000), ParallelToolCalls: sdk.Bool(true)}, options...)
 	defer stream.Close()
-	var result charuc.AgentResponse
+	var result agentuc.AgentResponse
 	completed := false
 	for stream.Next() {
 		e := stream.Current()
@@ -149,11 +149,11 @@ func (m *Model) Respond(ctx context.Context, r charuc.AgentRequest, delta func(s
 		case "response.completed":
 			completed = true
 			result.Text = e.Response.OutputText()
-			result.Usage = charuc.AgentUsage{Input: e.Response.Usage.InputTokens, Cached: e.Response.Usage.InputTokensDetails.CachedTokens, Output: e.Response.Usage.OutputTokens}
+			result.Usage = agentuc.AgentUsage{Input: e.Response.Usage.InputTokens, Cached: e.Response.Usage.InputTokensDetails.CachedTokens, Output: e.Response.Usage.OutputTokens}
 			for _, item := range e.Response.Output {
 				result.Output = append(result.Output, json.RawMessage(item.RawJSON()))
 				if item.Type == "function_call" {
-					result.Calls = append(result.Calls, charuc.AgentCall{ID: item.CallID, Name: item.Name, Arguments: item.AsFunctionCall().Arguments})
+					result.Calls = append(result.Calls, agentuc.AgentCall{ID: item.CallID, Name: item.Name, Arguments: item.AsFunctionCall().Arguments})
 				}
 			}
 		}

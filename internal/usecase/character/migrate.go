@@ -117,7 +117,7 @@ func (s *Service) Migrate(ctx context.Context, owner domain.OwnerID, id domain.I
 	for _, event := range candidate.Events {
 		staged := event
 		staged.Seq = 0
-		if err := validateAndAttribute(working, next, []domain.Event{staged}); err != nil {
+		if err := ValidateAndAttribute(working, next, []domain.Event{staged}); err != nil {
 			result.Issues = append(result.Issues, MigrationIssue{Seq: event.Seq, EventID: event.ID, Reason: "migration.invalidEvent"})
 			break
 		}

@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"github.com/promix1722/easydnd/internal/types"
-	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 )
 
 func (h *Handler) AgentCapabilities(c *gin.Context) {
@@ -32,7 +32,7 @@ func (h *Handler) agentAvailable(c *gin.Context) bool {
 // poll needs no proxy configuration, heartbeat or deadline override.
 const agentPollWait = time.Second
 
-func (h *Handler) agentResult(c *gin.Context, s charuc.AgentSession, err error) {
+func (h *Handler) agentResult(c *gin.Context, s agentuc.AgentSession, err error) {
 	c.Header("Cache-Control", "no-store")
 	if err != nil {
 		helpers.FormatError(c, err)
@@ -112,14 +112,14 @@ func (h *Handler) AgentControl(c *gin.Context) {
 	h.agentResult(c, s, err)
 }
 
-func readAgentFiles(c *gin.Context) ([]charuc.AgentFile, bool) {
+func readAgentFiles(c *gin.Context) ([]agentuc.AgentFile, bool) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 21<<20)
 	if err := c.Request.ParseMultipartForm(21 << 20); err != nil {
 		helpers.FormatError(c, types.NewValidationError("invalid attachments").Because("agent.files"))
 		return nil, false
 	}
 	defer c.Request.MultipartForm.RemoveAll()
-	files := []charuc.AgentFile{}
+	files := []agentuc.AgentFile{}
 	for _, part := range c.Request.MultipartForm.File["files"] {
 		f, err := part.Open()
 		if err != nil {
@@ -152,7 +152,7 @@ func readAgentFiles(c *gin.Context) ([]charuc.AgentFile, bool) {
 			helpers.FormatError(c, types.NewValidationError("text attachment too large").Because("agent.files"))
 			return nil, false
 		}
-		files = append(files, charuc.AgentFile{Name: part.Filename, MIME: mime, Data: b})
+		files = append(files, agentuc.AgentFile{Name: part.Filename, MIME: mime, Data: b})
 	}
 
 	return files, true

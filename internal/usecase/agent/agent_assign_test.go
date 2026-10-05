@@ -1,4 +1,4 @@
-package character_test
+package agent_test
 
 import (
 	"context"
@@ -8,22 +8,22 @@ import (
 
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
-	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 )
 
 // imported runs one turn of tool calls and returns the sheet it leaves and the
 // model that made them, whose outputs the test reads. The rules are the SRD as
 // a pack, which is what carries the casting profiles spell prompts come from.
-func imported(t *testing.T, calls ...charuc.AgentCall) (domain.State, *script) {
+func imported(t *testing.T, calls ...agentuc.AgentCall) (domain.State, *script) {
 	t.Helper()
-	model := &script{turns: [][]charuc.AgentCall{calls}}
-	a := charuc.NewAgent(namespacedService(t), model, charuc.AgentConfig{Workers: 1})
+	model := &script{turns: [][]agentuc.AgentCall{calls}}
+	a := agentuc.NewAgent(namespacedService(t), model, agentuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "paused" })
+	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "paused" })
 	sheet, err := a.Sheet(context.Background(), s)
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +46,7 @@ func has(list []rules.Slug, spell string) bool {
 	return slices.ContainsFunc(list, func(slug rules.Slug) bool { return local(slug) == spell })
 }
 
-func plan(level, rest string) charuc.AgentCall {
+func plan(level, rest string) agentuc.AgentCall {
 	return call("plan", "plan_import", `{`+strings.ReplaceAll(blankPlan, "%LEVEL%", level)+`,`+rest+`}`)
 }
 
@@ -137,7 +137,7 @@ func TestAssignSpellsLeavesAPreparedCastersOverflowUnprepared(t *testing.T) {
 // taking over its ability scores.
 func TestAgentKeepsThePrintedTotalsAcrossAnUnrelatedEdit(t *testing.T) {
 	svc := namespacedService(t)
-	model := &script{turns: [][]charuc.AgentCall{{
+	model := &script{turns: [][]agentuc.AgentCall{{
 		plan("1", `"scores":{"str":16,"dex":10,"con":10,"int":10,"wis":10,"cha":10},"spells":[]`),
 		call("class", "import_facts", `{"facts":[{"kind":"class","name":"Fighter","level":1}]}`),
 		call("ask", "ask_user", `{"text":"Which race?","options":["Half-Orc"]}`),
@@ -145,18 +145,18 @@ func TestAgentKeepsThePrintedTotalsAcrossAnUnrelatedEdit(t *testing.T) {
 		call("context", "get_build_context", `{}`),
 		call("race", "import_facts", `{"facts":[{"kind":"race","name":"Half-Orc"}]}`),
 	}}}
-	a := charuc.NewAgent(svc, model, charuc.AgentConfig{Workers: 1})
+	a := agentuc.NewAgent(svc, model, agentuc.AgentConfig{Workers: 1})
 	defer a.Close()
 	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "waiting" })
+	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "waiting" })
 	edit(t, svc, s.CharacterID, domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "identity.name", Op: domain.OpSet, Value: domain.StringValue("Grok")}}})
 	if s, err = a.Control(testOwner, s.ID, "message", "Half-Orc", s.Revision); err != nil {
 		t.Fatal(err)
 	}
-	s = waitAgent(t, a, s.ID, func(s charuc.AgentSession) bool { return s.Status == "paused" })
+	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "paused" })
 	sheet, err := a.Sheet(context.Background(), s)
 	if err != nil {
 		t.Fatal(err)
