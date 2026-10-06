@@ -461,6 +461,7 @@ func (c converter) item(i domain.Item) Item {
 	out := Item{
 		Entry:    entryOf(i.Entry),
 		Category: i.Category.String(),
+		Slot:     i.Slot.String(),
 		Cost:     costOf(i.Cost),
 		Weight:   i.Weight,
 	}
@@ -513,6 +514,7 @@ func (c converter) magicItem(m domain.MagicItem) MagicItem {
 		Entry:    entryOf(m.Entry),
 		Category: m.Category.String(),
 		Rarity:   m.Rarity.String(),
+		Slot:     m.Slot.String(),
 		Variant:  m.IsVariant,
 		Variants: slugStrings(m.Variants),
 	}

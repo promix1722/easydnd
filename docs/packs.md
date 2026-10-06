@@ -40,9 +40,19 @@ packs without icons retain their digests and remain valid. Existing catalog
 summary/detail routes expose an optional `icon` data URL; no image routes or
 separate image storage are used.
 
-The SRD pack is now `1.1.1`. Preserve `data.pack_archive` when deploying so
-characters pinned to `1.1.0` continue to use the archived release. An explicit
-`data.default_packs.srd-2014` pin must be updated to select `1.1.1`.
+The SRD pack's version is `data/rules/2014/release.json` (now `1.4.0`). Preserve
+`data.pack_archive` when deploying so characters pinned to an earlier release
+continue to use the archived bytes; startup refuses an archived release whose
+bytes have changed under the same version. An explicit
+`data.default_packs.srd-2014` pin must be updated to select the new version.
+
+An `equipment` or `magic-items` row may carry `slot`: where the item is worn or
+wielded, one of `head`, `neck`, `back`, `body`, `arms`, `hands`, `waist`,
+`feet`, `ring`, `main-hand`, `off-hand`. Left out, the loader derives it from
+what the item is -- armor `body`, a shield `off-hand`, a weapon or focus
+`main-hand`, a magic ring `ring`, a wand/staff/rod `main-hand` -- and anything
+else is only carried. Write it for a wondrous item that is worn (a cloak, a
+belt) or to override the shape; an unknown value fails the load.
 
 The committed `data/srd_5.1/spell-icons/` directory is the default artwork
 input for `srdgen`, including checks generating into temporary directories.

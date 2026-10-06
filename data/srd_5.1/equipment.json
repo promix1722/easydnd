@@ -66,6 +66,7 @@
       "unit": "gp"
     },
     "weight": 1,
+    "slot": "neck",
     "gear": {
       "gearCategory": "holy-symbols"
     }
@@ -795,6 +796,7 @@
       "unit": "sp"
     },
     "weight": 3,
+    "slot": "body",
     "gear": {
       "gearCategory": "standard-gear"
     }
@@ -807,6 +809,7 @@
       "unit": "gp"
     },
     "weight": 4,
+    "slot": "body",
     "gear": {
       "gearCategory": "standard-gear"
     }
@@ -819,6 +822,7 @@
       "unit": "gp"
     },
     "weight": 6,
+    "slot": "body",
     "gear": {
       "gearCategory": "standard-gear"
     }
@@ -831,6 +835,7 @@
       "unit": "gp"
     },
     "weight": 4,
+    "slot": "body",
     "gear": {
       "gearCategory": "standard-gear"
     }
@@ -2566,6 +2571,7 @@
       "unit": "gp"
     },
     "weight": 2,
+    "slot": "main-hand",
     "gear": {
       "gearCategory": "holy-symbols"
     }
@@ -2593,6 +2599,7 @@
       "unit": "gp"
     },
     "weight": 4,
+    "slot": "body",
     "gear": {
       "gearCategory": "standard-gear"
     }
@@ -3267,6 +3274,7 @@
       "amount": 0,
       "unit": "cp"
     },
+    "slot": "body",
     "gear": {
       "gearCategory": "standard-gear"
     }

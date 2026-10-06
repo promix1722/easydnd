@@ -1858,21 +1858,29 @@ five slides.
 
 ### Equipment is slots, then three groups
 
-On top, a panel of **slots** -- Armor, Main hand, Off hand, Neck, Rings (two),
-Worn -- each showing what is equipped there. Below it, everything the character
-owns in three tabs: **Wearable**, **Consumables**, **Other gear**, one row per
-entity however many lists the server splits it across, then the purse.
+On top, a **paperdoll**: the worn pieces head to foot -- Head, Neck, Back, Body
+down the left, Arms, Hands, Waist, Feet down the right -- with the character's
+portrait between them, then a row for what the hands hold: Main hand, Off hand,
+Rings (two). On a phone the two columns stand side by side without the
+portrait, which is in the page header already. Below it, everything the
+character owns in three tabs: **Wearable**, **Consumables**, **Other gear**, one
+row per entity however many lists the server splits it across, then the purse.
 
-Neither the group nor the slot is in the catalogue. Both are derived in
-`domain/equipment.ts` from what an item *is* (armor, weapon, gear category,
-magic-item category) plus two short slug lists for SRD gear that is used up or
-worn as clothing. The honest ceiling: homebrew the rules miss lands in *Other
-gear* with no slot, and there are no head/cloak/boots slots because SRD wondrous
-items carry no body part. A catalogue field is the upgrade path.
+The slot is the catalogue's: each item carries `slot`, written by srdgen or a
+homebrew pack or derived by the server from what the item is (see
+docs/dnd.md). `domain/equipment.ts` reads it and nothing else, so a cloak is on
+the back because the catalogue says so, not because the client knows the word.
+The group is still derived here: *wearable* is anything with a slot, and
+*consumable* is guessed from the category plus a short slug list, because the
+catalogue has no "used up" field yet.
 
 The server keeps one `equipped` list, so which item sits in which slot is derived
-too: a second held item takes the off hand, and anything equipped beyond a
-slot's capacity is shown under *Worn* rather than hidden.
+too: a second held item takes the off hand. Nothing is hidden: a slot worn past
+its capacity lists every occupant, and an equipped item with no slot at all --
+an old log, an import, homebrew without the field -- is shown in an
+**Elsewhere** card that appears only when something is in it. That card is the
+honest remainder of what used to be a permanent *Worn* slot, which was not a
+body part but "everything we could not place".
 
 The tab is **read-only unless `SheetBody` is given `onEquipment`**. Only the
 owner's `CharacterSheetScreen` passes it; `SharedSheetScreen` does not, so a

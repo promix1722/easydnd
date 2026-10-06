@@ -23,6 +23,10 @@ type Item struct {
 	// adventuring-gear, mounts-and-vehicles.
 	Category rules.Slug
 
+	// Slot is where the item is worn or wielded. SlotNone means it is only
+	// carried.
+	Slot Slot
+
 	// Cost is the list price. Weight is in pounds; zero means the SRD gives
 	// none, which is common for trinkets.
 	Cost   rules.Coins
@@ -150,6 +154,28 @@ type Vehicle struct {
 	Capacity string
 }
 
+// Slot is the part of the body an item is worn on, or the hand it is held in.
+// The set is the DMG's "Wearing and Wielding Items": one each of headwear,
+// cloak, armor, bracers, gloves, belt and footwear, a neck piece, two rings,
+// and a hand for each held thing.
+type Slot uint8
+
+// The slots, head to foot, then the hands.
+const (
+	SlotNone Slot = iota
+	SlotHead
+	SlotNeck
+	SlotBack
+	SlotBody
+	SlotArms
+	SlotHands
+	SlotWaist
+	SlotFeet
+	SlotRing
+	SlotMainHand
+	SlotOffHand
+)
+
 // Rarity is a magic item's scarcity, which governs its price and the level at
 // which it is appropriate.
 type Rarity uint8
@@ -176,6 +202,7 @@ type MagicItem struct {
 
 	Category rules.Slug
 	Rarity   Rarity
+	Slot     Slot
 
 	// Variants lists the concrete items this entry generalises, e.g. the
 	// specific +1/+2/+3 weapons under a generic entry. IsVariant marks an

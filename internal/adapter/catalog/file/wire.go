@@ -302,6 +302,10 @@ type Item struct {
 	Category string  `json:"category"`
 	Cost     Cost    `json:"cost"`
 	Weight   float64 `json:"weight,omitempty"`
+	// Slot is where the item is worn or wielded. Left empty, it is derived
+	// from what the item is -- armor, a shield, a weapon, a focus -- and
+	// anything else is only carried.
+	Slot string `json:"slot,omitempty"`
 
 	Weapon  *Weapon  `json:"weapon,omitempty"`
 	Armor   *Armor   `json:"armor,omitempty"`
@@ -366,6 +370,10 @@ type MagicItem struct {
 	Rarity    string   `json:"rarity,omitempty"`
 	Variants  []string `json:"variants,omitempty"`
 	IsVariant bool     `json:"isVariant,omitempty"`
+	// Slot as on Item. Left empty, armor, weapons, rings, wands, staffs and
+	// rods are placed by their category; a wondrous item without one is
+	// only carried.
+	Slot string `json:"slot,omitempty"`
 }
 
 // Spell is a spell or cantrip.

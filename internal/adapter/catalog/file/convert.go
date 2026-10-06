@@ -2,6 +2,7 @@ package file
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -564,7 +565,43 @@ func (c *conv) item(w Item, b Bundle) catalog.Item {
 			Capacity:        p.Field(ProseCapacity),
 		}
 	}
+	it.Slot = c.slot(w.Slot, func() catalog.Slot {
+		switch {
+		case it.Armor != nil && it.Armor.Category == catalog.Shield:
+			return catalog.SlotOffHand
+		case it.Armor != nil:
+			return catalog.SlotBody
+		case it.Weapon != nil:
+			return catalog.SlotMainHand
+		case it.Gear != nil && (it.Gear.GearCategory == "arcane-foci" || it.Gear.GearCategory == "druidic-foci"):
+			return catalog.SlotMainHand
+		}
+		return catalog.SlotNone
+	})
 	return it
+}
+
+// slot reads an explicit slot, or asks the item's shape where it goes.
+//
+// The shape is asked here and nowhere else: srdgen writes a slot only where the
+// shape cannot tell (a cloak, a pair of boots, a robe), and a homebrew pack may
+// write none at all and still have its armor worn and its swords held.
+func (c *conv) slot(explicit string, derive func() catalog.Slot) catalog.Slot {
+	if explicit == "" {
+		return derive()
+	}
+	slot, ok := slots[explicit]
+	if !ok {
+		c.fail("unknown slot %q", explicit)
+	}
+	return slot
+}
+
+// bareSlug strips a pack qualifier: a namespaced pack's top-level item
+// category arrives as "dnd-2014/ring".
+func bareSlug(s rules.Slug) string {
+	str := s.String()
+	return str[strings.LastIndex(str, "/")+1:]
 }
 
 func (c *conv) weapon(w Weapon) *catalog.Weapon {
@@ -614,12 +651,24 @@ func (c *conv) magicItem(w MagicItem, b Bundle) catalog.MagicItem {
 	if !ok && w.Rarity != "" {
 		c.fail("unknown rarity %q", w.Rarity)
 	}
+	category := rules.Slug(w.Category)
 	return catalog.MagicItem{
 		Entry:     entry(w.Slug, b),
-		Category:  rules.Slug(w.Category),
+		Category:  category,
 		Rarity:    rarity,
 		Variants:  slugs(w.Variants),
 		IsVariant: w.IsVariant,
+		Slot: c.slot(w.Slot, func() catalog.Slot {
+			switch bareSlug(category) {
+			case "armor":
+				return catalog.SlotBody
+			case "weapon", "wand", "staff", "rod":
+				return catalog.SlotMainHand
+			case "ring":
+				return catalog.SlotRing
+			}
+			return catalog.SlotNone
+		}),
 	}
 }
 

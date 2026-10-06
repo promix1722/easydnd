@@ -677,6 +677,7 @@ func (g *generator) equipment() error {
 			Category: up.EquipmentCategory.Index,
 			Cost:     file.Cost{Amount: up.Cost.Quantity, Unit: up.Cost.Unit},
 			Weight:   up.Weight,
+			Slot:     gearSlot[up.Index],
 		}
 		p := file.Prose{Name: up.Name, Desc: up.Desc}
 
@@ -762,6 +763,56 @@ func (g *generator) equipment() error {
 	return emit(g, file.FileEquipment, out, func(i file.Item) string { return i.Slug })
 }
 
+// Where standard gear is worn when its shape does not say. Armor, shields,
+// weapons and foci are placed by the catalogue loader from what they are;
+// these are the clothes and the two holy symbols that are worn or held.
+var gearSlot = map[string]string{
+	"amulet":            file.SlotNeck,
+	"reliquary":         file.SlotMainHand,
+	"clothes-common":    file.SlotBody,
+	"clothes-costume":   file.SlotBody,
+	"clothes-fine":      file.SlotBody,
+	"clothes-travelers": file.SlotBody,
+	"robes":             file.SlotBody,
+	"vestments":         file.SlotBody,
+}
+
+// wornAt places a wondrous item by the first word of its name that says
+// where it goes: "helm-of-telepathy" and a homebrew "dread-helm" are both
+// headwear, and "robe-of-eyes" is a robe before it is eyes. The private
+// 2014 pack's converter carries the same table.
+var wornAt = map[string]string{
+	"amulet": file.SlotNeck, "necklace": file.SlotNeck, "periapt": file.SlotNeck, "medallion": file.SlotNeck,
+	"brooch": file.SlotNeck, "scarab": file.SlotNeck, "talisman": file.SlotNeck,
+	"belt":  file.SlotWaist,
+	"boots": file.SlotFeet, "slippers": file.SlotFeet,
+	"bracers": file.SlotArms,
+	"cape":    file.SlotBack, "cloak": file.SlotBack, "mantle": file.SlotBack, "wings": file.SlotBack,
+	"circlet": file.SlotHead, "hat": file.SlotHead, "headband": file.SlotHead, "helm": file.SlotHead,
+	"goggles": file.SlotHead, "eyes": file.SlotHead,
+	"gauntlets": file.SlotHands, "gloves": file.SlotHands,
+	"robe": file.SlotBody, "clothes": file.SlotBody,
+}
+
+// magicSlot returns the explicit slot a magic item needs: a shield among the
+// magic armor (the loader would put it on the body), or a wondrous item whose
+// name says where it is worn. Everything else is left to the loader's default.
+func magicSlot(slug, category string) string {
+	switch category {
+	case "armor":
+		if strings.Contains(slug, "shield") {
+			return file.SlotOffHand
+		}
+	case "wondrous-items":
+		for _, word := range strings.Split(slug, "-") {
+			if slot, ok := wornAt[word]; ok {
+				return slot
+			}
+		}
+	}
+	return ""
+}
+
 func (g *generator) magicItems() error {
 	ups, err := read[upMagicItem](g, "5e-SRD-Magic-Items.json")
 	if err != nil {
@@ -774,6 +825,7 @@ func (g *generator) magicItems() error {
 			Category:  up.EquipmentCategory.Index,
 			Variants:  indexes(up.Variants),
 			IsVariant: up.Variant,
+			Slot:      magicSlot(up.Index, up.EquipmentCategory.Index),
 		}
 		if up.Rarity != nil {
 			m.Rarity = slugify(up.Rarity.Name)

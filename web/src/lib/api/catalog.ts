@@ -1,3 +1,5 @@
+import type { Slot } from '@/domain'
+
 import { request } from './client'
 import { requestLocale } from './locale'
 import { bookSources } from '../bookSources'
@@ -136,6 +138,8 @@ export interface Class extends Entry {
 
 export interface Item extends Entry {
   category?: string
+  /** Where the item is worn or wielded; absent when it is only carried. */
+  slot?: Slot
   cost?: { amount: number; unit: string }
   weight?: number
   armor?: { category?: string; baseAC: number; addsDexBonus?: boolean; maxDexBonus?: number; strengthMinimum?: number; stealthDisadvantage?: boolean }

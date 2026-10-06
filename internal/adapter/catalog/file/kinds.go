@@ -113,6 +113,21 @@ const (
 	ArmorShield = "shield"
 )
 
+// Equipment slots: where an item is worn or wielded.
+const (
+	SlotHead     = "head"
+	SlotNeck     = "neck"
+	SlotBack     = "back"
+	SlotBody     = "body"
+	SlotArms     = "arms"
+	SlotHands    = "hands"
+	SlotWaist    = "waist"
+	SlotFeet     = "feet"
+	SlotRing     = "ring"
+	SlotMainHand = "main-hand"
+	SlotOffHand  = "off-hand"
+)
+
 // Magic item rarities.
 const (
 	RarityCommon    = "common"
@@ -219,6 +234,20 @@ var armorCategories = map[string]catalog.ArmorCategory{
 	ArmorMedium: catalog.MediumArmor,
 	ArmorHeavy:  catalog.HeavyArmor,
 	ArmorShield: catalog.Shield,
+}
+
+var slots = map[string]catalog.Slot{
+	SlotHead:     catalog.SlotHead,
+	SlotNeck:     catalog.SlotNeck,
+	SlotBack:     catalog.SlotBack,
+	SlotBody:     catalog.SlotBody,
+	SlotArms:     catalog.SlotArms,
+	SlotHands:    catalog.SlotHands,
+	SlotWaist:    catalog.SlotWaist,
+	SlotFeet:     catalog.SlotFeet,
+	SlotRing:     catalog.SlotRing,
+	SlotMainHand: catalog.SlotMainHand,
+	SlotOffHand:  catalog.SlotOffHand,
 }
 
 var rarities = map[string]catalog.Rarity{

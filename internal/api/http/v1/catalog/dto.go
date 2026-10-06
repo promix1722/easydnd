@@ -380,6 +380,7 @@ type Vehicle struct {
 type Item struct {
 	Entry
 	Category string   `json:"category,omitempty"`
+	Slot     string   `json:"slot,omitempty"`
 	Cost     *Cost    `json:"cost,omitempty"`
 	Weight   float64  `json:"weight,omitempty"`
 	Weapon   *Weapon  `json:"weapon,omitempty"`
@@ -394,6 +395,7 @@ type MagicItem struct {
 	Entry
 	Category string   `json:"category,omitempty"`
 	Rarity   string   `json:"rarity,omitempty"`
+	Slot     string   `json:"slot,omitempty"`
 	Variant  bool     `json:"variant,omitempty"`
 	Variants []string `json:"variants,omitempty"`
 }

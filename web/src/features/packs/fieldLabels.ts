@@ -182,6 +182,7 @@ const fields: Record<string, MessageKey> = {
   size: 'packs.field.size',
   skills: 'packs.field.skills',
   slotLevel: 'packs.field.slotLevel',
+  slot: 'packs.field.slot',
   slug: 'packs.field.slug',
   somatic: 'packs.field.somatic',
   source: 'packs.field.source',

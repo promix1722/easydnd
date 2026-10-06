@@ -1,7 +1,9 @@
 /**
- * What an item is for, and where it is worn -- derived, because the catalogue
- * says neither. An item has a category and at most one of armor/weapon/gear;
- * nothing there says "consumable" or "goes on a finger".
+ * Where an item is worn, and what it is for.
+ *
+ * The catalogue says where: every item carries a `slot`, written by srdgen or
+ * a homebrew pack, or derived by the server from what the item is. Whether an
+ * item is used up it does not say, so that is still guessed here.
  *
  * Everything here also writes the changes an inventory edit is posted as, so
  * the sheet and the build screen cannot come to disagree about what "put it
@@ -12,8 +14,7 @@
 export interface ItemLike {
   slug: string
   category?: string
-  armor?: { category?: string }
-  weapon?: object
+  slot?: string
   gear?: { gearCategory?: string }
 }
 
@@ -39,59 +40,54 @@ export interface EquipmentChange {
 export type ItemGroup = 'wearable' | 'consumable' | 'gear'
 export const ITEM_GROUPS: readonly ItemGroup[] = ['wearable', 'consumable', 'gear']
 
-export type Slot = 'armor' | 'mainHand' | 'offHand' | 'neck' | 'ring' | 'worn'
+/**
+ * The DMG's "Wearing and Wielding Items" set, as the catalogue spells it:
+ * one of each worn piece, two rings, a hand for each held thing.
+ */
+export type Slot =
+  | 'head' | 'neck' | 'back' | 'body' | 'arms' | 'hands' | 'waist' | 'feet'
+  | 'ring' | 'main-hand' | 'off-hand'
 
-/** Slots in the order the panel draws them, and how many items each holds. */
+/** Slots head to foot, then the hands, and how many items each holds. */
 export const SLOTS: readonly { slot: Slot; capacity: number }[] = [
-  { slot: 'armor', capacity: 1 },
-  { slot: 'mainHand', capacity: 1 },
-  { slot: 'offHand', capacity: 1 },
+  { slot: 'head', capacity: 1 },
   { slot: 'neck', capacity: 1 },
+  { slot: 'back', capacity: 1 },
+  { slot: 'body', capacity: 1 },
+  { slot: 'arms', capacity: 1 },
+  { slot: 'hands', capacity: 1 },
+  { slot: 'waist', capacity: 1 },
+  { slot: 'feet', capacity: 1 },
+  { slot: 'main-hand', capacity: 1 },
+  { slot: 'off-hand', capacity: 1 },
   { slot: 'ring', capacity: 2 },
-  { slot: 'worn', capacity: Infinity },
 ]
 
-// ponytail: slug lists, because SRD standard gear and wondrous items carry no
-// "used up" or body-part field. Homebrew the rules below miss lands in `gear`
-// with no slot, and there are no head/cloak/boots slots. Add a catalogue
-// `slot`/`consumable` field (wire.go -> convert -> dto, pack version bump)
-// when either matters.
+const capacityOf = (slot: Slot) => SLOTS.find((entry) => entry.slot === slot)?.capacity ?? Infinity
+
+// ponytail: a slug list, because SRD gear carries no "used up" field. Homebrew
+// it misses lands in `gear`. Add a catalogue `consumable` field beside `slot`
+// when that matters.
 const USED_UP = new Set([
   'acid-vial', 'alchemists-fire-flask', 'antitoxin-vial', 'ball-bearings-bag-of-1000',
   'block-of-incense', 'caltrops', 'candle', 'chalk-1-piece', 'holy-water-flask',
   'ink-1-ounce-bottle', 'oil-flask', 'paper-one-sheet', 'parchment-one-sheet', 'perfume-vial',
   'piton', 'poison-basic-vial', 'rations-1-day', 'sealing-wax', 'soap', 'spike-iron', 'torch',
 ])
-const CLOTHING = new Set([
-  'clothes-common', 'clothes-costume', 'clothes-fine', 'clothes-travelers', 'robes', 'vestments',
-])
-const HELD = new Set(['weapon', 'wand', 'staff', 'rod'])
-const FOCI = new Set(['arcane-foci', 'druidic-foci'])
 
-// A pack may namespace its slugs ("dnd-2014/amulet"); the lists above are bare.
+// A pack may namespace its slugs ("dnd-2014/torch"); the list above is bare.
 const bare = (slug: string) => slug.slice(slug.lastIndexOf('/') + 1)
 
 /** Where an item goes when it is put on, or null when it is only carried. */
 export function slotOf(item: ItemLike | undefined): Slot | null {
-  if (item === undefined) return null
-  const slug = bare(item.slug)
-  if (item.armor?.category === 'shield') return 'offHand'
-  // A namespaced pack qualifies the category too: "dnd-2014/armor".
-  const category = bare(item.category ?? '')
-  if (item.armor !== undefined || category === 'armor') return 'armor'
-  if (item.weapon !== undefined || HELD.has(category)) return 'mainHand'
-  const gear = item.gear?.gearCategory ?? ''
-  if (FOCI.has(gear)) return 'mainHand'
-  if (gear === 'holy-symbols') return slug === 'amulet' ? 'neck' : 'worn'
-  if (category === 'ring' || slug === 'signet-ring') return 'ring'
-  if (category === 'wondrous-items' || CLOTHING.has(slug)) return 'worn'
-  return null
+  const slot = item?.slot
+  return slot !== undefined && SLOTS.some((entry) => entry.slot === slot) ? (slot as Slot) : null
 }
 
 /** Whether an item may go in a slot: its own, or the off hand for anything held. */
 export function fitsSlot(item: ItemLike | undefined, slot: Slot): boolean {
   const own = slotOf(item)
-  return own === slot || (slot === 'offHand' && own === 'mainHand')
+  return own === slot || (slot === 'off-hand' && own === 'main-hand')
 }
 
 export function groupOf(item: ItemLike | undefined): ItemGroup {
@@ -139,20 +135,25 @@ function equippedSlugs(equipment: EquipmentLike): string[] {
     stack.item === undefined ? [] : Array<string>(stack.count).fill(stack.item))
 }
 
+/** Equipped items with no slot to show them in: an import, an old log, homebrew without the field. */
+export const ELSEWHERE = 'elsewhere'
+
 /**
  * Which equipped items sit in which slot.
  *
  * Derived rather than stored: the server keeps one equipped list. A second
- * held item takes the off hand; whatever is equipped beyond a slot's capacity
- * -- or has no slot at all -- is shown under `worn` rather than hidden.
+ * held item takes the off hand. Nothing is hidden: a slot worn past its
+ * capacity lists every occupant, and an item with no slot at all is listed
+ * under `ELSEWHERE`, which the panel draws only when something is there.
  */
-export function slotted(equipment: EquipmentLike, items: ReadonlyMap<string, ItemLike>): Map<Slot, string[]> {
-  const bySlot = new Map<Slot, string[]>(SLOTS.map(({ slot }) => [slot, []]))
-  const room = (slot: Slot) =>
-    bySlot.get(slot)!.length < SLOTS.find((entry) => entry.slot === slot)!.capacity
+export function slotted(equipment: EquipmentLike, items: ReadonlyMap<string, ItemLike>): Map<Slot | typeof ELSEWHERE, string[]> {
+  const bySlot = new Map<Slot | typeof ELSEWHERE, string[]>()
+  for (const { slot } of SLOTS) bySlot.set(slot, [])
+  bySlot.set(ELSEWHERE, [])
+  const room = (slot: Slot) => bySlot.get(slot)!.length < capacityOf(slot)
   for (const slug of equippedSlugs(equipment)) {
     const own = slotOf(items.get(slug))
-    const slot = own !== null && room(own) ? own : own === 'mainHand' && room('offHand') ? 'offHand' : 'worn'
+    const slot = own === null ? ELSEWHERE : own === 'main-hand' && !room(own) && room('off-hand') ? 'off-hand' : own
     bySlot.get(slot)!.push(slug)
   }
   return bySlot
@@ -196,9 +197,8 @@ export function equip(
   const after = [...before]
   const changes: EquipmentChange[] = []
   const occupants = slotted(equipment, items).get(slot) ?? []
-  const capacity = SLOTS.find((entry) => entry.slot === slot)?.capacity ?? Infinity
   let carried = count(equipment.backpack, slug)
-  const displaced = occupants.length >= capacity ? occupants[0] : undefined
+  const displaced = occupants.length >= capacityOf(slot) ? occupants[0] : undefined
   if (displaced !== undefined) {
     after.splice(after.indexOf(displaced), 1)
     if (displaced === slug) carried += 1

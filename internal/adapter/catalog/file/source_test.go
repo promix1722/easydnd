@@ -547,6 +547,18 @@ func TestDomainNamesMatchTheWireVocabulary(t *testing.T) {
 		{file.RarityArtifact, catalog.RarityArtifact.String()},
 		{file.RarityVaries, catalog.RarityVaries.String()},
 
+		{file.SlotHead, catalog.SlotHead.String()},
+		{file.SlotNeck, catalog.SlotNeck.String()},
+		{file.SlotBack, catalog.SlotBack.String()},
+		{file.SlotBody, catalog.SlotBody.String()},
+		{file.SlotArms, catalog.SlotArms.String()},
+		{file.SlotHands, catalog.SlotHands.String()},
+		{file.SlotWaist, catalog.SlotWaist.String()},
+		{file.SlotFeet, catalog.SlotFeet.String()},
+		{file.SlotRing, catalog.SlotRing.String()},
+		{file.SlotMainHand, catalog.SlotMainHand.String()},
+		{file.SlotOffHand, catalog.SlotOffHand.String()},
+
 		{file.LanguageStandard, catalog.LanguageStandard.String()},
 		{file.LanguageExotic, catalog.LanguageExotic.String()},
 

@@ -35,22 +35,26 @@
   {
     "slug": "amulet-of-health",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "neck"
   },
   {
     "slug": "amulet-of-proof-against-detection-and-location",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "neck"
   },
   {
     "slug": "amulet-of-the-planes",
     "category": "wondrous-items",
-    "rarity": "very-rare"
+    "rarity": "very-rare",
+    "slot": "neck"
   },
   {
     "slug": "animated-shield",
     "category": "armor",
-    "rarity": "very-rare"
+    "rarity": "very-rare",
+    "slot": "off-hand"
   },
   {
     "slug": "apparatus-of-the-crab",
@@ -103,7 +107,8 @@
   {
     "slug": "arrow-catching-shield",
     "category": "armor",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "off-hand"
   },
   {
     "slug": "arrow-of-slaying",
@@ -161,7 +166,8 @@
   {
     "slug": "belt-of-dwarvenkind",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "waist"
   },
   {
     "slug": "belt-of-giant-strength",
@@ -174,43 +180,50 @@
       "belt-of-giant-strength-fire",
       "belt-of-giant-strength-cloud",
       "belt-of-giant-strength-storm"
-    ]
+    ],
+    "slot": "waist"
   },
   {
     "slug": "belt-of-giant-strength-cloud",
     "category": "wondrous-items",
     "rarity": "legendary",
-    "isVariant": true
+    "isVariant": true,
+    "slot": "waist"
   },
   {
     "slug": "belt-of-giant-strength-fire",
     "category": "wondrous-items",
     "rarity": "very-rare",
-    "isVariant": true
+    "isVariant": true,
+    "slot": "waist"
   },
   {
     "slug": "belt-of-giant-strength-frost",
     "category": "wondrous-items",
     "rarity": "very-rare",
-    "isVariant": true
+    "isVariant": true,
+    "slot": "waist"
   },
   {
     "slug": "belt-of-giant-strength-hill",
     "category": "wondrous-items",
     "rarity": "rare",
-    "isVariant": true
+    "isVariant": true,
+    "slot": "waist"
   },
   {
     "slug": "belt-of-giant-strength-stone",
     "category": "wondrous-items",
     "rarity": "very-rare",
-    "isVariant": true
+    "isVariant": true,
+    "slot": "waist"
   },
   {
     "slug": "belt-of-giant-strength-storm",
     "category": "wondrous-items",
     "rarity": "legendary",
-    "isVariant": true
+    "isVariant": true,
+    "slot": "waist"
   },
   {
     "slug": "berserker-axe",
@@ -220,27 +233,32 @@
   {
     "slug": "boots-of-elvenkind",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "feet"
   },
   {
     "slug": "boots-of-levitation",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "feet"
   },
   {
     "slug": "boots-of-speed",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "feet"
   },
   {
     "slug": "boots-of-striding-and-springing",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "feet"
   },
   {
     "slug": "boots-of-the-winterlands",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "feet"
   },
   {
     "slug": "bowl-of-commanding-water-elementals",
@@ -250,12 +268,14 @@
   {
     "slug": "bracers-of-archery",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "arms"
   },
   {
     "slug": "bracers-of-defense",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "arms"
   },
   {
     "slug": "brazier-of-commanding-fire-elementals",
@@ -265,7 +285,8 @@
   {
     "slug": "brooch-of-shielding",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "neck"
   },
   {
     "slug": "broom-of-flying",
@@ -280,7 +301,8 @@
   {
     "slug": "cape-of-the-mountebank",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "back"
   },
   {
     "slug": "carpet-of-flying",
@@ -330,37 +352,44 @@
   {
     "slug": "circlet-of-blasting",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "head"
   },
   {
     "slug": "cloak-of-arachnida",
     "category": "wondrous-items",
-    "rarity": "very-rare"
+    "rarity": "very-rare",
+    "slot": "back"
   },
   {
     "slug": "cloak-of-displacement",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "back"
   },
   {
     "slug": "cloak-of-elvenkind",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "back"
   },
   {
     "slug": "cloak-of-protection",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "back"
   },
   {
     "slug": "cloak-of-the-bat",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "back"
   },
   {
     "slug": "cloak-of-the-manta-ray",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "back"
   },
   {
     "slug": "crystal-ball",
@@ -605,17 +634,20 @@
   {
     "slug": "eyes-of-charming",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "head"
   },
   {
     "slug": "eyes-of-minute-seeing",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "head"
   },
   {
     "slug": "eyes-of-the-eagle",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "head"
   },
   {
     "slug": "feather-token",
@@ -754,7 +786,8 @@
   {
     "slug": "gauntlets-of-ogre-power",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "hands"
   },
   {
     "slug": "gem-of-brightness",
@@ -779,17 +812,20 @@
   {
     "slug": "gloves-of-missile-snaring",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "hands"
   },
   {
     "slug": "gloves-of-swimming-and-climbing",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "hands"
   },
   {
     "slug": "goggles-of-night",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "head"
   },
   {
     "slug": "hammer-of-thunderbolts",
@@ -804,32 +840,38 @@
   {
     "slug": "hat-of-disguise",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "head"
   },
   {
     "slug": "headband-of-intellect",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "head"
   },
   {
     "slug": "helm-of-brilliance",
     "category": "wondrous-items",
-    "rarity": "very-rare"
+    "rarity": "very-rare",
+    "slot": "head"
   },
   {
     "slug": "helm-of-comprehending-languages",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "head"
   },
   {
     "slug": "helm-of-telepathy",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "head"
   },
   {
     "slug": "helm-of-teleportation",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "head"
   },
   {
     "slug": "holy-avenger",
@@ -1044,7 +1086,8 @@
   {
     "slug": "mantle-of-spell-resistance",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "back"
   },
   {
     "slug": "manual-of-bodily-health",
@@ -1104,7 +1147,8 @@
   {
     "slug": "medallion-of-thoughts",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "neck"
   },
   {
     "slug": "mirror-of-life-trapping",
@@ -1119,17 +1163,20 @@
   {
     "slug": "necklace-of-adaptation",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "neck"
   },
   {
     "slug": "necklace-of-fireballs",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "neck"
   },
   {
     "slug": "necklace-of-prayer-beads",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "neck"
   },
   {
     "slug": "nine-lives-stealer",
@@ -1169,17 +1216,20 @@
   {
     "slug": "periapt-of-health",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "neck"
   },
   {
     "slug": "periapt-of-proof-against-poison",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "neck"
   },
   {
     "slug": "periapt-of-wound-closure",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "neck"
   },
   {
     "slug": "philter-of-love",
@@ -1652,27 +1702,32 @@
   {
     "slug": "robe-of-eyes",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "body"
   },
   {
     "slug": "robe-of-scintillating-colors",
     "category": "wondrous-items",
-    "rarity": "very-rare"
+    "rarity": "very-rare",
+    "slot": "body"
   },
   {
     "slug": "robe-of-stars",
     "category": "wondrous-items",
-    "rarity": "very-rare"
+    "rarity": "very-rare",
+    "slot": "body"
   },
   {
     "slug": "robe-of-the-archmagi",
     "category": "wondrous-items",
-    "rarity": "legendary"
+    "rarity": "legendary",
+    "slot": "body"
   },
   {
     "slug": "robe-of-useful-items",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "body"
   },
   {
     "slug": "rod-of-absorption",
@@ -1712,7 +1767,8 @@
   {
     "slug": "scarab-of-protection",
     "category": "wondrous-items",
-    "rarity": "legendary"
+    "rarity": "legendary",
+    "slot": "neck"
   },
   {
     "slug": "scimitar-of-speed",
@@ -1722,12 +1778,14 @@
   {
     "slug": "shield-of-missile-attraction",
     "category": "armor",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "off-hand"
   },
   {
     "slug": "slippers-of-spider-climbing",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "feet"
   },
   {
     "slug": "sovereign-glue",
@@ -1814,7 +1872,8 @@
   {
     "slug": "spellguard-shield",
     "category": "armor",
-    "rarity": "very-rare"
+    "rarity": "very-rare",
+    "slot": "off-hand"
   },
   {
     "slug": "sphere-of-annihilation",
@@ -1914,17 +1973,20 @@
   {
     "slug": "talisman-of-pure-good",
     "category": "wondrous-items",
-    "rarity": "legendary"
+    "rarity": "legendary",
+    "slot": "neck"
   },
   {
     "slug": "talisman-of-the-sphere",
     "category": "wondrous-items",
-    "rarity": "legendary"
+    "rarity": "legendary",
+    "slot": "neck"
   },
   {
     "slug": "talisman-of-ultimate-evil",
     "category": "wondrous-items",
-    "rarity": "legendary"
+    "rarity": "legendary",
+    "slot": "neck"
   },
   {
     "slug": "tome-of-clear-thought",
@@ -2090,11 +2152,13 @@
   {
     "slug": "winged-boots",
     "category": "wondrous-items",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "slot": "feet"
   },
   {
     "slug": "wings-of-flying",
     "category": "wondrous-items",
-    "rarity": "rare"
+    "rarity": "rare",
+    "slot": "back"
   }
 ]

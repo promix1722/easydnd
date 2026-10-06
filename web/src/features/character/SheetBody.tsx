@@ -204,6 +204,7 @@ export function SheetBody({
         equipment={s.equipment}
         items={items}
         name={(slug) => named('equipment', slug)}
+        identity={identity}
         disabled={pending}
         {...(onEquipment ? { onChange: onEquipment } : {})}
       />

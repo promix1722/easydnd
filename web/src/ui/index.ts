@@ -64,6 +64,7 @@ export {
   Card,
   Center,
   Checkbox,
+  Grid,
   MultiSelect,
   Code,
   Divider,

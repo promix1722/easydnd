@@ -103,7 +103,7 @@ const ITEMS: Sheet = {
   catalog: {
     skills: [],
     equipment: [
-      { slug: 'leather-armor', name: 'Leather Armor', category: 'armor', armor: { category: 'light', baseAC: 11 } },
+      { slug: 'leather-armor', name: 'Leather Armor', category: 'armor', slot: 'body', armor: { category: 'light', baseAC: 11 } },
       { slug: 'thieves-tools', name: "Thieves' Tools", category: 'tools' },
       { slug: 'crossbow-bolt', name: 'Crossbow Bolt', category: 'adventuring-gear', gear: { gearCategory: 'ammunition' } },
     ],
@@ -238,7 +238,7 @@ describe('the panels that were sentences', () => {
     const onEquipment = vi.fn()
     renderAt('mobile', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Armor' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Body' }))
     fireEvent.click(screen.getByRole('button', { name: 'Take off Leather Armor' }))
 
     expect(onEquipment).toHaveBeenCalledWith([

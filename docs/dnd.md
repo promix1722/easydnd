@@ -546,10 +546,22 @@ contents are presented as contents of the granted pack, without also granting a
 second loose copy of every contained item.
 
 The catalogue says what an item *is* -- armor, weapon, a gear category -- and
-nothing about whether it is used up or where on the body it goes. The client's
-Wearable / Consumables / Other gear groups and its equipment slots are derived
-from those facts (`web/src/domain/equipment.ts`), not stored; the character
-still has one `equipped` list and no per-slot state.
+**where it is worn**: every item and magic item carries a `slot`, one of the
+DMG's "Wearing and Wielding Items" set (`head`, `neck`, `back`, `body`, `arms`,
+`hands`, `waist`, `feet`, `ring`, `main-hand`, `off-hand`), or none when it is
+only carried. The shape decides where it can: armor is `body`, a shield
+`off-hand`, a weapon or focus `main-hand`, a magic ring `ring`, a wand, staff or
+rod `main-hand`. That default is applied once, by the catalogue loader, so a
+pack writes a slot only where the shape cannot tell -- srdgen does so for the
+clothes, the amulet and reliquary, the magic shields and every wondrous item
+whose name says where it goes (a cloak is `back`, boots are `feet`). A wondrous
+item without one -- a bag of holding, an ioun stone -- is carried, not worn.
+
+Whether an item is *used up* the catalogue still does not say; the client's
+Consumables group is guessed from the item's category and a short slug list
+(`web/src/domain/equipment.ts`). The character has one `equipped` list and no
+per-slot state: which item sits in which slot is derived from the list and the
+catalogue on every read.
 
 ### Spell acquisition and preparation
 

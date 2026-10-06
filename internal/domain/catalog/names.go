@@ -149,6 +149,24 @@ var rarityNames = map[Rarity]string{
 // enumeration.
 func (r Rarity) String() string { return name(rarityNames, r) }
 
+var slotNames = map[Slot]string{
+	SlotNone:     "",
+	SlotHead:     "head",
+	SlotNeck:     "neck",
+	SlotBack:     "back",
+	SlotBody:     "body",
+	SlotArms:     "arms",
+	SlotHands:    "hands",
+	SlotWaist:    "waist",
+	SlotFeet:     "feet",
+	SlotRing:     "ring",
+	SlotMainHand: "main-hand",
+	SlotOffHand:  "off-hand",
+}
+
+// String returns the slot's wire name, or "unknown" outside the enumeration.
+func (s Slot) String() string { return name(slotNames, s) }
+
 var languageTypeNames = map[LanguageType]string{
 	LanguageTypeNone: "",
 	LanguageStandard: "standard",
