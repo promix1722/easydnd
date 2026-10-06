@@ -273,7 +273,14 @@ export function catalogURL(collection: string, scope = ''): string {
 }
 function queryURL(path: string, query: string): string { return `${path}${path.includes('?') ? '&' : '?'}${query}` }
 
-/** Fetches a whole collection, typed by the caller. */
+/**
+ * Fetches a whole collection, typed by the caller.
+ *
+ * Not spells. Every spell carries its artwork, so the collection is megabytes
+ * and the server refuses to send it whole: name the spells (`getEntries`) or
+ * page through a search (`searchSpells`, `searchSpellOffer`), and ask
+ * `getSpellFilterOptions` what they can be filtered by.
+ */
 export function getCollection<T extends Entry>(collection: string, scope = ''): Promise<T[]> {
   if (scope) return request<T[]>(catalogURL(collection, scope))
   return cached(`collection:${requestLocale()}:${collection}`, () =>
@@ -341,6 +348,37 @@ export function searchSpells(search: SpellSearch, signal?: AbortSignal, scope = 
     if (value !== undefined && value !== '') params.set(key, String(value))
   }
   return request<SpellPage>(queryURL(scope === 'browse' ? '/packs/spells' : catalogURL('spells', scope), params.toString()), signal ? { signal } : {})
+}
+
+/**
+ * What a catalogue's spells can be filtered by: packs, books, schools and
+ * classes. Its own small request, so that nothing downloads the spells to
+ * find out.
+ */
+export const getSpellFilterOptions = (scope = '') => request<Omit<SpellBrowseOptions, 'unavailable'>>(catalogURL('spell-filters', scope))
+
+/** The spells of some levels on some classes' lists; no classes is every list. */
+export interface SpellLevels { minLevel: number; maxLevel: number; classes?: string[] }
+
+/**
+ * A search over an offer: the spells one character may pick, named or
+ * described, minus what is already chosen. See search.go's SpellSearch.
+ */
+export interface SpellOfferSearch extends Omit<SpellSearch, 'pack' | 'source' | 'versions'> {
+  packs?: string[]
+  sources?: string[]
+  only?: { slugs: string[]; fitting: SpellLevels[] }
+  exclude?: string[]
+  limit: number
+}
+
+/**
+ * Pages through an offer server-side. A POST because the offer may name every
+ * spell in the rules, which no URL holds; it changes nothing.
+ */
+export function searchSpellOffer(search: SpellOfferSearch, signal?: AbortSignal, scope = ''): Promise<SpellPage> {
+  const [base, query] = catalogURL('spells', scope).split('?')
+  return request<SpellPage>(`${base}/search${query ? `?${query}` : ''}`, { method: 'POST', body: search, ...(signal ? { signal } : {}) })
 }
 
 export const getSpellBrowseOptions = (versions = '') => request<SpellBrowseOptions>(`/packs/spell-filters?versions=${encodeURIComponent(versions)}`)

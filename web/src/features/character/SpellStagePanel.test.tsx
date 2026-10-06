@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest'
 
 import type { Prompt, Spell } from '@/lib/api'
 import { renderAt } from '@/test/render'
+import { spellFetch } from '@/test/spells'
 import { setupUser } from '@/test/user'
 import type { Block } from './blocks'
 import { SpellStagePanel } from './SpellStagePanel'
@@ -34,10 +35,7 @@ function Panel() {
 
 beforeEach(() => {
   answer.mockClear()
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => new Response(
-    JSON.stringify(String(input).includes('/catalog/spells') ? spells : []),
-    { status: 200, headers: { 'Content-Type': 'application/json' } },
-  )))
+  vi.stubGlobal('fetch', vi.fn(spellFetch(spells)))
 })
 for (const viewport of ['desktop', 'mobile'] as const) {
   it(`shows all saved selections immediately and edits their own source on ${viewport}`, async () => {
@@ -101,7 +99,7 @@ it('unions all level allowances in one picker and keeps available spells ungroup
 it('keeps saved cantrips and allows the one additional cantrip gained on level-up', async () => {
   const user = setupUser()
   const cantrips = ['chill-touch', 'eldritch-blast', 'mage-hand'].map((slug) => ({ slug, name: slug, level: 0 }))
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).includes('/catalog/spells') ? cantrips : []), { status: 200 })))
+  vi.stubGlobal('fetch', vi.fn(spellFetch(cantrips)))
   const old: Block = { key: 'old', kind: 'settled', changeable: true, row: { seq: 2, stage: 'cantrips', label: '', value: '',
     event: { type: 'level', choices: [{ prompt: 'warlock/spell/cantrip/1', picks: ['chill-touch', 'eldritch-blast'] }] } } }
   const extra: Prompt = { ...question('warlock'), purpose: 'cantrip', level: 4,
@@ -186,13 +184,7 @@ for (const cantripsOnly of [false, true]) {
       : spells.filter((spell) => spell.level === 1)
     const other: Spell = { slug: 'unavailable', name: 'Unavailable', level: cantripsOnly ? 0 : 2, desc: ['Read the full description.'] }
     const wrongTab: Spell = { slug: 'other-tab', name: 'Other Tab', level: cantripsOnly ? 1 : 0 }
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
-      const url = new URL(String(input), 'http://localhost')
-      const slugs = url.searchParams.get('slugs')?.split(',')
-      const data = url.pathname.includes('/catalog/spells')
-        ? [...offered, other, wrongTab].filter((spell) => slugs === undefined || slugs.includes(spell.slug)) : []
-      return new Response(JSON.stringify(data), { status: 200 })
-    }))
+    vi.stubGlobal('fetch', vi.fn(spellFetch([...offered, other, wrongTab])))
     const prompt: Prompt = { ...question('wizard', 2), choice: { ...question('wizard', 2).choice,
       from: { kind: 'explicit', options: offered.map((spell) => ({ key: spell.slug, kind: 'ref', ref: `spell:${spell.slug}` })) } } }
     renderAt('desktop', <SpellStagePanel active cantripsOnly={cantripsOnly} blocks={[{ key: 'open', kind: 'open', prompt }]}
@@ -268,7 +260,7 @@ it('caps highest-level picks across saved and new choices, with an explicit cust
     event: { type: 'level', choiceSource: 'class:sorcerer', purpose: 'known', choices: [{ prompt: 'sorcerer/spell/known/1', picks: ['fireball'] }] } } }
   const third: Spell = { slug: 'haste', name: 'Haste', level: 3 }
   const all = [...spells, third]
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).includes('/catalog/spells') ? all : []), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+  vi.stubGlobal('fetch', vi.fn(spellFetch(all)))
   const normal = question('sorcerer', 2)
   normal.choice.from.options!.push({ key: 'haste', kind: 'ref', ref: 'spell:haste' })
   const custom = { ...question('custom'), purpose: 'custom', source: 'rule:custom-spells', optional: true, upTo: true, event: { type: 'change' }, choice: { ...question('custom').choice, prompt: 'custom/spell/known', choose: 319 } }
@@ -293,7 +285,7 @@ it('caps highest-level picks across saved and new choices, with an explicit cust
 it('keeps an increased limit in the save batch and appends available spells', async () => {
   const user = setupUser()
   const all = Array.from({ length: 45 }, (_, i) => ({ slug: `spell-${i}`, name: `Spell ${String(i).padStart(2, '0')}`, level: 1, classes: ['sorcerer'] }))
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).includes('/catalog/spells') ? all : []), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+  vi.stubGlobal('fetch', vi.fn(spellFetch(all)))
   const custom = { ...question('custom'), purpose: 'custom', source: 'rule:custom-spells', optional: true, upTo: true, event: { type: 'change' }, choice: { ...question('custom').choice, prompt: 'custom/spell/known', choose: 319 } }
   const submit = vi.fn()
   renderAt('mobile', <SpellStagePanel active blocks={[{ key: 'custom', kind: 'open', prompt: custom }]} names={new Map()} loadSavedPrompt={vi.fn()} onAnswers={submit} pending={false} revision={1} />)

@@ -403,7 +403,8 @@ that.
 | `GET` | `/v1/health` | liveness |
 | `GET` | `/v1/version` | the release identifier -- a deploy contract, see below |
 | `GET` | `/v1/catalog` | the compendium's index: ruleset, locales, collections and counts |
-| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it. Spells and magic items list as *summaries*, and `?slugs=` returns full fidelity. Spells alone also answer search parameters (`q`, `level`, `school`, `class`, `castingTime`, `concentration`, `ritual`, `material`, `limit`, `offset`) with a filtered, level-then-name-sorted, paged `{spells, total}` envelope -- the filter itself is `domain/catalog.SpellFilter`; with no search parameter the route serves the bare array from its byte cache, unchanged |
+| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it. Magic items list as *summaries*, and `?slugs=` returns full fidelity. **Spells are never served whole** -- see [below](#spells-are-never-served-whole): they answer `?slugs=`, or search parameters (`q`, `level`, `school`, `class`, `castingTime`, `concentration`, `ritual`, `material`, `limit`, `offset`) with a filtered, level-then-name-sorted, paged `{spells, total}` envelope -- the filter itself is `domain/catalog.SpellFilter` -- and the bare URL is a 400. `spell-filters` in place of a collection name returns what spells can be filtered by |
+| `POST` | `/v1/catalog/spells/search` | the same search with a body, for an offer too long for a URL; also at `/v1/characters/{id}/catalog/spells/search` |
 | `GET` | `/v1/characters` | summaries |
 | `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
 | `POST` | `/v1/characters/import` | import a sheet exported by another tool |
@@ -506,6 +507,36 @@ line, and an invite token is usable for a day. The browser keeps it in a URL
 `GET /v1/characters` takes `?folder=` to narrow the listing, and `POST
 /v1/characters` takes a `folder` in the body. `POST /v1/characters/import` takes
 `?folder=` instead, because its body is the exported sheet itself.
+
+### Spells are never served whole
+
+Every spell carries its artwork inline, about 30 KB of it, so the spells
+collection is 11 MB. Nothing a screen does needs all of it, and for a long time
+three screens downloaded it anyway -- to name a dozen spells, to list the books
+a filter offers, to page through a class's list in the browser. So the route
+does not offer it: `GET …/catalog/spells` with neither `?slugs=` nor a search
+parameter is a 400 (`field.limit.required`), on every scope the catalogue is
+read through. A client that drifts back into fetching the list finds out on
+the first request, not from a slow page.
+
+What replaces it:
+
+- **Named spells**, `?slugs=`, at full fidelity. Bounded at 200 per request.
+- **A page of a search.** The query-string search above, or
+  `POST …/catalog/spells/search` with the same filters and two things a URL
+  cannot hold, `only` and `exclude`. `only` is an *offer* --
+  `{slugs, fitting: [{minLevel, maxLevel, classes}]}`, the spells a character
+  may pick, named or described; a spell is in it when either says so, and an
+  empty offer matches nothing. `exclude` is what is already chosen. `limit` is
+  required and at most 200. It is a POST because a bard's Magical Secrets
+  offers every spell there is; it writes nothing.
+- **`…/catalog/spell-filters`**: the packs, books, schools and classes the
+  catalogue's spells can be filtered by, so that no screen reads them off the
+  spells.
+- **Resolved in a sheet**, below.
+
+The manifest still counts the collection; it just cannot be fetched by that
+name alone.
 
 ### The sheet arrives resolved
 

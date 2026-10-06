@@ -7,7 +7,9 @@ import { setupUser } from '@/test/user'
 
 import { BuildScreen } from './BuildScreen'
 
+import type { Spell } from '@/lib/api'
 import type { Stage } from '@/domain'
+import { spellCatalog } from '@/test/spells'
 import { apiPath } from '@/test/api'
 import { testT } from '@/test/i18n'
 
@@ -437,6 +439,9 @@ function mockApi({
       const baseRelease = { id: 'srd-2014', version: '1.0.0', digest: 'base' }
       const defaultRules = { edition: '2014', semantics: '1', packs: [baseRelease] }
       if (apiPath(url) === '/v1/packs') return jsonResponse({ packs: [{ id: baseRelease.id, title: 'SRD 5.1', releases: [baseRelease] }], defaultRules })
+      // Before the write branch: a spell search is a POST that changes nothing.
+      const spellReply = spellCatalog((spellEntries ?? []) as Spell[], input, init)
+      if (spellReply !== undefined) return spellReply
       if (apiPath(url) === '/v1/packs/resolve') return jsonResponse(defaultRules)
       if (method !== 'GET') {
         posted.push({ url, method, body: JSON.parse(String(init?.body ?? '{}')) })
@@ -458,7 +463,6 @@ function mockApi({
         return jsonResponse(thenEvents !== undefined && posted.length > 0 ? thenEvents : events)
       }
       if (url.includes('/sheet')) return jsonResponse(sheet ?? SHEET)
-      if (url.includes('/catalog/spells')) return jsonResponse(spellEntries ?? [])
       if (url.includes('/catalog/races')) return jsonResponse(RACES)
       if (url.includes('/catalog/subraces')) return jsonResponse(SUBRACES)
       if (url.includes('/catalog/alignments')) return jsonResponse(ALIGNMENTS)

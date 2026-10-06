@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -336,9 +337,15 @@ func TestCatalogManifestIndexesEveryCollection(t *testing.T) {
 		if collection.Count == 0 {
 			t.Errorf("collection %q is empty", collection.Name)
 		}
-		rec := send(t, r, session, http.MethodGet, "/v1/catalog/"+collection.Name, nil)
+		// Spells are the one collection reached a page at a time: the bare
+		// URL is refused. See TestSpellSearchFiltersSortsAndPages.
+		path := "/v1/catalog/" + collection.Name
+		if collection.Name == catalogapi.CollectionSpells {
+			path += "?limit=1"
+		}
+		rec := send(t, r, session, http.MethodGet, path, nil)
 		if rec.Code != http.StatusOK {
-			t.Errorf("GET /v1/catalog/%s = %d, want 200", collection.Name, rec.Code)
+			t.Errorf("GET %s = %d, want 200", path, rec.Code)
 		}
 	}
 }
@@ -384,8 +391,8 @@ func TestUnknownCollectionIsNotFound(t *testing.T) {
 }
 
 // The spells collection answers search parameters with a filtered, sorted,
-// paged envelope, while the plain path keeps serving the bare array -- the
-// build flow reads that one and must not notice the search existing.
+// paged envelope, and is never served whole: every spell carries its artwork,
+// so the bare collection is megabytes nobody needs.
 func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 	r, session := newFullRouter(t)
 
@@ -432,10 +439,67 @@ func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 		t.Errorf("level=ten status = %d, want 400", rec.Code)
 	}
 
-	// The plain path is untouched by the search existing: still a bare array.
+	// The bare collection is refused, not answered.
 	rec = send(t, r, session, http.MethodGet, "/v1/catalog/spells", nil)
-	if body := rec.Body.String(); rec.Code != http.StatusOK || body == "" || body[0] != '[' {
-		t.Errorf("plain collection = %d %q..., want a 200 array", rec.Code, body[:min(len(body), 20)])
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("plain collection = %d, want 400", rec.Code)
+	}
+	// Naming spells still works, and the filter options come without them.
+	rec = send(t, r, session, http.MethodGet, "/v1/catalog/spells?slugs=fireball", nil)
+	if named := decode[[]catalogapi.Spell](t, rec); rec.Code != http.StatusOK || len(named) != 1 {
+		t.Errorf("?slugs=fireball = %d, %d spells", rec.Code, len(named))
+	}
+	rec = send(t, r, session, http.MethodGet, "/v1/catalog/spell-filters", nil)
+	if options := decode[catalogapi.SpellFilterOptions](t, rec); rec.Code != http.StatusOK ||
+		len(options.Schools) != 8 || len(options.Classes) != 12 || options.Classes[0].Name != "Barbarian" {
+		t.Errorf("spell-filters = %d %+v", rec.Code, options)
+	}
+}
+
+// A build screen pages through what one character may pick. The offer goes in
+// a body because it can name every spell in the rules; what comes back is one
+// page of it.
+func TestSpellSearchOverAnOffer(t *testing.T) {
+	r, session := newFullRouter(t)
+	search := func(body map[string]any) catalogapi.SpellSearchResult {
+		t.Helper()
+		rec := send(t, r, session, http.MethodPost, "/v1/catalog/spells/search", body)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("POST %v = %d: %s", body, rec.Code, rec.Body)
+		}
+		return decode[catalogapi.SpellSearchResult](t, rec)
+	}
+	slugs := func(got catalogapi.SpellSearchResult) []string {
+		out := []string{}
+		for _, spell := range got.Spells {
+			out = append(out, spell.Slug)
+		}
+		return out
+	}
+
+	named := map[string]any{"slugs": []string{"fireball", "shield", "light"}}
+	if got := slugs(search(map[string]any{"limit": 20, "only": named})); !slices.Equal(got, []string{"light", "shield", "fireball"}) {
+		t.Errorf("named offer = %v, want it sorted by level", got)
+	}
+	// What is already chosen is left out, and the other filters still apply.
+	if got := slugs(search(map[string]any{"limit": 20, "only": named, "exclude": []string{"shield"}, "school": "evocation"})); !slices.Equal(got, []string{"light", "fireball"}) {
+		t.Errorf("excluded and filtered = %v", got)
+	}
+	// An offer also takes "whatever fits": a level range on a class's list.
+	fitting := search(map[string]any{"limit": 200, "only": map[string]any{"slugs": []string{"fireball"},
+		"fitting": []map[string]any{{"minLevel": 0, "maxLevel": 0, "classes": []string{"cleric"}}}}})
+	if fitting.Total != 8 || fitting.Spells[len(fitting.Spells)-1].Slug != "fireball" {
+		t.Errorf("fitting = %d %v, want the seven cleric cantrips and fireball", fitting.Total, slugs(fitting))
+	}
+	// An offer of nothing is nothing, not everything; and a page is bounded.
+	if got := search(map[string]any{"limit": 20, "only": map[string]any{}}); got.Total != 0 {
+		t.Errorf("empty offer matched %d", got.Total)
+	}
+	if got := search(map[string]any{"limit": 20}); got.Total != 319 || len(got.Spells) != 20 {
+		t.Errorf("no offer = %d of %d", len(got.Spells), got.Total)
+	}
+	if rec := send(t, r, session, http.MethodPost, "/v1/catalog/spells/search", map[string]any{}); rec.Code != http.StatusBadRequest {
+		t.Errorf("no limit = %d, want 400", rec.Code)
 	}
 }
 

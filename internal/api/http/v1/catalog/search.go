@@ -42,13 +42,13 @@ var searchParams = []string{
 // spellSearch is a parsed search request: what to match, and which page.
 type spellSearch struct {
 	filter domain.SpellFilter
-	limit  int // 0 means everything
+	limit  int // 0 means every match, which only the query-string search allows
 	offset int
 }
 
 // hasSpellSearch reports whether the request carries any search parameter.
-// Their absence keeps the whole-collection path -- and its byte cache --
-// exactly as it was.
+// Without one, and without ?slugs=, a request for spells is refused: see
+// Collection.
 func hasSpellSearch(c *gin.Context) bool {
 	for _, param := range searchParams {
 		if _, ok := c.GetQuery(param); ok {

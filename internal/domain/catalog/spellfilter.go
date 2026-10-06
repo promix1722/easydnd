@@ -37,10 +37,46 @@ type SpellFilter struct {
 	// Material filters on the material component; false selects the spells
 	// castable without one, which is the filter people actually use.
 	Material *bool
+
+	// Only, when set, narrows the search to an offer: the spells one character
+	// may pick. It is how a build screen pages through its choices without
+	// being sent every spell in the rules. An offer naming nothing matches
+	// nothing.
+	Only *SpellOffer
+
+	// Exclude drops named spells: the ones already chosen.
+	Exclude []rules.Slug
+}
+
+// SpellOffer is a set of spells given two ways at once: by name, and by what
+// fits. A spell is in it when either says so.
+type SpellOffer struct {
+	Slugs   []rules.Slug
+	Fitting []SpellLevels
+}
+
+// SpellLevels is the spells of some levels on some classes' lists. No classes
+// means every list.
+type SpellLevels struct {
+	MinLevel, MaxLevel int
+	Classes            []rules.Slug
+}
+
+func (o SpellOffer) has(s Spell) bool {
+	if slices.Contains(o.Slugs, s.Slug) {
+		return true
+	}
+	return slices.ContainsFunc(o.Fitting, func(r SpellLevels) bool {
+		return s.Level >= r.MinLevel && s.Level <= r.MaxLevel &&
+			(len(r.Classes) == 0 || slices.ContainsFunc(r.Classes, func(c rules.Slug) bool { return slices.Contains(s.Classes, c) }))
+	})
 }
 
 // Matches reports whether the spell satisfies every set field.
 func (f SpellFilter) Matches(s Spell) bool {
+	if f.Only != nil && !f.Only.has(s) || slices.Contains(f.Exclude, s.Slug) {
+		return false
+	}
 	if f.Name != "" && !strings.Contains(strings.ToLower(s.Name), strings.ToLower(f.Name)) {
 		return false
 	}

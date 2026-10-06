@@ -238,6 +238,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			}
 			authed.GET("/catalog", h.Catalog.Manifest)
 			authed.GET("/catalog/:collection", h.Catalog.Collection)
+			authed.POST("/catalog/spells/search", h.Catalog.SpellSearch)
 
 			// Characters. Every route is at most one level deep: a
 			// sub-resource under an addressed parent, and never a
@@ -273,6 +274,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.GET("/characters/:id/custom-options", h.Character.CustomOptions)
 			authed.POST("/characters/:id/custom-options", h.Character.UpsertCustomOption)
 			authed.GET("/characters/:id/catalog/:collection", h.Character.Catalog)
+			authed.POST("/characters/:id/catalog/spells/search", h.Character.SpellSearch)
 			authed.POST("/characters/:id/rules", h.Character.MigrateRules)
 			authed.POST("/characters/:id/rules/restore", h.Character.RestoreRules)
 			authed.POST("/characters/:id/events", h.Character.AppendEvents)

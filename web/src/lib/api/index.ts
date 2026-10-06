@@ -36,6 +36,8 @@ export {
   getManifest,
   resetCatalogCache,
   searchSpells,
+  searchSpellOffer,
+  getSpellFilterOptions,
 } from './catalog'
 export type {
   Choice,
@@ -54,6 +56,8 @@ export type {
   SpellComponents,
   SpellPage,
   SpellSearch,
+  SpellLevels,
+  SpellOfferSearch,
 } from './catalog'
 
 // Folders: where an account files its characters. Not a group of players.

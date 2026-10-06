@@ -1,4 +1,4 @@
-import type { Spell } from '@/lib/api'
+import type { Spell, SpellOfferSearch } from '@/lib/api'
 
 export interface SpellFilterValues {
   packIds?: string[]
@@ -35,4 +35,21 @@ export function matchesSpellFilters(spell: Spell, filters: SpellFilterValues): b
 
 export function hasSpellFilters(filters: SpellFilterValues): boolean {
  return Object.entries(filters).some(([key, value]) => Array.isArray(value) ? value.length > 0 : value !== EMPTY_SPELL_FILTERS[key as keyof SpellFilterValues])
+}
+
+/** The same filters as the request a server-side search takes. */
+export function spellFilterSearch(filters: SpellFilterValues): Omit<SpellOfferSearch, 'limit'> {
+  const q = filters.query.trim()
+  return {
+    ...(q === '' ? {} : { q }),
+    ...(filters.level === null ? {} : { level: Number(filters.level) }),
+    ...(filters.school === null ? {} : { school: filters.school }),
+    ...(filters.casterClass === null ? {} : { class: filters.casterClass }),
+    ...(filters.time === null ? {} : { castingTime: filters.time }),
+    ...(filters.concentration ? { concentration: true } : {}),
+    ...(filters.ritual ? { ritual: true } : {}),
+    ...(filters.noMaterial ? { material: false } : {}),
+    ...(filters.packIds?.length ? { packs: filters.packIds } : {}),
+    ...(filters.sources?.length ? { sources: filters.sources } : {}),
+  }
 }

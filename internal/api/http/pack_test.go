@@ -47,7 +47,7 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 		t.Fatal(resolved.Body.String())
 	}
 	lock := decode[helpers.RulesLock](t, resolved)
-	for _, path := range []string{"/v1/packs/" + p.ID, "/v1/packs/" + p.ID + "/export?version=1.0.0", "/v1/packs/catalog/spells?packs=" + p.ID + "@1.0.0"} {
+	for _, path := range []string{"/v1/packs/" + p.ID, "/v1/packs/" + p.ID + "/export?version=1.0.0", "/v1/packs/catalog/spells?limit=50&packs=" + p.ID + "@1.0.0"} {
 		rec := send(t, r, outsider, http.MethodGet, path, nil)
 		if rec.Code != 404 {
 			t.Fatalf("private read %s = %d", path, rec.Code)
@@ -72,7 +72,7 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 		t.Fatal(ch.Body.String())
 	}
 	hero := decode[characterapi.CreateResponse](t, ch)
-	catalog := send(t, r, outsider, http.MethodGet, "/v1/packs/catalog/spells?packs="+p.ID+"@1.0.0", nil)
+	catalog := send(t, r, outsider, http.MethodGet, "/v1/packs/catalog/spells?limit=50&packs="+p.ID+"@1.0.0", nil)
 	if catalog.Code != 200 || catalog.Header().Get("Cache-Control") != "no-store" || !strings.Contains(catalog.Body.String(), p.ID+"/") {
 		t.Fatalf("catalog: %d", catalog.Code)
 	}
@@ -101,7 +101,7 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 	if unshared.Code != 200 {
 		t.Fatal(unshared.Body.String())
 	}
-	denied := send(t, r, outsider, http.MethodGet, "/v1/packs/catalog/spells?packs="+p.ID+"@1.0.0", nil)
+	denied := send(t, r, outsider, http.MethodGet, "/v1/packs/catalog/spells?limit=50&packs="+p.ID+"@1.0.0", nil)
 	if denied.Code != 404 {
 		t.Fatal("cached catalogue bypassed authorization")
 	}
@@ -111,7 +111,7 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 			t.Fatalf("revoked pack remained in browse %s: %d %s", path, rec.Code, rec.Body)
 		}
 	}
-	for _, path := range []string{"/v1/characters/" + hero.ID + "/sheet", "/v1/characters/" + hero.ID + "/catalog/spells"} {
+	for _, path := range []string{"/v1/characters/" + hero.ID + "/sheet", "/v1/characters/" + hero.ID + "/catalog/spells?limit=5"} {
 		rec := send(t, r, outsider, http.MethodGet, path, nil)
 		if rec.Code != 200 {
 			t.Fatalf("retained character: %d %s", rec.Code, rec.Body)

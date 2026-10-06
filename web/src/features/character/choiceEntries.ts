@@ -14,7 +14,9 @@ export async function loadEntries(prompt: Prompt, scope = ''): Promise<Map<strin
     }
     if (set.kind === 'collection' && set.collection !== undefined) {
       const collection = collectionOfKind(set.collection)
-      if (collection !== null) whole.add(collection)
+      // Never spells: that collection is not served whole. The server lists
+      // a spell choice's options inline, so this is only a guard.
+      if (collection !== null && collection !== 'spells') whole.add(collection)
       return
     }
     for (const option of set.options ?? []) {
@@ -31,7 +33,7 @@ export async function loadEntries(prompt: Prompt, scope = ''): Promise<Map<strin
   }
   visitSet(prompt.choice.from)
 
-  if (wanted.has('spells') || whole.has('spells')) {
+  if (wanted.has('spells')) {
     whole.add('magic-schools')
     whole.add('classes')
   }

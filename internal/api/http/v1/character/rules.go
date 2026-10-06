@@ -108,3 +108,13 @@ func (h *Handler) Catalog(c *gin.Context) {
 	}
 	catalogapi.ServeCollection(c, cat)
 }
+
+// SpellSearch handles POST /v1/characters/{id}/catalog/spells/search.
+func (h *Handler) SpellSearch(c *gin.Context) {
+	cat, err := h.service.CharacterCatalog(c.Request.Context(), h.owner(c), idOf(c), helpers.Locale(c))
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	catalogapi.ServeSpellSearch(c, cat)
+}

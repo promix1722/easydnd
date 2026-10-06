@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
-import type { Entry, Spell, SpellPage, SpellSearch } from '@/lib/api'
-import { bySlug, getCollection, getSpellBrowseOptions, searchSpells, sourceOptions } from '@/lib/api'
+import type { Spell, SpellPage, SpellSearch } from '@/lib/api'
+import { bySlug, getSpellBrowseOptions, getSpellFilterOptions, searchSpells } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
 import {
@@ -155,14 +155,11 @@ export function SpellsScreen() {
 
   // What fills the Selects. Keyed on nothing, because it answers to nothing:
   // the list of schools and the list of classes are the same whatever is being
-  // searched for. Both are served from the catalogue cache after the first
-  // visit, so this is usually not a request at all.
+  // searched for. One small request, which is what the server computes them
+  // into: reading them off the spells would mean downloading the spells.
   const options = useResource(`spells:options:${scope}:${versions}`, async () => {
     if (scope === 'browse') return getSpellBrowseOptions(versions)
-    const [schools, classes, spells] = await Promise.all([
-      getCollection<Entry>('magic-schools', scope), getCollection<Entry>('classes', scope), getCollection<Spell>('spells', scope),
-    ])
-    return { schools, classes, ...sourceOptions(spells), unavailable: [] }
+    return { ...await getSpellFilterOptions(scope), unavailable: [] }
   })
   useEffect(() => {
     if (!options.data) return

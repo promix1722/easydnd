@@ -997,9 +997,10 @@ that ticked it, and the page-level state took the whole screen down to a
 spinner and rebuilt it -- search box, filters, count and table -- to change
 which rows were in the table. Typing lost the caret on every pause.
 
-It is two resources now. `spells:options` is keyed on nothing, loads once,
-comes from the catalogue cache thereafter, and is the only one that gates the
-page. The search is keyed as before but gates the results region alone through
+It is two resources now. `spells:options` is keyed on nothing, loads once --
+one small request for the packs, books, schools and classes there are to filter
+by, `…/catalog/spell-filters`, never the spells themselves -- and is the only
+one that gates the page. The search is keyed as before but gates the results region alone through
 `PageBody`. A third piece finishes it: the screen holds the last page that
 arrived, so a search in flight *dims* the rows already on screen instead of
 emptying the table. They are the previous answer, not a wrong one, and the
@@ -1011,6 +1012,14 @@ precache. This supports packs imported after deployment without rebuilding the
 website. The tradeoff is larger catalog JSON and no independent image cache;
 the SRD artwork is about 8 MB before base64 encoding. Private and shared pack
 artwork follows the existing catalog authorization and cache policy.
+
+That tradeoff is why **the spell list is never downloaded**. Inline artwork
+makes every spell about 30 KB, so "all the spells" is 11 MB, and the server
+refuses the bare collection outright (see
+[backend.md](backend.md#spells-are-never-served-whole)). A screen gets spells
+three ways and no others: the ones it names (`getEntries('spells', slugs)`),
+a page of a search (`searchSpells`, `searchSpellOffer`), or resolved inside a
+sheet. `getCollection('spells')` is a request the API answers with a 400.
 
 **`features/spells/spellText.ts` is the piece the structured rule values were
 waiting for**: the compendium stores casting time, range and duration as
@@ -4148,10 +4157,16 @@ the counter exceeds its normal-plus-extra denominator.
 Selected cards use blue highlighting. Both lists use compact 32px icons, reduced
 padding and one row action; mobile keeps a 44px action target. Available results
 start with 20 rows; “Load more” appends the next 20, matching the spells page.
-Changing filters resets the loaded range, while adding or removing a selection
-keeps the expanded list. The immutable catalogue's lightweight summaries are
-cached, filtered and paginated locally; descriptions are hydrated only for the
-visible rows and selected spells. The selected cantrip list has one “Cantrips”
+Changing filters resets the loaded range, while adding a spell or taking a
+draft pick back keeps the expanded list; removing a *saved* spell asks again,
+because the server is what leaves saved picks out. **The list is searched,
+sorted, counted and paged by the server**: the panel posts the offer -- the
+options its open prompts list, plus the levels and class lists an extra
+allowance lets in, minus what is saved -- to `…/catalog/spells/search` and is
+sent twenty spells at a time. It used to download every spell in the rules and
+do all of that in the browser. A draft pick is hidden locally rather than
+excluded by the server, so that adding a spell is not a request; the count
+subtracts it. The description is fetched for the one row that is open. The selected cantrip list has one “Cantrips”
 caption without a redundant level-zero heading. Selected leveled spells retain
 their level headings; available results remain sorted by level and localized name.
 Each allowance source, including additional allowance, has a caption with gray
