@@ -116,9 +116,12 @@ type Value struct {
 
 // Sheet is the projected character.
 type Sheet struct {
-	CustomOptions []CustomOption         `json:"customOptions,omitempty"`
-	ImportSession string                 `json:"importSession,omitempty"`
-	CatalogNames  map[string]string      `json:"catalogNames,omitempty"`
+	CustomOptions []CustomOption    `json:"customOptions,omitempty"`
+	ImportSession string            `json:"importSession,omitempty"`
+	CatalogNames  map[string]string `json:"catalogNames,omitempty"`
+	// Catalog is what the sheet's slugs mean, sent with them. Only the two
+	// sheet reads fill it; a write's echo of the sheet does not.
+	Catalog       *catalogapi.Resolved   `json:"catalog,omitempty"`
 	ImportedNotes []string               `json:"importedNotes,omitempty"`
 	Contributions []Contribution         `json:"contributions,omitempty"`
 	PackActions   []ActionOffer          `json:"packActions,omitempty"`

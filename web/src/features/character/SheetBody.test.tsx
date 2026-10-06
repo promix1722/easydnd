@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Sheet } from '@/lib/api'
 import { renderAt } from '@/test/render'
 
-import type { Compendium } from './compendium'
 import { SheetBody } from './SheetBody'
 
 /**
@@ -72,20 +71,21 @@ const SHEET: Sheet = {
   actions: [],
 }
 
-/** Nothing named, which falls every name back to a title-cased slug. */
-const NO_COMPENDIUM: Compendium = { names: null, skills: null, proficiencies: null }
-
-/** Distinct names prove these sections consult the catalogue, not titleCase. */
-const NAMED_COMPENDIUM: Compendium = {
-  ...NO_COMPENDIUM,
-  names: new Map([
-    ['traits:darkvision', 'Night Sight'],
-    ['features:sneak-attack', 'Surprise Strike'],
-    ['languages:common', 'Trade Tongue'],
-    ['equipment:leather-armor', 'Hide Jerkin'],
-    ['equipment:thieves-tools', 'Locksmith Kit'],
-    ['equipment:crossbow-bolt', 'Quarrel'],
-  ]),
+/**
+ * SHEET itself resolves nothing, which falls every name back to a title-cased
+ * slug. Distinct names here prove these sections read what the sheet resolved,
+ * not titleCase.
+ */
+const NAMED: Sheet = {
+  ...SHEET,
+  catalogNames: {
+    'traits:darkvision': 'Night Sight',
+    'features:sneak-attack': 'Surprise Strike',
+    'languages:common': 'Trade Tongue',
+    'equipment:leather-armor': 'Hide Jerkin',
+    'equipment:thieves-tools': 'Locksmith Kit',
+    'equipment:crossbow-bolt': 'Quarrel',
+  },
 }
 
 /**
@@ -98,17 +98,20 @@ const NAMED_COMPENDIUM: Compendium = {
 const SECTIONS = ['Overview', 'Actions', 'Equipment']
 
 /** What the Equipment tab sorts and slots by. */
-const ITEMS: Compendium = {
-  ...NO_COMPENDIUM,
-  items: new Map([
-    ['leather-armor', { slug: 'leather-armor', name: 'Leather Armor', category: 'armor', armor: { category: 'light', baseAC: 11 } }],
-    ['thieves-tools', { slug: 'thieves-tools', name: "Thieves' Tools", category: 'tools' }],
-    ['crossbow-bolt', { slug: 'crossbow-bolt', name: 'Crossbow Bolt', category: 'adventuring-gear', gear: { gearCategory: 'ammunition' } }],
-  ]),
+const ITEMS: Sheet = {
+  ...SHEET,
+  catalog: {
+    skills: [],
+    equipment: [
+      { slug: 'leather-armor', name: 'Leather Armor', category: 'armor', armor: { category: 'light', baseAC: 11 } },
+      { slug: 'thieves-tools', name: "Thieves' Tools", category: 'tools' },
+      { slug: 'crossbow-bolt', name: 'Crossbow Bolt', category: 'adventuring-gear', gear: { gearCategory: 'ammunition' } },
+    ],
+  },
 }
 
 function body(viewport: 'mobile' | 'desktop') {
-  return renderAt(viewport, <SheetBody sheet={SHEET} compendium={NO_COMPENDIUM} />)
+  return renderAt(viewport, <SheetBody sheet={SHEET} />)
 }
 
 /**
@@ -216,7 +219,7 @@ describe('the panels that were sentences', () => {
   })
 
   it('draws what is worn in its slot, and what is owned by group', () => {
-    renderAt('mobile', <SheetBody sheet={SHEET} compendium={ITEMS} />)
+    renderAt('mobile', <SheetBody sheet={ITEMS} />)
 
     const slots = screen.getByRole('region', { name: 'Worn and wielded' })
     expect.soft(within(slots).getByText('Leather Armor')).toBeInTheDocument()
@@ -233,7 +236,7 @@ describe('the panels that were sentences', () => {
   // -- and "offers nothing to press but the tabs" -- hold.
   it('takes off what a slot holds', () => {
     const onEquipment = vi.fn()
-    renderAt('mobile', <SheetBody sheet={SHEET} compendium={ITEMS} onEquipment={onEquipment} />)
+    renderAt('mobile', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Armor' }))
     fireEvent.click(screen.getByRole('button', { name: 'Take off Leather Armor' }))
@@ -251,10 +254,9 @@ describe('the panels that were sentences', () => {
       'mobile',
       <SheetBody
         sheet={{
-          ...SHEET,
+          ...NAMED,
           resources: { parameters: { 'sneak-attack': { name: 'Sneak Attack', number: 1, dice: '1d6' } } },
         }}
-        compendium={NAMED_COMPENDIUM}
       />,
     )
 
@@ -275,7 +277,7 @@ describe('the panels that were sentences', () => {
 
   // Capacity only: what a sheet has spent is a fact about one game, not the character.
   it('draws consumables as marks, slots by level, and leaves Hit Dice to the vitals', () => {
-    renderAt('mobile', <SheetBody compendium={NAMED_COMPENDIUM} sheet={{ ...SHEET, resources: { pools: {
+    renderAt('mobile', <SheetBody sheet={{ ...NAMED, resources: { pools: {
       'spell-slots/2': { id: 'spell-slots/2', name: '', group: 'spell-slots', max: 2, used: 0, slotLevel: 2 },
       'spell-slots/1': { id: 'spell-slots/1', name: '', group: 'spell-slots', max: 4, used: 0, slotLevel: 1 },
       'channel-divinity': { id: 'channel-divinity', name: 'Channel Divinity Uses', group: 'class', max: 1, used: 0 },
@@ -292,7 +294,7 @@ describe('the panels that were sentences', () => {
   // A group with nothing in it still says so, because "nothing worn" is the
   // answer to the question and a missing group is not.
   it('says so when a group is empty', () => {
-    renderAt('desktop', <SheetBody sheet={{ ...SHEET, traits: [] }} compendium={NO_COMPENDIUM} />)
+    renderAt('desktop', <SheetBody sheet={{ ...SHEET, traits: [] }} />)
 
     expect(screen.getByText('No racial traits.')).toBeInTheDocument()
   })

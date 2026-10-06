@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 
-import type { Change, Sheet } from '@/lib/api'
+import { SpellIcon } from '@/features/spells/spellIcon'
+import { bySlug } from '@/lib/api'
+import type { Change, Item, Sheet } from '@/lib/api'
 import {
   Bullet,
   Card,
@@ -18,7 +20,6 @@ import {
 } from '@/ui'
 import type { DeckPanel } from '@/ui'
 
-import type { Compendium } from './compendium'
 import { IdentityTable } from './IdentityTable'
 import { ProficienciesPanel } from './ProficienciesPanel'
 import { ResourcePools } from './ResourcePools'
@@ -53,19 +54,24 @@ import { abilityAbbr, abilityName } from './labels'
  */
 export function SheetBody({
   sheet: s,
-  compendium,
   onEquipment,
   pending = false,
 }: {
   sheet: Sheet
-  compendium: Compendium
   /** Posts an inventory edit. Absent on a sheet that is only being read. */
   onEquipment?: (changes: Change[]) => void
   pending?: boolean
 }) {
-  const { skills, proficiencies } = compendium
-  const items = compendium.items ?? new Map()
-  const names = new Map([...(compendium.names ?? new Map<string,string>()), ...Object.entries(s.catalogNames ?? {})])
+  // The sheet arrives with what its slugs mean: names in `catalogNames`, and
+  // in `catalog` the entries a panel reads more of. Nothing here asks the
+  // compendium for anything, and a sheet without them -- one a write echoed
+  // back -- draws title-cased slugs.
+  const catalog = s.catalog
+  const skills = catalog ? bySlug(catalog.skills) : null
+  const proficiencies = catalog ? bySlug(catalog.proficiencies ?? []) : null
+  const items = bySlug<Item>([...(catalog?.magicItems ?? []), ...(catalog?.equipment ?? [])])
+  const spells = bySlug(catalog?.spells ?? [])
+  const names = new Map(Object.entries(s.catalogNames ?? {}))
   const identity = s.identity
   // Hit Dice are a vital, drawn there; everything else spendable is on Actions.
   const pools = Object.values(s.resources.pools ?? {}).filter((pool) => pool.max > 0 && pool.group !== 'hit-dice')
@@ -98,7 +104,7 @@ export function SheetBody({
   const who = <IdentityTable identity={identity} names={names} />
   const abilities = <AbilityCards sheet={s} />
   const named = (collection: string, slug: string) =>
-    names?.get(`${collection}:${slug}`) ?? items.get(slug)?.name ?? titleCase(slug)
+    names.get(`${collection}:${slug}`) ?? (collection === 'spells' ? spells : items).get(slug)?.name ?? titleCase(slug)
   const headed = (title: string, content: ReactNode) => (
     <Panel>
       <Stack gap="sm">
@@ -184,8 +190,8 @@ export function SheetBody({
       {s.spells.sources.map((source) => <Panel key={source.source}><Stack gap="xs">
         <Text fw={600}>{source.source.startsWith('rule:custom-spells') ? t('spellRules.custom') : named(collectionOfKind(kindOf(source.source)) ?? 'classes', slugOf(source.source))}</Text>
         {(['cantrips', 'known', 'spellbook', 'prepared', 'arcanum', 'mastery'] as const).map((mode) => {
-          const spells = source[mode] ?? []
-          return spells.length === 0 ? null : <ItemList key={mode} label={spellChoiceName(t, mode === 'cantrips' ? 'cantrip' : mode, mode === 'prepared' ? source.preparationLimit ?? spells.length : spells.length)} items={spells.map((slug) => named('spells', slug))} />
+          const list = source[mode] ?? []
+          return list.length === 0 ? null : <ItemList key={mode} label={spellChoiceName(t, mode === 'cantrips' ? 'cantrip' : mode, mode === 'prepared' ? source.preparationLimit ?? list.length : list.length)} items={list.map((slug) => named('spells', slug))} mark={(at) => <SpellIcon icon={spells.get(list[at] ?? '')?.icon} />} />
         })}
       </Stack></Panel>)}
     </Stack>,
@@ -307,10 +313,13 @@ function ItemList({
   label,
   items,
   empty,
+  mark,
 }: {
   label: string
   items: string[]
   empty?: string
+  /** Drawn in place of the bullet when it yields something: a spell's artwork. */
+  mark?: (at: number) => ReactNode
 }) {
   return (
     <Stack gap={4}>
@@ -325,7 +334,7 @@ function ItemList({
         <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md" verticalSpacing={4}>
           {items.map((item, at) => (
             <Group key={`${item}-${at}`} gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
-              <Bullet />
+              {mark?.(at) ?? <Bullet />}
               <Text size="sm">{item}</Text>
             </Group>
           ))}

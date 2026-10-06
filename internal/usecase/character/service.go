@@ -273,11 +273,21 @@ func (s *Service) owned(
 func (s *Service) Sheet(
 	ctx context.Context, owner domain.OwnerID, id domain.ID, locale rules.Locale,
 ) (domain.State, error) {
+	state, _, err := s.SheetWithCatalog(ctx, owner, id, locale)
+	return state, err
+}
+
+// SheetWithCatalog is Sheet plus the catalogue it was projected against, for a
+// response that sends what the sheet's slugs mean along with them.
+func (s *Service) SheetWithCatalog(
+	ctx context.Context, owner domain.OwnerID, id domain.ID, locale rules.Locale,
+) (domain.State, *catalog.Catalog, error) {
 	character, cat, err := s.load(ctx, owner, id, locale)
 	if err != nil {
-		return domain.State{}, err
+		return domain.State{}, nil, err
 	}
-	return domain.Project(character.Log, cat)
+	state, err := domain.Project(character.Log, cat)
+	return state, cat, err
 }
 
 // Prompts returns what the character still has to decide.

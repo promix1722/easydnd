@@ -159,15 +159,25 @@ func (s *Service) readable(
 func (s *Service) Sheet(
 	ctx context.Context, actor user.ID, id character.ID, locale rules.Locale,
 ) (character.State, error) {
+	state, _, err := s.SheetWithCatalog(ctx, actor, id, locale)
+	return state, err
+}
+
+// SheetWithCatalog is Sheet plus the catalogue it was projected against. See
+// the character service's method of the same name.
+func (s *Service) SheetWithCatalog(
+	ctx context.Context, actor user.ID, id character.ID, locale rules.Locale,
+) (character.State, *catalog.Catalog, error) {
 	c, err := s.readable(ctx, actor, id)
 	if err != nil {
-		return character.State{}, err
+		return character.State{}, nil, err
 	}
 	cat, err := catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
 	if err != nil {
-		return character.State{}, err
+		return character.State{}, nil, err
 	}
-	return character.Project(c.Log, cat)
+	state, err := character.Project(c.Log, cat)
+	return state, cat, err
 }
 
 // summarize folds a set of character ids into the short form a roster shows,

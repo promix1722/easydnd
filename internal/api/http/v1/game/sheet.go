@@ -23,13 +23,13 @@ import (
 // and your own are produced by one code path and cannot drift into two shapes
 // the client would have to tell apart.
 func (h *Handler) Sheet(c *gin.Context) {
-	state, err := h.service.Sheet(
+	state, cat, err := h.service.SheetWithCatalog(
 		c.Request.Context(), h.actor(c), pathCharacterOf(c), helpers.Locale(c))
 	if err != nil {
 		helpers.FormatError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, characterapi.SheetOf(state))
+	c.JSON(http.StatusOK, characterapi.ResolvedSheetOf(state, cat))
 }
 
 func (h *Handler) Catalog(c *gin.Context) {

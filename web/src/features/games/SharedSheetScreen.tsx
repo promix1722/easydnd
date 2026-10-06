@@ -8,8 +8,6 @@ import { Avatar, characterAvatar, Badge, Page, pageState } from '@/ui'
 
 import { titleCase } from '@/domain'
 
-import type { Compendium } from '../character/compendium'
-import { loadCompendium } from '../character/compendium'
 import { SheetBody } from '../character/SheetBody'
 
 /**
@@ -25,32 +23,30 @@ export function SharedSheetScreen() {
   const t = useT()
   const locale = useLocale()
   const { id: groupId = '', character = '' } = useParams()
-  // The same compendium the owner's own sheet loads, so the two name things
-  // out of one set. Both requests are session-cached.
+  // The sheet names its own slugs, exactly as the owner's does: one resolver
+  // on the server writes both, so the two cannot name things differently.
   const { data, error, loading, reload } = useResource<{
     sheet: Sheet
-    compendium: Compendium
     /**
      * The group's name, for the middle crumb, or null when the lookup failed.
      *
      * Fetched here rather than threaded through the route because the trail is
      * `Groups / <group> / <character>` and a crumb that says a group id is no
      * better than one that says nothing. The failure is tolerated on the same
-     * bargain the owner's sheet already makes for `prompts` and the compendium:
+     * bargain the owner's sheet already makes for `prompts`:
      * a shared sheet is worth drawing, and is not worth losing to a second
      * request for one word. A null renders as the crumb's placeholder.
      */
     groupName: string | null
   }>(`shared:${locale}:${character}`, async (signal) => {
-    const [sheet, compendium, groupName] = await Promise.all([
+    const [sheet, groupName] = await Promise.all([
       getSharedSheet(character, signal),
-      loadCompendium(`/shared/${character}/catalog`),
       getGroup(groupId, signal).then(
         (group) => group.name,
         () => null,
       ),
     ])
-    return { sheet, compendium, groupName }
+    return { sheet, groupName }
   })
 
   const state = pageState(
@@ -80,7 +76,7 @@ export function SharedSheetScreen() {
   const named = (collection: string, slug: string | undefined) =>
     slug === undefined
       ? null
-      : (data.compendium.names?.get(`${collection}:${slug}`) ?? titleCase(slug))
+      : (data.sheet.catalogNames?.[`${collection}:${slug}`] ?? titleCase(slug))
   const classes = (identity.classes ?? [])
     .map(({ class: slug, level }) => `${named('classes', slug) ?? slug} ${level}`)
     .join(' / ')
@@ -104,7 +100,7 @@ export function SharedSheetScreen() {
     >
       {/* The way back is the trail now. The "Back to the group" button that
           used to sit here said the same thing in a second place. */}
-      <SheetBody sheet={data.sheet} compendium={data.compendium} />
+      <SheetBody sheet={data.sheet} />
     </Page>
   )
 }

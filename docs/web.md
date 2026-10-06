@@ -2067,11 +2067,28 @@ container is exact by construction and cannot drift.
 **Every field is drawn even when empty**, showing
 `--`, because "not chosen yet" is the answer to the question and a missing row
 is not -- on a half-built character the blanks are the most useful thing on the
-page. Names come from the compendium, five session-cached collections flattened
-into one map keyed `"<collection>:<slug>"`; keyed by collection as well as slug
-because two collections may share one, and a bare slug map would let a
-background rename a class. Without it the table falls back to title-casing, and
-"half-elf" becomes "Half Elf" rather than "Half-Elf".
+page. Names come with the sheet, in `catalogNames`: one map keyed
+`"<collection>:<slug>"`; keyed by collection as well as slug because two
+collections may share one, and a bare slug map would let a background rename a
+class. Without it the table falls back to title-casing, and "half-elf" becomes
+"Half Elf" rather than "Half-Elf".
+
+**The sheet asks the compendium for nothing.** The server has the character's
+catalogue in hand when it projects the sheet, so it resolves every slug there
+and sends the answer in the same response: `catalogNames` for what the sheet
+only names, and `catalog` -- skills, proficiencies, equipment, magic items,
+spells -- for the entries a panel reads more of, limited to what this character
+references. See [the resolved sheet](backend.md#the-sheet-arrives-resolved).
+Opening a sheet is two requests, the sheet and its prompts, and a refresh after
+an inventory edit is one.
+
+It used to be sixteen. The screen fetched fourteen whole collections to do this
+lookup in the browser, and one of them was every spell in the rules with its
+artwork inlined: about 11 MB to print a dozen names. **No screen may download a
+collection in order to name a few of its entries, and nothing may download the
+whole spell list at all** -- a client gets the spells it names or one page of a
+search. The sheet's own spells are the first case: they arrive resolved, icon
+included, and the Spells tab draws the icon in place of the row's bullet.
 
 Under the cards is a second headline row, `features/character/Vitals`: passive
 Perception, the spellcasting numbers, speed, vision and Hit Dice. Four of those
@@ -2121,13 +2138,13 @@ modifier here would be the browser computing a rule, which
 [`domain/format.ts`](../web/src/domain/format.ts) exists to forbid — and it
 would be wrong the day Jack of All Trades starts halving a bonus.
 
-What the compendium *is* asked for is each skill's **name and governing
-ability**, fetched with the session-cached `getCollection('skills')`. The name
-matters twice: it is in the negotiated locale, and it is the only spelling that
-gets "Sleight of Hand" right, where title-casing the slug capitalises the "Of".
-That request failing costs the ability tags and falls the names back to the
-slug; it does not stop the panel drawing, on the same reasoning as the prompts
-fetch above.
+What the compendium *does* supply is each skill's **name and governing
+ability**, which arrive in the sheet's own `catalog.skills` -- all eighteen,
+because the panel draws all eighteen. The name matters twice: it is in the
+negotiated locale, and it is the only spelling that gets "Sleight of Hand"
+right, where title-casing the slug capitalises the "Of". A sheet without them
+-- the one a write echoes back carries no `catalog` -- loses the ability tags
+and falls the names back to the slug; it does not stop the panel drawing.
 
 Training level is carried by a mark — `ui/ProficiencyMark`, one glyph filling
 in across the four levels, with Expertise ringed rather than merely fuller
@@ -2209,8 +2226,8 @@ attack roll has a fixed ability, so a bare proficiency bonus would be the less
 useful half of a number this panel is not showing; armor proficiency adds
 nothing to any roll at all, and only stops the penalties. Nothing is computed
 here either: the number is `status.proficiencyBonus` as the server derived it,
-and the *type* that decides which rows get it comes from the compendium, via
-the same session-cached `getCollection` the skill names come from.
+and the *type* that decides which rows get it comes from the sheet's
+`catalog.proficiencies`, resolved by the server beside the skill names.
 
 The stat row above leads with hit points, then armor class, initiative and
 proficiency. Hit points are the one number that moves between one glance and

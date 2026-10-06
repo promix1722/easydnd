@@ -1,6 +1,6 @@
 import type { BuildPolicy } from './packPolicy'
 import type { RulesLock } from './packs'
-import type { Choice, Option } from './catalog'
+import type { Choice, Item, Option, Proficiency, Skill as CatalogSkill, Spell } from './catalog'
 import { request } from './client'
 
 /**
@@ -188,6 +188,18 @@ export interface Sheet {
  customOptions?: CustomOption[]
  importSession?: string
  catalogNames?: Record<string,string>
+  /**
+   * What the sheet's slugs mean, resolved by the server in the same response:
+   * the entries a panel reads more than a name from. Present on a sheet that
+   * was read, absent on the one a write echoes back.
+   */
+  catalog?: {
+    skills: CatalogSkill[]
+    proficiencies?: Proficiency[]
+    equipment?: Item[]
+    magicItems?: Item[]
+    spells?: Spell[]
+  }
  importedNotes?: string[]
   identity: Identity
   base: Base

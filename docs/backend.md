@@ -411,7 +411,7 @@ that.
 | `POST` | `/v1/characters/stub` | **development only** -- build the reference character in one call |
 | `GET` | `/v1/characters/{id}` | the log |
 | `DELETE` | `/v1/characters/{id}` | |
-| `GET` | `/v1/characters/{id}/sheet` | the projection |
+| `GET` | `/v1/characters/{id}/sheet` | the projection, with what its slugs mean -- see [The sheet arrives resolved](#the-sheet-arrives-resolved) |
 | `GET` | `/v1/characters/{id}/prompts` | what must be decided next |
 | `GET` | `/v1/characters/{id}/events` | the log |
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
@@ -450,7 +450,7 @@ that.
 | `POST` | `/v1/games/{id}/monsters` | private copy: `{"character_id":"..."}`; `{}` creates a stub; DM or owner |
 | `POST` | `/v1/games/{id}/order` | stable sort: `{"by_initiative":true}`; move: `{"entry_id":"...","direction":-1}` (or `1`); DM or owner |
 | `POST` | `/v1/games/{id}/rest` | long rest: every entry gets all of its spent uses back; DM or owner |
-| `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only |
+| `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only, resolved the same way |
 
 Three of those need a word about their shape.
 
@@ -506,6 +506,35 @@ line, and an invite token is usable for a day. The browser keeps it in a URL
 `GET /v1/characters` takes `?folder=` to narrow the listing, and `POST
 /v1/characters` takes a `folder` in the body. `POST /v1/characters/import` takes
 `?folder=` instead, because its body is the exported sheet itself.
+
+### The sheet arrives resolved
+
+A projected sheet is slugs: `race: "half-elf"`, a list of features, the spells
+a caster has. The two sheet reads -- `/v1/characters/{id}/sheet` and
+`/v1/shared/{id}/sheet` -- send what those slugs mean in the same response,
+through one function, `character.ResolvedSheetOf`:
+
+- **`catalogNames`**, `"<collection>:<slug>"` to the localized name, for what a
+  sheet only names: race, subrace, classes, subclasses, background, traits,
+  features, feats, languages, and the source of each spell list. The projection
+  already wrote the names of imported and custom entries there; those are kept.
+- **`catalog`**, the entries a panel reads more than a name from, in the shapes
+  the collection routes serve: the character's proficiencies, the items it
+  holds (asked of both item collections, because a stack does not say which it
+  came from), **its own spells with their artwork**, and all eighteen skills,
+  which every sheet draws.
+
+A slug the catalogue does not define is skipped, not an error: the client
+title-cases it, as it always has.
+
+The reason is the cost of the alternative. The server holds the character's
+catalogue when it projects, so the lookup is a few map reads. Left to the
+client it was fourteen whole collections per sheet, the spell list with its
+inlined artwork among them -- about 11 MB to print a dozen names. A sheet read
+is now one response, sized by the character rather than by the rules.
+
+A write's echo of the sheet (`WriteResponse.sheet`) carries no `catalog`. It is
+there to confirm the write; a screen that draws a sheet reads the sheet.
 
 ### Importing states, not histories
 

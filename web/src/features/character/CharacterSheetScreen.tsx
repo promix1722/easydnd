@@ -7,8 +7,6 @@ import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import { Avatar, characterAvatar, Badge, Button, Group, ModalSheet, NumberInput, Page, Stack, Text, pageState } from '@/ui'
 
-import type { Compendium } from './compendium'
-import { loadCompendium } from './compendium'
 import { desiredLevelChange } from './desiredLevel'
 import { SheetBody } from './SheetBody'
 
@@ -26,13 +24,6 @@ interface SheetView {
    * a second request failed is a page that fails for a reason it is not about.
    */
   prompts: Prompt[] | null
-  /**
-   * The compendium collections the body names things out of. Each is null when
-   * its request failed -- the same bargain as `prompts` above: the sheet is
-   * worth drawing with title-cased slugs, and is not worth losing to a second
-   * request.
-   */
-  compendium: Compendium
 }
 
 
@@ -73,18 +64,14 @@ export function CharacterSheetScreen() {
     setPickingLevel(null)
     await navigate(`/characters/${id}/build`, { state: { stage: 'class' } })
   }
-  // A projected sheet contains stable slugs, but its compendium contains
-  // localized names. Changing language must therefore reload this resource;
-  // clearing the catalogue cache alone cannot replace data already in state.
+  // The sheet carries the localized names of its own slugs, so changing
+  // language must reload it: that is what the locale is doing in the key.
   const sheet = useResource<SheetView>(`sheet:${locale}:${id}`, async (signal) => {
-    const [projected, prompts, compendium] = await Promise.all([
+    const [projected, prompts] = await Promise.all([
       getSheet(id, signal),
       getPrompts(id, signal).then((response) => response, () => null),
-      // Session-cached, so this is one request for the whole visit however
-      // many sheets are opened.
-      loadCompendium(`/characters/${id}/catalog`),
     ])
-    return { sheet: projected, prompts: prompts?.prompts ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL, compendium }
+    return { sheet: projected, prompts: prompts?.prompts ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL }
   })
 
   // Read the log's head at the moment of writing: the sheet does not carry a
@@ -189,7 +176,6 @@ export function CharacterSheetScreen() {
       )}
       <SheetBody
         sheet={s}
-        compendium={sheet.data.compendium}
         pending={editEquipment.pending}
         onEquipment={(changes) => void editEquipment.run(changes)}
       />
