@@ -1838,6 +1838,38 @@ it('places spell and equipment questions in their own tabs', async () => {
   expect(current()).toBe('Equipment')
 })
 
+// An answered choice used to be reopened by deleting its entry and waiting for
+// the question to come back: a player who opened a card to look at what they
+// had picked saw nothing picked, and had just unpicked it.
+it('reopens an answered equipment choice on its answer, without touching it', async () => {
+  const user = setupUser()
+  const weapon = {
+    choice: { prompt: 'wizard/starting-equipment/0', kind: 'equipment', choose: 1, from: { kind: 'explicit', options: [
+      { key: 'quarterstaff', kind: 'ref', ref: 'item:quarterstaff', count: 1 },
+      { key: 'dagger', kind: 'ref', ref: 'item:dagger', count: 1 },
+    ] } },
+    source: 'class:wizard', group: 'class', optional: true, heldOnly: false, event: { type: 'class', ref: 'class:wizard', level: 1 },
+  }
+  mockApi({
+    prompts: { seq: 3, complete: true, prompts: [] },
+    editPrompts: { seq: 3, complete: false, prompts: [weapon] },
+    events: { seq: 3, events: [INIT, { seq: 2, type: 'class', source: 'class', ref: 'class:wizard', level: 1 }, {
+      seq: 3, type: 'class', source: 'class', choiceKind: 'equipment', ref: 'class:wizard', level: 1,
+      choices: [{ prompt: 'wizard/starting-equipment/0', picks: ['dagger'] }],
+      selections: [{ key: 'dagger', kind: 'ref', ref: 'item:dagger', count: 1 }],
+    }] },
+  })
+  renderBuild('desktop')
+  await user.click(await screen.findByRole('tab', { name: 'Equipment' }))
+  await user.click(block(/Starting equipment/i))
+
+  expect(await screen.findByRole('button', { name: 'Dagger' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'Quarterstaff' })).toHaveAttribute('aria-pressed', 'false')
+  expect(read.some((url) => url.includes('/prompts?before=3'))).toBe(true)
+  // Looking is not changing: nothing was deleted, priced or written.
+  expect(posted).toHaveLength(0)
+})
+
 it('saves the merged spell picker as a batch of legal per-level answers', async () => {
   const user = setupUser()
   const spellPrompt = (level: number, slugs: string[]) => ({

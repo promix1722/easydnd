@@ -81,6 +81,12 @@ const EMPTY_VIEW: BuildView = {
   names: new Map(),
 }
 
+/** An answered choice's question, fetched to be put again in place. */
+interface Reposed {
+  seq: number
+  prompt: Prompt
+}
+
 /** A change, priced before it is paid for. */
 interface Preview {
   spellBatch?: { submissions: SpellSubmission[]; next: Stage }
@@ -148,8 +154,15 @@ export function BuildScreen() {
         // An equipment card is titled by what it offers, so those items are
         // named before any card is opened.
         ...prompts.prompts.filter((prompt) => prompt.choice.kind === 'equipment')
-          .flatMap((prompt) => (prompt.choice.from.options ?? []).flatMap((option) => [option, ...(option.items ?? [])]))
-          .flatMap((option) => option.ref === undefined ? [] : [{ ref: option.ref }]),
+          .flatMap((prompt) => [
+            // The category a card or one of its options draws on, by its
+            // catalogue name: "Arcane Foci" in English is not a title in Russian.
+            ...(prompt.choice.from.category === undefined ? [] : [{ ref: `equipment-category:${prompt.choice.from.category}` }]),
+            ...(prompt.choice.from.options ?? []).flatMap((option) => [option, ...(option.items ?? [])]).flatMap((option) => [
+              ...(option.ref === undefined ? [] : [{ ref: option.ref }]),
+              ...(option.choice?.from.category === undefined ? [] : [{ ref: `equipment-category:${option.choice.from.category}` }]),
+            ]),
+          ]),
         ...[...sheet.equipment.equipped, ...sheet.equipment.backpack, ...sheet.equipment.loot]
           .flatMap((stack) => stack.item === undefined ? [] : [{ ref: `item:${stack.item}` }]),
       ], `${characterPath(id)}/catalog`),
@@ -177,6 +190,7 @@ export function BuildScreen() {
   const [customDraft, setCustomDraft] = useState<CustomOption | null>(null)
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [preview, setPreview] = useState<Preview | null>(null)
+  const [reposed, setReposed] = useState<Reposed | null>(null)
   const [creating, setCreating] = useState(false)
   const [advanceAfter, setAdvanceAfter] = useState<{ view: BuildView; stage: Stage } | null>(null)
   const [openAfterCreation, setOpenAfterCreation] = useState<Stage | null>(null)
@@ -328,7 +342,7 @@ export function BuildScreen() {
       ? null
       : opened.kind === 'open'
         ? { prompt: opened.prompt, replaces: null }
-        : askingFor(opened.row)
+        : askingFor(opened.row, reposed)
 
   /**
    * Closing the question, and opening whatever takes its place.
@@ -521,6 +535,27 @@ export function BuildScreen() {
   }
 
   /**
+   * Puts an answered choice's question again without touching the answer.
+   *
+   * The server stops sending a question once it is answered, but it will say
+   * what was being asked at an entry's position. The card then opens on the
+   * saved answer and a change replaces the entry in place. This used to drop
+   * the entry and wait for the question to come back -- so a player who opened
+   * a card to look at what they had picked saw nothing picked, and had in fact
+   * just unpicked it. The drop remains only for what cannot be found again: an
+   * entry bundling several questions, or a prompt the server no longer poses.
+   */
+  const repose = async (row: SettledRow) => {
+    const answers = row.event.choices ?? []
+    const first = answers[0]?.prompt
+    const whole = first !== undefined && answers.every((answer) => answer.prompt === first || answer.prompt.startsWith(`${first}/`))
+    const posed = whole ? await getPrompts(id, undefined, row.seq).then((response) => response.prompts, () => []) : []
+    const prompt = posed.find((each) => each.choice.prompt === first)
+    if (prompt === undefined) await price(row, null, reaskedKey(row))
+    else setReposed({ seq: row.seq, prompt })
+  }
+
+  /**
    * Opening a block, which for a settled one is putting its question again.
    *
    * Every decided block opens onto the question that decided it, and there is
@@ -539,7 +574,7 @@ export function BuildScreen() {
     if (isSpellChoice(block.row)) return
     const question = reask(block.row)
     if (question === null) {
-      void price(block.row, null, reaskedKey(block.row))
+      void repose(block.row)
       return
     }
     // A rename starts from the name it is changing rather than from nothing.
@@ -956,8 +991,8 @@ function isSpellChoice(row: SettledRow): boolean {
   return row.stage === 'spells' || row.stage === 'cantrips'
 }
 
-function askingFor(row: SettledRow): Asking | null {
-  const prompt = reask(row)
+function askingFor(row: SettledRow, reposed: Reposed | null): Asking | null {
+  const prompt = reask(row) ?? (reposed?.seq === row.seq ? reposed.prompt : null)
   return prompt === null ? null : { prompt, replaces: row }
 }
 

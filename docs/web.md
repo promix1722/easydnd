@@ -1550,15 +1550,23 @@ be lost. A change that costs nothing else is simply made, because confirming
 every change teaches players to confirm without reading, which is exactly the
 habit the one change that *does* cost something needs them not to have.
 
-An answer that carries *picks* -- a rogue's Expertise, a half-elf's ability
-bonuses -- cannot be re-posed directly, because the options that made it up
+An answer that carries *picks* -- a rogue's Expertise, a starting weapon --
+cannot be rebuilt from the answer alone, because the options that made it up
 arrived with a prompt the server stopped emitting the moment it was answered.
-Opening one of those blocks therefore drops the entry, which reaches the same
-place from the other side: the question comes back outstanding, and
-`reclaimPlace` holds the block's own place for it, so what returns is where
-what went was. The player is shown none of that -- the same press, the same
-outcome, a moment longer -- and it is asked about on the same rule as
-everything else: only if another answer cannot survive it.
+So the screen asks for it: `GET /prompts?before=<seq>` returns the questions as
+they stood at that entry's position, `repose` finds the one the entry answered,
+and the block opens **on its answer** -- as deep as the answer went, so a focus
+picked out of "an arcane focus" opens on the list of foci with that one pressed.
+Opening writes nothing; a change replaces the entry in place.
+
+It used to drop the entry instead and wait for the question to come back. That
+reached the same question, blank: a player who opened a card to see what they
+had picked saw nothing picked, and had in fact just unpicked it. The drop
+remains only where the question cannot be found again -- an entry that bundles
+several questions, or a prompt the server no longer poses there -- and then
+`reclaimPlace` holds the block's own place for what returns, and it is asked
+about on the same rule as everything else: only if another answer cannot
+survive it.
 
 The question that comes back is also **open**. `done` takes the key of a block
 that does not exist yet, and the reread is what brings it into being; without

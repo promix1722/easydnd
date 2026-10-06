@@ -1212,5 +1212,6 @@
   "equipment.fewer": "Убрать одну штуку: {{name}}",
   "choice.oneOf": "одно из: {{name}}",
   "choice.or": " или ",
-  "choice.also": "ещё {{what}}"
+  "choice.also": "ещё {{what}}",
+  "block.from": "· {{name}}"
 }

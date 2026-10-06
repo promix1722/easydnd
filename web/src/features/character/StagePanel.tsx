@@ -290,7 +290,7 @@ function OpenHeader({ prompt, names }: { prompt: Prompt; names: ReadonlyMap<stri
         {prompt.source !== undefined && (
           <Text span size="xs" c="dimmed" fw={400}>
             {' '}
-            · from {refName(prompt.source, names)}
+            {t('block.from', { name: refName(prompt.source, names) })}
           </Text>
         )}
       </Text>

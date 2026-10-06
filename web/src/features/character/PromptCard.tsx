@@ -156,11 +156,10 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
           const detail = count > 0 ? option.detail : undefined
           const described = detail !== undefined
           return (
-            // The box owns the horizontal padding and the button gives its own
-            // up, so the name and the description share a left edge by
-            // construction. 15px is where an unpicked button puts its label,
-            // so picking does not nudge the name sideways.
-            <Stack key={option.key} gap={0} px={described ? 15 : 0} style={described ? {
+            // The button keeps its own padding, so its focus ring is the full
+            // width of the box rather than a frame hugging the name; the
+            // description is padded to where a button puts its label (15px).
+            <Stack key={option.key} gap={0} style={described ? {
               background: 'var(--mantine-primary-color-light)',
               borderRadius: 'var(--mantine-radius-default)',
             } : undefined}>
@@ -175,7 +174,6 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
               // lines tall, and a button that fixes its own height would crop
               // it. Padded rather than sized.
               h="auto"
-              {...(described ? { px: 0 } : {})}
               py="xs"
               disabled={pending || option.disabled || spent}
               // Once the answer is ready, Tab should reach Confirm from the
@@ -222,7 +220,7 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
             {detail !== undefined && (
               // Smaller and dimmed, so it reads as about the option rather
               // than as another one.
-              <Box pb="xs" pl={1} c="dimmed">
+              <Box pb="xs" px={15} c="dimmed">
                 <Markdown size="xs">{detail}</Markdown>
               </Box>
             )}
@@ -267,7 +265,25 @@ function begin(t: Translate, prompt: Prompt, entries: Map<string, Entry>, initia
   // Seeded without settling: settle takes a finished stage as answered and
   // moves on, and an answer shown for changing has not been given again.
   if (saved !== undefined && prompt.choice.kind !== 'spell') {
-    return { for: prompt.choice.prompt, stages: [prompt.choice], answers: [], picked: [...saved.picks] }
+    // And it opens as deep as the answer went: a focus chosen out of "an
+    // arcane focus" opens on the list of foci with that one pressed, not back
+    // at the branch with the focus forgotten.
+    let out: Progress = { for: prompt.choice.prompt, stages: [prompt.choice], answers: [], picked: [...saved.picks] }
+    for (let depth = 0; depth < 8; depth += 1) {
+      const stage = out.stages[out.answers.length]
+      if (stage === undefined) break
+      const opened = opens(stage, out.picked)
+      const following = [...out.stages, ...opened][out.answers.length + 1]
+      const nested = following === undefined ? undefined : initialAnswers.find((answer) => answer.prompt === following.prompt)
+      if (nested === undefined) break
+      out = {
+        for: out.for,
+        stages: [...out.stages, ...opened],
+        answers: [...out.answers, { prompt: stage.prompt, picks: out.picked }],
+        picked: [...nested.picks],
+      }
+    }
+    return out
   }
   return settle(t, prompt, entries, {
     for: prompt.choice.prompt,

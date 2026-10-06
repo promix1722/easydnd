@@ -1160,5 +1160,6 @@
   "equipment.fewer": "One fewer {{name}}",
   "choice.oneOf": "one of: {{name}}",
   "choice.or": " or ",
-  "choice.also": "also {{what}}"
+  "choice.also": "also {{what}}",
+  "block.from": "· from {{name}}"
 }
