@@ -157,19 +157,23 @@ export function SheetBody({
             What the server derived, as it derived it. It does not yet turn an
             equipped weapon into an attack, so a sheet with none says so.
           */}
-          <ItemList
-            label={t('sheet.actions')}
-            items={(s.actions ?? []).map((action) =>
-              [action.name, action.toHit === undefined ? '' : signed(action.toHit), action.damage, action.uses, action.notes]
-                .filter(Boolean).join(' · '))}
-            empty={t('sheet.noActions')}
-          />
-          {/*
-            Scaling values only -- a Sneak Attack die, an aura's range -- drawn
-            only when there is one, because a row about somebody else's class
-            is not a fact at all.
-          */}
-          {parameters.length > 0 && <ItemList label={t('sheet.resources')} items={parameters} />}
+          <Panel>
+            <Stack gap="md">
+              <ItemList
+                label={t('sheet.actions')}
+                items={(s.actions ?? []).map((action) =>
+                  [action.name, action.toHit === undefined ? '' : signed(action.toHit), action.damage, action.uses, action.notes]
+                    .filter(Boolean).join(' · '))}
+                empty={t('sheet.noActions')}
+              />
+              {/*
+                Scaling values only -- a Sneak Attack die, an aura's range -- drawn
+                only when there is one, because a row about somebody else's class
+                is not a fact at all.
+              */}
+              {parameters.length > 0 && <ItemList label={t('sheet.resources')} items={parameters} />}
+            </Stack>
+          </Panel>
           {pools.length > 0 && headed(t('sheet.consumables'), <ResourcePools pools={pools} />)}
         </Stack>
       ),
@@ -177,13 +181,13 @@ export function SheetBody({
   ]
   if (s.spells.sources?.length) panels.push({
     value: 'spells', label: t('sheet.spells'), content: <Stack gap="md">
-      {s.spells.sources.map((source) => <Stack key={source.source} gap="xs">
+      {s.spells.sources.map((source) => <Panel key={source.source}><Stack gap="xs">
         <Text fw={600}>{source.source.startsWith('rule:custom-spells') ? t('spellRules.custom') : named(collectionOfKind(kindOf(source.source)) ?? 'classes', slugOf(source.source))}</Text>
         {(['cantrips', 'known', 'spellbook', 'prepared', 'arcanum', 'mastery'] as const).map((mode) => {
           const spells = source[mode] ?? []
           return spells.length === 0 ? null : <ItemList key={mode} label={spellChoiceName(t, mode === 'cantrips' ? 'cantrip' : mode, mode === 'prepared' ? source.preparationLimit ?? spells.length : spells.length)} items={spells.map((slug) => named('spells', slug))} />
         })}
-      </Stack>)}
+      </Stack></Panel>)}
     </Stack>,
   })
   panels.push({
@@ -204,7 +208,7 @@ export function SheetBody({
   // heading above this, and a landmark whose name changed per character would
   // give a screen-reader user a different table of contents on every sheet.
   const shown = panels.some((panel) => panel.value === tab) ? tab : 'overview'
-  return <TabDeck label={t('sheet.label')} panels={panels} value={shown} onChange={setTab} />
+  return <TabDeck bar label={t('sheet.label')} panels={panels} value={shown} onChange={setTab} />
 }
 
 

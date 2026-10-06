@@ -93,6 +93,19 @@ describe('TabRow', () => {
 
     expect(screen.getByText('panel')).toBeInTheDocument()
   })
+
+  it('puts the strip, and only the strip, on a surface when asked for a bar', () => {
+    renderAt(
+      viewport,
+      <TabRow bar tabs={TABS} value="class" onChange={vi.fn()}>
+        <p>panel</p>
+      </TabRow>,
+    )
+
+    // The bar is navigation; what it selects brings its own surface.
+    expect(screen.getByRole('tablist').closest('.mantine-Paper-root')).not.toBeNull()
+    expect(screen.getByText('panel').closest('.mantine-Paper-root')).toBeNull()
+  })
 })
 
 describe('TabRow', () => {

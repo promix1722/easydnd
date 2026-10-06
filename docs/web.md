@@ -1920,6 +1920,19 @@ screen this app has already spent an argument buying back (see [Two views, one
 codebase](#two-views-one-codebase)), and a swipe changes tab from anywhere on
 the slide, so the strip is not the only way through.
 
+**The strip sits on a bar of its own, and nothing on a tab sits on the page.**
+The sheet's tabs are the page's own rather than something inside a `Panel`, so
+drawn plainly their captions lay straight on the backdrop's doodles with a
+hairline under them -- and so did the Actions and Spells lists beneath. Build
+and Group never showed it, only because their `TabRow` happens to be inside a
+`Panel`. So the sheet passes `bar`, which `TabDeck` hands to `TabRow`: the strip
+is drawn on the same bordered `Paper` a `Panel` is, and the list's grey rule is
+dropped because the bar's border already draws that line. It is a flag rather
+than the default, because a bar inside a `Panel` is a box in a box -- which is
+why the Equipment tab's inner row does not pass it and sits in a `Panel` with
+its rows and the purse instead. Every tab's content is in panels for the same
+reason: two surfaces, the bar and then what it selects.
+
 **A slide is as tall as the tallest slide**, which is now the Overview. Swipe
 from its foot to Actions and you are a long way down a mostly empty slide with
 the tabs off-screen above. The alternative is to measure the showing slide and

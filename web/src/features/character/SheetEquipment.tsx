@@ -4,7 +4,7 @@ import { ITEM_GROUPS, SLOTS, equip, fitsSlot, groupOf, mergeStacks, setCoin, set
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
 import type { Change, Equipment, Item } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Button, ModalSheet, Paper, SimpleGrid, Stack, TabRow, Text, UnstyledButton } from '@/ui'
+import { Button, ModalSheet, Panel, Paper, SimpleGrid, Stack, TabRow, Text, UnstyledButton } from '@/ui'
 
 import { InventoryRows, Purse } from './Inventory'
 
@@ -57,18 +57,22 @@ export function SheetEquipment({ equipment, items, name, disabled = false, onCha
       })}
     </SimpleGrid>
 
-    <TabRow tabs={ITEM_GROUPS.map((each) => ({ value: each, label: groups[each] }))} value={group}
-      onChange={(next) => setGroup(next as ItemGroup)}>
-      <InventoryRows
-        rows={rows.filter((row) => groupOf(items.get(row.item ?? '')) === group)}
-        name={rowName}
-        empty={t('sheet.empty')}
-        disabled={disabled}
-        {...(onChange ? { onTotal: (row: InventoryRow, total: number) => onChange(setTotal(equipment, row.item ?? '', total)) } : {})}
-      />
-    </TabRow>
-    <Purse purse={equipment.purse} disabled={disabled}
-      {...(onChange ? { onChange: (unit: string, amount: number) => onChange([setCoin(unit, amount)]) } : {})} />
+    <Panel>
+      <Stack gap="md">
+        <TabRow tabs={ITEM_GROUPS.map((each) => ({ value: each, label: groups[each] }))} value={group}
+          onChange={(next) => setGroup(next as ItemGroup)}>
+          <InventoryRows
+            rows={rows.filter((row) => groupOf(items.get(row.item ?? '')) === group)}
+            name={rowName}
+            empty={t('sheet.empty')}
+            disabled={disabled}
+            {...(onChange ? { onTotal: (row: InventoryRow, total: number) => onChange(setTotal(equipment, row.item ?? '', total)) } : {})}
+          />
+        </TabRow>
+        <Purse purse={equipment.purse} disabled={disabled}
+          {...(onChange ? { onChange: (unit: string, amount: number) => onChange([setCoin(unit, amount)]) } : {})} />
+      </Stack>
+    </Panel>
 
     {onChange && <ModalSheet opened={picking !== null} onClose={() => setPicking(null)} title={picking === null ? '' : slots[picking]}>
       {picking !== null && <Stack gap="xs">

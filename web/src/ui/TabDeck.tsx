@@ -39,6 +39,8 @@ export interface TabDeckProps {
    * starts.
    */
   swipeable?: boolean
+  /** Hands `TabRow` its `bar`: the strip on a surface of its own. */
+  bar?: boolean
 }
 
 /**
@@ -90,6 +92,7 @@ export function TabDeck({
   value,
   onChange,
   swipeable = true,
+  bar = false,
 }: TabDeckProps) {
   const isDesktop = useIsDesktop()
   const [embla, setEmbla] = useState<EmblaCarouselType | null>(null)
@@ -134,14 +137,14 @@ export function TabDeck({
 
   if (isDesktop) {
     return (
-      <TabRow tabs={tabs} value={value} onChange={press}>
+      <TabRow tabs={tabs} value={value} onChange={press} bar={bar}>
         {panels.find((panel) => panel.value === value)?.content}
       </TabRow>
     )
   }
 
   return (
-    <TabRow tabs={tabs} value={value} onChange={press}>
+    <TabRow tabs={tabs} value={value} onChange={press} bar={bar}>
       <Carousel
         aria-label={label}
         slideGap="md"
