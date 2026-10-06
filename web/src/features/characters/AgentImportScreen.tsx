@@ -364,10 +364,15 @@ export function AgentImportScreen() {
                     onRules={(label) => void chooseRules(label)}
                     stalled={
                       stalled ? (
+                        // Said in words, and before the buttons: a turn that
+                        // stopped short used to leave only something to press.
                         <Bubble>
-                          <Button variant="default" disabled={action.pending} onClick={() => void control(session.status === 'failed' ? 'retry' : 'resume')}>
-                            {session.status === 'failed' ? t('agent.retry') : t('agent.resume')}
-                          </Button>
+                          <Stack gap="xs" align="flex-start">
+                            <MessageText text={session.status === 'failed' ? t('agent.failed') : t('agent.paused')} />
+                            <Button variant="default" disabled={action.pending} onClick={() => void control(session.status === 'failed' ? 'retry' : 'resume')}>
+                              {session.status === 'failed' ? t('agent.retry') : t('agent.resume')}
+                            </Button>
+                          </Stack>
                         </Bubble>
                       ) : null
                     }
@@ -702,8 +707,8 @@ function Conversation({
       {/* The end of a turn that asked nothing -- finished, stopped short or
           failed -- is the same four buttons. A question's own answers come
           first: they are under the question. */}
-      {actions && !(lastAssistant?.options?.length && lastAssistant.key > lastUser) && <Bubble>{actions}</Bubble>}
       {stalled}
+      {actions && !(lastAssistant?.options?.length && lastAssistant.key > lastUser) && <Bubble>{actions}</Bubble>}
     </Stack>
   )
 }

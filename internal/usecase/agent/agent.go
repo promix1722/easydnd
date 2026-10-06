@@ -893,6 +893,7 @@ func (a *Agent) turn(ctx context.Context, cancel context.CancelFunc, rec Record)
 	// Before the model is asked anything: a chat kept across a restart has no
 	// character to build, and a request would be spent finding that out.
 	if c, err := a.service.Repository().Get(ctx, s.CharacterID); err != nil && ctx.Err() == nil || err == nil && !a.made(s, c) {
+		a.service.Logger().Warn("AI wizard session has no character of its own", "session", s.ID, "character", s.CharacterID, "error", err)
 		_ = setStatus(s, "failed")
 		s.Revision++
 		addAgentEvent(s, "status", "failed", "", nil)
@@ -926,6 +927,8 @@ func (a *Agent) turn(ctx context.Context, cancel context.CancelFunc, rec Record)
 			// the queue, it is the next process's, or this one's restarted.
 			_ = setStatus(s, "queued")
 		} else {
+			// The owner is told only that it failed; why is here.
+			a.service.Logger().Error("AI wizard model request failed", "session", s.ID, "error", err)
 			_ = setStatus(s, "failed")
 			s.Revision++
 			addAgentEvent(s, "status", "failed", "", nil)

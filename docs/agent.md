@@ -110,8 +110,11 @@ the conversation**, under the latest message, and is open for writing only
 when the assistant has asked something: disabled while it works and before
 the opening's questions are answered. (For one round it was hidden behind a
 "Tell what to do…" answer; a field that is always there and says by its state
-whose turn it is turned out simpler.) A paused or failed run adds a Resume or
-Retry button.
+whose turn it is turned out simpler.) A paused or failed run says so in a line of the
+assistant's -- it stopped, nothing imported is lost -- with Resume or Retry
+under it, ahead of the four buttons. It used to add the button and no words,
+which read as a chat that had ended on nothing. Why a turn failed is in the
+server log (`AI wizard model request failed`), not in the chat.
 
 **Nothing in the log folds away.** Answers already given stay under the
 question that offered them, no longer pressable. Every write the assistant
