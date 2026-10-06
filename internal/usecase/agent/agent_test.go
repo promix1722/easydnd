@@ -330,9 +330,9 @@ func TestAgentWritesTheBuildersOwnEntries(t *testing.T) {
 	if s.CharacterID == "" {
 		t.Fatal("no character behind the chat")
 	}
-	// The rules were asked and answered before there was a session; the
-	// transcript opens with them all the same.
-	if first := s.Events[0]; first.Kind != "rules" || !strings.Contains(string(first.Data), `"packs":`) {
+	// The transcript opens with the assistant's question and the rules that
+	// answered it, events like every other.
+	if first := s.Events[1]; s.Events[0].Kind != "opening" || first.Kind != "rules" || !strings.Contains(string(first.Data), `"packs":`) {
 		t.Fatalf("the transcript does not open with the rules: %+v %s", first, first.Data)
 	}
 	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "review" })
@@ -402,7 +402,7 @@ func TestAgentQuestionsKeepRequiredChoicesInChat(t *testing.T) {
 		t.Fatal(err)
 	}
 	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "waiting" })
-	if len(s.Events[1].Files) != 1 || s.Events[1].Text != "Import my hero" || len(s.Events[1].Files[0].Data) != 0 {
+	if len(s.Events[2].Files) != 1 || s.Events[2].Text != "Import my hero" || len(s.Events[2].Files[0].Data) != 0 {
 		t.Fatal("user attachment not recorded with its message")
 	}
 	var question *agentuc.AgentEvent

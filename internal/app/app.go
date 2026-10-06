@@ -261,7 +261,14 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	if cfg.Agent.APIKey != "" {
 		model = agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model, cfg.Agent.ReasoningEffort)
 	}
-	agent := agentuc.NewAgent(characterService, model, agentuc.AgentConfig{Workers: cfg.Agent.Workers, MaxTurns: cfg.Agent.MaxTurns, MaxSessions: cfg.Agent.MaxSessions, Timeout: cfg.Agent.RequestTimeout})
+	// The wizard's chats are in the database when there is one, so that a
+	// restart keeps them and a second process can answer for them. Without
+	// one they are in memory, like everything else in such a process.
+	var agentStore agentuc.Store
+	if pool != nil {
+		agentStore = postgres.NewAgentStore(pool)
+	}
+	agent := agentuc.NewAgent(characterService, model, agentuc.AgentConfig{Workers: cfg.Agent.Workers, MaxTurns: cfg.Agent.MaxTurns, MaxSessions: cfg.Agent.MaxSessions, Timeout: cfg.Agent.RequestTimeout, Store: agentStore})
 
 	// Inbound adapters. The character routes are declared behind
 	// RequireSession, and the handler reads the owner from the account that

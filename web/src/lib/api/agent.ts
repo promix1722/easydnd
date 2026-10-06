@@ -17,6 +17,7 @@ export interface AgentSession {
   id: string
   folder: string
   status:
+    | 'opening'
     | 'queued'
     | 'running'
     | 'waiting'
@@ -47,9 +48,12 @@ export const listAgentSessions = () =>
   request<AgentSession[]>('/agent-sessions')
 export const getAgentSession = (id: string) =>
   request<AgentView>(`/agent-sessions/${encodeURIComponent(id)}`)
-// One long-poll request: what this tab holds goes up, and the answer is the
+/** How often an open chat asks the server what is new, in milliseconds. A
+ * value and not a constant so that tests need not wait for it. */
+export const polling = { every: 1000 }
+// One poll: what this tab holds goes up, and the answer -- at once -- is the
 // whole session if its revision moved, the events past `after` if only those
-// did, or nothing (204) once the server has waited. See docs/long-polling.md.
+// did, or nothing (204). See docs/polling.md.
 export const pollAgentSession = (
   id: string,
   revision: number,
@@ -60,22 +64,28 @@ export const pollAgentSession = (
     `/agent-sessions/${encodeURIComponent(id)}?revision=${revision}&after=${after}`,
     { signal },
   )
-export function createAgentSession(
-  files: File[],
-  instructions: string,
-  folder?: string,
-  rules?: RulesLock,
-  unattended = false,
-) {
+/** Opens a chat: one question in it, no rules and no character yet. */
+export const openAgentSession = (folder?: string) =>
+  request<AgentView>(`/agent-sessions${folder ? `?folder=${encodeURIComponent(folder)}` : ''}`, {
+    method: 'POST',
+  })
+/** Answers an opened chat's first question. */
+export const chooseAgentRules = (id: string, revision: number, rules: RulesLock) =>
+  request<AgentView>(`/agent-sessions/${encodeURIComponent(id)}/control`, {
+    method: 'POST',
+    body: { revision, action: 'rules', rules },
+  })
+/** An opened chat's first message, with the sheet if there is one. It is
+ * where the character begins. */
+export function startAgentSession(id: string, revision: number, files: File[], instructions: string) {
   const formData = new FormData()
   for (const file of files) formData.append('files', file)
   formData.append('instructions', instructions)
-  if (rules) formData.append('rules', JSON.stringify(rules))
-  if (unattended) formData.append('unattended', 'true')
-  return request<AgentView>(
-    `/agent-sessions${folder ? `?folder=${encodeURIComponent(folder)}` : ''}`,
-    { method: 'POST', formData },
-  )
+  formData.append('revision', String(revision))
+  return request<AgentView>(`/agent-sessions/${encodeURIComponent(id)}/files`, {
+    method: 'POST',
+    formData,
+  })
 }
 export const controlAgent = (
   id: string,

@@ -25,7 +25,9 @@ click, no account, nothing stored beyond the group roster a guest asks to be
 named in, and nothing that survives it. **Characters and the folders they are
 filed in still live in memory** and are wiped by a restart. See
 [Authentication](docs/backend.md#authentication) and
-[Folders](docs/backend.md#folders).
+[Folders](docs/backend.md#folders). **AI Wizard chats are in PostgreSQL**,
+kept for a day after they were last used -- so a chat outlives the restart
+that takes its character; see [Session lifetime](docs/agent.md#session-lifetime).
 
 **Groups** are the second main section: a table of people with three ranks --
 owner, DM, player -- who invite each other with a link that works for 24 hours.
@@ -64,7 +66,7 @@ an account; use the account icon in the header to switch roles. See
 | [docs/packs.md](docs/packs.md) | JSON packs, version locks, extensible resources, configuration and migration APIs |
 | [docs/packs-plan.md](docs/packs-plan.md) | Original design and later milestones |
 | [docs/agent.md](docs/agent.md) | Character import tools, chat workspace, private content, configuration and resumability |
-| [docs/long-polling.md](docs/long-polling.md) | How the AI Wizard page follows a running import: one held request, a one-second wait |
+| [docs/polling.md](docs/polling.md) | How the AI Wizard page follows a running import: one request a second, answered at once |
 | [docs/known-caveats.md](docs/known-caveats.md) | Limits that are known and deliberate, starting with the AI Wizard not scaling horizontally |
 | [docs/backend.md](docs/backend.md) | The Go service: layout, layer rules, configuration, deployment |
 | [docs/web.md](docs/web.md) | The browser client: layout, layer rules, how it ships |

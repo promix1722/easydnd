@@ -1,13 +1,11 @@
 package character
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
@@ -27,11 +25,6 @@ func (h *Handler) agentAvailable(c *gin.Context) bool {
 	return true
 }
 
-// agentPollWait is how long AgentGet holds an up-to-date reader. One second is
-// far inside every timeout between the browser and this handler, so a held
-// poll needs no proxy configuration, heartbeat or deadline override.
-const agentPollWait = time.Second
-
 func (h *Handler) agentResult(c *gin.Context, s agentuc.AgentSession, err error) {
 	c.Header("Cache-Control", "no-store")
 	if err != nil {
@@ -42,6 +35,14 @@ func (h *Handler) agentResult(c *gin.Context, s agentuc.AgentSession, err error)
 }
 func (h *Handler) AgentCreate(c *gin.Context) {
 	if !h.agentAvailable(c) {
+		return
+	}
+	// No form at all is the wizard being opened: a chat with one question in
+	// it. A form is the older, single request that also answers that question
+	// and sends the first message.
+	if !strings.HasPrefix(c.ContentType(), "multipart/") {
+		s, err := h.agent.Open(c.Request.Context(), h.owner(c), folderOf(c), helpers.Locale(c))
+		h.agentResult(c, s, err)
 		return
 	}
 	files, ok := readAgentFiles(c)
@@ -76,13 +77,11 @@ func (h *Handler) AgentGet(c *gin.Context) {
 		h.agentResult(c, s, err)
 		return
 	}
-	// Long polling: the reader says what it holds and is answered when that is
-	// out of date, or with 204 after agentPollWait. See docs/long-polling.md.
+	// Polling: the reader says what it holds and is answered at once with what
+	// it lacks, or with 204. See docs/polling.md.
 	revision, _ := strconv.Atoi(raw)
 	after, _ := strconv.Atoi(c.Query("after"))
-	ctx, cancel := context.WithTimeout(c.Request.Context(), agentPollWait)
-	defer cancel()
-	s, full, changed, err := h.agent.Wait(ctx, h.owner(c), c.Param("id"), revision, after)
+	s, full, changed, err := h.agent.Poll(c.Request.Context(), h.owner(c), c.Param("id"), revision, after)
 	switch {
 	case err != nil || full:
 		h.agentResult(c, s, err)
@@ -100,12 +99,23 @@ func (h *Handler) AgentControl(c *gin.Context) {
 		return
 	}
 	var p struct {
-		Action   string `json:"action"`
-		Text     string `json:"text"`
-		Revision int    `json:"revision"`
+		Rules    *helpers.RulesLock `json:"rules"`
+		Action   string             `json:"action"`
+		Text     string             `json:"text"`
+		Revision int                `json:"revision"`
 	}
 	if err := c.ShouldBindJSON(&p); err != nil {
 		helpers.FormatError(c, types.NewValidationError("invalid control"))
+		return
+	}
+	// The answer to an opened chat's first question: which rules.
+	if p.Action == "rules" {
+		if p.Rules == nil || p.Rules.Domain().Validate() != nil {
+			helpers.FormatError(c, types.NewValidationError("select rules before starting").Because("agent.rulesRequired"))
+			return
+		}
+		s, err := h.agent.Rules(h.owner(c), c.Param("id"), p.Revision, p.Rules.Domain())
+		h.agentResult(c, s, err)
 		return
 	}
 	s, err := h.agent.Control(h.owner(c), c.Param("id"), p.Action, p.Text, p.Revision)

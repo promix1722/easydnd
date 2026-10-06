@@ -46,7 +46,7 @@ func (reviewModel) Respond(_ context.Context, r agentuc.AgentRequest, _ func(str
 	}
 	return agentuc.AgentResponse{Calls: []agentuc.AgentCall{{ID: "name", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Hero"}`}, {ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name"]}`}, {ID: "review", Name: "prepare_review", Arguments: `{"text":"Review","allow_incomplete":true}`}}}, nil
 }
-func TestImportHTTPUploadResumeOwnershipAndLongPoll(t *testing.T) {
+func TestImportHTTPUploadResumeOwnershipAndPoll(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	source, err := catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "..", "..", "data", "srd_5.1")}, nil, "")
 	if err != nil {
@@ -119,7 +119,7 @@ func TestImportHTTPUploadResumeOwnershipAndLongPoll(t *testing.T) {
 	if response.StatusCode != 404 {
 		t.Fatalf("foreign session read=%d", response.StatusCode)
 	}
-	// poll is one long-poll request from a reader holding (revision, after).
+	// poll is one poll from a reader holding (revision, after).
 	poll := func(revision, after int) (int, string) {
 		t.Helper()
 		response, err := http.Get(fmt.Sprintf("%s/sessions/%s?revision=%d&after=%d", server.URL, view.Session.ID, revision, after))
@@ -133,7 +133,7 @@ func TestImportHTTPUploadResumeOwnershipAndLongPoll(t *testing.T) {
 	current, _ := agent.Get(domain.OwnerID("owner"), view.Session.ID)
 	// A reader on an older revision is behind on more than events: it gets
 	// the whole session, at once.
-	status, body := poll(current.Revision-1, 2)
+	status, body := poll(current.Revision-1, 3)
 	if status != 200 || !strings.Contains(body, `"session"`) || !strings.Contains(body, `"characterId":"chr_`) || !strings.Contains(body, `"status":"review"`) {
 		t.Fatalf("bad recovery snapshot %d %s", status, body)
 	}
@@ -145,24 +145,22 @@ func TestImportHTTPUploadResumeOwnershipAndLongPoll(t *testing.T) {
 	var tail struct {
 		Events []agentuc.AgentEvent `json:"events"`
 	}
-	status, body = poll(current.Revision, 2)
+	status, body = poll(current.Revision, 3)
 	if err := json.Unmarshal([]byte(body), &tail); status != 200 || err != nil || strings.Contains(body, `"session"`) ||
-		len(tail.Events) != len(current.Events)-2 || tail.Events[0].ID != 3 {
+		len(tail.Events) != len(current.Events)-3 || tail.Events[0].ID != 4 {
 		t.Fatalf("bad tail %d %s", status, body)
 	}
-	// Up to date, it is held for the wait and told nothing.
+	// Up to date, it is told nothing, and at once: nothing is held.
 	started := time.Now()
-	if status, body = poll(current.Revision, len(current.Events)); status != 204 || body != "" || time.Since(started) < 900*time.Millisecond {
+	if status, body = poll(current.Revision, len(current.Events)); status != 204 || body != "" || time.Since(started) > 500*time.Millisecond {
 		t.Fatalf("idle poll = %d %q after %s", status, body, time.Since(started))
 	}
-	// A change during the wait answers it early.
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		_, _ = agent.Control(domain.OwnerID("owner"), view.Session.ID, "message", "One more thing", current.Revision)
-	}()
-	started = time.Now()
-	if status, body = poll(current.Revision, len(current.Events)); status != 200 || !strings.Contains(body, "One more thing") || time.Since(started) > 900*time.Millisecond {
-		t.Fatalf("woken poll = %d %q after %s", status, body, time.Since(started))
+	// A change is in the next poll's answer.
+	if _, err = agent.Control(domain.OwnerID("owner"), view.Session.ID, "message", "One more thing", current.Revision); err != nil {
+		t.Fatal(err)
+	}
+	if status, body = poll(current.Revision, len(current.Events)); status != 200 || !strings.Contains(body, "One more thing") {
+		t.Fatalf("poll after a change = %d %q", status, body)
 	}
 	request, _ = http.NewRequest("GET", server.URL+"/sessions/"+view.Session.ID, nil)
 	response, err = http.DefaultClient.Do(request)
@@ -174,17 +172,100 @@ func TestImportHTTPUploadResumeOwnershipAndLongPoll(t *testing.T) {
 	if response.StatusCode != 200 || !bytes.Contains(b, []byte("Hero")) {
 		t.Fatalf("reload failed %s", b)
 	}
-	// A discarded chat answers the poll that was waiting on it, with 404.
-	current, _ = agent.Get(domain.OwnerID("owner"), view.Session.ID)
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		_, _ = agent.Control(domain.OwnerID("owner"), view.Session.ID, "discard", "", current.Revision)
-	}()
-	for status = 200; status == 200; current, _ = agent.Get(domain.OwnerID("owner"), view.Session.ID) {
-		status, body = poll(current.Revision, len(current.Events))
+	// A discarded chat answers its next poll with 404.
+	// The message above started turns; a discard is only accepted at the
+	// revision the page holds, so wait for them to end.
+	for current, _ = agent.Get(domain.OwnerID("owner"), view.Session.ID); current.Status == "queued" || current.Status == "running"; current, _ = agent.Get(domain.OwnerID("owner"), view.Session.ID) {
+		time.Sleep(time.Millisecond)
 	}
-	if status != 404 {
+	if _, err = agent.Control(domain.OwnerID("owner"), view.Session.ID, "discard", "", current.Revision); err != nil {
+		t.Fatal(err)
+	}
+	if status, body = poll(current.Revision, len(current.Events)); status != 404 {
 		t.Fatalf("poll of a discarded chat = %d %s", status, body)
+	}
+}
+
+// The wizard as the page drives it: a chat is opened with one question in it,
+// the rules are its answer, and the first message is where the character
+// begins. Every step is an event the page reads back.
+func TestImportHTTPOpenedChatIsAnsweredInSteps(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	source, err := catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "..", "..", "data", "srd_5.1")}, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, nil, slog.New(slog.DiscardHandler))
+	cat, err := source.Load(context.Background(), rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc.SetPackAccess(testAgentAccess{})
+	agent := agentuc.NewAgent(svc, reviewModel{}, agentuc.AgentConfig{Workers: 1})
+	defer agent.Close()
+	h := api.New(svc, slog.New(slog.DiscardHandler)).WithAgent(agent)
+	r := gin.New()
+	r.Use(func(c *gin.Context) { middleware.SetUser(c, user.User{ID: "owner"}) })
+	r.POST("/sessions", h.AgentCreate)
+	r.POST("/sessions/:id/files", h.AgentFiles)
+	r.POST("/sessions/:id/control", h.AgentControl)
+	server := httptest.NewServer(r)
+	defer server.Close()
+	var view struct {
+		Session agentuc.AgentSession `json:"session"`
+	}
+	send := func(path, contentType string, body io.Reader) int {
+		t.Helper()
+		response, err := http.Post(server.URL+path, contentType, body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		if response.StatusCode == 200 {
+			if err := json.NewDecoder(response.Body).Decode(&view); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return response.StatusCode
+	}
+	message := func(text string) (string, io.Reader) {
+		var form bytes.Buffer
+		writer := multipart.NewWriter(&form)
+		_ = writer.WriteField("revision", fmt.Sprint(view.Session.Revision))
+		_ = writer.WriteField("instructions", text)
+		_ = writer.Close()
+		return writer.FormDataContentType(), &form
+	}
+	if status := send("/sessions", "application/json", nil); status != 200 || view.Session.Status != "opening" ||
+		len(view.Session.Events) != 1 || view.Session.Events[0].Kind != "opening" || view.Session.CharacterID != "" {
+		t.Fatalf("open: %d %+v", status, view.Session)
+	}
+	id := view.Session.ID
+	if listed := agent.List("owner"); len(listed) != 1 {
+		t.Fatalf("an opened chat is not offered to be reopened: %v", listed)
+	}
+	// No rules, no start.
+	contentType, form := message("A hero")
+	if status := send("/sessions/"+id+"/files", contentType, form); status != 400 {
+		t.Fatalf("a first message before the rules = %d", status)
+	}
+	lock, _ := json.Marshal(map[string]any{"action": "rules", "revision": view.Session.Revision, "rules": helpers.RulesLockOf(cat.Lock)})
+	if status := send("/sessions/"+id+"/control", "application/json", bytes.NewReader(lock)); status != 200 || view.Session.Status != "opening" ||
+		len(view.Session.Events) != 2 || view.Session.Events[1].Kind != "rules" {
+		t.Fatalf("rules: %d %+v", status, view.Session)
+	}
+	contentType, form = message("A hero")
+	if status := send("/sessions/"+id+"/files", contentType, form); status != 200 || view.Session.CharacterID == "" ||
+		len(view.Session.Events) != 3 || view.Session.Events[2].Kind != "user" || view.Session.Events[2].Text != "A hero" {
+		t.Fatalf("first message: %d %+v", status, view.Session)
+	}
+	// The rules are final from the first message on.
+	lock, _ = json.Marshal(map[string]any{"action": "rules", "revision": view.Session.Revision, "rules": helpers.RulesLockOf(cat.Lock)})
+	if status := send("/sessions/"+id+"/control", "application/json", bytes.NewReader(lock)); status != 400 {
+		t.Fatalf("rules after the first message = %d", status)
+	}
+	if _, err := svc.Repository().Get(context.Background(), view.Session.CharacterID); err != nil {
+		t.Fatal(err)
 	}
 }
 

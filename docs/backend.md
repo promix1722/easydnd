@@ -1664,7 +1664,9 @@ correct.
 
 Accounts, their passkeys, their linked external identities and the groups they
 play in are stored in PostgreSQL -- AWS RDS in production -- by
-`internal/adapter/repository/postgres`. Five tables:
+`internal/adapter/repository/postgres`. Five tables (rule packs and AI Wizard
+chats are kept there too, and are described with their own features:
+[packs.md](packs.md), [agent.md](agent.md#session-lifetime)):
 
 | Table | Holds |
 |---|---|
@@ -2330,12 +2332,18 @@ The optional import agent uses a fixed Go worker pool and an OpenAI Responses
 adapter behind the `AgentModel` port. Its authenticated `/v1/agent-sessions`
 routes hold the conversation; the character it builds is an ordinary one in
 the ordinary repository from the first message, committed to after every tool
-call. Sessions, source bytes and immutable private packs
-are process-local, so browser reload resumes but server restart does not.
+call. Sessions and their source bytes are in PostgreSQL (`agent_sessions`,
+`agent_events`, `agent_files`) behind the `Store` port declared beside
+`AgentModel`; a turn is run by whichever API process claimed it under a
+lease, and a process that stops gives its turn back to the queue. The wizard
+also owns the service's only timer: once a second it looks for a turn queued
+by another process, and every ten minutes it deletes the chats nobody has
+used for a day. The character and the private packs a chat makes are still
+process-local, so a restart keeps the chat and loses what it built.
 See [agent.md](agent.md) for tool contracts, lifecycle, bounds and the `agent`
 YAML configuration. The nginx upload-limit change must be installed separately
 from a release. The browser follows a session by
-[long polling](long-polling.md), which needs no proxy configuration; an idle
+[polling](polling.md) once a second, which needs no proxy configuration; an idle
 poll -- a `GET` answered `204` -- is logged at Debug rather than Info, since
 every open wizard tab sends one a second. The wizard is also why the API
 [runs as one process](known-caveats.md).

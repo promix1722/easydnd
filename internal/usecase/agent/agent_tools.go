@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
@@ -360,6 +361,9 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		if strings.TrimSpace(args.Text) == "" {
 			return nil, fmt.Errorf("question required")
 		}
+		if err := spokenIn(s.Locale, args.Text+" "+strings.Join(args.Options, " ")); err != nil {
+			return nil, err
+		}
 		if len(args.Options) > 10 {
 			return nil, fmt.Errorf("offer at most ten concise answers")
 		}
@@ -368,12 +372,17 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 				return nil, fmt.Errorf("invalid answer option")
 			}
 		}
-		s.Status = "waiting"
+		if err := setStatus(s, "waiting"); err != nil {
+			return nil, err
+		}
 		s.asked = s.offered
 		addAgentEvent(s, "question", args.Text, "", nil)
 		s.Events[len(s.Events)-1].Options = append([]string(nil), args.Options...)
 		return map[string]bool{"waiting": true}, nil
 	case "prepare_review":
+		if err := spokenIn(s.Locale, args.Text); err != nil {
+			return nil, err
+		}
 		if len(s.Files) > 0 && len(s.expected) == 0 {
 			return nil, fmt.Errorf("read all source pages and call plan_import with every documented fact before review")
 		}
@@ -433,7 +442,9 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 			return !strings.Contains(key, ":") && overridePath(key) && !pathWritten(pruned, key)
 		})
 		s.Log = pruned
-		s.Status = "review"
+		if err := setStatus(s, "review"); err != nil {
+			return nil, err
+		}
 		addAgentEvent(s, "assistant", args.Text, "", nil)
 		// Nobody was asked, so the handoff says what was left for the owner.
 		if s.Unattended && len(open) > 0 {
@@ -2362,4 +2373,29 @@ func clearImportedInventory(log domain.Log, placement string) domain.Log {
 	updated := log.Clone()
 	_ = updated.Append(domain.Event{Type: domain.EventChange, Observed: true, Changes: []domain.Change{{Path: path, Op: domain.OpSet, Value: domain.SlugListValue(nil)}}})
 	return updated
+}
+
+// spokenIn refuses what the assistant is about to say to the owner when it is
+// not in the language they chose for the interface. The instructions say so
+// and were not followed: a Russian sheet read in an English chat ended in a
+// Russian summary. It is told by the script, which is all that separates the
+// two languages shipped, and by the majority of letters, so that a name
+// quoted from the sheet does not count against a sentence.
+func spokenIn(locale rules.Locale, text string) error {
+	cyrillic, latin := 0, 0
+	for _, r := range text {
+		switch {
+		case unicode.Is(unicode.Cyrillic, r):
+			cyrillic++
+		case unicode.Is(unicode.Latin, r):
+			latin++
+		}
+	}
+	switch {
+	case locale == "en" && cyrillic > latin:
+		return fmt.Errorf("not sent: write this in English, the language the user chose for the interface, whatever language the sources are in. Names from the sheet stay as printed")
+	case locale == "ru" && latin > cyrillic:
+		return fmt.Errorf("not sent: write this in Russian, the language the user chose for the interface, whatever language the sources are in. Names from the sheet stay as printed")
+	}
+	return nil
 }

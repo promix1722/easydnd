@@ -10,7 +10,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -110,8 +112,12 @@ type AgentSession struct {
 	Generation  int               `json:"-"`
 	Input       []json.RawMessage `json:"-"`
 	Turns       int               `json:"-"`
-	busy        bool
-	cancel      context.CancelFunc
+	// rules is the answer to the opening question, and chosen that it was
+	// given: the default rules are an answer too, and their lock is empty.
+	rules  pack.Lock
+	chosen bool
+	// count is how many of Events the store already holds.
+	count int
 }
 type AgentCall struct{ ID, Name, Arguments string }
 type AgentResponse struct {
@@ -143,19 +149,22 @@ type AgentModel interface {
 type AgentConfig struct {
 	Workers, MaxTurns, MaxSessions int
 	Timeout                        time.Duration
+	// Store is where sessions are kept; nil keeps them in this process.
+	Store Store
 }
+
+// Agent runs the wizard's turns. It keeps no session of its own: each one
+// lives in the Store, a turn is worked on by whichever instance claimed it,
+// and every reader is answered from the Store. See docs/agent.md.
 type Agent struct {
-	mu       sync.Mutex
-	sessions map[string]*AgentSession
-	// views is what readers see: a copy of each session, republished whenever
-	// it changes. mu is held for as long as a response's tool calls take --
-	// seconds -- and a page that only wants to show the chat, or list the
-	// chats, must not queue behind that.
-	viewMu sync.RWMutex
-	views  map[string]AgentSession
-	// changed is closed and replaced, under viewMu, whenever views changes:
-	// the broadcast a long-polling reader sleeps on. See docs/long-polling.md.
-	changed chan struct{}
+	store Store
+	// instance names this process in a lease. A new one each start: a turn
+	// left running by the last process is taken over when its lease runs out.
+	instance string
+	// local guards running.
+	local sync.Mutex
+	// running is the turns this process has in flight, and how to stop each.
+	running map[string]context.CancelFunc
 	service *charuc.Service
 	model   AgentModel
 	config  AgentConfig
@@ -164,6 +173,17 @@ type Agent struct {
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
 }
+
+const (
+	// leaseMargin is how long past a turn's own deadline its lease runs.
+	// ponytail: no heartbeat, so a crashed server's turn waits out the whole
+	// lease (the request timeout plus this); add one if that wait matters.
+	leaseMargin = 30 * time.Second
+	// sessionIdle is how long an unused chat is kept.
+	sessionIdle   = 24 * time.Hour
+	sweepInterval = 10 * time.Minute
+	storeTimeout  = 10 * time.Second
+)
 
 func NewAgent(service *charuc.Service, model AgentModel, cfg AgentConfig) *Agent {
 	if cfg.Workers <= 0 {
@@ -178,13 +198,47 @@ func NewAgent(service *charuc.Service, model AgentModel, cfg AgentConfig) *Agent
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = 2 * time.Minute
 	}
+	if cfg.Store == nil {
+		cfg.Store = NewMemoryStore()
+	}
+	var token [16]byte
+	_, _ = rand.Read(token[:])
 	ctx, cancel := context.WithCancel(context.Background())
-	a := &Agent{views: map[string]AgentSession{}, changed: make(chan struct{}), sessions: map[string]*AgentSession{}, service: service, model: model, config: cfg, wake: make(chan struct{}, 1), ctx: ctx, cancel: cancel}
+	a := &Agent{store: cfg.Store, instance: hex.EncodeToString(token[:]), running: map[string]context.CancelFunc{}, service: service, model: model, config: cfg, wake: make(chan struct{}, 1), ctx: ctx, cancel: cancel}
 	for i := 0; i < cfg.Workers; i++ {
 		a.wg.Add(1)
 		go a.worker()
 	}
+	a.wg.Add(1)
+	go a.tick()
 	return a
+}
+
+// tick is what makes several processes one wizard: every second a worker
+// looks for a turn queued elsewhere or left by a process that died, and every
+// sweepInterval the chats nobody has used for a day are deleted.
+func (a *Agent) tick() {
+	defer a.wg.Done()
+	look, sweep := time.NewTicker(time.Second), time.NewTicker(sweepInterval)
+	defer look.Stop()
+	defer sweep.Stop()
+	a.signal()
+	for {
+		if _, err := a.store.Sweep(a.ctx, sessionIdle); err != nil && a.ctx.Err() == nil {
+			a.service.Logger().Warn("AI wizard sweep failed", "error", err)
+		}
+	wait:
+		for {
+			select {
+			case <-a.ctx.Done():
+				return
+			case <-look.C:
+				a.signal()
+			case <-sweep.C:
+				break wait
+			}
+		}
+	}
 }
 func (a *Agent) Close()         { a.cancel(); a.wg.Wait() }
 func (a *Agent) Enabled() bool  { return a.model != nil }
@@ -202,12 +256,73 @@ func addAgentEvent(s *AgentSession, kind, text, tool string, data any) {
 	}
 	s.Events = append(s.Events, e)
 }
-func (a *Agent) owned(owner domain.OwnerID, id string) (*AgentSession, error) {
-	s := a.sessions[id]
-	if s == nil || s.Owner != owner {
-		return nil, types.NewNotFoundError("import session not found").Because("agent.notFound")
+
+// document is the part of a session only this package reads back.
+type document struct {
+	Folder            domain.FolderID
+	CharacterID       domain.ID
+	Unattended        bool
+	Files             []AgentFile
+	Manual            []AgentManual
+	Assumptions       []string
+	Locale            rules.Locale
+	Log               domain.Log
+	Input             []json.RawMessage
+	Turns             int
+	Expected, Nudged  []string
+	Printed           map[string]int
+	Spells, Prepared  []string
+	Scores            map[rules.Ability]int
+	Offered, Asked    bool
+	ClassLevels       map[rules.Slug]int
+	CharacterRevision int
+	Operations        map[string]agentOperation
+	Rules             pack.Lock
+	Chosen            bool
+}
+
+// encode is a session as the store keeps it. pending are the calls of the
+// response being worked through that have not run yet: each is stored as
+// answered "not run", because the provider rejects a transcript with an
+// unanswered call and whoever continues from the stored one must be able to
+// send it.
+func encode(s *AgentSession, pending []AgentCall) Record {
+	input := s.Input
+	if len(pending) > 0 {
+		input = append([]json.RawMessage(nil), input...)
+		for _, call := range pending {
+			input = append(input, raw(map[string]any{"type": "function_call_output", "call_id": call.ID, "output": string(agentError(errInterrupted))}))
+		}
 	}
+	return Record{ID: s.ID, Owner: s.Owner, Status: s.Status, Revision: s.Revision, Generation: s.Generation, Finished: s.Finished, Created: s.Created, Count: s.count, Events: s.Events,
+		Document: raw(document{Folder: s.Folder, CharacterID: s.CharacterID, Unattended: s.Unattended, Files: s.Files, Manual: s.Manual, Assumptions: s.Assumptions, Locale: s.Locale, Log: s.Log, Input: input, Turns: s.Turns,
+			Expected: s.expected, Nudged: s.nudged, Printed: s.printed, Spells: s.spells, Prepared: s.prepared, Scores: s.scores, Offered: s.offered, Asked: s.asked, ClassLevels: s.classLevels, CharacterRevision: s.characterRevision, Operations: s.operations, Rules: s.rules, Chosen: s.chosen})}
+}
+
+var errInterrupted = errors.New("not run: the turn was interrupted; send it again if it is still needed")
+
+func decode(rec Record) (*AgentSession, error) {
+	var d document
+	if err := json.Unmarshal(rec.Document, &d); err != nil {
+		return nil, types.WrapServerError(err, "decode import session")
+	}
+	s := &AgentSession{ID: rec.ID, Owner: rec.Owner, Status: rec.Status, Revision: rec.Revision, Generation: rec.Generation, Finished: rec.Finished, Created: rec.Created, count: rec.Count,
+		Events: append([]AgentEvent{}, rec.Events...), Files: append([]AgentFile{}, d.Files...), Manual: append([]AgentManual{}, d.Manual...), Assumptions: append([]string{}, d.Assumptions...),
+		Folder: d.Folder, CharacterID: d.CharacterID, Unattended: d.Unattended, Locale: d.Locale, Log: d.Log, Input: d.Input, Turns: d.Turns,
+		expected: d.Expected, nudged: d.Nudged, printed: d.Printed, spells: d.Spells, prepared: d.Prepared, scores: d.Scores, offered: d.Offered, asked: d.Asked, classLevels: d.ClassLevels, characterRevision: d.CharacterRevision, operations: d.Operations, rules: d.Rules, chosen: d.Chosen}
 	return s, nil
+}
+
+// load reads a session for its owner; anybody else's does not exist.
+func (a *Agent) load(owner domain.OwnerID, id string) (*AgentSession, error) {
+	rec, err := a.store.Get(a.ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if rec.Owner != owner {
+		return nil, ErrSessionNotFound()
+	}
+	return decode(rec)
 }
 func copyAgentSession(s *AgentSession) AgentSession {
 	out := *s
@@ -228,24 +343,17 @@ func copyAgentSession(s *AgentSession) AgentSession {
 	out.Log = s.Log.Clone()
 	out.Input = nil
 	out.operations = nil
-	out.cancel = nil
 	return out
 }
 
-// publish makes a session's current state what readers see. Called with mu
-// held, after anything a reader should learn of.
-func (a *Agent) publish(s *AgentSession) {
-	v := copyAgentSession(s)
-	a.viewMu.Lock()
-	a.views[s.ID] = v
-	a.notify()
-	a.viewMu.Unlock()
-}
-
-// notify wakes every Wait. Called with viewMu held for writing.
-func (a *Agent) notify() {
-	close(a.changed)
-	a.changed = make(chan struct{})
+// stop cancels the turn this process has in flight for a session, if any. A
+// turn running elsewhere finds out at its next write, which the store refuses.
+func (a *Agent) stop(id string) {
+	a.local.Lock()
+	if cancel := a.running[id]; cancel != nil {
+		cancel()
+	}
+	a.local.Unlock()
 }
 
 func (a *Agent) Create(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, files []AgentFile, instructions string, selected ...pack.Lock) (AgentSession, error) {
@@ -257,94 +365,201 @@ func (a *Agent) CreateUnattended(ctx context.Context, owner domain.OwnerID, fold
 	return a.create(ctx, owner, folder, locale, files, instructions, true, selected...)
 }
 
-func (a *Agent) create(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, files []AgentFile, instructions string, unattended bool, selected ...pack.Lock) (AgentSession, error) {
+// Open starts a chat with nothing in it but the assistant's first question:
+// which rules. There is no character yet -- that begins with the owner's
+// first message -- so an opened chat that is walked away from costs a row.
+func (a *Agent) Open(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale) (AgentSession, error) {
+	s, err := a.opening(ctx, owner, folder, locale)
+	if err != nil {
+		return AgentSession{}, err
+	}
+	if err = a.keep(ctx, s, nil); err != nil {
+		return AgentSession{}, err
+	}
+	return copyAgentSession(s), nil
+}
+
+// opening is a session as it is the moment the wizard is opened.
+func (a *Agent) opening(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale) (*AgentSession, error) {
 	if a.model == nil {
-		return AgentSession{}, types.NewNotImplementedError("agent is not configured").Because("agent.disabled")
+		return nil, types.NewNotImplementedError("agent is not configured").Because("agent.disabled")
+	}
+	folder, err := a.service.ResolveFolder(ctx, owner, folder)
+	if err != nil {
+		return nil, err
+	}
+	var token [16]byte
+	if _, err = rand.Read(token[:]); err != nil {
+		return nil, err
+	}
+	s := &AgentSession{Created: a.service.Now(), ID: hex.EncodeToString(token[:]), Owner: owner, Folder: folder, Locale: locale, Status: "opening", Revision: 1, Files: []AgentFile{}, Events: []AgentEvent{}, Manual: []AgentManual{}, Assumptions: []string{}}
+	// The assistant's first words. An event like any other, so that the page
+	// draws the whole conversation one way from its first line.
+	addAgentEvent(s, "opening", "", "", nil)
+	return s, nil
+}
+
+// keep stores a new session, with the attachments its first message brought.
+func (a *Agent) keep(ctx context.Context, s *AgentSession, files []AgentFile) error {
+	rec := encode(s, nil)
+	rec.Files = files
+	ok, err := a.store.Create(ctx, rec, a.config.MaxSessions)
+	if err == nil && !ok {
+		err = types.NewValidationError("session capacity reached").Because("agent.capacity")
+	}
+	if err != nil {
+		return err
+	}
+	s.count = len(s.Events)
+	a.signal()
+	return nil
+}
+
+// choose answers the opening question: the rules the character is built
+// under. It may be answered again until the first message, which makes it
+// final; the answer that stands is the last.
+func (a *Agent) choose(ctx context.Context, s *AgentSession, selected pack.Lock) error {
+	if s.Status != "opening" {
+		return types.NewValidationError("session changed").Because("agent.changed")
+	}
+	var cat *catalog.Catalog
+	var err error
+	if !selected.IsZero() {
+		if a.service.PackAccess() == nil {
+			return types.NewAccessDeniedError("pack selection unavailable")
+		}
+		if err = a.service.PackAccess().AuthorizeLock(ctx, user.ID(s.Owner), selected, pack.Lock{}); err != nil {
+			return err
+		}
+		cat, err = catalog.LoadLocked(ctx, a.service.Source(), s.Locale, selected)
+	} else {
+		cat, err = a.service.Source().Load(ctx, s.Locale)
+	}
+	if err != nil {
+		return err
+	}
+	s.rules, s.chosen = cat.Lock.Clone(), true
+	chosen := []map[string]string{}
+	for _, release := range cat.Lock.Packs {
+		chosen = append(chosen, map[string]string{"id": release.ID, "version": release.Version})
+	}
+	addAgentEvent(s, "rules", "", "", map[string]any{"packs": chosen})
+	s.Revision++
+	return nil
+}
+
+// start is the owner's first message. It is where the character begins: the
+// chat has rules by now, and from here every tool call is committed to a
+// character that is already in the owner's list.
+func (a *Agent) start(ctx context.Context, s *AgentSession, files []AgentFile, instructions string) error {
+	if s.Status != "opening" {
+		return types.NewValidationError("session changed").Because("agent.changed")
+	}
+	if !s.chosen {
+		return types.NewValidationError("select rules before starting").Because("agent.rulesRequired")
 	}
 	if (len(files) == 0 && strings.TrimSpace(instructions) == "") || len(files) > 8 || len(instructions) > 16000 {
-		return AgentSession{}, types.NewValidationError("invalid import input").Because("agent.files")
+		return types.NewValidationError("invalid import input").Because("agent.files")
 	}
 	total := 0
 	names := map[string]bool{}
 	for _, f := range files {
 		total += len(f.Data)
 		if len(f.Data) == 0 || len(f.Name) > 200 || names[f.Name] {
-			return AgentSession{}, types.NewValidationError("invalid attachment").Because("agent.files")
+			return types.NewValidationError("invalid attachment").Because("agent.files")
 		}
 		names[f.Name] = true
 	}
 	if total > 20<<20 {
-		return AgentSession{}, types.NewValidationError("attachments too large").Because("agent.files")
+		return types.NewValidationError("attachments too large").Because("agent.files")
 	}
-	folder, err := a.service.ResolveFolder(ctx, owner, folder)
+	cat, err := catalog.LoadLocked(ctx, a.service.Source(), s.Locale, s.rules)
 	if err != nil {
-		return AgentSession{}, err
+		return err
 	}
-	var cat *catalog.Catalog
-	if len(selected) > 0 && !selected[0].IsZero() {
-		if a.service.PackAccess() == nil {
-			return AgentSession{}, types.NewAccessDeniedError("pack selection unavailable")
-		}
-		if err := a.service.PackAccess().AuthorizeLock(ctx, user.ID(owner), selected[0], pack.Lock{}); err != nil {
-			return AgentSession{}, err
-		}
-		cat, err = catalog.LoadLocked(ctx, a.service.Source(), locale, selected[0])
-	} else {
-		cat, err = a.service.Source().Load(ctx, locale)
-	}
-	if err != nil {
-		return AgentSession{}, err
-	}
-	var token [16]byte
-	if _, err = rand.Read(token[:]); err != nil {
-		return AgentSession{}, err
-	}
-	ownedFiles := append([]AgentFile(nil), files...)
-	for i := range ownedFiles {
-		ownedFiles[i].Data = append([]byte(nil), files[i].Data...)
-	}
-	s := &AgentSession{Unattended: unattended, Created: a.service.Now(), ID: hex.EncodeToString(token[:]), Owner: owner, Folder: folder, Locale: locale, Status: "queued", Revision: 1, Files: ownedFiles, Events: []AgentEvent{}, Manual: []AgentManual{}, Assumptions: []string{}}
 	// The same entries the builder writes for a new character: its name, then
 	// the rules it is built under. The wizard's character is an ordinary one
 	// from its first message, so it opens in the ordinary builder.
 	e := charuc.InitEvent(charuc.NewCharacter{Name: "…"})
-	e.RulesLock = cat.Lock.Clone()
+	e.RulesLock = s.rules.Clone()
 	log := domain.Log{}
 	_ = log.Append(e,
 		domain.Event{Type: domain.EventChange, Source: domain.GroupIdentity, Changes: []domain.Change{{Path: "identity.ruleset", Op: domain.OpSet, Value: domain.SlugValue(rules.Slug(cat.Ruleset))}}},
 		domain.Event{Type: domain.EventNote, Note: "import.session:" + s.ID})
-	s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": instructions + "\nCreate this single character from the description and any attached sources, using the selected rules lock. Read the build context first."}))
-	// The conversation opens with the rules, asked and answered before there
-	// was a session. Recorded as its first event so the transcript keeps it.
-	chosen := []map[string]string{}
-	for _, release := range cat.Lock.Packs {
-		chosen = append(chosen, map[string]string{"id": release.ID, "version": release.Version})
-	}
-	addAgentEvent(s, "rules", "", "", map[string]any{"packs": chosen})
-	addAgentEvent(s, "user", instructions, "", nil)
-	s.Events[len(s.Events)-1].Files = agentFileLabels(files)
 	// The repository can commit the initial log atomically. Do not fall back to
 	// Create + Commit, which leaves an empty character after a failed write.
 	repo, ok := a.service.Repository().(interface {
 		CreateWithLog(context.Context, domain.OwnerID, domain.FolderID, domain.Log) (domain.Character, error)
 	})
 	if !ok {
-		return AgentSession{}, types.NewNotImplementedError("atomic character creation unavailable")
+		return types.NewNotImplementedError("atomic character creation unavailable")
 	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	if len(a.sessions) >= a.config.MaxSessions {
-		return AgentSession{}, types.NewValidationError("session capacity reached").Because("agent.capacity")
+	created, err := repo.CreateWithLog(ctx, s.Owner, s.Folder, log)
+	if err != nil {
+		return err
 	}
-	created, err := repo.CreateWithLog(ctx, owner, folder, log)
+	s.CharacterID, s.Log, s.characterRevision = created.ID, created.Log.Clone(), created.Revision
+	s.Files = agentFileLabels(files)
+	s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": instructions + "\nCreate this single character from the description and any attached sources, using the selected rules lock. Read the build context first."}))
+	addAgentEvent(s, "user", instructions, "", nil)
+	s.Events[len(s.Events)-1].Files = agentFileLabels(files)
+	s.Revision++
+	return setStatus(s, "queued")
+}
+
+// create is a chat opened, given its rules and sent its first message in one
+// step: what the CLI and a client that asks its questions itself do.
+func (a *Agent) create(ctx context.Context, owner domain.OwnerID, folder domain.FolderID, locale rules.Locale, files []AgentFile, instructions string, unattended bool, selected ...pack.Lock) (AgentSession, error) {
+	s, err := a.opening(ctx, owner, folder, locale)
 	if err != nil {
 		return AgentSession{}, err
 	}
-	s.CharacterID, s.Log, s.characterRevision = created.ID, created.Log.Clone(), created.Revision
-	a.sessions[s.ID] = s
-	a.publish(s)
-	a.signal()
+	s.Unattended = unattended
+	var lock pack.Lock
+	if len(selected) > 0 {
+		lock = selected[0]
+	}
+	if err = a.choose(ctx, s, lock); err == nil {
+		err = a.start(ctx, s, files, instructions)
+	}
+	if err == nil {
+		err = a.keep(ctx, s, files)
+	}
+	if err != nil {
+		// No chat, so no character either: it was only ever the chat's.
+		if !s.CharacterID.IsZero() {
+			_ = a.service.Delete(ctx, owner, s.CharacterID)
+		}
+		return AgentSession{}, err
+	}
 	return copyAgentSession(s), nil
+}
+
+// Rules answers an opened chat's first question.
+func (a *Agent) Rules(owner domain.OwnerID, id string, revision int, selected pack.Lock) (AgentSession, error) {
+	return a.change(owner, id, func(s *AgentSession) ([]AgentFile, error) {
+		if s.Revision != revision {
+			return nil, types.NewValidationError("session changed").Because("agent.changed")
+		}
+		return nil, a.choose(a.ctx, s, selected)
+	})
+}
+
+// begin sends an opened chat its first message.
+func (a *Agent) begin(owner domain.OwnerID, id string, revision int, files []AgentFile, text string) (AgentSession, error) {
+	var made domain.ID
+	out, err := a.change(owner, id, func(s *AgentSession) ([]AgentFile, error) {
+		if s.Revision != revision {
+			return nil, types.NewValidationError("session changed").Because("agent.changed")
+		}
+		err := a.start(a.ctx, s, files, text)
+		made = s.CharacterID
+		return files, err
+	})
+	if err != nil && !made.IsZero() {
+		_ = a.service.Delete(a.ctx, owner, made)
+	}
+	return out, err
 }
 
 // pull re-reads the character, and reports whether the player has changed it
@@ -355,11 +570,24 @@ func (a *Agent) pull(ctx context.Context, s *AgentSession) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if !a.made(s, c) {
+		return false, types.NewNotFoundError("character not found")
+	}
 	if c.Revision == s.characterRevision {
 		return false, nil
 	}
 	s.Log, s.characterRevision = c.Log.Clone(), c.Revision
 	return true, nil
+}
+
+// made reports whether c is the character this session created. A session
+// outlives the process and a character id does not -- it is a counter that
+// starts again -- so after a restart the id a session holds can name a
+// different character, even one of the same owner's.
+func (a *Agent) made(s *AgentSession, c domain.Character) bool {
+	return c.Owner == s.Owner && slices.ContainsFunc(c.Log.Events, func(e domain.Event) bool {
+		return e.Type == domain.EventNote && e.Note == "import.session:"+s.ID
+	})
 }
 
 // push writes the working copy back, refusing if the player got there first.
@@ -380,7 +608,7 @@ func (a *Agent) call(ctx context.Context, s *AgentSession, name string, argument
 	held := s.Log
 	edited, err := a.pull(ctx, s)
 	if types.IsNotFound(err) {
-		s.Status = "failed"
+		_ = setStatus(s, "failed")
 		addAgentEvent(s, "status", "failed", "", nil)
 	}
 	if err != nil {
@@ -413,133 +641,167 @@ func (a *Agent) call(ctx context.Context, s *AgentSession, name string, argument
 	return result, err
 }
 func (a *Agent) Get(owner domain.OwnerID, id string) (AgentSession, error) {
-	a.viewMu.RLock()
-	defer a.viewMu.RUnlock()
-	v, ok := a.views[id]
-	if !ok || v.Owner != owner {
-		return AgentSession{}, types.NewNotFoundError("import session not found").Because("agent.notFound")
-	}
-	// A caller's own copy: the published one is shared by every reader.
-	return copyAgentSession(&v), nil
-}
-
-// Wait is Get for a reader that already holds the session at (revision,
-// after), after being the id of its last event: it returns once the published
-// session differs from that, or changed=false when ctx ends first. A moved
-// revision returns the whole session (full); otherwise only the events past
-// after, which is what keeps a streaming turn's answers small.
-func (a *Agent) Wait(ctx context.Context, owner domain.OwnerID, id string, revision, after int) (s AgentSession, full, changed bool, err error) {
-	for {
-		a.viewMu.RLock()
-		v, ok := a.views[id]
-		wake := a.changed
-		if !ok || v.Owner != owner {
-			a.viewMu.RUnlock()
-			return AgentSession{}, false, false, types.NewNotFoundError("import session not found").Because("agent.notFound")
-		}
-		if v.Revision != revision || after < 0 || after > len(v.Events) {
-			s = copyAgentSession(&v)
-			a.viewMu.RUnlock()
-			return s, true, true, nil
-		}
-		if after < len(v.Events) {
-			// Only the tail is copied: the events before it are the bulk of
-			// a long chat and the reader already has them.
-			v.Events = v.Events[after:]
-			s = copyAgentSession(&v)
-			a.viewMu.RUnlock()
-			return s, false, true, nil
-		}
-		a.viewMu.RUnlock()
-		select {
-		case <-ctx.Done():
-			return AgentSession{}, false, false, nil
-		case <-wake:
-		}
-	}
-}
-func (a *Agent) List(owner domain.OwnerID) []AgentSession {
-	a.viewMu.RLock()
-	defer a.viewMu.RUnlock()
-	out := []AgentSession{}
-	for _, v := range a.views {
-		if v.Owner == owner {
-			v.Events = nil
-			v.Files = nil
-			out = append(out, v)
-		}
-	}
-	return out
-}
-func (a *Agent) invalidate(s *AgentSession) {
-	s.Generation++
-	if s.cancel != nil {
-		s.cancel()
-	}
-	s.Revision++
-}
-func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision int) (AgentSession, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	s, err := a.owned(owner, id)
+	s, err := a.load(owner, id)
 	if err != nil {
 		return AgentSession{}, err
 	}
-	// Finishing closes the chat whatever it was doing and whatever revision
-	// the page last saw: it changes nothing a stale view could be wrong about.
-	if action == "finish" {
-		a.invalidate(s)
-		s.Finished = true
-		if s.Status == "queued" || s.Status == "running" {
-			s.Status = "paused"
-		}
-		a.publish(s)
-		return copyAgentSession(s), nil
+	return copyAgentSession(s), nil
+}
+
+// Poll is Get for a reader that already holds the session at (revision,
+// after), after being the id of its last event. A moved revision returns the
+// whole session (full); otherwise only the events past after, which is what
+// keeps a streaming turn's answers small; changed=false when there is nothing
+// the reader lacks. It never waits: the page asks again in a second. See
+// docs/polling.md.
+func (a *Agent) Poll(ctx context.Context, owner domain.OwnerID, id string, revision, after int) (s AgentSession, full, changed bool, err error) {
+	rec, err := a.store.Tail(ctx, id, after)
+	if err == nil && rec.Owner != owner {
+		err = ErrSessionNotFound()
 	}
-	if s.Finished || s.Revision != revision {
-		return AgentSession{}, types.NewValidationError("session changed").Because("agent.changed")
+	if err != nil {
+		return AgentSession{}, false, false, err
 	}
-	switch action {
-	case "stop":
-		a.invalidate(s)
-		s.Status = "paused"
-		addAgentEvent(s, "status", "paused", "", nil)
-	case "resume", "retry":
-		if len(s.Input) > 500 || transcriptSize(s.Input) > 2<<20 {
-			return AgentSession{}, types.NewValidationError("session conversation limit reached").Because("agent.limit")
+	if rec.Revision != revision || after < 0 || after > rec.Count {
+		s, err = a.Get(owner, id)
+		return s, true, true, err
+	}
+	return AgentSession{Events: rec.Events}, false, after < rec.Count, nil
+}
+func (a *Agent) List(owner domain.OwnerID) []AgentSession {
+	out := []AgentSession{}
+	records, err := a.store.List(a.ctx, owner)
+	if err != nil {
+		a.service.Logger().Warn("AI wizard list failed", "error", err)
+		return out
+	}
+	for _, rec := range records {
+		s, err := decode(rec)
+		if err != nil {
+			continue
 		}
-		a.invalidate(s)
-		s.Status = "queued"
-		s.Turns = 0
-		a.signal()
-	case "message":
-		if strings.TrimSpace(text) == "" || len(text) > 16000 || len(s.Input) > 500 || transcriptSize(s.Input) > 2<<20 {
-			return AgentSession{}, types.NewValidationError("invalid message")
+		// ponytail: a chat outlives a restart and its character does not, and
+		// the wizard reopens the latest unfinished chat -- so one whose
+		// character this process cannot find is left out. Drop this when
+		// characters are stored.
+		if c, err := a.service.Repository().Get(a.ctx, s.CharacterID); s.Status != "opening" && (err != nil || !a.made(s, c)) {
+			continue
 		}
-		a.invalidate(s)
-		s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": text}))
-		addAgentEvent(s, "user", text, "", nil)
-		s.Status = "queued"
-		s.Turns = 0
-		a.signal()
-	case "discard":
-		// Discarding the chat discards what it made. Leaving the chat any other
-		// way leaves the character where it is.
-		if err := a.service.Delete(a.ctx, owner, s.CharacterID); err != nil && !types.IsNotFound(err) {
+		v := copyAgentSession(s)
+		v.Events, v.Files = nil, nil
+		out = append(out, v)
+	}
+	return out
+}
+
+// invalidate fences whatever turn is in flight: its writes carry the
+// generation it claimed and the store refuses them from here on.
+func (a *Agent) invalidate(s *AgentSession) {
+	s.Generation++
+	s.Revision++
+}
+
+// change applies one owner's edit to a stored session under its row lock.
+func (a *Agent) change(owner domain.OwnerID, id string, edit func(*AgentSession) ([]AgentFile, error)) (AgentSession, error) {
+	var out AgentSession
+	err := a.store.Update(a.ctx, id, func(rec *Record) error {
+		if rec.Owner != owner {
+			return ErrSessionNotFound()
+		}
+		s, err := decode(*rec)
+		if err != nil {
+			return err
+		}
+		files, err := edit(s)
+		if err != nil {
+			return err
+		}
+		*rec = encode(s, nil)
+		rec.Files = files
+		out = copyAgentSession(s)
+		return nil
+	})
+	if err != nil {
+		return AgentSession{}, err
+	}
+	a.stop(id)
+	a.signal()
+	return out, nil
+}
+func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision int) (AgentSession, error) {
+	if action == "discard" {
+		s, err := a.load(owner, id)
+		if err != nil {
 			return AgentSession{}, err
 		}
-		a.invalidate(s)
-		delete(a.sessions, id)
-		a.viewMu.Lock()
-		delete(a.views, id)
-		a.notify()
-		a.viewMu.Unlock()
+		if s.Finished || s.Revision != revision {
+			return AgentSession{}, types.NewValidationError("session changed").Because("agent.changed")
+		}
+		// Discarding the chat discards what it made -- and only that: after a
+		// restart the id it holds may be another character's. Leaving the chat
+		// any other way leaves the character where it is.
+		if c, err := a.service.Repository().Get(a.ctx, s.CharacterID); err == nil && a.made(s, c) {
+			if err := a.service.Delete(a.ctx, owner, s.CharacterID); err != nil && !types.IsNotFound(err) {
+				return AgentSession{}, err
+			}
+		}
+		if err := a.store.Delete(a.ctx, id); err != nil {
+			return AgentSession{}, err
+		}
+		a.stop(id)
 		return copyAgentSession(s), nil
-	default:
-		return AgentSession{}, types.NewValidationError("unknown session control")
 	}
-	a.publish(s)
-	return copyAgentSession(s), nil
+	if action == "message" {
+		if s, err := a.load(owner, id); err == nil && s.Status == "opening" {
+			return a.begin(owner, id, revision, nil, text)
+		}
+	}
+	return a.change(owner, id, func(s *AgentSession) ([]AgentFile, error) {
+		// An opened chat has nothing to stop, resume or finish: it is waiting
+		// for its rules and its first message, which come by other doors.
+		if s.Status == "opening" {
+			return nil, types.NewValidationError("session changed").Because("agent.changed")
+		}
+		// Finishing closes the chat whatever it was doing and whatever revision
+		// the page last saw: it changes nothing a stale view could be wrong about.
+		if action == "finish" {
+			a.invalidate(s)
+			s.Finished = true
+			if s.Status == "queued" || s.Status == "running" {
+				return nil, setStatus(s, "paused")
+			}
+			return nil, nil
+		}
+		if s.Finished || s.Revision != revision {
+			return nil, types.NewValidationError("session changed").Because("agent.changed")
+		}
+		switch action {
+		case "stop":
+			a.invalidate(s)
+			// A stop is accepted in any state, a paused one included.
+			s.Status = "paused"
+			addAgentEvent(s, "status", "paused", "", nil)
+		case "resume", "retry":
+			if len(s.Input) > 500 || transcriptSize(s.Input) > 2<<20 {
+				return nil, types.NewValidationError("session conversation limit reached").Because("agent.limit")
+			}
+			a.invalidate(s)
+			s.Turns = 0
+			return nil, setStatus(s, "queued")
+		case "message":
+			if strings.TrimSpace(text) == "" || len(text) > 16000 || len(s.Input) > 500 || transcriptSize(s.Input) > 2<<20 {
+				return nil, types.NewValidationError("invalid message")
+			}
+			a.invalidate(s)
+			s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": text}))
+			addAgentEvent(s, "user", text, "", nil)
+			s.Turns = 0
+			return nil, setStatus(s, "queued")
+		default:
+			return nil, types.NewValidationError("unknown session control")
+		}
+		return nil, nil
+	})
 }
 func (a *Agent) Catalog(ctx context.Context, s AgentSession) (*catalog.Catalog, error) {
 	cat, err := catalog.LoadLocked(ctx, a.service.Source(), s.Locale, s.Log.RulesLock())
@@ -560,72 +822,115 @@ func (a *Agent) worker() {
 			return
 		case <-a.wake:
 		}
-		for {
-			if a.ctx.Err() != nil {
-				return
+		for a.ctx.Err() == nil {
+			// A turn this process is still unwinding is not taken again: its
+			// late tool call must not run beside the next turn's.
+			a.local.Lock()
+			busy := slices.Collect(maps.Keys(a.running))
+			a.local.Unlock()
+			rec, ok, err := a.store.Claim(a.ctx, a.instance, a.config.Timeout+leaseMargin, busy)
+			if err != nil && a.ctx.Err() == nil {
+				a.service.Logger().Warn("AI wizard claim failed", "error", err)
 			}
-			a.mu.Lock()
-			var s *AgentSession
-			for _, v := range a.sessions {
-				if v.Status == "queued" && !v.busy {
-					s = v
-					break
-				}
-			}
-			if s == nil {
-				a.mu.Unlock()
+			if err != nil || !ok {
 				break
 			}
-			s.busy = true
-			s.Status = "running"
-			s.Revision++
-			gen := s.Generation
 			ctx, cancel := context.WithTimeout(a.ctx, a.config.Timeout)
-			s.cancel = cancel
-			snap := copyAgentSession(s)
-			snap.Input = append([]json.RawMessage(nil), s.Input...)
-			snap.Files = append([]AgentFile(nil), s.Files...)
-			a.publish(s)
-			a.mu.Unlock()
+			a.local.Lock()
+			a.running[rec.ID] = cancel
+			a.local.Unlock()
 			a.signal()
-			a.run(ctx, &snap, gen)
+			a.turn(ctx, cancel, rec)
 			cancel()
-			a.mu.Lock()
-			if current := a.sessions[snap.ID]; current != nil {
-				current.busy = false
-				current.cancel = nil
-				if current.Status == "queued" {
-					a.signal()
-				}
-			}
-			a.mu.Unlock()
+			a.local.Lock()
+			delete(a.running, rec.ID)
+			a.local.Unlock()
+			a.signal()
 		}
 	}
 }
-func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
-	response, err := a.model.Respond(ctx, AgentRequest{Input: snap.Input, Files: snap.Files, Locale: snap.Locale.String(), Session: snap.ID, Unattended: snap.Unattended}, func(delta string) {
-		a.mu.Lock()
-		defer a.mu.Unlock()
-		s := a.sessions[snap.ID]
-		if s != nil && s.Generation == gen && len(s.Events) < 10000 {
-			addAgentEvent(s, "delta", delta, "", nil)
-			a.publish(s)
-		}
-	})
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	s := a.sessions[snap.ID]
-	if s == nil || s.Generation != gen {
+
+// turn is one claimed turn. The session it works on is this goroutine's own:
+// the lease is what keeps every other writer out, so nothing here is locked.
+func (a *Agent) turn(ctx context.Context, cancel context.CancelFunc, rec Record) {
+	s, err := decode(rec)
+	if err == nil {
+		s.Files, err = a.store.Files(ctx, s.ID)
+	}
+	if err != nil {
+		a.service.Logger().Error("AI wizard session unreadable", "session", rec.ID, "error", err)
 		return
 	}
-	defer a.publish(s)
+	// save stores the session as it stands and reports whether the turn is
+	// still this process's to continue.
+	save := func(pending []AgentCall, last bool) bool {
+		// A turn that ran out of time, or a process that is stopping, still
+		// has to say how it ended.
+		saving, done := context.WithTimeout(context.WithoutCancel(ctx), storeTimeout)
+		defer done()
+		// ponytail: the whole document is rewritten after every tool call (up
+		// to 2 MiB of transcript); store Input as rows if it shows.
+		rec := encode(s, pending)
+		if !last {
+			// A question or a review ends the turn in the middle of a batch,
+			// and the status goes with the turn's last save, not this one: a
+			// session stored as no longer running has given up its lease, and
+			// the last save -- the one that moves the revision the page is
+			// waiting on -- would be refused.
+			rec.Status = "running"
+		}
+		ok, err := a.store.Save(saving, rec, a.instance)
+		if err != nil {
+			a.service.Logger().Error("AI wizard save failed", "session", s.ID, "error", err)
+		}
+		if err != nil || !ok {
+			cancel()
+			return false
+		}
+		s.count = len(s.Events)
+		return true
+	}
+	// Before the model is asked anything: a chat kept across a restart has no
+	// character to build, and a request would be spent finding that out.
+	if c, err := a.service.Repository().Get(ctx, s.CharacterID); err != nil && ctx.Err() == nil || err == nil && !a.made(s, c) {
+		_ = setStatus(s, "failed")
+		s.Revision++
+		addAgentEvent(s, "status", "failed", "", nil)
+		save(nil, true)
+		return
+	}
+	held := true
+	response, err := a.model.Respond(ctx, AgentRequest{Input: s.Input, Files: s.Files, Locale: s.Locale.String(), Session: s.ID, Unattended: s.Unattended}, func(delta string) {
+		if !held || len(s.Events) >= 10000 {
+			return
+		}
+		e := AgentEvent{ID: len(s.Events) + 1, Kind: "delta", Text: delta}
+		if ok, err := a.store.Append(ctx, s.ID, a.instance, s.Generation, e); err != nil || !ok {
+			// Stopped, answered or taken over while the model was typing.
+			held = false
+			cancel()
+			return
+		}
+		s.Events = append(s.Events, e)
+		s.count = len(s.Events)
+	})
+	if !held {
+		return
+	}
 	if err == nil {
 		err = ctx.Err()
 	}
 	if err != nil {
-		s.Status = "failed"
-		s.Revision++
-		addAgentEvent(s, "status", "failed", "", nil)
+		if a.ctx.Err() != nil {
+			// The process is stopping. The turn is not lost with it: back in
+			// the queue, it is the next process's, or this one's restarted.
+			_ = setStatus(s, "queued")
+		} else {
+			_ = setStatus(s, "failed")
+			s.Revision++
+			addAgentEvent(s, "status", "failed", "", nil)
+		}
+		save(nil, true)
 		return
 	}
 	// Commit a complete response before executing any tool. Partial streamed
@@ -648,6 +953,8 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 			// transcript with an unanswered call -- but a response is one
 			// bounded batch, and nothing runs after the call that ended the turn.
 			switch {
+			case ctx.Err() != nil:
+				err = errInterrupted
 			case i >= 32:
 				err = fmt.Errorf("too many tool calls in one response; send the rest again")
 			case s.Status != "running":
@@ -694,8 +1001,11 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 		}
 		s.Events[len(s.Events)-1].Source = args.Source
 		s.Events[len(s.Events)-1].Assumption = args.Assumption
-		// Each call's writes are shown as it finishes, not when the batch does.
-		a.publish(s)
+		// Each call's writes are stored, and so shown, as it finishes, not
+		// when the batch does.
+		if !save(response.Calls[i+1:], false) {
+			return
+		}
 	}
 
 	s.Revision++
@@ -704,16 +1014,16 @@ func (a *Agent) run(ctx context.Context, snap *AgentSession, gen int) {
 			// The request demands a tool call, so this is a response cut short.
 			// It is not a question: waiting would leave the owner with nothing
 			// to answer. Paused has a Resume button.
-			s.Status = "paused"
+			_ = setStatus(s, "paused")
 			addAgentEvent(s, "status", "paused", "", nil)
 		} else if s.Turns >= a.config.MaxTurns || len(s.Input) > 500 || len(s.Events) > 10000 || transcriptSize(s.Input) > 2<<20 {
-			s.Status = "paused"
+			_ = setStatus(s, "paused")
 			addAgentEvent(s, "status", "budget", "", nil)
 		} else {
-			s.Status = "queued"
-			a.signal()
+			_ = setStatus(s, "queued")
 		}
 	}
+	save(nil, true)
 }
 
 func clip(text string) string {
@@ -755,47 +1065,44 @@ func transcriptSize(input []json.RawMessage) int {
 // AddFiles extends the same character's source set and fences an in-flight
 // response, just like a correction. Files remain private to this session.
 func (a *Agent) AddFiles(owner domain.OwnerID, id string, revision int, files []AgentFile, text string) (AgentSession, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	s, err := a.owned(owner, id)
+	if s, err := a.load(owner, id); err == nil && s.Status == "opening" {
+		return a.begin(owner, id, revision, files, text)
+	}
+	stored, err := a.store.Files(a.ctx, id)
 	if err != nil {
 		return AgentSession{}, err
 	}
-	if s.Revision != revision {
-		return AgentSession{}, types.NewValidationError("session changed").Because("agent.changed")
-	}
-	if len(files) == 0 || len(files)+len(s.Files) > 8 || len(text) > 16000 || len(s.Input) > 500 {
-		return AgentSession{}, types.NewValidationError("invalid attachments").Because("agent.files")
-	}
-	total := 0
-	names := map[string]bool{}
-	for _, f := range s.Files {
-		total += len(f.Data)
-		names[f.Name] = true
-	}
-	for _, f := range files {
-		total += len(f.Data)
-		if len(f.Data) == 0 || len(f.Name) > 200 || names[f.Name] {
-			return AgentSession{}, types.NewValidationError("empty or duplicate attachment").Because("agent.files")
+	return a.change(owner, id, func(s *AgentSession) ([]AgentFile, error) {
+		if s.Revision != revision {
+			return nil, types.NewValidationError("session changed").Because("agent.changed")
 		}
-		names[f.Name] = true
-	}
-	if total > 20<<20 {
-		return AgentSession{}, types.NewValidationError("attachments too large").Because("agent.files")
-	}
-	for _, f := range files {
-		f.Data = append([]byte(nil), f.Data...)
-		s.Files = append(s.Files, f)
-	}
-	a.invalidate(s)
-	s.Status = "queued"
-	s.Turns = 0
-	s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": "I added more source files for the same character. Read the full source set and preserve my edits.\n" + text}))
-	addAgentEvent(s, "user", text, "", nil)
-	s.Events[len(s.Events)-1].Files = agentFileLabels(files)
-	a.publish(s)
-	a.signal()
-	return copyAgentSession(s), nil
+		if len(files) == 0 || len(files)+len(stored) > 8 || len(text) > 16000 || len(s.Input) > 500 {
+			return nil, types.NewValidationError("invalid attachments").Because("agent.files")
+		}
+		total := 0
+		names := map[string]bool{}
+		for _, f := range stored {
+			total += len(f.Data)
+			names[f.Name] = true
+		}
+		for _, f := range files {
+			total += len(f.Data)
+			if len(f.Data) == 0 || len(f.Name) > 200 || names[f.Name] {
+				return nil, types.NewValidationError("empty or duplicate attachment").Because("agent.files")
+			}
+			names[f.Name] = true
+		}
+		if total > 20<<20 {
+			return nil, types.NewValidationError("attachments too large").Because("agent.files")
+		}
+		s.Files = append(s.Files, agentFileLabels(files)...)
+		a.invalidate(s)
+		s.Turns = 0
+		s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": "I added more source files for the same character. Read the full source set and preserve my edits.\n" + text}))
+		addAgentEvent(s, "user", text, "", nil)
+		s.Events[len(s.Events)-1].Files = agentFileLabels(files)
+		return files, setStatus(s, "queued")
+	})
 }
 
 // Attachments belong to the user message which submitted them, never to a

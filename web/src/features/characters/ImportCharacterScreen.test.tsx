@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderAt } from '@/test/render'
 import { pacing } from './useReveal'
 import { setupUser } from '@/test/user'
+import { polling } from '@/lib/api/agent'
 import type { AgentView } from '@/lib/api/agent'
 import { ImportCharacterScreen } from './ImportCharacterScreen'
 
@@ -26,8 +27,9 @@ const VIEW: AgentView = {
     assumptions: ['Matched a misspelled spell name'],
   },
 }
-// The server's side of the long poll: a request the screen makes is held until
-// a test answers it. `emit` resolves once the screen has taken every answer
+// The server's side of the poll. A real one answers at once; this one holds
+// the request until a test answers it, so that a test decides what the screen
+// has seen. `emit` resolves once the screen has taken every answer
 // and asked again, so what follows it sees them applied.
 const Stream = {
   closed: false,
@@ -57,11 +59,19 @@ const Stream = {
     return new Promise<void>((done) => this.taken.push(done))
   },
 }
+// A chat as the server opens it: one question, no rules, no character.
+const { characterId: _none, ...blank } = VIEW.session
+const OPENED: AgentView = {
+  session: { ...blank, id: 'opened', status: 'opening', revision: 1, events: [{ id: 1, kind: 'opening' }], files: [] },
+}
 let writes: { url: string; body: unknown }[]
 let sessions: AgentView['session'][]
+let opened: AgentView
 beforeEach(() => {
   writes = []
   sessions = []
+  opened = OPENED
+  polling.every = 0
   Stream.reset()
   // The pacing of the chat is one test's subject and every other's delay.
   pacing.on = false
@@ -74,16 +84,27 @@ beforeEach(() => {
       if (url.includes('/agent-capabilities'))
         return Response.json({ enabled: false })
       if (init?.method === 'POST') {
-        writes.push({
-          url,
-          body:
-            init.body instanceof FormData
-              ? init.body
-              : JSON.parse(String(init.body)),
-        })
-        return Response.json(VIEW)
+        const body = init.body instanceof FormData ? init.body : init.body ? JSON.parse(String(init.body)) : undefined
+        writes.push({ url, body })
+        // The opened chat, answered in steps: its rules, then a first message.
+        const events = opened.session.events
+        if ((body as { action?: string } | undefined)?.action === 'rules')
+          opened = { session: { ...opened.session, revision: 2, events: [...events, { id: events.length + 1, kind: 'rules', data: { packs: RULES.packs } }] } }
+        else if (url.includes('/opened/files'))
+          opened = {
+            session: {
+              ...opened.session,
+              status: 'review',
+              revision: 3,
+              characterId: 'chr1',
+              events: [...events, { id: events.length + 1, kind: 'user', text: String((body as FormData).get('instructions')) }, { id: events.length + 2, kind: 'assistant', text: 'Draft ready' }],
+            },
+          }
+        else if (!/\/agent-sessions(\?|$)/.test(url)) return Response.json(VIEW)
+        return Response.json(opened)
       }
       if (url.includes('revision=')) return Stream.poll(init?.signal)
+      if (url.includes('/agent-sessions/opened')) return Response.json(opened)
       if (url.includes('/agent-sessions/session1')) return Response.json(VIEW)
       if (/\/agent-sessions(\?|$)/.test(url)) return Response.json(sessions)
       return Response.json([])
@@ -162,7 +183,7 @@ it('deduplicates replayed events and restores a coherent snapshot', async () => 
   expect(screen.queryByText('Checking the spell')).not.toBeInTheDocument()
 })
 
-it('uploads source bytes and optional instructions before creating a session', async () => {
+it('opens a chat, answers its rules and sends the sheet with the first message', async () => {
   const user = setupUser()
   const { container } = renderAt(
     'desktop',
@@ -176,17 +197,19 @@ it('uploads source bytes and optional instructions before creating a session', a
       </Routes>
     </MemoryRouter>,
   )
-  // The assistant opens by asking for the rules, inside the conversation, and
-  // there is nothing to type into until it is the player's turn to speak.
+  // The assistant opens by asking for the rules -- the first event of a chat
+  // the page opened on arriving -- and there is nothing to type into until it
+  // is the player's turn to speak.
   const log = within(screen.getByRole('log'))
-  expect(log.getByText(/Which rules should I use/)).toBeInTheDocument()
+  expect(await log.findByText(/Which rules should I use/)).toBeInTheDocument()
   expect(screen.getByRole('textbox')).toBeDisabled()
   // The rules are prepared answers like any other question's: one press.
   await user.click(await log.findByRole('button', { name: 'D&D 2014 v1.0.0' }))
   // The answer is a message of the player's, and the next question follows it.
-  // The question it answers stays where it was asked, no longer pressable.
+  // The question it answers stays where it was asked, and can be answered
+  // again until the first message makes the rules final.
   await waitFor(() => expect(log.getAllByText('D&D 2014 v1.0.0').length).toBeGreaterThan(1))
-  expect(log.getByRole('button', { name: 'D&D 2014 v1.0.0' })).toBeDisabled()
+  expect(log.getByRole('button', { name: 'D&D 2014 v1.0.0' })).toBeEnabled()
   expect(log.getByText(/attach, or would you rather describe/)).toBeInTheDocument()
   // Describing needs no button: the box is simply open. Attaching is a quiet
   // control inside it, which the file then replaces.
@@ -205,11 +228,14 @@ it('uploads source bytes and optional instructions before creating a session', a
   await waitFor(() => expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled())
   await user.click(screen.getByRole('button', { name: 'Send' }))
   await screen.findByText('Draft ready')
-  expect(writes).toHaveLength(1)
+  expect(log.getByRole('button', { name: 'D&D 2014 v1.0.0' })).toBeDisabled()
+  // Three writes, one per step: the chat, its rules, its first message.
+  expect(writes).toHaveLength(3)
   expect(writes[0]?.url).toContain('folder=folder1')
-  const form = writes[0]?.body as FormData
+  expect(writes[1]?.body).toMatchObject({ action: 'rules', revision: 1, rules: RULES })
+  const form = writes[2]?.body as FormData
   expect(form.get('instructions')).toBe('Keep the custom items')
-  expect(JSON.parse(String(form.get('rules')))).toEqual(RULES)
+  expect(form.get('revision')).toBe('2')
   expect((form.get('files') as File).name).toBe('hero.txt')
 })
 
@@ -233,7 +259,7 @@ it('lets a message be sent only on the player\'s turn, and keeps the opening in 
         ...VIEW.session,
         revision: 6,
         status: 'running',
-        events: [{ id: 9, kind: 'rules', data: { packs: [{ id: 'srd-2014', version: '1.0.0' }] } }, ...VIEW.session.events],
+        events: [{ id: 8, kind: 'opening' }, { id: 9, kind: 'rules', data: { packs: [{ id: 'srd-2014', version: '1.0.0' }] } }, ...VIEW.session.events],
       },
     }),
   )
@@ -241,7 +267,7 @@ it('lets a message be sent only on the player\'s turn, and keeps the opening in 
   await waitFor(() => expect(screen.getByRole('status', { name: 'The assistant is working…' })).toBeInTheDocument())
   expect(screen.getByRole('textbox')).toBeEnabled()
   expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
-  // What was asked and answered before the session began is still there.
+  // The opening is part of the log like everything after it.
   const transcript = screen.getByRole('log')
   expect(transcript.textContent).toMatch(/Which rules should I use.*D&D 2014 v1\.0\.0.*describe the character.*Please import Zephyr/)
   await act(() =>

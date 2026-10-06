@@ -41,8 +41,9 @@ for another command. A deadline pauses the session; it does not answer questions
 or declare the character complete.
 
 The AI Wizard creates **one character** from a description or uploaded sources.
-The character is real from the first message: it is created with the session,
-it is in the owner's character list while the assistant is still working, and
+The character is real from the first message: it is created when that message
+is sent -- the chat itself is older, opened with the page -- it
+is in the owner's character list while the assistant is still working, and
 every tool call is committed to it. There is no draft and no Save. The session
 holds the attachments, the conversation, tool results and the id of that
 character. A model never receives an owner, character or session ID parameter
@@ -63,23 +64,32 @@ needs `agent.api_key` and `agent.model` configured to process uploads. Without
 the provider, imports report that AI import is not configured; the workspace
 does not fall back to the legacy HexSheet JSON screen.
 
-**The assistant leads and the player answers.** The conversation opens with
-two questions asked before any session exists:
+**The assistant leads and the player answers.** The page opens a session the
+moment it is arrived at (`Open`, status `opening`), and the conversation
+begins with two questions that are that session's events:
 
-1. *Which rules?* -- one prepared answer per rule pack, like any other
-   question's; pressing one is the player's reply. What the pack depends on
-   comes with it. The lock travels with the first message and is final from
-   then on; the HTTP API still requires it. It used to be the builder's pack
-   form dropped into a bubble -- toggles, Confirm, Clear -- which was a form
-   in a conversation.
+1. *Which rules?* -- the `opening` event, with one prepared answer per rule
+   pack, like any other question's; pressing one is the player's reply (the
+   `rules` control, recorded as a `rules` event). What the pack depends on
+   comes with it. It can be answered again -- the last answer stands, and is
+   the one shown -- until the first message, which makes the lock final. It
+   used to be the builder's pack form dropped into a bubble -- toggles,
+   Confirm, Clear -- which was a form in a conversation.
 2. *A sheet to attach, or a description?* -- asked, and answered by writing:
    the text field opens with this question. Attaching is a quiet control
    inside the field, bottom left, which the attached file replaces. There are
    no "attach" and "describe" buttons; describing is just typing.
 
-Both stay in the log: the session's first event is `rules`, carrying the
-confirmed packs, and the client draws it as that same exchange. It used to be
-a card above the chat that disappeared the moment the session began.
+Both are the log: a session's first events are `opening` and `rules`, and the
+page draws them through the one function that draws every later message.
+They used to be drawn by the page before any session existed and drawn again
+from the `rules` event once one did, and the swap showed: the opening
+flickered as the first message was sent. Before that it was a card above the
+chat that disappeared the moment the session began.
+
+An opened chat has no character. It is the chat the wizard reopens, so
+arriving twice does not make two; one that is walked away from is a row that
+the daily sweep removes, and until then it counts towards `max_sessions`.
 
 **Every turn of the assistant's ends in buttons.** It says what it did, then
 offers prepared answers (`ask_user`, up to ten -- all of a choice's options
@@ -145,9 +155,11 @@ the `identity.*` path that answers it.
 
 ### Unattended sessions
 
-An owner who does not want to be asked says so when the chat begins: the
-checkbox under the first message, `unattended=true` in the multipart request,
-`"unattended": true` on the CLI's `start`. The session then imports what the
+An owner who does not want to be asked says so when the chat begins:
+`unattended=true` in the multipart request, `"unattended": true` on the CLI's
+`start`. The web client no longer offers it -- its checkbox under the first
+message was removed -- so this is the CLI's and the corpus runs' mode. The
+session then imports what the
 sources state and leaves the rest open:
 
 - `ask_user` is refused, with the reason.
@@ -200,9 +212,12 @@ Source/page evidence and assumptions remain internal metadata, not transcript
 labels or a preview warning panel. The compact composer sits at the bottom;
 Enter sends and Shift+Enter inserts a line break. Scrolling up stops following.
 
-The assistant replies in **the language of the owner's latest message**, and
-writes its questions and suggested answers in it too. The interface locale is
-only the fallback, for a first message that is an attachment and nothing else.
+The assistant replies in **the language the owner chose for the interface**,
+and writes its questions and suggested answers in it too. Nothing else moves
+it: not the language a sheet is written in, and not the language of a
+message. It used to follow the owner's latest message with the interface
+locale as the fallback for an attachment sent alone -- and for exactly that
+case, a Russian sheet in an English interface, the chat turned Russian.
 
 The route is `/ai-wizard/:sessionId`. Old `/characters/import` routes redirect,
 retaining the session and query, and legacy `?session=...` links still open.
@@ -235,7 +250,7 @@ responded by inventing custom content until the list went quiet.
 There is no interruption control in the UI. The message box stays open while
 the assistant is running, but nothing can be sent from it: Send and the reply
 buttons wait for the turn to end. Terminal status snapshots enable them and
-focus it. The page learns of them by [long polling](long-polling.md), which
+focus it. The page learns of them by [polling](polling.md), which
 never disables input.
 Resume continues a paused conversation; Retry continues after a failure.
 The internal stop API remains for cancellation and lifecycle handling.
@@ -246,12 +261,72 @@ remaining choices are open is finished in the ordinary builder.
 
 ## Session lifetime
 
-State is **in memory in one server process**, including attachments and private
-packs -- which is why the wizard [cannot be run as more than one API
-process](known-caveats.md). Browser reload recovers the session from the URL's
-session ID (or legacy `session` query parameter). The import screen also lists unfinished sessions for the
-selected folder. Server restart loses this state, as it currently loses ordinary
-characters. PostgreSQL account storage does not change that guarantee.
+A session is **stored in PostgreSQL**, with its attachments: `agent_sessions`
+(one row a chat), `agent_events` (what the page shows, appended to) and
+`agent_files` (the sources). Any API process answers for any chat, a restart
+keeps it, and browser reload recovers it from the URL's session ID (or legacy
+`session` query parameter). A process without a database -- development with
+no `db.url`, the CLI, the tests -- keeps the same sessions in memory behind
+the same `Store` port.
+
+**The character is not stored with it.** Characters and the private packs an
+import writes are still in the memory of one process, which is why the wizard
+[cannot yet be run as more than one API process](known-caveats.md): a chat
+survives a restart and the character it built does not. The assistant checks
+that a character is the one its chat created before writing to it -- an id
+is a counter that starts again, so after a restart it names somebody else --
+and fails the session otherwise; the chat list leaves such a chat out, so the
+wizard does not reopen one whose character is gone.
+
+**A chat nobody has used for a day is deleted**, whatever its status, by a
+sweep every API process runs every ten minutes. "Used" is a write, a turn, or
+the page being opened; an idle poll does not count. Only the chat goes: the
+character stays where it is, and its *AI Wizard history* link then says the
+chat is no longer kept.
+
+### Who is doing what
+
+A session's `status` moves only along one table (`transitions` in
+`state.go`), and `setStatus` refuses anything else:
+
+| From | To | By |
+| --- | --- | --- |
+| `opening` | `queued` | the owner's first message, once the rules are chosen |
+| `queued` | `running` | a worker claiming the turn |
+| `running` | `queued` | the turn going on to its next request; a process that is stopping, giving the turn back |
+| `running` | `waiting`, `review`, `paused`, `failed` | the turn ending |
+| `waiting`, `review`, `paused`, `failed` | `queued` | the owner: a message, Resume, Retry, more files |
+| any but `opening` | `paused` | the owner: stop, Finish |
+
+Who may make a move is decided by the store and not by a lock in a process:
+
+- **A lease.** Claiming a turn writes `lease_owner` -- a random name the
+  process gave itself at start -- and `lease_until`. The claim is one
+  `UPDATE ... FOR UPDATE SKIP LOCKED`, so every worker of every process can
+  ask at once and each is handed a different session or none. A `CHECK`
+  holds the table to it: a row is `running` exactly when it has a lease.
+- **A generation.** Every control from the owner advances it.
+- **Every write a turn makes names both** (`WHERE lease_owner = me AND
+  generation = mine`). A turn that was stopped, answered or taken over
+  writes nothing: the store reports the refusal and the worker drops what it
+  was doing. A streamed chunk is such a write, so a turn stopped from
+  another process learns of it at its next chunk.
+
+**Taking over.** A lease runs for the request timeout plus thirty seconds and
+is not renewed -- a turn cannot outlive its own deadline. A process that
+stops puts its turns back to `queued`, and the next process, or the same one
+restarted, claims them at once. A process that dies leaves its turns
+`running` under a lease that runs out, after which they are claimed like
+queued ones; that wait, two and a half minutes by default, is the price of
+having no heartbeat. Each process looks for such turns once a second.
+
+**The stored transcript is always sendable.** The session is saved after the
+model's response and after each tool call. A response's calls that have not
+run yet are stored as answered "not run: the turn was interrupted", because
+the provider rejects a transcript with an unanswered call -- so whoever
+continues from a turn cut short, by a stop or by a dead process, continues
+from something it can send. Tool-call ids already have a recorded outcome
+(below), so a call seen twice is not run twice.
 
 The wizard is its own use case package, `internal/usecase/agent` (imported as
 `agentuc`), beside the character one it writes through. It is a second writer
@@ -262,20 +337,18 @@ package the same validators the builder's own writes pass
 (`ValidateAndAttribute`, `ValidateImported`, `Revise`, `UpsertCustom`). The
 dependency runs one way: nothing in `usecase/character` imports the agent.
 
-The coordinator in `internal/usecase/agent/agent.go` owns the session map and
-its mutation lock. It deliberately has no database or durable job framework in
-this release. A fixed number of goroutines run independent sessions, with one
-active model request per session. Model I/O runs outside the lock; tool
-mutations run inside it. Waiting, review and paused states do not consume
-workers.
+The coordinator in `internal/usecase/agent/agent.go` holds no session. A
+fixed number of goroutines each claim a turn, work on their own copy of the
+session -- the lease is what keeps every other writer out, so there is no
+lock -- and save it. One model request is active per session. Waiting, review
+and paused states do not consume workers.
 
-**Reads do not take the coordinator's lock.** A response's tool calls hold it
-for seconds, and `Get`/`List`/`Wait` -- the page opening and every poll it
-sends after -- used to queue behind them, which is what made the app appear
-to hang when the wizard was opened mid-import. Readers are served from
-`views`, a published copy of each session under its own read-write lock,
-republished after each tool call, streamed chunk and control. Each republish
-also wakes the readers waiting in `Wait`.
+**Reads wait for nothing.** `Get`, `List` and `Poll` -- the page opening and
+every poll it sends after -- read the store. They used to queue behind a
+mutex a response's tool calls held for seconds, which made the app appear to
+hang when the wizard was opened mid-import, and then were served from a
+published copy of each session; with the session in the store neither is
+needed.
 
 The session's log is the agent's **working copy** of the character, not the
 character. Around every tool call the coordinator reads the stored character
@@ -294,12 +367,12 @@ responses enter the server transcript before tool execution. Partial function
 arguments are never executed. Tool-call IDs have an argument hash and recorded
 outcome; replay returns that outcome and reuse with different arguments fails.
 
-Events have increasing IDs, and the browser follows a session by long polling
+Events have increasing IDs, and the browser follows a session by polling
 with the pair it holds -- the session's revision and its last event ID. It is
 answered with the whole session when the revision has moved and with only the
 newer events otherwise; it deduplicates event IDs and rejects older snapshots.
 Closing the browser only ends the polling, not the import. The transport is
-described in [long-polling.md](long-polling.md).
+described in [polling.md](polling.md).
 
 ## Tools and rules
 
@@ -600,11 +673,11 @@ Owners are taken from authentication, never from a request body.
 | Method and route | Input / result |
 | --- | --- |
 | `GET /v1/agent-capabilities` | Whether the provider is configured |
-| `POST /v1/agent-sessions?folder=...` | Multipart required `rules` JSON, optional `files` and `instructions`; at least a description or file is required |
+| `POST /v1/agent-sessions?folder=...` | No form: opens a chat -- status `opening`, one `opening` event, no character. With a multipart form (required `rules` JSON, optional `files`, `instructions`, `unattended`): the older single request that also chooses the rules and sends the first message |
 | `GET /v1/agent-sessions` | Owner's import sessions |
-| `GET /v1/agent-sessions/:id` | Session snapshot, including `characterId`. With `?revision=R&after=N` it is a [long poll](long-polling.md): held up to a second, answered with the session, the newer events, or `204` |
-| `POST /v1/agent-sessions/:id/files` | Multipart files, revision and optional instructions |
-| `POST /v1/agent-sessions/:id/control` | Revision plus `message`, `stop`, `resume`, `retry` or `discard` action; `discard` deletes the character too |
+| `GET /v1/agent-sessions/:id` | Session snapshot, including `characterId`. With `?revision=R&after=N` it is a [poll](polling.md): answered at once with the session, the newer events, or `204` |
+| `POST /v1/agent-sessions/:id/files` | Multipart `revision`, optional `files` and `instructions`. On an opened chat it is the first message -- text, files or both -- and creates the character; afterwards it adds source files |
+| `POST /v1/agent-sessions/:id/control` | Revision plus `rules` (with a `rules` lock; an opened chat only), `message`, `stop`, `resume`, `retry`, `finish` or `discard` action; `discard` deletes the character too |
 
 
 Normal characters expose GET/POST `/v1/characters/:id/custom-options`.
@@ -668,8 +741,9 @@ comparison needs.
 
 The key's absence disables AI import. Limits default to the values above;
 workers are bounded at 32, turns at 200, sessions at 1000 and request timeout at
-10 minutes. The session count includes finished conversations, so capacity
-must be sized for this memory-first deployment.
+10 minutes. `workers` is per API process. `max_sessions` counts every stored
+chat, finished ones included and across all processes; the daily sweep is
+what brings it back down.
 
 Additional fixed bounds are 8 files / 20 MiB per session, 256 KiB per text/JSON
 file, 16,000 UTF-8 bytes per message, 128 KiB per tool argument payload, 12,000
@@ -680,7 +754,7 @@ not a billed-token accounting system.
 
 The checked-in nginx configuration raises `/v1/`'s body limit to 21 MiB. **Deploying
 a release does not install nginx configuration**: apply that file separately.
-Long polling holds a request for a second at most, so it needs nothing from
+A poll is an ordinary request answered at once, so it needs nothing from
 nginx and leaves the normal HTTP timeouts in place.
 
 ## Validation and later milestones
@@ -689,7 +763,7 @@ Tests cover translated/fuzzy spell identity, printed-name resolution and its
 scopes, a scripted end-to-end import that ends with no custom entry and nothing
 pinned (on the SRD and on a namespaced pack), skill distribution, the
 one-time checklist reminder, calls after a turn has ended, worker bounds,
-cancellation, owner isolation, HTTP uploads and long-poll recovery, score preservation
+cancellation, owner isolation, HTTP uploads, the opened chat answered in steps and poll recovery, score preservation
 and rebasing, the builder's own entries on the stored character (name apart
 from rules, class at 1 and subclass at its level, one manual ability-scores
 entry, nothing printed pinned over an identity field), discard deleting the
@@ -700,10 +774,15 @@ required-choice review guards and the end of a turn arriving by poll.
 The provider adapter is tested against a local HTTP fixture; a live provider
 smoke test requires deployment credentials and a configured model.
 
-Durable restart recovery is deliberately later. It must persist attachments,
-transcript/provider state, operation outcomes, revision/generation, draft log,
-private releases and final character linkage together, with transactional
-claims/leases and a unique finalization key. Persisting only messages cannot
-resume this runtime correctly. Text-only character creation uses the same bounded tools. A future MCP adapter
+Sessions, attachments, the transcript with its provider state, operation
+outcomes and the revision and generation are stored together, with turns
+claimed under a lease (see [Session lifetime](#session-lifetime)). What a
+restart still loses is the character and the private releases, which are not
+the wizard's to store. `RunAgentStore` runs one contract over the PostgreSQL
+and in-memory stores -- one winner among eight claims, a fenced turn that
+cannot save or append, an expired lease taken over, the sweep -- and the use
+case tests run two agents over one store: a turn released by a stopping
+process and finished by another, and a recycled character id refused.
+Text-only character creation uses the same bounded tools. A future MCP adapter
 can reuse them.
 

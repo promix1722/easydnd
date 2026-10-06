@@ -4191,10 +4191,9 @@ progress events is one assistant bubble built from `progressEntry`
 consecutive writes to one field sharing the caption. It is never folded.
 Source labels and internal assumptions are omitted.
 
-Under the first message's text there is one checkbox, *Don't ask me anything*,
-sent as the `unattended` field of the request that creates the session. It is
-shown only before a session exists, because it is the session's and no later
-message can change it; see [agent.md](agent.md#unattended-sessions).
+The page has no control for an [unattended session](agent.md#unattended-sessions):
+a *Don't ask me anything* checkbox stood under the first message for a while
+and was taken out. The request field and the CLI flag remain.
 
 The screen is nothing but the transcript, with the composer as its last
 element. Before a session exists the transcript is drawn from local state:
@@ -4211,12 +4210,17 @@ the `log`, and is open for writing from the moment
 the rules are chosen; `myTurn` enables only Send. On
 `review` the last message's buttons are View, Edit, Finish and Delete. With no
 session id the screen takes the owner's latest session that is not
-`finished` as its own (`resumed`, state rather than a redirect); Finish posts
+`finished` as its own (`resumed`, state rather than a redirect), and opens a
+new one (`openAgentSession`) when there is none -- so there is always a
+session, and the whole transcript, the opening's two questions included, is
+drawn from its events by `Conversation` and by nothing else; Finish posts
 the `finish` control before navigating, and a finished session renders
 without composer or actions. The composer has no attach
 control: files go with the first message, through the opening's "Attach a
-sheet". The opening's rules question is the same kind of buttons, one per
-pack, resolved through `resolvePacks`.
+sheet", and that first message is `startAgentSession`. The opening's rules
+question (the `opening` event) is the same kind of buttons, one per pack,
+resolved through `resolvePacks` and sent with `chooseAgentRules`; they stay
+pressable until the first message.
 
 Each `progress` event is its own bubble: `agent.progress.imported` ("Imported
 field: …") in bold over the value from `progressEntry`. Assistant bubbles have
@@ -4255,7 +4259,7 @@ has one shape.
 
 Questions and unresolved choices are handled in chat with suggested reply
 buttons and free-text input. Sending waits for the current assistant run to end;
-there is no Stop control. One [long poll](long-polling.md) at a time brings
+there is no Stop control. One [poll](polling.md) a second brings
 turn status and new messages, without making the composer busy: the screen
 sends the revision and last event id it holds, applies the answer through one
 `merge` function, and asks again. It stops while the tab is hidden, for a

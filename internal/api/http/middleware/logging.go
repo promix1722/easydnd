@@ -37,8 +37,8 @@ func RequestLogger() gin.HandlerFunc {
 			log.Error("http request", attrs...)
 		case status >= 400:
 			log.Warn("http request", attrs...)
-		// A GET with nothing to say is a long poll that timed out -- one a
-		// second from every open AI Wizard tab. See docs/long-polling.md.
+		// A GET with nothing to say is a poll that had nothing to tell -- one a
+		// second from every open AI Wizard tab. See docs/polling.md.
 		case status == http.StatusNoContent && c.Request.Method == http.MethodGet:
 			log.Debug("http request", attrs...)
 		default:
