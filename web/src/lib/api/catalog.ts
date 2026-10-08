@@ -93,6 +93,12 @@ export interface Choice {
    * two different scores.
    */
   repeatable?: boolean
+  /**
+   * What a starting-kit choice fills -- body, main-hand, off-hand, backup,
+   * pack, focus, instrument -- and so the card's title. The server writes it;
+   * the client never works out from the options what a question is about.
+   */
+  slot?: string
 }
 
 export interface CollectionInfo {

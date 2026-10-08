@@ -1225,7 +1225,7 @@ func TestSavedEquipmentSelectionsPreserveBundleQuantities(t *testing.T) {
 	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
 		"expectedSeq": 1,
 		"events": []map[string]any{{"type": "class", "ref": "class:fighter", "level": 1,
-			"choices":    []map[string]any{{"prompt": "fighter/starting-equipment/2", "picks": []string{"crossbow-light+crossbow-bolt"}}},
+			"choices":    []map[string]any{{"prompt": "fighter/starting-equipment/backup", "picks": []string{"crossbow-light+crossbow-bolt"}}},
 			"selections": []map[string]any{{"kind": "ref", "key": "plate", "ref": "item:plate-armor", "count": 999}},
 		}},
 	})

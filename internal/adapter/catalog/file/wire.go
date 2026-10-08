@@ -75,6 +75,9 @@ type Choice struct {
 	Choose int       `json:"choose"`
 	Kind   string    `json:"kind"`
 	From   OptionSet `json:"from"`
+	// Slot is what a starting-kit choice fills: body, main-hand, off-hand,
+	// backup, pack, focus or instrument. See rules.Choice.
+	Slot string `json:"slot,omitempty"`
 }
 
 // OptionSet is the pool a Choice draws from.

@@ -133,6 +133,7 @@ func (c *conv) choiceValue(w Choice) rules.Choice {
 		Choose: w.Choose,
 		Kind:   c.choiceKind(w.Kind),
 		From:   c.optionSet(w.From),
+		Slot:   rules.Slug(w.Slot),
 	}
 }
 

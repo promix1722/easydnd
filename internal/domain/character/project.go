@@ -564,10 +564,12 @@ func (p *projector) addClassResources(row catalog.ClassLevel) {
 
 // applyEquipmentChoices resolves the starting-equipment prompts into stacks.
 //
-// Everything lands in the backpack. Nothing in the catalogue says what a
-// character is wearing, and guessing -- strapping on the shield that came in
-// the same bundle as a two-handed weapon -- would produce an armor class with
-// no rule behind it. Equipping is an explicit change event.
+// A choice asked for a worn slot -- body, main hand, off hand -- is answered
+// by what goes there, so that item is equipped; the rest of its answer (the
+// longbow and arrows that come with the fighter's leather armor) and every
+// slotless choice land in the backpack. Nothing else is guessed: strapping on
+// a shield that came beside a two-handed weapon would produce an armor class
+// with no rule behind it. Everything further is an explicit change event.
 func (p *projector) applyEquipmentChoices() {
 	class, ok := p.cat.Classes.Get(p.firstClass())
 	if ok {
@@ -587,13 +589,35 @@ func (p *projector) addChosenEquipment(choice rules.Choice) {
 		switch opt := o.(type) {
 		case rules.RefOption:
 			if opt.Ref.Kind == rules.RefItem || opt.Ref.Kind == rules.RefMagicItem {
-				p.addStacks([]catalog.ItemStack{{Item: opt.Ref.Slug, Count: max(opt.Count, 1)}})
+				stack := ItemStack{Item: opt.Ref.Slug, Count: max(opt.Count, 1)}
+				if p.fillsSlot(choice.Slot, opt.Ref.Slug) {
+					p.state.Equipment.Equipped = append(p.state.Equipment.Equipped, stack)
+				} else {
+					p.addStacks([]catalog.ItemStack{{Item: stack.Item, Count: stack.Count}})
+				}
 			}
 		case rules.MoneyOption:
 			p.addCoins(opt.Coins)
 		}
 	})
 }
+
+// fillsSlot reports whether an item chosen for a kit slot is what goes there:
+// its own slot, or a held weapon in the off hand. Only the worn slots count;
+// "backup" or "pack" name the card and nothing on the body.
+func (p *projector) fillsSlot(slot rules.Slug, item rules.Slug) bool {
+	want, ok := kitSlots[slot]
+	if !ok {
+		return false
+	}
+	it, ok := p.cat.Items.Get(item)
+	if !ok {
+		return false
+	}
+	return it.Slot == want || (want == catalog.SlotOffHand && it.Slot == catalog.SlotMainHand)
+}
+
+var kitSlots = map[rules.Slug]catalog.Slot{"body": catalog.SlotBody, "main-hand": catalog.SlotMainHand, "off-hand": catalog.SlotOffHand}
 
 func (p *projector) firstClass() rules.Slug {
 	if len(p.state.Identity.Classes) == 0 {
@@ -777,9 +801,19 @@ func (p *projector) addLanguages(languages ...rules.Slug) {
 	}
 }
 
+// addStacks carries stacks in the backpack. An equipment pack is carried as
+// what is in it -- a dungeoneer's pack is a backpack, a crowbar, ten torches
+// -- because that is what a player reaches for; the pack itself is only how
+// the book sells them together.
 func (p *projector) addStacks(stacks []catalog.ItemStack) {
 	for _, stack := range stacks {
 		if stack.Item.IsZero() {
+			continue
+		}
+		if it, ok := p.cat.Items.Get(stack.Item); ok && it.Gear != nil && len(it.Gear.Contents) > 0 {
+			for _, inside := range it.Gear.Contents {
+				p.addStacks([]catalog.ItemStack{{Item: inside.Item, Count: max(inside.Count, 1) * max(stack.Count, 1)}})
+			}
 			continue
 		}
 		p.state.Equipment.Backpack = append(p.state.Equipment.Backpack, ItemStack{

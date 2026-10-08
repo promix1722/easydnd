@@ -92,7 +92,7 @@ func rogue3(t *testing.T) *builder {
 				answer("rogue-expertise-1/expertise/0", "skill-insight", "skill-religion"),
 			}}).
 		add("equipment", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
-			Choices: []domain.Answer{answer("rogue/starting-equipment/0", "rapier")}}).
+			Choices: []domain.Answer{answer("rogue/starting-equipment/main-hand", "rapier")}}).
 		add("level 3", domain.Event{Type: domain.EventChange, Changes: []domain.Change{
 			{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(3)}}}).
 		add("subclass", domain.Event{Type: domain.EventSubclass, Ref: ref(rules.RefSubclass, "thief"), Level: 3})
@@ -157,7 +157,7 @@ func TestReviseReplacesAnEntryWithNoDependants(t *testing.T) {
 
 	out, dropped := revised(t, b, 8, &domain.Event{
 		Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
-		Choices: []domain.Answer{answer("rogue/starting-equipment/0", "shortsword")},
+		Choices: []domain.Answer{answer("rogue/starting-equipment/main-hand", "shortsword")},
 	})
 
 	if len(dropped) != 0 {
@@ -330,7 +330,7 @@ func TestReviseKeepsAnEntryThatLostAnAnswer(t *testing.T) {
 	if !hasAnswer(out, "rogue-expertise-1/expertise/0") {
 		t.Error("Expertise went with it")
 	}
-	if !hasAnswer(out, "rogue/starting-equipment/0") {
+	if !hasAnswer(out, "rogue/starting-equipment/main-hand") {
 		t.Error("the rapier went with it")
 	}
 

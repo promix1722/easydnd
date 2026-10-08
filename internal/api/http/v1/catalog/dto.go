@@ -54,6 +54,10 @@ type Choice struct {
 	// Ability Score Improvement sets it -- a half-elf's two bonuses look
 	// identical and must go to two different scores.
 	Repeatable bool `json:"repeatable,omitempty"`
+
+	// Slot is what a starting-kit choice fills -- body, main-hand, off-hand,
+	// backup, pack, focus, instrument -- and is the card's title.
+	Slot string `json:"slot,omitempty"`
 }
 
 // OptionSet is the pool a Choice draws from.

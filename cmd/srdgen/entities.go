@@ -342,24 +342,21 @@ func (g *generator) classes() error {
 	out := make([]file.Class, 0, len(ups))
 	for _, up := range ups {
 		c := file.Class{
-			Slug:                     up.Index,
-			HitDie:                   up.HitDie,
-			SavingThrows:             indexes(up.SavingThrows),
-			Proficiencies:            indexes(up.Proficiencies),
-			ProficiencyOptions:       g.choices(up.ProficiencyChoices, up.Index+"/proficiency"),
-			StartingEquipment:        stacks(up.StartingEquipment),
-			StartingEquipmentOptions: g.choices(up.StartingEquipmentOptions, up.Index+"/starting-equipment"),
+			Slug:               up.Index,
+			HitDie:             up.HitDie,
+			SavingThrows:       indexes(up.SavingThrows),
+			Proficiencies:      indexes(up.Proficiencies),
+			ProficiencyOptions: g.choices(up.ProficiencyChoices, up.Index+"/proficiency"),
+			StartingEquipment:  stacks(up.StartingEquipment),
+			// Hand-written, slot by slot, rather than read from upstream's
+			// "(a) or (b)" pairs: see kits.go.
+			StartingEquipmentOptions: g.kit(up.Index),
 			Subclasses:               indexes(up.Subclasses),
 		}
-		// SRD 5.1 explicitly includes a quiver with these arrows. Upstream
-		// omitted the container; preserve the rogue bundle's stored answer key.
+		// SRD 5.1 explicitly includes a quiver with these arrows; upstream
+		// omitted the container.
 		if up.Index == "ranger" {
 			c.StartingEquipment = append(c.StartingEquipment, file.ItemStack{Item: "quiver", Count: 1})
-		}
-		if up.Index == "rogue" {
-			bundle := &c.StartingEquipmentOptions[1].From.Options[0]
-			bundle.Key = "shortbow+arrow"
-			bundle.Items = append(bundle.Items, file.Option{Kind: file.OptionRef, Ref: "item:quiver", Count: 1})
 		}
 		p := file.Prose{Name: up.Name}
 		if up.Spellcasting != nil {

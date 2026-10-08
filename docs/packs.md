@@ -291,7 +291,11 @@ uses a Wisdom bonus; version 2.0.0 removes its former demonstration Luck score.
 Numeric effects support `add`, `max`, `set` on ability scores, AC, initiative,
 passive Perception, HP maximum and movement speeds. Grants support features,
 traits, feats, spells, proficiencies, languages and equipment. Rules can expose
-choices through the existing prompt/answer grammar. Ability dependencies are
+choices through the existing prompt/answer grammar. A class's
+`startingEquipmentOptions` carry a `slot` apiece -- `body`, `main-hand`,
+`off-hand`, `backup`, `pack`, `focus` or `instrument` -- which titles the
+builder's card and, for the three worn slots, equips what was chosen (see
+docs/dnd.md); a choice without one is titled by its options. Ability dependencies are
 ordered and cyclic reads rejected. Mixed combination operations or multiple
 `set` effects on one target are rejected. DM change events remain final overrides.
 Rules with no automated effect must explicitly declare `manual: true`.

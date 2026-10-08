@@ -502,15 +502,22 @@ func TestProjectRogueResourcesAndEquipment(t *testing.T) {
 		}
 	}
 
-	// Equipping is an explicit change; everything else stays packed.
-	if len(s.Equipment.Equipped) != 1 || s.Equipment.Equipped[0].Item != "leather-armor" {
-		t.Errorf("equipped = %+v, want the leather armor", s.Equipment.Equipped)
+	// The main-hand pick is wielded; the armor was an explicit change;
+	// everything else stays packed -- and the burglar's pack is carried as
+	// its contents, never as a pack.
+	has := func(list []ItemStack, want rules.Slug) bool {
+		return slices.ContainsFunc(list, func(st ItemStack) bool { return st.Item == want })
 	}
-	for _, want := range []rules.Slug{"dagger", "thieves-tools", "rapier", "shortbow", "burglars-pack"} {
-		found := slices.ContainsFunc(s.Equipment.Backpack, func(st ItemStack) bool { return st.Item == want })
-		if !found {
+	if len(s.Equipment.Equipped) != 2 || !has(s.Equipment.Equipped, "leather-armor") || !has(s.Equipment.Equipped, "rapier") {
+		t.Errorf("equipped = %+v, want the leather armor and the rapier", s.Equipment.Equipped)
+	}
+	for _, want := range []rules.Slug{"dagger", "thieves-tools", "shortbow", "crowbar", "ball-bearings-bag-of-1000"} {
+		if !has(s.Equipment.Backpack, want) {
 			t.Errorf("backpack %v is missing %q", s.Equipment.Backpack, want)
 		}
+	}
+	if has(s.Equipment.Backpack, "burglars-pack") {
+		t.Errorf("backpack %v still carries the pack itself", s.Equipment.Backpack)
 	}
 	// Two daggers, not one: a RefOption's Count is a quantity.
 	for _, stack := range s.Equipment.Backpack {
@@ -653,8 +660,8 @@ func TestProjectActionsComeFromWeaponsAndTags(t *testing.T) {
 	if _, ok := got["item:leather-armor"]; ok {
 		t.Error("armor produced an action")
 	}
-	if _, ok := rogueSheetActions(t)["item:rapier"]; ok {
-		t.Error("a rapier that is not equipped produced an attack")
+	if _, ok := rogueSheetActions(t)["item:shortbow"]; ok {
+		t.Error("a shortbow that is not equipped produced an attack")
 	}
 }
 

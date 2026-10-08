@@ -123,11 +123,11 @@ func RogueLog(t *testing.T) Log {
 				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
 					"skill-persuasion", "skill-stealth",
 				}},
-				{Prompt: "rogue/starting-equipment/0", Picks: []rules.Slug{"rapier"}},
+				{Prompt: "rogue/starting-equipment/main-hand", Picks: []rules.Slug{"rapier"}},
 				// The shortbow-and-arrows bundle has no slug of its own, so
 				// it is named by what is in it.
-				{Prompt: "rogue/starting-equipment/1", Picks: []rules.Slug{"shortbow+arrow"}},
-				{Prompt: "rogue/starting-equipment/2", Picks: []rules.Slug{"burglars-pack"}},
+				{Prompt: "rogue/starting-equipment/backup", Picks: []rules.Slug{"shortbow+arrow"}},
+				{Prompt: "rogue/starting-equipment/pack", Picks: []rules.Slug{"burglars-pack"}},
 			},
 		},
 		// A rogue's kit includes leather armor, but wearing it is a decision

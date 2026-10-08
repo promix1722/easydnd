@@ -19,12 +19,13 @@ import (
 func TestEquipmentCategoriesValidateAndProject(t *testing.T) {
 	b := build(t).add("fighter", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 1})
 	event := domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Choices: []domain.Answer{
-		answer("fighter/starting-equipment/1", "martial-weapons"),
-		answer("fighter/starting-equipment/1/1", "longsword", "longsword"),
+		answer("fighter/starting-equipment/main-hand", "longsword"),
+		answer("fighter/starting-equipment/off-hand", "martial-weapons"),
+		answer("fighter/starting-equipment/off-hand/martial-weapons", "longsword"),
 	}}
 	invalid := event
 	invalid.Choices = append([]domain.Answer{}, event.Choices...)
-	invalid.Choices[1] = answer("fighter/starting-equipment/1/1", "plate-armor", "not-an-item")
+	invalid.Choices[2] = answer("fighter/starting-equipment/off-hand/martial-weapons", "plate-armor")
 	if _, err := b.s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq, invalid); err == nil {
 		t.Fatal("accepted items outside martial-weapons")
 	}
@@ -34,21 +35,22 @@ func TestEquipmentCategoriesValidateAndProject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Both hands asked for a weapon, so both longswords are wielded.
 	count := 0
-	for _, stack := range state.Equipment.Backpack {
+	for _, stack := range state.Equipment.Equipped {
 		if stack.Item == "longsword" {
 			count += stack.Count
 		}
 	}
-	if count != 2 {
-		t.Fatalf("longswords = %d", count)
+	if count != 2 || len(state.Equipment.Backpack) != 0 {
+		t.Fatalf("longswords wielded = %d, backpack = %v", count, state.Equipment.Backpack)
 	}
 	resolved, err := domain.ResolvedSelections(b.log(), cat)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resolved["fighter/starting-equipment/1"].Options) != 2 {
-		t.Fatal("saved bundle lost nested equipment")
+	if len(resolved["fighter/starting-equipment/off-hand"].Options) != 1 {
+		t.Fatalf("saved off-hand answer lost its nested pick: %+v", resolved["fighter/starting-equipment/off-hand"])
 	}
 }
 

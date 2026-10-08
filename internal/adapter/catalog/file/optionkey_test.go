@@ -90,6 +90,27 @@ func everyChoice(c *catalog.Catalog, visit func(rules.Choice)) {
 	}
 }
 
+// A class kit is asked slot by slot, and the slot is the whole of what the
+// builder titles the card by -- so every kit choice must carry one the client
+// has a caption for, under the prompt id it names.
+func TestClassKitsAreAskedBySlot(t *testing.T) {
+	c := load(t, rules.LocaleEN)
+	known := map[rules.Slug]bool{"body": true, "main-hand": true, "off-hand": true, "backup": true, "pack": true, "focus": true, "instrument": true}
+	for _, cl := range c.Classes.All() {
+		if len(cl.StartingEquipmentOptions) == 0 {
+			t.Errorf("%s has no starting kit", cl.Slug)
+		}
+		for _, ch := range cl.StartingEquipmentOptions {
+			if !known[ch.Slot] {
+				t.Errorf("%s: slot %q is not one the builder can title", ch.Prompt, ch.Slot)
+			}
+			if want := cl.Slug + "/starting-equipment/" + ch.Slot; ch.Prompt != want {
+				t.Errorf("prompt %q, want %q", ch.Prompt, want)
+			}
+		}
+	}
+}
+
 // OptionKey is only useful if it is total and injective over the real data:
 // total because an option with no key is an option a player cannot pick, and
 // injective within a prompt because two options sharing a key means an answer
@@ -141,16 +162,16 @@ func TestRogueBundleAndNestedPromptsAreAnswerable(t *testing.T) {
 	}
 	var kit rules.Choice
 	for _, ch := range rogue.StartingEquipmentOptions {
-		if ch.Prompt == "rogue/starting-equipment/1" {
+		if ch.Prompt == "rogue/starting-equipment/backup" {
 			kit = ch
 		}
 	}
 	if kit.Prompt.IsZero() {
-		t.Fatal("rogue/starting-equipment/1 not found")
+		t.Fatal("rogue/starting-equipment/backup not found")
 	}
 	keys := rules.OptionKeys(kit.From)
 	if len(keys) == 0 {
-		t.Fatal("rogue/starting-equipment/1 has no option keys")
+		t.Fatal("rogue/starting-equipment/backup has no option keys")
 	}
 	// The shortbow-and-arrows bundle has no slug of its own, so it is named
 	// by what is in it.

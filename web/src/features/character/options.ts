@@ -74,13 +74,32 @@ export function choosableOptions(
     const reason = disabledBy(t, prompt, held, option.key)
     return {
       key: option.key,
-      provenance: option.ref ? entries.get(slugOf(option.ref))?.provenance : undefined,
+      provenance: entries.get(slugOf(firstRef(option) ?? ''))?.provenance,
       label: optionLabel(t, option, entries),
       ...maybeDetail(detailOf(t, option, entries)),
       disabled: reason !== undefined,
       ...maybeReason(reason),
     }
   })
+}
+
+/** The reference an option is badged by: its own, or its bundle's first. */
+function firstRef(option: Option): string | undefined {
+  if (option.ref !== undefined) return option.ref
+  for (const item of option.items ?? []) {
+    const ref = firstRef(item)
+    if (ref !== undefined) return ref
+  }
+  return undefined
+}
+
+/**
+ * Whether an entry is ammunition, which a weapon's label leaves unsaid: a
+ * longbow comes with its arrows the way a crossbow comes with its string.
+ * The same test `groupOf` uses to file it under Consumables.
+ */
+function isAmmunition(entry: Entry | undefined): boolean {
+  return (entry as Item | undefined)?.gear?.gearCategory === 'ammunition'
 }
 
 function maybeReason(reason: string | undefined): { reason?: string } {
@@ -148,13 +167,17 @@ export function optionLabel(
             option.choice.from.collection,
           )
         : t('option.choose')
-    case 'bundle':
-      // Joined with the catalogue's own word for "and": a bundle of a shortbow
-      // and twenty arrows is one option, and the conjunction between them is
-      // prose like any other.
-      return (option.items ?? [])
+    case 'bundle': {
+      // Joined with the catalogue's own word for "and", and without the
+      // ammunition: a shortbow and twenty arrows reads "Shortbow", the
+      // arrows being what a bow comes with. The detail under the picked
+      // option still lists them.
+      const items = option.items ?? []
+      const named = items.filter((item) => !(item.ref !== undefined && isAmmunition(entries.get(slugOf(item.ref)))))
+      return (named.length === 0 ? items : named)
         .map((item) => optionLabel(t, item, entries))
         .join(t('option.bundleJoin'))
+    }
     case 'ability-bonus':
       return `${abilityName(t, option.ability ?? '')} +${(option.bonus ?? 1) * times}`
     case 'text':
@@ -239,18 +262,23 @@ function detailOf(t: Translate, option: Option, entries: Map<string, Entry>): st
 }
 
 /**
- * What an equipment question offers, as its title.
+ * What an equipment question fills, as its title.
  *
- * A warlock has four of these and they were all headed "Starting equipment":
- * nothing said that the fourth is a second weapon rather than the first one
- * again. So the card is named by its options -- "Component pouch or one of:
- * Arcane Foci", "One of: Simple Weapons" -- which is also how the rulebook
- * writes them. Undefined for anything else, and for a list too long to be a
- * title.
+ * A class kit is asked slot by slot -- "Body", "Main hand", "Off hand",
+ * "Backup weapon", "Pack" -- and the server says which on the choice, so the
+ * card is titled by that: a player fills a sheet by its slots, not by the
+ * book's "(a) chain mail or (b) leather armor, a longbow and 20 arrows".
+ *
+ * A kit question with no slot -- a background's, a pack written before slots
+ * -- is named by its options instead ("Component pouch or one of: Arcane
+ * Foci"), which is how the rulebook writes them. Undefined for anything
+ * else, and for a list too long to be a title.
  */
 export function equipmentTitle(t: Translate, prompt: Prompt, names: ReadonlyMap<string, string>): string | undefined {
-  const { kind, from } = prompt.choice
+  const { kind, from, slot } = prompt.choice
   if (kind !== 'equipment') return undefined
+  const slotTitle = slot === undefined ? undefined : slotTitles(t)[slot]
+  if (slotTitle !== undefined) return slotTitle
   const category = (slug: string) =>
     t('choice.oneOf', { name: names.get(`equipment-category:${slug}`) ?? titleCase(slug.slice(slug.lastIndexOf('/') + 1)) })
   const capital = (title: string) => title.charAt(0).toUpperCase() + title.slice(1)
@@ -268,4 +296,12 @@ export function equipmentTitle(t: Translate, prompt: Prompt, names: ReadonlyMap<
     .map((option) => option.choice?.from.category !== undefined ? category(option.choice.from.category) : optionLabel(t, option, entries))
     .join(t('choice.or'))
   return capital(title)
+}
+
+/** The kit slots a card can be titled by; a word not here falls back to the options. */
+function slotTitles(t: Translate): Record<string, string | undefined> {
+  return {
+    body: t('equipment.slot.body'), 'main-hand': t('equipment.slot.main-hand'), 'off-hand': t('equipment.slot.off-hand'),
+    backup: t('equipment.slot.backup'), pack: t('equipment.slot.pack'), focus: t('equipment.slot.focus'), instrument: t('equipment.slot.instrument'),
+  }
 }

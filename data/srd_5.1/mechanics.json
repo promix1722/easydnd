@@ -1,7 +1,7 @@
 {
   "choiceRequirements": [
     {
-      "prompt": "cleric/starting-equipment/0",
+      "prompt": "cleric/starting-equipment/main-hand",
       "pick": "warhammer",
       "anyProficiency": [
         "warhammers",
@@ -9,7 +9,7 @@
       ]
     },
     {
-      "prompt": "cleric/starting-equipment/1",
+      "prompt": "cleric/starting-equipment/body",
       "pick": "chain-mail",
       "anyProficiency": [
         "heavy-armor",

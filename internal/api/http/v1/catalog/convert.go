@@ -132,6 +132,7 @@ func (c converter) choiceValue(ch rules.Choice) Choice {
 		Kind:       ch.Kind.String(),
 		From:       c.optionSet(ch.From),
 		Repeatable: ch.Repeatable,
+		Slot:       ch.Slot.String(),
 	}
 }
 

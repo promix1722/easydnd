@@ -192,7 +192,8 @@ func TestConditionalClericEquipment(t *testing.T) {
 	state := spellState("cleric", 1)
 	builder := promptBuilder{cat: cat, state: state, answers: answers{}}
 	class, _ := cat.Classes.Get("cleric")
-	if !slices.Contains(builder.blockedIn(class.StartingEquipmentOptions[0]), rules.Slug("warhammer")) {
+	// The kit asks body first, then main hand.
+	if !slices.Contains(builder.blockedIn(class.StartingEquipmentOptions[1]), rules.Slug("warhammer")) {
 		t.Fatal("warhammer offered without proficiency")
 	}
 	builder.state.Proficiencies = []rules.Slug{"warhammers", "heavy-armor"}

@@ -10,8 +10,9 @@ the sheet are all built and tested -- see
 [Level-up is the desired level](#level-up-is-the-desired-level). The battle
 tracker is not: `/games` is a section in the navigation whose page says so.
 
-Character creation presents every starting-equipment alternative, including
-category menus and complete bundles. The server expands category membership;
+Character creation asks for a class's starting kit slot by slot -- body, main
+hand, off hand, a backup weapon, the pack -- including category menus and
+complete bundles. The server expands category membership;
 the client preserves its option keys and order. See
 [Builder choice behavior](#builder-choice-behavior) for the interaction contract.
 Ability scores remain the six standard characteristics, including with addons.
@@ -4124,14 +4125,19 @@ An option is not drawn until its catalogue entry has loaded. Drawn early it is
 named by its slug and then renamed in place -- "Scholars Pack" becoming
 "Scholar's Pack" with its source tags -- which read as the card flashing.
 
-An equipment card is **titled by what it offers** -- "Component pouch or one of:
-Arcane Foci" -- rather than "Starting equipment": a warlock has four such
-questions and under one shared title nothing said the fourth is a second
-weapon. A question that is only a category has no alternative, so it reads
-"Also one of: Simple Weapons", which is what tells it from the card above that
-offers the same category as one of two options. The rulebook really does grant
-both. No price is shown on an option: starting equipment is granted, not
-bought.
+A class kit card is **titled by the slot it fills** -- Body, Main hand, Off
+hand, Backup weapon, Pack, Focus, Instrument -- because that is how a player
+fills a sheet, and the book's "(a) chain mail or (b) leather armor, a longbow
+and 20 arrows" read as word soup when it was joined into a title. The slot is
+the server's, on the choice (docs/dnd.md), so the card is named before its
+options have loaded; a kit question with no slot -- a background's, a pack
+built before slots -- is still **titled by what it offers**, "Component pouch
+or one of: Arcane Foci", and one that is only a category reads "Also one of:
+Simple Weapons", which tells it from the card above that offers the same
+category as one of two options. A bundle's label leaves its ammunition unsaid
+-- "Leather Armor and Longbow", the arrows being what a bow comes with -- and
+the detail under the picked option still lists them. No price is shown on an
+option: starting equipment is granted, not bought.
 
 A picked option and its description are one box, in the picked colour; the
 description is beside the button rather than inside it only because it is

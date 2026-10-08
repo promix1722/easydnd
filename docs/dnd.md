@@ -191,7 +191,7 @@ ability-bonus options — so a rule read off the kind let the half-elf spend bot
 on one score. The prompt says it instead. Nothing in the compendium sets it;
 the domain does, on the improvement it synthesises.
 
-Every prompt carries a **stable id** (`fighter/starting-equipment/1`). That id is
+Every prompt carries a **stable id** (`fighter/starting-equipment/body`). That id is
 what a character's stored answer points at, so it must survive a data
 regeneration — otherwise reloading a character silently loses its choices.
 
@@ -573,14 +573,37 @@ or two fighting styles cannot duplicate the same benefit. Class-specific names
 for the same fighting style count as one style. Collection choices such as feats
 and languages are also validated against explicit catalogue membership.
 
+**A class kit is asked slot by slot**, and is hand-written in `cmd/srdgen`
+(`kits.go`) rather than read from the upstream dump's "(a) … or (b) …"
+pairs. The book pairs things the way it sells them; a player fills a sheet
+by its slots, and "a martial weapon and a shield, or two martial weapons"
+asked as one question was the card nobody could read. Each choice carries a
+`slot` -- `body`, `main-hand`, `off-hand`, or the kit-only `backup`, `pack`,
+`focus`, `instrument` -- which is its prompt id (`fighter/starting-equipment/off-hand`),
+the card's title, and for the three worn slots a rule: **the item chosen for
+a worn slot is equipped**, a second weapon in the off hand included, where
+everything else granted lands in the backpack. Fixed items (the cleric's
+shield, the rogue's leather armor) are still worn by an explicit change.
+Two places depart from the SRD's shape, never its contents: the fighter's and
+paladin's weapons are *main hand: any martial weapon* and *off hand: a shield
+or any martial weapon*, which allows exactly the book's combinations; the
+ranger's "two shortswords or two simple melee weapons" is two independent
+picks, which allows a shortsword beside a handaxe the book does not. The
+fighter's leather armor still brings its longbow and arrows as one body
+option, because splitting that bundle would hand out a bow with chain mail.
+
 The generator repairs omissions against the SRD: ranger quivers, the rogue's
 quiver-bearing bow bundle, and the acolyte's five incense blocks, vestments,
 prayer-book/wheel choice and 15 gp. The rogue bundle retains its historical key
 `shortbow+arrow` although its resolved contents now include the quiver. A bundle
 can carry an explicit identity for precisely this kind of source correction.
-Cleric warhammer and chain-mail choices require appropriate proficiency. Pack
-contents are presented as contents of the granted pack, without also granting a
-second loose copy of every contained item.
+Cleric warhammer and chain-mail choices require appropriate proficiency. **An
+equipment pack is granted as its contents**: a dungeoneer's pack is a backpack,
+a crowbar, ten torches and the rest in the backpack, never a row called
+"Dungeoneer's Pack", because the contents are what a player reaches for and the
+pack is only how the book sells them together. The wizard still names the
+pack, and a settled answer reads it back as one. A counted write from an
+import (`equipment.backpack.dungeoneers-pack` set 1) is not unpacked.
 
 ### Items carry their slot
 

@@ -106,7 +106,7 @@ func ParseChoiceKind(s string) (ChoiceKind, bool) {
 // Choice is "choose Choose of these", and nests arbitrarily deep.
 type Choice struct {
 	// Prompt identifies this prompt within its owning entry, e.g.
-	// "fighter/starting-equipment/1". It is load-bearing: a character's log
+	// "fighter/starting-equipment/body". It is load-bearing: a character's log
 	// records answers against it, so it must stay stable across catalogue
 	// regenerations or stored characters lose their choices.
 	Prompt Slug
@@ -133,6 +133,15 @@ type Choice struct {
 	// in the source compendium sets it; choice resolution sets it for equipment
 	// categories and the domain sets it on synthesised improvement prompts.
 	Repeatable bool
+
+	// Slot names what a starting-kit choice fills, so a builder can ask
+	// "what goes on your body?" rather than read the book's "(a) chain mail
+	// or (b) leather armor, a longbow and 20 arrows" back to the player. It
+	// is one of the catalogue's worn slots -- body, main-hand, off-hand --
+	// or a kit-only word: backup (a second weapon), pack, focus, instrument.
+	// Empty on every other choice. Only a worn slot has a mechanical effect:
+	// the item chosen for it is equipped rather than carried.
+	Slot Slug
 }
 
 // OptionSetKind distinguishes how an option set names its members.
