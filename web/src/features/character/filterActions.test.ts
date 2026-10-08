@@ -1,23 +1,32 @@
 import { describe, expect, it } from 'vitest'
 
-import { EMPTY_ACTION_FILTERS, hasActionFilters, matchesActionFilters } from './filterActions'
+import { DEFAULT_ACTION_FILTERS, hasActionFilters, matchesActionFilters, toggled } from './filterActions'
 
 const dash = { source: 'derived', origin: 'action:dash', kind: 'action', category: 'basic', name: 'Dash' }
+const sword = { source: 'derived', origin: 'item:longsword', kind: 'action', category: 'equipment', name: 'Longsword' }
 const wind = { source: 'derived', origin: 'feature:second-wind', kind: 'bonus-action', category: 'feature', name: 'Second Wind' }
 
+const ALL = { ...DEFAULT_ACTION_FILTERS, offCategories: [] }
+const only = (filters: typeof DEFAULT_ACTION_FILTERS) =>
+  [dash, sword, wind].filter((a) => matchesActionFilters(a, filters)).map((a) => a.name)
+
 describe('action filters', () => {
-  it('lets everything through when empty', () => {
-    expect(hasActionFilters(EMPTY_ACTION_FILTERS)).toBe(false)
-    expect([dash, wind].filter((a) => matchesActionFilters(a, EMPTY_ACTION_FILTERS))).toHaveLength(2)
+  it('opens on the character\'s own actions, with the basic ones switched off', () => {
+    expect.soft(hasActionFilters(DEFAULT_ACTION_FILTERS)).toBe(false)
+    expect.soft(only(DEFAULT_ACTION_FILTERS)).toEqual(['Longsword', 'Second Wind'])
+    expect.soft(only(ALL)).toEqual(['Dash', 'Longsword', 'Second Wind'])
+    expect.soft(hasActionFilters(ALL)).toBe(true)
   })
 
-  it('narrows by name, by part of the turn and by where the action comes from', () => {
-    const only = (filters: Partial<typeof EMPTY_ACTION_FILTERS>) =>
-      [dash, wind].filter((a) => matchesActionFilters(a, { ...EMPTY_ACTION_FILTERS, ...filters })).map((a) => a.name)
-    expect.soft(only({ query: ' wIn ' })).toEqual(['Second Wind'])
-    expect.soft(only({ kind: 'action' })).toEqual(['Dash'])
-    expect.soft(only({ category: 'feature' })).toEqual(['Second Wind'])
-    expect.soft(only({ kind: 'action', category: 'feature' })).toEqual([])
-    expect.soft(hasActionFilters({ ...EMPTY_ACTION_FILTERS, kind: 'reaction' })).toBe(true)
+  it('switches each part of the turn and each source off on its own', () => {
+    expect.soft(only({ ...ALL, query: ' wIn ' })).toEqual(['Second Wind'])
+    expect.soft(only({ ...ALL, offKinds: ['action'] })).toEqual(['Second Wind'])
+    expect.soft(only({ ...ALL, offCategories: ['feature', 'equipment'] })).toEqual(['Dash'])
+    expect.soft(only({ ...ALL, offKinds: ['bonus-action'], offCategories: ['basic'] })).toEqual(['Longsword'])
+  })
+
+  it('toggles a value in and out', () => {
+    expect.soft(toggled(['basic'], 'basic')).toEqual([])
+    expect.soft(toggled(['basic'], 'feature')).toEqual(['basic', 'feature'])
   })
 })

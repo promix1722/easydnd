@@ -3,9 +3,9 @@ import { useState } from 'react'
 import { signed } from '@/domain'
 import type { Entry, ResourcePool, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Badge, BlockList, Button, Group, Markdown, Select, Stack, Text, TextInput, joinProse } from '@/ui'
+import { Badge, BlockList, Button, Group, Markdown, Stack, Text, TextInput, joinProse } from '@/ui'
 
-import { EMPTY_ACTION_FILTERS, hasActionFilters, matchesActionFilters } from './filterActions'
+import { DEFAULT_ACTION_FILTERS, hasActionFilters, matchesActionFilters, toggled } from './filterActions'
 
 const KINDS = {
   action: 'actions.kind.action',
@@ -15,10 +15,13 @@ const KINDS = {
 } as const
 
 const CATEGORIES = {
-  basic: 'actions.category.basic',
   equipment: 'actions.category.equipment',
   feature: 'actions.category.feature',
+  basic: 'actions.category.basic',
 } as const
+
+/** Buttons in the order the tables above are written, whatever order the sheet lists its actions in. */
+const inOrder = (order: object) => (a: string, b: string) => Object.keys(order).indexOf(a) - Object.keys(order).indexOf(b)
 
 /**
  * What the character can do on a turn, as a list that opens.
@@ -33,7 +36,8 @@ const CATEGORIES = {
  * opens onto nothing.
  *
  * Filters are local state, as they are for a build's spell choices: the list
- * is a dozen rows of one sheet, not a page worth a URL.
+ * is a dozen rows of one sheet, not a page worth a URL. It opens with the
+ * basic actions switched off -- see `DEFAULT_ACTION_FILTERS`.
  */
 export function SheetActions({ actions, entries, pools }: {
   actions: readonly SheetAction[]
@@ -42,7 +46,7 @@ export function SheetActions({ actions, entries, pools }: {
   pools: Readonly<Record<string, ResourcePool>>
 }) {
   const t = useT()
-  const [filters, setFilters] = useState(EMPTY_ACTION_FILTERS)
+  const [filters, setFilters] = useState(DEFAULT_ACTION_FILTERS)
   const [opened, setOpened] = useState<string | null>(null)
   const kindName = (kind: string) => (kind in KINDS ? t(KINDS[kind as keyof typeof KINDS]) : kind)
 
@@ -59,29 +63,39 @@ export function SheetActions({ actions, entries, pools }: {
         value={filters.query}
         onChange={(event) => setFilters({ ...filters, query: event.currentTarget.value })}
       />
-      <Group gap="sm">
-        <Select
-          aria-label={t('actions.filter.kind')}
-          placeholder={t('actions.filter.anyKind')}
-          data={present(actions.map((action) => action.kind)).map((kind) => ({ value: kind, label: kindName(kind) }))}
-          value={filters.kind}
-          onChange={(kind) => setFilters({ ...filters, kind })}
-          clearable
-        />
-        <Select
-          aria-label={t('actions.filter.category')}
-          placeholder={t('actions.filter.anyCategory')}
-          data={present(actions.map((action) => action.category)).filter((category) => category in CATEGORIES)
-            .map((category) => ({ value: category, label: t(CATEGORIES[category as keyof typeof CATEGORIES]) }))}
-          value={filters.category}
-          onChange={(category) => setFilters({ ...filters, category })}
-          clearable
-        />
+      {/*
+        One button per value, each pressed or not on its own, rather than a
+        select: a turn is "my action and my bonus action", which a control
+        that holds one value cannot say. Only what this sheet has is offered.
+        Both sets share a line where there is room, the wider gap telling them
+        apart, and wrap as two on a phone.
+      */}
+      <Group gap="md">
+      <Group gap="xs" role="group" aria-label={t('actions.filter.kind')}>
+        {present(actions.map((action) => action.kind)).sort(inOrder(KINDS)).map((kind) => (
+          <FilterButton
+            key={kind}
+            label={kindName(kind)}
+            on={!filters.offKinds.includes(kind)}
+            onToggle={() => setFilters({ ...filters, offKinds: toggled(filters.offKinds, kind) })}
+          />
+        ))}
+      </Group>
+      <Group gap="xs" role="group" aria-label={t('actions.filter.category')}>
+        {present(actions.map((action) => action.category)).filter((category) => category in CATEGORIES).sort(inOrder(CATEGORIES)).map((category) => (
+          <FilterButton
+            key={category}
+            label={t(CATEGORIES[category as keyof typeof CATEGORIES])}
+            on={!filters.offCategories.includes(category)}
+            onToggle={() => setFilters({ ...filters, offCategories: toggled(filters.offCategories, category) })}
+          />
+        ))}
+      </Group>
       </Group>
       <Group gap="sm" justify="space-between">
         <Text size="sm" c="dimmed" aria-live="polite">{t('actions.count', { count: visible.length })}</Text>
         {hasActionFilters(filters) && (
-          <Button variant="subtle" onClick={() => setFilters(EMPTY_ACTION_FILTERS)}>{t('prompt.resetSpellFilters')}</Button>
+          <Button variant="subtle" onClick={() => setFilters(DEFAULT_ACTION_FILTERS)}>{t('prompt.resetSpellFilters')}</Button>
         )}
       </Group>
       {visible.length === 0 && <Text size="sm" c="dimmed">{t('actions.empty')}</Text>}
@@ -115,5 +129,14 @@ export function SheetActions({ actions, entries, pools }: {
         })}
       />
     </Stack>
+  )
+}
+
+/** A filter value that is pressed while it is let through, in the app's pressed-button idiom. */
+function FilterButton({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
+  return (
+    <Button size="xs" variant={on ? 'light' : 'default'} aria-pressed={on} onClick={onToggle}>
+      {label}
+    </Button>
   )
 }

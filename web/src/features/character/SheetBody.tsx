@@ -45,9 +45,9 @@ import { abilityAbbr, abilityName } from './labels'
  * `onEquipment`: only the owner's screen passes it, and without it nothing on
  * the sheet can be pressed.
  *
- * The sheet is four tabs at every width -- Overview, Actions, Spells,
- * Equipment -- handed to `ui/TabDeck`, which draws a tab row on a wide screen
- * and the same row over a swiped deck on a phone. Four rather than a tab per
+ * The sheet is a handful of tabs at every width -- Overview, Actions, Spells,
+ * Resources, Equipment, Items -- handed to `ui/TabDeck`, which draws a tab row on a wide screen
+ * and the same row over a swiped deck on a phone. A handful rather than a tab per
  * section: a sheet is read by what you are doing (looking someone up, taking a
  * turn, casting, gearing up), not by which table of the rulebook a number is in.
  */
@@ -77,11 +77,13 @@ export function SheetBody({
   const items = bySlug<Item>([...(catalog?.magicItems ?? []), ...(catalog?.equipment ?? [])])
   const names = new Map(Object.entries(s.catalogNames ?? {}))
   const identity = s.identity
-  // Hit Dice are a vital, drawn there; everything else spendable is on Actions.
+  // Hit Dice are a vital, drawn there; everything else spendable is on Resources.
   const pools = Object.values(s.resources.pools ?? {}).filter((pool) => pool.max > 0 && pool.group !== 'hit-dice')
     .sort((a, b) => a.name.localeCompare(b.name))
   const parameters = Object.values(s.resources.parameters ?? {})
-    .filter((value) => value.boolean !== false)
+    // A zero is a value the class has not reached yet -- Brutal Critical before
+    // ninth level -- and "0" on a sheet reads as a thing the character has.
+    .filter((value) => value.boolean !== false && (value.number !== 0 || !!value.dice || !!value.text || !!value.rational || value.boolean === true))
     .map((value) => {
       const amount = value.dice || value.text || (value.rational ? `${value.rational.numerator}/${value.rational.denominator}` : value.boolean ? '' : String(value.number))
       return amount ? `${value.name}: ${amount}` : value.name
@@ -170,15 +172,8 @@ export function SheetBody({
                 entries={bySlug(catalog?.actions ?? [])}
                 pools={s.resources.pools ?? {}}
               />
-              {/*
-                Scaling values only -- a Sneak Attack die, an aura's range -- drawn
-                only when there is one, because a row about somebody else's class
-                is not a fact at all.
-              */}
-              {parameters.length > 0 && <ItemList label={t('sheet.resources')} items={parameters} />}
             </Stack>
           </Panel>
-          {pools.length > 0 && headed(t('sheet.consumables'), <ResourcePools pools={pools} />)}
         </Stack>
       ),
     },
@@ -186,6 +181,24 @@ export function SheetBody({
   if (s.spells.sources?.length) panels.push({
     value: 'spells', label: t('sheet.spells'),
     content: <SheetSpells sheet={s} characterId={characterId} onChanged={onChanged} />,
+  })
+  /*
+   * What a class hands out besides actions, on a tab of its own so the action
+   * list is only actions. Two different things, kept apart: a pool is spent
+   * and comes back on a rest; a scaling value -- a Sneak Attack die, a Rage
+   * damage bonus -- is a number that grows with level and is never spent.
+   * Drawn only for a character with either, because a tab about somebody
+   * else's class is not a fact at all.
+   */
+  if (pools.length > 0 || parameters.length > 0) panels.push({
+    value: 'resources',
+    label: t('sheet.resources'),
+    content: (
+      <Stack gap="md">
+        {pools.length > 0 && headed(t('sheet.consumables'), <ResourcePools pools={pools} />)}
+        {parameters.length > 0 && <Panel><ItemList label={t('sheet.scaling')} items={parameters} /></Panel>}
+      </Stack>
+    ),
   })
   panels.push({
     value: 'equipment',

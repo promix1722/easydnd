@@ -1847,19 +1847,33 @@ going through the pack.
 - **Overview** is who the character is and the abilities everything else is
   derived from, the body's state, then skills, proficiencies and traits as
   headed panels -- two abreast on a wide screen, stacked on a phone.
-- **Actions** lists what the server derived (`sheet.actions`), the scaling
-  values a class brings, and the spendable pools. The list is
+- **Actions** lists what the server derived (`sheet.actions`) and nothing
+  else. The list is
   `features/character/SheetActions.tsx`: a `BlockList` whose rows open onto
-  their description, under a search box and two selects -- the part of the turn
-  and where the action comes from. What is on it is the rule pack's decision
+  their description, under a search box and two rows of filter buttons -- the
+  part of the turn and where the action comes from. Each value is its own
+  button, pressed while it is let through (`aria-pressed`, the same idiom as a
+  picked option), because a select holds one value and a turn is "my action
+  and my bonus action". The list opens with everything pressed except
+  **Basic**: those fourteen rows are the same on every sheet and would stand
+  between a player and their own abilities. What is on it is the rule pack's decision
   (see [packs.md](packs.md#action-tags)); the client knows no class. The prose
   arrives in the sheet response as `catalog.actions`, keyed by each action's
   `origin`, so opening a row is not a request. A row with no prose -- a mundane
   weapon -- has no body and is drawn as a fact, not a control. Filters are
-  local state and offer only the kinds and sources the sheet actually has. A
+  local state, offer only the kinds and sources the sheet actually has, and
+  record what is switched *off*, so a kind a pack adds later is shown. A
   pool is shown by capacity, as everywhere on a sheet; spending is the game
   tracker's.
 - **Spells** is drawn only for a character with a spell source.
+- **Resources** is what a class hands out besides actions, drawn only for a
+  character with any: the spendable pools ("Consumable slots"), and under them
+  the scaling values -- a Sneak Attack die, a Rage damage bonus. The two are
+  kept apart because they are different things: a pool is spent and comes back
+  on a rest, a scaling value is a number that grows with level and is never
+  spent. A scaling value of zero is one the class has not reached yet and is
+  not drawn. It was the foot of the Actions tab until the action list grew
+  long enough to push it off the screen.
 - **Equipment** and **Items** are described
   [below](#equipment-is-what-is-worn-items-is-what-is-carried).
 

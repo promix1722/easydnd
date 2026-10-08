@@ -278,7 +278,7 @@ describe('the panels that were sentences', () => {
       <SheetBody
         sheet={{
           ...NAMED,
-          resources: { parameters: { 'sneak-attack': { name: 'Sneak Attack', number: 1, dice: '1d6' } } },
+          resources: { parameters: { 'sneak-attack': { name: 'Sneak Attack', number: 1, dice: '1d6' }, 'brutal-critical-dice': { name: 'Brutal Critical Dice', number: 0 } } },
         }}
       />,
     )
@@ -296,6 +296,8 @@ describe('the panels that were sentences', () => {
     ]) {
       expect.soft(screen.getAllByText(name).length).toBeGreaterThan(0)
     }
+    // Not reached yet is not a thing the character has.
+    expect.soft(screen.queryByText(/Brutal Critical/)).not.toBeInTheDocument()
   })
 
   it('lists actions that open onto their description and can be filtered', () => {
@@ -316,14 +318,25 @@ describe('the panels that were sentences', () => {
     // A weapon with no prose is a fact, not a control that opens onto nothing.
     expect.soft(screen.queryByRole('button', { name: /Rapier/ })).not.toBeInTheDocument()
 
+    // The basic actions are on every sheet, so the list opens without them.
+    expect.soft(screen.getByText('2 actions')).toBeInTheDocument()
+    expect.soft(screen.queryByText('Dash')).not.toBeInTheDocument()
+    expect.soft(screen.getByRole('button', { name: 'Basic' })).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(screen.getByRole('button', { name: 'Basic' }))
     fireEvent.click(screen.getByRole('button', { name: /Dash/ }))
     expect.soft(screen.getByText('You gain extra movement.')).toBeInTheDocument()
+
+    // Each button is pressed or not on its own.
+    fireEvent.click(screen.getByRole('button', { name: 'Bonus action' }))
+    expect.soft(screen.queryByText('Second Wind')).not.toBeInTheDocument()
+    expect.soft(screen.getByText('Rapier')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Bonus action' }))
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search actions' }), { target: { value: 'wind' } })
     expect.soft(screen.getByText('1 action')).toBeInTheDocument()
     expect.soft(screen.queryByText('Rapier')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
-    expect.soft(screen.getByText('3 actions')).toBeInTheDocument()
+    expect.soft(screen.getByText('2 actions')).toBeInTheDocument()
   })
 
   // Capacity only: what a sheet has spent is a fact about one game, not the character.
@@ -336,6 +349,8 @@ describe('the panels that were sentences', () => {
     } } }} />)
 
     expect.soft(screen.getByRole('heading', { name: 'Consumable slots' })).toBeInTheDocument()
+    // Their own tab, not the foot of the action list.
+    expect.soft(screen.getByRole('tab', { name: 'Resources' })).toBeInTheDocument()
     expect.soft(screen.getAllByRole('img', { name: /left$/ }).map((row) => row.getAttribute('aria-label'))).toEqual([
       'Spell slots, level 1: 4 of 4 left', 'Spell slots, level 2: 2 of 2 left', 'Channel Divinity Uses: 1 of 1 left',
     ])
