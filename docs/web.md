@@ -1358,7 +1358,17 @@ exists: an alignment is namespaced `character/alignment` exactly like
 `character/race`, this screen read the namespace as the shape, and the
 `change` event it posted -- naming an alignment, changing nothing -- was
 accepted by a server that could attribute it to no prompt. The alignment
-simply never saved, with a 200 to say so.
+simply never saved, with a 200 to say so. (The server refuses that shape now,
+`field.answer.notAPick`: the AI Wizard made the same mistake later, and two
+such entries beside the still-open question are three blocks under one key.)
+
+A settled input reads back as what it is. An alignment is shown by the
+compendium's name for it, asked for alongside the entries' references
+(`alignment:<slug>`), and not as its slug in title case -- English in every
+language, and under a rule pack "Dnd 2014/neutral Good". The four written
+lines are printed as written even when they are stored as a list, which is
+how the wizard stores them: a list used to be printed the way a list of slugs
+is, and "кто-нибудь" came out "кто Нибудь".
 
 One `PromptCard` renders every kind of prompt rather than one component per
 kind, because the server synthesises "which race?" into the compendium's own
@@ -4270,18 +4280,28 @@ a *Don't ask me anything* checkbox stood under the first message for a while
 and was taken out. The request field and the CLI flag remain.
 
 The screen is nothing but the transcript, with the composer as its last
-element. Before a session exists the transcript is drawn from local state:
-the assistant asks for the rules as one button per pack, the press becomes a
-player bubble (with Change), and the assistant then asks for a sheet or a
-description -- answered in the composer, which opens at that point and
-carries a borderless "Attach a sheet" `FileButton` bottom left until a file
-replaces it. Once the session
-exists the same exchange is drawn from its first event, `rules`.
+element. The assistant asks for the rules as one button per pack, the press
+becomes a player bubble, and the assistant then asks for a sheet or a
+description. The composer is open from that first question and carries a
+borderless "Attach a sheet" `FileButton` bottom left until a file replaces
+it: a line of text with a clip, flush with the words above it. Its
+background is held transparent in every state -- disabled, it was given the
+grey slab every disabled button gets, which with no padding to sit in read
+as a button drawn wrong.
+
+The rules question is answered by pressing or by writing. `send` on an opened
+chat with no rules yet asks `namedPack` (`agentChat.ts`) which pack the text
+names and chooses it first; a text that is only the pack's name stops there.
+A text that names none -- or a sheet with no text -- is sent as the first
+message regardless, and the server takes the deployment's packs: the `rules`
+event then carries `assumed`, and `Conversation` draws it as the assistant's
+line (`agent.rulesAssumed`) under the message instead of as the player's
+answer above it.
 
 Replies are buttons: a message's prepared answers -- the question's `options`,
 nothing when it offered none -- of which only the latest message's are live. The composer is always rendered, under
-the `log`, and is open for writing from the moment
-the rules are chosen; `myTurn` enables only Send. On
+the `log`, and is open for writing whenever there is a
+session; `myTurn` enables only Send. On
 `review` the last message's buttons are View, Edit, Finish and Delete. With no
 session id the screen takes the owner's latest session that is not
 `finished` as its own (`resumed`, state rather than a redirect), and opens a
@@ -4306,9 +4326,18 @@ the **page** scrolls, as in any chat application. The composer is a second
 block straight under the card -- outside the `log`, in normal flow, not
 `sticky` -- so the two can never cover each other; a pinned composer hid the
 end of the newest message whenever the page was a few pixels short of the
-bottom. The `log` is at least `calc(100dvh - 360px)` tall, so a short chat
-puts the composer at the foot of the window
-too. The page follows the conversation until the reader scrolls **up**, and
+bottom. **The composer is in the same place whether the chat is empty or
+long**: the two blocks are a flex column at least as tall as the window
+leaves, the card takes what the composer does not, and a chat that has
+outgrown the window scrolls to the same foot. How tall that is is measured
+(`frame`, in a layout effect, again whenever the page resizes) and not
+written as a sum -- it used to be `calc(100dvh - 360px)` on the `log`, a guess
+at what stands above it that left the composer sixty pixels short of where
+a full chat puts it, and that could not be right on a phone, where the
+heading is gone and the padding under the page is the safe area's. What is
+above the chat is the box's own offset; what is under it is `main`'s bottom
+padding. The page
+follows the conversation until the reader scrolls **up**, and
 picks it up again when they come back within 80px of the end, send a message,
 or press the round arrow that appears at the foot of the window while they are
 away.
@@ -4324,6 +4353,11 @@ zero-height `sticky` row.
 View, Edit, Finish (on `review`) and Delete are also the page's `actions`,
 shown whenever the session has a character. A paused or failed
 session adds a Resume or Retry bubble. 
+
+The page's name in the trail is `chatName(session.created, session.id)` --
+the local time the chat was opened and eight characters of its id -- and is
+drawn once the session has arrived, so it never begins as one thing and
+becomes another.
 
 `/ai-wizard/:sessionId` identifies a chat and is the only page of it. View and
 Edit navigate to `/characters/:id` and `/characters/:id/build`: the chat writes

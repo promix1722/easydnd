@@ -21,14 +21,30 @@ type agentProgress struct {
 // implementation details remain in the internal transcript.
 func (a *Agent) recordProgress(ctx context.Context, s *AgentSession, tool string, args agentArgs, result json.RawMessage) {
 	p := agentProgress{Operation: "imported"}
+	// A catalogue entry is named in the language the chat is held in. What a
+	// tool answers a model with is the name that matched, which is the
+	// sheet's language: an English sheet read in a Russian chat was a
+	// transcript of "Race: Tiefling".
+	named := func(ref, fallback string) string {
+		parsed, ok := rules.ParseRef(ref)
+		if cat, err := a.Catalog(ctx, *s); ok && err == nil {
+			if name := catalogNames(cat)(parsed); name != "" {
+				return name
+			}
+		}
+		return fallback
+	}
 	switch tool {
 	case "resolve_import_facts":
 		// The write itself says what it settled on: the catalogue entry a
 		// printed name resolved to, or the path a value landed at.
-		var written struct{ Ref, Name, Path string }
+		var written struct {
+			Ref, Name, Path string
+			Refs            []string
+		}
 		_ = json.Unmarshal(result, &written)
 		if ref, ok := rules.ParseRef(written.Ref); ok {
-			p.Field, p.Value = ref.Kind.String(), written.Name
+			p.Field, p.Value = ref.Kind.String(), named(written.Ref, written.Name)
 			if args.Level != nil {
 				p.Level = *args.Level
 			}
@@ -49,8 +65,17 @@ func (a *Agent) recordProgress(ctx context.Context, s *AgentSession, tool string
 		} else {
 			p.Value = fmt.Sprint(value)
 		}
+		// Values that named catalogue entries are shown by the entries' names:
+		// a model writes an option's key as readily as its name.
+		if len(written.Refs) > 0 {
+			parts := make([]string, len(written.Refs))
+			for i, ref := range written.Refs {
+				parts[i] = named(ref, ref)
+			}
+			p.Value = strings.Join(parts, ", ")
+		}
 	case "set_inventory":
-		p.Field, p.Value = "item", args.Name+" × "+string(args.Value)
+		p.Field, p.Value = "item", named(args.Ref, args.Name)+" × "+string(args.Value)
 	case "upsert_custom_option":
 		// Content the build or the pack already has was imported as itself,
 		// and said so on its own line.
@@ -77,7 +102,7 @@ func (a *Agent) recordProgress(ctx context.Context, s *AgentSession, tool string
 		cat, err := a.Catalog(ctx, *s)
 		if err == nil {
 			names := map[string]string{}
-			for _, kind := range []string{"spell", "feature", "proficiency", "race", "class", "subrace", "subclass", "background", "item", "feat"} {
+			for _, kind := range []string{"spell", "feature", "proficiency", "language", "race", "class", "subrace", "subclass", "background", "item", "feat"} {
 				for _, entry := range charuc.CatalogCandidates(cat, kind) {
 					ref, _ := rules.ParseRef(entry.Ref)
 					names[ref.Slug.String()] = entry.Name

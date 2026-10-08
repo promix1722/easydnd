@@ -224,6 +224,16 @@ settles them — `identity.personalityTraits` and its three siblings — which i
 the same shape an alignment and the six ability scores travel in. The tables
 remain in the compendium as suggestions to read.
 
+**A pick never answers one of the character's own questions.** Everything
+under `character/` — which race, which class, the alignment, the four written
+lines — is settled by an entry that *is* the answer or by a change at a path,
+and the projection reads it from there. A pick filed under one of those ids
+(`choices: [{prompt: "character/alignment", picks: [...]}]`) names a real
+option of a real open question, so it used to pass validation, and it settled
+nothing: the question stayed open with an answer under it for good. It is
+refused now (`field.answer.notAPick`, in `validateAnswer`), which is the only
+honest thing to do with an answer nothing will ever read.
+
 ### Localization
 
 Mechanics are language-neutral and prose is not, so they live in separate files:

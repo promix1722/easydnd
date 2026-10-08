@@ -149,6 +149,52 @@ describe('summarise', () => {
     expect(rows.get('rules')?.map((row) => [row.label, row.value])).toEqual([['Rules', 'D&D 2014']])
   })
 
+  // The slug read back as words is English in every language, and under a
+  // rule pack it carries the pack's id: "Dnd 2014/neutral Good".
+  it('names an alignment as the compendium does', () => {
+    const rows = settledByStage(testT, {
+      events: [
+        {
+          seq: 1,
+          type: 'change',
+          source: 'personality',
+          changes: [
+            { path: 'identity.alignment', op: 'set', value: { kind: 'slug', slug: 'dnd-2014/neutral-good' } },
+          ],
+        },
+      ],
+      names: new Map([['alignment:dnd-2014/neutral-good', 'Нейтрально-добрый']]),
+    })
+
+    expect([...rows.values()].flat().map((row) => row.value)).toEqual(['Нейтрально-добрый'])
+  })
+
+  // The wizard stores a sheet's traits as a list, and a list of slugs is
+  // title-cased with its hyphens read as spaces.
+  it('prints what the player wrote as they wrote it', () => {
+    const rows = settledByStage(testT, {
+      events: [
+        {
+          seq: 1,
+          type: 'change',
+          source: 'personality',
+          changes: [
+            {
+              path: 'identity.ideals',
+              op: 'set',
+              value: { kind: 'slugs', slugs: ['кто-нибудь наконец вступился.', 'second line'] },
+            },
+          ],
+        },
+      ],
+      names: new Map(),
+    })
+
+    expect([...rows.values()].flat().map((row) => row.value)).toEqual([
+      'кто-нибудь наконец вступился. · second line',
+    ])
+  })
+
   // A question whose options are questions is answered in one entry now: the
   // branch, then what the branch offered. Printing both would name the choice
   // once as itself -- "Expertise, Skill Stealth, Skill Acrobatics".

@@ -90,16 +90,24 @@ beforeEach(() => {
         const events = opened.session.events
         if ((body as { action?: string } | undefined)?.action === 'rules')
           opened = { session: { ...opened.session, revision: 2, events: [...events, { id: events.length + 1, kind: 'rules', data: { packs: RULES.packs } }] } }
-        else if (url.includes('/opened/files'))
+        else if (url.includes('/opened/files')) {
+          // A first message sent before the rules takes the deployment's own,
+          // and the chat says so after the message.
+          const said = [
+            { kind: 'user', text: String((body as FormData).get('instructions')) },
+            ...(events.some((event) => event.kind === 'rules') ? [] : [{ kind: 'rules', data: { packs: RULES.packs, assumed: true } }]),
+            { kind: 'assistant', text: 'Draft ready' },
+          ]
           opened = {
             session: {
               ...opened.session,
               status: 'review',
               revision: 3,
               characterId: 'chr1',
-              events: [...events, { id: events.length + 1, kind: 'user', text: String((body as FormData).get('instructions')) }, { id: events.length + 2, kind: 'assistant', text: 'Draft ready' }],
+              events: [...events, ...said.map((event, at) => ({ ...event, id: events.length + at + 1 }))],
             },
           }
+        }
         else if (!/\/agent-sessions(\?|$)/.test(url)) return Response.json(VIEW)
         return Response.json(opened)
       }
@@ -198,11 +206,14 @@ it('opens a chat, answers its rules and sends the sheet with the first message',
     </MemoryRouter>,
   )
   // The assistant opens by asking for the rules -- the first event of a chat
-  // the page opened on arriving -- and there is nothing to type into until it
-  // is the player's turn to speak.
+  // the page opened on arriving. It is a question like any later one, so the
+  // box is open under it from the start.
   const log = within(screen.getByRole('log'))
   expect(await log.findByText(/Which rules should I use/)).toBeInTheDocument()
-  expect(screen.getByRole('textbox')).toBeDisabled()
+  expect(screen.getByRole('textbox')).toBeEnabled()
+  // The page is named by when the chat was opened and the head of its id,
+  // not by thirty-two hex digits.
+  expect(screen.getByRole('heading', { name: /^\d{4}-\d\d-\d\d-\d\d:\d\d:\d\d-opened$/ })).toBeInTheDocument()
   // The rules are prepared answers like any other question's: one press.
   await user.click(await log.findByRole('button', { name: 'D&D 2014 v1.0.0' }))
   // The answer is a message of the player's, and the next question follows it.
@@ -237,6 +248,61 @@ it('opens a chat, answers its rules and sends the sheet with the first message',
   expect(form.get('instructions')).toBe('Keep the custom items')
   expect(form.get('revision')).toBe('2')
   expect((form.get('files') as File).name).toBe('hero.txt')
+})
+
+// A question with buttons under it is answered by pressing one or by writing.
+// The first question is no exception, though no model is there to read the
+// reply: the page reads which pack it names.
+it('takes the rules written into the message box as the answer to the opening question', async () => {
+  const user = setupUser()
+  renderAt(
+    'desktop',
+    <MemoryRouter initialEntries={['/ai-wizard']}>
+      <Routes>
+        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+  const log = within(screen.getByRole('log'))
+  expect(await log.findByText(/Which rules should I use/)).toBeInTheDocument()
+  await user.type(screen.getByRole('textbox'), 'd&d 2014{Enter}')
+  // The same answer the button gives, and nothing sent besides: the words
+  // were the answer, not a description of a character.
+  expect(await log.findByText(/attach, or would you rather describe/)).toBeInTheDocument()
+  expect(screen.getByRole('textbox')).toHaveValue('')
+  expect(writes).toHaveLength(2)
+  expect(writes[1]?.body).toMatchObject({ action: 'rules', revision: 1, rules: RULES })
+})
+
+it('starts from a first message that came before the rules, and says which it took', async () => {
+  const user = setupUser()
+  const { container } = renderAt(
+    'desktop',
+    <MemoryRouter initialEntries={['/ai-wizard']}>
+      <Routes>
+        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard/:sessionId" element={<ImportCharacterScreen />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+  const log = within(screen.getByRole('log'))
+  expect(await log.findByText(/Which rules should I use/)).toBeInTheDocument()
+  // The sheet can be attached before anything is answered.
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]')
+  if (!input) throw new Error('File input missing')
+  await user.upload(input, new File(['Hero'], 'hero.txt', { type: 'text/plain' }))
+  await user.type(screen.getByRole('textbox'), 'Zephyr the bard')
+  await user.click(screen.getByRole('button', { name: 'Send' }))
+  await screen.findByText('Draft ready')
+  // Two writes: the chat and its first message. No rules were sent; the
+  // server took its own, and the assistant says so under the message rather
+  // than the page pretending the player picked them.
+  expect(writes).toHaveLength(2)
+  const first = writes[1]?.body as FormData
+  expect(first.get('revision')).toBe('1')
+  const said = screen.getByRole('log').textContent ?? ''
+  expect(said).toMatch(/Zephyr the bard.*I’ll use D&D 2014 v1\.0\.0\..*Draft ready/)
+  expect(said).not.toMatch(/would you rather describe/)
 })
 
 it('lets a message be sent only on the player\'s turn, and keeps the opening in the log', async () => {

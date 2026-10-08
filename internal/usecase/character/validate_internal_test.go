@@ -175,3 +175,29 @@ func TestOffersChecksTheKindAndNotOnlyTheSlug(t *testing.T) {
 		t.Error("offers() accepted a class from a set of races")
 	}
 }
+
+// The character's own questions are answered by an entry or a change, never by
+// a pick. A pick under one of their ids names a real option of a real open
+// question, so it used to be accepted, and settled nothing.
+func TestAPickDoesNotAnswerTheCharactersOwnQuestion(t *testing.T) {
+	cat := loadCatalog(t)
+	log := logFrom(t)
+	open, err := domain.Prompts(log, cat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, asked := findPrompt(open, "character/alignment"); !asked {
+		t.Fatal("the alignment is not asked of a new character")
+	}
+	pick := domain.Answer{Prompt: "character/alignment", Picks: []rules.Slug{"lawful-good"}}
+	if errs := validateAnswer(open, pick, 0); len(errs) != 1 || errs[0].Reason != "field.answer.notAPick" {
+		t.Fatalf("a pick for the alignment = %+v, want it refused as not a pick", errs)
+	}
+	if err := ValidateAndAttribute(log, cat, []domain.Event{{Type: domain.EventChange, Choices: []domain.Answer{pick}}}); err == nil {
+		t.Fatal("an entry that answers the alignment with a pick was accepted")
+	}
+	set := domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "identity.alignment", Op: domain.OpSet, Value: domain.SlugValue("lawful-good")}}}
+	if err := ValidateAndAttribute(log, cat, []domain.Event{set}); err != nil {
+		t.Fatalf("the change that does answer it = %v", err)
+	}
+}

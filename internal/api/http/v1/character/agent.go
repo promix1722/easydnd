@@ -186,6 +186,6 @@ func (h *Handler) AgentFiles(c *gin.Context) {
 		helpers.FormatError(c, types.NewValidationError("revision required"))
 		return
 	}
-	s, err := h.agent.AddFiles(h.owner(c), c.Param("id"), revision, files, c.PostForm("instructions"))
+	s, err := h.agent.AddFiles(h.owner(c), c.Param("id"), revision, helpers.Locale(c), files, c.PostForm("instructions"))
 	h.agentResult(c, s, err)
 }

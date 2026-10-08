@@ -150,6 +150,11 @@ export function BuildScreen() {
       sheet,
       names: await resolveRefNames([
         ...log.events, ...prompts.prompts,
+        // An alignment is written as a value at a path, not as a reference,
+        // so nothing above asks for its name.
+        ...log.events.flatMap((event) => (event.changes ?? [])
+          .filter((change) => change.path === 'identity.alignment' && change.value.slug !== undefined)
+          .map((change) => ({ ref: `alignment:${change.value.slug}` }))),
         ...(prompts.spellRules ?? []).flatMap((rule) => [{ source: rule.source }, ...(rule.automatic ?? []).map((slug) => ({ ref: `spell:${slug}` })), ...(rule.listClasses ?? []).map((slug) => ({ ref: `class:${slug}` }))]),
         // An equipment card is titled by what it offers, so those items are
         // named before any card is opened.

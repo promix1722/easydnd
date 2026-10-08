@@ -244,17 +244,12 @@ func TestImportHTTPOpenedChatIsAnsweredInSteps(t *testing.T) {
 	if listed := agent.List("owner"); len(listed) != 1 {
 		t.Fatalf("an opened chat is not offered to be reopened: %v", listed)
 	}
-	// No rules, no start.
-	contentType, form := message("A hero")
-	if status := send("/sessions/"+id+"/files", contentType, form); status != 400 {
-		t.Fatalf("a first message before the rules = %d", status)
-	}
 	lock, _ := json.Marshal(map[string]any{"action": "rules", "revision": view.Session.Revision, "rules": helpers.RulesLockOf(cat.Lock)})
 	if status := send("/sessions/"+id+"/control", "application/json", bytes.NewReader(lock)); status != 200 || view.Session.Status != "opening" ||
 		len(view.Session.Events) != 2 || view.Session.Events[1].Kind != "rules" {
 		t.Fatalf("rules: %d %+v", status, view.Session)
 	}
-	contentType, form = message("A hero")
+	contentType, form := message("A hero")
 	if status := send("/sessions/"+id+"/files", contentType, form); status != 200 || view.Session.CharacterID == "" ||
 		len(view.Session.Events) != 3 || view.Session.Events[2].Kind != "user" || view.Session.Events[2].Text != "A hero" {
 		t.Fatalf("first message: %d %+v", status, view.Session)
@@ -266,6 +261,26 @@ func TestImportHTTPOpenedChatIsAnsweredInSteps(t *testing.T) {
 	}
 	if _, err := svc.Repository().Get(context.Background(), view.Session.CharacterID); err != nil {
 		t.Fatal(err)
+	}
+
+	// The opening question may go unanswered: a first message is an answer
+	// too. The chat then starts under the deployment's own packs and says so
+	// after the message -- and it is held in the language that message was
+	// sent in, not the one the page was in when the chat was opened, which
+	// is the chat the wizard goes on reopening for days.
+	view.Session = agentuc.AgentSession{}
+	if status := send("/sessions?locale=en", "application/json", nil); status != 200 || view.Session.Status != "opening" {
+		t.Fatalf("open: %d %+v", status, view.Session)
+	}
+	id = view.Session.ID
+	contentType, form = message("Герой")
+	if status := send("/sessions/"+id+"/files?locale=ru", contentType, form); status != 200 || view.Session.CharacterID == "" ||
+		len(view.Session.Events) != 3 || view.Session.Events[1].Kind != "user" || view.Session.Events[2].Kind != "rules" ||
+		!strings.Contains(string(view.Session.Events[2].Data), `"assumed":true`) {
+		t.Fatalf("a first message before the rules: %d %+v", status, view.Session)
+	}
+	if started, _ := agent.Get("owner", id); started.Locale != rules.LocaleRU {
+		t.Fatalf("the chat is held in %q, not in the language of its first message", started.Locale)
 	}
 }
 

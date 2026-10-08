@@ -2,6 +2,7 @@ import type { Translate } from '@/lib/i18n'
 import { titleCase } from '@/domain'
 const fields = {
   'identity.name': 'agent.field.name',
+  'identity.alignment': 'agent.field.alignment',
   race: 'agent.field.race',
   subrace: 'agent.field.subrace',
   class: 'agent.field.class',

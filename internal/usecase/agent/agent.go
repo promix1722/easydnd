@@ -76,11 +76,15 @@ type AgentSession struct {
 	// build comes out at them, whatever order race and improvements arrive in.
 	// A player editing the character ends that -- their numbers win.
 	scores map[rules.Ability]int
-	// offered is that review has been refused once over unanswered questions,
-	// so that the owner is asked about them and a model cannot loop on it.
+	// offered is that review has just been refused over questions the owner
+	// was never put, so that the question which follows is known to be about
+	// them.
 	offered bool
-	// asked is that the owner has been asked a question since that refusal.
-	asked bool
+	// questions is everything the owner has been asked, with what it was
+	// about and what they answered. It is what keeps a question from being
+	// put twice: the model is shown it wherever it decides whether to ask,
+	// and review is held back only for what is not in it.
+	questions []agentQuestion
 	// classLevels is the level the sheet prints beside each class.
 	classLevels map[rules.Slug]int
 	// characterRevision is the stored character's revision as the agent last
@@ -120,6 +124,57 @@ type AgentSession struct {
 	count int
 }
 type AgentCall struct{ ID, Name, Arguments string }
+
+// agentQuestion is one question the owner was put, and what came of it.
+type agentQuestion struct {
+	Text    string
+	Options []string
+	// About is the open prompts the question put to them, by the id a model
+	// reads them under: the ones it named, the ones whose own options it
+	// offered as answers, and after a refused review all that was left.
+	About []string
+	// Open is every prompt that was open when it was asked. The same answers
+	// offered again over the same open prompts is the same question.
+	Open []string
+	// Answer is the owner's reply, once there is one.
+	Answer string
+}
+
+// replied files a message of the owner's as the answer to the question they
+// were last put, if it is still waiting for one.
+func (s *AgentSession) replied(text string) {
+	if n := len(s.questions); n > 0 && s.questions[n-1].Answer == "" {
+		s.questions[n-1].Answer = text
+	}
+}
+
+// decided is what the owner has already said about each prompt: the last
+// answered question that put it to them.
+func (s *AgentSession) decided() map[string]agentQuestion {
+	out := map[string]agentQuestion{}
+	for _, q := range s.questions {
+		if q.Answer == "" {
+			continue
+		}
+		for _, id := range q.About {
+			out[id] = q
+		}
+	}
+	return out
+}
+
+// answers is the owner's choices so far, in the order they were made, as a
+// model is shown them.
+func (s *AgentSession) answers() []map[string]any {
+	out := []map[string]any{}
+	for _, q := range s.questions {
+		if q.Answer != "" {
+			out = append(out, map[string]any{"question": q.Text, "answer": q.Answer, "about": q.About})
+		}
+	}
+	return out
+}
+
 type AgentResponse struct {
 	Text   string
 	Output []json.RawMessage
@@ -273,7 +328,8 @@ type document struct {
 	Printed           map[string]int
 	Spells, Prepared  []string
 	Scores            map[rules.Ability]int
-	Offered, Asked    bool
+	Offered           bool
+	Questions         []agentQuestion
 	ClassLevels       map[rules.Slug]int
 	CharacterRevision int
 	Operations        map[string]agentOperation
@@ -296,7 +352,7 @@ func encode(s *AgentSession, pending []AgentCall) Record {
 	}
 	return Record{ID: s.ID, Owner: s.Owner, Status: s.Status, Revision: s.Revision, Generation: s.Generation, Finished: s.Finished, Created: s.Created, Count: s.count, Events: s.Events,
 		Document: raw(document{Folder: s.Folder, CharacterID: s.CharacterID, Unattended: s.Unattended, Files: s.Files, Manual: s.Manual, Assumptions: s.Assumptions, Locale: s.Locale, Log: s.Log, Input: input, Turns: s.Turns,
-			Expected: s.expected, Nudged: s.nudged, Printed: s.printed, Spells: s.spells, Prepared: s.prepared, Scores: s.scores, Offered: s.offered, Asked: s.asked, ClassLevels: s.classLevels, CharacterRevision: s.characterRevision, Operations: s.operations, Rules: s.rules, Chosen: s.chosen})}
+			Expected: s.expected, Nudged: s.nudged, Printed: s.printed, Spells: s.spells, Prepared: s.prepared, Scores: s.scores, Offered: s.offered, Questions: s.questions, ClassLevels: s.classLevels, CharacterRevision: s.characterRevision, Operations: s.operations, Rules: s.rules, Chosen: s.chosen})}
 }
 
 var errInterrupted = errors.New("not run: the turn was interrupted; send it again if it is still needed")
@@ -309,7 +365,7 @@ func decode(rec Record) (*AgentSession, error) {
 	s := &AgentSession{ID: rec.ID, Owner: rec.Owner, Status: rec.Status, Revision: rec.Revision, Generation: rec.Generation, Finished: rec.Finished, Created: rec.Created, count: rec.Count,
 		Events: append([]AgentEvent{}, rec.Events...), Files: append([]AgentFile{}, d.Files...), Manual: append([]AgentManual{}, d.Manual...), Assumptions: append([]string{}, d.Assumptions...),
 		Folder: d.Folder, CharacterID: d.CharacterID, Unattended: d.Unattended, Locale: d.Locale, Log: d.Log, Input: d.Input, Turns: d.Turns,
-		expected: d.Expected, nudged: d.Nudged, printed: d.Printed, spells: d.Spells, prepared: d.Prepared, scores: d.Scores, offered: d.Offered, asked: d.Asked, classLevels: d.ClassLevels, characterRevision: d.CharacterRevision, operations: d.Operations, rules: d.Rules, chosen: d.Chosen}
+		expected: d.Expected, nudged: d.Nudged, printed: d.Printed, spells: d.Spells, prepared: d.Prepared, scores: d.Scores, offered: d.Offered, questions: d.Questions, classLevels: d.ClassLevels, characterRevision: d.CharacterRevision, operations: d.Operations, rules: d.Rules, chosen: d.Chosen}
 	return s, nil
 }
 
@@ -439,24 +495,38 @@ func (a *Agent) choose(ctx context.Context, s *AgentSession, selected pack.Lock)
 		return err
 	}
 	s.rules, s.chosen = cat.Lock.Clone(), true
-	chosen := []map[string]string{}
-	for _, release := range cat.Lock.Packs {
-		chosen = append(chosen, map[string]string{"id": release.ID, "version": release.Version})
-	}
-	addAgentEvent(s, "rules", "", "", map[string]any{"packs": chosen})
+	addAgentEvent(s, "rules", "", "", map[string]any{"packs": lockedPacks(s.rules)})
 	s.Revision++
 	return nil
 }
 
-// start is the owner's first message. It is where the character begins: the
-// chat has rules by now, and from here every tool call is committed to a
-// character that is already in the owner's list.
-func (a *Agent) start(ctx context.Context, s *AgentSession, files []AgentFile, instructions string) error {
+// lockedPacks is a rules lock as a `rules` event carries it.
+func lockedPacks(lock pack.Lock) []map[string]string {
+	out := []map[string]string{}
+	for _, release := range lock.Packs {
+		out = append(out, map[string]string{"id": release.ID, "version": release.Version})
+	}
+	return out
+}
+
+// start is the owner's first message. It is where the character begins: from
+// here every tool call is committed to a character that is already in the
+// owner's list.
+//
+// It is also where the conversation's language is settled, as the one the
+// owner is reading the page in now. A chat is opened by arriving at the page
+// and is the chat reopened on the next visit, so the language it was opened in
+// can be days old: a chat opened in English and begun after switching to
+// Russian was answered in English to the end.
+//
+// The opening question may go unanswered. A first message is an answer too --
+// "here is my sheet" -- and what it leaves unsaid is taken the way a new
+// character's is: the deployment's own packs. The `rules` event then says so,
+// after the message, as something the assistant decided rather than something
+// the owner picked.
+func (a *Agent) start(ctx context.Context, s *AgentSession, locale rules.Locale, files []AgentFile, instructions string) error {
 	if s.Status != "opening" {
 		return types.NewValidationError("session changed").Because("agent.changed")
-	}
-	if !s.chosen {
-		return types.NewValidationError("select rules before starting").Because("agent.rulesRequired")
 	}
 	if (len(files) == 0 && strings.TrimSpace(instructions) == "") || len(files) > 8 || len(instructions) > 16000 {
 		return types.NewValidationError("invalid import input").Because("agent.files")
@@ -473,7 +543,17 @@ func (a *Agent) start(ctx context.Context, s *AgentSession, files []AgentFile, i
 	if total > 20<<20 {
 		return types.NewValidationError("attachments too large").Because("agent.files")
 	}
-	cat, err := catalog.LoadLocked(ctx, a.service.Source(), s.Locale, s.rules)
+	s.Locale = locale
+	assumed := !s.chosen
+	var cat *catalog.Catalog
+	var err error
+	if assumed {
+		if cat, err = a.service.Source().Load(ctx, s.Locale); err == nil {
+			s.rules, s.chosen = cat.Lock.Clone(), true
+		}
+	} else {
+		cat, err = catalog.LoadLocked(ctx, a.service.Source(), s.Locale, s.rules)
+	}
 	if err != nil {
 		return err
 	}
@@ -503,6 +583,9 @@ func (a *Agent) start(ctx context.Context, s *AgentSession, files []AgentFile, i
 	s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": instructions + "\nCreate this single character from the description and any attached sources, using the selected rules lock. Read the build context first."}))
 	addAgentEvent(s, "user", instructions, "", nil)
 	s.Events[len(s.Events)-1].Files = agentFileLabels(files)
+	if assumed {
+		addAgentEvent(s, "rules", "", "", map[string]any{"packs": lockedPacks(s.rules), "assumed": true})
+	}
 	s.Revision++
 	return setStatus(s, "queued")
 }
@@ -520,7 +603,7 @@ func (a *Agent) create(ctx context.Context, owner domain.OwnerID, folder domain.
 		lock = selected[0]
 	}
 	if err = a.choose(ctx, s, lock); err == nil {
-		err = a.start(ctx, s, files, instructions)
+		err = a.start(ctx, s, locale, files, instructions)
 	}
 	if err == nil {
 		err = a.keep(ctx, s, files)
@@ -545,14 +628,14 @@ func (a *Agent) Rules(owner domain.OwnerID, id string, revision int, selected pa
 	})
 }
 
-// begin sends an opened chat its first message.
-func (a *Agent) begin(owner domain.OwnerID, id string, revision int, files []AgentFile, text string) (AgentSession, error) {
+// begin sends an opened chat its first message, in the language it is sent in.
+func (a *Agent) begin(owner domain.OwnerID, id string, revision int, locale rules.Locale, files []AgentFile, text string) (AgentSession, error) {
 	var made domain.ID
 	out, err := a.change(owner, id, func(s *AgentSession) ([]AgentFile, error) {
 		if s.Revision != revision {
 			return nil, types.NewValidationError("session changed").Because("agent.changed")
 		}
-		err := a.start(a.ctx, s, files, text)
+		err := a.start(a.ctx, s, locale, files, text)
 		made = s.CharacterID
 		return files, err
 	})
@@ -752,8 +835,10 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 		return copyAgentSession(s), nil
 	}
 	if action == "message" {
+		// By this door the chat keeps the language it was opened in: a control
+		// carries none. The page sends its first message with AddFiles.
 		if s, err := a.load(owner, id); err == nil && s.Status == "opening" {
-			return a.begin(owner, id, revision, nil, text)
+			return a.begin(owner, id, revision, s.Locale, nil, text)
 		}
 	}
 	return a.change(owner, id, func(s *AgentSession) ([]AgentFile, error) {
@@ -795,6 +880,7 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 			a.invalidate(s)
 			s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": text}))
 			addAgentEvent(s, "user", text, "", nil)
+			s.replied(text)
 			s.Turns = 0
 			return nil, setStatus(s, "queued")
 		default:
@@ -1067,9 +1153,12 @@ func transcriptSize(input []json.RawMessage) int {
 
 // AddFiles extends the same character's source set and fences an in-flight
 // response, just like a correction. Files remain private to this session.
-func (a *Agent) AddFiles(owner domain.OwnerID, id string, revision int, files []AgentFile, text string) (AgentSession, error) {
+//
+// To an opened chat it is the first message, and locale is the language the
+// conversation is then held in; later it changes nothing.
+func (a *Agent) AddFiles(owner domain.OwnerID, id string, revision int, locale rules.Locale, files []AgentFile, text string) (AgentSession, error) {
 	if s, err := a.load(owner, id); err == nil && s.Status == "opening" {
-		return a.begin(owner, id, revision, files, text)
+		return a.begin(owner, id, revision, locale, files, text)
 	}
 	stored, err := a.store.Files(a.ctx, id)
 	if err != nil {
@@ -1104,6 +1193,9 @@ func (a *Agent) AddFiles(owner domain.OwnerID, id string, revision int, files []
 		s.Input = append(s.Input, raw(map[string]any{"role": "user", "content": "I added more source files for the same character. Read the full source set and preserve my edits.\n" + text}))
 		addAgentEvent(s, "user", text, "", nil)
 		s.Events[len(s.Events)-1].Files = agentFileLabels(files)
+		if strings.TrimSpace(text) != "" {
+			s.replied(text)
+		}
 		return files, setStatus(s, "queued")
 	})
 }

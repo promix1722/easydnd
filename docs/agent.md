@@ -75,6 +75,19 @@ begins with two questions that are that session's events:
    the one shown -- until the first message, which makes the lock final. It
    used to be the builder's pack form dropped into a bubble -- toggles,
    Confirm, Clear -- which was a form in a conversation.
+
+   It can also be answered **by writing**, like every later question. There
+   is no model to read the reply yet -- the rules are what it will be given --
+   so the page reads it (`namedPack`): the one pack whose title or id the text
+   contains, or whose button the text is a piece of ("srd", "dnd 2014"). A
+   message that says only that is the answer and nothing more. And it can go
+   **unanswered**: a first message sent before any rules -- a sheet dropped
+   into the box -- starts the chat under the deployment's own packs
+   (`data.default_packs`), which `start` records as a `rules` event marked
+   `assumed`, after the message, and the page draws as the assistant saying
+   which rules it took rather than as something the player picked. The text
+   field used to be disabled until a button was pressed, which made the first
+   thing on the page a box that could not be typed into.
 2. *A sheet to attach, or a description?* -- asked, and answered by writing:
    the text field opens with this question. Attaching is a quiet control
    inside the field, bottom left, which the attached file replaces. There are
@@ -106,11 +119,12 @@ choose. The model is likewise told not to report a leftover and stop, nor to
 ask anything whose only answer is "go on": it resolves what it can, and asks
 about a concrete problem with its concrete ways out, "Skip it" among them.
 **The text field is always the last thing in
-the conversation**, under the latest message, and is open for writing only
-when the assistant has asked something: disabled while it works and before
-the opening's questions are answered. (For one round it was hidden behind a
-"Tell what to do…" answer; a field that is always there and says by its state
-whose turn it is turned out simpler.) A paused or failed run says so in a line of the
+the conversation**, under the latest message, and is always open for writing,
+from the opening question on; what waits for the assistant to stop is
+sending. A question that offers buttons is answered by pressing one or by
+writing, whichever the player likes. (For one round the field was hidden
+behind a "Tell what to do…" answer, and for another it was disabled until
+the rules were chosen; a field that is always there turned out simpler.) A paused or failed run says so in a line of the
 assistant's -- it stopped, nothing imported is lost -- with Resume or Retry
 under it, ahead of the four buttons. It used to add the button and no words,
 which read as a chat that had ended on nothing. Why a turn failed is in the
@@ -142,19 +156,66 @@ is still an open chat, which is the difference from `review`. The sheet's
 header links to its chat as **AI Wizard history**, beside Level up and Edit.
 
 **The assistant cannot finish over unanswered questions without asking.**
-`prepare_review` is refused once while any prompt is still open -- optional
-ones included: alignment, personality traits, ideals, bonds, flaws -- and
-returns them with the instruction to offer the owner *fill them in for me*,
-*one by one*, or *leave them blank*. It stays refused until an `ask_user` has
-actually followed -- calling again is not consent, and neither is
-`allow_incomplete`, which is the model's word that the owner chose and was
-taken at that word until a model set it on its own. The builder's extra-spell
-questions (`custom/spell/*`) are not counted: they are always open.
-This is enforced by the tool rather than left to the
-prompt because the prompt alone was not followed -- and could not have been:
-the written questions were filtered out of the open prompts the model is
-shown, so it never knew they were unanswered. They are listed now, each with
-the `identity.*` path that answers it.
+`prepare_review` is refused while any open prompt is one the owner has not
+been asked about -- optional ones included: alignment, personality traits,
+ideals, bonds, flaws -- and returns those with the instruction to offer the
+owner *fill them in for me*, *one by one*, or *leave them blank*. It stays
+refused until an `ask_user` has actually followed -- calling again is not
+consent, and neither is `allow_incomplete`, which is the model's word that
+the owner chose and was taken at that word until a model set it on its own.
+The builder's extra-spell questions (`custom/spell/*`) are not counted: they
+are always open. This is enforced by the tool rather than left to the prompt
+because the prompt alone was not followed -- and could not have been: the
+written questions were filtered out of the open prompts the model is shown,
+so it never knew they were unanswered. They are listed now, each with the
+`identity.*` path that answers it.
+
+**Nothing is asked twice.** Every question is kept with its answer
+(`AgentSession.questions`, stored with the session): its text and options,
+the open prompts it was *about*, and what the owner replied. A question is
+about the prompts it names (`ask_user`'s `about`), the ones whose own options
+it offers as answers -- a question about a blank alignment offers alignments,
+whatever it says -- and, when it follows a refused review, everything that
+refusal listed. Three things read that record:
+
+- **The open prompts themselves.** Every list of them a tool returns -- after
+  each write, in `get_build_context`, in a refused review -- carries, on a
+  prompt the owner was asked about, the question and their answer (`asked`),
+  with the instruction to do as they said and not ask again.
+  `get_build_context` also returns the whole record as `userAnswers`. That
+  list is where a model decides whether to ask, and it used to say only that
+  the prompt was still open.
+- **The review.** What the owner was asked about is not held against the
+  draft, whatever they answered and whenever they were asked. It used to
+  count only if the question came *after* the refusal: an owner asked about a
+  blank alignment who said "leave it blank" was asked again one message
+  later, because the review that followed found the alignment unanswered and
+  did not know they had just been asked. The model was then told to ask, and
+  did.
+- **`ask_user` itself.** The same answers, offered again over the same open
+  prompts to an owner who has just pressed one of them and written nothing
+  since, is the question they answered however it is reworded; it is refused
+  with their answer. A reply in the owner's own words is not caught by this
+  -- asking again after "what is the difference?" is not asking twice -- and
+  neither is a different question about the same prompt: "one by one" is
+  followed by exactly that.
+
+**An answer to one of the written questions goes to its path, whichever tool
+it came by.** A
+model answers every open prompt with `answer_choices`, these included, and
+for a while that wrote a pick under `character/alignment` -- an entry the
+build accepted and never read. The question stayed open under its answer, the
+model answered it again ("alignment is still showing as blank"), and the
+builder drew one decided block per answer and an undecided one, all under one
+key, none of which opened. `answer` now writes such an answer as the change it
+is (`promptPaths`), and the build refuses the pick form outright -- see
+[Choices](dnd.md#choices). Two things keep the working door from being a
+way round the rule above. `answer_choices` refuses these prompts until the
+owner has been asked something, because before that the only one deciding is
+the model; and the prompt's `how` no longer says only how to write the value
+but whose it is to give: what a source states is transcribed, what none
+states waits for `ask_user`. Told only how, a model wrote an alignment "from
+the description" for a box the sheet left blank.
 
 ### Unattended sessions
 
@@ -222,8 +283,27 @@ message. It used to follow the owner's latest message with the interface
 locale as the fallback for an attachment sent alone -- and for exactly that
 case, a Russian sheet in an English interface, the chat turned Russian.
 
+**Which language that is is settled by the first message** (`start`, from the
+`?locale=` of the request that sends it), and not when the chat is opened. A
+chat is opened by arriving at the page and is the chat reopened on every
+later visit, so the language it was opened in can be days old: one opened in
+English and begun after the owner switched to Russian was answered in English
+to the end. From the first message on it does not change, whatever the
+interface is switched to. The `message` control carries no locale, so a first
+message sent by that door keeps the language of `Open`; the page sends its
+first message through `/files`.
+
+The transcript's own lines follow the same language. A `progress` event names
+a catalogue entry -- a race, an item, an alignment, the languages in a list --
+as the chat's locale does (`recordProgress`), not by the name the tool
+answered the model with, which is the one that matched and so the sheet's
+language: an English sheet in a Russian chat used to read "Race: Tiefling".
+
 The route is `/ai-wizard/:sessionId`. Old `/characters/import` routes redirect,
 retaining the session and query, and legacy `?session=...` links still open.
+The page is **named by when the chat was opened and the head of its id** --
+`2026-02-01-17:20:32-364665a0`, the reader's own time (`chatName`) -- where it
+used to be named by the id alone, thirty-two hex digits that say nothing.
 **View and Edit are links to the character**: `/characters/:id` and
 `/characters/:id/build`, the ordinary sheet and the ordinary builder. They sit
 in the chat header from the first message and inside assistant messages where
@@ -388,7 +468,7 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 
 | Tool | Responsibility |
 | --- | --- |
-| `get_build_context` | The draft by fact path, open prompts **with their options**, the answers given so far, custom entries, differences from the sheet's printed numbers, checklist entries not yet covered |
+| `get_build_context` | The draft by fact path, open prompts **with their options** and what the owner has already said about each, the answers given so far, the owner's replies to every question (`userAnswers`), custom entries, differences from the sheet's printed numbers, checklist entries not yet covered |
 | `read_source` | Text/JSON source contents, or reference to an attached image/PDF |
 | `plan_import` | Transcribe the sheet in one typed call: name, alignment, personality traits, ideals, bonds and flaws, final ability totals, level, hit points, armor class, speed, every skill and save bonus, coins, inventory and spells, plus a checklist of what else it documents |
 | `import_facts` | Race, subrace, class with its level, subclass, background and feats **by printed name**; printed values at a path. Per-fact errors with candidates |
@@ -402,7 +482,7 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 | `search_catalog` | Ranked identities across supported locales within the pinned rules lock |
 | `get_option_details` | Exact catalogue mechanics and, when available, a pack wire example |
 | `upsert_custom_option` | Keep content the rules lack as an editable typed definition. Refuses to copy what the pack or the build already has |
-| `ask_user` | Ask a blocking question and release the worker |
+| `ask_user` | Ask a blocking question and release the worker. `about` names the open prompts it puts to the owner; a question just answered is refused |
 | `prepare_review` | End the import: check the name and required choices, drop overrides the build reproduces |
 
 A response may carry several tool calls; they run in order, up to 32. Once a

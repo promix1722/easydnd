@@ -3,6 +3,7 @@ package character
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
@@ -438,6 +439,21 @@ func ValidateChanges(cat *catalog.Catalog, event domain.Event, index int) []type
 func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []types.FieldError {
 	field := fmt.Sprintf("events[%d].choices.%s", index, answer.Prompt)
 
+	// The questions a character poses about itself are never answered by a
+	// pick. "Which race?" is answered by a race entry, an alignment by the
+	// change that sets it, and the projection reads each from there. A pick
+	// under one of those ids names a real option of a real open question, so
+	// everything below would accept it -- and it would settle nothing: the
+	// question stays open with an answer filed under it, for ever. That is
+	// what the AI Wizard wrote for an alignment, and the builder then drew a
+	// decided block and an undecided one under the same key.
+	if strings.HasPrefix(answer.Prompt.String(), selfPosed) {
+		return []types.FieldError{{
+			Field: field, Rule: "not-a-pick",
+			Reason: "field.answer.notAPick",
+		}}
+	}
+
 	prompt, found := findPrompt(open, answer.Prompt)
 	if !found {
 		return []types.FieldError{{
@@ -508,6 +524,11 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 	}
 	return fields
 }
+
+// selfPosed is the namespace of the questions the character asks about
+// itself, as against the ones a catalogue entry poses: see
+// domain.promptBuilder, which is the only thing that mints them.
+const selfPosed = "character/"
 
 func findPrompt(open []domain.Prompt, id rules.Slug) (domain.Prompt, bool) {
 	for _, p := range open {

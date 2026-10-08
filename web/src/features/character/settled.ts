@@ -123,7 +123,7 @@ function rowFor(
   }
 
   const changes = event.changes ?? []
-  if (changes.length > 0) return { seq, stage, ...summarise(t, changes), ...level, event }
+  if (changes.length > 0) return { seq, stage, ...summarise(t, changes, names), ...level, event }
 
   return null
 }
@@ -196,13 +196,23 @@ export function leafAnswers(answers: readonly Answer[]): Answer[] {
  * rendering, on the same principle `eventLabel` follows: an entry drawn plainly
  * is better than one refused.
  */
-function summarise(t: Translate, changes: readonly Change[]): { label: string; value: string } {
+function summarise(
+  t: Translate,
+  changes: readonly Change[],
+  names: ReadonlyMap<string, string>,
+): { label: string; value: string } {
   const name = changes.find((change) => change.path === 'identity.name')
   if (name !== undefined) return { label: t('settled.name'), value: formatValue(t, name.value) }
 
   const alignment = changes.find((change) => change.path === 'identity.alignment')
   if (alignment !== undefined) {
-    return { label: t('settled.alignment'), value: formatValue(t, alignment.value) }
+    // By the compendium's name for it. The slug read back as words is English
+    // in every language, and under a rule pack it is the pack's id as well:
+    // "Dnd 2014/neutral Good".
+    return {
+      label: t('settled.alignment'),
+      value: names.get(`alignment:${alignment.value.slug ?? ''}`) ?? formatValue(t, alignment.value),
+    }
   }
 
   const desired = changes.find((change) => change.path === 'identity.desiredLevel')
@@ -228,9 +238,12 @@ function summarise(t: Translate, changes: readonly Change[]): { label: string; v
     const label = writtenLabel(written.path)
     return {
       label: label === undefined ? '' : t(label),
+      // As written. The AI Wizard stores the lines as a list, and a list is
+      // printed as slugs are -- title-cased, hyphens taken for spaces -- which
+      // is right for "point-buy" and turned "кто-нибудь" into "кто Нибудь".
       value: changes
         .filter((change) => change.path === written.path)
-        .map((change) => formatValue(t, change.value))
+        .flatMap((change) => change.value.slugs ?? [formatValue(t, change.value)])
         .join(' · '),
     }
   }

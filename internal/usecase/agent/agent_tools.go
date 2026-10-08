@@ -49,6 +49,7 @@ type agentArgs struct {
 	Selected        *bool           `json:"selected"`
 	AllowIncomplete bool            `json:"allow_incomplete"`
 	Options         []string        `json:"options"`
+	About           []string        `json:"about"`
 	Offset          int             `json:"offset"`
 	Definition      string          `json:"definition"`
 	Kind            string          `json:"kind"`
@@ -303,7 +304,9 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 		for _, c := range domain.CustomOptions(s.Log) {
 			custom = append(custom, map[string]any{"id": c.ID, "kind": c.Kind, "name": c.Name, "ref": c.Reference, "selected": c.Selected})
 		}
-		return map[string]any{"sheet": agentSheet(state), "differences": a.differences(s, cat), "prompts": open, "answered": answered, "custom": custom, "checklistMissing": localChecklist(a.missing(ctx, s, cat, state))}, nil
+		// userAnswers is the owner's own choices in this chat: what they were
+		// asked and what they said, so that nothing is put to them twice.
+		return map[string]any{"sheet": agentSheet(state), "differences": a.differences(s, cat), "prompts": open, "answered": answered, "custom": custom, "checklistMissing": localChecklist(a.missing(ctx, s, cat, state)), "userAnswers": s.answers()}, nil
 	case "read_source":
 		for _, f := range s.Files {
 			if strings.EqualFold(f.Name, args.Name) || strings.EqualFold(f.Name, args.Name[strings.LastIndex(args.Name, "/")+1:]) || args.Name == "" && len(s.Files) == 1 {
@@ -372,10 +375,31 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 				return nil, fmt.Errorf("invalid answer option")
 			}
 		}
+		open, err := a.openPrompts(s, cat)
+		if err != nil {
+			return nil, err
+		}
+		asking := agentQuestion{Text: args.Text, Options: append([]string(nil), args.Options...), Open: promptIDs(open)}
+		// The same answers, offered again over the same open prompts, to an
+		// owner who has just pressed one of them and said nothing since: that
+		// is the question they answered, however it is reworded.
+		if n := len(s.questions); n > 0 {
+			last := s.questions[n-1]
+			if justAnswered(s.Events) && foldedIn(last.Options, last.Answer) && sameFolded(asking.Options, last.Options) && sameFolded(asking.Open, last.Open) {
+				return nil, fmt.Errorf("asked twice: the user has just answered this very question with %q. Never ask again what they have answered. Do as they said: what they chose to leave blank or open stays so, and prepare_review does not hold it against the draft", last.Answer)
+			}
+		}
+		asking.About = questionAbout(cat, open, args.About, args.Options)
+		// A question that follows a refused review is the one the refusal
+		// asked for: about everything that was left.
+		if s.offered {
+			asking.About = asking.Open
+		}
 		if err := setStatus(s, "waiting"); err != nil {
 			return nil, err
 		}
-		s.asked = s.offered
+		s.offered = false
+		s.questions = append(s.questions, asking)
 		addAgentEvent(s, "question", args.Text, "", nil)
 		s.Events[len(s.Events)-1].Options = append([]string(nil), args.Options...)
 		return map[string]bool{"waiting": true}, nil
@@ -414,25 +438,32 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 				}
 			}
 			if len(required) > 0 {
-				return map[string]any{"ready": false, "remainingChoices": agentPrompts(cat, required, false), "next": "Resolve these choices from the source or call ask_user with a focused question and suggested answers. Do not send the user to the editor. Only set allow_incomplete if the user explicitly chooses to leave choices incomplete."}, nil
+				return map[string]any{"ready": false, "remainingChoices": agentPrompts(cat, required, false, s.decided()), "next": "Resolve these choices from the source or call ask_user with a focused question and suggested answers. Do not send the user to the editor. Only set allow_incomplete if the user explicitly chooses to leave choices incomplete."}, nil
 			}
 		}
 		// Whatever is still unanswered is the owner's to decide about, not the
-		// model's to pass over: optional questions included, once.
+		// model's to pass over: optional questions included.
 		// Refused until the owner has actually been asked: a second call is
 		// not consent.
 		// allow_incomplete does not skip this: it is the model's word that
 		// the owner chose to leave things open, and the owner was not asked.
 		// The builder's own extra-spell questions are not counted -- they
 		// are always open, and no character is unfinished for them.
+		//
+		// What the owner has been asked about is theirs already, whatever
+		// they answered and whenever they were asked. It used to count only
+		// if the question came after this refusal: an owner asked about a
+		// blank alignment who said "leave it blank" was asked again a
+		// message later, because the refusal that followed did not know.
 		open, err := a.openPrompts(s, cat)
 		if err != nil {
 			return nil, err
 		}
 		open = slices.DeleteFunc(open, func(entry map[string]any) bool { return entry["purpose"] == "custom" })
-		if len(open) > 0 && !s.Unattended && !(s.offered && s.asked) {
+		unasked := slices.DeleteFunc(slices.Clone(open), func(entry map[string]any) bool { return entry["asked"] != nil })
+		if len(unasked) > 0 && !s.Unattended {
 			s.offered = true
-			return map[string]any{"ready": false, "unanswered": open, "next": "These are still unanswered. Do not finish yet: call ask_user and offer to settle them, naming them in plain words, with the answers \"Fill them in for me\", \"One by one\" and \"Leave them blank\". Fill them in: answer each from the sheet or the description. One by one: one ask_user per entry, with its options as prepared answers (for a written one such as a personality trait, offer a few suggestions that suit the character). Leave them blank: prepare_review again."}, nil
+			return map[string]any{"ready": false, "unanswered": unasked, "userAnswers": s.answers(), "next": "The user has not been asked about these. Do not finish yet: call ask_user once and offer to settle them, naming each in the user's language and never by its id, with the answers \"Fill them in for me\", \"One by one\" and \"Leave them blank\". Fill them in: answer each from the sheet or the description. One by one: one ask_user per entry, with its options as prepared answers (for a written one such as a personality trait, offer a few suggestions that suit the character). Leave them blank: prepare_review again. What the user has already answered is in userAnswers, is not listed here and is never asked again."}, nil
 		}
 		// The draft goes to its owner as a build, not as a build with the
 		// sheet's numbers pinned on top. What the build reproduces is dropped
@@ -1072,7 +1103,7 @@ func (a *Agent) setInventory(ctx context.Context, s *AgentSession, cat *catalog.
 			unmatched = append(unmatched, failure)
 			continue
 		}
-		a.recordProgress(ctx, s, "set_inventory", agentArgs{Name: found.Name, Value: fact.Value}, nil)
+		a.recordProgress(ctx, s, "set_inventory", agentArgs{Ref: found.Ref, Name: found.Name, Value: fact.Value}, nil)
 		applied = append(applied, map[string]any{"name": item.Name, "ref": found.Ref, "count": json.RawMessage(fact.Value), "placement": strings.Split(fact.Path, ".")[1]})
 	}
 	return map[string]any{"applied": applied, "unmatched": unmatched, "next": "Resend an unmatched item by one of its candidate refs, or keep it with upsert_custom_option kind item, its count and placement."}
@@ -1395,6 +1426,8 @@ func (a *Agent) valueFact(ctx context.Context, s *AgentSession, cat *catalog.Cat
 		return domain.Log{}, nil, fmt.Errorf("unsupported fact path %q; supported: identity.name|alignment|personalityTraits|ideals|bonds|flaws, finalAbilities.<ability>, base.hitPoints.max|current|temporary, base.speed, base.size, base.senses.darkvision, base.languages, status.armorClass|initiative|passivePerception, skills.<skill>.proficiency|bonus, savingThrows.<ability>.proficient|bonus, proficiencies, equipment.purse.<coin>. Anything else is kept with upsert_custom_option kind note", args.Path)
 	}
 	op := domain.OpSet
+	result := map[string]any{"applied": true, "path": path}
+	refs := []string{}
 	switch {
 	case strings.HasPrefix(path, "equipment.") && v.Kind == domain.ValueSlugList && len(v.Slugs) > 0:
 		return domain.Log{}, nil, fmt.Errorf("list items with set_inventory {items:[{name, count, placement}]}, which resolves their names")
@@ -1407,6 +1440,7 @@ func (a *Agent) valueFact(ctx context.Context, s *AgentSession, cat *catalog.Cat
 		}
 		ref, _ := rules.ParseRef(found.Ref)
 		v = domain.SlugValue(ref.Slug)
+		refs = append(refs, found.Ref)
 	case factLists[path] != "":
 		if v.Kind == domain.ValueString {
 			v = domain.SlugListValue([]rules.Slug{rules.Slug(v.Str)})
@@ -1418,8 +1452,14 @@ func (a *Agent) valueFact(ctx context.Context, s *AgentSession, cat *catalog.Cat
 			}
 			ref, _ := rules.ParseRef(found.Ref)
 			v.Slugs[i] = ref.Slug
+			refs = append(refs, found.Ref)
 		}
 		op = domain.OpAdd
+	}
+	// The entries a value named, for whoever reads the write back: the
+	// transcript shows them by name.
+	if len(refs) > 0 {
+		result["refs"] = refs
 	}
 	log := s.Log.Clone()
 	segments := strings.Split(path, ".")
@@ -1437,9 +1477,9 @@ func (a *Agent) valueFact(ctx context.Context, s *AgentSession, cat *catalog.Cat
 	}
 	change := domain.Change{Path: domain.Path(path), Op: op, Value: v}
 	if strings.HasPrefix(path, "identity.") {
-		return setNative(log, change, args.Source), map[string]any{"applied": true, "path": path}, nil
+		return setNative(log, change, args.Source), result, nil
 	}
-	return setObserved(log, change, args.Source), map[string]any{"applied": true, "path": path}, nil
+	return setObserved(log, change, args.Source), result, nil
 }
 
 // setNative writes a fact the builder asks for itself -- the name, the level,
@@ -1502,6 +1542,42 @@ func (a *Agent) answer(ctx context.Context, s *AgentSession, cat *catalog.Catalo
 	picks := args.Picks
 	if len(picks) == 0 && args.Ref != "" {
 		picks = []string{args.Ref}
+	}
+	// What a character says about itself -- its alignment, its traits, its
+	// level -- is a value at a path, and the build reads it from there. Written
+	// as a pick the entry is accepted and settles nothing: the question stays
+	// open under an answer, which a model then answers again. A model answers
+	// these like any other prompt all the same, so the answer is put where it
+	// counts.
+	if path := promptPaths[p.Choice.Prompt.String()]; path != "" {
+		if !strings.HasPrefix(path, "identity.") || len(picks) == 0 {
+			return nil, fmt.Errorf("%s is a value, not a pick: write it with plan_import, or import_facts {path: %q, value}", args.Prompt, path)
+		}
+		// What a source states is transcribed by plan_import and import_facts.
+		// An answer here is somebody's decision, and before anybody has been
+		// asked anything it can only be the model's own: an alignment guessed
+		// for a blank box. It was harmless while it settled nothing; it is
+		// not now.
+		if !slices.ContainsFunc(s.Events, func(e AgentEvent) bool { return e.Kind == "question" }) {
+			return nil, fmt.Errorf("%s was answered before the user was asked anything. If a source states it, write it as stated: import_facts {path: %q, value}. If none does, it is the user's to decide: leave it open and offer it with ask_user", args.Prompt, path)
+		}
+		fact := agentArgs{Path: path, Value: raw(picks), Source: args.Source}
+		if len(picks) == 1 {
+			fact.Value = raw(picks[0])
+			if level, err := strconv.Atoi(picks[0]); err == nil && path == "identity.desiredLevel" {
+				fact.Value = raw(level)
+			}
+		}
+		result, err := a.importFact(ctx, s, cat, fact)
+		if err != nil {
+			return nil, err
+		}
+		a.recordProgress(ctx, s, "resolve_import_facts", fact, raw(result))
+		keys := make([]rules.Slug, len(picks))
+		for i, pick := range picks {
+			keys[i] = rules.Slug(pick)
+		}
+		return keys, nil
 	}
 	if kind, structural := structuralPrompt(p); structural {
 		// "Which subclass?" is settled by naming the entry, not by a pick.
@@ -1758,7 +1834,7 @@ func (a *Agent) customOption(ctx context.Context, s *AgentSession, cat *catalog.
 				if err != nil {
 					return nil, err
 				}
-				a.recordProgress(ctx, s, "set_inventory", agentArgs{Name: found.Name, Value: fact.Value}, nil)
+				a.recordProgress(ctx, s, "set_inventory", agentArgs{Ref: found.Ref, Name: found.Name, Value: fact.Value}, nil)
 				return done("the selected rules have it; added to the inventory as the catalogue item")
 			}
 		}
@@ -2120,7 +2196,7 @@ func promptOptions(cat *catalog.Catalog, p domain.Prompt, nameOf func(rules.Ref)
 // how many to pick, how to answer, and the options themselves. A prompt
 // without its options costs a round trip per question, which a bounded run
 // cannot afford.
-func agentPrompts(cat *catalog.Catalog, prompts []domain.Prompt, files bool) []map[string]any {
+func agentPrompts(cat *catalog.Catalog, prompts []domain.Prompt, files bool, decided map[string]agentQuestion) []map[string]any {
 	nameOf := catalogNames(cat)
 	out := []map[string]any{}
 	for _, p := range prompts {
@@ -2141,12 +2217,27 @@ func agentPrompts(cat *catalog.Catalog, prompts []domain.Prompt, files bool) []m
 			entry["how"] = "import_facts {path, value}"
 			if path := promptPaths[p.Choice.Prompt.String()]; path != "" {
 				entry["how"] = "import_facts {path: \"" + path + "\", value}, or plan_import"
+				// Who the character is, as against what it is made of. A sheet
+				// that leaves the box blank has not been answered by the
+				// model's reading of the rest of it: told only how to write
+				// one, a model wrote an alignment "from the description" and
+				// the owner was never asked.
+				if strings.HasPrefix(path, "identity.") && path != "identity.desiredLevel" {
+					entry["how"] = "what a source states: plan_import, or import_facts {path: \"" + path + "\", value}. What no source states is the user's to decide and never inferred: leave it open, offer it with ask_user, and write the reply with answer_choices"
+				}
 			}
 		}
 		for key, set := range map[string]bool{"optional": p.Optional, "upTo": p.UpTo, "heldOnly": p.HeldOnly, "repeatable": p.Choice.Repeatable} {
 			if set {
 				entry[key] = true
 			}
+		}
+		// What the owner has already said about it goes with the prompt, in
+		// the list a model reads after every write: that is where it decides
+		// whether to ask, and where it used to find only that the prompt was
+		// still open.
+		if q, ok := decided[entry["id"].(string)]; ok {
+			entry["asked"] = map[string]string{"question": q.Text, "answer": q.Answer, "now": "the user has answered: do as they said and never ask this again. Left blank or open means it stays open"}
 		}
 		if p.Level > 0 {
 			entry["level"] = p.Level
@@ -2186,7 +2277,66 @@ func (a *Agent) openPrompts(s *AgentSession, cat *catalog.Catalog) ([]map[string
 	prompts = slices.DeleteFunc(prompts, func(p domain.Prompt) bool {
 		return p.Choice.Kind == rules.ChooseSpell && p.Purpose == "custom"
 	})
-	return agentPrompts(cat, prompts, len(s.Files) > 0), nil
+	return agentPrompts(cat, prompts, len(s.Files) > 0, s.decided()), nil
+}
+
+// promptIDs is the ids of a list of open prompts, as a model reads them.
+func promptIDs(open []map[string]any) []string {
+	out := make([]string, 0, len(open))
+	for _, entry := range open {
+		if id, ok := entry["id"].(string); ok {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// questionAbout says which open prompts a question puts to the owner: the
+// ones it names, and the ones whose own options it offers as answers. A
+// question about a blank alignment offers alignments, whatever it says it is
+// about; one that offers suggestions for a trait has to say.
+func questionAbout(cat *catalog.Catalog, open []map[string]any, named, offered []string) []string {
+	out := []string{}
+	for _, entry := range open {
+		id, _ := entry["id"].(string)
+		about := slices.ContainsFunc(named, func(name string) bool { return localKey(cat, name) == id })
+		if options, _ := entry["options"].([]agentOption); !about {
+			own := 0
+			for _, option := range options {
+				if foldedIn(offered, option.Name) || foldedIn(offered, option.Key) {
+					own++
+				}
+			}
+			about = own >= 2
+		}
+		if about {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// justAnswered reports that the owner's only message since the last question is
+// their answer to it.
+func justAnswered(events []AgentEvent) bool {
+	replies := 0
+	for i := len(events) - 1; i >= 0 && events[i].Kind != "question"; i-- {
+		if events[i].Kind == "user" {
+			replies++
+		}
+	}
+	return replies == 1
+}
+
+func folded(text string) string { return strings.ToLower(strings.TrimSpace(text)) }
+
+func foldedIn(list []string, text string) bool {
+	return text != "" && slices.ContainsFunc(list, func(entry string) bool { return folded(entry) == folded(text) })
+}
+
+// sameFolded reports that two lists hold the same entries, in any order.
+func sameFolded(a, b []string) bool {
+	return len(a) == len(b) && !slices.ContainsFunc(a, func(entry string) bool { return !foldedIn(b, entry) })
 }
 
 // localKey drops the pinned packs' namespaces from an option key. A key is

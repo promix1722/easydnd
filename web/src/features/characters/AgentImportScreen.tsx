@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate, useSearchParams, useParams } from 'react-router'
 import {
@@ -34,6 +34,7 @@ import {
 } from '@/ui'
 import { listPacks, resolvePacks } from '@/lib/api/packs'
 import { useResource } from '@/lib/useResource'
+import { chatName, namedPack } from './agentChat'
 import { progressEntry } from './agentProgress'
 
 /** Stream events are rendered from recorded state, so reconnect/reload never
@@ -43,8 +44,9 @@ import { progressEntry } from './agentProgress'
  *
  * It is a conversation the assistant leads. It asks -- which rules, a sheet or
  * a description, then whatever the build leaves open -- and the player
- * answers; so there is something to type into only when it is the player's
- * turn, and nothing above the transcript but the transcript. */
+ * answers: by pressing one of the answers it offers, or by writing, whichever
+ * they like and from the first question on. There is nothing above the
+ * transcript but the transcript. */
 // What the tab shows after an answer arrives. A whole session replaces the one
 // held unless it is older -- a slow read must not undo a newer write -- and a
 // tail of events is appended past the ones already here. Event ids are 1..n.
@@ -90,6 +92,7 @@ export function AgentImportScreen() {
   const [connected, setConnected] = useState(true)
   const boot = useRef<{ folder: string | undefined; found: Promise<string | undefined> }>(undefined)
   const composer = useRef<HTMLTextAreaElement>(null)
+  const frame = useRef<HTMLDivElement>(null)
   const end = useRef<HTMLDivElement>(null)
   const follow = useRef(true)
   // What the poll loop holds, which is the view one render early: its cursor
@@ -217,20 +220,46 @@ export function AgentImportScreen() {
     grown.observe(document.body)
     return () => grown.disconnect()
   }, [])
+  // The chat is as tall as the window allows from its first moment, so the
+  // message box is where it will be at the end of a long conversation: at the
+  // foot of the window, with the page's own margin under it. A chat that has
+  // outgrown the window scrolls to the same place.
+  //
+  // Measured rather than written as a sum, because what stands above the chat
+  // is not this screen's to know: the shell's header, the page's heading
+  // (gone on a phone), a notice. What is under it is the shell's padding,
+  // which on a phone is the safe area's.
+  useLayoutEffect(() => {
+    const box = frame.current
+    if (!box) return
+    const fit = () => {
+      const under = parseFloat(getComputedStyle(box.closest('main') ?? box).paddingBottom) || 0
+      const over = box.getBoundingClientRect().top + window.scrollY
+      box.style.minHeight = `calc(100dvh - ${Math.round(over + under)}px)`
+    }
+    fit()
+    const moved = new ResizeObserver(fit)
+    moved.observe(document.body)
+    window.addEventListener('resize', fit)
+    return () => {
+      moved.disconnect()
+      window.removeEventListener('resize', fit)
+    }
+  }, [])
   const typedTo = reveal.events.at(-1)?.text?.length
   useEffect(() => {
     if (follow.current) end.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' })
   }, [reveal.events.length, typedTo, reveal.settled, session?.status])
   const active = session?.status === 'running' || session?.status === 'queued' || !reveal.settled
-  // The player's turn: the assistant has asked or finished, or the opening has
-  // reached "tell me about the character". Only then is there a composer.
+  // The player's turn: the assistant has asked or finished. Its first
+  // question -- which rules -- is a question like the rest.
   const stalled = reveal.settled && (session?.status === 'paused' || session?.status === 'failed')
   // A finished chat is a record: nothing more is said in it.
   const finished = session?.finished === true
   // An opened chat is waiting for its rules, and then for the first message.
   const opening = session?.status === 'opening'
   const ruled = session?.events.some((event) => event.kind === 'rules') === true
-  const myTurn = !!session && !active && !finished && (!opening || ruled)
+  const myTurn = !!session && !active && !finished
   useEffect(() => {
     // Without scrolling: a focus brings its field into view by the shortest
     // way, which stops the smooth scroll to the end half way and leaves the
@@ -238,13 +267,27 @@ export function AgentImportScreen() {
     if (myTurn) composer.current?.focus({ preventScroll: true })
   }, [myTurn])
   async function send(answer = message) {
-    if (!session || !myTurn || action.pending || (!answer.trim() && !files.length)) return
+    if (!session || !myTurn || action.pending || choose.pending || (!answer.trim() && !files.length)) return
     follow.current = true
+    let revision = session.revision
+    // Written before the rules were pressed, a message may be the answer to
+    // that question: the pack it names. One that says nothing more is only
+    // that. One that names none leaves the rules to the server, which takes
+    // the deployment's own and says so in the chat.
+    if (opening && !ruled) {
+      const named = namedPack(offered, answer)
+      if (named) {
+        const chosen = await chooseRules(named.pack.label)
+        if (!chosen) return
+        if (named.only && !files.length) return setMessage('')
+        revision = chosen.session.revision
+      }
+    }
     const result = await action.run(() =>
       // A sheet is attached to the first message and to no other.
       opening
-        ? startAgentSession(session.id, session.revision, files, answer)
-        : controlAgent(session.id, session.revision, 'message', answer),
+        ? startAgentSession(session.id, revision, files, answer)
+        : controlAgent(session.id, revision, 'message', answer),
     )
     if (result) {
       setMessage('')
@@ -259,19 +302,26 @@ export function AgentImportScreen() {
   // The answer to the opening question, by the caption of the button pressed.
   const offered = (packs.data?.packs ?? [])
     .filter((pack) => !pack.archived && pack.releases.length > 0)
-    .map((pack) => ({ label: `${pack.title} v${pack.releases.at(-1)!.version}`, release: pack.releases.at(-1)! }))
+    .map((pack) => ({
+      id: pack.id,
+      title: pack.title,
+      label: `${pack.title} v${pack.releases.at(-1)!.version}`,
+      release: pack.releases.at(-1)!,
+    }))
   async function chooseRules(label: string) {
     const release = offered.find((pack) => pack.label === label)?.release
-    if (!session || !release) return
+    if (!session || !release) return null
     const lock = await choose.run([release])
-    if (lock) await action.run(() => chooseAgentRules(session.id, session.revision, lock))
+    return lock ? action.run(() => chooseAgentRules(session.id, session.revision, lock)) : null
   }
   async function control(kind: string) {
     if (!session) return
     const result = await action.run(() => controlAgent(session.id, session.revision, kind))
     if (result && kind === 'discard') void navigate('/characters')
   }
-  const trail = id ? [{ label: id }] : []
+  // Named once the chat has said when it was opened: a name that began as a
+  // piece of the id and grew a date a moment later would be two names.
+  const trail = session ? [{ label: chatName(session.created, session.id) }] : []
   // Finish is View under the name the end of a conversation has: the
   // character is already real, so there is nothing to save, only somewhere to go.
   const open = (kind: 'view' | 'edit' | 'finish') => {
@@ -338,14 +388,15 @@ export function AgentImportScreen() {
           // page scrolls. The card is the chat's own ground over the page's
           // pattern, and the message box is a box of its own underneath it --
           // two blocks one after the other, which can never cover each other.
-          // A short chat still fills the window, so the box starts at its foot.
-          <div>
-          <Card withBorder padding="md" radius="md" style={{ background: 'var(--mantine-color-body)' }}>
+          // A short chat still fills the window -- the card takes what the
+          // box leaves -- so the box is at the window's foot from the first
+          // question to the last. See the effect that measures `frame`.
+          <div ref={frame} style={{ display: 'flex', flexDirection: 'column' }}>
+          <Card withBorder padding="md" radius="md" style={{ background: 'var(--mantine-color-body)', flex: '1 0 auto' }}>
               <div
                 role="log"
                 aria-label={t('agent.chat')}
                 aria-live="polite"
-                style={{ minHeight: 'calc(100dvh - 360px)' }}
               >
                 {session && (
                   <Conversation
@@ -408,8 +459,9 @@ export function AgentImportScreen() {
                       styles={{ input: { background: 'transparent', opacity: 1 } }}
                       ref={composer}
                       // Always there and always open for writing, the
-                      // assistant's turn included: only sending waits.
-                      disabled={!session || (opening && !ruled)}
+                      // assistant's turn and its first question included:
+                      // only sending waits.
+                      disabled={!session}
                       aria-label={opening ? t('agent.instructions') : t('agent.message')}
                       placeholder={t('agent.messagePlaceholder')}
                       value={message}
@@ -429,7 +481,7 @@ export function AgentImportScreen() {
                         }
                       }}
                     />
-                    <Group align="end" justify="space-between">
+                    <Group align="center" justify="space-between">
                       {files.length ? (
                         <Group gap="xs">
                           {files.map((file, index) => (
@@ -457,7 +509,20 @@ export function AgentImportScreen() {
                           onChange={(incoming) => setFiles(incoming.slice(0, 8))}
                         >
                           {(props) => (
-                            <Button {...props} variant="transparent" size="compact-sm" px={0} disabled={!myTurn} leftSection={<IconPaperclip size={16} />}>
+                            <Button
+                              {...props}
+                              variant="transparent"
+                              size="compact-sm"
+                              px={0}
+                              disabled={!myTurn}
+                              leftSection={<IconPaperclip size={16} />}
+                              // A line of text with a clip beside it, flush
+                              // with the words above. Waiting dims it and no
+                              // more: the grey slab a disabled button is given
+                              // has no padding to sit in here, and read as a
+                              // button drawn wrong.
+                              style={{ background: 'transparent' }}
+                            >
                               {t('agent.start.attach')}
                             </Button>
                           )}
@@ -467,7 +532,7 @@ export function AgentImportScreen() {
                       <Button
                         type="submit"
                         loading={action.pending}
-                        disabled={!myTurn || (!message.trim() && !files.length)}
+                        disabled={!myTurn || choose.pending || (!message.trim() && !files.length)}
                       >
                         {t('agent.send')}
                       </Button>
@@ -607,8 +672,15 @@ function Conversation({
       rows.push({ key: event.id, kind: 'assistant', text: t('agent.lead'), opening: true })
     } else if (event.kind === 'rules') {
       if (event.id !== rules) continue
+      const said = event.data as { packs?: { id: string; version: string }[]; assumed?: boolean } | undefined
+      const chosen = said?.packs ?? []
+      if (said?.assumed) {
+        // The first message came before any answer, so the rules are the
+        // assistant's decision, and it says so as one.
+        rows.push({ key: event.id, kind: 'assistant', text: t('agent.rulesAssumed', { rules: packNames(chosen) }) })
+        continue
+      }
       // The player's answer, and the assistant's next question after it.
-      const chosen = (event.data as { packs?: { id: string; version: string }[] } | undefined)?.packs ?? []
       rows.push({ key: event.id, kind: 'user', text: packNames(chosen) })
       rows.push({ key: -event.id, kind: 'assistant', text: t('agent.askStart') })
     } else if (event.kind === 'attachments') {
