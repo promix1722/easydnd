@@ -497,3 +497,40 @@ func TestPacksRejectCustomAbilityScores(t *testing.T) {
 		t.Fatal("custom characteristic accepted in an event path")
 	}
 }
+
+// A pack decides what is on the action list: a tag on an entry, or a
+// standalone action. Under a namespaced pack the tag's pool has to resolve to
+// the pack's own resource, and the SRD's unowned actions still reach everyone.
+func TestTaggedEntriesAndStandaloneActionsReachTheActionList(t *testing.T) {
+	cat, err := registry(t).Load(context.Background(), rules.LocaleEN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sheet, err := character.Project(build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 3}, character.Event{Type: character.EventSubclass, Ref: ref(rules.RefSubclass, "example/tactician")}), cat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]character.Action{}
+	for _, a := range sheet.Actions {
+		got[a.Origin.String()] = a
+	}
+	for origin, want := range map[string]character.Action{
+		"feature:example/combat-training": {Kind: character.Reaction, Category: character.ActionFromFeature, Uses: "example/combat-dice"},
+		"action:example/maneuver":         {Kind: character.BonusAction, Category: character.ActionFromFeature, Uses: "example/combat-dice"},
+		"feature:second-wind":             {Kind: character.BonusAction, Category: character.ActionFromFeature, Uses: "second-wind"},
+		"action:dash":                     {Kind: character.MainAction, Category: character.BasicAction},
+		"action:opportunity-attack":       {Kind: character.Reaction, Category: character.BasicAction},
+	} {
+		a, ok := got[origin]
+		if !ok {
+			t.Errorf("%s is not on the action list", origin)
+			continue
+		}
+		if a.Kind != want.Kind || a.Category != want.Category || a.Uses != want.Uses || a.Name == "" {
+			t.Errorf("%s = %+v, want kind %v, category %v, uses %q", origin, a, want.Kind, want.Category, want.Uses)
+		}
+	}
+	if len(sheet.PackActions) != 1 {
+		t.Errorf("pack actions = %d, want only the owned one: an unowned action has nothing to spend", len(sheet.PackActions))
+	}
+}

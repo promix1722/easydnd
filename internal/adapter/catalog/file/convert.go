@@ -2,6 +2,7 @@ package file
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
@@ -260,6 +261,18 @@ func entry(slug string, bundle Bundle) catalog.Entry {
 	return catalog.Entry{Slug: rules.Slug(slug), Name: name, Desc: p.Desc}
 }
 
+// tagged attaches a pack's action tag to an entry.
+func (c *conv) tagged(e catalog.Entry, w *ActionTag) catalog.Entry {
+	if w == nil {
+		return e
+	}
+	if !slices.Contains(ActionKinds, w.Kind) {
+		c.fail("%s: unknown action kind %q", e.Slug, w.Kind)
+	}
+	e.Action = &catalog.ActionTag{Kind: w.Kind, Uses: rules.Slug(w.Uses)}
+	return e
+}
+
 // prose returns the bundle entry for a slug, or the zero Prose.
 func prose(slug string, bundle Bundle) Prose { return bundle[slug] }
 
@@ -360,7 +373,7 @@ func (c *conv) subrace(w Subrace, b Bundle) catalog.Subrace {
 
 func (c *conv) trait(w Trait, b Bundle) catalog.Trait {
 	t := catalog.Trait{
-		Entry:              entry(w.Slug, b),
+		Entry:              c.tagged(entry(w.Slug, b), w.Action),
 		Races:              slugs(w.Races),
 		Subraces:           slugs(w.Subraces),
 		Proficiencies:      slugs(w.Proficiencies),
@@ -482,7 +495,7 @@ func (c *conv) subclass(w Subclass, b Bundle) catalog.Subclass {
 
 func (c *conv) feature(w Feature, b Bundle) catalog.Feature {
 	f := catalog.Feature{
-		Entry:         entry(w.Slug, b),
+		Entry:         c.tagged(entry(w.Slug, b), w.Action),
 		Class:         rules.Slug(w.Class),
 		Subclass:      rules.Slug(w.Subclass),
 		Level:         w.Level,
@@ -530,13 +543,13 @@ func (c *conv) background(w Background, b Bundle) catalog.Background {
 }
 
 func (c *conv) feat(w Feat, b Bundle) catalog.Feat {
-	return catalog.Feat{Entry: entry(w.Slug, b), Prerequisites: c.prerequisites(w.Prerequisites)}
+	return catalog.Feat{Entry: c.tagged(entry(w.Slug, b), w.Action), Prerequisites: c.prerequisites(w.Prerequisites)}
 }
 
 func (c *conv) item(w Item, b Bundle) catalog.Item {
 	p := prose(w.Slug, b)
 	it := catalog.Item{
-		Entry:    entry(w.Slug, b),
+		Entry:    c.tagged(entry(w.Slug, b), w.Action),
 		Category: rules.Slug(w.Category),
 		Cost:     c.cost(w.Cost),
 		Weight:   w.Weight,
@@ -653,7 +666,7 @@ func (c *conv) magicItem(w MagicItem, b Bundle) catalog.MagicItem {
 	}
 	category := rules.Slug(w.Category)
 	return catalog.MagicItem{
-		Entry:     entry(w.Slug, b),
+		Entry:     c.tagged(entry(w.Slug, b), w.Action),
 		Category:  category,
 		Rarity:    rarity,
 		Variants:  slugs(w.Variants),

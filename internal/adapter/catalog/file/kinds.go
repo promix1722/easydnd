@@ -97,6 +97,10 @@ const (
 	AreaSphere   = "sphere"
 )
 
+// ActionKinds are the parts of a turn an action tag or a standalone action
+// may name.
+var ActionKinds = []string{"action", "bonus-action", "reaction", "free-action"}
+
 // Weapon categories and ranges.
 const (
 	WeaponSimple  = "simple"

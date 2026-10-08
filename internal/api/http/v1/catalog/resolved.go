@@ -16,6 +16,40 @@ type Resolved struct {
 	Equipment     []Item        `json:"equipment,omitempty"`
 	MagicItems    []MagicItem   `json:"magicItems,omitempty"`
 	Spells        []Spell       `json:"spells,omitempty"`
+
+	// Actions is the prose behind the sheet's action list, keyed by each
+	// action's origin, so opening a row costs no second request.
+	Actions []Entry `json:"actions,omitempty"`
+}
+
+// Describe is the prose of whatever an action came from: the tagged entry, the
+// weapon, or the pack's standalone action.
+func (c Converter) Describe(origin rules.Ref) []string {
+	cat := c.inner.cat
+	switch origin.Kind {
+	case rules.RefFeature:
+		v, _ := cat.Features.Get(origin.Slug)
+		return v.Desc
+	case rules.RefTrait:
+		v, _ := cat.Traits.Get(origin.Slug)
+		return v.Desc
+	case rules.RefFeat:
+		v, _ := cat.Feats.Get(origin.Slug)
+		return v.Desc
+	case rules.RefItem:
+		v, _ := cat.Items.Get(origin.Slug)
+		return v.Desc
+	case rules.RefMagicItem:
+		v, _ := cat.MagicItems.Get(origin.Slug)
+		return v.Desc
+	case rules.RefAction:
+		for _, a := range cat.Mechanics.Actions {
+			if a.Slug == origin.Slug {
+				return a.Desc
+			}
+		}
+	}
+	return nil
 }
 
 // Resolve looks the named entries up. A slug the catalogue does not define --

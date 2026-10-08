@@ -100,6 +100,12 @@ type generator struct {
 
 	counts   map[string]int
 	warnings []string
+
+	// actionTags is data/rules/2014/action-tags.json: which entries belong in
+	// a character's action list. The upstream dump says so only in prose, so
+	// it is authored, and a tag is deleted as it is applied -- whatever is
+	// left names an entry that does not exist.
+	actionTags map[string]map[string]*file.ActionTag
 }
 
 func newGenerator(in, out, translations string) *generator {
@@ -116,6 +122,16 @@ func newGenerator(in, out, translations string) *generator {
 
 func (g *generator) warnf(format string, a ...any) {
 	g.warnings = append(g.warnings, fmt.Sprintf(format, a...))
+}
+
+// rulesDir holds the mechanics the upstream dump does not state as data.
+const rulesDir = "data/rules/2014"
+
+// actionTag takes the authored action tag for an entry, if it has one.
+func (g *generator) actionTag(collection, slug string) *file.ActionTag {
+	tag := g.actionTags[collection][slug]
+	delete(g.actionTags[collection], slug)
+	return tag
 }
 
 // put records an entry's prose under the bundle for one mechanics file.
@@ -162,9 +178,21 @@ func (g *generator) run() error {
 		g.feats,
 		g.equipment, g.magicItems, g.spells,
 	}
+	raw, err := os.ReadFile(filepath.Join(rulesDir, "action-tags.json"))
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(raw, &g.actionTags); err != nil {
+		return fmt.Errorf("action-tags.json: %w", err)
+	}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
+		}
+	}
+	for collection, tags := range g.actionTags {
+		for slug := range tags {
+			g.warnf("action-tags.json: %s/%s is not an entry srdgen emits", collection, slug)
 		}
 	}
 

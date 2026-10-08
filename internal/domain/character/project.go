@@ -24,17 +24,17 @@ import (
 //  3. compute the derived values -- proficiency bonus, then ability
 //     modifiers, then skills and saving throws, then armor class, initiative
 //     and the spellcasting summaries
-//  4. assemble actions, deriving from equipment and prepared spells before
-//     appending the ones stored manually
+//  4. assemble actions, deriving from equipment, tagged entries and the
+//     pack's standalone actions
 //
 // Step 3 is ordered because each stage feeds the next: proficiency bonus
 // depends on character level, saving throws depend on the proficiency bonus,
 // and the spell save DC depends on both.
 //
-// Step 4 is not implemented. Deriving an attack from an equipped weapon and a
-// casting from a prepared spell is the battle tracker's groundwork, not
-// character creation's, and State.Actions carries only what a change event
-// put there.
+// Step 4 happens after the build, in deriveActions: an equipped weapon gives
+// its attack, an entry the pack tagged gives its action, and the pack's
+// standalone actions give the rest. A casting from a prepared spell is not
+// derived; spells are listed on their own.
 //
 // # Base scores versus final scores
 //

@@ -298,6 +298,34 @@ describe('the panels that were sentences', () => {
     }
   })
 
+  it('lists actions that open onto their description and can be filtered', () => {
+    renderAt('desktop', <SheetBody sheet={{
+      ...NAMED,
+      actions: [
+        { source: 'derived', origin: 'item:rapier', kind: 'action', category: 'equipment', name: 'Rapier', toHit: 5, damage: '1d8+3', range: 5 },
+        { source: 'derived', origin: 'feature:second-wind', kind: 'bonus-action', category: 'feature', name: 'Second Wind', uses: 'second-wind' },
+        { source: 'derived', origin: 'action:dash', kind: 'action', category: 'basic', name: 'Dash' },
+      ],
+      resources: { pools: { 'second-wind': { id: 'second-wind', name: 'Second Wind Uses', group: 'class', max: 1, used: 0 } } },
+      catalog: { skills: [], actions: [{ slug: 'action:dash', name: 'Dash', desc: ['You gain extra movement.'] }] },
+    }} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Actions' }))
+
+    expect.soft(screen.getByText('+5 to hit · 1d8+3 · 5 ft.')).toBeInTheDocument()
+    expect.soft(screen.getByText('Second Wind Uses: 1')).toBeInTheDocument()
+    // A weapon with no prose is a fact, not a control that opens onto nothing.
+    expect.soft(screen.queryByRole('button', { name: /Rapier/ })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Dash/ }))
+    expect.soft(screen.getByText('You gain extra movement.')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search actions' }), { target: { value: 'wind' } })
+    expect.soft(screen.getByText('1 action')).toBeInTheDocument()
+    expect.soft(screen.queryByText('Rapier')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
+    expect.soft(screen.getByText('3 actions')).toBeInTheDocument()
+  })
+
   // Capacity only: what a sheet has spent is a fact about one game, not the character.
   it('draws consumables as marks, slots by level, and leaves Hit Dice to the vitals', () => {
     renderAt('mobile', <SheetBody sheet={{ ...NAMED, resources: { pools: {

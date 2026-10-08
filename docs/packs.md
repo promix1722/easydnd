@@ -78,7 +78,7 @@ two formats. The format belongs to the field; nothing on the wire marks it.
 
 | Field | Format |
 |---|---|
-| `name`, every `fields.*` value, and the name-only bundles (`terms`, `resources`, `actions`) | **plain text**: one line, shown as written |
+| `name`, every `fields.*` value, and the name-only bundles (`terms`, `resources`) | **plain text**: one line, shown as written |
 | `desc[]` and every `blocks.*[]` | **Markdown**, one array element per line-level block |
 
 A Markdown element is exactly one of: a paragraph, a `##### ` heading, one
@@ -255,7 +255,7 @@ indexes, so adding a subclass/subrace does not edit a parent release.
 | `rules` | Owner, minimum level, optional condition, choices, grants and numeric effects |
 | `resources` | Spendable pools or derived parameters, thresholds/expressions, recovery and sharing |
 | `casting` | Explicit class or subclass shared/independent profiles; contribution numerator/denominator, start level and floor/ceil rounding per class |
-| `actions` | Owner, condition, resource costs and manual outcomes |
+| `actions` | Part of the turn (`kind`), optional owner, condition, resource costs and manual outcomes |
 | `overrides` | Version-guarded replacement of a dependency's complete rule/resource definition |
 
 Expressions are integer ASTs: `constant`, `read`, `add`, `subtract`, `multiply`,
@@ -341,6 +341,49 @@ shared budgets require explicit recorded allocation. Conditional recovery uses
 Its rolls and other outcomes remain manual. The sheet exposes localized
 `packActions`, affordability, `manualRules` and contributions with rule/owner
 and originating event identity where directly attributable.
+
+## Action tags
+
+The character sheet's action list is whatever the pack says it is. There are
+two ways to put something on it, and no third in code.
+
+**Tag an entry.** A feature, trait, feat, equipment item or magic item may carry
+an `action` object:
+
+```json
+{"slug": "second-wind", "class": "fighter", "level": 1,
+ "action": {"kind": "bonus-action", "uses": "second-wind"}}
+```
+
+`kind` is `action`, `bonus-action`, `reaction` or `free-action` -- the last for
+something that rides on another action, like Action Surge or a smite. `uses` is
+optional and names the resource pool the action spends; it is a slug field, so
+it is namespaced and reference-checked like any other. The entry's own `name`
+and `desc` are the action's, which is why the tag is two fields: there is no
+second copy of the prose to keep in step. A character has the action while it
+holds the entry; for an item that means equipped.
+
+**Declare a standalone action** in `mechanics.actions`, for what is not an
+entry. `kind` defaults to `action`. `owner` is optional: without one the action
+belongs to every character and may carry no `minimumLevel`, `when` or `costs`,
+because there is nothing to be eligible for or to afford. Its `actions` locale
+entry needs a `name` and may carry a Markdown `desc`.
+
+The SRD pack uses both. Its fourteen unowned actions -- Attack through Use an
+Object, Grapple, Shove, Two-Weapon Fighting, Opportunity Attack -- are authored
+in `data/rules/2014/mechanics.json` with their text in
+`data/rules/2014/actions.en.json` and `data/translations/<locale>/actions.json`.
+Its tags are authored in `data/rules/2014/action-tags.json`, a
+`{collection: {slug: tag}}` table, because the entities themselves are
+generated from an upstream dump that says "as a bonus action" only in prose;
+`srdgen` merges the table in and fails on a slug it did not emit. A pack that
+owns its entity JSON writes the tag straight onto the entry.
+
+Where a feature exists once per tier (`bardic-inspiration-d6`, `-d8`, ...),
+only the first is tagged, or a tenth-level bard would list it three times.
+
+Equipped weapons need no tag; their attack is derived from `weapon`. Unowned
+actions are not in `packActions` -- that list is what can be *spent*.
 
 ## Revisions and migrations
 

@@ -194,6 +194,8 @@ type Trait struct {
 	SpellOptions     *Choice  `json:"spellOptions,omitempty"`
 	SubtraitOptions  *Choice  `json:"subtraitOptions,omitempty"`
 	DamageResistance []string `json:"damageResistance,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Class is a character class.
@@ -272,6 +274,8 @@ type Feature struct {
 	EnemyTypeOptions   *Choice  `json:"enemyTypeOptions,omitempty"`
 	TerrainTypeOptions *Choice  `json:"terrainTypeOptions,omitempty"`
 	Invocations        []string `json:"invocations,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Background is where a character came from before adventuring.
@@ -290,10 +294,19 @@ type Background struct {
 	Flaws             *Choice `json:"flaws,omitempty"`
 }
 
+// ActionTag is the "action" object an entity carries to appear in the action
+// list: the part of a turn it takes and, optionally, the pool it spends.
+type ActionTag struct {
+	Kind string `json:"kind"`
+	Uses string `json:"uses,omitempty"`
+}
+
 // Feat is an optional talent.
 type Feat struct {
 	Slug          string         `json:"slug"`
 	Prerequisites []Prerequisite `json:"prerequisites,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Item is a piece of mundane equipment.
@@ -312,6 +325,8 @@ type Item struct {
 	Gear    *Gear    `json:"gear,omitempty"`
 	Tool    *Tool    `json:"tool,omitempty"`
 	Vehicle *Vehicle `json:"vehicle,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Weapon is the weapon-specific part of an Item.
@@ -374,6 +389,8 @@ type MagicItem struct {
 	// rods are placed by their category; a wondrous item without one is
 	// only carried.
 	Slot string `json:"slot,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Spell is a spell or cantrip.

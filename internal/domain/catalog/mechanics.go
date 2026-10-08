@@ -104,8 +104,12 @@ type Effect struct {
 
 // ActionDefinition describes eligibility and atomic resource costs. Outcomes
 // such as attack rolls are resolved at the table and recorded as event facts.
+//
+// Owner is zero for an action open to everybody -- Dash, Hide -- and Kind is
+// the wire name of the part of a turn it takes, as on ActionTag.
 type ActionDefinition struct {
 	Entry
+	Kind         string
 	Owner        rules.Ref
 	MinimumLevel int
 	When         *rules.Expression

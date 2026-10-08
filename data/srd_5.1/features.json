@@ -5,7 +5,11 @@
   {
     "slug": "action-surge-1-use",
     "class": "fighter",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "free-action",
+      "uses": "action-surges"
+    }
   },
   {
     "slug": "action-surge-2-uses",
@@ -413,7 +417,11 @@
   {
     "slug": "bardic-inspiration-d6",
     "class": "bard",
-    "level": 1
+    "level": 1,
+    "action": {
+      "kind": "bonus-action",
+      "uses": "bardic-inspiration"
+    }
   },
   {
     "slug": "bardic-inspiration-d8",
@@ -493,24 +501,40 @@
     "slug": "channel-divinity-preserve-life",
     "class": "cleric",
     "subclass": "life",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "action",
+      "uses": "channel-divinity-charges"
+    }
   },
   {
     "slug": "channel-divinity-sacred-weapon",
     "class": "paladin",
     "subclass": "devotion",
-    "level": 3
+    "level": 3,
+    "action": {
+      "kind": "action",
+      "uses": "paladin-channel-divinity"
+    }
   },
   {
     "slug": "channel-divinity-turn-the-unholy",
     "class": "paladin",
     "subclass": "devotion",
-    "level": 3
+    "level": 3,
+    "action": {
+      "kind": "action",
+      "uses": "paladin-channel-divinity"
+    }
   },
   {
     "slug": "channel-divinity-turn-undead",
     "class": "cleric",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "action",
+      "uses": "channel-divinity-charges"
+    }
   },
   {
     "slug": "circle-of-the-land",
@@ -639,7 +663,11 @@
   {
     "slug": "cleansing-touch",
     "class": "paladin",
-    "level": 14
+    "level": 14,
+    "action": {
+      "kind": "action",
+      "uses": "cleansing-touch"
+    }
   },
   {
     "slug": "cleric-ability-score-improvement-1",
@@ -669,18 +697,28 @@
   {
     "slug": "countercharm",
     "class": "bard",
-    "level": 6
+    "level": 6,
+    "action": {
+      "kind": "action"
+    }
   },
   {
     "slug": "cunning-action",
     "class": "rogue",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "bonus-action"
+    }
   },
   {
     "slug": "cutting-words",
     "class": "bard",
     "subclass": "lore",
-    "level": 3
+    "level": 3,
+    "action": {
+      "kind": "reaction",
+      "uses": "bardic-inspiration"
+    }
   },
   {
     "slug": "danger-sense",
@@ -754,7 +792,10 @@
   {
     "slug": "deflect-missiles",
     "class": "monk",
-    "level": 3
+    "level": 3,
+    "action": {
+      "kind": "reaction"
+    }
   },
   {
     "slug": "destroy-undead-cr-1-2-or-below",
@@ -825,7 +866,11 @@
   {
     "slug": "divine-intervention",
     "class": "cleric",
-    "level": 10
+    "level": 10,
+    "action": {
+      "kind": "action",
+      "uses": "divine-intervention"
+    }
   },
   {
     "slug": "divine-intervention-improvement",
@@ -835,12 +880,19 @@
   {
     "slug": "divine-sense",
     "class": "paladin",
-    "level": 1
+    "level": 1,
+    "action": {
+      "kind": "action",
+      "uses": "divine-sense"
+    }
   },
   {
     "slug": "divine-smite",
     "class": "paladin",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "free-action"
+    }
   },
   {
     "slug": "divine-strike",
@@ -877,7 +929,11 @@
     "slug": "draconic-presence",
     "class": "sorcerer",
     "subclass": "draconic",
-    "level": 18
+    "level": 18,
+    "action": {
+      "kind": "action",
+      "uses": "sorcery-points"
+    }
   },
   {
     "slug": "draconic-resilience",
@@ -1025,7 +1081,10 @@
     "slug": "dragon-wings",
     "class": "sorcerer",
     "subclass": "draconic",
-    "level": 14
+    "level": 14,
+    "action": {
+      "kind": "bonus-action"
+    }
   },
   {
     "slug": "druid-ability-score-improvement-1",
@@ -1482,7 +1541,11 @@
   {
     "slug": "empty-body",
     "class": "monk",
-    "level": 18
+    "level": 18,
+    "action": {
+      "kind": "action",
+      "uses": "ki-points"
+    }
   },
   {
     "slug": "evocation-savant",
@@ -1509,7 +1572,10 @@
     "slug": "fast-hands",
     "class": "rogue",
     "subclass": "thief",
-    "level": 3
+    "level": 3,
+    "action": {
+      "kind": "bonus-action"
+    }
   },
   {
     "slug": "fast-movement",
@@ -1853,7 +1919,10 @@
     "slug": "fighter-fighting-style-protection",
     "class": "fighter",
     "level": 1,
-    "parent": "fighter-fighting-style"
+    "parent": "fighter-fighting-style",
+    "action": {
+      "kind": "reaction"
+    }
   },
   {
     "slug": "fighter-fighting-style-two-weapon-fighting",
@@ -1883,22 +1952,36 @@
     "slug": "fighting-style-protection",
     "class": "paladin",
     "level": 2,
-    "parent": "paladin-fighting-style"
+    "parent": "paladin-fighting-style",
+    "action": {
+      "kind": "reaction"
+    }
   },
   {
     "slug": "flexible-casting-converting-spell-slot",
     "class": "sorcerer",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "bonus-action"
+    }
   },
   {
     "slug": "flexible-casting-creating-spell-slots",
     "class": "sorcerer",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "bonus-action",
+      "uses": "sorcery-points"
+    }
   },
   {
     "slug": "flurry-of-blows",
     "class": "monk",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "bonus-action",
+      "uses": "ki-points"
+    }
   },
   {
     "slug": "foe-slayer",
@@ -1919,7 +2002,10 @@
     "slug": "frenzy",
     "class": "barbarian",
     "subclass": "berserker",
-    "level": 3
+    "level": 3,
+    "action": {
+      "kind": "bonus-action"
+    }
   },
   {
     "slug": "hide-in-plain-sight",
@@ -1930,7 +2016,10 @@
     "slug": "holy-nimbus",
     "class": "paladin",
     "subclass": "devotion",
-    "level": 20
+    "level": 20,
+    "action": {
+      "kind": "action"
+    }
   },
   {
     "slug": "hunters-prey",
@@ -1975,7 +2064,10 @@
     "class": "ranger",
     "subclass": "hunter",
     "level": 3,
-    "parent": "hunters-prey"
+    "parent": "hunters-prey",
+    "action": {
+      "kind": "reaction"
+    }
   },
   {
     "slug": "hunters-prey-horde-breaker",
@@ -2025,7 +2117,10 @@
     "slug": "intimidating-presence",
     "class": "barbarian",
     "subclass": "berserker",
-    "level": 10
+    "level": 10,
+    "action": {
+      "kind": "action"
+    }
   },
   {
     "slug": "jack-of-all-trades",
@@ -2045,7 +2140,11 @@
   {
     "slug": "lay-on-hands",
     "class": "paladin",
-    "level": 1
+    "level": 1,
+    "action": {
+      "kind": "action",
+      "uses": "lay-on-hands"
+    }
   },
   {
     "slug": "magical-secrets-1",
@@ -2090,7 +2189,10 @@
   {
     "slug": "martial-arts",
     "class": "monk",
-    "level": 1
+    "level": 1,
+    "action": {
+      "kind": "bonus-action"
+    }
   },
   {
     "slug": "metamagic-1",
@@ -2406,14 +2508,20 @@
     "class": "ranger",
     "subclass": "hunter",
     "level": 11,
-    "parent": "multiattack"
+    "parent": "multiattack",
+    "action": {
+      "kind": "action"
+    }
   },
   {
     "slug": "multiattack-whirlwind-attack",
     "class": "ranger",
     "subclass": "hunter",
     "level": 11,
-    "parent": "multiattack"
+    "parent": "multiattack",
+    "action": {
+      "kind": "action"
+    }
   },
   {
     "slug": "mystic-arcanum-6th-level",
@@ -2740,7 +2848,11 @@
   {
     "slug": "patient-defense",
     "class": "monk",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "bonus-action",
+      "uses": "ki-points"
+    }
   },
   {
     "slug": "peerless-skill",
@@ -2792,7 +2904,10 @@
   {
     "slug": "primeval-awareness",
     "class": "ranger",
-    "level": 3
+    "level": 3,
+    "action": {
+      "kind": "action"
+    }
   },
   {
     "slug": "purity-of-body",
@@ -2809,12 +2924,20 @@
     "slug": "quivering-palm",
     "class": "monk",
     "subclass": "open-hand",
-    "level": 17
+    "level": 17,
+    "action": {
+      "kind": "action",
+      "uses": "ki-points"
+    }
   },
   {
     "slug": "rage",
     "class": "barbarian",
-    "level": 1
+    "level": 1,
+    "action": {
+      "kind": "bonus-action",
+      "uses": "rage-count"
+    }
   },
   {
     "slug": "ranger-ability-score-improvement-1",
@@ -2933,7 +3056,10 @@
   {
     "slug": "reckless-attack",
     "class": "barbarian",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "free-action"
+    }
   },
   {
     "slug": "relentless-rage",
@@ -2955,7 +3081,10 @@
     "slug": "retaliation",
     "class": "barbarian",
     "subclass": "berserker",
-    "level": 14
+    "level": 14,
+    "action": {
+      "kind": "reaction"
+    }
   },
   {
     "slug": "rogue-ability-score-improvement-1",
@@ -3388,7 +3517,11 @@
   {
     "slug": "second-wind",
     "class": "fighter",
-    "level": 1
+    "level": 1,
+    "action": {
+      "kind": "bonus-action",
+      "uses": "second-wind"
+    }
   },
   {
     "slug": "signature-spell",
@@ -3403,7 +3536,10 @@
   {
     "slug": "slow-fall",
     "class": "monk",
-    "level": 4
+    "level": 4,
+    "action": {
+      "kind": "reaction"
+    }
   },
   {
     "slug": "sneak-attack",
@@ -3523,12 +3659,19 @@
   {
     "slug": "step-of-the-wind",
     "class": "monk",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "bonus-action",
+      "uses": "ki-points"
+    }
   },
   {
     "slug": "stillness-of-mind",
     "class": "monk",
-    "level": 7
+    "level": 7,
+    "action": {
+      "kind": "action"
+    }
   },
   {
     "slug": "stroke-of-luck",
@@ -3538,7 +3681,11 @@
   {
     "slug": "stunning-strike",
     "class": "monk",
-    "level": 5
+    "level": 5,
+    "action": {
+      "kind": "free-action",
+      "uses": "ki-points"
+    }
   },
   {
     "slug": "superior-critical",
@@ -3589,14 +3736,20 @@
     "class": "ranger",
     "subclass": "hunter",
     "level": 15,
-    "parent": "superior-hunters-defense"
+    "parent": "superior-hunters-defense",
+    "action": {
+      "kind": "reaction"
+    }
   },
   {
     "slug": "superior-hunters-defense-uncanny-dodge",
     "class": "ranger",
     "subclass": "hunter",
     "level": 15,
-    "parent": "superior-hunters-defense"
+    "parent": "superior-hunters-defense",
+    "action": {
+      "kind": "reaction"
+    }
   },
   {
     "slug": "superior-inspiration",
@@ -3655,7 +3808,10 @@
   {
     "slug": "uncanny-dodge",
     "class": "rogue",
-    "level": 5
+    "level": 5,
+    "action": {
+      "kind": "reaction"
+    }
   },
   {
     "slug": "use-magic-device",
@@ -3666,7 +3822,10 @@
   {
     "slug": "vanish",
     "class": "ranger",
-    "level": 14
+    "level": 14,
+    "action": {
+      "kind": "bonus-action"
+    }
   },
   {
     "slug": "warlock-ability-score-improvement-1",
@@ -3697,7 +3856,11 @@
     "slug": "wholeness-of-body",
     "class": "monk",
     "subclass": "open-hand",
-    "level": 6
+    "level": 6,
+    "action": {
+      "kind": "action",
+      "uses": "wholeness-of-body"
+    }
   },
   {
     "slug": "wild-shape-cr-1-2-or-below-no-flying-speed",
@@ -3707,7 +3870,11 @@
   {
     "slug": "wild-shape-cr-1-4-or-below-no-flying-or-swim-speed",
     "class": "druid",
-    "level": 2
+    "level": 2,
+    "action": {
+      "kind": "action",
+      "uses": "wild-shape-uses"
+    }
   },
   {
     "slug": "wild-shape-cr-1-or-below",

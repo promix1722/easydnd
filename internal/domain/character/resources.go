@@ -354,6 +354,7 @@ func (p *projector) applyEffect(r catalog.RuleDefinition, e catalog.Effect) erro
 
 type ActionOffer struct {
 	ID                rules.Slug
+	Kind              ActionKind
 	Owner             rules.Ref
 	Name              string
 	Manual, Available bool
@@ -363,6 +364,11 @@ type ActionOffer struct {
 func actionOffers(s *State, cat *catalog.Catalog) error {
 	s.PackActions = nil
 	for _, a := range cat.Mechanics.Actions {
+		// An action nobody owns is open to everybody and costs nothing, so
+		// there is nothing to offer or afford; deriveActions lists it.
+		if a.Owner.IsZero() {
+			continue
+		}
 		active, err := activeRule(*s, cat, catalog.RuleDefinition{Owner: a.Owner, MinimumLevel: a.MinimumLevel, When: a.When})
 		if err != nil {
 			return err
@@ -370,7 +376,7 @@ func actionOffers(s *State, cat *catalog.Catalog) error {
 		if !active {
 			continue
 		}
-		offer := ActionOffer{ID: a.Slug, Owner: a.Owner, Name: a.Name, Manual: a.Manual, Available: true, Costs: map[rules.Slug]int{}}
+		offer := ActionOffer{ID: a.Slug, Kind: actionKind(a.Kind), Owner: a.Owner, Name: a.Name, Manual: a.Manual, Available: true, Costs: map[rules.Slug]int{}}
 		for _, cost := range a.Costs {
 			n, err := cost.Amount.Eval(variables(*s, cat))
 			if err != nil {
@@ -389,5 +395,6 @@ func actionOffers(s *State, cat *catalog.Catalog) error {
 		}
 		s.PackActions = append(s.PackActions, offer)
 	}
+	deriveActions(s, cat)
 	return nil
 }

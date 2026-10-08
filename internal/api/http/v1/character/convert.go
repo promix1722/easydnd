@@ -373,14 +373,15 @@ func actionsOf(actions []domain.Action) []Action {
 	out := make([]Action, 0, len(actions))
 	for _, a := range actions {
 		action := Action{
-			Source: a.Source.String(),
-			Origin: refString(a.Origin),
-			Kind:   a.Kind.String(),
-			Name:   a.Name,
-			Range:  int(a.Range),
-			ToHit:  a.ToHit,
-			Uses:   a.Uses.String(),
-			Notes:  a.Notes,
+			Source:   a.Source.String(),
+			Origin:   refString(a.Origin),
+			Kind:     a.Kind.String(),
+			Category: a.Category.String(),
+			Name:     a.Name,
+			Range:    int(a.Range),
+			ToHit:    a.ToHit,
+			Uses:     a.Uses.String(),
+			Notes:    a.Notes,
 		}
 		if a.Damage != nil {
 			action.Damage = a.Damage.Dice.String()

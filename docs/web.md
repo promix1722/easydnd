@@ -1848,9 +1848,17 @@ going through the pack.
   derived from, the body's state, then skills, proficiencies and traits as
   headed panels -- two abreast on a wide screen, stacked on a phone.
 - **Actions** lists what the server derived (`sheet.actions`), the scaling
-  values a class brings, and the spendable pools. The server does not yet turn
-  an equipped weapon into an attack, so a fresh fighter's list is honestly
-  short; that is a gap in the projection (see docs/dnd.md), not in this tab.
+  values a class brings, and the spendable pools. The list is
+  `features/character/SheetActions.tsx`: a `BlockList` whose rows open onto
+  their description, under a search box and two selects -- the part of the turn
+  and where the action comes from. What is on it is the rule pack's decision
+  (see [packs.md](packs.md#action-tags)); the client knows no class. The prose
+  arrives in the sheet response as `catalog.actions`, keyed by each action's
+  `origin`, so opening a row is not a request. A row with no prose -- a mundane
+  weapon -- has no body and is drawn as a fact, not a control. Filters are
+  local state and offer only the kinds and sources the sheet actually has. A
+  pool is shown by capacity, as everywhere on a sheet; spending is the game
+  tracker's.
 - **Spells** is drawn only for a character with a spell source.
 - **Equipment** and **Items** are described
   [below](#equipment-is-what-is-worn-items-is-what-is-carried).

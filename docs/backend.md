@@ -2220,7 +2220,7 @@ until the next run. Change `cmd/srdgen` and run `make data/srd` instead.
 [data/translations/README.md](../data/translations/README.md) and
 [dnd.md](dnd.md#localization).
 
-The generator does four things the raw dump does not:
+The generator does five things the raw dump does not:
 
 1. **Splits mechanics from prose.** Language-neutral data lives in the directory
    root; translatable text lives under `i18n/<locale>/`, keyed by the same slug.
@@ -2238,7 +2238,13 @@ The generator does four things the raw dump does not:
 3. **Normalises rule strings.** `"1 action"`, `"90 feet"` and `"Up to 1 minute"`
    are mechanics wearing prose clothing; they become structured values and are
    re-rendered per locale.
-4. **Types every cross-reference** as `kind:slug`, using the upstream URL --
+4. **Adds what the dump only says in prose.** `data/rules/2014/` is authored:
+   `mechanics.json` (pools, rules, the actions open to everybody),
+   `resources.en.json` and `actions.en.json` (their English), and
+   `action-tags.json`, which marks the features and traits that belong in a
+   character's action list. The tags are merged onto the generated entries; a
+   tag for a slug the generator did not emit is a warning, and so a failure.
+5. **Types every cross-reference** as `kind:slug`, using the upstream URL --
    `skill:acrobatics` and `proficiency:skill-acrobatics` are different things
    with confusingly similar names.
 

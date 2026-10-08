@@ -1,6 +1,8 @@
 package file
 
 import (
+	"cmp"
+
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -158,11 +160,14 @@ type SenseGrant struct {
 	Distance int    `json:"distance"`
 }
 type ActionDefinition struct {
-	ID           string         `json:"id"`
-	Owner        Ref            `json:"owner"`
+	ID string `json:"id"`
+	// Kind is the part of a turn the action takes; empty means "action".
+	Kind string `json:"kind,omitempty"`
+	// Owner is empty for an action open to every character.
+	Owner        Ref            `json:"owner,omitempty"`
 	MinimumLevel int            `json:"minimumLevel,omitempty"`
 	When         *Expression    `json:"when,omitempty"`
-	Costs        []ResourceCost `json:"costs"`
+	Costs        []ResourceCost `json:"costs,omitempty"`
 	Manual       bool           `json:"manual"`
 }
 type ResourceCost struct {
@@ -247,7 +252,7 @@ func (w PackMechanics) domain(prose, actionProse Bundle) (catalog.Mechanics, err
 		out.Rules = append(out.Rules, d)
 	}
 	for _, w := range w.Actions {
-		d := catalog.ActionDefinition{Entry: entry(w.ID, actionProse), Owner: c.ref(w.Owner), MinimumLevel: w.MinimumLevel, Manual: w.Manual}
+		d := catalog.ActionDefinition{Entry: entry(w.ID, actionProse), Kind: cmp.Or(w.Kind, "action"), Owner: c.ref(w.Owner), MinimumLevel: w.MinimumLevel, Manual: w.Manual}
 		if w.When != nil {
 			e := w.When.domain()
 			d.When = &e

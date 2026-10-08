@@ -423,11 +423,33 @@ projector fell into once: whether a skill may take Expertise is a question
 about its training level, not about whether the key exists.
 
 **Actions have two provenances**, and the model says which. A *derived* action is
-recomputed on every projection — an equipped longsword produces its attack, a
-prepared spell its casting — so editing one has no effect. A *manual* action is
-stored in the log outright, for things no rule derives. Each carries an `Origin`
-naming what produced it: the rogue's bonus-action Hide comes from
+recomputed on every projection, so editing one has no effect. A *manual* action
+is stored in the log outright, for things no rule derives. Each carries an
+`Origin` naming what produced it: the rogue's bonus-action Hide comes from
 `feature:cunning-action`.
+
+**The pack decides what is on the list; the code names no class.** `deriveActions`
+(`internal/domain/character/actions.go`) fills `State.Actions` from three places:
+
+- **An equipped weapon** gives its attack, with no tag needed. The modifier is
+  Strength, Dexterity for a ranged weapon, the better of the two for a finesse
+  one; the proficiency bonus is added when one of the character's proficiencies
+  *references* the weapon or a category holding it. References are followed
+  rather than slugs compared, so it holds under a pack whose slugs are
+  namespaced. That is all it applies: no fighting style, no magic bonus, no
+  Martial Arts, no off-hand rule -- none of those is data yet.
+- **A tagged entry.** Any feature, trait, feat, item or magic item may carry
+  `"action": {"kind": "bonus-action", "uses": "second-wind"}`. If the
+  character holds the entry (an item: has it equipped), it is an action, named
+  and described by the entry's own prose. See
+  [packs.md](packs.md#action-tags).
+- **A standalone action** from the pack's `mechanics.actions`. One with no
+  `owner` is open to everybody -- the SRD's Dash, Hide, Opportunity Attack --
+  and is filed as `basic`; an owned one is the pack action it always was.
+
+Each action also carries a `Category` -- `basic`, `equipment` or `feature` --
+which is the reason the character has it and what a player filters by. Spells
+are not on this list; they are castings, and they have their own.
 
 Action, Bonus Action and Reaction are **siblings**, not a hierarchy. A turn
 grants one of each, and spending one does not spend another.
@@ -486,9 +508,9 @@ in two, and the saving throws all come out matching the real exported sheet.
 
 **Still not derived**, and marked as such where it would go:
 
-- Actions from equipment and prepared spells. `State.Actions` carries only
-  what a change event put there, and the battle tracker is where the rest
-  belongs.
+- Castings from prepared spells, and anything about a weapon attack beyond the
+  ability modifier and proficiency: fighting styles, magic bonuses, Martial
+  Arts, two-weapon and two-handed grips.
 - Jack of All Trades, a class feature whose mechanics the compendium records
   only as prose.
 

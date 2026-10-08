@@ -1,0 +1,177 @@
+{
+  "features": {
+    "action-surge-1-use": {
+      "kind": "free-action",
+      "uses": "action-surges"
+    },
+    "bardic-inspiration-d6": {
+      "kind": "bonus-action",
+      "uses": "bardic-inspiration"
+    },
+    "channel-divinity-preserve-life": {
+      "kind": "action",
+      "uses": "channel-divinity-charges"
+    },
+    "channel-divinity-sacred-weapon": {
+      "kind": "action",
+      "uses": "paladin-channel-divinity"
+    },
+    "channel-divinity-turn-the-unholy": {
+      "kind": "action",
+      "uses": "paladin-channel-divinity"
+    },
+    "channel-divinity-turn-undead": {
+      "kind": "action",
+      "uses": "channel-divinity-charges"
+    },
+    "cleansing-touch": {
+      "kind": "action",
+      "uses": "cleansing-touch"
+    },
+    "countercharm": {
+      "kind": "action"
+    },
+    "cunning-action": {
+      "kind": "bonus-action"
+    },
+    "cutting-words": {
+      "kind": "reaction",
+      "uses": "bardic-inspiration"
+    },
+    "deflect-missiles": {
+      "kind": "reaction"
+    },
+    "divine-intervention": {
+      "kind": "action",
+      "uses": "divine-intervention"
+    },
+    "divine-sense": {
+      "kind": "action",
+      "uses": "divine-sense"
+    },
+    "divine-smite": {
+      "kind": "free-action"
+    },
+    "draconic-presence": {
+      "kind": "action",
+      "uses": "sorcery-points"
+    },
+    "dragon-wings": {
+      "kind": "bonus-action"
+    },
+    "empty-body": {
+      "kind": "action",
+      "uses": "ki-points"
+    },
+    "fast-hands": {
+      "kind": "bonus-action"
+    },
+    "fighter-fighting-style-protection": {
+      "kind": "reaction"
+    },
+    "fighting-style-protection": {
+      "kind": "reaction"
+    },
+    "flexible-casting-converting-spell-slot": {
+      "kind": "bonus-action"
+    },
+    "flexible-casting-creating-spell-slots": {
+      "kind": "bonus-action",
+      "uses": "sorcery-points"
+    },
+    "flurry-of-blows": {
+      "kind": "bonus-action",
+      "uses": "ki-points"
+    },
+    "frenzy": {
+      "kind": "bonus-action"
+    },
+    "holy-nimbus": {
+      "kind": "action"
+    },
+    "hunters-prey-giant-killer": {
+      "kind": "reaction"
+    },
+    "intimidating-presence": {
+      "kind": "action"
+    },
+    "lay-on-hands": {
+      "kind": "action",
+      "uses": "lay-on-hands"
+    },
+    "martial-arts": {
+      "kind": "bonus-action"
+    },
+    "multiattack-volley": {
+      "kind": "action"
+    },
+    "multiattack-whirlwind-attack": {
+      "kind": "action"
+    },
+    "patient-defense": {
+      "kind": "bonus-action",
+      "uses": "ki-points"
+    },
+    "primeval-awareness": {
+      "kind": "action"
+    },
+    "quivering-palm": {
+      "kind": "action",
+      "uses": "ki-points"
+    },
+    "rage": {
+      "kind": "bonus-action",
+      "uses": "rage-count"
+    },
+    "reckless-attack": {
+      "kind": "free-action"
+    },
+    "retaliation": {
+      "kind": "reaction"
+    },
+    "second-wind": {
+      "kind": "bonus-action",
+      "uses": "second-wind"
+    },
+    "slow-fall": {
+      "kind": "reaction"
+    },
+    "step-of-the-wind": {
+      "kind": "bonus-action",
+      "uses": "ki-points"
+    },
+    "stillness-of-mind": {
+      "kind": "action"
+    },
+    "stunning-strike": {
+      "kind": "free-action",
+      "uses": "ki-points"
+    },
+    "superior-hunters-defense-stand-against-the-tide": {
+      "kind": "reaction"
+    },
+    "superior-hunters-defense-uncanny-dodge": {
+      "kind": "reaction"
+    },
+    "uncanny-dodge": {
+      "kind": "reaction"
+    },
+    "vanish": {
+      "kind": "bonus-action"
+    },
+    "wholeness-of-body": {
+      "kind": "action",
+      "uses": "wholeness-of-body"
+    },
+    "wild-shape-cr-1-4-or-below-no-flying-or-swim-speed": {
+      "kind": "action",
+      "uses": "wild-shape-uses"
+    }
+  },
+  "traits": {
+    "breath-weapon": {
+      "kind": "action",
+      "uses": "breath-weapon"
+    }
+  }
+}

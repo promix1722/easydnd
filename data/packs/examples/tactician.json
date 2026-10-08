@@ -37,7 +37,11 @@
         "slug": "combat-training",
         "class": "srd-2014:class:fighter",
         "subclass": "tactician",
-        "level": 3
+        "level": 3,
+        "action": {
+          "kind": "reaction",
+          "uses": "combat-dice"
+        }
       }
     ],
     "class-levels": [
@@ -175,6 +179,7 @@
     "actions": [
       {
         "id": "maneuver",
+        "kind": "bonus-action",
         "owner": "subclass:tactician",
         "minimumLevel": 3,
         "costs": [

@@ -660,6 +660,66 @@
       "mode": "cantrip"
     }
   ],
+  "actions": [
+    {
+      "id": "attack",
+      "manual": true
+    },
+    {
+      "id": "cast-a-spell",
+      "manual": true
+    },
+    {
+      "id": "dash",
+      "manual": true
+    },
+    {
+      "id": "disengage",
+      "manual": true
+    },
+    {
+      "id": "dodge",
+      "manual": true
+    },
+    {
+      "id": "help",
+      "manual": true
+    },
+    {
+      "id": "hide",
+      "manual": true
+    },
+    {
+      "id": "ready",
+      "manual": true
+    },
+    {
+      "id": "search",
+      "manual": true
+    },
+    {
+      "id": "use-an-object",
+      "manual": true
+    },
+    {
+      "id": "grapple",
+      "manual": true
+    },
+    {
+      "id": "shove",
+      "manual": true
+    },
+    {
+      "id": "two-weapon-fighting",
+      "kind": "bonus-action",
+      "manual": true
+    },
+    {
+      "id": "opportunity-attack",
+      "kind": "reaction",
+      "manual": true
+    }
+  ],
   "core": {
     "minScore": 1,
     "maxScore": 30,

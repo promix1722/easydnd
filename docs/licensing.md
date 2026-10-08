@@ -34,6 +34,10 @@ The generated base `pack-manifest.json` carries the generator's existing SRD
 source and attribution. Portable/directory exports preserve that metadata and
 locale bundles; repackaging does not change the underlying terms described here.
 `data/rules/2014/` supplies authored mechanics missing from the upstream dump.
+One file there is not authored: `actions.en.json` is SRD 5.1 text -- the combat
+actions from the vendored dump's rule sections, which the generator does not
+otherwise read -- and travels under the same attribution as the rest of the
+generated data, as does its translation in `data/translations/`.
 The Tactician fixture in `data/packs/examples/` is illustrative project content,
 not a claim that its subclass appears in the SRD. Custom packs can carry their
 own source/attribution; the loader does not determine their publication rights.

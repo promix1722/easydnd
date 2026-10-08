@@ -442,6 +442,20 @@ const (
 	Manual
 )
 
+// ActionCategory groups actions by why the character has them.
+type ActionCategory uint8
+
+// The categories of action.
+const (
+	ActionCategoryNone ActionCategory = iota
+	// BasicAction is open to every character: Dash, Hide, Help.
+	BasicAction
+	// ActionFromEquipment comes from something worn or wielded.
+	ActionFromEquipment
+	// ActionFromFeature comes from a class, race, feat or other grant.
+	ActionFromFeature
+)
+
 // Action is something the character can do on their turn.
 type Action struct {
 	Source ActionSource
@@ -451,6 +465,10 @@ type Action struct {
 	Origin rules.Ref
 
 	Kind ActionKind
+
+	// Category is the broad reason the action is on the list, which is what a
+	// player filters by.
+	Category ActionCategory
 
 	// Name is display text. For a derived action it is copied from the
 	// origin entry and is therefore already in the catalogue's locale; for a

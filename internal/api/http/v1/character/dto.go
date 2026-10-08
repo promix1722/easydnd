@@ -314,12 +314,14 @@ type Action struct {
 	Source string `json:"source"`
 	Origin string `json:"origin,omitempty"`
 	Kind   string `json:"kind"`
-	Name   string `json:"name"`
-	Range  int    `json:"range,omitempty"`
-	ToHit  *int   `json:"toHit,omitempty"`
-	Damage string `json:"damage,omitempty"`
-	Uses   string `json:"uses,omitempty"`
-	Notes  string `json:"notes,omitempty"`
+	// Category is why the character has it: basic, equipment or feature.
+	Category string `json:"category,omitempty"`
+	Name     string `json:"name"`
+	Range    int    `json:"range,omitempty"`
+	ToHit    *int   `json:"toHit,omitempty"`
+	Damage   string `json:"damage,omitempty"`
+	Uses     string `json:"uses,omitempty"`
+	Notes    string `json:"notes,omitempty"`
 }
 
 type ResourcePool struct {

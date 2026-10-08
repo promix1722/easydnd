@@ -534,3 +534,61 @@ func TestProficiencyBonusMatchesTheData(t *testing.T) {
 		}
 	}
 }
+
+// The action list is derived from what is wielded and what the pack tagged.
+// The actions a pack gives everybody live in its mechanics, which this
+// package's bare Source does not read; the file adapter's tests cover them.
+func TestProjectActionsComeFromWeaponsAndTags(t *testing.T) {
+	log := RogueLog(t)
+	if err := log.Append(Event{Type: EventChange, Changes: []Change{
+		{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue([]rules.Slug{"rapier", "shortbow", "greataxe"})},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]Action{}
+	for _, a := range s.Actions {
+		got[a.Origin.String()] = a
+	}
+	attack := func(origin string, toHit int, damage string, reach rules.Feet) {
+		t.Helper()
+		a, ok := got[origin]
+		if !ok || a.ToHit == nil || a.Damage == nil {
+			t.Errorf("%s gives no attack: %+v", origin, a)
+			return
+		}
+		if *a.ToHit != toHit || a.Damage.Dice.String() != damage || a.Range != reach || a.Kind != MainAction || a.Category != ActionFromEquipment {
+			t.Errorf("%s = to hit %d, damage %s, range %d; want %d, %s, %d", origin, *a.ToHit, a.Damage.Dice, a.Range, toHit, damage, reach)
+		}
+	}
+	// Finesse takes Dexterity 3 over Strength; a rogue is proficient, +2.
+	attack("item:rapier", 5, "1d8+3", 5)
+	attack("item:shortbow", 5, "1d6+3", 80)
+	// No proficiency with a greataxe, and it is swung with Strength.
+	strength := s.Abilities.Modifier(rules.Strength)
+	if a := got["item:greataxe"]; a.ToHit == nil || *a.ToHit != strength {
+		t.Errorf("greataxe to hit = %v, want the bare Strength modifier %d", a.ToHit, strength)
+	}
+	if a := got["feature:cunning-action"]; a.Kind != BonusAction || a.Category != ActionFromFeature || a.Name == "" {
+		t.Errorf("Cunning Action = %+v, want a bonus action from a feature", a)
+	}
+	// Carried is not wielded.
+	if _, ok := got["item:leather-armor"]; ok {
+		t.Error("armor produced an action")
+	}
+	if _, ok := rogueSheetActions(t)["item:rapier"]; ok {
+		t.Error("a rapier that is not equipped produced an attack")
+	}
+}
+
+func rogueSheetActions(t *testing.T) map[string]Action {
+	t.Helper()
+	out := map[string]Action{}
+	for _, a := range rogueSheet(t).Actions {
+		out[a.Origin.String()] = a
+	}
+	return out
+}

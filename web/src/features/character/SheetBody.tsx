@@ -22,6 +22,7 @@ import type { DeckPanel } from '@/ui'
 import { IdentityTable } from './IdentityTable'
 import { ProficienciesPanel } from './ProficienciesPanel'
 import { ResourcePools } from './ResourcePools'
+import { SheetActions } from './SheetActions'
 import { SheetEquipment, SheetItems } from './SheetEquipment'
 import { SkillsPanel } from './SkillsPanel'
 import { Vitals } from './Vitals'
@@ -162,18 +163,12 @@ export function SheetBody({
       label: t('sheet.actions'),
       content: (
         <Stack gap="md">
-          {/*
-            What the server derived, as it derived it. It does not yet turn an
-            equipped weapon into an attack, so a sheet with none says so.
-          */}
           <Panel>
             <Stack gap="md">
-              <ItemList
-                label={t('sheet.actions')}
-                items={(s.actions ?? []).map((action) =>
-                  [action.name, action.toHit === undefined ? '' : signed(action.toHit), action.damage, action.uses, action.notes]
-                    .filter(Boolean).join(' · '))}
-                empty={t('sheet.noActions')}
+              <SheetActions
+                actions={s.actions ?? []}
+                entries={bySlug(catalog?.actions ?? [])}
+                pools={s.resources.pools ?? {}}
               />
               {/*
                 Scaling values only -- a Sneak Attack die, an aura's range -- drawn

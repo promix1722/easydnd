@@ -1,6 +1,6 @@
 import type { BuildPolicy } from './packPolicy'
 import type { RulesLock } from './packs'
-import type { Choice, Item, Option, Proficiency, Skill as CatalogSkill, Spell } from './catalog'
+import type { Choice, Entry, Item, Option, Proficiency, Skill as CatalogSkill, Spell } from './catalog'
 import { request } from './client'
 
 /**
@@ -198,6 +198,8 @@ export interface Sheet {
     proficiencies?: Proficiency[]
     equipment?: Item[]
     magicItems?: Item[]
+    /** The prose behind `actions`, each entry's `slug` being an action's `origin`. */
+    actions?: Entry[]
     spells?: Spell[]
   }
  importedNotes?: string[]
@@ -221,7 +223,11 @@ export interface Sheet {
 /** Something the character can do on their turn, as the server derived it. */
 export interface SheetAction {
   source: string
+  /** What produced it, as `kind:slug`; also the key of its prose in `catalog.actions`. */
+  origin?: string
   kind: string
+  /** Why the character has it: `basic`, `equipment` or `feature`. */
+  category?: string
   name: string
   range?: number
   toHit?: number

@@ -277,6 +277,7 @@ func (g *generator) traits() error {
 	out := make([]file.Trait, 0, len(ups))
 	for _, up := range ups {
 		t := file.Trait{
+			Action:             g.actionTag("traits", up.Index),
 			Slug:               up.Index,
 			Races:              indexes(up.Races),
 			Subraces:           indexes(up.Subraces),
@@ -557,7 +558,7 @@ func (g *generator) features() error {
 	out := make([]file.Feature, 0, len(ups))
 	seen := make(map[string]bool, len(ups))
 	for _, up := range ups {
-		f := file.Feature{Slug: up.Index, Level: up.Level}
+		f := file.Feature{Slug: up.Index, Level: up.Level, Action: g.actionTag("features", up.Index)}
 		if up.Class != nil {
 			f.Class = up.Class.Index
 		}
@@ -651,7 +652,7 @@ func (g *generator) feats() error {
 	}
 	out := make([]file.Feat, 0, len(ups))
 	for _, up := range ups {
-		f := file.Feat{Slug: up.Index}
+		f := file.Feat{Slug: up.Index, Action: g.actionTag("feats", up.Index)}
 		for _, pre := range up.Prerequisites {
 			f.Prerequisites = append(f.Prerequisites, file.Prerequisite{
 				Kind:         file.PrerequisiteAbility,

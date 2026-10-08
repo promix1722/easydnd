@@ -13,7 +13,7 @@ import (
 // writePack incorporates explicitly authored mechanics missing from the upstream
 // compendium. Generated output is still exclusively owned by srdgen.
 func (g *generator) writePack(locales []rules.Locale) error {
-	input := "data/rules/2014"
+	input := rulesDir
 	raw, err := os.ReadFile(filepath.Join(input, "mechanics.json"))
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (g *generator) writePack(locales []rules.Locale) error {
 	if err = json.Unmarshal(versionRaw, &release); err != nil {
 		return err
 	}
-	manifest := file.PackManifest{SchemaVersion: 1, ID: "srd-2014", Version: release.Version, Edition: "2014", Semantics: "1", DefaultLocale: "en", Source: "SRD 5.1", Attribution: attribution, Requires: []string{"effects.v1", "resources.v1", "progressions.v1"}, Files: map[string]string{"mechanics": "mechanics.json"}}
+	manifest := file.PackManifest{SchemaVersion: 1, ID: "srd-2014", Version: release.Version, Edition: "2014", Semantics: "1", DefaultLocale: "en", Source: "SRD 5.1", Attribution: attribution, Requires: []string{"effects.v1", "resources.v1", "actions.v1", "progressions.v1"}, Files: map[string]string{"mechanics": "mechanics.json"}}
 	for _, name := range file.MechanicsFiles() {
 		manifest.Files["entities/"+strings.TrimSuffix(name, ".json")] = name
 	}
@@ -43,26 +43,30 @@ func (g *generator) writePack(locales []rules.Locale) error {
 		for _, name := range file.ProseFiles() {
 			manifest.Files["locales/"+locale.String()+"/"+strings.TrimSuffix(name, ".json")] = filepath.ToSlash(filepath.Join("i18n", locale.String(), name))
 		}
-		resourceInput := filepath.Join(input, "resources.en.json")
-		if locale != rules.DefaultLocale {
-			resourceInput = filepath.Join(g.transDir, locale.String(), "resources.json")
+		// Resource and action names belong to the authored mechanics, so
+		// their English is authored beside them.
+		for _, bundle := range []string{"resources", "actions"} {
+			bundleInput := filepath.Join(input, bundle+".en.json")
+			if locale != rules.DefaultLocale {
+				bundleInput = filepath.Join(g.transDir, locale.String(), bundle+".json")
+			}
+			raw, err := os.ReadFile(bundleInput)
+			if os.IsNotExist(err) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			var prose file.Bundle
+			if err = json.Unmarshal(raw, &prose); err != nil {
+				return err
+			}
+			name := filepath.ToSlash(filepath.Join("i18n", locale.String(), bundle+".json"))
+			if err = g.write(name, prose); err != nil {
+				return err
+			}
+			manifest.Files["locales/"+locale.String()+"/"+bundle] = name
 		}
-		raw, err := os.ReadFile(resourceInput)
-		if os.IsNotExist(err) {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		var prose file.Bundle
-		if err = json.Unmarshal(raw, &prose); err != nil {
-			return err
-		}
-		name := filepath.ToSlash(filepath.Join("i18n", locale.String(), "resources.json"))
-		if err = g.write(name, prose); err != nil {
-			return err
-		}
-		manifest.Files["locales/"+locale.String()+"/resources"] = name
 	}
 
 	manifest.Title = "SRD 5.1"

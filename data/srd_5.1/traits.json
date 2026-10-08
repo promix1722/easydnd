@@ -15,7 +15,11 @@
     "slug": "breath-weapon",
     "races": [
       "dragonborn"
-    ]
+    ],
+    "action": {
+      "kind": "action",
+      "uses": "breath-weapon"
+    }
   },
   {
     "slug": "damage-resistance",
