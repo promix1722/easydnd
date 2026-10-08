@@ -132,7 +132,16 @@ API listen address. Different worktree ports on the same browser hostname
 therefore cannot overwrite or clear one another's sessions, passkey ceremonies
 or SSO flight cookies. Production cookie names are unchanged. Restarting an
 API without `auth.session_secret` still invalidates that API's sessions because
-its signing key is generated per process.
+its signing key is generated per process. Because a browser does not isolate
+cookies by port, a shared development hostname collects one such dead cookie
+per switch and per restart, across every worktree's namespace, until the
+`Cookie` header outgrows the proxy's 8 KB line limit and nginx answers
+`400 Request Header Or Cookie Too Large` before the API sees anything. So in
+development `RequireSession` also verifies every other session cookie of its
+own namespace in the request and clears the ones that no longer work; cookies
+of other namespaces are left alone, since another server's token cannot be
+checked here and may be live. A jar that is already over the limit has to be
+emptied in the browser once.
 
 `make dev` is a **disposable** stack: Ctrl-C takes the database down with the
 servers, so every run starts on an empty schema and nothing is left behind.

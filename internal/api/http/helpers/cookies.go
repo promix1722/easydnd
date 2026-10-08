@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -110,9 +111,38 @@ func (o CookieOptions) SetSession(c *gin.Context, token string, ttl time.Duratio
 }
 
 // ClearSession expires the session cookie.
-func (o CookieOptions) ClearSession(c *gin.Context) {
+func (o CookieOptions) ClearSession(c *gin.Context) { o.ClearSessionNamed(c, o.sessionName(c)) }
+
+// SiblingSessions lists, by name, every other session cookie of this server's
+// own namespace that the request carries -- development only, where each
+// account switch mints a new selector and so a new cookie. Cookies do not
+// isolate ports, so on a shared development hostname those pile up across
+// restarts until the Cookie header is too long for the proxy in front; the
+// middleware verifies each one and clears the dead. Other servers' namespaces
+// are left alone: their tokens cannot be checked here and may well be live.
+func (o CookieOptions) SiblingSessions(c *gin.Context) map[string]string {
+	if !o.Development {
+		return nil
+	}
+	own, prefix := o.sessionName(c), o.SessionCookieName()
+	var siblings map[string]string
+	for _, cookie := range c.Request.Cookies() {
+		if cookie.Name == own || !strings.HasPrefix(cookie.Name, prefix) {
+			continue
+		}
+		if siblings == nil {
+			siblings = map[string]string{}
+		}
+		siblings[cookie.Name] = cookie.Value
+	}
+	return siblings
+}
+
+// ClearSessionNamed expires a session cookie by name, with the attributes
+// SetSession gave it, which is what makes the browser match the two.
+func (o CookieOptions) ClearSessionNamed(c *gin.Context, name string) {
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     o.sessionName(c),
+		Name:     name,
 		Value:    "",
 		Path:     sessionCookiePath,
 		MaxAge:   -1,
