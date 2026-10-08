@@ -179,7 +179,7 @@
             {
               "kind": "ref",
               "ref": "item:handaxe",
-              "count": 2
+              "count": 1
             },
             {
               "kind": "ref",
@@ -1406,24 +1406,9 @@
               "count": 1
             },
             {
-              "kind": "bundle",
-              "items": [
-                {
-                  "kind": "ref",
-                  "ref": "item:leather-armor",
-                  "count": 1
-                },
-                {
-                  "kind": "ref",
-                  "ref": "item:longbow",
-                  "count": 1
-                },
-                {
-                  "kind": "ref",
-                  "ref": "item:arrow",
-                  "count": 20
-                }
-              ]
+              "kind": "ref",
+              "ref": "item:leather-armor",
+              "count": 1
             }
           ]
         },
@@ -1588,6 +1573,21 @@
                 {
                   "kind": "ref",
                   "ref": "item:crossbow-bolt",
+                  "count": 20
+                }
+              ]
+            },
+            {
+              "kind": "bundle",
+              "items": [
+                {
+                  "kind": "ref",
+                  "ref": "item:longbow",
+                  "count": 1
+                },
+                {
+                  "kind": "ref",
+                  "ref": "item:arrow",
                   "count": 20
                 }
               ]

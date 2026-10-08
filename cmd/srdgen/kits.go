@@ -65,7 +65,7 @@ func firstRef(option file.Option) file.Ref {
 var classKits = map[string][]kitSlot{
 	"barbarian": {
 		pick(slotMainHand, one("greataxe"), anyOne("martial-melee-weapons")),
-		pick(slotOffHand, item("handaxe", 2), anyOne("simple-weapons")),
+		pick(slotOffHand, one("handaxe"), anyOne("simple-weapons")),
 	},
 	"bard": {
 		pick(slotMainHand, one("rapier"), one("longsword"), anyOne("simple-weapons")),
@@ -85,10 +85,10 @@ var classKits = map[string][]kitSlot{
 		anyOf(slotFocus, "druidic-foci"),
 	},
 	"fighter": {
-		pick(slotBody, one("chain-mail"), bundle("", one("leather-armor"), one("longbow"), item("arrow", 20))),
+		pick(slotBody, one("chain-mail"), one("leather-armor")),
 		anyOf(slotMainHand, "martial-weapons"),
 		pick(slotOffHand, one("shield"), anyOne("martial-weapons")),
-		pick(slotBackup, crossbow, item("handaxe", 2)),
+		pick(slotBackup, crossbow, bundle("", one("longbow"), item("arrow", 20)), item("handaxe", 2)),
 		pick(slotPack, one("dungeoneers-pack"), one("explorers-pack")),
 	},
 	"monk": {

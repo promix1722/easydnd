@@ -4134,8 +4134,9 @@ options have loaded; a kit question with no slot -- a background's, a pack
 built before slots -- is still **titled by what it offers**, "Component pouch
 or one of: Arcane Foci", and one that is only a category reads "Also one of:
 Simple Weapons", which tells it from the card above that offers the same
-category as one of two options. A bundle's label leaves its ammunition unsaid
--- "Leather Armor and Longbow", the arrows being what a bow comes with -- and
+category as one of two options. Armor and weapons are separate choices in the
+catalogue. A weapon bundle's label leaves its ammunition unsaid -- "Longbow",
+the arrows being what a bow comes with -- and
 the detail under the picked option still lists them. No price is shown on an
 option: starting equipment is granted, not bought.
 

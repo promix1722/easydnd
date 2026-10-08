@@ -665,6 +665,33 @@ func TestProjectActionsComeFromWeaponsAndTags(t *testing.T) {
 	}
 }
 
+// The kit's worn items are the baseline a sheet edit replaces, not a grant
+// re-applied on top of it: before this, every rewrite of the equipped list
+// gained one more copy of the kit's weapon.
+func TestKitWornItemsAreReplacedByAnEquippedWrite(t *testing.T) {
+	log := RogueLog(t)
+	for range 3 {
+		if err := log.Append(Event{Type: EventChange, Changes: []Change{
+			{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue([]rules.Slug{"rapier", "leather-armor"})},
+		}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rapiers := 0
+	for _, st := range s.Equipment.Equipped {
+		if st.Item == "rapier" {
+			rapiers += st.Count
+		}
+	}
+	if rapiers != 1 || len(s.Equipment.Equipped) != 2 {
+		t.Errorf("equipped = %+v, want one rapier and the armor", s.Equipment.Equipped)
+	}
+}
+
 func rogueSheetActions(t *testing.T) map[string]Action {
 	t.Helper()
 	out := map[string]Action{}

@@ -111,6 +111,58 @@ func TestClassKitsAreAskedBySlot(t *testing.T) {
 	}
 }
 
+func TestStartingEquipmentOptionsContainOneEquipmentType(t *testing.T) {
+	c := load(t, rules.LocaleEN)
+	var choices []rules.Choice
+	for _, class := range c.Classes.All() {
+		choices = append(choices, class.StartingEquipmentOptions...)
+	}
+	for _, background := range c.Backgrounds.All() {
+		choices = append(choices, background.StartingEquipmentOptions...)
+	}
+	for _, choice := range choices {
+		choice = c.ResolveChoice(choice)
+		for _, option := range choice.From.Options {
+			items := []rules.Option{option}
+			if bundle, ok := option.(rules.BundleOption); ok {
+				items = bundle.Items
+			}
+			primary := 0
+			for _, component := range items {
+				ref, ok := component.(rules.RefOption)
+				if !ok || ref.Ref.Kind != rules.RefItem {
+					t.Fatalf("%s: unexpected kit component %T", choice.Prompt, component)
+				}
+				item, ok := c.Items.Get(ref.Ref.Slug)
+				if !ok {
+					t.Fatalf("%s: unknown item %s", choice.Prompt, ref.Ref.Slug)
+				}
+				if item.Gear != nil && item.Gear.GearCategory == "ammunition" || item.Slug == "quiver" {
+					continue
+				}
+				primary++
+				var want catalog.Slot
+				switch choice.Slot {
+				case "body":
+					want = catalog.SlotBody
+				case "main-hand":
+					want = catalog.SlotMainHand
+				case "off-hand":
+					want = catalog.SlotOffHand
+				default:
+					continue
+				}
+				if ref.Count != 1 || item.Slot != want && !(want == catalog.SlotOffHand && item.Slot == catalog.SlotMainHand) {
+					t.Errorf("%s: %s ×%d does not fill exactly one %s slot", choice.Prompt, item.Slug, ref.Count, choice.Slot)
+				}
+			}
+			if primary != 1 {
+				t.Errorf("%s option %s contains %d equipment types, want one", choice.Prompt, rules.OptionKey(option), primary)
+			}
+		}
+	}
+}
+
 // OptionKey is only useful if it is total and injective over the real data:
 // total because an option with no key is an option a player cannot pick, and
 // injective within a prompt because two options sharing a key means an answer

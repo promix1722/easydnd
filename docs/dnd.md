@@ -587,13 +587,18 @@ weapon, less any item the slot already names on its own (five javelins beside
 a worn slot is equipped**, a second weapon in the off hand included, where
 everything else granted lands in the backpack. Fixed items (the cleric's
 shield, the rogue's leather armor) are still worn by an explicit change.
-Two places depart from the SRD's shape, never its contents: the fighter's and
-paladin's weapons are *main hand: any martial weapon* and *off hand: a shield
-or any martial weapon*, which allows exactly the book's combinations; the
+The fighter's and paladin's weapons are *main hand: any martial weapon* and
+*off hand: a shield or any martial weapon*. Some choices deliberately depart
+from the SRD to keep each card about one equipment type: the
 ranger's "two shortswords or two simple melee weapons" is two independent
 picks, which allows a shortsword beside a handaxe the book does not. The
-fighter's leather armor still brings its longbow and arrows as one body
-option, because splitting that bundle would hand out a bow with chain mail.
+fighter chooses chain mail or leather armor for Body and can choose a longbow
+with arrows as its backup weapon, independently of armor. The barbarian's
+off-hand handaxe option grants one handaxe, so one worn slot never equips two.
+Ammunition and its quiver may accompany one weapon; carried stacks such as
+the fighter's two backup handaxes and the paladin's five javelins remain.
+Catalogue tests enforce one equipment type per class-kit option and one
+matching item per worn slot.
 
 The generator repairs omissions against the SRD: ranger quivers, the rogue's
 quiver-bearing bow bundle, and the acolyte's five incense blocks, vestments,
@@ -650,8 +655,10 @@ slots follow their subclass rows at the parent class's level. Multiclass slots
 use the profile's fraction and rounding. Spell-choice IDs and sources belong to
 the subclass, preventing an archetype change from carrying its old selections.
 
-Pack expressions can read whether body armor or a shield is equipped. Equipped
-changes apply before rule conditions; backpack and loot changes follow grants.
+Pack expressions can read whether body armor or a shield is equipped. The
+starting kit's worn items are seated first, then the equipped changes apply,
+before rule conditions -- so a sheet's whole-list write replaces the kit's
+choice rather than being topped up by it; backpack and loot changes follow grants.
 This allows packs to implement equipment-dependent features such as Unarmored
 Defense without interpreting their prose.
 

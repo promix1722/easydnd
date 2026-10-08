@@ -53,6 +53,40 @@ func TestEquipmentCategoriesValidateAndProject(t *testing.T) {
 	}
 }
 
+func TestFighterArmorAndBowAreSeparateChoices(t *testing.T) {
+	b := build(t).add("fighter", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 1})
+	event := domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Choices: []domain.Answer{
+		answer("fighter/starting-equipment/body", "leather-armor+longbow+arrow"),
+	}}
+	if _, err := b.s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq, event); err == nil {
+		t.Fatal("accepted armor and bow as one body choice")
+	}
+	event.Choices = []domain.Answer{answer("fighter/starting-equipment/body", "leather-armor")}
+	b.add("armor only", event)
+	cat, err := b.s.Catalog(context.Background(), rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := domain.Project(b.log(), cat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(state.Equipment.Equipped, []domain.ItemStack{{Item: "leather-armor", Count: 1}}) || len(state.Equipment.Backpack) != 0 {
+		t.Fatalf("armor choice granted extra gear: %+v", state.Equipment)
+	}
+	event.Choices = []domain.Answer{answer("fighter/starting-equipment/backup", "longbow+arrow")}
+	b.add("bow separately", event)
+	state, err = domain.Project(b.log(), cat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []domain.ItemStack{{Item: "longbow", Count: 1}, {Item: "arrow", Count: 20}} {
+		if !slices.Contains(state.Equipment.Backpack, want) {
+			t.Errorf("backpack = %+v, missing %+v", state.Equipment.Backpack, want)
+		}
+	}
+}
+
 func TestFightingStyleCannotBeChosenAgain(t *testing.T) {
 	b := build(t).add("fighter", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 1}).
 		add("style", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "fighter"), Level: 1, Choices: []domain.Answer{answer("fighter-fighting-style/subfeature/0", "fighter-fighting-style-defense")}}).

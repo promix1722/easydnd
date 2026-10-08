@@ -152,9 +152,14 @@ func (p *projector) run(log Log) (State, error) {
 		}
 		p.state.Status.ProficiencyBonus = n
 	}
+	// The starting kit comes first: what a worn slot chose is the baseline
+	// the sheet's own equipped writes then replace. Applied after them, the
+	// kit's longsword was appended to a list that already carried it, once
+	// per edit.
+	p.applyEquipmentChoices()
 	// Equipped items are explicit inputs to pack conditions as well as AC.
 	// Apply that independent list before rules; carried-item changes still
-	// follow rule grants and starting-equipment choices.
+	// follow rule grants.
 	var carriedChanges []seqChange
 	for _, change := range p.equipment {
 		if change.Change.Path == "equipment.equipped" {
@@ -176,8 +181,6 @@ func (p *projector) run(log Log) (State, error) {
 			p.addHitPoints(class.HitDie, taken.Level, i == 0)
 		}
 	}
-	p.applyEquipmentChoices()
-
 	if err := p.applyChanges(p.equipment); err != nil {
 		return State{}, err
 	}
@@ -566,7 +569,7 @@ func (p *projector) addClassResources(row catalog.ClassLevel) {
 //
 // A choice asked for a worn slot -- body, main hand, off hand -- is answered
 // by what goes there, so that item is equipped; the rest of its answer (the
-// longbow and arrows that come with the fighter's leather armor) and every
+// bolts that come with a crossbow) and every
 // slotless choice land in the backpack. Nothing else is guessed: strapping on
 // a shield that came beside a two-handed weapon would produce an armor class
 // with no rule behind it. Everything further is an explicit change event.
