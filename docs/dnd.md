@@ -551,7 +551,8 @@ Worn armor counts whether it was equipped as a list entry
 (`equipment.equipped` add `leather-armor`) or as a counted stack
 (`equipment.equipped.leather-armor` set `1`). The second is how an import
 writes inventory, because a sheet prints quantities; both are applied before
-armor class is derived. A third path, `equipment.custom` set to one slug or
+armor class is derived. A counted write edits the stack where it already is
+-- the sheet draws a list in its order, and "one fewer" must not move the row. A third path, `equipment.custom` set to one slug or
 none, records which equipped item sits in the sheet's Custom slot -- see
 [below](#items-carry-their-slot); it is the one placement the projection
 cannot derive, and it is forgotten on its own once the item is no longer

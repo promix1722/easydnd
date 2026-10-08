@@ -1,4 +1,4 @@
-import { COINS, equip, setTotal, slotOf, unequip } from '@/domain'
+import { COINS, equip, groupOf, setTotal, slotOf, unequip } from '@/domain'
 import type { InventoryRow } from '@/domain'
 import type { Change, Equipment, Item } from '@/lib/api'
 import { useT } from '@/lib/i18n'
@@ -11,10 +11,10 @@ import { itemFacts } from './options'
  * and where it was published. Everything a row has to say is on the row;
  * nothing opens.
  *
- * With `onChange`, a wearable has a menu on the right -- wear, take off, drop
- * -- and anything else a count stepper, because a torch is owned by the dozen
- * and a cloak is not. A count is printed only when it says something: one
- * dagger is "Dagger".
+ * With `onChange`, every row has a menu on the right: a wearable is worn or
+ * taken off, a consumable is used (one fewer, nothing else yet), and anything
+ * is dropped -- one or all of it, when there is more than one. A count is
+ * printed only when it says something: one dagger is "Dagger".
  */
 export function InventoryRows({ rows, equipment, items, name, lookup, empty, disabled = false, onChange }: {
   rows: readonly InventoryRow[]
@@ -38,31 +38,23 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
       // it was written.
       const editable = row.item !== undefined && onChange !== undefined
       const slot = slotOf(item)
-      const stepper = editable && slot === null
+      const group = groupOf(item)
       const line = item === undefined ? undefined : itemFacts(t, item, (slug) =>
         lookup(item.weapon?.properties?.includes(slug) ? 'weapon-properties' : 'damage-types', slug))
+      const total = (count: number) => onChange?.(setTotal(equipment, row.item ?? '', count))
       return <Paper key={row.key} withBorder radius="md" p="xs">
         <Group justify="space-between" wrap="nowrap" gap="sm" align="flex-start">
           <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
             <Group gap={8}>
               <Text size="sm" fw={500}>{label}</Text>
-              {row.count > 1 && !stepper && <Text size="sm" c="dimmed">×{row.count}</Text>}
+              {row.count > 1 && <Text size="sm" c="dimmed">×{row.count}</Text>}
               {row.equipped > 0 && <Badge size="xs" variant="light">{t('equipment.equippedMark')}</Badge>}
             </Group>
             {line !== undefined && <Text size="xs" c="dimmed">{line}</Text>}
           </Stack>
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
             <SourceTags provenance={item?.provenance} oneLine />
-            {stepper && (
-              <>
-                <ActionIcon variant="default" size="sm" aria-label={t('equipment.fewer', { name: label })}
-                  disabled={disabled} onClick={() => onChange(setTotal(equipment, row.item ?? '', row.count - 1))}>−</ActionIcon>
-                <Text size="sm" miw={28} ta="center">{row.count}</Text>
-                <ActionIcon variant="default" size="sm" aria-label={t('equipment.more', { name: label })}
-                  disabled={disabled} onClick={() => onChange(setTotal(equipment, row.item ?? '', row.count + 1))}>+</ActionIcon>
-              </>
-            )}
-            {editable && slot !== null && (
+            {editable && (
               <Menu position="bottom-end">
                 <Menu.Target>
                   {/* Its own padding pulled back, so the dots end where the badges do. */}
@@ -71,9 +63,15 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
                   </ActionIcon>
                 </Menu.Target>
                 <Menu.Dropdown>
-                  {row.count > row.equipped && <Menu.Item onClick={() => onChange(equip(equipment, items, row.item ?? '', slot))}>{t('equipment.wear')}</Menu.Item>}
-                  {row.equipped > 0 && <Menu.Item onClick={() => onChange(unequip(equipment, row.item ?? ''))}>{t('equipment.takeOffNamed', { name: label })}</Menu.Item>}
-                  <Menu.Item color="red" onClick={() => onChange(setTotal(equipment, row.item ?? '', row.count - 1))}>{t('equipment.drop')}</Menu.Item>
+                  {slot !== null && row.count > row.equipped && <Menu.Item onClick={() => onChange(equip(equipment, items, row.item ?? '', slot))}>{t('equipment.wear')}</Menu.Item>}
+                  {slot !== null && row.equipped > 0 && <Menu.Item onClick={() => onChange(unequip(equipment, row.item ?? ''))}>{t('equipment.takeOffNamed', { name: label })}</Menu.Item>}
+                  {group === 'consumable' && <Menu.Item onClick={() => total(row.count - 1)}>{t('equipment.use')}</Menu.Item>}
+                  {row.count > 1
+                    ? <>
+                      <Menu.Item color="red" onClick={() => total(row.count - 1)}>{t('equipment.dropOne')}</Menu.Item>
+                      <Menu.Item color="red" onClick={() => total(0)}>{t('equipment.dropAll')}</Menu.Item>
+                    </>
+                    : <Menu.Item color="red" onClick={() => total(0)}>{t('equipment.drop')}</Menu.Item>}
                 </Menu.Dropdown>
               </Menu>
             )}

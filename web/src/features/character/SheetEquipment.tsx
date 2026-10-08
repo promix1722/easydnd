@@ -1,13 +1,12 @@
 import { useState } from 'react'
 
-import { CUSTOM, ELSEWHERE, ITEM_GROUPS, equip, fitsSlot, groupOf, mergeStacks, setCoin, setTotal, slotted, unequip } from '@/domain'
+import { CUSTOM, ELSEWHERE, equip, fitsSlot, groupOf, mergeStacks, setCoin, slotted, unequip } from '@/domain'
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
 import type { Change, Equipment, Item } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Box, Button, Grid, ModalSheet, Panel, Paper, Stack, TabRow, Text, UnstyledButton } from '@/ui'
+import { Box, Button, Grid, ModalSheet, Panel, Paper, Stack, Text, UnstyledButton } from '@/ui'
 
 import { InventoryRows, Purse } from './Inventory'
-import { ItemPicker } from './ItemPicker'
 
 /**
  * A card on the paperdoll. One per slot, except the ring slot, which holds
@@ -121,44 +120,32 @@ export function SheetEquipment({ equipment, items, name, lookup, disabled = fals
   </Stack>
 }
 
-/** The groups the Items tab lists: everything that is not worn, which Equipment already has. */
-const CARRIED: readonly ItemGroup[] = ITEM_GROUPS.filter((group) => group !== 'wearable')
-
 /**
- * The sheet's Items tab: what is carried but not worn, in two groups, then
- * the purse. With `onChange`, a row has a count stepper and Add item searches
- * the character's catalogue for something not owned yet.
+ * The sheet's Items tab, read top-down: the purse, then what is used up, then
+ * everything else carried but not worn. With `onChange`, the purse is five
+ * fields and each row has a menu. Nothing here adds an item yet.
  */
 export function SheetItems({ equipment, items, name, lookup, disabled = false, onChange }: InventoryProps) {
   const t = useT()
-  const [group, setGroup] = useState<ItemGroup>(CARRIED[0] ?? 'gear')
-  const [adding, setAdding] = useState(false)
-  const groups: Record<ItemGroup, string> = {
-    wearable: t('equipment.group.wearable'), consumable: t('equipment.group.consumable'), gear: t('equipment.group.gear'),
-  }
   const rows = mergeStacks(equipment)
+  const section = (group: ItemGroup, label: string) => <Panel>
+    <Stack gap="sm">
+      <Text size="xs" c="dimmed" tt="uppercase">{label}</Text>
+      <InventoryRows rows={rows.filter((row) => groupOf(items.get(row.item ?? '')) === group)}
+        equipment={equipment} items={items} name={rowName(name)} lookup={lookup}
+        empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
+    </Stack>
+  </Panel>
 
   return <Stack gap="md">
     <Panel>
-      <Stack gap="md">
-        <TabRow tabs={CARRIED.map((each) => ({ value: each, label: groups[each] }))} value={group}
-          onChange={(next) => setGroup(next as ItemGroup)}>
-          <InventoryRows rows={rows.filter((row) => groupOf(items.get(row.item ?? '')) === group)}
-            equipment={equipment} items={items} name={rowName(name)} lookup={lookup}
-            empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
-        </TabRow>
-        {onChange && <Button variant="light" disabled={disabled} onClick={() => setAdding(true)}>{t('equipment.addItem')}</Button>}
+      <Stack gap="sm">
+        <Text size="xs" c="dimmed" tt="uppercase">{t('equipment.purse')}</Text>
         <Purse purse={equipment.purse} disabled={disabled}
           {...(onChange ? { onChange: (unit: string, amount: number) => onChange([setCoin(unit, amount)]) } : {})} />
       </Stack>
     </Panel>
-
-    {onChange && <ItemPicker opened={adding} onClose={() => setAdding(false)} onPick={(hit) => {
-      // One more of it, wherever it already is: a wearable just bought lands
-      // in the backpack and is put on from the Equipment tab.
-      const owned = rows.find((row) => row.item === hit.slug)?.count ?? 0
-      onChange(setTotal(equipment, hit.slug, owned + 1))
-      setAdding(false)
-    }} />}
+    {section('consumable', t('equipment.group.consumable'))}
+    {section('gear', t('equipment.group.gear'))}
   </Stack>
 }

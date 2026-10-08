@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Sheet } from '@/lib/api'
@@ -237,10 +237,9 @@ describe('the panels that were sentences', () => {
 
     const slots = screen.getByRole('region', { name: 'Worn and wielded' })
     expect.soft(within(slots).getByText('Leather Armor')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: 'Consumables' }))
+    // Items is read top-down, nothing to switch: coins, consumables, gear.
     expect.soft(screen.getByText('Crossbow Bolt')).toBeInTheDocument()
     expect.soft(screen.getByText('×20')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: 'Other gear' }))
     expect.soft(screen.getByText("Thieves' Tools")).toBeInTheDocument()
     // One of a thing is the thing: no "×1".
     expect.soft(screen.queryByText('×1')).not.toBeInTheDocument()
@@ -263,10 +262,8 @@ describe('the panels that were sentences', () => {
   })
 
   // Twelve cards, one item each, three columns; the two rings are two cards
-  // and hands are arms. A wearable row has no stepper -- its actions are a
-  // menu -- while a consumable keeps the stepper, because bolts come by the
-  // twenty.
-  it('draws twelve one-item cards and gives a wearable a menu, not a stepper', () => {
+  // and hands are arms. No row has a stepper: every row's actions are a menu.
+  it('draws twelve one-item cards and gives every row a menu, not a stepper', () => {
     renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={vi.fn()} />)
 
     const slots = within(screen.getByRole('region', { name: 'Worn and wielded' }))
@@ -275,8 +272,33 @@ describe('the panels that were sentences', () => {
     ])
     expect.soft(screen.queryByRole('button', { name: 'One fewer Leather Armor' })).not.toBeInTheDocument()
     expect.soft(screen.getByRole('button', { name: 'Actions for Leather Armor' })).toBeInTheDocument()
-    expect.soft(screen.getByRole('button', { name: 'One more Crossbow Bolt' })).toBeInTheDocument()
-    expect.soft(screen.queryByRole('button', { name: 'Actions for Crossbow Bolt' })).not.toBeInTheDocument()
+    expect.soft(screen.queryByRole('button', { name: 'One more Crossbow Bolt' })).not.toBeInTheDocument()
+    expect.soft(screen.getByRole('button', { name: 'Actions for Crossbow Bolt' })).toBeInTheDocument()
+  })
+
+  // A consumable is used one at a time and dropped one or all at a time; gear
+  // is only dropped, and one of a thing has one Drop.
+  it('uses and drops from the Items tab\'s menus', async () => {
+    const onEquipment = vi.fn()
+    const user = setupUser()
+    renderAt('mobile', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
+
+    await user.click(screen.getByRole('button', { name: 'Actions for Crossbow Bolt' }))
+    await user.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'Use' }))
+    expect(onEquipment).toHaveBeenLastCalledWith([
+      { path: 'equipment.backpack.crossbow-bolt', op: 'set', value: { kind: 'int', int: 19 } },
+    ])
+    await user.click(screen.getByRole('button', { name: 'Actions for Crossbow Bolt' }))
+    await user.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'Drop all' }))
+    expect(onEquipment).toHaveBeenLastCalledWith([
+      { path: 'equipment.backpack.crossbow-bolt', op: 'set', value: { kind: 'int', int: 0 } },
+    ])
+
+    await user.click(screen.getByRole('button', { name: "Actions for Thieves' Tools" }))
+    const menu = within(await screen.findByRole('menu'))
+    expect(menu.queryByRole('menuitem', { name: 'Use' })).not.toBeInTheDocument()
+    expect(menu.queryByRole('menuitem', { name: 'Drop one' })).not.toBeInTheDocument()
+    expect(menu.getByRole('menuitem', { name: 'Drop' })).toBeInTheDocument()
   })
 
   it('wears and drops from a row\'s menu', async () => {
@@ -332,29 +354,6 @@ describe('the panels that were sentences', () => {
     expect(screen.queryByRole('button', { name: /Chain Mail/ })).not.toBeInTheDocument()
   })
 
-  // The Items tab's picker searches the catalogue a page at a time -- never
-  // the whole collection -- and a pick is one more of the thing in the backpack.
-  it('adds an item found in the catalogue to the backpack', async () => {
-    const onEquipment = vi.fn()
-    const fetch = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input)
-      if (!url.includes('/catalog/items')) throw new Error(`the sheet asked for ${url}`)
-      return new Response(JSON.stringify({ items: [{ slug: 'rope-hempen', name: 'Rope, Hempen', category: 'adventuring-gear' }], total: 1 }),
-        { headers: { 'content-type': 'application/json' } })
-    })
-    vi.stubGlobal('fetch', fetch)
-    renderAt('mobile', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
-    expect(fetch).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Add item' }))
-    fireEvent.click(await screen.findByRole('button', { name: /Rope, Hempen/ }))
-
-    await waitFor(() => expect(onEquipment).toHaveBeenCalledWith([
-      { path: 'equipment.backpack.rope-hempen', op: 'set', value: { kind: 'int', int: 1 } },
-    ]))
-    expect(String(fetch.mock.calls[0]?.[0])).toContain('limit=20')
-  })
-
   it('uses localized catalogue names and a localized class-resource label', () => {
     // A phone mounts every tab, so one render reaches all four.
     renderAt(
@@ -367,8 +366,6 @@ describe('the panels that were sentences', () => {
       />,
     )
 
-    // No item details in this compendium, so nothing is known to be wearable.
-    fireEvent.click(screen.getByRole('tab', { name: 'Other gear' }))
     for (const name of [
       'Night Sight',
       'Surprise Strike',

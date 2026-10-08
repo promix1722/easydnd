@@ -325,10 +325,22 @@ func (p *projector) changeEquipment(sc seqChange, rest []string) error {
 		if sc.Change.Op != OpSet || count < 0 || count > 100000 {
 			return p.badOp(sc)
 		}
-		*list = slices.DeleteFunc(*list, func(stack ItemStack) bool { return stack.Item == slug })
-		if count > 0 {
-			*list = append(*list, ItemStack{Item: slug, Count: count})
+		// In place: a count edit is "one fewer torch", not "a new torch at
+		// the end", so the row stays where the player left it. A second
+		// stack of the slug further down is folded into the first.
+		at := slices.IndexFunc(*list, func(stack ItemStack) bool { return stack.Item == slug })
+		if at < 0 {
+			if count > 0 {
+				*list = append(*list, ItemStack{Item: slug, Count: count})
+			}
+			return nil
 		}
+		tail := slices.DeleteFunc(slices.Clone((*list)[at+1:]), func(stack ItemStack) bool { return stack.Item == slug })
+		head := (*list)[:at]
+		if count > 0 {
+			head = append(head, ItemStack{Item: slug, Count: count})
+		}
+		*list = append(head, tail...)
 		return nil
 	}
 

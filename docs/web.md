@@ -1914,15 +1914,14 @@ is in the page header already. Below the doll, the **Wearable** rows:
 everything with a slot, worn or not, one row per entity however many lists the
 server splits it across.
 
-**Items** is the rest in two inner tabs, **Consumables** and **Other gear**,
-then the purse -- and, for the owner, **Add item**: a search over the
-character's own catalogue (equipment and magic items together, a page at a
-time, `searchItems` against `…/characters/{id}/catalog/items`, see
-docs/backend.md) whose pick is one more of that thing in the backpack. A
-wearable bought there appears on the Equipment tab, where it is put on. It is
-the only way to get an item the character was not granted: the wizard asks
-about the starting kit once and never lists the inventory, and a custom item
-has no UI for now.
+**Items** is the rest, read top-down with nothing to switch: the **Coins**
+panel first, then **Consumables**, then **Other gear**, each a panel with the
+same heading the Wearable rows have. There is no Add item yet: a sheet has no
+way, for now, to gain an item the character was not granted, since the wizard
+asks about the starting kit once and never lists the inventory, and a custom
+item has no UI either. The server's paged catalogue search (`searchItems`
+against `…/characters/{id}/catalog/items`, docs/backend.md) stays for when it
+comes back.
 
 The slot is the catalogue's: each item carries `slot`, written by srdgen or a
 homebrew pack or derived by the server from what the item is (see
@@ -1957,10 +1956,12 @@ sheet (docs/backend.md#the-sheet-arrives-resolved).
 Both tabs are **editable only when `SheetBody` is given `onEquipment`**. Only
 the owner's `CharacterSheetScreen` passes it; `SharedSheetScreen` does not, so
 a sheet shared with a table has nothing to press. With it, a card opens a
-sheet offering what in the backpack fits -- for Custom, any wearable -- a
-wearable row has a **menu** on the right (Wear, Take off, Drop
-one), a consumable or gear row a count stepper instead, because bolts come by
-the twenty and cloaks do not; Add item is drawn, and the purse is five fields.
+sheet offering what in the backpack fits -- for Custom, any wearable -- every
+row has a **menu** on the right: Wear and Take off on a wearable, **Use** on a
+consumable (one fewer, and nothing else yet -- no potion takes effect), and
+Drop on anything, offered as *Drop one* and *Drop all* once there is more than
+one. No count stepper: a dozen torches is still one row with one menu. The
+purse is five fields.
 Every edit is one `change` event on `equipment.*` paths, appended to the log.
 Equipping writes the equipped list both whole and per slug -- see the comment
 on `equippedChanges` for why the server needs both -- and into Custom, the
@@ -2030,10 +2031,6 @@ from its foot to Actions and you are a long way down a mostly empty slide with
 the tabs off-screen above. The alternative is to measure the showing slide and
 size the viewport to it -- a `ResizeObserver` reading a layout jsdom does not
 compute, so the suite could neither exercise it nor catch it breaking.
-
-The Items tab holds a second, inner tab row (Consumables, Other gear). It is a
-plain `TabRow`, not a deck, so a swipe there still moves between the sheet's
-five tabs.
 
 The first tab is **`Main`**, and it is the one label here that names a place
 rather than its contents. The section holds two things -- the identity table and

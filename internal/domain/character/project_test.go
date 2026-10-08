@@ -184,6 +184,31 @@ func TestProjectArmorEquippedByCountSetsArmorClass(t *testing.T) {
 	}
 }
 
+// A counted write edits the stack where it is. The sheet draws the backpack
+// in list order, so "one fewer" that deleted and re-appended sent the row to
+// the bottom on every use.
+func TestProjectCountedWriteKeepsTheStackInPlace(t *testing.T) {
+	log := RogueLog(t)
+	if err := log.Append(
+		Event{Type: EventChange, Changes: []Change{
+			{Path: "equipment.backpack", Op: OpSet, Value: SlugListValue(nil)},
+			{Path: "equipment.backpack.torch", Op: OpSet, Value: IntValue(2)},
+			{Path: "equipment.backpack.candle", Op: OpSet, Value: IntValue(1)},
+			{Path: "equipment.backpack.torch", Op: OpSet, Value: IntValue(1)},
+		}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []ItemStack{{Item: "torch", Count: 1}, {Item: "candle", Count: 1}}
+	if !slices.Equal(got.Equipment.Backpack, want) {
+		t.Errorf("backpack = %v, want %v", got.Equipment.Backpack, want)
+	}
+}
+
 // Unarmored Defense is a rule the pack states, not a number armorClass knows:
 // a barbarian adds Constitution while wearing no armor and keeps a shield, a
 // monk adds Wisdom and loses it to either. Nobody else gets anything.
