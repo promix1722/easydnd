@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { ELSEWHERE, equip, groupOf, mergeStacks, setTotal, slotOf, slotted, unequip } from './equipment'
+import { CUSTOM, ELSEWHERE, equip, fitsSlot, groupOf, mergeStacks, setTotal, slotOf, slotted, unequip } from './equipment'
 import type { ItemLike } from './equipment'
 
 // The slot comes from the catalogue; what an item otherwise is only decides
@@ -16,6 +16,9 @@ const ITEMS = new Map<string, ItemLike>([
   { slug: 'boots-of-speed', category: 'wondrous-items', slot: 'feet' },
   { slug: 'cloak-of-protection', category: 'wondrous-items', slot: 'back' },
   { slug: 'helm-of-telepathy', category: 'wondrous-items', slot: 'head' },
+  { slug: 'gloves-of-missile-snaring', category: 'wondrous-items', slot: 'arms' },
+  // The catalogue reads "hands" as arms; a client never sees the old word.
+  { slug: 'old-gauntlets', category: 'wondrous-items', slot: 'hands' },
   { slug: 'bag-of-holding', category: 'wondrous-items' },
   { slug: 'arrow', category: 'adventuring-gear', gear: { gearCategory: 'ammunition' } },
   { slug: 'torch', category: 'adventuring-gear', gear: { gearCategory: 'standard-gear' } },
@@ -36,6 +39,8 @@ describe('equipment', () => {
     ['boots-of-speed', 'wearable', 'feet'],
     ['cloak-of-protection', 'wearable', 'back'],
     ['helm-of-telepathy', 'wearable', 'head'],
+    ['gloves-of-missile-snaring', 'wearable', 'arms'],
+    ['old-gauntlets', 'gear', null],
     ['bag-of-holding', 'gear', null],
     ['arrow', 'consumable', null],
     ['torch', 'consumable', null],
@@ -88,6 +93,37 @@ describe('equipment', () => {
     expect(worn.get('body')).toEqual(['leather-armor', 'chain-mail'])
     expect(worn.get(ELSEWHERE)).toEqual(['torch'])
     expect(slotted(rogue, ITEMS).get(ELSEWHERE)).toEqual([])
+  })
+
+  // Custom is the one slot the server stores: any wearable fits, its occupant is
+  // seated before the rest are placed by shape, and moving in or out of it
+  // writes the placement as well as the lists.
+  it('seats the stored Custom occupant first and takes any wearable', () => {
+    const odd = { ...rogue, equipped: [{ item: 'leather-armor', count: 1 }, { item: 'torch', count: 1 }], custom: 'torch' }
+    expect(slotted(odd, ITEMS).get(CUSTOM)).toEqual(['torch'])
+    expect(slotted(odd, ITEMS).get(ELSEWHERE)).toEqual([])
+    // Any wearable, not anything: a bag has no slot and gets no slot.
+    expect(fitsSlot(ITEMS.get('cloak-of-protection'), CUSTOM)).toBe(true)
+    expect(fitsSlot(ITEMS.get('bag-of-holding'), CUSTOM)).toBe(false)
+    expect(fitsSlot(ITEMS.get('bag-of-holding'), 'head')).toBe(false)
+    // A worn armor placed in Custom frees the body slot for another.
+    const twice = { ...odd, equipped: [{ item: 'leather-armor', count: 1 }, { item: 'chain-mail', count: 1 }], custom: 'leather-armor' }
+    expect(slotted(twice, ITEMS).get('body')).toEqual(['chain-mail'])
+
+    expect(equip(rogue, ITEMS, 'dagger', CUSTOM)).toEqual([
+      { path: 'equipment.equipped', op: 'set', value: { kind: 'slugs', slugs: ['leather-armor', 'dagger'] } },
+      { path: 'equipment.equipped.dagger', op: 'set', value: { kind: 'int', int: 1 } },
+      { path: 'equipment.backpack.dagger', op: 'set', value: { kind: 'int', int: 1 } },
+      { path: 'equipment.custom', op: 'set', value: { kind: 'slugs', slugs: ['dagger'] } },
+    ])
+    expect(unequip(odd, 'torch', CUSTOM)).toEqual([
+      { path: 'equipment.equipped', op: 'set', value: { kind: 'slugs', slugs: ['leather-armor'] } },
+      { path: 'equipment.equipped.torch', op: 'set', value: { kind: 'int', int: 0 } },
+      { path: 'equipment.backpack.torch', op: 'set', value: { kind: 'int', int: 1 } },
+      { path: 'equipment.custom', op: 'set', value: { kind: 'slugs', slugs: [] } },
+    ])
+    // Off the body, not out of Custom: the server forgets the slot itself.
+    expect(unequip(odd, 'torch')).toHaveLength(3)
   })
 
   it('takes an item off into the backpack', () => {

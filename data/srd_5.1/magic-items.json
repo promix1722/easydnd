@@ -787,7 +787,7 @@
     "slug": "gauntlets-of-ogre-power",
     "category": "wondrous-items",
     "rarity": "uncommon",
-    "slot": "hands"
+    "slot": "arms"
   },
   {
     "slug": "gem-of-brightness",
@@ -813,13 +813,13 @@
     "slug": "gloves-of-missile-snaring",
     "category": "wondrous-items",
     "rarity": "uncommon",
-    "slot": "hands"
+    "slot": "arms"
   },
   {
     "slug": "gloves-of-swimming-and-climbing",
     "category": "wondrous-items",
     "rarity": "uncommon",
-    "slot": "hands"
+    "slot": "arms"
   },
   {
     "slug": "goggles-of-night",

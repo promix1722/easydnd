@@ -1900,13 +1900,19 @@ props, and they split the inventory by whether a thing *can* be worn rather than
 by whether it is: a wearable in the backpack is on the Equipment tab, under the
 doll it could go on.
 
-**Equipment** is, on top, a **paperdoll**: the worn pieces head to foot --
-Head, Neck, Back, Body down the left, Arms, Hands, Waist, Feet down the right --
-with the character's portrait between them, then a row for what the hands hold:
-Main hand, Off hand, Rings (two). On a phone the two columns stand side by side
-without the portrait, which is in the page header already. Below it, the
-**Wearable** rows: everything with a slot, worn or not, one row per entity
-however many lists the server splits it across.
+**Equipment** is, on top, a **paperdoll** of twelve cards in three columns, at
+every width: what is held -- Main hand, Off hand, Arms, Custom -- then what is
+worn down the middle -- Head, Body, Belt, Legs -- then what hangs or is slipped
+on -- Back, Amulet, Ring 1, Ring 2. Each card holds one item. The labels are
+the player's words for the catalogue's slots: Belt is `waist`, Amulet is
+`neck`, Legs is `feet`, and the two ring cards are the one `ring` slot with
+room for two. Arms is bracers *and* gloves, because the catalogue has one slot
+for both (docs/dnd.md). **Custom** is the card that takes any wearable: a
+second cloak, a third ring, a helm over a circlet. No portrait between the
+columns; it
+is in the page header already. Below the doll, the **Wearable** rows:
+everything with a slot, worn or not, one row per entity however many lists the
+server splits it across.
 
 **Items** is the rest in two inner tabs, **Consumables** and **Other gear**,
 then the purse -- and, for the owner, **Add item**: a search over the
@@ -1926,22 +1932,39 @@ The group is still derived here: *wearable* is anything with a slot, and
 *consumable* is guessed from the category plus a short slug list, because the
 catalogue has no "used up" field yet.
 
-The server keeps one `equipped` list, so which item sits in which slot is derived
-too: a second held item takes the off hand. Nothing is hidden: a slot worn past
-its capacity lists every occupant, and an equipped item with no slot at all --
-an old log, an import, homebrew without the field -- is shown in an
+The server keeps one `equipped` list and one placement, `equipment.custom`, so
+which item sits in which slot is derived too, bar that one: the Custom
+occupant is seated first, then everything else goes by its shape, and a second
+held item takes the off hand. Custom is stored rather than derived because
+nothing about an item's shape could put it there -- a cloak in Custom while
+Back stands empty is a choice, and the only way to keep a choice is to write
+it down. Nothing is hidden: a slot worn past its capacity lists every
+occupant, and an equipped item with no slot at all that nobody placed -- an
+old log, an import, homebrew without the field -- is shown in an
 **Elsewhere** card that appears only when something is in it. That card is the
 honest remainder of what used to be a permanent *Worn* slot, which was not a
 body part but "everything we could not place".
 
-Both tabs are **read-only unless `SheetBody` is given `onEquipment`**. Only the
-owner's `CharacterSheetScreen` passes it; `SharedSheetScreen` does not, so a
-sheet shared with a table has nothing to press. With it, a slot opens a sheet
-offering what in the backpack fits, a row has a count stepper, Add item is
-drawn, and the purse is five fields. Every edit is
-one `change` event on `equipment.*` paths, appended to the log. Equipping writes
-the equipped list both whole and per slug -- see the comment on
-`equippedChanges` for why the server needs both.
+Every inventory row, on both tabs, is a **bubble** (`features/character/
+Inventory`): the name, the item's numbers on one line -- armor class, damage
+and its type, range, properties, weight, built by `itemFacts`, the same line
+the builder prints under a picked kit option -- and the pack and book badges on
+one line to the right. Nothing opens: everything a row has to say is on the
+row. The words the line needs -- damage types, weapon properties -- arrive in
+the sheet's `catalogNames`, resolved by the server like everything else on the
+sheet (docs/backend.md#the-sheet-arrives-resolved).
+
+Both tabs are **editable only when `SheetBody` is given `onEquipment`**. Only
+the owner's `CharacterSheetScreen` passes it; `SharedSheetScreen` does not, so
+a sheet shared with a table has nothing to press. With it, a card opens a
+sheet offering what in the backpack fits -- for Custom, any wearable -- a
+wearable row has a **menu** on the right (Wear, Take off, Drop
+one), a consumable or gear row a count stepper instead, because bolts come by
+the twenty and cloaks do not; Add item is drawn, and the purse is five fields.
+Every edit is one `change` event on `equipment.*` paths, appended to the log.
+Equipping writes the equipped list both whole and per slug -- see the comment
+on `equippedChanges` for why the server needs both -- and into Custom, the
+placement as well.
 
 ### What the sheet says about an unfinished character
 

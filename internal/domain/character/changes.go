@@ -281,9 +281,26 @@ func (p *projector) changeEquipment(sc seqChange, rest []string) error {
 		p.state.Equipment.Purse[unit] = value
 		return nil
 	}
+	if len(rest) == 1 && rest[0] == "custom" {
+		slugs := valueSlugs(sc.Change.Value)
+		if sc.Change.Op != OpSet || len(slugs) > 1 {
+			return p.badOp(sc)
+		}
+		if len(slugs) == 1 && !p.cat.Items.Has(slugs[0]) && !p.cat.MagicItems.Has(slugs[0]) {
+			return p.unresolved(sc)
+		}
+		p.state.Equipment.Custom = ""
+		if len(slugs) == 1 {
+			p.state.Equipment.Custom = slugs[0]
+		}
+		return nil
+	}
 	if len(rest) != 1 && len(rest) != 2 {
 		return p.unresolved(sc)
 	}
+	// Whatever the equipped list becomes, the Custom slot cannot hold what
+	// the character no longer wears.
+	defer p.clearCustomIfBare()
 	var list *[]ItemStack
 	switch rest[0] {
 	case "equipped":
@@ -491,6 +508,15 @@ func (p *projector) changeSlugList(sc seqChange, list *[]rules.Slug, rest []stri
 
 // valueSlugs reads a Value as a list of slugs, accepting either spelling so a
 // caller adding one condition need not wrap it in a list.
+// clearCustomIfBare forgets the Custom slot's occupant once it has left the
+// equipped list, by a counted write or a whole one.
+func (p *projector) clearCustomIfBare() {
+	e := &p.state.Equipment
+	if e.Custom != "" && !slices.ContainsFunc(e.Equipped, func(s ItemStack) bool { return s.Item == e.Custom }) {
+		e.Custom = ""
+	}
+}
+
 func valueSlugs(v Value) []rules.Slug {
 	switch v.Kind {
 	case ValueSlug:

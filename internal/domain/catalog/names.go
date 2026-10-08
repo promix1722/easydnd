@@ -156,7 +156,6 @@ var slotNames = map[Slot]string{
 	SlotBack:     "back",
 	SlotBody:     "body",
 	SlotArms:     "arms",
-	SlotHands:    "hands",
 	SlotWaist:    "waist",
 	SlotFeet:     "feet",
 	SlotRing:     "ring",

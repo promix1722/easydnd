@@ -105,6 +105,55 @@ func TestProjectRogueStatusBlock(t *testing.T) {
 	}
 }
 
+// The Custom slot is the one placement the character records, and it only
+// ever names something worn: take the item off, by count or by list, and the
+// slot forgets it.
+func TestProjectCustomSlotFollowsWhatIsEquipped(t *testing.T) {
+	log := RogueLog(t)
+	cat := LoadCatalog(t)
+	custom := func(slugs ...rules.Slug) Event {
+		return Event{Type: EventChange, Changes: []Change{{Path: "equipment.custom", Op: OpSet, Value: SlugListValue(slugs)}}}
+	}
+	if err := log.Append(custom("leather-armor")); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Project(log, cat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Equipment.Custom != "leather-armor" {
+		t.Fatalf("custom = %q, want leather-armor", s.Equipment.Custom)
+	}
+	if err := log.Append(Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped.leather-armor", Op: OpSet, Value: IntValue(0)}}}); err != nil {
+		t.Fatal(err)
+	}
+	if s, err = Project(log, cat); err != nil {
+		t.Fatal(err)
+	}
+	if s.Equipment.Custom != "" {
+		t.Errorf("custom = %q after taking the armor off by count, want none", s.Equipment.Custom)
+	}
+	if err := log.Append(
+		Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue([]rules.Slug{"leather-armor"})}}},
+		custom("leather-armor"),
+		Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue(nil)}}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if s, err = Project(log, cat); err != nil {
+		t.Fatal(err)
+	}
+	if s.Equipment.Custom != "" {
+		t.Errorf("custom = %q after a whole-list set without it, want none", s.Equipment.Custom)
+	}
+	if err := log.Append(custom("not-an-item")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = Project(log, cat); err == nil {
+		t.Error("a custom slot naming nothing in the catalogue projected")
+	}
+}
+
 // Armor worn as a counted stack protects exactly as armor worn as a list
 // entry does. The import writes stacks, because a sheet prints quantities.
 func TestProjectArmorEquippedByCountSetsArmorClass(t *testing.T) {

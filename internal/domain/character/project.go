@@ -181,6 +181,10 @@ func (p *projector) run(log Log) (State, error) {
 	if err := p.applyChanges(p.equipment); err != nil {
 		return State{}, err
 	}
+	// The whole-list equipped writes ran before the rules and the Custom slot
+	// writes after, so a slot set between two list writes is checked only now,
+	// against the list as it finally stands.
+	p.clearCustomIfBare()
 
 	p.deriveProficiencies()
 	p.deriveStatus()

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { Sheet } from '@/lib/api'
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
 import { SheetBody } from './SheetBody'
 
@@ -106,6 +107,19 @@ const ITEMS: Sheet = {
       { slug: 'leather-armor', name: 'Leather Armor', category: 'armor', slot: 'body', armor: { category: 'light', baseAC: 11 } },
       { slug: 'thieves-tools', name: "Thieves' Tools", category: 'tools' },
       { slug: 'crossbow-bolt', name: 'Crossbow Bolt', category: 'adventuring-gear', gear: { gearCategory: 'ammunition' } },
+    ],
+  },
+}
+
+/** A spare armor in the backpack, so that a row has something to wear. */
+const PACKED: Sheet = {
+  ...ITEMS,
+  equipment: { ...ITEMS.equipment, backpack: [...ITEMS.equipment.backpack, { item: 'chain-mail', count: 1 }] },
+  catalog: {
+    skills: [],
+    equipment: [
+      ...(ITEMS.catalog?.equipment ?? []),
+      { slug: 'chain-mail', name: 'Chain Mail', category: 'armor', slot: 'body', armor: { category: 'heavy', baseAC: 16, strengthMinimum: 13, stealthDisadvantage: true } },
     ],
   },
 }
@@ -246,6 +260,76 @@ describe('the panels that were sentences', () => {
       { path: 'equipment.equipped.leather-armor', op: 'set', value: { kind: 'int', int: 0 } },
       { path: 'equipment.backpack.leather-armor', op: 'set', value: { kind: 'int', int: 1 } },
     ])
+  })
+
+  // Twelve cards, one item each, three columns; the two rings are two cards
+  // and hands are arms. A wearable row has no stepper -- its actions are a
+  // menu -- while a consumable keeps the stepper, because bolts come by the
+  // twenty.
+  it('draws twelve one-item cards and gives a wearable a menu, not a stepper', () => {
+    renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={vi.fn()} />)
+
+    const slots = within(screen.getByRole('region', { name: 'Worn and wielded' }))
+    expect.soft(slots.getAllByRole('button').map((card) => card.getAttribute('aria-label'))).toEqual([
+      'Main hand', 'Off hand', 'Arms', 'Custom', 'Head', 'Body', 'Belt', 'Legs', 'Back', 'Amulet', 'Ring 1', 'Ring 2',
+    ])
+    expect.soft(screen.queryByRole('button', { name: 'One fewer Leather Armor' })).not.toBeInTheDocument()
+    expect.soft(screen.getByRole('button', { name: 'Actions for Leather Armor' })).toBeInTheDocument()
+    expect.soft(screen.getByRole('button', { name: 'One more Crossbow Bolt' })).toBeInTheDocument()
+    expect.soft(screen.queryByRole('button', { name: 'Actions for Crossbow Bolt' })).not.toBeInTheDocument()
+  })
+
+  it('wears and drops from a row\'s menu', async () => {
+    const onEquipment = vi.fn()
+    const user = setupUser()
+    renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={onEquipment} />)
+
+    await user.click(screen.getByRole('button', { name: 'Actions for Chain Mail' }))
+    await user.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'Wear' }))
+    expect(onEquipment).toHaveBeenLastCalledWith([
+      { path: 'equipment.equipped', op: 'set', value: { kind: 'slugs', slugs: ['chain-mail'] } },
+      { path: 'equipment.equipped.leather-armor', op: 'set', value: { kind: 'int', int: 0 } },
+      { path: 'equipment.equipped.chain-mail', op: 'set', value: { kind: 'int', int: 1 } },
+      { path: 'equipment.backpack.chain-mail', op: 'set', value: { kind: 'int', int: 0 } },
+      { path: 'equipment.backpack.leather-armor', op: 'set', value: { kind: 'int', int: 1 } },
+    ])
+
+    await user.click(screen.getByRole('button', { name: 'Actions for Leather Armor' }))
+    const menu = within(await screen.findByRole('menu'))
+    // Worn, and only one of it: nothing to wear, something to take off.
+    expect(menu.queryByRole('menuitem', { name: 'Wear' })).not.toBeInTheDocument()
+    expect(menu.getByRole('menuitem', { name: 'Take off Leather Armor' })).toBeInTheDocument()
+    await user.click(menu.getByRole('menuitem', { name: 'Drop' }))
+    expect(onEquipment).toHaveBeenLastCalledWith([
+      { path: 'equipment.equipped', op: 'set', value: { kind: 'slugs', slugs: [] } },
+      { path: 'equipment.equipped.leather-armor', op: 'set', value: { kind: 'int', int: 0 } },
+    ])
+  })
+
+  // Custom takes any wearable in the backpack -- not the toolkit -- and the
+  // pick is recorded as a placement, since no shape could put a mail there
+  // while the body is taken.
+  it('offers the backpack\'s wearables to the Custom card and records the placement', () => {
+    const onEquipment = vi.fn()
+    renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={onEquipment} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
+    const dialog = within(screen.getByRole('dialog'))
+    expect(dialog.queryByRole('button', { name: "Thieves' Tools" })).not.toBeInTheDocument()
+    fireEvent.click(dialog.getByRole('button', { name: 'Chain Mail' }))
+
+    expect(onEquipment).toHaveBeenCalledWith(expect.arrayContaining([
+      { path: 'equipment.custom', op: 'set', value: { kind: 'slugs', slugs: ['chain-mail'] } },
+      { path: 'equipment.equipped.chain-mail', op: 'set', value: { kind: 'int', int: 1 } },
+    ]))
+  })
+
+  // Everything a row has to say is on the row, read-only sheets included.
+  it('prints an item\'s numbers on its row, with the catalogue\'s words', () => {
+    renderAt('mobile', <SheetBody sheet={PACKED} />)
+
+    expect(screen.getByText('Armor class: 16 · Strength required: 13 · Disadvantage on Stealth checks')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Chain Mail/ })).not.toBeInTheDocument()
   })
 
   // The Items tab's picker searches the catalogue a page at a time -- never

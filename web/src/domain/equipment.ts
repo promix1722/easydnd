@@ -28,6 +28,8 @@ export interface EquipmentLike {
   equipped: StackLike[]
   backpack: StackLike[]
   loot: StackLike[]
+  /** The equipped item in the Custom slot, the one placement the server records. */
+  custom?: string
 }
 
 /** A change as the events route takes it; structurally `lib/api`'s `Change`. */
@@ -42,11 +44,15 @@ export const ITEM_GROUPS: readonly ItemGroup[] = ['wearable', 'consumable', 'gea
 
 /**
  * The DMG's "Wearing and Wielding Items" set, as the catalogue spells it:
- * one of each worn piece, two rings, a hand for each held thing.
+ * one of each worn piece, two rings, a hand for each held thing -- and
+ * `custom`, which the catalogue never writes: the sheet's one slot that takes
+ * any wearable, so its occupant is stored on the character rather than derived.
  */
 export type Slot =
-  | 'head' | 'neck' | 'back' | 'body' | 'arms' | 'hands' | 'waist' | 'feet'
-  | 'ring' | 'main-hand' | 'off-hand'
+  | 'head' | 'neck' | 'back' | 'body' | 'arms' | 'waist' | 'feet'
+  | 'ring' | 'main-hand' | 'off-hand' | 'custom'
+
+export const CUSTOM = 'custom'
 
 /** Slots head to foot, then the hands, and how many items each holds. */
 export const SLOTS: readonly { slot: Slot; capacity: number }[] = [
@@ -55,12 +61,12 @@ export const SLOTS: readonly { slot: Slot; capacity: number }[] = [
   { slot: 'back', capacity: 1 },
   { slot: 'body', capacity: 1 },
   { slot: 'arms', capacity: 1 },
-  { slot: 'hands', capacity: 1 },
   { slot: 'waist', capacity: 1 },
   { slot: 'feet', capacity: 1 },
   { slot: 'main-hand', capacity: 1 },
   { slot: 'off-hand', capacity: 1 },
   { slot: 'ring', capacity: 2 },
+  { slot: CUSTOM, capacity: 1 },
 ]
 
 const capacityOf = (slot: Slot) => SLOTS.find((entry) => entry.slot === slot)?.capacity ?? Infinity
@@ -81,12 +87,13 @@ const bare = (slug: string) => slug.slice(slug.lastIndexOf('/') + 1)
 /** Where an item goes when it is put on, or null when it is only carried. */
 export function slotOf(item: ItemLike | undefined): Slot | null {
   const slot = item?.slot
-  return slot !== undefined && SLOTS.some((entry) => entry.slot === slot) ? (slot as Slot) : null
+  return slot !== undefined && slot !== CUSTOM && SLOTS.some((entry) => entry.slot === slot) ? (slot as Slot) : null
 }
 
-/** Whether an item may go in a slot: its own, or the off hand for anything held. */
+/** Whether an item may go in a slot: its own, the off hand for anything held, or Custom for anything wearable. */
 export function fitsSlot(item: ItemLike | undefined, slot: Slot): boolean {
   const own = slotOf(item)
+  if (slot === CUSTOM) return own !== null
   return own === slot || (slot === 'off-hand' && own === 'main-hand')
 }
 
@@ -141,17 +148,22 @@ export const ELSEWHERE = 'elsewhere'
 /**
  * Which equipped items sit in which slot.
  *
- * Derived rather than stored: the server keeps one equipped list. A second
- * held item takes the off hand. Nothing is hidden: a slot worn past its
- * capacity lists every occupant, and an item with no slot at all is listed
- * under `ELSEWHERE`, which the panel draws only when something is there.
+ * Derived rather than stored, bar one: the server keeps one equipped list and
+ * the slug in its Custom slot. That one is seated first; the rest go by their
+ * own shape, and a second held item takes the off hand. Nothing is hidden: a
+ * slot worn past its capacity lists every occupant, and an item with no slot
+ * at all is listed under `ELSEWHERE`, which the panel draws only when
+ * something is there.
  */
 export function slotted(equipment: EquipmentLike, items: ReadonlyMap<string, ItemLike>): Map<Slot | typeof ELSEWHERE, string[]> {
   const bySlot = new Map<Slot | typeof ELSEWHERE, string[]>()
   for (const { slot } of SLOTS) bySlot.set(slot, [])
   bySlot.set(ELSEWHERE, [])
   const room = (slot: Slot) => bySlot.get(slot)!.length < capacityOf(slot)
-  for (const slug of equippedSlugs(equipment)) {
+  const worn = equippedSlugs(equipment)
+  const custom = equipment.custom === undefined ? -1 : worn.indexOf(equipment.custom)
+  if (custom >= 0) bySlot.get(CUSTOM)!.push(...worn.splice(custom, 1))
+  for (const slug of worn) {
     const own = slotOf(items.get(slug))
     const slot = own === null ? ELSEWHERE : own === 'main-hand' && !room(own) && room('off-hand') ? 'off-hand' : own
     bySlot.get(slot)!.push(slug)
@@ -166,6 +178,13 @@ const setCount = (list: 'equipped' | 'backpack' | 'loot', slug: string, int: num
   path: `equipment.${list}.${slug}`,
   op: 'set',
   value: { kind: 'int', int },
+})
+
+/** What the Custom slot holds: one slug, or none. */
+const setCustom = (slug?: string): EquipmentChange => ({
+  path: 'equipment.custom',
+  op: 'set',
+  value: { kind: 'slugs', slugs: slug === undefined ? [] : [slug] },
 })
 
 /**
@@ -186,7 +205,11 @@ function equippedChanges(before: string[], after: string[]): EquipmentChange[] {
   ]
 }
 
-/** Moves one `slug` from the backpack into `slot`, sending a full slot's first occupant back. */
+/**
+ * Moves one `slug` from the backpack into `slot`, sending a full slot's first
+ * occupant back. Into Custom, it also records the placement, which is the
+ * only one the server does not derive.
+ */
 export function equip(
   equipment: EquipmentLike,
   items: ReadonlyMap<string, ItemLike>,
@@ -205,18 +228,27 @@ export function equip(
     else changes.push(setCount('backpack', displaced, count(equipment.backpack, displaced) + 1))
   }
   after.push(slug)
+  if (slot === CUSTOM) changes.push(setCustom(slug))
   // Callers offer only what the backpack holds; the floor is for a stale click.
   return [...equippedChanges(before, after), setCount('backpack', slug, Math.max(carried - 1, 0)), ...changes]
 }
 
-/** Takes one `slug` off and puts it in the backpack. */
-export function unequip(equipment: EquipmentLike, slug: string): EquipmentChange[] {
+/**
+ * Takes one `slug` off and puts it in the backpack. Out of Custom, the slot
+ * is cleared too; anywhere else the server forgets a Custom occupant on its
+ * own once the last of it is off.
+ */
+export function unequip(equipment: EquipmentLike, slug: string, from?: Slot): EquipmentChange[] {
   const before = equippedSlugs(equipment)
   const at = before.indexOf(slug)
   if (at < 0) return []
   const after = [...before]
   after.splice(at, 1)
-  return [...equippedChanges(before, after), setCount('backpack', slug, count(equipment.backpack, slug) + 1)]
+  return [
+    ...equippedChanges(before, after),
+    setCount('backpack', slug, count(equipment.backpack, slug) + 1),
+    ...(from === CUSTOM && equipment.custom === slug ? [setCustom()] : []),
+  ]
 }
 
 /**

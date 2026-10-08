@@ -41,7 +41,7 @@ func TestResolvedSheetNamesWhatItCarries(t *testing.T) {
 		Base:          domain.Base{Languages: []rules.Slug{"common"}},
 		Traits:        []rules.Slug{"darkvision"},
 		Proficiencies: []rules.Slug{"daggers", "not-in-the-catalogue"},
-		Equipment:     domain.Equipment{Backpack: []domain.ItemStack{{Item: "dagger", Count: 2}, {Item: "dagger", Count: 1}}},
+		Equipment:     domain.Equipment{Backpack: []domain.ItemStack{{Item: "dagger", Count: 2}, {Item: "dagger", Count: 1}}, Custom: "dagger"},
 		Spells: domain.Spellbook{Cantrips: []rules.Slug{"fire-bolt"},
 			Sources: []domain.SpellSource{{Source: rules.Ref{Kind: rules.RefClass, Slug: "wizard"}, Spellbook: []rules.Slug{"magic-missile"}}}},
 	}, cat)
@@ -49,10 +49,15 @@ func TestResolvedSheetNamesWhatItCarries(t *testing.T) {
 	for key, want := range map[string]string{
 		"races:elf": "Named by the projection", "backgrounds:acolyte": "Acolyte", "classes:wizard": "Wizard",
 		"subclasses:evocation": "Evocation", "languages:common": "Common", "traits:darkvision": "Darkvision",
+		// What the dagger's stat line names.
+		"damage-types:piercing": "Piercing", "weapon-properties:finesse": "Finesse",
 	} {
 		if got := sheet.CatalogNames[key]; got != want {
 			t.Errorf("catalogNames[%q] = %q, want %q", key, got, want)
 		}
+	}
+	if sheet.Equipment.Custom != "dagger" {
+		t.Errorf("custom slot = %q, want dagger", sheet.Equipment.Custom)
 	}
 	got := sheet.Catalog
 	if got == nil || len(got.Skills) != 18 || len(got.Proficiencies) != 1 || len(got.Equipment) != 1 || len(got.Spells) != 2 {

@@ -112,6 +112,12 @@ func (c Converter) Name(collection, slug string) (string, bool) {
 	case CollectionLanguages:
 		v, ok := cat.Languages.Get(s)
 		return v.Name, ok
+	case CollectionDamageTypes:
+		v, ok := cat.DamageTypes.Get(s)
+		return v.Name, ok
+	case CollectionWeaponProperties:
+		v, ok := cat.WeaponProperties.Get(s)
+		return v.Name, ok
 	}
 	return "", false
 }

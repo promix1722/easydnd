@@ -324,6 +324,12 @@ type Equipment struct {
 	Backpack []ItemStack
 	Loot     []ItemStack
 
+	// Custom is the one equipped item worn in the sheet's Custom slot, the
+	// slot that takes any wearable. Every other slot is derived from the item's
+	// own shape, so this is the only placement the character has to record.
+	// It names something in Equipped, or nothing.
+	Custom rules.Slug
+
 	Purse rules.Purse
 }
 

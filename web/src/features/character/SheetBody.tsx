@@ -208,7 +208,7 @@ export function SheetBody({
         equipment={s.equipment}
         items={items}
         name={(slug) => named('equipment', slug)}
-        identity={identity}
+        lookup={named}
         disabled={pending}
         {...(onEquipment ? { onChange: onEquipment } : {})}
       />
@@ -221,6 +221,7 @@ export function SheetBody({
         equipment={s.equipment}
         items={items}
         name={(slug) => named('equipment', slug)}
+        lookup={named}
         disabled={pending}
         {...(onEquipment ? { onChange: onEquipment } : {})}
       />

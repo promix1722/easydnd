@@ -791,7 +791,7 @@ var wornAt = map[string]string{
 	"cape":    file.SlotBack, "cloak": file.SlotBack, "mantle": file.SlotBack, "wings": file.SlotBack,
 	"circlet": file.SlotHead, "hat": file.SlotHead, "headband": file.SlotHead, "helm": file.SlotHead,
 	"goggles": file.SlotHead, "eyes": file.SlotHead,
-	"gauntlets": file.SlotHands, "gloves": file.SlotHands,
+	"gauntlets": file.SlotArms, "gloves": file.SlotArms,
 	"robe": file.SlotBody, "clothes": file.SlotBody,
 }
 

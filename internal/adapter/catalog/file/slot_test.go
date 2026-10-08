@@ -22,6 +22,7 @@ func TestSlotIsExplicitOrDerivedFromTheItem(t *testing.T) {
 		{"focus", c.item(Item{Slug: "wand", Category: "adventuring-gear", Gear: &Gear{GearCategory: "arcane-foci"}}, nil).Slot, catalog.SlotMainHand},
 		{"carried", c.item(Item{Slug: "torch", Category: "adventuring-gear", Gear: &Gear{GearCategory: "standard-gear"}}, nil).Slot, catalog.SlotNone},
 		{"magic explicit", c.magicItem(MagicItem{Slug: "boots-of-speed", Category: "wondrous-items", Slot: SlotFeet}, nil).Slot, catalog.SlotFeet},
+		{"hands, the old name for arms", c.magicItem(MagicItem{Slug: "gloves-of-missile-snaring", Category: "wondrous-items", Slot: "hands"}, nil).Slot, catalog.SlotArms},
 		{"magic ring, namespaced", c.magicItem(MagicItem{Slug: "dnd-2014/ring-of-jumping", Category: "dnd-2014/ring"}, nil).Slot, catalog.SlotRing},
 		{"magic armor", c.magicItem(MagicItem{Slug: "armor-1", Category: "armor"}, nil).Slot, catalog.SlotBody},
 		{"wand", c.magicItem(MagicItem{Slug: "wand-of-fear", Category: "wand"}, nil).Slot, catalog.SlotMainHand},

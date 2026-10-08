@@ -263,6 +263,7 @@ type Equipment struct {
 	Equipped []ItemStack    `json:"equipped"`
 	Backpack []ItemStack    `json:"backpack"`
 	Loot     []ItemStack    `json:"loot"`
+	Custom   string         `json:"custom,omitempty"`
 	Purse    map[string]int `json:"purse,omitempty"`
 }
 

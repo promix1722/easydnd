@@ -124,7 +124,6 @@ const (
 	SlotBack     = "back"
 	SlotBody     = "body"
 	SlotArms     = "arms"
-	SlotHands    = "hands"
 	SlotWaist    = "waist"
 	SlotFeet     = "feet"
 	SlotRing     = "ring"
@@ -241,12 +240,14 @@ var armorCategories = map[string]catalog.ArmorCategory{
 }
 
 var slots = map[string]catalog.Slot{
-	SlotHead:     catalog.SlotHead,
-	SlotNeck:     catalog.SlotNeck,
-	SlotBack:     catalog.SlotBack,
-	SlotBody:     catalog.SlotBody,
-	SlotArms:     catalog.SlotArms,
-	SlotHands:    catalog.SlotHands,
+	SlotHead: catalog.SlotHead,
+	SlotNeck: catalog.SlotNeck,
+	SlotBack: catalog.SlotBack,
+	SlotBody: catalog.SlotBody,
+	SlotArms: catalog.SlotArms,
+	// "hands" was its own slot once. Archived SRD releases and the private
+	// 2014 pack still write it, so it stays readable, as arms.
+	"hands":      catalog.SlotArms,
 	SlotWaist:    catalog.SlotWaist,
 	SlotFeet:     catalog.SlotFeet,
 	SlotRing:     catalog.SlotRing,

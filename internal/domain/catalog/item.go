@@ -156,8 +156,10 @@ type Vehicle struct {
 
 // Slot is the part of the body an item is worn on, or the hand it is held in.
 // The set is the DMG's "Wearing and Wielding Items": one each of headwear,
-// cloak, armor, bracers, gloves, belt and footwear, a neck piece, two rings,
-// and a hand for each held thing.
+// cloak, armor, belt and footwear, a neck piece, two rings, and a hand for
+// each held thing. The DMG's bracers and gloves are one slot here, arms: the
+// sheet draws a single card for the forearm and the hand on the end of it,
+// and a pack that still writes "hands" is read as arms.
 type Slot uint8
 
 // The slots, head to foot, then the hands.
@@ -168,7 +170,6 @@ const (
 	SlotBack
 	SlotBody
 	SlotArms
-	SlotHands
 	SlotWaist
 	SlotFeet
 	SlotRing

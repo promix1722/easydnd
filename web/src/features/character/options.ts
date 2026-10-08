@@ -183,6 +183,35 @@ export function optionLabel(
  * the compendium actually wrote, and a description that stops mid-word is
  * worse than one that takes three lines.
  */
+/**
+ * An item's numbers on one line: a stat block, not six paragraphs. `name`
+ * turns a damage type or weapon property slug into its word; the builder has
+ * the entries, the sheet has the catalogue's names.
+ *
+ * No price: starting equipment is granted, not bought, and a "Cost: 12 gp"
+ * under a free pack reads as a bill. The price belongs where things are bought.
+ */
+export function itemFacts(t: Translate, item: Item, name: (slug: string) => string): string | undefined {
+  const facts: string[] = []
+  if (item.armor !== undefined) {
+    const armor = item.armor
+    facts.push(t('equipment.ac', { value: armor.baseAC }))
+    if (armor.addsDexBonus) facts.push(armor.maxDexBonus === undefined ? t('equipment.dex') : t('equipment.dexCap', { count: armor.maxDexBonus }))
+    if (armor.strengthMinimum) facts.push(t('equipment.strength', { value: armor.strengthMinimum }))
+    if (armor.stealthDisadvantage) facts.push(t('equipment.stealth'))
+  }
+  if (item.weapon !== undefined) {
+    const weapon = item.weapon
+    if (weapon.damage) facts.push(t('equipment.damage', { dice: weapon.damage.dice, type: weapon.damage.type === undefined ? '' : name(weapon.damage.type) }))
+    if (weapon.twoHandedDamage) facts.push(t('equipment.twoHands', { dice: weapon.twoHandedDamage.dice }))
+    if (weapon.normalRange) facts.push(t('equipment.range', { normal: weapon.normalRange, long: weapon.longRange ?? weapon.normalRange }))
+    if (weapon.throwNormalRange) facts.push(t('equipment.thrownRange', { normal: weapon.throwNormalRange, long: weapon.throwLongRange ?? weapon.throwNormalRange }))
+    if (weapon.properties?.length) facts.push(weapon.properties.map(name).join(', '))
+  }
+  if (item.weight !== undefined) facts.push(t('equipment.weight', { value: item.weight }))
+  return facts.length === 0 ? undefined : facts.join(' · ')
+}
+
 function detailOf(t: Translate, option: Option, entries: Map<string, Entry>): string | undefined {
   // Each component under its own name in bold: a crossbow and twenty bolts are
   // two things, and a run of unheaded "Weight:" lines does not say whose.
@@ -197,27 +226,8 @@ function detailOf(t: Translate, option: Option, entries: Map<string, Entry>): st
   const lines = [...(entry.desc ?? [])]
   if (option.ref.includes('item:')) {
     const item = entry as Item
-    // The numbers on one line: they are a stat block, not six paragraphs.
-    const facts: string[] = []
-    if (item.armor !== undefined) {
-      const armor = item.armor
-      facts.push(t('equipment.ac', { value: armor.baseAC }))
-      if (armor.addsDexBonus) facts.push(armor.maxDexBonus === undefined ? t('equipment.dex') : t('equipment.dexCap', { count: armor.maxDexBonus }))
-      if (armor.strengthMinimum) facts.push(t('equipment.strength', { value: armor.strengthMinimum }))
-      if (armor.stealthDisadvantage) facts.push(t('equipment.stealth'))
-    }
-    if (item.weapon !== undefined) {
-      const weapon = item.weapon
-      if (weapon.damage) facts.push(t('equipment.damage', { dice: weapon.damage.dice, type: entries.get(weapon.damage.type ?? '')?.name ?? weapon.damage.type ?? '' }))
-      if (weapon.twoHandedDamage) facts.push(t('equipment.twoHands', { dice: weapon.twoHandedDamage.dice }))
-      if (weapon.normalRange) facts.push(t('equipment.range', { normal: weapon.normalRange, long: weapon.longRange ?? weapon.normalRange }))
-      if (weapon.throwNormalRange) facts.push(t('equipment.thrownRange', { normal: weapon.throwNormalRange, long: weapon.throwLongRange ?? weapon.throwNormalRange }))
-      if (weapon.properties?.length) facts.push(weapon.properties.map((slug) => entries.get(slug)?.name ?? slug).join(', '))
-    }
-    if (item.weight !== undefined) facts.push(t('equipment.weight', { value: item.weight }))
-    // No price: starting equipment is granted, not bought, and a "Cost: 12 gp"
-    // under a free pack reads as a bill. The price belongs where things are bought.
-    if (facts.length > 0) lines.push(facts.join(' · '))
+    const facts = itemFacts(t, item, (slug) => entries.get(slug)?.name ?? slug)
+    if (facts !== undefined) lines.push(facts)
     // A list, and a count only where it says something: fourteen "×1"s in one
     // sentence was a paragraph nobody could find the rope in.
     if (item.gear?.contents?.length) lines.push(t('equipment.contents'), ...item.gear.contents.map((item) => {

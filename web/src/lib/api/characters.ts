@@ -111,6 +111,8 @@ export interface Equipment {
   equipped: ItemStack[]
   backpack: ItemStack[]
   loot: ItemStack[]
+  /** The equipped item in the sheet's Custom slot, the one placement the server stores. */
+  custom?: string
   purse?: Record<string, number>
 }
 

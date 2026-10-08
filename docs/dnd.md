@@ -551,7 +551,11 @@ Worn armor counts whether it was equipped as a list entry
 (`equipment.equipped` add `leather-armor`) or as a counted stack
 (`equipment.equipped.leather-armor` set `1`). The second is how an import
 writes inventory, because a sheet prints quantities; both are applied before
-armor class is derived.
+armor class is derived. A third path, `equipment.custom` set to one slug or
+none, records which equipped item sits in the sheet's Custom slot -- see
+[below](#items-carry-their-slot); it is the one placement the projection
+cannot derive, and it is forgotten on its own once the item is no longer
+equipped, whichever path took it off.
 
 ## Builder choices under the 2014 rules
 
@@ -577,23 +581,32 @@ Cleric warhammer and chain-mail choices require appropriate proficiency. Pack
 contents are presented as contents of the granted pack, without also granting a
 second loose copy of every contained item.
 
+### Items carry their slot
+
 The catalogue says what an item *is* -- armor, weapon, a gear category -- and
 **where it is worn**: every item and magic item carries a `slot`, one of the
 DMG's "Wearing and Wielding Items" set (`head`, `neck`, `back`, `body`, `arms`,
-`hands`, `waist`, `feet`, `ring`, `main-hand`, `off-hand`), or none when it is
-only carried. The shape decides where it can: armor is `body`, a shield
-`off-hand`, a weapon or focus `main-hand`, a magic ring `ring`, a wand, staff or
-rod `main-hand`. That default is applied once, by the catalogue loader, so a
-pack writes a slot only where the shape cannot tell -- srdgen does so for the
-clothes, the amulet and reliquary, the magic shields and every wondrous item
-whose name says where it goes (a cloak is `back`, boots are `feet`). A wondrous
-item without one -- a bag of holding, an ioun stone -- is carried, not worn.
+`waist`, `feet`, `ring`, `main-hand`, `off-hand`), or none when it is only
+carried. The DMG's bracers and gloves are one slot here, `arms`: the sheet
+draws one card for the forearm and the hand on the end of it. `hands` was a
+slot of its own until SRD release 1.5.0; the loader still reads it, as `arms`,
+because archived releases and the private 2014 pack wrote it. The shape
+decides where an item can go: armor is `body`, a shield `off-hand`, a weapon or
+focus `main-hand`, a magic ring `ring`, a wand, staff or rod `main-hand`. That
+default is applied once, by the catalogue loader, so a pack writes a slot only
+where the shape cannot tell -- srdgen does so for the clothes, the amulet and
+reliquary, the magic shields and every wondrous item whose name says where it
+goes (a cloak is `back`, boots are `feet`). A wondrous item without one -- a
+bag of holding, an ioun stone -- is carried, not worn.
 
 Whether an item is *used up* the catalogue still does not say; the client's
 Consumables group is guessed from the item's category and a short slug list
-(`web/src/domain/equipment.ts`). The character has one `equipped` list and no
-per-slot state: which item sits in which slot is derived from the list and the
-catalogue on every read.
+(`web/src/domain/equipment.ts`). The character has one `equipped` list and
+**one** piece of per-slot state, `Equipment.Custom`: the slug in the sheet's
+Custom slot, the slot that takes a wearable of any shape. Every other placement is
+derived from the list and the catalogue on every read, because the shape
+decides it; Custom is stored because nothing else could decide it, and it only
+ever names something equipped.
 
 ### Spell acquisition and preparation
 

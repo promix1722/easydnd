@@ -287,6 +287,7 @@ func equipmentOf(e domain.Equipment) Equipment {
 		Equipped: stacksOf(e.Equipped),
 		Backpack: stacksOf(e.Backpack),
 		Loot:     stacksOf(e.Loot),
+		Custom:   e.Custom.String(),
 	}
 	if len(e.Purse) > 0 {
 		out.Purse = make(map[string]int, len(e.Purse))

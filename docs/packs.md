@@ -47,12 +47,14 @@ bytes have changed under the same version. An explicit
 `data.default_packs.srd-2014` pin must be updated to select the new version.
 
 An `equipment` or `magic-items` row may carry `slot`: where the item is worn or
-wielded, one of `head`, `neck`, `back`, `body`, `arms`, `hands`, `waist`,
-`feet`, `ring`, `main-hand`, `off-hand`. Left out, the loader derives it from
-what the item is -- armor `body`, a shield `off-hand`, a weapon or focus
-`main-hand`, a magic ring `ring`, a wand/staff/rod `main-hand` -- and anything
-else is only carried. Write it for a wondrous item that is worn (a cloak, a
-belt) or to override the shape; an unknown value fails the load.
+wielded, one of `head`, `neck`, `back`, `body`, `arms`, `waist`, `feet`,
+`ring`, `main-hand`, `off-hand`. Gloves and gauntlets are `arms`, as bracers
+are; `hands`, the name that slot had before release 1.5.0, is still accepted
+and read as `arms`. Left out, the loader derives it from what the item is --
+armor `body`, a shield `off-hand`, a weapon or focus `main-hand`, a magic ring
+`ring`, a wand/staff/rod `main-hand` -- and anything else is only carried.
+Write it for a wondrous item that is worn (a cloak, a belt) or to override the
+shape; any other unknown value fails the load.
 
 The committed `data/srd_5.1/spell-icons/` directory is the default artwork
 input for `srdgen`, including checks generating into temporary directories.

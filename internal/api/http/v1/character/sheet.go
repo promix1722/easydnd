@@ -87,6 +87,24 @@ func ResolvedSheetOf(s domain.State, cat *catalog.Catalog) Sheet {
 		items = append(items, stack.Item)
 	}
 
+	resolved := conv.Resolve(out.Proficiencies, items, spells)
+	for _, a := range s.Actions {
+		if desc := conv.Describe(a.Origin); len(desc) > 0 {
+			resolved.Actions = append(resolved.Actions, catalogapi.Entry{Slug: a.Origin.String(), Name: a.Name, Desc: desc})
+		}
+	}
+	// What a weapon's stat line names: the sheet draws "1d12 slashing, heavy",
+	// and only the catalogue knows the words.
+	for _, item := range resolved.Equipment {
+		if item.Weapon != nil {
+			if item.Weapon.Damage != nil {
+				name(catalogapi.CollectionDamageTypes, item.Weapon.Damage.Type)
+			}
+			for _, property := range item.Weapon.Properties {
+				name(catalogapi.CollectionWeaponProperties, property)
+			}
+		}
+	}
 	if len(names) > 0 {
 		if out.CatalogNames == nil {
 			out.CatalogNames = map[string]string{}
@@ -94,12 +112,6 @@ func ResolvedSheetOf(s domain.State, cat *catalog.Catalog) Sheet {
 			out.CatalogNames = maps.Clone(out.CatalogNames)
 		}
 		maps.Copy(out.CatalogNames, names)
-	}
-	resolved := conv.Resolve(out.Proficiencies, items, spells)
-	for _, a := range s.Actions {
-		if desc := conv.Describe(a.Origin); len(desc) > 0 {
-			resolved.Actions = append(resolved.Actions, catalogapi.Entry{Slug: a.Origin.String(), Name: a.Name, Desc: desc})
-		}
 	}
 	out.Catalog = &resolved
 	return out
