@@ -271,8 +271,14 @@ export function BuildScreen() {
   // Spell tabs only have work when the server offers a choice or the player
   // has a saved selection to edit. A non-caster should never have to pass
   // through empty Cantrips and Spells tabs.
-  const visibleStages = STAGES.filter((each) => each !== 'cantrips' && each !== 'spells' ||
-    open.some((prompt) => stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each) ||
+  //
+  // Equipment is stricter: only while a starting kit is still being chosen.
+  // The kit is asked once, by the first class at level 1, and it seeds the
+  // inventory; what the character carries after that is edited on the sheet,
+  // so a saved answer keeps no tab here and a level-up never sees one.
+  const asked = (each: Stage) => open.some((prompt) => stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each)
+  const visibleStages = STAGES.filter((each) => each === 'equipment' ? asked(each) : each !== 'cantrips' && each !== 'spells' ||
+    asked(each) ||
     (settled.get(each)?.length ?? 0) > 0 || view.sheet?.customOptions?.some((option) => option.kind === (each === 'cantrips' ? 'cantrip' : 'spell')))
   const preferredStage = chosenStage ?? (isNew ? 'rules' : firstUnfinished(open))
   const stage = visibleStages.includes(preferredStage) ? preferredStage : firstUnfinished(open)
@@ -735,10 +741,12 @@ export function BuildScreen() {
                       if (prompt === undefined) throw new Error(t('prompt.nothingOffered'))
                       return prompt
                     }}
-                    onAnswers={(submissions) => void saveSpells(submissions, each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : 'equipment')}
+                    // A save lands on the next tab with work, or stays put when
+                    // this was the last: Equipment is only there while a kit is chosen.
+                    onAnswers={(submissions) => void saveSpells(submissions, each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : after ?? each)}
                     pending={answer.pending || revise.pending || spellSave.pending || remove.pending || build.loading}
                     revision={view.prompts.revision ?? view.prompts.seq}
-                    onNext={() => goToStage(each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : 'equipment')}
+                    {...(each === 'cantrips' && visibleStages.includes('spells') ? { onNext: () => goToStage('spells') } : after === null ? {} : { onNext: () => goToStage(after) })}
                   >{customs(each)}</SpellStagePanel>
                 ) : (
                   <Stack>

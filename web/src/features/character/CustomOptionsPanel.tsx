@@ -40,7 +40,9 @@ const shown = {
   background: ['background'],
   cantrips: ['cantrip'],
   spells: ['spell'],
-  equipment: ['item'],
+  // Items are not authored here: the tab is only on screen while a starting
+  // kit is being chosen, and what the character carries is edited on the sheet.
+  equipment: [],
   personal: ['note'],
   personality: ['note'],
   rules: [],

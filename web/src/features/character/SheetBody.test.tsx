@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Sheet } from '@/lib/api'
@@ -95,7 +95,7 @@ const NAMED: Sheet = {
  */
 // No Spells tab: this character casts nothing, and a tab with nothing under
 // it is a question the sheet should not ask.
-const SECTIONS = ['Overview', 'Actions', 'Equipment']
+const SECTIONS = ['Overview', 'Actions', 'Equipment', 'Items']
 
 /** What the Equipment tab sorts and slots by. */
 const ITEMS: Sheet = {
@@ -246,6 +246,29 @@ describe('the panels that were sentences', () => {
       { path: 'equipment.equipped.leather-armor', op: 'set', value: { kind: 'int', int: 0 } },
       { path: 'equipment.backpack.leather-armor', op: 'set', value: { kind: 'int', int: 1 } },
     ])
+  })
+
+  // The Items tab's picker searches the catalogue a page at a time -- never
+  // the whole collection -- and a pick is one more of the thing in the backpack.
+  it('adds an item found in the catalogue to the backpack', async () => {
+    const onEquipment = vi.fn()
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (!url.includes('/catalog/items')) throw new Error(`the sheet asked for ${url}`)
+      return new Response(JSON.stringify({ items: [{ slug: 'rope-hempen', name: 'Rope, Hempen', category: 'adventuring-gear' }], total: 1 }),
+        { headers: { 'content-type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetch)
+    renderAt('mobile', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
+    expect(fetch).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add item' }))
+    fireEvent.click(await screen.findByRole('button', { name: /Rope, Hempen/ }))
+
+    await waitFor(() => expect(onEquipment).toHaveBeenCalledWith([
+      { path: 'equipment.backpack.rope-hempen', op: 'set', value: { kind: 'int', int: 1 } },
+    ]))
+    expect(String(fetch.mock.calls[0]?.[0])).toContain('limit=20')
   })
 
   it('uses localized catalogue names and a localized class-resource label', () => {

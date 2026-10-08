@@ -176,6 +176,7 @@ export function CharacterSheetScreen() {
           {editEquipment.error}
         </Text>
       )}
+      {/* The Items tab's picker and the Spells tab both read this character's catalogue, packs included. */}
       <CatalogScope.Provider value={`${characterPath(id)}/catalog`}>
         <SheetBody
           sheet={s}

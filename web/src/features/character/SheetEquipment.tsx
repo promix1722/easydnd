@@ -7,6 +7,7 @@ import { useT } from '@/lib/i18n'
 import { Avatar, Box, Button, Center, Grid, ModalSheet, Panel, Paper, Stack, TabRow, Text, UnstyledButton, characterAvatar } from '@/ui'
 
 import { InventoryRows, Purse } from './Inventory'
+import { ItemPicker } from './ItemPicker'
 
 /** The paperdoll: worn pieces head to foot either side of the portrait, then what the hands hold. */
 const LEFT: readonly Slot[] = ['head', 'neck', 'back', 'body']
@@ -15,23 +16,26 @@ const HANDS: readonly Slot[] = ['main-hand', 'off-hand', 'ring']
 
 type Card = Slot | typeof ELSEWHERE
 
-/**
- * The sheet's Equipment tab: what is worn where, then everything owned in
- * three groups.
- *
- * Read-only without `onChange`, which is how a sheet shared with a table is
- * drawn. With it, a slot is a button that offers what in the backpack fits.
- */
-export function SheetEquipment({ equipment, items, name, identity, disabled = false, onChange }: {
+/** What both tabs are drawn from. Read-only without `onChange`, which is how a sheet shared with a table is drawn. */
+interface InventoryProps {
   equipment: Equipment
   items: ReadonlyMap<string, Item>
   name: (slug: string) => string
-  identity: Pick<Identity, 'image' | 'classes'>
   disabled?: boolean
   onChange?: (changes: Change[]) => void
+}
+
+const rowName = (name: (slug: string) => string) => (row: InventoryRow) => row.customName ?? name(row.item ?? '')
+
+/**
+ * The sheet's Equipment tab: what is worn where, then everything that could be.
+ *
+ * With `onChange`, a slot is a button that offers what in the backpack fits.
+ */
+export function SheetEquipment({ equipment, items, name, identity, disabled = false, onChange }: InventoryProps & {
+  identity: Pick<Identity, 'image' | 'classes'>
 }) {
   const t = useT()
-  const [group, setGroup] = useState<ItemGroup>('wearable')
   const [picking, setPicking] = useState<Card | null>(null)
   const slots: Record<Card, string> = {
     head: t('equipment.slot.head'), neck: t('equipment.slot.neck'), back: t('equipment.slot.back'), body: t('equipment.slot.body'),
@@ -39,12 +43,8 @@ export function SheetEquipment({ equipment, items, name, identity, disabled = fa
     'main-hand': t('equipment.slot.main-hand'), 'off-hand': t('equipment.slot.off-hand'), ring: t('equipment.slot.ring'),
     elsewhere: t('equipment.slot.elsewhere'),
   }
-  const groups: Record<ItemGroup, string> = {
-    wearable: t('equipment.group.wearable'), consumable: t('equipment.group.consumable'), gear: t('equipment.group.gear'),
-  }
   const bySlot = slotted(equipment, items)
-  const rows = mergeStacks(equipment)
-  const rowName = (row: InventoryRow) => row.customName ?? name(row.item ?? '')
+  const rows = mergeStacks(equipment).filter((row) => groupOf(items.get(row.item ?? '')) === 'wearable')
   // Nothing fits "elsewhere": it only ever holds what is already there.
   const fitting = picking === null || picking === ELSEWHERE ? [] : equipment.backpack.filter((stack, at, all) =>
     stack.item !== undefined && fitsSlot(items.get(stack.item), picking) &&
@@ -84,19 +84,15 @@ export function SheetEquipment({ equipment, items, name, identity, disabled = fa
     </Box>
 
     <Panel>
-      <Stack gap="md">
-        <TabRow tabs={ITEM_GROUPS.map((each) => ({ value: each, label: groups[each] }))} value={group}
-          onChange={(next) => setGroup(next as ItemGroup)}>
-          <InventoryRows
-            rows={rows.filter((row) => groupOf(items.get(row.item ?? '')) === group)}
-            name={rowName}
-            empty={t('sheet.empty')}
-            disabled={disabled}
-            {...(onChange ? { onTotal: (row: InventoryRow, total: number) => onChange(setTotal(equipment, row.item ?? '', total)) } : {})}
-          />
-        </TabRow>
-        <Purse purse={equipment.purse} disabled={disabled}
-          {...(onChange ? { onChange: (unit: string, amount: number) => onChange([setCoin(unit, amount)]) } : {})} />
+      <Stack gap="sm">
+        <Text size="xs" c="dimmed" tt="uppercase">{t('equipment.group.wearable')}</Text>
+        <InventoryRows
+          rows={rows}
+          name={rowName(name)}
+          empty={t('sheet.empty')}
+          disabled={disabled}
+          {...(onChange ? { onTotal: (row: InventoryRow, total: number) => onChange(setTotal(equipment, row.item ?? '', total)) } : {})}
+        />
       </Stack>
     </Panel>
 
@@ -117,5 +113,51 @@ export function SheetEquipment({ equipment, items, name, identity, disabled = fa
         ))}
       </Stack>}
     </ModalSheet>}
+  </Stack>
+}
+
+/** The groups the Items tab lists: everything that is not worn, which Equipment already has. */
+const CARRIED: readonly ItemGroup[] = ITEM_GROUPS.filter((group) => group !== 'wearable')
+
+/**
+ * The sheet's Items tab: what is carried but not worn, in two groups, then
+ * the purse. With `onChange`, a row has a count stepper and Add item searches
+ * the character's catalogue for something not owned yet.
+ */
+export function SheetItems({ equipment, items, name, disabled = false, onChange }: InventoryProps) {
+  const t = useT()
+  const [group, setGroup] = useState<ItemGroup>(CARRIED[0] ?? 'gear')
+  const [adding, setAdding] = useState(false)
+  const groups: Record<ItemGroup, string> = {
+    wearable: t('equipment.group.wearable'), consumable: t('equipment.group.consumable'), gear: t('equipment.group.gear'),
+  }
+  const rows = mergeStacks(equipment)
+
+  return <Stack gap="md">
+    <Panel>
+      <Stack gap="md">
+        <TabRow tabs={CARRIED.map((each) => ({ value: each, label: groups[each] }))} value={group}
+          onChange={(next) => setGroup(next as ItemGroup)}>
+          <InventoryRows
+            rows={rows.filter((row) => groupOf(items.get(row.item ?? '')) === group)}
+            name={rowName(name)}
+            empty={t('sheet.empty')}
+            disabled={disabled}
+            {...(onChange ? { onTotal: (row: InventoryRow, total: number) => onChange(setTotal(equipment, row.item ?? '', total)) } : {})}
+          />
+        </TabRow>
+        {onChange && <Button variant="light" disabled={disabled} onClick={() => setAdding(true)}>{t('equipment.addItem')}</Button>}
+        <Purse purse={equipment.purse} disabled={disabled}
+          {...(onChange ? { onChange: (unit: string, amount: number) => onChange([setCoin(unit, amount)]) } : {})} />
+      </Stack>
+    </Panel>
+
+    {onChange && <ItemPicker opened={adding} onClose={() => setAdding(false)} onPick={(hit) => {
+      // One more of it, wherever it already is: a wearable just bought lands
+      // in the backpack and is put on from the Equipment tab.
+      const owned = rows.find((row) => row.item === hit.slug)?.count ?? 0
+      onChange(setTotal(equipment, hit.slug, owned + 1))
+      setAdding(false)
+    }} />}
   </Stack>
 }

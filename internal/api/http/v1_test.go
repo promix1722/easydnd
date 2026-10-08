@@ -456,6 +456,53 @@ func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 	}
 }
 
+// The sheet's item picker searches equipment and magic items together, by
+// name, a page at a time -- and like spells the bare list is refused.
+func TestItemSearchPagesEquipmentAndMagicItems(t *testing.T) {
+	r, session := newFullRouter(t)
+
+	search := func(query string) catalogapi.ItemSearchResult {
+		t.Helper()
+		rec := send(t, r, session, http.MethodGet, "/v1/catalog/items?"+query, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET ?%s = %d, want 200: %s", query, rec.Code, rec.Body)
+		}
+		return decode[catalogapi.ItemSearchResult](t, rec)
+	}
+
+	page := search("q=sword&limit=2")
+	if page.Total <= 2 || len(page.Items) != 2 {
+		t.Fatalf("q=sword&limit=2 = %d of %d, want 2 of more", len(page.Items), page.Total)
+	}
+	rest := search("q=sword&limit=200&offset=2")
+	if rest.Total != page.Total || len(rest.Items) != page.Total-2 {
+		t.Errorf("offset=2 = %d of %d, want %d", len(rest.Items), rest.Total, page.Total-2)
+	}
+	// Sorted by name across both collections, and a magic item says so.
+	var magic, mundane bool
+	for _, hit := range append(page.Items, rest.Items...) {
+		if !strings.Contains(strings.ToLower(hit.Name), "sword") {
+			t.Errorf("%s does not match", hit.Name)
+		}
+		if hit.Magic {
+			magic = true
+		} else {
+			mundane = true
+		}
+	}
+	if !magic || !mundane {
+		t.Errorf("sword search = magic %v, mundane %v, want both", magic, mundane)
+	}
+	if page.Items[0].Slug != "dancing-sword" || page.Items[1].Slug != "greatsword" {
+		t.Errorf("first hits = %+v, want dancing-sword then greatsword", page.Items)
+	}
+
+	// The bare collection is refused, not answered.
+	if rec := send(t, r, session, http.MethodGet, "/v1/catalog/items", nil); rec.Code != http.StatusBadRequest {
+		t.Errorf("plain collection = %d, want 400", rec.Code)
+	}
+}
+
 // A build screen pages through what one character may pick. The offer goes in
 // a body because it can name every spell in the rules; what comes back is one
 // page of it.

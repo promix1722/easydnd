@@ -354,6 +354,30 @@ export function searchSpells(search: SpellSearch, signal?: AbortSignal, scope = 
   return request<SpellPage>(queryURL(scope === 'browse' ? '/packs/spells' : catalogURL('spells', scope), params.toString()), signal ? { signal } : {})
 }
 
+/** One row of an items search: enough to pick by. The sheet asks for the rest once it is owned. */
+export interface ItemHit {
+  slug: string
+  name: string
+  category?: string
+  magic?: boolean
+}
+
+export interface ItemPage {
+  items: ItemHit[]
+  total: number
+}
+
+/**
+ * Searches equipment and magic items together by name, a page at a time.
+ *
+ * Like spells, `items` is never served whole: the one screen that reads it is
+ * the sheet's Add item picker, and a picker needs a page, not a download.
+ */
+export function searchItems(q: string, limit: number, offset: number, signal?: AbortSignal, scope = ''): Promise<ItemPage> {
+  const params = new URLSearchParams({ q, limit: String(limit), offset: String(offset) })
+  return request<ItemPage>(queryURL(catalogURL('items', scope), params.toString()), signal ? { signal } : {})
+}
+
 /**
  * What a catalogue's spells can be filtered by: packs, books, schools and
  * classes. Its own small request, so that nothing downloads the spells to

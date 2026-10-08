@@ -161,6 +161,43 @@ func (h *Handler) searchSpells(c *gin.Context, search spellSearch) {
 	c.JSON(http.StatusOK, out)
 }
 
+// searchItems answers CollectionItems: equipment and magic items whose name
+// contains ?q=, sorted by name and paged like spells. Only q, limit and offset
+// are read; the spell filters a shared parser also accepts are ignored.
+func (h *Handler) searchItems(c *gin.Context, search spellSearch) {
+	cat, err := h.source.Load(c.Request.Context(), helpers.Locale(c))
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	q := strings.ToLower(search.filter.Name)
+	matches := make([]ItemHit, 0)
+	for _, item := range cat.Items.All() {
+		if strings.Contains(strings.ToLower(item.Name), q) {
+			matches = append(matches, ItemHit{Slug: item.Slug.String(), Name: item.Name, Category: item.Category.String()})
+		}
+	}
+	for _, item := range cat.MagicItems.All() {
+		if strings.Contains(strings.ToLower(item.Name), q) {
+			matches = append(matches, ItemHit{Slug: item.Slug.String(), Name: item.Name, Category: item.Category.String(), Magic: true})
+		}
+	}
+	slices.SortFunc(matches, func(a, b ItemHit) int {
+		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+	})
+
+	total := len(matches)
+	if search.offset < len(matches) {
+		matches = matches[search.offset:]
+	} else {
+		matches = nil
+	}
+	if search.limit > 0 && search.limit < len(matches) {
+		matches = matches[:search.limit]
+	}
+	c.JSON(http.StatusOK, ItemSearchResult{Items: append([]ItemHit{}, matches...), Total: total})
+}
+
 // ParseSpellSearch shares validation between scoped and aggregate catalogue searches.
 func ParseSpellSearch(c *gin.Context) (domain.SpellFilter, int, int, error) {
 	s, err := parseSpellSearch(c)

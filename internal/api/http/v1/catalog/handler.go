@@ -71,6 +71,11 @@ const (
 	CollectionMagicItems          = "magic-items"
 	CollectionSpells              = "spells"
 	CollectionTerms               = "terms"
+	// CollectionItems is not a collection of its own: it is equipment and magic
+	// items searched together, by name, a page at a time. It is served only with
+	// search parameters, for the same reason spells are never served whole --
+	// the one screen that reads it is a picker, and a picker needs a page.
+	CollectionItems = "items"
 )
 
 // Collections lists every collection, in the order the manifest does.

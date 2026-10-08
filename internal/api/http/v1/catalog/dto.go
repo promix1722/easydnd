@@ -441,6 +441,22 @@ type SpellSearchResult struct {
 	Total  int     `json:"total"`
 }
 
+// ItemHit is one row of an items search: enough to pick an item by, no more.
+// The sheet asks for the rest by slug once the item is owned.
+type ItemHit struct {
+	Slug     string `json:"slug"`
+	Name     string `json:"name"`
+	Category string `json:"category,omitempty"`
+	Magic    bool   `json:"magic,omitempty"`
+}
+
+// ItemSearchResult is a page of equipment and magic items searched by name,
+// in the same envelope as SpellSearchResult and for the same reason.
+type ItemSearchResult struct {
+	Items []ItemHit `json:"items"`
+	Total int       `json:"total"`
+}
+
 // RuleValue is a structured rule string: a casting time, a range, a duration.
 //
 // The SRD writes these as prose -- "1 action", "90 feet", "Up to 1 minute" --

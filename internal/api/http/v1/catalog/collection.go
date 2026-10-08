@@ -68,8 +68,17 @@ func (h *Handler) Collection(c *gin.Context) {
 			h.searchSpells(c, search)
 			return
 		}
-		if name == CollectionSpells {
-			helpers.FormatError(c, types.NewFieldValidationError("the spells collection is not served whole", types.FieldError{
+		if name == CollectionItems && hasSpellSearch(c) {
+			search, err := parseSpellSearch(c)
+			if err != nil {
+				helpers.FormatError(c, err)
+				return
+			}
+			h.searchItems(c, search)
+			return
+		}
+		if name == CollectionSpells || name == CollectionItems {
+			helpers.FormatError(c, types.NewFieldValidationError("the "+name+" collection is not served whole", types.FieldError{
 				Field: ParamLimit, Rule: "required", Reason: "field.limit.required",
 			}))
 			return

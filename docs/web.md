@@ -1219,7 +1219,9 @@ dialog, because it asks nothing.
 ## The build screen is a loop, not a wizard
 
 `features/character/BuildScreen` reads `/prompts`, `/events` and `/sheet`, and
-draws nine tabs. It is still a loop rather than an N-step wizard, and it has to
+draws up to nine tabs -- Cantrips and Spells only for a caster, Equipment only
+while a starting kit is still being chosen, see [Builder choice
+behavior](#builder-choice-behavior). It is still a loop rather than an N-step wizard, and it has to
 be: prompts nest -- answering the "two skills" branch of a rogue's Expertise is
 what brings the two-skill prompt into existence -- so the total number of steps
 is not knowable until the last one is answered. The tabs are not steps. They
@@ -1834,11 +1836,13 @@ whole class of real decisions off the screen.
 
 ## The sheet decides what order things come in
 
-Four tabs, at every width: **Overview**, **Actions**, **Spells**, **Equipment**.
+Five tabs, at every width: **Overview**, **Actions**, **Spells**, **Equipment**,
+**Items**.
 `features/character/SheetBody` builds them and `ui/TabDeck` draws them -- a tab
 row over the showing panel on a wide screen, the same row over a swiped deck on
 a phone. They are named for what a player is doing rather than for a table of
-the rulebook: looking the character up, taking a turn, casting, gearing up.
+the rulebook: looking the character up, taking a turn, casting, gearing up,
+going through the pack.
 
 - **Overview** is who the character is and the abilities everything else is
   derived from, the body's state, then skills, proficiencies and traits as
@@ -1848,23 +1852,39 @@ the rulebook: looking the character up, taking a turn, casting, gearing up.
   an equipped weapon into an attack, so a fresh fighter's list is honestly
   short; that is a gap in the projection (see docs/dnd.md), not in this tab.
 - **Spells** is drawn only for a character with a spell source.
-- **Equipment** is described [below](#equipment-is-slots-then-three-groups).
+- **Equipment** and **Items** are described
+  [below](#equipment-is-what-is-worn-items-is-what-is-carried).
 
 A wide screen used to draw every section at once with no tabs, and a phone a tab
 per section -- eight of them. Both were the same list read two ways, and the
-phone's strip had grown past what a thumb could scan. Four is one layout to
+phone's strip had grown past what a thumb could scan. Five is one layout to
 learn, and the cost is deliberate: the phone's Overview is a scroll rather than
 five slides.
 
-### Equipment is slots, then three groups
+### Equipment is what is worn; Items is what is carried
 
-On top, a **paperdoll**: the worn pieces head to foot -- Head, Neck, Back, Body
-down the left, Arms, Hands, Waist, Feet down the right -- with the character's
-portrait between them, then a row for what the hands hold: Main hand, Off hand,
-Rings (two). On a phone the two columns stand side by side without the
-portrait, which is in the page header already. Below it, everything the
-character owns in three tabs: **Wearable**, **Consumables**, **Other gear**, one
-row per entity however many lists the server splits it across, then the purse.
+Both are `features/character/SheetEquipment`, one component each over the same
+props, and they split the inventory by whether a thing *can* be worn rather than
+by whether it is: a wearable in the backpack is on the Equipment tab, under the
+doll it could go on.
+
+**Equipment** is, on top, a **paperdoll**: the worn pieces head to foot --
+Head, Neck, Back, Body down the left, Arms, Hands, Waist, Feet down the right --
+with the character's portrait between them, then a row for what the hands hold:
+Main hand, Off hand, Rings (two). On a phone the two columns stand side by side
+without the portrait, which is in the page header already. Below it, the
+**Wearable** rows: everything with a slot, worn or not, one row per entity
+however many lists the server splits it across.
+
+**Items** is the rest in two inner tabs, **Consumables** and **Other gear**,
+then the purse -- and, for the owner, **Add item**: a search over the
+character's own catalogue (equipment and magic items together, a page at a
+time, `searchItems` against `…/characters/{id}/catalog/items`, see
+docs/backend.md) whose pick is one more of that thing in the backpack. A
+wearable bought there appears on the Equipment tab, where it is put on. It is
+the only way to get an item the character was not granted: the wizard asks
+about the starting kit once and never lists the inventory, and a custom item
+has no UI for now.
 
 The slot is the catalogue's: each item carries `slot`, written by srdgen or a
 homebrew pack or derived by the server from what the item is (see
@@ -1882,11 +1902,11 @@ an old log, an import, homebrew without the field -- is shown in an
 honest remainder of what used to be a permanent *Worn* slot, which was not a
 body part but "everything we could not place".
 
-The tab is **read-only unless `SheetBody` is given `onEquipment`**. Only the
+Both tabs are **read-only unless `SheetBody` is given `onEquipment`**. Only the
 owner's `CharacterSheetScreen` passes it; `SharedSheetScreen` does not, so a
 sheet shared with a table has nothing to press. With it, a slot opens a sheet
-offering what in the backpack fits, a row has a count stepper, and the purse is
-five fields. Every edit is
+offering what in the backpack fits, a row has a count stepper, Add item is
+drawn, and the purse is five fields. Every edit is
 one `change` event on `equipment.*` paths, appended to the log. Equipping writes
 the equipped list both whole and per slug -- see the comment on
 `equippedChanges` for why the server needs both.
@@ -1920,7 +1940,7 @@ on that answer and is drawn either way.
 
 ### On a phone the sheet is a deck, not an accordion
 
-The same four tabs under the character's name, one on screen, and a swipe
+The same five tabs under the character's name, one on screen, and a swipe
 between them. **Nothing opens and nothing closes**: the carousel decides what is
 visible, so a tab has no shut state to be in.
 
@@ -1946,7 +1966,7 @@ and Group never showed it, only because their `TabRow` happens to be inside a
 is drawn on the same bordered `Paper` a `Panel` is, and the list's grey rule is
 dropped because the bar's border already draws that line. It is a flag rather
 than the default, because a bar inside a `Panel` is a box in a box -- which is
-why the Equipment tab's inner row does not pass it and sits in a `Panel` with
+why the Items tab's inner row does not pass it and sits in a `Panel` with
 its rows and the purse instead. Every tab's content is in panels for the same
 reason: two surfaces, the bar and then what it selects.
 
@@ -1956,9 +1976,9 @@ the tabs off-screen above. The alternative is to measure the showing slide and
 size the viewport to it -- a `ResizeObserver` reading a layout jsdom does not
 compute, so the suite could neither exercise it nor catch it breaking.
 
-The Equipment tab holds a second, inner tab row (the three groups). It is a
+The Items tab holds a second, inner tab row (Consumables, Other gear). It is a
 plain `TabRow`, not a deck, so a swipe there still moves between the sheet's
-four tabs.
+five tabs.
 
 The first tab is **`Main`**, and it is the one label here that names a place
 rather than its contents. The section holds two things -- the identity table and
@@ -3982,8 +4002,15 @@ Two things about that are the frontend's to keep working:
 
 ## Builder choice behavior
 
-Creation and level-up use the same nine tabs and server prompts. Cantrips and
-Spells have separate tabs; all equipment choices live in the final Equipment tab, and nothing else does. A selection
+Creation and level-up use the same tabs and server prompts. Cantrips and
+Spells have separate tabs; all equipment choices live in the final Equipment
+tab, and nothing else does. **That tab is drawn only while a starting-kit
+question is still open.** The kit is asked once -- by the first class, at level
+1 -- and its answers seed the inventory; after that the character's things are
+edited on the sheet's Equipment and Items tabs, so an answered kit keeps no tab
+here, Edit and Level up never show one, and the spell tabs' Next and save land
+on the tab after them with work or stay put. Reopening the level-1 class choice
+re-poses the kit, and the tab comes back with it. A selection
 changes a card in place: choosing, confirming, reopening, or replacing it must
 not sort the wizard's question cards. Spell choices have an explicit selected
 list above their filters; other option lists retain their original order. Answered choices use the original
@@ -4014,11 +4041,11 @@ a count only where it is more than one. "×1" is printed nowhere: one of a thing
 is the thing.
 
 The tab is its questions and nothing else. There is no inventory list, no coin
-fields and no way to add an item here: what the character ends up holding is
-decided by the choices (and the fixed grants behind them), and it is read -- and
-worn, and counted -- on the sheet's Equipment tab. A list of the projected
-inventory under the questions repeated every answer a second time and invited
-editing a starting kit by hand; custom items will get their own flow.
+fields, no custom items and no way to add an item here: what the character
+starts with is decided by the choices (and the fixed grants behind them), and
+it is read, worn, counted and added to on the sheet's Equipment and Items tabs.
+A list of the projected inventory under the questions repeated every answer a
+second time and invited editing a starting kit by hand.
 
 An option is not drawn until its catalogue entry has loaded. Drawn early it is
 named by its slug and then renamed in place -- "Scholars Pack" becoming
@@ -4325,7 +4352,7 @@ gone, and nothing replaced it, because the import now writes what the builder
 writes: an imported character's scores are the ability-scores card and open
 `AbilityScoresForm`, its traits are the Personality tab's written cards, its
 level is the Level card. What an import still lays over the build (inventory,
-coins) is shown by the Equipment tab's ordinary summary.
+coins) is shown by the sheet's Equipment and Items tabs.
 
 ### Nothing in the builder writes a custom entry
 

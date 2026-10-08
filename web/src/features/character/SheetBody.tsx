@@ -22,7 +22,7 @@ import type { DeckPanel } from '@/ui'
 import { IdentityTable } from './IdentityTable'
 import { ProficienciesPanel } from './ProficienciesPanel'
 import { ResourcePools } from './ResourcePools'
-import { SheetEquipment } from './SheetEquipment'
+import { SheetEquipment, SheetItems } from './SheetEquipment'
 import { SkillsPanel } from './SkillsPanel'
 import { Vitals } from './Vitals'
 import { SheetSpells } from './SheetSpells'
@@ -201,6 +201,18 @@ export function SheetBody({
         items={items}
         name={(slug) => named('equipment', slug)}
         identity={identity}
+        disabled={pending}
+        {...(onEquipment ? { onChange: onEquipment } : {})}
+      />
+    ),
+  }, {
+    value: 'items',
+    label: t('sheet.items'),
+    content: (
+      <SheetItems
+        equipment={s.equipment}
+        items={items}
+        name={(slug) => named('equipment', slug)}
         disabled={pending}
         {...(onEquipment ? { onChange: onEquipment } : {})}
       />

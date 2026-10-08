@@ -915,7 +915,7 @@ describe('BuildScreen', () => {
 
     // The spell tabs appear when a choice is available; the remaining tabs
     // remain places the player can visit before choosing a class.
-    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Equipment'])
+    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
   })
 
@@ -946,7 +946,7 @@ describe('BuildScreen', () => {
     await user.click(await panel('class').findByRole('button', { name: 'Confirm' }))
 
     await screen.findByRole('tab', { name: 'Cantrips' })
-    expect(tabs().slice(-3)).toEqual(['Cantrips', 'Spells', 'Equipment'])
+    expect(tabs().slice(-2)).toEqual(['Cantrips', 'Spells'])
   })
 
   // One mount, walked across three tabs: each shows only what belongs to it,
@@ -1395,7 +1395,7 @@ describe('a new character', () => {
     // The scores are a question asked of a character that exists, not a field
     // on the form that creates one.
     expect(screen.queryByText(/ability scores/)).not.toBeInTheDocument()
-    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Equipment'])
+    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
   })
 
   it('chooses 2014 rules before the name and saves them when the character is created', async () => {
@@ -1631,7 +1631,7 @@ describe('a new character', () => {
     // that had already succeeded. It read as a reload because it looked like
     // one. The tabs never go, and neither does the block being answered.
     expect(screen.queryByText('Working out what is next...')).not.toBeInTheDocument()
-    expect(tabs()).toHaveLength(8)
+    expect(tabs()).toHaveLength(7)
     expect(screen.getByText('A name')).toBeInTheDocument()
 
     // And what replaces the block being answered is that block with an answer
@@ -1805,7 +1805,9 @@ it('edits saved spells from the existing picks without deleting them on open or 
   await user.click(screen.getByRole('button', { name: 'Add Fire Bolt' }))
   await user.click(screen.getByRole('button', { name: 'Next' }))
   await waitFor(() => expect(writes()).toHaveLength(1))
-  expect(current()).toBe('Equipment')
+  // The last tab with work: a save there stays put rather than landing on an
+  // Equipment tab that is only drawn while a starting kit is being chosen.
+  expect(current()).toBe('Cantrips')
   expect(posted.every((request) => request.method === 'PUT')).toBe(true)
   expect(writes()[0]).toMatchObject({ method: 'PUT', body: {
     expectedSeq: 3, expectedRevision: 5,
@@ -1845,8 +1847,12 @@ it('places spell and equipment questions in their own tabs', async () => {
 // An answered choice used to be reopened by deleting its entry and waiting for
 // the question to come back: a player who opened a card to look at what they
 // had picked saw nothing picked, and had just unpicked it.
-it('reopens an answered equipment choice on its answer, without touching it', async () => {
-  const user = setupUser()
+/**
+ * The starting kit is asked once and seeds the inventory; after that the
+ * character's things are edited on the sheet. So an answered kit keeps no
+ * Equipment tab here -- it is drawn only while a kit question is still open.
+ */
+it('drops the Equipment tab once the starting kit is answered', async () => {
   const weapon = {
     choice: { prompt: 'wizard/starting-equipment/0', kind: 'equipment', choose: 1, from: { kind: 'explicit', options: [
       { key: 'quarterstaff', kind: 'ref', ref: 'item:quarterstaff', count: 1 },
@@ -1864,13 +1870,10 @@ it('reopens an answered equipment choice on its answer, without touching it', as
     }] },
   })
   renderBuild('desktop')
-  await user.click(await screen.findByRole('tab', { name: 'Equipment' }))
-  await user.click(block(/Starting equipment/i))
+  await screen.findByRole('tab', { name: 'Class' })
 
-  expect(await screen.findByRole('button', { name: 'Dagger' })).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByRole('button', { name: 'Quarterstaff' })).toHaveAttribute('aria-pressed', 'false')
-  expect(read.some((url) => url.includes('/prompts?before=3'))).toBe(true)
-  // Looking is not changing: nothing was deleted, priced or written.
+  expect(screen.queryByRole('tab', { name: 'Equipment' })).not.toBeInTheDocument()
+  expect(screen.queryByText(/Starting equipment/i)).not.toBeInTheDocument()
   expect(posted).toHaveLength(0)
 })
 
@@ -1942,5 +1945,6 @@ it('saves multiple previous spell edits and a new acquisition atomically before 
     ],
     events: [{ choices: [{ prompt: third.choice.prompt, picks: ['darkness'] }] }],
   } })
-  await waitFor(() => expect(screen.getByRole('tab', { name: 'Equipment' })).toHaveAttribute('aria-selected', 'true'))
+  // Nothing after Spells has work, so the save stays where it was made.
+  await waitFor(() => expect(screen.getByRole('tab', { name: 'Spells' })).toHaveAttribute('aria-selected', 'true'))
 })

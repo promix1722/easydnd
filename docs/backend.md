@@ -412,7 +412,7 @@ that.
 | `GET` | `/v1/health` | liveness |
 | `GET` | `/v1/version` | the release identifier -- a deploy contract, see below |
 | `GET` | `/v1/catalog` | the compendium's index: ruleset, locales, collections and counts |
-| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it. Magic items list as *summaries*, and `?slugs=` returns full fidelity. **Spells are never served whole** -- see [below](#spells-are-never-served-whole): they answer `?slugs=`, or search parameters (`q`, `level`, `school`, `class`, `castingTime`, `concentration`, `ritual`, `material`, `limit`, `offset`) with a filtered, level-then-name-sorted, paged `{spells, total}` envelope -- the filter itself is `domain/catalog.SpellFilter` -- and the bare URL is a 400. `spell-filters` in place of a collection name returns what spells can be filtered by |
+| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it. Magic items list as *summaries*, and `?slugs=` returns full fidelity. **Spells are never served whole** -- see [below](#spells-are-never-served-whole): they answer `?slugs=`, or search parameters (`q`, `level`, `school`, `class`, `castingTime`, `concentration`, `ritual`, `material`, `limit`, `offset`) with a filtered, level-then-name-sorted, paged `{spells, total}` envelope -- the filter itself is `domain/catalog.SpellFilter` -- and the bare URL is a 400. `spell-filters` in place of a collection name returns what spells can be filtered by. `items` in place of a collection name is equipment and magic items **searched together by name**, `?q=&limit=&offset=`, as a name-sorted, paged `{items: [{slug, name, category, magic}], total}` envelope -- the sheet's Add item picker reads it -- and like spells it is never served whole |
 | `POST` | `/v1/catalog/spells/search` | the same search with a body, for an offer too long for a URL; also at `/v1/characters/{id}/catalog/spells/search` |
 | `GET` | `/v1/characters` | summaries |
 | `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
@@ -546,6 +546,16 @@ What replaces it:
 
 The manifest still counts the collection; it just cannot be fetched by that
 name alone.
+
+**`items` is held to the same rule for the opposite reason.** Equipment and
+magic items are small enough to serve whole, and the plain collections still
+are; but the one screen that *searches* them -- the sheet's Add item picker --
+needs a page, not a download, and a client that pages never drifts into
+holding the catalogue. So `GET …/catalog/items?q=&limit=&offset=` answers
+both collections together, matched on name, sorted by name, in an
+`{items, total}` envelope with the `magic` flag telling the two apart, and the
+bare `…/catalog/items` is the same 400. It is served on every scope a
+collection is, so a character's picker sees the character's packs.
 
 ### The sheet arrives resolved
 
