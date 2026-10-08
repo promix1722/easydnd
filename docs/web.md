@@ -2105,7 +2105,32 @@ artwork inlined: about 11 MB to print a dozen names. **No screen may download a
 collection in order to name a few of its entries, and nothing may download the
 whole spell list at all** -- a client gets the spells it names or one page of a
 search. The sheet's own spells are the first case: they arrive resolved, icon
-included, and the Spells tab draws the icon in place of the row's bullet.
+included, and the Spells tab (`features/character/SheetSpells`) draws them as
+the build screen's rows -- icon, level, concentration and ritual tags, school,
+casting time, components -- under a heading per spell level. What arrives is a
+summary without the spell's text; opening a row fetches that one spell by slug
+through the screen's catalogue scope, `/characters/:id/catalog` on the owner's
+sheet and `/shared/:id/catalog` on the one a table reads, and shows it the way
+the build screen does: inline below the row on a wide screen, as a full-screen
+view with a Back button on a phone. The school and class names come from the
+same scope's `spell-filters`, one small request per tab.
+
+A class that prepares spells -- cleric, druid, paladin, wizard -- prepares them
+on its owner's sheet. The tab finds the class's `prepared` question again the
+way the build screen reposes a saved answer (the entry in the log that answers
+`<class>/spell/prepared/<level>`, then `/prompts?before=` for the question as
+it was asked; or the open prompt when it has never been answered) and draws
+two lists: what is prepared, with Remove, and what could be, searched,
+filtered and paged by the server from the question's options exactly as the
+build screen's available list is, with Add. Spells the rules prepare on their
+own (a domain's) are in the first list without a Remove. Every Add or Remove is
+one write, as taking off a piece of armour is: an append the first time, a
+replacement of the answering entry after that, and a delete when the last
+prepared spell goes, because an empty up-to answer is one the server treats as
+unanswered. There is no draft and no dry run -- nothing in the log depends on
+a preparation answer, so there is never anything a change could drop. A shared
+sheet shows the same rows and opens the same text, and nothing on it can be
+pressed to change the character.
 
 Under the cards is a second headline row, `features/character/Vitals`: passive
 Perception, the spellcasting numbers, speed, vision and Hit Dice. Four of those
@@ -4104,7 +4129,7 @@ displayed capacity.
 Leaving preparation open does not prevent finishing. The saved events retain the class level that grants each selection,
 including intermediate levels of a character created above level one. Cantrip
 purposes and legacy cantrip prompt IDs route to Cantrips; other spell choices
-route to Spells. Both saved choices and outstanding prompts use that mapping. The sheet displays spell ownership per source.
+route to Spells. Both saved choices and outstanding prompts use that mapping. The sheet displays spell ownership per source, and lets a preparing class change its prepared list without the builder; see [the sheet's spells](#the-sheet-arrives-resolved).
 
 Editing saved spells reads the question at the original event's
 position through `GET /characters/:id/prompts?before=:seq`, with the current

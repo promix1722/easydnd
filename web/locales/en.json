@@ -626,6 +626,7 @@
   "choice.replaceSpell": "Replacement spell",
   "choice.arcanum": "Mystic Arcanum",
   "choice.mastery": "Spell Mastery",
+  "sheet.alwaysPrepared": "Always prepared",
   "sheet.spells": "Spells",
   "option.requiresProficiency": "Requires proficiency",
   "error.field.answer.requiresProficiency": "This choice requires proficiency.",

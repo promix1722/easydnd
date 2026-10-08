@@ -678,6 +678,7 @@
   "choice.replaceSpell": "Новое заклинание",
   "choice.arcanum": "Таинственный арканум",
   "choice.mastery": "Мастерство заклинателя",
+  "sheet.alwaysPrepared": "Всегда подготовлено",
   "sheet.spells": "Заклинания",
   "option.requiresProficiency": "Требуется владение",
   "error.field.answer.requiresProficiency": "Для этого варианта требуется владение.",

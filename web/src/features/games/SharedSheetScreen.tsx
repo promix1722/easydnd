@@ -2,6 +2,7 @@ import { useParams } from 'react-router'
 
 import type { Sheet } from '@/lib/api'
 import { getGroup, getSharedSheet } from '@/lib/api'
+import { CatalogScope } from '@/lib/api/catalogScope'
 import { useResource } from '@/lib/useResource'
 import { useLocale, useT } from '@/lib/i18n'
 import { Avatar, characterAvatar, Badge, Page, pageState } from '@/ui'
@@ -100,7 +101,9 @@ export function SharedSheetScreen() {
     >
       {/* The way back is the trail now. The "Back to the group" button that
           used to sit here said the same thing in a second place. */}
-      <SheetBody sheet={data.sheet} />
+      <CatalogScope.Provider value={`/shared/${encodeURIComponent(character)}/catalog`}>
+        <SheetBody sheet={data.sheet} />
+      </CatalogScope.Provider>
     </Page>
   )
 }

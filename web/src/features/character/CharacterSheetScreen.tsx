@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 
 import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent } from '@/lib/api'
+import { CatalogScope } from '@/lib/api/catalogScope'
+import { characterPath } from '@/lib/api/characters'
 import type { Change, Prompt, Sheet } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
@@ -174,11 +176,15 @@ export function CharacterSheetScreen() {
           {editEquipment.error}
         </Text>
       )}
-      <SheetBody
-        sheet={s}
-        pending={editEquipment.pending}
-        onEquipment={(changes) => void editEquipment.run(changes)}
-      />
+      <CatalogScope.Provider value={`${characterPath(id)}/catalog`}>
+        <SheetBody
+          sheet={s}
+          characterId={id}
+          onChanged={sheet.refresh}
+          pending={editEquipment.pending}
+          onEquipment={(changes) => void editEquipment.run(changes)}
+        />
+      </CatalogScope.Provider>
 
       <ModalSheet
         opened={pickingLevel !== null}

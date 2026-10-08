@@ -611,7 +611,9 @@ that offers too much, not one that computes wrong; a profile field for the
 schools, and spell benefits for the unrestricted picks, is where it would go.
 
 Required acquisitions must be answered before the build is complete. Preparation
-is optional and may use less than the maximum. Its choices are revalidated when
+is optional and may use less than the maximum, and is the one spell choice the
+sheet itself edits: its owner prepares and unprepares from the Spells tab, which
+answers the same prompt the builder would. Its choices are revalidated when
 levels or ability modifiers change. The wizard permits direct editing within
 current totals rather than simulating 2014 retraining restrictions; the policy
 and its intentional simplification are described below.

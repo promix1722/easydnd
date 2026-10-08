@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { SpellIcon } from '@/features/spells/spellIcon'
 import { bySlug } from '@/lib/api'
 import type { Change, Item, Sheet } from '@/lib/api'
 import {
@@ -26,8 +25,7 @@ import { ResourcePools } from './ResourcePools'
 import { SheetEquipment } from './SheetEquipment'
 import { SkillsPanel } from './SkillsPanel'
 import { Vitals } from './Vitals'
-import { spellChoiceName } from './promptNames'
-import { collectionOfKind, kindOf, slugOf } from '@/domain'
+import { SheetSpells } from './SheetSpells'
 
 import { abilitiesInOrder, signed, titleCase } from '@/domain'
 import { useT } from '@/lib/i18n'
@@ -55,11 +53,17 @@ import { abilityAbbr, abilityName } from './labels'
 export function SheetBody({
   sheet: s,
   onEquipment,
+  characterId,
+  onChanged,
   pending = false,
 }: {
   sheet: Sheet
   /** Posts an inventory edit. Absent on a sheet that is only being read. */
   onEquipment?: (changes: Change[]) => void
+  /** The character being edited; lets its owner prepare spells. Absent on a sheet only being read. */
+  characterId?: string
+  /** Called after the Spells tab wrote something, so the screen reloads the sheet. */
+  onChanged?: () => void
   pending?: boolean
 }) {
   // The sheet arrives with what its slugs mean: names in `catalogNames`, and
@@ -70,7 +74,6 @@ export function SheetBody({
   const skills = catalog ? bySlug(catalog.skills) : null
   const proficiencies = catalog ? bySlug(catalog.proficiencies ?? []) : null
   const items = bySlug<Item>([...(catalog?.magicItems ?? []), ...(catalog?.equipment ?? [])])
-  const spells = bySlug(catalog?.spells ?? [])
   const names = new Map(Object.entries(s.catalogNames ?? {}))
   const identity = s.identity
   // Hit Dice are a vital, drawn there; everything else spendable is on Actions.
@@ -104,7 +107,7 @@ export function SheetBody({
   const who = <IdentityTable identity={identity} names={names} />
   const abilities = <AbilityCards sheet={s} />
   const named = (collection: string, slug: string) =>
-    names.get(`${collection}:${slug}`) ?? (collection === 'spells' ? spells : items).get(slug)?.name ?? titleCase(slug)
+    names.get(`${collection}:${slug}`) ?? items.get(slug)?.name ?? titleCase(slug)
   const headed = (title: string, content: ReactNode) => (
     <Panel>
       <Stack gap="sm">
@@ -186,15 +189,8 @@ export function SheetBody({
     },
   ]
   if (s.spells.sources?.length) panels.push({
-    value: 'spells', label: t('sheet.spells'), content: <Stack gap="md">
-      {s.spells.sources.map((source) => <Panel key={source.source}><Stack gap="xs">
-        <Text fw={600}>{source.source.startsWith('rule:custom-spells') ? t('spellRules.custom') : named(collectionOfKind(kindOf(source.source)) ?? 'classes', slugOf(source.source))}</Text>
-        {(['cantrips', 'known', 'spellbook', 'prepared', 'arcanum', 'mastery'] as const).map((mode) => {
-          const list = source[mode] ?? []
-          return list.length === 0 ? null : <ItemList key={mode} label={spellChoiceName(t, mode === 'cantrips' ? 'cantrip' : mode, mode === 'prepared' ? source.preparationLimit ?? list.length : list.length)} items={list.map((slug) => named('spells', slug))} mark={(at) => <SpellIcon icon={spells.get(list[at] ?? '')?.icon} />} />
-        })}
-      </Stack></Panel>)}
-    </Stack>,
+    value: 'spells', label: t('sheet.spells'),
+    content: <SheetSpells sheet={s} characterId={characterId} onChanged={onChanged} />,
   })
   panels.push({
     value: 'equipment',

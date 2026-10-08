@@ -7,7 +7,13 @@ import { SpellDetails } from '@/features/spells/SpellDetails'
 import { castingTimeText, componentsAbbrev, levelText } from '@/features/spells/spellText'
 import type { Choosable } from './options'
 
-/** Separate sibling buttons inside one bordered box keep the row keyboard accessible. */
+/**
+ * Separate sibling buttons inside one bordered box keep the row keyboard accessible.
+ *
+ * Without `onToggle` the row is a thing to read, not to pick: the sheet draws
+ * a known spell this way, with the same icon, tags and opening detail and no
+ * Add or Remove anywhere.
+ */
 export function SpellChoiceRow({ option, spell, entries, isSelected, pending, disabled, opened, onOpen, onToggle, custom = false }: {
   custom?: boolean
   option: Choosable
@@ -19,7 +25,7 @@ export function SpellChoiceRow({ option, spell, entries, isSelected, pending, di
   disabled: boolean
   opened: boolean
   onOpen: (open: boolean) => void
-  onToggle: () => void
+  onToggle?: (() => void) | undefined
 }) {
   const t = useT()
   const isDesktop = useIsDesktop()
@@ -29,7 +35,7 @@ export function SpellChoiceRow({ option, spell, entries, isSelected, pending, di
     componentsAbbrev(t, spell.components),
   ].filter(Boolean)
   const changeSelection = () => {
-    onToggle()
+    onToggle?.()
     onOpen(false)
   }
   const removeLabel = t('list.rowAction', { label: t('common.remove'), name: option.label })
@@ -69,7 +75,7 @@ export function SpellChoiceRow({ option, spell, entries, isSelected, pending, di
               </Stack>
             </Group>
           </Button>
-          {isDesktop ? <Button
+          {onToggle === undefined ? null : isDesktop ? <Button
             size="xs" {...(isSelected ? { color: 'blue' } : {})}
             variant={isSelected ? 'subtle' : 'light'}
             aria-label={isSelected ? removeLabel : addLabel}
@@ -86,7 +92,7 @@ export function SpellChoiceRow({ option, spell, entries, isSelected, pending, di
         <ChoiceDetails
           title={option.label}
           onBack={() => onOpen(false)}
-          actions={isSelected
+          actions={onToggle === undefined ? null : isSelected
             ? <Button variant="default" aria-label={removeLabel} disabled={pending || disabled} onClick={changeSelection}>{t('common.remove')}</Button>
             : <Button disabled={pending || disabled} onClick={changeSelection}>{t('common.add')}</Button>}
           mobileSummary={<Group gap="xs">
