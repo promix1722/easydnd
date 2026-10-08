@@ -33,8 +33,10 @@ func bundle(key string, items ...file.Option) file.Option {
 	return file.Option{Kind: file.OptionBundle, Key: key, Items: items}
 }
 
-// any is "one of this category" as an option beside named items; the
-// nested prompt id is filled in by kit.
+// anyOne is "any one of this category" beside named items. It is written as
+// a nested choice here and expanded by kit into the category's members, so
+// the card is one flat list: a player picks a longsword, not "Martial
+// Weapons" and then a longsword.
 func anyOne(category string) file.Option {
 	return file.Option{Kind: file.OptionNested, Choice: &file.Choice{
 		Choose: 1, Kind: choiceKindFor["equipment"],
@@ -43,6 +45,18 @@ func anyOne(category string) file.Option {
 }
 
 var crossbow = bundle("", one("crossbow-light"), item("crossbow-bolt", 20))
+
+// firstRef is the item an option is, or starts with: a bundle is its first
+// item, the one that gives it its name.
+func firstRef(option file.Option) file.Ref {
+	if option.Ref != "" {
+		return option.Ref
+	}
+	if len(option.Items) > 0 {
+		return firstRef(option.Items[0])
+	}
+	return ""
+}
 
 // classKits is each SRD class's starting kit, asked slot by slot rather than
 // in the book's "(a) … or (b) …" pairs. The SRD text is the source
@@ -119,9 +133,11 @@ var classKits = map[string][]kitSlot{
 }
 
 // kit is a class's starting-equipment choices, one per slot, with prompt ids
-// named by the slot: "fighter/starting-equipment/body". A category pick
-// nested beside named items is "<prompt>/<category>".
-func (g *generator) kit(class string) []file.Choice {
+// named by the slot: "fighter/starting-equipment/body". A category beside
+// named items is spelled out as its members, minus any item the slot already
+// names on its own -- five javelins beside "any simple melee weapon" is one
+// javelin option, the five -- so a card is one list and never a sub-choice.
+func (g *generator) kit(class string, categories map[string][]string) []file.Choice {
 	slots, ok := classKits[class]
 	if !ok {
 		g.warnf("no starting kit for class %q", class)
@@ -135,13 +151,26 @@ func (g *generator) kit(class string) []file.Choice {
 			c.From = file.OptionSet{Kind: file.OptionSetEquipmentCategory, Category: s.category}
 		} else {
 			c.From = file.OptionSet{Kind: file.OptionSetExplicit, Options: make([]file.Option, 0, len(s.options))}
+			named := map[file.Ref]bool{}
 			for _, option := range s.options {
-				if option.Choice != nil {
-					nested := *option.Choice
-					nested.Prompt = prompt + "/" + nested.From.Category
-					option.Choice = &nested
+				if ref := firstRef(option); ref != "" {
+					named[ref] = true
 				}
-				c.From.Options = append(c.From.Options, option)
+			}
+			for _, option := range s.options {
+				if option.Choice == nil {
+					c.From.Options = append(c.From.Options, option)
+					continue
+				}
+				members, ok := categories[option.Choice.From.Category]
+				if !ok {
+					g.warnf("%s: unknown equipment category %q", prompt, option.Choice.From.Category)
+				}
+				for _, slug := range members {
+					if !named[file.Ref("item:"+slug)] {
+						c.From.Options = append(c.From.Options, one(slug))
+					}
+				}
 			}
 		}
 		out = append(out, c)

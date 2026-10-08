@@ -179,9 +179,8 @@ through it: `Prompts` asks with it and `Project` reads with it, because
 projection resolves an answer by walking the catalogue's own shape and a
 flattened question with a nested reader would silently lose the answer. The
 guard is narrow — every branch over the same list of references, every branch
-worth the same number of picks — so "a martial weapon and a shield, or two
-martial weapons" is left alone, its pool being a category and "shield, shield"
-not being a legal answer.
+worth the same number of picks — so the monk's "an artisan's tool or a
+musical instrument", two branches over different lists, is left alone.
 
 **`Repeatable` is on the choice, and only one choice has it.** A level's
 Ability Score Improvement is "+2 to one ability, or +1 to two", so the same
@@ -580,7 +579,11 @@ by its slots, and "a martial weapon and a shield, or two martial weapons"
 asked as one question was the card nobody could read. Each choice carries a
 `slot` -- `body`, `main-hand`, `off-hand`, or the kit-only `backup`, `pack`,
 `focus`, `instrument` -- which is its prompt id (`fighter/starting-equipment/off-hand`),
-the card's title, and for the three worn slots a rule: **the item chosen for
+the card's title, and for the three worn slots a rule. **A kit card is one
+list and never a sub-choice**: "a shield or any martial weapon" is written
+with the category and generated as the shield followed by every martial
+weapon, less any item the slot already names on its own (five javelins beside
+"any simple melee weapon" is one javelin option, the five). The rule: **the item chosen for
 a worn slot is equipped**, a second weapon in the off hand included, where
 everything else granted lands in the backpack. Fixed items (the cleric's
 shield, the rogue's leather armor) are still worn by an explicit change.

@@ -20,12 +20,11 @@ func TestEquipmentCategoriesValidateAndProject(t *testing.T) {
 	b := build(t).add("fighter", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 1})
 	event := domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Choices: []domain.Answer{
 		answer("fighter/starting-equipment/main-hand", "longsword"),
-		answer("fighter/starting-equipment/off-hand", "martial-weapons"),
-		answer("fighter/starting-equipment/off-hand/martial-weapons", "longsword"),
+		answer("fighter/starting-equipment/off-hand", "longsword"),
 	}}
 	invalid := event
 	invalid.Choices = append([]domain.Answer{}, event.Choices...)
-	invalid.Choices[2] = answer("fighter/starting-equipment/off-hand/martial-weapons", "plate-armor")
+	invalid.Choices[1] = answer("fighter/starting-equipment/off-hand", "plate-armor")
 	if _, err := b.s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq, invalid); err == nil {
 		t.Fatal("accepted items outside martial-weapons")
 	}
@@ -50,7 +49,7 @@ func TestEquipmentCategoriesValidateAndProject(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(resolved["fighter/starting-equipment/off-hand"].Options) != 1 {
-		t.Fatalf("saved off-hand answer lost its nested pick: %+v", resolved["fighter/starting-equipment/off-hand"])
+		t.Fatalf("saved off-hand answer: %+v", resolved["fighter/starting-equipment/off-hand"])
 	}
 }
 

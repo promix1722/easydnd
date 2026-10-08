@@ -228,8 +228,8 @@ func TestPromptIDsAreGloballyUnique(t *testing.T) {
 		}
 		seen[choice.Prompt] = true
 	})
-	if total < 127 {
-		t.Fatalf("walked %d prompts, expected at least the 127 the compendium poses", total)
+	if total < 112 {
+		t.Fatalf("walked %d prompts, expected at least the 112 the compendium poses", total)
 	}
 	t.Logf("checked %d prompt ids", total)
 }

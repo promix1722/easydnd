@@ -36,10 +36,7 @@ import (
 // # The guard
 //
 // Everything that is not exactly this shape comes back untouched, which is
-// every starting-kit prompt and the monk's tools. The fighter's off hand --
-// "a shield, or any martial weapon" -- is the one to keep in mind: its
-// branch's pool is an equipment *category* rather than a list of references,
-// and flattening it would make "a shield and a shield" a legal answer.
+// every starting-kit prompt and the monk's tools.
 func oneList(c *rules.Choice) *rules.Choice {
 	if c == nil || c.Choose != 1 || c.From.Kind != rules.OptionsExplicit {
 		return c

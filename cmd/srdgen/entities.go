@@ -339,6 +339,14 @@ func (g *generator) classes() error {
 	if err != nil {
 		return err
 	}
+	cats, err := read[upEquipmentCategory](g, "5e-SRD-Equipment-Categories.json")
+	if err != nil {
+		return err
+	}
+	categories := map[string][]string{}
+	for _, cat := range cats {
+		categories[cat.Index] = indexes(cat.Equipment)
+	}
 	out := make([]file.Class, 0, len(ups))
 	for _, up := range ups {
 		c := file.Class{
@@ -350,7 +358,7 @@ func (g *generator) classes() error {
 			StartingEquipment:  stacks(up.StartingEquipment),
 			// Hand-written, slot by slot, rather than read from upstream's
 			// "(a) or (b)" pairs: see kits.go.
-			StartingEquipmentOptions: g.kit(up.Index),
+			StartingEquipmentOptions: g.kit(up.Index, categories),
 			Subclasses:               indexes(up.Subclasses),
 		}
 		// SRD 5.1 explicitly includes a quiver with these arrows; upstream

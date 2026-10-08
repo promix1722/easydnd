@@ -81,16 +81,89 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "barbarian/starting-equipment/main-hand/martial-melee-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "martial-melee-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:battleaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:flail",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:glaive",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatsword",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:halberd",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:lance",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:longsword",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:maul",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:morningstar",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:pike",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:rapier",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:scimitar",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortsword",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:trident",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:war-pick",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:warhammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:whip",
+              "count": 1
             }
           ]
         },
@@ -109,16 +182,69 @@
               "count": 2
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "barbarian/starting-equipment/off-hand/simple-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:crossbow-light",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dart",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sling",
+              "count": 1
             }
           ]
         },
@@ -349,16 +475,74 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "bard/starting-equipment/main-hand/simple-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:crossbow-light",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dart",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sling",
+              "count": 1
             }
           ]
         },
@@ -398,16 +582,49 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "bard/starting-equipment/instrument/musical-instruments",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "musical-instruments"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:bagpipes",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:drum",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dulcimer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:flute",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:lyre",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:horn",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:pan-flute",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shawm",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:viol",
+              "count": 1
             }
           ]
         },
@@ -721,16 +938,69 @@
               ]
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "cleric/starting-equipment/backup/simple-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dart",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sling",
+              "count": 1
             }
           ]
         },
@@ -887,16 +1157,54 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "druid/starting-equipment/main-hand/simple-melee-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-melee-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
             }
           ]
         },
@@ -915,16 +1223,74 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "druid/starting-equipment/off-hand/simple-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:crossbow-light",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dart",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sling",
+              "count": 1
             }
           ]
         },
@@ -1086,16 +1452,119 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "fighter/starting-equipment/off-hand/martial-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "martial-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:battleaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:flail",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:glaive",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greataxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatsword",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:halberd",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:lance",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:longsword",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:maul",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:morningstar",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:pike",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:rapier",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:scimitar",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortsword",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:trident",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:war-pick",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:warhammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:whip",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:blowgun",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:crossbow-hand",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:crossbow-heavy",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:longbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:net",
+              "count": 1
             }
           ]
         },
@@ -1421,16 +1890,74 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "monk/starting-equipment/main-hand/simple-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:crossbow-light",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dart",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sling",
+              "count": 1
             }
           ]
         },
@@ -1565,16 +2092,119 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "paladin/starting-equipment/off-hand/martial-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "martial-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:battleaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:flail",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:glaive",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greataxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatsword",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:halberd",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:lance",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:longsword",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:maul",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:morningstar",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:pike",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:rapier",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:scimitar",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortsword",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:trident",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:war-pick",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:warhammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:whip",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:blowgun",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:crossbow-hand",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:crossbow-heavy",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:longbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:net",
+              "count": 1
             }
           ]
         },
@@ -1593,16 +2223,69 @@
               "count": 5
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "paladin/starting-equipment/backup/simple-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:crossbow-light",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dart",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sling",
+              "count": 1
             }
           ]
         },
@@ -1782,16 +2465,54 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "ranger/starting-equipment/main-hand/simple-melee-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-melee-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
             }
           ]
         },
@@ -1810,16 +2531,54 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "ranger/starting-equipment/off-hand/simple-melee-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-melee-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
             }
           ]
         },
@@ -2279,16 +3038,69 @@
               ]
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "sorcerer/starting-equipment/main-hand/simple-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dart",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sling",
+              "count": 1
             }
           ]
         },
@@ -2307,16 +3119,29 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "sorcerer/starting-equipment/focus/arcane-foci",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "arcane-foci"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:crystal",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:orb",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:rod",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:staff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:wand",
+              "count": 1
             }
           ]
         },
@@ -2451,16 +3276,69 @@
               ]
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "warlock/starting-equipment/main-hand/simple-weapons",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "simple-weapons"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:club",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dagger",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:greatclub",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:handaxe",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:javelin",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:light-hammer",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:mace",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:quarterstaff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sickle",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:spear",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:dart",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:shortbow",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:sling",
+              "count": 1
             }
           ]
         },
@@ -2489,16 +3367,29 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "warlock/starting-equipment/focus/arcane-foci",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "arcane-foci"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:crystal",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:orb",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:rod",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:staff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:wand",
+              "count": 1
             }
           ]
         },
@@ -2642,16 +3533,29 @@
               "count": 1
             },
             {
-              "kind": "nested",
-              "choice": {
-                "prompt": "wizard/starting-equipment/focus/arcane-foci",
-                "choose": 1,
-                "kind": "equipment",
-                "from": {
-                  "kind": "equipment-category",
-                  "category": "arcane-foci"
-                }
-              }
+              "kind": "ref",
+              "ref": "item:crystal",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:orb",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:rod",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:staff",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:wand",
+              "count": 1
             }
           ]
         },
