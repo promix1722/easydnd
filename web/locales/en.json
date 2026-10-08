@@ -71,7 +71,6 @@
   "build.reason.empty": "nothing left in it",
   "build.reason.notOffered": "no longer offered",
   "build.rejected": "The server did not accept that",
-  "build.subtitleComplete": "Everything required is answered. What is left is optional.",
   "characters.classes": "Classes",
   "characters.copy": "Copy",
   "characters.deleteFolder": "Delete folder",

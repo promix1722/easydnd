@@ -156,10 +156,11 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
           const detail = count > 0 ? option.detail : undefined
           const described = detail !== undefined
           return (
-            // The button keeps its own padding, so its focus ring is the full
-            // width of the box rather than a frame hugging the name; the
+            // The focus ring goes round the whole box (`.picked-option` in
+            // app.css), not the button: a ring on the button alone framed the
+            // name and left the description hanging out underneath it. The
             // description is padded to where a button puts its label (15px).
-            <Stack key={option.key} gap={0} style={described ? {
+            <Stack key={option.key} gap={0} {...(described ? { className: 'picked-option' } : {})} style={described ? {
               background: 'var(--mantine-primary-color-light)',
               borderRadius: 'var(--mantine-radius-default)',
             } : undefined}>
@@ -218,9 +219,10 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
               contain.
             */}
             {detail !== undefined && (
-              // Smaller and dimmed, so it reads as about the option rather
-              // than as another one.
-              <Box pb="xs" px={15} c="dimmed">
+              // Smaller, so it reads as about the option rather than as
+              // another one -- but not dimmed: grey on the picked colour is
+              // not legible.
+              <Box pb="xs" px={15}>
                 <Markdown size="xs">{detail}</Markdown>
               </Box>
             )}

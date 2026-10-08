@@ -269,6 +269,13 @@ describe('StagePanel', () => {
     expect(decided.closest('[data-highlighted="true"]')).toBeNull()
   })
 
+  it('does not mark an optional question', () => {
+    renderAt(viewport, panel([], [{ ...SKILLS, optional: true }]))
+
+    const offered = screen.getByRole('button', { name: /2 to be proficient in/ })
+    expect(offered.closest('[data-highlighted="true"]')).toBeNull()
+  })
+
   it('opens nothing of its own accord, and reports what was pressed', async () => {
     const user = setupUser()
     const onOpen = vi.fn()

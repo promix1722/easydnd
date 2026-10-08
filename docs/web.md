@@ -1219,14 +1219,14 @@ dialog, because it asks nothing.
 ## The build screen is a loop, not a wizard
 
 `features/character/BuildScreen` reads `/prompts`, `/events` and `/sheet`, and
-draws up to nine tabs -- Cantrips and Spells only for a caster, Equipment only
-while a starting kit is still being chosen, see [Builder choice
+draws up to ten tabs -- Cantrips and Spells only for a caster, Equipment only
+on a visit that was asked about a starting kit, see [Builder choice
 behavior](#builder-choice-behavior). It is still a loop rather than an N-step wizard, and it has to
 be: prompts nest -- answering the "two skills" branch of a rogue's Expertise is
 what brings the two-skill prompt into existence -- so the total number of steps
 is not knowable until the last one is answered. The tabs are not steps. They
-are display categories in the order `domain/stages.ts` states: identity, class,
-abilities, race, background, personality, cantrips, spells, equipment. Spell and equipment
+are display categories in the order `domain/stages.ts` states: rules, identity,
+class, abilities, race, background, cantrips, spells, equipment, personality. Spell and equipment
 choices use their kind to select a tab; other choices use the server's group.
 Saved answers use the same mapping, with prompt IDs as a fallback for older
 events without choice metadata. Rule ownership remains class/race/background.
@@ -1235,7 +1235,7 @@ choices hang off -- and the scores straight after it, because they are
 what the class was picked *for*: a barbarian wants the 15 in Strength, and
 deciding that while the class is still the last thing you looked at is the
 difference between building a character and filling in a form. Personality is
-the only tab that asks nothing about the rules -- see
+last, and the only tab that asks nothing about the rules -- see
 [below](#who-the-character-is-is-its-own-tab-and-its-own-words).
 
 ### The tabs are a deck, so a phone can swipe between them
@@ -1297,8 +1297,11 @@ a focused slide into view and emits the same `select` a swipe does. Nothing in
 `TabDeck` implements it, which is worth saying because the obvious hand-rolled
 version is a focus handler that fights the one already there.
 
-The screen opens on the first category with something required outstanding,
-and that is the whole of the help it offers: **answering does not move you**.
+The screen opens on the first category with something required outstanding --
+and, for a character with nothing required left, on the first tab. It used to
+fall back to the first tab with *anything* open, and since a custom spell is
+on offer to every character for ever, Edit opened a finished fighter on
+Cantrips. That is the whole of the help it offers: **answering does not move you**.
 A tab changes when a tab is pressed, and never on the way back from a write --
 answering one question is not a request to be asked another, and a player who
 has just chosen barbarian is usually looking at what barbarian brought with
@@ -1307,16 +1310,21 @@ did: see
 [Creating is answering the first question](#creating-is-answering-the-first-question).
 There is no Next in the tab row for the same reason: the order is the player's,
 and a control that walks the tabs in the server's order is a wizard's stride in
-a screen that is not a wizard. `Finish` sits against the last tab rather than
-across the row from it, because it is the thing to do after them.
+a screen that is not a wizard. `Finish` is on the trail's line, in `Page`'s
+`actions`, because it acts on the character rather than on the tabs.
 
 A `Next` does appear **under the list, once a tab has nothing left to answer**,
 and only then. That is not navigation -- the tabs are always there -- it is the
 end of a piece of work saying where the next piece is, at the moment when that
-is the only thing left to say. It goes to the next category with something
-*required* still open, wrapping round, and it names none of them: a finished
-character always has an optional prompt somewhere, and a Next that walked to
-that would never let anybody stop.
+is the only thing left to say. It goes to the next later category with anything
+still open, optional included -- that is how a player reaches Personality --
+and wraps round only for *required* work. The standing offer of a custom
+spell (`purpose: custom`) is not followed: it is open on every character, and
+Next walked a fighter through Cantrips and Spells because of it. **With nowhere left to go and
+nothing required open, Next is Finish**: it lands on the sheet, the same as
+the button on the trail. Until the character is complete the last tab has no
+Next. The build screen no longer prints a line saying everything required is
+answered; the filled Finish and a Next that leaves say it.
 
 Three requests, because they answer three different questions: `/prompts` says
 what is still open, `/events` says what was decided and in which entry, and
@@ -1750,8 +1758,9 @@ this.
 
 ### Who the character is is its own tab, and its own words
 
-`personality` is the last tab and the only one that asks nothing about the
-rules: a personality trait, an ideal, a bond, a flaw and an alignment. They are
+`personality` is the last tab -- after spells and equipment, since none of it
+is required and the character can be played without it -- and the only one
+that asks nothing about the rules: a personality trait, an ideal, a bond, a flaw and an alignment. They are
 the *background's* questions -- it is the acolyte entry that suggests what an
 acolyte tends to believe -- and they used to sit under background for exactly
 that reason, which put five questions nobody has to answer in front of the one
@@ -1970,7 +1979,10 @@ placement as well.
 ### What the sheet says about an unfinished character
 
 A badge on the name reading **Unfinished**, and only when `/prompts` comes back
-with something in it. The badge is the whole message: the sheet does not
+with `complete: false`. Not "with something in it", which is what it used to
+test: optional prompts stay open for ever -- an alignment, a custom spell --
+so the badge never came off a finished character, and the build screen and
+the sheet disagreed about the same response. The badge is the whole message: the sheet does not
 enumerate what is open, because enumerating it put the build screen's work on
 the page nobody came to build on -- an alert, a list of five questions, and the
 sheet itself pushed below the fold on a phone. The screen that answers a
@@ -4056,12 +4068,21 @@ Two things about that are the frontend's to keep working:
 
 Creation and level-up use the same tabs and server prompts. Cantrips and
 Spells have separate tabs; all equipment choices live in the final Equipment
-tab, and nothing else does. **That tab is drawn only while a starting-kit
-question is still open.** The kit is asked once -- by the first class, at level
-1 -- and its answers seed the inventory; after that the character's things are
-edited on the sheet's Equipment and Items tabs, so an answered kit keeps no tab
-here, Edit and Level up never show one, and the spell tabs' Next and save land
-on the tab after them with work or stay put. Reopening the level-1 class choice
+tab, and nothing else does. **That tab is drawn on a visit that was asked a
+starting-kit question, and stays for the rest of that visit** -- answering the
+kit used to take the tab away mid-creation, and the answer with it. The kit is
+asked once -- by the first class, at level 1 -- and its answers seed the
+inventory; after that the character's things are edited on the sheet's
+Equipment and Items tabs, so a visit that opens with the kit already answered
+draws no tab: Edit and Level up never show one. There is no stored "finished"
+flag, so "creating" is exactly "this visit saw a kit prompt"; leaving a
+half-built character and coming back with the kit answered hides the tab too.
+The spell tabs' Next and save land on the tab after them with work or stay put.
+
+**Editing is the creation screen, locked where it is final.** The Rules tab of
+an existing character draws the same ruleset form and the same pack buttons as
+creation, disabled, with "This choice is final" -- not a summary card and a
+text list, which read as a different screen. Reopening the level-1 class choice
 re-poses the kit, and the tab comes back with it. A selection
 changes a card in place: choosing, confirming, reopening, or replacing it must
 not sort the wizard's question cards. Spell choices have an explicit selected
@@ -4115,8 +4136,12 @@ bought.
 A picked option and its description are one box, in the picked colour; the
 description is beside the button rather than inside it only because it is
 Markdown. The box owns the horizontal padding, so the name and the description
-start on one left edge, and the description is smaller and dimmed so it reads as
-being about the option rather than as another one. An item's numbers (damage,
+start on one left edge, and the description is smaller so it reads as
+being about the option rather than as another one -- not dimmed, because grey
+on the picked colour is not legible. The focus ring is drawn round the whole
+box (`.picked-option` in `ui/app.css`), not round the button, which framed the
+name and left the description outside. An optional block gets no accent
+border: that border means "still has to be answered". An item's numbers (damage,
 range, weight, cost) are one line joined by middle dots, not a paragraph each;
 a bundle heads each component with its name in bold. One of a category is named by the category: "Arcane Foci", not
 "1 × Arcane Foci"
@@ -4197,7 +4222,7 @@ and Back controls. A single Next button
 sits immediately after the selected list beside the count, followed by filters
 and available results. There is no second Next button at the bottom. With no
 draft, Next navigates directly; with a valid draft it saves first, then advances
-from Cantrips to Spells or from Spells to Equipment. Invalid or failed saves
+from Cantrips to Spells or from Spells to the next tab with work. Invalid or failed saves
 keep the draft and the current tab in place.
 Selected spells stay visible under every filter. Add remains inside each box,
 and a full selection still allows previews. Confirmation is blocked while

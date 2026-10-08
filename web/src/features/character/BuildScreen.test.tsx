@@ -843,6 +843,8 @@ describe('BuildScreen', () => {
       }] },
     })
     renderBuild(viewport)
+    // Nothing here is required, so the screen opens on the first tab.
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
 
     await user.type(await screen.findByLabelText('Personality trait'), 'I trust strangers.')
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
@@ -877,8 +879,10 @@ describe('BuildScreen', () => {
     try {
       renderBuild(viewport)
 
-      await screen.findByRole('tab', { name: 'Personality' })
-      expect(current()).toBe('Personality')
+      // Nothing here is required, so the screen opens on the first tab.
+      const personality = await screen.findByRole('tab', { name: 'Personality' })
+      expect(current()).toBe('Rules')
+      await user.click(personality)
       const bond = await screen.findByLabelText('Bond')
       await waitFor(() => expect(bond).toHaveFocus())
       await user.type(bond, 'asdfda')
@@ -946,7 +950,7 @@ describe('BuildScreen', () => {
     await user.click(await panel('class').findByRole('button', { name: 'Confirm' }))
 
     await screen.findByRole('tab', { name: 'Cantrips' })
-    expect(tabs().slice(-2)).toEqual(['Cantrips', 'Spells'])
+    expect(tabs().slice(-3)).toEqual(['Cantrips', 'Spells', 'Personality'])
   })
 
   // One mount, walked across three tabs: each shows only what belongs to it,
@@ -1047,6 +1051,17 @@ describe('BuildScreen', () => {
     expect(await screen.findByText('sheet')).toBeInTheDocument()
   })
 
+  it('finishes from Next when there is no tab left to go to', async () => {
+    const user = setupUser()
+    mockApi({ prompts: FINISHED, events: LEVELLED_LOG })
+    renderBuild(viewport)
+
+    await screen.findByRole('button', { name: 'Finish' })
+    await user.click(panel('rules').getByRole('button', { name: 'Next' }))
+
+    expect(await screen.findByText('sheet')).toBeInTheDocument()
+  })
+
   // Two readings of the same finished character, from one mount: what the
   // bottom row offers, and what the class tab says about the level it took.
   // Neither writes anything, so re-mounting to ask the second question would
@@ -1056,12 +1071,12 @@ describe('BuildScreen', () => {
     mockApi({ prompts: FINISHED, events: LEVELLED_LOG })
     renderBuild(viewport)
 
-    // Finish is the only control on the row: there is no Next, because the
-    // order to answer things in is the player's and the tabs already say what
-    // the categories are.
+    // A finished character opens on the first tab, and with nowhere left to
+    // send anybody its Next is a second Finish.
     const finish = await screen.findByRole('button', { name: 'Finish' })
     expect.soft(finish).toHaveAttribute('data-variant', 'filled')
-    expect.soft(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
+    expect.soft(current()).toBe('Rules')
+    expect.soft(panel('rules').getByRole('button', { name: 'Next' })).toBeInTheDocument()
 
     // Advancement is the class story continued, so a level that was taken
     // sits on the class tab rather than under a tab of its own.
@@ -1181,6 +1196,8 @@ describe('BuildScreen', () => {
     const user = setupUser()
     mockApi({ prompts: ALIGNMENT, events: BACKGROUND_LOG })
     renderBuild(viewport)
+    // Nothing here is required, so the screen opens on the first tab.
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
 
     await user.click(await screen.findByRole('button', { name: 'Neutral' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
@@ -1237,6 +1254,8 @@ describe('BuildScreen', () => {
     const user = setupUser()
     mockApi({ prompts: TRAITS_OPEN, events: BACKGROUND_LOG })
     renderBuild(viewport)
+    // Nothing here is required, so the screen opens on the first tab.
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
 
     await user.type(
       await screen.findByLabelText('Personality trait'),
@@ -1831,7 +1850,7 @@ it('places spell and equipment questions in their own tabs', async () => {
   })
   renderBuild('mobile')
   await screen.findByRole('tab', { name: 'Spells' })
-  expect(tabs().slice(-2)).toEqual(['Spells', 'Equipment'])
+  expect(tabs().slice(-3)).toEqual(['Spells', 'Equipment', 'Personality'])
   expect(current()).toBe('Spells')
   expect(panel('spells').queryByRole('combobox', { name: 'Spell selection' })).not.toBeInTheDocument()
   expect(panel('equipment').getAllByRole('button', { name: /Starting equipment/ })).toHaveLength(2)
@@ -1849,10 +1868,10 @@ it('places spell and equipment questions in their own tabs', async () => {
 // had picked saw nothing picked, and had just unpicked it.
 /**
  * The starting kit is asked once and seeds the inventory; after that the
- * character's things are edited on the sheet. So an answered kit keeps no
- * Equipment tab here -- it is drawn only while a kit question is still open.
+ * character's things are edited on the sheet. So a visit that opens with the
+ * kit already answered -- Edit -- draws no Equipment tab.
  */
-it('drops the Equipment tab once the starting kit is answered', async () => {
+it('draws no Equipment tab when the starting kit was answered before this visit', async () => {
   const weapon = {
     choice: { prompt: 'wizard/starting-equipment/0', kind: 'equipment', choose: 1, from: { kind: 'explicit', options: [
       { key: 'quarterstaff', kind: 'ref', ref: 'item:quarterstaff', count: 1 },
@@ -1875,6 +1894,50 @@ it('drops the Equipment tab once the starting kit is answered', async () => {
   expect(screen.queryByRole('tab', { name: 'Equipment' })).not.toBeInTheDocument()
   expect(screen.queryByText(/Starting equipment/i)).not.toBeInTheDocument()
   expect(posted).toHaveLength(0)
+})
+
+it('keeps the Equipment tab for the rest of a visit that was asked about the kit', async () => {
+  const user = setupUser()
+  const kit = {
+    choice: { prompt: 'wizard/starting-equipment/0', kind: 'equipment', choose: 1, from: { kind: 'explicit', options: [
+      { key: 'dagger', kind: 'ref', ref: 'item:dagger', count: 1 },
+    ] } },
+    source: 'class:wizard', group: 'class', optional: true, heldOnly: false, event: { type: 'class', ref: 'class:wizard', level: 1 },
+  }
+  // Any write stands in for the kit's own answer: what matters is that the
+  // prompts come back without an equipment question.
+  mockApi({
+    prompts: { seq: 1, complete: false, prompts: [kit, {
+      choice: { prompt: 'character/class', choose: 1, kind: 'class', from: { kind: 'explicit', options: [
+        { key: 'wizard', kind: 'text', text: 'Wizard' },
+      ] } },
+      group: 'class', optional: false, event: { type: 'class', level: 1 }, heldOnly: false,
+    }] },
+    then: { seq: 2, complete: true, prompts: [] },
+    thenEvents: { seq: 2, events: [INIT, { seq: 2, type: 'class', source: 'class', ref: 'class:wizard', level: 1 }] },
+  })
+  renderBuild('mobile')
+  await screen.findByRole('tab', { name: 'Equipment' })
+  await user.click(await panel('class').findByRole('button', { name: 'Confirm' }))
+
+  await waitFor(() => expect(writes()).toHaveLength(1))
+  await waitFor(() => expect(panel('equipment').queryByRole('button', { name: /Starting equipment/ })).not.toBeInTheDocument())
+  expect(screen.getByRole('tab', { name: 'Equipment' })).toBeInTheDocument()
+})
+
+it('does not send Next to a spell tab that only offers a custom spell', async () => {
+  const user = setupUser()
+  const custom = (mode: string) => ({
+    choice: { prompt: `custom/spell/${mode}`, kind: 'spell', choose: 1, from: { kind: 'explicit', options: [] } },
+    source: 'rule:custom-spells', group: 'class', purpose: 'custom', optional: true, upTo: true, heldOnly: false, event: { type: 'change' },
+  })
+  mockApi({ prompts: { seq: 1, complete: true, prompts: [custom('cantrip'), custom('known')] } })
+  renderBuild('mobile')
+  await screen.findByRole('tab', { name: 'Cantrips' })
+
+  await user.click(panel('rules').getByRole('button', { name: 'Next' }))
+
+  expect(await screen.findByText('sheet')).toBeInTheDocument()
 })
 
 it('saves the merged spell picker as a batch of legal per-level answers', async () => {

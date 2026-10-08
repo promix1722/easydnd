@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent } from '@/lib/api'
 import { CatalogScope } from '@/lib/api/catalogScope'
 import { characterPath } from '@/lib/api/characters'
-import type { Change, Prompt, Sheet } from '@/lib/api'
+import type { Change, Sheet } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import { Avatar, characterAvatar, Badge, Button, Group, ModalSheet, NumberInput, Page, Stack, Text, pageState } from '@/ui'
@@ -21,11 +21,11 @@ interface SheetView {
   maxLevel: number
   sheet: Sheet
   /**
-   * Null when `/prompts` failed. The list of what is left is worth having and
+   * Null when `/prompts` failed. Whether anything is left is worth having and
    * is not worth losing the sheet over -- a sheet that refuses to draw because
    * a second request failed is a page that fails for a reason it is not about.
    */
-  prompts: Prompt[] | null
+  complete: boolean | null
 }
 
 
@@ -73,7 +73,7 @@ export function CharacterSheetScreen() {
       getSheet(id, signal),
       getPrompts(id, signal).then((response) => response, () => null),
     ])
-    return { sheet: projected, prompts: prompts?.prompts ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL }
+    return { sheet: projected, complete: prompts?.complete ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL }
   })
 
   // Read the log's head at the moment of writing: the sheet does not carry a
@@ -106,7 +106,6 @@ export function CharacterSheetScreen() {
 
   const s = sheet.data.sheet
   const identity = s.identity
-  const outstanding = sheet.data.prompts ?? []
 
   return (
     <Page
@@ -121,11 +120,15 @@ export function CharacterSheetScreen() {
        * news is a badge on the name -- where a rank or "Read only" already
        * goes -- and the way in is a button that is always there.
        *
+       * Unfinished is the server's `complete`, not "anything still open": an
+       * optional question -- an alignment, a custom spell -- is open on every
+       * character for ever, and counting those left the badge on for good.
+       *
        * A `/prompts` that failed is `null`, deliberately survivable, and draws
        * no badge: silence is the right answer to a question that could not be
        * asked, where "unfinished" would be a guess.
        */
-      {...(outstanding.length > 0
+      {...(sheet.data.complete === false
         ? { badge: <Badge variant="light">{t('sheet.unfinished')}</Badge> }
         : {})}
       /*

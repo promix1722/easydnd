@@ -65,20 +65,14 @@ export function PackSelector({
       setPending(false)
     }
   }
-  const form = finalized ? (
-    <Stack gap="sm">
-      {(value?.packs ?? []).map((release) => <Group key={release.id} justify="space-between">
-        <Text size="sm">{list.data?.packs.find((p) => p.id === release.id)?.title ?? release.id} v{release.version}</Text>
-      </Group>)}
-      <Text size="xs" c="dimmed">{t('ruleset.final')}</Text>
-      {children}
-    </Stack>
-  ) : (
+  // Finalized is the same list with everything locked, so editing a
+  // character shows the form it was created on.
+  const form = (
     <Stack gap="md" ref={surfaceRef}>
       {list.error && <Alert>{describeError(t, list.error)}</Alert>}
       <Stack gap="xs">
         {(list.data?.packs ?? [])
-          .filter((p) => !p.archived && p.releases.length > 0)
+          .filter((p) => (!p.archived || selected.some((r) => r.id === p.id)) && p.releases.length > 0)
           .flatMap((p) => [...p.releases].reverse().map((release) => {
             const chosen = selected.some((r) => r.id === p.id && r.version === release.version)
             return (
@@ -89,7 +83,7 @@ export function PackSelector({
                 justify="flex-start"
                 h="auto"
                 py="xs"
-                disabled={disabled || pending}
+                disabled={disabled || pending || finalized}
                 onClick={() => {
                   const remaining = selected.filter((r) => r.id !== p.id)
                   select(chosen ? remaining : [...remaining, release])
@@ -100,7 +94,7 @@ export function PackSelector({
             )
           }))}
       </Stack>
-      <Group>
+      {!finalized && <Group>
         <Button
           disabled={disabled || selected.length === 0 || list.data === null}
           loading={pending}
@@ -111,8 +105,8 @@ export function PackSelector({
         {selected.length > 0 && <Button variant="subtle" disabled={disabled || pending} onClick={() => select([])}>
           {t('prompt.clear')}
         </Button>}
-      </Group>
-      <Text size="xs" c="dimmed">{t('packs.dependenciesHint')}</Text>
+      </Group>}
+      <Text size="xs" c="dimmed">{t(finalized ? 'ruleset.final' : 'packs.dependenciesHint')}</Text>
       {value && <Text size="xs" c="dimmed">
         {t('packs.included')}: {value.packs.map((p) => `${p.id}@${p.version}`).join(', ')}
       </Text>}

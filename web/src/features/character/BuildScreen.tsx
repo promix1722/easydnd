@@ -187,6 +187,7 @@ export function BuildScreen() {
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [seeded, setSeeded] = useState(false)
   const [askedOn, setAskedOn] = useState<Stage | null>(null)
+  const [kitSeen, setKitSeen] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [imageDraft, setImageDraft] = useState<string | undefined>(undefined)
   const [draftRules, setDraftRules] = useState<Change[] | null>(null)
@@ -277,12 +278,18 @@ export function BuildScreen() {
   // has a saved selection to edit. A non-caster should never have to pass
   // through empty Cantrips and Spells tabs.
   //
-  // Equipment is stricter: only while a starting kit is still being chosen.
-  // The kit is asked once, by the first class at level 1, and it seeds the
-  // inventory; what the character carries after that is edited on the sheet,
-  // so a saved answer keeps no tab here and a level-up never sees one.
+  // Equipment is stricter: only for a visit that was asked about a starting
+  // kit. The kit is asked once, by the first class at level 1, and it seeds
+  // the inventory; what the character carries after that is edited on the
+  // sheet, so Edit and a level-up never see the tab. Answering the kit does
+  // not take the tab away mid-creation, though: the answer stays changeable
+  // until the player leaves.
+  // ponytail: "creating" is "this visit saw a kit prompt" -- coming back to a
+  // half-built character with the kit answered hides the tab. A stored
+  // finished flag is the upgrade.
   const asked = (each: Stage) => open.some((prompt) => stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each)
-  const visibleStages = STAGES.filter((each) => each === 'equipment' ? asked(each) : each !== 'cantrips' && each !== 'spells' ||
+  if (!kitSeen && asked('equipment')) setKitSeen(true)
+  const visibleStages = STAGES.filter((each) => each === 'equipment' ? kitSeen || asked(each) : each !== 'cantrips' && each !== 'spells' ||
     asked(each) ||
     (settled.get(each)?.length ?? 0) > 0 || view.sheet?.customOptions?.some((option) => option.kind === (each === 'cantrips' ? 'cantrip' : 'spell')))
   const preferredStage = chosenStage ?? (isNew ? 'rules' : firstUnfinished(open))
@@ -685,9 +692,6 @@ export function BuildScreen() {
               </Button>
             ),
           })}
-      {...(!posingName && view.prompts.complete
-        ? { subtitle: t('build.subtitleComplete') }
-        : {})}
     >
       <Panel>
         <Stack gap="lg">
@@ -730,6 +734,11 @@ export function BuildScreen() {
                 ? <CustomOptionsPanel id={id} stage={on} modal={on === stage} sheet={view.sheet} revision={view.prompts.revision ?? view.prompts.seq} onSaved={() => build.refresh()} draft={customDraft} onDraft={setCustomDraft} />
                 : null
               const after = each === 'rules' && isNew && draftRules !== null ? 'personal' : stageAfter(each, open)
+              // Next with nowhere left to go is Finish, once nothing required
+              // is open; until then there is no Next on the last tab.
+              const next = after !== null ? () => goToStage(after)
+                : !posingName && view.prompts.complete ? () => void navigate(`/characters/${id}`)
+                : undefined
               return {
                 value: each,
                 label: stageLabel(t, each),
@@ -751,7 +760,7 @@ export function BuildScreen() {
                     onAnswers={(submissions) => void saveSpells(submissions, each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : after ?? each)}
                     pending={answer.pending || revise.pending || spellSave.pending || remove.pending || build.loading}
                     revision={view.prompts.revision ?? view.prompts.seq}
-                    {...(each === 'cantrips' && visibleStages.includes('spells') ? { onNext: () => goToStage('spells') } : after === null ? {} : { onNext: () => goToStage(after) })}
+                    {...(each === 'cantrips' && visibleStages.includes('spells') ? { onNext: () => goToStage('spells') } : next === undefined ? {} : { onNext: next })}
                   >{customs(each)}</SpellStagePanel>
                 ) : (
                   <Stack>
@@ -783,7 +792,7 @@ export function BuildScreen() {
                       creating || create.pending || answer.pending || revise.pending || remove.pending
                     }
                     fields={fields}
-                    {...(after === null ? {} : { onNext: () => goToStage(after) })}
+                    {...(next === undefined ? {} : { onNext: next })}
                     {...(posingName || asking?.prompt.choice.kind === 'text'
                       ? { name: nameDraft }
                       : {})}
@@ -1018,16 +1027,15 @@ function title(view: BuildView): string {
 /**
  * The first category with something required still open.
  *
- * Optional prompts do not count. A finished character always has one -- the
- * offer of another level -- so counting them would mean no character was ever
- * anywhere but wherever that offer lives.
+ * Optional prompts do not count. A finished character always has some -- a
+ * custom spell is on offer to everybody -- so counting them would open Edit
+ * on wherever that offer lives. With nothing required it opens the first tab.
  */
 function firstUnfinished(prompts: readonly Prompt[]): Stage {
   const required = new Set(
     prompts.filter((p) => !p.optional).flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)),
   )
-  const any = new Set(prompts.flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
-  return STAGES.find((s) => required.has(s)) ?? STAGES.find((s) => any.has(s)) ?? 'personal'
+  return STAGES.find((s) => required.has(s)) ?? 'rules'
 }
 
 /**
@@ -1035,9 +1043,13 @@ function firstUnfinished(prompts: readonly Prompt[]): Stage {
  *
  * Follow display order, including optional questions such as Personality.
  * Only wrap to an earlier tab for required work that is still outstanding.
+ *
+ * The offer of a custom spell does not count: the server makes it to every
+ * character for ever, so following it walked a fighter through Cantrips and
+ * Spells on the way to anything else.
  */
 function stageAfter(stage: Stage, prompts: readonly Prompt[]): Stage | null {
-  const all = new Set(prompts.flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
+  const all = new Set(prompts.filter((p) => p.purpose !== 'custom').flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
   const required = new Set(prompts.filter((p) => !p.optional)
     .flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
   // Someone who entered a name before choosing rules should see Rules next.

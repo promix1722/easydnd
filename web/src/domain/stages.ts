@@ -18,8 +18,9 @@ export const MAX_LEVEL = 20
  * that has not already been decided -- a racial bonus is applied by the rules,
  * not typed in here.
  *
- * Personality asks about the character. Spells and equipment follow the
- * choices that grant them, with equipment always last.
+ * Spells and equipment follow the choices that grant them. Personality asks
+ * about the character and comes last: none of it is required, so it is what
+ * is left once the character can already be played.
  * A trait, an ideal, a bond, a flaw and an alignment are who the character is
  * rather than what they can do, and they used to sit under background because
  * that is which entry suggests them -- which put five questions nobody has to
@@ -32,10 +33,10 @@ export const STAGES = [
   'abilities',
   'race',
   'background',
-  'personality',
   'cantrips',
   'spells',
   'equipment',
+  'personality',
 ] as const satisfies readonly Stage[]
 
 const STAGE_OF_GROUP: Record<string, Stage> = {

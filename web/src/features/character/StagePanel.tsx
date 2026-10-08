@@ -12,7 +12,7 @@ import type { BlockListItem } from '@/ui'
 
 import { AbilityScoresForm } from './AbilityScoresForm'
 import type { Scores } from './AbilityScoresForm'
-import { groupByLevel } from './blocks'
+import { groupByLevel, setsRuleset } from './blocks'
 import type { Asking, Block } from './blocks'
 import { DesiredLevelForm } from './DesiredLevelForm'
 import { NameForm } from './NameForm'
@@ -146,6 +146,14 @@ export function StagePanel({
   const itemFor = (block: Block): BlockListItem => {
     const open = block.key === openKey
     if (block.kind === 'settled') {
+      // The ruleset is final, but it is drawn as the form it was chosen on,
+      // locked: Edit is the screen the character was created on, not a
+      // summary of it.
+      if (setsRuleset(block.row)) return {
+        key: block.key,
+        header: <Text size="sm" fw={600}>{t('choice.ruleset')}</Text>,
+        body: open ? <RulesetForm pending={false} selected onSubmit={() => undefined} /> : null,
+      }
       const header = <SettledHeader row={block.row} />
       if (!block.changeable) return { key: block.key, header }
       return {
@@ -161,7 +169,9 @@ export function StagePanel({
     return {
       key: block.key,
       header: <OpenHeader prompt={block.prompt} names={names} />,
-      highlighted: !waiting && !(rulesSelected && block.prompt.choice.prompt === 'character/ruleset'),
+      // Optional work is offered, not called out: the accent border is for
+      // what still has to be answered.
+      highlighted: !waiting && !block.prompt.optional && !(rulesSelected && block.prompt.choice.prompt === 'character/ruleset'),
       ...(waiting ? {} : { body: open && asking !== null ? surface(asking) : null }),
     }
   }

@@ -74,3 +74,8 @@
   .chat-bubble { animation-name: chat-fade; }
   .chat-typing span { animation-name: chat-pulse; }
 }
+
+/* A picked option and its description are one box, so the focus ring is drawn
+ * round the box rather than round the button inside it. */
+.picked-option:has(:focus-visible) { outline: 2px solid var(--mantine-primary-color-filled); outline-offset: 2px; }
+.picked-option > button:focus-visible { outline: none; }

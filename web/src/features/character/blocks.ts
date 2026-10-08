@@ -102,7 +102,7 @@ function isTakenLevel(row: SettledRow): boolean {
 }
 
 /** Whether an entry is the one that recorded the ruleset, which is final. */
-function setsRuleset(row: SettledRow): boolean {
+export function setsRuleset(row: SettledRow): boolean {
   return (row.event.changes ?? []).some((change) => change.path === 'identity.ruleset')
 }
 

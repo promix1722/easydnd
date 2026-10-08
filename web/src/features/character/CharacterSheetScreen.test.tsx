@@ -135,9 +135,8 @@ function jsonResponse(body: unknown, status = 200): Response {
 /**
  * The prompts a character still has outstanding.
  *
- * Two groups on purpose: what the sheet reads off this response is only
- * whether it is empty, so a fixture with one prompt in one group would pass
- * against a screen that had gone looking at the group.
+ * What the sheet reads off this response is only `complete`: required
+ * prompts here, and the optional-only case has its own test below.
  */
 const OPEN = {
   seq: 3,
@@ -527,6 +526,15 @@ describe('an unfinished character', () => {
     expect(answer).toHaveAttribute('href', '/characters/chr_000001/build')
     expect(screen.queryByText(/A background/)).not.toBeInTheDocument()
     expect(screen.queryByText(/1 more language/)).not.toBeInTheDocument()
+  })
+
+  it('is not marked unfinished by optional prompts alone', async () => {
+    // An alignment or a custom spell is on offer for ever; the server says
+    // `complete` and the sheet believes it rather than counting what is open.
+    mockApi(SHEET, { seq: 3, complete: true, prompts: OPEN.prompts.map((prompt) => ({ ...prompt, optional: true })) })
+    await renderSheet('desktop')
+
+    expect(screen.queryByText('Unfinished')).not.toBeInTheDocument()
   })
 
   it('still draws the sheet when the prompts could not be fetched', async () => {
