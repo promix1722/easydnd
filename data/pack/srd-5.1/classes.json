@@ -6,6 +6,14 @@
       "str",
       "con"
     ],
+    "abilityPriority": [
+      "str",
+      "con",
+      "dex",
+      "wis",
+      "int",
+      "cha"
+    ],
     "proficiencies": [
       "light-armor",
       "medium-armor",
@@ -273,6 +281,14 @@
     "savingThrows": [
       "dex",
       "cha"
+    ],
+    "abilityPriority": [
+      "cha",
+      "dex",
+      "int",
+      "con",
+      "wis",
+      "str"
     ],
     "proficiencies": [
       "light-armor",
@@ -816,6 +832,14 @@
       "wis",
       "cha"
     ],
+    "abilityPriority": [
+      "wis",
+      "str",
+      "con",
+      "cha",
+      "int",
+      "dex"
+    ],
     "proficiencies": [
       "light-armor",
       "medium-armor",
@@ -1062,6 +1086,14 @@
     "savingThrows": [
       "int",
       "wis"
+    ],
+    "abilityPriority": [
+      "wis",
+      "con",
+      "int",
+      "dex",
+      "cha",
+      "str"
     ],
     "proficiencies": [
       "light-armor",
@@ -1331,6 +1363,14 @@
     "savingThrows": [
       "str",
       "con"
+    ],
+    "abilityPriority": [
+      "str",
+      "dex",
+      "con",
+      "cha",
+      "wis",
+      "int"
     ],
     "proficiencies": [
       "all-armor",
@@ -1640,6 +1680,14 @@
     "savingThrows": [
       "str",
       "dex"
+    ],
+    "abilityPriority": [
+      "dex",
+      "wis",
+      "con",
+      "str",
+      "int",
+      "cha"
     ],
     "proficiencies": [
       "simple-weapons",
@@ -2012,6 +2060,14 @@
       "wis",
       "cha"
     ],
+    "abilityPriority": [
+      "str",
+      "cha",
+      "con",
+      "wis",
+      "dex",
+      "int"
+    ],
     "proficiencies": [
       "all-armor",
       "shields",
@@ -2355,6 +2411,14 @@
       "str",
       "dex"
     ],
+    "abilityPriority": [
+      "dex",
+      "wis",
+      "con",
+      "str",
+      "cha",
+      "int"
+    ],
     "proficiencies": [
       "light-armor",
       "medium-armor",
@@ -2690,6 +2754,14 @@
       "dex",
       "int"
     ],
+    "abilityPriority": [
+      "dex",
+      "int",
+      "con",
+      "str",
+      "wis",
+      "cha"
+    ],
     "proficiencies": [
       "light-armor",
       "simple-weapons",
@@ -2957,6 +3029,14 @@
       "con",
       "cha"
     ],
+    "abilityPriority": [
+      "cha",
+      "con",
+      "dex",
+      "wis",
+      "str",
+      "int"
+    ],
     "proficiencies": [
       "daggers",
       "darts",
@@ -3188,6 +3268,14 @@
     "savingThrows": [
       "wis",
       "cha"
+    ],
+    "abilityPriority": [
+      "cha",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "str"
     ],
     "proficiencies": [
       "light-armor",
@@ -3441,6 +3529,14 @@
       "int",
       "wis"
     ],
+    "abilityPriority": [
+      "int",
+      "wis",
+      "con",
+      "dex",
+      "cha",
+      "str"
+    ],
     "proficiencies": [
       "daggers",
       "darts",
@@ -3602,6 +3698,14 @@
     "savingThrows": [
       "con",
       "int"
+    ],
+    "abilityPriority": [
+      "int",
+      "con",
+      "dex",
+      "wis",
+      "str",
+      "cha"
     ],
     "subclasses": [
       "alchemist",

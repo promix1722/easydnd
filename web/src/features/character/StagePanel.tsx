@@ -439,6 +439,7 @@ function AnswerSurface({
       <AbilityScoresForm
         {...(scores !== undefined ? { scores } : {})}
         {...(method !== undefined ? { method } : {})}
+        {...(prompt.recommended !== undefined ? { recommended: prompt.recommended } : {})}
         pending={pending}
         fields={fields}
         submitLabel={submitLabel}

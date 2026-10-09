@@ -650,6 +650,25 @@ Drafts and all private authoring/catalogue responses use `Cache-Control: no-stor
 Validation has localized reason codes, document locations, and expandable compiler
 details for diagnosing unsupported mechanics.
 
+## Class ability priority
+
+A class may carry `abilityPriority`: all six abilities, most important first --
+where its best score goes, then its second best, down to the one it can spare.
+
+```json
+{"slug": "wizard", "abilityPriority": ["int", "wis", "con", "dex", "cha", "str"]}
+```
+
+It is advice, not a rule: nothing is derived from it. The builder's **Use
+recommended** deals the ability scores out by it (docs/web.md), and the server
+passes it on only when it names every ability exactly once -- a list of four,
+or one with a repeat, is not an order six scores can be dealt by and is
+ignored. The base pack's thirteen classes each have one. They follow the
+usual advice for each class -- the casting or attacking ability first,
+Constitution high, the dump stat last -- and are a starting point to edit, not
+a ruling. The artificer's row is owned by the `easydnd-2014` export, like every
+`tce` row; its priority has to be carried there too or a re-export drops it.
+
 ## Pack and book provenance
 
 `manifest.title` optionally provides a release display name. `manifest.sources`
@@ -688,7 +707,15 @@ and structural constants do not get visible tags.
 `GET /v1/packs/spell-filters` returns accessible published packs and versions,
 book options, schools, classes and unavailable releases. `GET /v1/packs/spells`
 searches across those releases, independently resolving each dependency closure;
-incompatible cores are never combined. The latest accessible semantic version
+incompatible cores are never combined. **The exception is the default rules**:
+a release that is in the server's default lock is loaded under that whole lock
+rather than alone, and its rows carry that lock as `catalogPacks`. This is what
+lets an **overlay** reach the compendium -- a pack of prose over another pack's
+entities that defines none of its own. Alone, the base pack has no description
+for a spell the overlay describes, and the overlay's own row lists nothing,
+because no spell is *its* spell; so a spell beyond the SRD opened with its
+mechanics and an empty box. Default packs are browsed the way a new character
+meets them, together. The latest accessible semantic version
 of each non-archived pack is the default. `versions=id@version,...` overrides it.
 `pack=id,...` and `source=pack:book,...` narrow results (OR within a field, AND
 between fields and other spell filters). Existing spell query and pagination

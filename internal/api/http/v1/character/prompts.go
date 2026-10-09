@@ -41,6 +41,10 @@ type Prompt struct {
 	// answers rather than the illegal ones. Expertise is the case -- it
 	// doubles a proficiency the character already has.
 	HeldOnly bool `json:"heldOnly"`
+
+	// Recommended is the class's advice for the ability scores: every ability,
+	// most important first. Present on the ability-score prompt only.
+	Recommended []string `json:"recommended,omitempty"`
 }
 
 // PromptEvent is the event an answer must be posted as.
@@ -169,6 +173,9 @@ func promptOf(p domain.Prompt, conv catalogapi.Converter) Prompt {
 		Held:     slugStrings(p.Held),
 		Blocked:  slugStrings(p.Blocked),
 		HeldOnly: p.HeldOnly,
+	}
+	for _, ability := range p.Recommended {
+		out.Recommended = append(out.Recommended, string(ability))
 	}
 	return out
 }

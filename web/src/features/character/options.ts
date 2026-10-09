@@ -1,5 +1,5 @@
-import type { Entry, Item, Option, Prompt } from '@/lib/api'
-import { slugOf, titleCase } from '@/domain'
+import type { Entry, Item, Option, Prompt, SheetAction } from '@/lib/api'
+import { signed, slugOf, titleCase } from '@/domain'
 import type { Translate } from '@/lib/i18n'
 import { joinProse } from '@/ui'
 
@@ -14,7 +14,6 @@ import { abilityName, choiceOptionName } from './labels'
  * client cannot get it wrong.
  */
 export interface Choosable {
-  icon?: Item['icon']
   provenance?: Entry['provenance']
   /** An entry the player wrote, rather than one the rules have. */
   manual?: boolean
@@ -62,7 +61,6 @@ export function choosableOptions(
   if (set.kind !== 'explicit') {
     return [...entries.values()].map((entry) => ({
       key: entry.slug,
-      icon: prompt.choice.kind === 'equipment' ? (entry as Item).icon : undefined,
       provenance: entry.provenance,
       ...(entry.manual === true ? { manual: true } : {}),
       label: entry.name,
@@ -76,7 +74,6 @@ export function choosableOptions(
     const reason = disabledBy(t, prompt, held, option.key)
     return {
       key: option.key,
-      icon: prompt.choice.kind === 'equipment' ? (entries.get(slugOf(firstRef(option) ?? '')) as Item | undefined)?.icon : undefined,
       provenance: entries.get(slugOf(firstRef(option) ?? ''))?.provenance,
       label: optionLabel(t, option, entries),
       ...maybeDetail(detailOf(t, option, entries)),
@@ -217,7 +214,7 @@ export function optionLabel(
  * No price: starting equipment is granted, not bought, and a "Cost: 12 gp"
  * under a free pack reads as a bill. The price belongs where things are bought.
  */
-export function itemFacts(t: Translate, item: Item, name: (slug: string) => string): string | undefined {
+export function itemFacts(t: Translate, item: Item, name: (slug: string) => string, statsElsewhere = false): string | undefined {
   const facts: string[] = []
   if (item.armor !== undefined) {
     const armor = item.armor
@@ -228,14 +225,56 @@ export function itemFacts(t: Translate, item: Item, name: (slug: string) => stri
   }
   if (item.weapon !== undefined) {
     const weapon = item.weapon
-    if (weapon.damage) facts.push(t('equipment.damage', { dice: weapon.damage.dice, type: weapon.damage.type === undefined ? '' : name(weapon.damage.type) }))
+    // `statsElsewhere`: the sheet draws damage and range as captioned numbers of their own.
+    if (weapon.damage && !statsElsewhere) facts.push(t('equipment.damage', { dice: weapon.damage.dice, type: weapon.damage.type === undefined ? '' : name(weapon.damage.type) }))
     if (weapon.twoHandedDamage) facts.push(t('equipment.twoHands', { dice: weapon.twoHandedDamage.dice }))
-    if (weapon.normalRange) facts.push(t('equipment.range', { normal: weapon.normalRange, long: weapon.longRange ?? weapon.normalRange }))
+    if (weapon.normalRange && !statsElsewhere) facts.push(t('equipment.range', { normal: weapon.normalRange, long: weapon.longRange ?? weapon.normalRange }))
     if (weapon.throwNormalRange) facts.push(t('equipment.thrownRange', { normal: weapon.throwNormalRange, long: weapon.throwLongRange ?? weapon.throwNormalRange }))
     if (weapon.properties?.length) facts.push(weapon.properties.map(name).join(', '))
   }
   if (item.weight !== undefined) facts.push(t('equipment.weight', { value: item.weight }))
   return facts.length === 0 ? undefined : facts.join(' · ')
+}
+
+/** A weapon's three numbers, as `WeaponStats` draws them. Absent for anything that is not a weapon. */
+export interface WeaponNumbers {
+  damage?: string
+  hit?: string
+  range?: string
+}
+
+/**
+ * What a weapon does, from the best source there is.
+ *
+ * The sheet's action for it, when it is wielded: that is the server's sum --
+ * the die *and* the modifier, and the bonus to hit -- so the Equipment tab and
+ * the Actions tab cannot print two different numbers for one rapier. A weapon
+ * that is only carried has no action, so it falls back to what the catalogue
+ * says of any such weapon: its die and type, its range, and no bonus to hit.
+ */
+export function weaponNumbers(
+  t: Translate,
+  item: Item | undefined,
+  actions: readonly SheetAction[],
+  name: (slug: string) => string,
+): WeaponNumbers | undefined {
+  const weapon = item?.weapon
+  if (item === undefined || weapon === undefined) return undefined
+  const action = actions.find((each) => {
+    const parts = (each.origin ?? '').split(':')
+    return parts[parts.length - 2] === 'item' && parts[parts.length - 1] === item.slug
+  })
+  if (action !== undefined) return {
+    ...(action.damage ? { damage: action.damage } : {}),
+    ...(action.toHit === undefined ? {} : { hit: signed(action.toHit) }),
+    ...(action.range ? { range: t('vitals.feet', { distance: action.range }) } : {}),
+  }
+  const damage = weapon.damage === undefined ? undefined
+    : [weapon.damage.dice, weapon.damage.type === undefined ? '' : name(weapon.damage.type)].filter(Boolean).join(' ')
+  return {
+    ...(damage ? { damage } : {}),
+    ...(weapon.normalRange ? { range: t('vitals.feet', { distance: `${weapon.normalRange}/${weapon.longRange ?? weapon.normalRange}` }) } : {}),
+  }
 }
 
 function detailOf(t: Translate, option: Option, entries: Map<string, Entry>): string | undefined {

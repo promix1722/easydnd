@@ -8,7 +8,6 @@ import { ACTION_ICON_SIZE } from './actions'
 import { useIsDesktop } from './useIsDesktop'
 
 import { useT } from '@/lib/i18n'
-import type { Translate } from '@/lib/i18n'
 
 /**
  * One thing a row can be made to do, as data rather than as a button.
@@ -98,15 +97,6 @@ export interface DataListProps<T> {
   leading?: (item: T) => ReactNode
   /** Every action on the row. An empty array draws no control at all. */
   actions?: (item: T) => readonly RowAction[]
-  /**
-   * Draw the actions behind the menu at every width, not only on a phone.
-   *
-   * For a table whose rows are the page's subject rather than its plumbing:
-   * three buttons on every character makes the list read as a control panel,
-   * and the folder above it already carries its own actions behind the same
-   * glyph.
-   */
-  menuActions?: boolean
   empty?: ReactNode
 }
 
@@ -137,7 +127,6 @@ export function DataList<T>({
   badges,
   leading,
   actions,
-  menuActions,
   empty,
 }: DataListProps<T>) {
   const t = useT()
@@ -208,11 +197,7 @@ export function DataList<T>({
                 ))}
                 {anyActions && (
                   <Table.Td w={1} ta="right">
-                    <DesktopActions
-                      actions={actions(item)}
-                      name={primary?.primary === true ? primary.text(item) : ''}
-                      menu={menuActions === true}
-                    />
+                    {actions(item).length > 0 && <RowMenu actions={actions(item)} name={primary?.primary === true ? primary.text(item) : ''} />}
                   </Table.Td>
                 )}
               </Table.Tr>
@@ -359,43 +344,6 @@ function saysSomething(value: ReactNode): boolean {
   return value !== null && value !== undefined && value !== false && value !== '' && value !== '--'
 }
 
-/** Spelled out, because a wide screen has room and a table's actions should be visible. */
-function DesktopActions({
-  actions,
-  name,
-  menu,
-}: {
-  actions: readonly RowAction[]
-  name: string
-  menu: boolean
-}) {
-  const t = useT()
-  if (actions.length === 0) return null
-  // Four is where a row stops being able to lay them out -- the same threshold
-  // `FolderPanel` settled on for its own header, and the reason it has a menu.
-  if (menu || actions.length > 3) return <RowMenu actions={actions} name={name} />
-
-  return (
-    <Group gap="xs" justify="flex-end" wrap="nowrap">
-      {actions.map((action) => (
-        <Button
-          key={action.key}
-          variant="subtle"
-          // Spread rather than passed: `exactOptionalPropertyTypes` makes
-          // `color={undefined}` a different thing from omitting `color`.
-          {...(action.color === undefined ? {} : { color: action.color })}
-          {...(action.disabled === undefined ? {} : { disabled: action.disabled })}
-          {...(action.icon === undefined ? {} : { leftSection: action.icon })}
-          aria-label={accessibleName(t, action.label, name)}
-          onClick={action.onClick}
-        >
-          {action.label}
-        </Button>
-      ))}
-    </Group>
-  )
-}
-
 /**
  * Every action behind one control.
  *
@@ -427,12 +375,3 @@ function RowMenu({ actions, name }: { actions: readonly RowAction[]; name: strin
   )
 }
 
-/**
- * "Delete Ada" -- the convention every row action in the app already followed.
- *
- * A key rather than two strings joined here, because the order of the two is a
- * fact about the language and not about this component.
- */
-function accessibleName(t: Translate, label: string, name: string): string {
-  return t('list.rowAction', { label, name })
-}

@@ -202,6 +202,7 @@ type Class struct {
 	Slug                     string      `json:"slug"`
 	HitDie                   int         `json:"hitDie"`
 	SavingThrows             []string    `json:"savingThrows,omitempty"`
+	AbilityPriority          []string    `json:"abilityPriority,omitempty"`
 	Proficiencies            []string    `json:"proficiencies,omitempty"`
 	ProficiencyOptions       []Choice    `json:"proficiencyOptions,omitempty"`
 	StartingEquipment        []ItemStack `json:"startingEquipment,omitempty"`

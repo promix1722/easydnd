@@ -76,18 +76,33 @@ export function SheetBody({
   const items = bySlug<Item>([...(catalog?.magicItems ?? []), ...(catalog?.equipment ?? [])])
   const names = new Map(Object.entries(s.catalogNames ?? {}))
   const identity = s.identity
+  // A plain-number scaling value -- Extra Attacks: 1, Maneuvers: 3 -- is counted
+  // off at the table like any pool, so it is drawn as one: that many marks,
+  // spent in a game. A die, a fraction or a word has no number of uses and
+  // stays a line under Scaling values. The id is the one the game tracker
+  // spends it by.
+  const scaling = Object.entries(s.resources.parameters ?? {})
+  const countable = (value: (typeof scaling)[number][1]) =>
+    (value.number ?? 0) > 0 && !value.dice && !value.text && !value.rational && value.boolean === undefined
   // Hit Dice are a vital, drawn there; everything else spendable is on Resources.
-  const pools = Object.values(s.resources.pools ?? {}).filter((pool) => pool.max > 0 && pool.group !== 'hit-dice')
-    .sort((a, b) => a.name.localeCompare(b.name))
-  const parameters = Object.values(s.resources.parameters ?? {})
+  const pools = [
+    ...Object.values(s.resources.pools ?? {}).filter((pool) => pool.max > 0 && pool.group !== 'hit-dice')
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    ...scaling.filter(([, value]) => countable(value))
+      .map(([slug, value]) => ({ id: `scaling/${slug}`, name: value.name, group: 'scaling', max: value.number ?? 0, used: 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  ]
+  // What is left -- a die, a fraction, a word -- is not counted off, it is read:
+  // "Sneak Attack: 1d6". It is the size of a feature, so it is drawn with the
+  // features rather than in a box of its own.
+  const valued = new Map(scaling.map(([, value]) => value)
     // A zero is a value the class has not reached yet -- Brutal Critical before
     // ninth level -- and "0" on a sheet reads as a thing the character has.
-    .filter((value) => value.boolean !== false && (value.number !== 0 || !!value.dice || !!value.text || !!value.rational || value.boolean === true))
+    .filter((value) => !countable(value) && value.boolean !== false && (value.number !== 0 || !!value.dice || !!value.text || !!value.rational || value.boolean === true))
     .map((value) => {
       const amount = value.dice || value.text || (value.rational ? `${value.rational.numerator}/${value.rational.denominator}` : value.boolean ? '' : String(value.number))
-      return amount ? `${value.name}: ${amount}` : value.name
-    })
-    .sort()
+      return [value.name, amount ? `${value.name}: ${amount}` : value.name] as const
+    }))
 
   const t = useT()
   const [tab, setTab] = useState('overview')
@@ -95,6 +110,13 @@ export function SheetBody({
   const abilities = <AbilityCards sheet={s} />
   const named = (collection: string, slug: string) =>
     names.get(`${collection}:${slug}`) ?? items.get(slug)?.name ?? titleCase(slug)
+  // A feature that has a value says it on its own line -- "Sneak Attack: 1d6"
+  // in place of "Sneak Attack" -- and a value no feature is named for follows them.
+  const featureNames = (s.features ?? []).map((slug) => named('features', slug))
+  const featureLines = [
+    ...featureNames.map((name) => valued.get(name) ?? name),
+    ...[...valued].filter(([name]) => !featureNames.includes(name)).map(([, line]) => line).sort(),
+  ]
   const headed = (title: string, content: ReactNode) => (
     <Panel>
       <Stack gap="sm">
@@ -132,7 +154,7 @@ export function SheetBody({
                 />
                 <ItemList
                   label={t('sheet.features')}
-                  items={(s.features ?? []).map((slug) => named('features', slug))}
+                  items={featureLines}
                   empty={t('sheet.noFeatures')}
                 />
                 <ItemList
@@ -187,20 +209,17 @@ export function SheetBody({
     content: <SheetSpells sheet={s} characterId={characterId} onChanged={onChanged} />,
   })
   /*
-   * What a class hands out besides actions, on a tab of its own so the action
-   * list is only actions. Two different things, kept apart: a pool is spent
-   * and comes back on a rest; a scaling value -- a Sneak Attack die, a Rage
-   * damage bonus -- is a number that grows with level and is never spent.
-   * Drawn only for a character with either, because a tab about somebody
-   * else's class is not a fact at all.
+   * What a class hands out to spend, on a tab of its own so the action list is
+   * only actions: every pool, and every scaling value that is a plain number
+   * and so can be counted off. Drawn only for a character with any, because a
+   * tab about somebody else's class is not a fact at all.
    */
-  if (pools.length > 0 || parameters.length > 0) panels.push({
+  if (pools.length > 0) panels.push({
     value: 'resources',
     label: t('sheet.resources'),
     content: (
       <Stack gap="md">
-        {pools.length > 0 && headed(t('sheet.consumables'), <ResourcePools pools={pools} />)}
-        {parameters.length > 0 && <Panel><ItemList label={t('sheet.scaling')} items={parameters} /></Panel>}
+        {headed(t('sheet.consumables'), <ResourcePools pools={pools} />)}
       </Stack>
     ),
   })
@@ -211,6 +230,7 @@ export function SheetBody({
       <SheetEquipment
         equipment={s.equipment}
         items={items}
+        actions={s.actions ?? []}
         name={(slug) => named('equipment', slug)}
         lookup={named}
         disabled={pending}

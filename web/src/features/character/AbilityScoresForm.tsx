@@ -46,6 +46,12 @@ export interface AbilityScoresFormProps {
   /** The scores as they stand, so changing them starts from what they are. */
   scores?: Scores
   method?: string
+  /**
+   * The class's advice: every ability, most important first. With it the form
+   * offers to deal the scores out for the player; without it -- no class yet,
+   * or a pack that gives none -- there is nothing to recommend and no button.
+   */
+  recommended?: readonly string[]
   pending: boolean
   /** The server's per-field complaints, pointed at the input that caused one. */
   fields?: readonly ApiFieldError[]
@@ -90,6 +96,7 @@ export interface AbilityScoresFormProps {
 export function AbilityScoresForm({
   scores,
   method = 'standard-array',
+  recommended,
   pending,
   fields = [],
   submitLabel,
@@ -126,6 +133,30 @@ export function AbilityScoresForm({
   }
 
   const ready = !dealsOut(how) || ABILITY_ORDER.every((ability) => placed[ability] !== null)
+
+  /*
+   * The recommendation is an order, not six numbers, so it fits whatever the
+   * method has to give: the dealt numbers go out best-first by it, and the
+   * methods with no numbers of their own get the standard array the same way.
+   * Point buy only when the array is something its budget can buy -- under a
+   * pack whose prices put it out of reach there is no honest suggestion.
+   */
+  const byPriority = (numbers: readonly number[]): Scores => {
+    const best = [...numbers].sort((a, b) => b - a)
+    return Object.fromEntries((recommended ?? []).map((ability, at) => [ability, best[at] ?? 0]))
+  }
+  const affordable = policy.standardArray.every((score) => policy.pointCosts[score] !== undefined)
+    && policy.standardArray.reduce((sum, score) => sum + (policy.pointCosts[score] ?? 0), 0) <= policy.pointBuyBudget
+  const canRecommend = recommended !== undefined && recommended.length === ABILITY_ORDER.length
+    && ABILITY_ORDER.every((ability) => recommended.includes(ability)) && (how !== 'point-buy' || affordable)
+  const useRecommended = () => {
+    if (dealsOut(how)) {
+      // Each ability takes the place of the best number still unclaimed.
+      const places = values.map((_, place) => place).sort((a, b) => (values[b] ?? 0) - (values[a] ?? 0))
+      setPlaced(Object.fromEntries((recommended ?? []).map((ability, at) => [ability, places[at] ?? null])))
+    } else if (how === 'point-buy') setBought(byPriority(policy.standardArray))
+    else setWritten(byPriority(policy.standardArray))
+  }
 
   const change = (next: string) => {
     setHow(next)
@@ -249,6 +280,7 @@ export function AbilityScoresForm({
         <Button onClick={submit} loading={pending} disabled={!ready}>
           {ready ? submitLabel : t('scores.placeAllSix')}
         </Button>
+        {canRecommend && <Button variant="light" disabled={pending} onClick={useRecommended}>{t('scores.useRecommended')}</Button>}
       </Group>
     </Stack>
   )

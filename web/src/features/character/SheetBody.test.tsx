@@ -350,7 +350,7 @@ describe('the panels that were sentences', () => {
       <SheetBody
         sheet={{
           ...NAMED,
-          resources: { parameters: { 'sneak-attack': { name: 'Sneak Attack', number: 1, dice: '1d6' }, 'brutal-critical-dice': { name: 'Brutal Critical Dice', number: 0 } } },
+          resources: { parameters: { 'sneak-attack': { name: 'Sneak Attack', number: 1, dice: '1d6' }, 'brutal-critical-dice': { name: 'Brutal Critical Dice', number: 0 }, 'extra-attacks': { name: 'Extra Attacks', number: 2 } } },
         }}
       />,
     )
@@ -368,6 +368,12 @@ describe('the panels that were sentences', () => {
     }
     // Not reached yet is not a thing the character has.
     expect.soft(screen.queryByText(/Brutal Critical/)).not.toBeInTheDocument()
+    // A plain number is counted off at the table, so it is marks to spend rather than a line to read.
+    expect.soft(screen.getByRole('img', { name: 'Extra Attacks: 2 of 2 left' })).toBeInTheDocument()
+    expect.soft(screen.queryByText('Extra Attacks: 2')).not.toBeInTheDocument()
+    // A value that is read rather than counted is a feature's own line; there is no box of scaling values.
+    expect.soft(under('Features')).toContain('Sneak Attack: 1d6')
+    expect.soft(screen.queryByText('Scaling values')).not.toBeInTheDocument()
   })
 
   it('lists actions in groups that fold, each row opening onto its description', async () => {
@@ -395,7 +401,13 @@ describe('the panels that were sentences', () => {
 
     fireEvent.click(group(/^Equipment/))
     fireEvent.click(group(/^Class and race/))
-    expect.soft(await screen.findByText(/to hit/)).toHaveTextContent('+5 to hit')
+    // A weapon's numbers are captioned columns in one order -- damage, hit,
+    // range -- not a sentence.
+    const rapier = (await screen.findByText('Rapier')).closest('.mantine-Accordion-item') as HTMLElement
+    expect.soft(within(rapier).getByText('Damage').nextElementSibling).toHaveTextContent('1d8+3')
+    expect.soft(within(rapier).getByText('Hit').nextElementSibling).toHaveTextContent('+5')
+    expect.soft(within(rapier).getByText('Range').nextElementSibling).toHaveTextContent('5 ft.')
+    expect.soft(within(rapier).getAllByText(/^(Damage|Hit|Range)$/).map((each) => each.textContent)).toEqual(['Damage', 'Hit', 'Range'])
     expect.soft(screen.getByText('Second Wind Uses: 1')).toBeInTheDocument()
     // A weapon with no prose is a fact, not a control that opens onto nothing.
     expect.soft(screen.queryByRole('button', { name: /Rapier/ })).not.toBeInTheDocument()

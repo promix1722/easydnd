@@ -36,20 +36,50 @@ func statsOf(state character.State) domain.Stats {
 	return stats
 }
 
+// scalingPrefix marks a pool that the sheet calls a scaling value.
+const scalingPrefix = "scaling/"
+
+// consumables is everything a game can spend from a sheet: its pools, and its
+// plain-number scaling values -- Extra Attacks: 1, Maneuvers: 3 -- as pools of
+// that many uses. A pack calls those parameters because nothing in the rules
+// spends them, but a table still counts them off within a turn, and the
+// tracker is where counting is done. A value that is a die, a fraction or a
+// word has no number of uses and is left out.
+//
+// Nothing restores one but a long rest and the row's own plus button: a
+// scaling value has no recovery policy to read.
+func consumables(state character.State) map[rules.Slug]character.ResourcePool {
+	out := make(map[rules.Slug]character.ResourcePool, len(state.Resources.Pools)+len(state.Resources.Parameters))
+	for id, pool := range state.Resources.Pools {
+		out[id] = pool
+	}
+	for slug, value := range state.Resources.Parameters {
+		if value.Number > 0 && value.Dice == "" && value.Text == "" && value.Rational == nil && value.Boolean == nil {
+			id := scalingPrefix + slug
+			out[id] = character.ResourcePool{ID: id, Definition: slug, Name: value.Name, Group: "scaling", Max: value.Number}
+		}
+	}
+	return out
+}
+
 // poolsOf orders a character's non-empty pools -- spell slots by level, then
-// named pools, hit dice last -- and fills in what this game has spent.
+// named pools, scaling values, hit dice last -- and fills in what this game
+// has spent.
 func poolsOf(state character.State, used map[string]int) []character.ResourcePool {
 	rank := func(p character.ResourcePool) int {
 		switch p.Group {
 		case "spell-slots":
 			return 0
-		case "hit-dice":
+		case "scaling":
 			return 2
+		case "hit-dice":
+			return 3
 		}
 		return 1
 	}
-	out := make([]character.ResourcePool, 0, len(state.Resources.Pools))
-	for id, pool := range state.Resources.Pools {
+	all := consumables(state)
+	out := make([]character.ResourcePool, 0, len(all))
+	for id, pool := range all {
 		if pool.Max > 0 {
 			pool.Used = min(used[string(id)], pool.Max)
 			out = append(out, pool)
@@ -233,7 +263,7 @@ func (s *Service) PatchEntry(ctx context.Context, actor user.ID, id domain.ID, e
 		if err != nil {
 			return err
 		}
-		pools = state.Resources.Pools
+		pools = consumables(state)
 	}
 	return s.games.MutateEntries(ctx, id, func(entries []domain.Entry) ([]domain.Entry, error) {
 		for i := range entries {

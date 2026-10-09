@@ -1,5 +1,5 @@
 import type { Icon } from '@tabler/icons-react'
-import { IconSparkles, IconDice5, IconSettings, IconShield, IconUsers, IconWand } from '@tabler/icons-react'
+import { IconSparkles, IconDice5, IconShield, IconUsers, IconWand } from '@tabler/icons-react'
 
 import type { MessageKey } from '@/lib/i18n'
 
@@ -69,7 +69,6 @@ export const SECTIONS: readonly Section[] = [
   { to: '/ai-wizard', label: 'section.aiWizard', icon: IconSparkles, owns: ['/ai-wizard'] },
   { to: '/groups', label: 'section.groups', icon: IconShield, owns: ['/groups'] },
   { to: '/games', label: 'section.games', icon: IconDice5, owns: ['/games'] },
-  { to: '/homebrew', label: 'section.homebrew', icon: IconSettings, owns: ['/homebrew'], desktopOnly: true },
   { to: '/spells', label: 'section.spells', icon: IconWand, owns: ['/spells'] },
 ]
 

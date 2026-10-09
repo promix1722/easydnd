@@ -264,6 +264,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.POST("/characters/:id/rules/restore", h.Character.RestoreRules)
 			authed.POST("/characters/:id/events", h.Character.AppendEvents)
 			authed.DELETE("/characters/:id/events", h.Character.TruncateEvents)
+			authed.POST("/characters/:id/auto-equip", h.Character.AutoEquip)
 			// One entry of that log, addressed by position -- which is what
 			// Seq means. Addressing a member of a sub-resource collection is
 			// not a third level: there is no route below these two, and

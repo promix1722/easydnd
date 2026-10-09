@@ -1,12 +1,13 @@
 import { CUSTOM, ELSEWHERE, discard, groupOf, mergeStacks, setCoin, slotted, unequip } from '@/domain'
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
-import type { Change, Equipment, Item } from '@/lib/api'
+import type { Change, Equipment, Item, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import { Box, Grid, Group, ITEM_ICON_SIZE, ItemIcon, Markdown, Menu, Panel, Paper, Stack, Text } from '@/ui'
 
 import { InventoryRows, ItemMenu, Purse } from './Inventory'
-import { itemFacts } from './options'
+import { itemFacts, weaponNumbers } from './options'
 import { useSlotLabels } from './slotLabels'
+import { WeaponStats } from './WeaponStats'
 import type { Card } from './slotLabels'
 
 /** Three columns: what is held, what is worn down the middle, what hangs or is slipped on. */
@@ -24,6 +25,8 @@ interface InventoryProps {
   items: ReadonlyMap<string, Item>
   name: (slug: string) => string
   lookup: (collection: string, slug: string) => string
+  /** The sheet's actions: a wielded weapon shows the damage and bonus its action has. */
+  actions?: readonly SheetAction[]
   disabled?: boolean
   onChange?: (changes: Change[]) => void
 }
@@ -37,7 +40,7 @@ const rowName = (name: (slug: string) => string) => (row: InventoryRow) => row.c
  * from its row's menu below. With `onChange`, a worn item has the same menu on
  * its card, to take it off or drop it.
  */
-export function SheetEquipment({ equipment, items, name, lookup, disabled = false, onChange }: InventoryProps) {
+export function SheetEquipment({ equipment, items, name, lookup, actions = [], disabled = false, onChange }: InventoryProps) {
   const t = useT()
   const labels = useSlotLabels()
   const bySlot = slotted(equipment, items)
@@ -61,15 +64,17 @@ export function SheetEquipment({ equipment, items, name, lookup, disabled = fals
           ? <Text size="sm" c="dimmed">{t('equipment.slotEmpty')}</Text>
           : worn.map((slug, at) => {
             const item = items.get(slug)
-            const facts = item === undefined ? undefined : itemFacts(t, item, (ref) =>
-              lookup(item.weapon?.properties?.includes(ref) ? 'weapon-properties' : 'damage-types', ref))
+            const word = (ref: string) => lookup(item?.weapon?.properties?.includes(ref) ? 'weapon-properties' : 'damage-types', ref)
+            const numbers = weaponNumbers(t, item, actions, word)
+            const facts = item === undefined ? undefined : itemFacts(t, item, word, numbers !== undefined)
             const from = slotOfCard(each)
             const slot = from === ELSEWHERE ? undefined : from
             return <Group key={`${slug}:${at}`} gap={6} wrap="nowrap" align="flex-start">
               <ItemIcon icon={item?.icon} />
               <Stack gap={2} mah={ITEM_ICON_SIZE} style={{ minWidth: 0, flex: 1, overflow: 'hidden', overflowWrap: 'anywhere' }}>
                 <Text size="sm" fw={500} truncate style={{ flexShrink: 0 }}>{name(slug)}</Text>
-                {facts !== undefined && <Text size="xs" c="dimmed" lineClamp={2} style={{ flexShrink: 0 }}>{facts}</Text>}
+                {numbers !== undefined && <WeaponStats inline {...numbers} />}
+                {facts !== undefined && <Text size="xs" c="dimmed" lineClamp={numbers === undefined ? 2 : 1} style={{ flexShrink: 0 }}>{facts}</Text>}
                 {!!item?.desc?.length && <Text component="div" size="xs" lineClamp={1} style={{ flexShrink: 0 }}><Markdown size="xs" inline>{item.desc[0] ?? ''}</Markdown></Text>}
               </Stack>
               {onChange && <ItemMenu name={name(slug)} disabled={disabled}>
@@ -95,7 +100,7 @@ export function SheetEquipment({ equipment, items, name, lookup, disabled = fals
     <Panel>
       <Stack gap="sm">
         <Text size="xs" c="dimmed" tt="uppercase">{t('equipment.group.wearable')}</Text>
-        <InventoryRows rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup}
+        <InventoryRows rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup} actions={actions}
           empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
       </Stack>
     </Panel>

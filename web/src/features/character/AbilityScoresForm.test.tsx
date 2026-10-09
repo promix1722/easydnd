@@ -68,6 +68,23 @@ describe('the standard array', () => {
     expect(scored(changes, 'cha')).toBe(8)
   })
 
+  // The class's advice is an order, most important first; the button deals
+  // the numbers out by it, and there is no button without advice to give.
+  it('deals the array out by the class\'s priority on request', async () => {
+    const user = setupUser()
+    const onSubmit = vi.fn()
+    const { unmount } = renderAt(viewport, form())
+    expect(screen.queryByRole('button', { name: 'Use recommended' })).not.toBeInTheDocument()
+    unmount()
+
+    renderAt(viewport, form({ onSubmit, recommended: ['int', 'wis', 'con', 'dex', 'cha', 'str'] }))
+    await user.click(screen.getByRole('button', { name: 'Use recommended' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    const changes = onSubmit.mock.calls[0]?.[0] as Change[]
+    expect(['str', 'dex', 'con', 'int', 'wis', 'cha'].map((ability) => scored(changes, ability))).toEqual([8, 12, 13, 15, 14, 10])
+  })
+
   it('swaps when a number is put where another one already is', async () => {
     const user = setupUser()
     renderAt(viewport, form())

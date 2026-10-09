@@ -106,6 +106,9 @@ export function ModalSheet({
         centered
         closeButtonProps={close}
         {...locked}
+        // The same space above the content the drawer below keeps, for the
+        // same reason: Mantine zeroes a body's top padding under a header.
+        styles={{ body: { paddingTop: 'var(--mantine-spacing-md)' } }}
       >
         {body}
       </Modal>

@@ -34,15 +34,36 @@ func TestEquipmentCategoriesValidateAndProject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Both hands asked for a weapon, so both longswords are wielded.
+	// Both hands asked for a weapon and both longswords are carried: a build
+	// equips nothing. Dressed at the end, one goes in the main hand and the
+	// other stays packed -- a second weapon in the off hand is a fighting
+	// style nobody chose.
 	count := 0
-	for _, stack := range state.Equipment.Equipped {
+	for _, stack := range state.Equipment.Backpack {
 		if stack.Item == "longsword" {
 			count += stack.Count
 		}
 	}
-	if count != 2 || len(state.Equipment.Backpack) != 0 {
-		t.Fatalf("longswords wielded = %d, backpack = %v", count, state.Equipment.Backpack)
+	if count != 2 || len(state.Equipment.Equipped) != 0 {
+		t.Fatalf("longswords carried = %d, equipped = %v", count, state.Equipment.Equipped)
+	}
+	if err := b.s.AutoEquip(context.Background(), testOwner, b.id, rules.DefaultLocale); err != nil {
+		t.Fatal(err)
+	}
+	dressed, err := b.s.Sheet(context.Background(), testOwner, b.id, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(dressed.Equipment.Equipped, []domain.ItemStack{{Item: "longsword", Count: 1}}) {
+		t.Fatalf("auto-equip wore %+v, want one longsword", dressed.Equipment.Equipped)
+	}
+	// Again changes nothing: it is a start, not a correction.
+	before, _ := b.s.Get(context.Background(), testOwner, b.id)
+	if err := b.s.AutoEquip(context.Background(), testOwner, b.id, rules.DefaultLocale); err != nil {
+		t.Fatal(err)
+	}
+	if after, _ := b.s.Get(context.Background(), testOwner, b.id); after.Log.Len() != before.Log.Len() {
+		t.Fatal("auto-equip wrote a second time over a dressed character")
 	}
 	resolved, err := domain.ResolvedSelections(b.log(), cat)
 	if err != nil {
@@ -71,7 +92,7 @@ func TestFighterArmorAndBowAreSeparateChoices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(state.Equipment.Equipped, []domain.ItemStack{{Item: "leather-armor", Count: 1}}) || len(state.Equipment.Backpack) != 0 {
+	if !reflect.DeepEqual(state.Equipment.Backpack, []domain.ItemStack{{Item: "leather-armor", Count: 1}}) || len(state.Equipment.Equipped) != 0 {
 		t.Fatalf("armor choice granted extra gear: %+v", state.Equipment)
 	}
 	event.Choices = []domain.Answer{answer("fighter/starting-equipment/backup", "longbow+arrow")}
@@ -522,4 +543,38 @@ func TestHighestSpellLevelLimitAndCustomOverride(t *testing.T) {
 			t.Fatalf("level six formula wrong: %+v", rule)
 		}
 	}
+}
+
+// A feat's own question belongs to the level that brought the feat: taking
+// Slasher at fourth level opens "+1 to Strength or Dexterity" as part of what
+// fourth level asked, not as a question belonging to no level -- which a build
+// screen drew above first level, ahead of the improvement that opened it.
+func TestAFeatsPromptCarriesTheLevelItWasTakenAt(t *testing.T) {
+	r, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), r, nil, slog.New(slog.DiscardHandler))
+	c := mustCreateScored(t, s)
+	fighter := ref(rules.RefClass, "fighter")
+	improvement := rules.Slug("fighter/ability-score-improvement/4")
+	(&builder{t: t, s: s, id: c.ID, seq: c.Log.LastSeq()}).
+		add("level", domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(4)}}}).
+		add("fighter", domain.Event{Type: domain.EventClass, Ref: fighter, Level: 1}).
+		// The branch is named by what it draws from, then the feat it offers.
+		add("branch", domain.Event{Type: domain.EventLevel, Ref: fighter, Level: 4, Choices: []domain.Answer{answer(improvement, "feat")}}).
+		add("feat", domain.Event{Type: domain.EventLevel, Ref: fighter, Level: 4, Choices: []domain.Answer{answer(improvement+"/1", "slasher")}})
+	prompts, err := s.Prompts(context.Background(), testOwner, c.ID, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range prompts {
+		if p.Choice.Prompt == "slasher/ability/0" {
+			if p.Level != 4 {
+				t.Fatalf("Slasher's prompt is at level %d, want 4", p.Level)
+			}
+			return
+		}
+	}
+	t.Fatal("Slasher opened no prompt")
 }

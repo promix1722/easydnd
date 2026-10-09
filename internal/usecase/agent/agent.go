@@ -852,6 +852,13 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 		if action == "finish" {
 			a.invalidate(s)
 			s.Finished = true
+			// The import carried everything and wore nothing; this is the end,
+			// so the character is dressed now, one item to a slot. Best effort:
+			// a chat that made no character, or one whose character is gone,
+			// still closes.
+			if s.CharacterID != "" {
+				_ = a.service.AutoEquip(a.ctx, s.Owner, s.CharacterID, s.Locale)
+			}
 			if s.Status == "queued" || s.Status == "running" {
 				return nil, setStatus(s, "paused")
 			}

@@ -91,7 +91,9 @@ describe('PromptCard', () => {
     ])
   })
 
-  it('scrolls a lower selected option and then its confirmation into view', async () => {
+  // A pick keeps what was picked in view and jumps nowhere else: scrolling to
+  // Confirm threw a long list to its foot on every click.
+  it('keeps a picked option in view and does not jump to the confirmation', async () => {
     const user = setupUser()
     const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
     try {
@@ -102,7 +104,8 @@ describe('PromptCard', () => {
 
       await user.click(screen.getByRole('button', { name: /Acrobatics/ }))
       const confirm = screen.getByRole('button', { name: 'Confirm' })
-      await waitFor(() => expect(scroll.mock.contexts).toContain(confirm))
+      expect(confirm).toBeEnabled()
+      expect(scroll.mock.contexts).not.toContain(confirm)
     } finally {
       scroll.mockRestore()
     }

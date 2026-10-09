@@ -55,7 +55,6 @@ describe('choosableOptions', () => {
     // The arrows go without saying; the bundle wears its bow's badges.
     expect(got[0]?.label).toBe('Shortbow')
     expect(got[0]?.provenance?.packId).toBe('srd')
-    expect(got[0]?.icon).toBe('data:image/webp;base64,Ym93')
     expect(got[0]?.detail).toContain('Arrow ×20')
     expect(got[1]?.label).toBe('Shortsword')
   })

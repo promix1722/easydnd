@@ -18,6 +18,19 @@ const BASE_URL = '/v1'
 /** Header name and semantics come from internal/api/http/middleware/requestid.go. */
 const HEADER_REQUEST_ID = 'X-Request-Id'
 
+const unauthorized = new Set<() => void>()
+
+/**
+ * Calls `listener` whenever the API answers 401, to anything. Returns the
+ * unsubscribe. `AuthProvider` is the one listener: a 401 means nobody is
+ * signed in any more, and that is a fact about the whole app rather than
+ * about the screen whose request happened to find it out.
+ */
+export function onUnauthorized(listener: () => void): () => void {
+  unauthorized.add(listener)
+  return () => { unauthorized.delete(listener) }
+}
+
 export interface RequestOptions {
   formData?: FormData
   method?: string
@@ -130,6 +143,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const payload: unknown = text === '' ? undefined : safeParse(text)
 
   if (!response.ok) {
+    // The session this tab was using is no longer one the server accepts --
+    // it expired, or the server restarted with a new signing key. Said here,
+    // once, rather than left to each screen to report as its own failure.
+    if (response.status === 401) for (const listener of unauthorized) listener()
     if (isApiErrorEnvelope(payload)) {
       throw new ApiError(response.status, payload.error)
     }

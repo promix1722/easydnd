@@ -1090,8 +1090,43 @@ func (a *Agent) setInventory(ctx context.Context, s *AgentSession, cat *catalog.
 		}
 	}
 	applied, unmatched := []map[string]any{}, []map[string]any{}
+	// One item to a slot. A sheet lists every weapon it has as wielded, and
+	// taking that at its word seated a barbarian's net, longsword, four
+	// javelins and handaxe in one hand. The first thing the sheet calls worn
+	// takes its slot -- so the armor class the sheet prints is still one the
+	// build can reproduce -- and everything after it for that slot, and every
+	// further copy of it, is carried.
+	seated, wornOf := map[catalog.Slot]int{}, map[string]int{}
 	for _, item := range items {
 		fact, found, err := a.inventoryFact(ctx, s, cat, item)
+		if slug, worn := strings.CutPrefix(fact.Path, "equipment.equipped."); err == nil && worn {
+			slot, capacity := catalog.SlotNone, 1
+			if it, ok := cat.Items.Get(rules.Slug(slug)); ok {
+				slot = it.Slot
+			} else if it, ok := cat.MagicItems.Get(rules.Slug(slug)); ok {
+				slot = it.Slot
+			}
+			if slot == catalog.SlotRing {
+				capacity = 2
+			}
+			count, _ := strconv.Atoi(string(fact.Value))
+			// The same item on a second page of the sheet is the same item:
+			// it keeps the seat it was given and takes no other.
+			wear, again := wornOf[slug]
+			if !again {
+				if slot != catalog.SlotNone {
+					wear = min(count, capacity-seated[slot])
+				}
+				seated[slot] += wear
+				wornOf[slug] = wear
+			}
+			if wear == 0 {
+				fact.Path = "equipment.backpack." + slug
+			} else if count > wear {
+				fact.Value = json.RawMessage(strconv.Itoa(wear))
+				_, err = a.importFact(ctx, s, cat, agentArgs{Path: "equipment.backpack." + slug, Value: json.RawMessage(strconv.Itoa(count - wear)), Source: item.Source})
+			}
+		}
 		if err == nil {
 			_, err = a.importFact(ctx, s, cat, fact)
 		}

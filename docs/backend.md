@@ -1114,6 +1114,14 @@ own recovery policy says a short rest refills them in full -- Second Wind,
 Channel Divinity, a warlock's slots -- read from each player's sheet
 (`ResourcePool.RestoredBy`). A policy with a condition counts as not applying:
 no SRD pool has one, and evaluating it needs the catalogue.
+A game can also spend a sheet's **plain-number scaling values** -- Extra
+Attacks: 1, Maneuvers: 3 -- as pools of that many uses, under the id
+`scaling/<parameter>` (`consumables` in `usecase/game/tracker.go`). A pack calls
+them parameters because no rule spends them, but a table counts them off within
+a turn, and the tracker is where counting is done. A value that is a die, a
+fraction or a word has no number of uses and is not offered. A scaling value
+has no recovery policy, so a short rest leaves it spent and only a long rest or
+the row's plus gives it back.
 The row's plus button is the undo for everything smaller. Monsters have
 no pools.
 

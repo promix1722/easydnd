@@ -36,7 +36,7 @@ it('keeps shared filters in the browse URL and sends them to catalogue search', 
   await user.click(screen.getByRole('combobox', { name: 'Pack' }))
   await user.click(screen.getByRole('option', { name: 'My library v1.0.0' }))
   await user.click(screen.getByRole('combobox', { name: 'Book / source' }))
-  await user.click(screen.getByRole('option', { name: "Player's Handbook / My library v1.0.0" }))
+  await user.click(screen.getByRole('option', { name: "My library v1.0.0 / Player's Handbook" }))
   await user.keyboard('{Escape}')
   await user.click(screen.getByRole('checkbox', { name: 'Ritual' }))
   await user.type(search, 'detect')

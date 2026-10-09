@@ -243,7 +243,6 @@ export function CharacterListScreen() {
                   getKey={(character) => character.id}
                   leading={(character) => <Avatar image={character.image} fallback={characterAvatar(character.classes)} />}
                   actions={actionsFor}
-                  menuActions
                   columns={[
                     {
                       key: 'name',

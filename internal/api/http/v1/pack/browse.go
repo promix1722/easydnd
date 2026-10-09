@@ -42,7 +42,8 @@ type browseData struct {
 	domainSpells []catalog.Spell
 }
 
-// Each release gets its own compiled dependency closure: browsing does not compose rules.
+// Each release gets its own compiled dependency closure: browsing does not
+// compose rules -- except for the default packs, which are shown together.
 func (h *Handler) browse(c *gin.Context) (browseData, error) {
 	out := browseData{Packs: []browsePack{}, Sources: []browseSource{}, Schools: []catalogapi.Entry{}, Classes: []catalogapi.Entry{}, Unavailable: []unavailable{}}
 	rows, err := h.service.List(c.Request.Context(), actor(c).ID)
@@ -60,6 +61,7 @@ func (h *Handler) browse(c *gin.Context) (browseData, error) {
 		}
 	}
 	sourceSeen, schoolSeen, classSeen := map[string]bool{}, map[string]bool{}, map[string]bool{}
+	defaults := h.service.Default()
 	for _, row := range rows {
 		if row.Archived || len(row.Releases) == 0 {
 			continue
@@ -91,6 +93,15 @@ func (h *Handler) browse(c *gin.Context) (browseData, error) {
 		if err != nil {
 			out.Unavailable = append(out.Unavailable, unavailable{row.ID, chosen.Version, "pack.unavailable"})
 			continue
+		}
+		// A default pack is browsed the way a new character meets it: under the
+		// default rules, not alone. That is what lets an overlay -- a pack of
+		// prose over another pack's entities, defining none of its own -- reach
+		// the compendium at all: alone, the base has no description for a spell
+		// the overlay describes, and the overlay's own row lists nothing,
+		// because no spell is *its* spell.
+		if slices.ContainsFunc(defaults.Packs, func(r domain.Release) bool { return r.ID == chosen.ID && r.Version == chosen.Version }) {
+			lock = defaults
 		}
 		cat, err := catalog.LoadLocked(c.Request.Context(), h.source, helpers.Locale(c), lock)
 		if err != nil {

@@ -90,6 +90,11 @@ type Prompt struct {
 	// Event is what the answer must be posted as.
 	Event PromptEvent
 
+	// Recommended is the character's class's advice for the six scores: every
+	// ability, most important first. Set on the ability-score prompt only, and
+	// only once there is a class whose pack gives one.
+	Recommended []rules.Ability
+
 	// Held lists the options the character already has from another source.
 	//
 	// The prompt is *not* narrowed to exclude them. Narrowing would make the
@@ -363,9 +368,31 @@ func (b *promptBuilder) abilities() {
 			Choose: len(b.cat.AbilityIDs()),
 			Kind:   rules.ChooseAbilityScores,
 		},
-		Group: GroupAbilities,
-		Event: PromptEvent{Type: EventChange},
+		Group:       GroupAbilities,
+		Event:       PromptEvent{Type: EventChange},
+		Recommended: b.abilityPriority(),
 	})
+}
+
+// abilityPriority is the first class's advice, when it names every ability
+// exactly once. Anything else -- a pack that lists four, or one twice -- is
+// not an order the six scores can be dealt out by, so it is no advice at all.
+func (b *promptBuilder) abilityPriority() []rules.Ability {
+	if len(b.state.Identity.Classes) == 0 {
+		return nil
+	}
+	class, ok := b.cat.Classes.Get(b.state.Identity.Classes[0].Class)
+	if !ok || len(class.AbilityPriority) != len(b.cat.AbilityIDs()) {
+		return nil
+	}
+	seen := map[rules.Ability]bool{}
+	for _, ability := range class.AbilityPriority {
+		seen[ability] = true
+	}
+	if len(seen) != len(class.AbilityPriority) {
+		return nil
+	}
+	return class.AbilityPriority
 }
 
 func (b *promptBuilder) race() {
@@ -848,10 +875,31 @@ func (b *promptBuilder) packRules() {
 			continue
 		}
 		for _, ch := range r.Choices {
-			p := Prompt{Group: GroupClass, Source: r.Owner, Event: PromptEvent{Type: EventRule, Ref: rules.NewRef(rules.RefRule, r.ID)}}
+			p := Prompt{Group: GroupClass, Source: r.Owner, Level: b.featLevel(r.Owner), Event: PromptEvent{Type: EventRule, Ref: rules.NewRef(rules.RefRule, r.ID)}}
 			b.addChoice(&ch, p)
 		}
 	}
+}
+
+// featLevel is the class level a feat was taken at, or zero when it was not
+// taken at one -- a rule owned by something else, or a feat a race gave.
+//
+// A feat's own question belongs to the level that brought the feat: Slasher's
+// "+1 to Strength or Dexterity" is part of what fourth level asked. Without a
+// level it reads as belonging to no level at all, and a build screen draws it
+// above first level, ahead of the improvement that opened it.
+func (b *promptBuilder) featLevel(owner rules.Ref) int {
+	if owner.Kind != rules.RefFeat {
+		return 0
+	}
+	for _, taken := range b.state.Identity.Classes {
+		for level := 1; level <= taken.Level; level++ {
+			if slices.Contains(b.answers.picks(asiPrompt(taken.Class, level)+"/1"), owner.Slug) {
+				return level
+			}
+		}
+	}
+	return 0
 }
 
 func abilityScoreIncrease(cat *catalog.Catalog) int {

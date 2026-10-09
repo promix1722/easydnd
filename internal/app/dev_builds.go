@@ -39,14 +39,6 @@ func written(path character.Path, text string) character.Event {
 	return character.Event{Type: character.EventChange, Changes: []character.Change{set(path, character.StringValue(text))}}
 }
 
-func wear(items ...rules.Slug) character.Event {
-	var changes []character.Change
-	for _, item := range items {
-		changes = append(changes, character.Change{Path: "equipment.equipped", Op: character.OpAdd, Value: character.SlugValue(item)})
-	}
-	return character.Event{Type: character.EventChange, Changes: changes}
-}
-
 // SRD 5.1 publishes one background, so every seed is an acolyte, with the
 // acolyte's own suggested trait, ideal, bond and flaw written out.
 func acolyte(languages ...rules.Slug) []character.Event {
@@ -94,8 +86,6 @@ var devRogue = devBuild{
 			answer("rogue/starting-equipment/backup", "shortbow+arrow"),
 			answer("rogue/starting-equipment/pack", "burglars-pack"),
 		}},
-		// A kit's armor is carried, not worn, until somebody says so.
-		wear("leather-armor"),
 	},
 }
 
@@ -120,7 +110,6 @@ var devPaladin = devBuild{
 		{Type: character.EventLevel, Ref: classRef("paladin"), Level: 5, Choices: []character.Answer{
 			answer("paladin/spell/prepared/5", "bless", "cure-wounds", "shield-of-faith", "command", "aid"),
 		}},
-		wear("chain-mail"),
 	},
 }
 
@@ -177,6 +166,10 @@ func seedCharacter(ctx context.Context, chars *charuc.Service, owner character.O
 		if seq, err = chars.Apply(ctx, owner, created.ID, rules.DefaultLocale, seq, event); err != nil {
 			return character.Character{}, fmt.Errorf("seed %s, entry %d (%s %s): %w", name, at, event.Type, event.Ref.Canonical(), err)
 		}
+	}
+	// Dressed the way a finished build is: nothing above equips anything.
+	if err := chars.AutoEquip(ctx, owner, created.ID, rules.DefaultLocale); err != nil {
+		return character.Character{}, fmt.Errorf("seed %s: %w", name, err)
 	}
 	prompts, err := chars.Prompts(ctx, owner, created.ID, rules.DefaultLocale)
 	if err != nil {

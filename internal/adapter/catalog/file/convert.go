@@ -398,6 +398,7 @@ func (c *conv) class(w Class, b Bundle) catalog.Class {
 		Entry:                    entry(w.Slug, b),
 		HitDie:                   w.HitDie,
 		SavingThrows:             c.abilities(w.SavingThrows),
+		AbilityPriority:          c.abilities(w.AbilityPriority),
 		Proficiencies:            slugs(w.Proficiencies),
 		ProficiencyOptions:       c.choices(w.ProficiencyOptions),
 		StartingEquipment:        c.itemStacks(w.StartingEquipment),

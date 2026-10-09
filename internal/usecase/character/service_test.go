@@ -530,3 +530,38 @@ func TestAnotherOwnerCannotReachTheCharacter(t *testing.T) {
 		t.Errorf("log length = %d, want 1", after.Log.Len())
 	}
 }
+
+// The ability-score prompt carries the class's advice once there is a class,
+// and none before: the builder's "Use recommended" deals the scores by it.
+func TestAbilityPromptCarriesTheClassPriority(t *testing.T) {
+	ctx := context.Background()
+	s := newService(t)
+	c, err := s.Create(ctx, testOwner, "", opening())
+	if err != nil {
+		t.Fatal(err)
+	}
+	recommended := func() []rules.Ability {
+		t.Helper()
+		prompts, err := s.Prompts(ctx, testOwner, c.ID, rules.DefaultLocale)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range prompts {
+			if p.Choice.Prompt == "character/abilities" {
+				return p.Recommended
+			}
+		}
+		t.Fatal("no ability-score prompt")
+		return nil
+	}
+	if got := recommended(); got != nil {
+		t.Fatalf("advice without a class: %v", got)
+	}
+	if _, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, c.Log.LastSeq(),
+		domain.Event{Type: domain.EventClass, Ref: rules.NewRef(rules.RefClass, "wizard"), Level: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if got := recommended(); len(got) != 6 || got[0] != "int" || got[5] != "str" {
+		t.Fatalf("wizard priority = %v", got)
+	}
+}

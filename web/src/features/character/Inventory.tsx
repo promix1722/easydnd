@@ -2,11 +2,12 @@ import type { ReactNode } from 'react'
 
 import { COINS, equip, groupOf, setTotal, slotsFor, slotted } from '@/domain'
 import type { InventoryRow, Slot } from '@/domain'
-import type { Change, Equipment, Item } from '@/lib/api'
+import type { Change, Equipment, Item, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import { ACTION_ICON_SIZE, ActionIcon, Group, IconDotsVertical, ItemIcon, Menu, NumberInput, Paper, SourceTags, Stack, Text, useIsDesktop } from '@/ui'
 
-import { itemFacts } from './options'
+import { itemFacts, weaponNumbers } from './options'
+import { WeaponStats } from './WeaponStats'
 import { useSlotLabels } from './slotLabels'
 
 /** The three dots on the right of a row or a worn item, and what they open. */
@@ -38,7 +39,7 @@ export function ItemMenu({ name, disabled = false, children }: { name: string; d
  * is more than one. A count is printed only when it says something: one
  * dagger is "Dagger".
  */
-export function InventoryRows({ rows, equipment, items, name, lookup, empty, disabled = false, onChange }: {
+export function InventoryRows({ rows, equipment, items, name, lookup, empty, actions = [], disabled = false, onChange }: {
   rows: readonly InventoryRow[]
   equipment: Equipment
   items: ReadonlyMap<string, Item>
@@ -46,6 +47,8 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
   /** The catalogue's word for a damage type or a weapon property. */
   lookup: (collection: string, slug: string) => string
   empty: string
+  /** The sheet's actions, so a wielded weapon shows the numbers its action has. */
+  actions?: readonly SheetAction[]
   disabled?: boolean
   onChange?: (changes: Change[]) => void
 }) {
@@ -67,8 +70,9 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
       // it was written.
       const editable = row.item !== undefined && onChange !== undefined
       const group = groupOf(item)
-      const line = item === undefined ? undefined : itemFacts(t, item, (slug) =>
-        lookup(item.weapon?.properties?.includes(slug) ? 'weapon-properties' : 'damage-types', slug))
+      const word = (slug: string) => lookup(item?.weapon?.properties?.includes(slug) ? 'weapon-properties' : 'damage-types', slug)
+      const numbers = weaponNumbers(t, item, actions, word)
+      const line = item === undefined ? undefined : itemFacts(t, item, word, numbers !== undefined)
       // Totals count the worn units too, and `setTotal` takes from the backpack first.
       const total = (all: number) => onChange?.(setTotal(equipment, row.item ?? '', all))
       // In the top right corner where there is room; on a phone that corner is
@@ -82,9 +86,12 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
               <Text size="sm" fw={500}>{label}</Text>
               {count > 1 && <Text size="sm" c="dimmed">×{count}</Text>}
             </Group>
+            {!isDesktop && numbers !== undefined && <WeaponStats inline {...numbers} />}
             {line !== undefined && <Text size="xs" c="dimmed">{line}</Text>}
             {!isDesktop && tags}
           </Stack>
+          {/* Columns where there is room for them; on a phone they are a line under the name, like the badges. */}
+          {isDesktop && numbers !== undefined && <WeaponStats {...numbers} />}
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
             {isDesktop && tags}
             {editable && (

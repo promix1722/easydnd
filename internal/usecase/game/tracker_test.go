@@ -239,7 +239,7 @@ func TestAShortRestReturnsOnlyShortRestPools(t *testing.T) {
 	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer})
 	cid := f.character(t, "bob")
 	if err := f.characters.Append(ctx, cid, 0, character.Event{Type: character.EventInit},
-		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "fighter"), Level: 2}); err != nil {
+		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "fighter"), Level: 5}); err != nil {
 		t.Fatal(err)
 	}
 	if err := f.svc.Share(ctx, "bob", "table", cid); err != nil {
@@ -272,6 +272,31 @@ func TestAShortRestReturnsOnlyShortRestPools(t *testing.T) {
 	}
 	if got := used(); got["second-wind"] != 0 || got["hit-dice/fighter"] != 1 {
 		t.Fatalf("after short rest: %+v", got)
+	}
+
+	// A plain-number scaling value -- a fifth-level fighter's one Extra Attack
+	// -- is spent like a pool, to its number and no further. It has no
+	// recovery of its own, so only a long rest gives it back.
+	spend := func(n int) error {
+		return f.svc.PatchEntry(ctx, "alice", g.ID, entries[0].Entry.ID, gameuc.EntryPatch{Used: map[string]int{"scaling/extra-attacks": n}})
+	}
+	if err := spend(2); err == nil {
+		t.Fatal("spent more Extra Attacks than the character has")
+	}
+	if err := spend(1); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.Rest(ctx, "alice", g.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	if got := used(); got["scaling/extra-attacks"] != 1 {
+		t.Fatalf("a short rest returned a scaling value: %+v", got)
+	}
+	if err := f.svc.Rest(ctx, "alice", g.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if got := used(); got["scaling/extra-attacks"] != 0 || got["hit-dice/fighter"] != 0 {
+		t.Fatalf("after long rest: %+v", got)
 	}
 }
 

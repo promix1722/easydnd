@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Answer, Choice, Entry, Option, Prompt } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
-import { Badge, Box, Button, Group, ItemIcon, Markdown, SourceTags, Stack, Text } from '@/ui'
+import { Badge, Box, Button, Group, Markdown, SourceTags, Stack, Text } from '@/ui'
 
 import { SpellChoices } from './SpellChoices'
 
@@ -90,11 +90,15 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
   // scores.
   const repeatable = stage.repeatable === true
 
+  // A pick keeps the picked option in view and goes nowhere else. It used to
+  // jump to Confirm once the answer was ready, which in a long list -- sixteen
+  // backgrounds, thirty weapons -- threw the page to the bottom on every click
+  // and took the option just chosen, and its description, off the screen.
   useEffect(() => {
     if (!touched) return
-    const target = ready ? confirmRef.current : lastOptionRef.current
+    const target = lastOptionRef.current
     if (target?.isConnected) target.scrollIntoView?.({ block: 'nearest' })
-  }, [progress, ready, touched])
+  }, [progress, touched])
 
   const toggle = (key: string) => {
     setTouched(true)
@@ -170,7 +174,6 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
               c="var(--mantine-color-text)"
               aria-pressed={count > 0}
               justify="space-between"
-              leftSection={option.icon ? <ItemIcon icon={option.icon} /> : undefined}
               styles={{ label: { width: '100%', minWidth: 0 } }}
               // The description underneath makes a picked option two or three
               // lines tall, and a button that fixes its own height would crop

@@ -1,4 +1,4 @@
-export { request } from './client'
+export { onUnauthorized, request } from './client'
 export type { RequestOptions } from './client'
 export {
   ApiError,
@@ -70,6 +70,7 @@ export type { Folder } from './folders'
 // Characters.
 export {
   appendEvents,
+  autoEquip,
   copyCharacter,
   createCharacter,
   deleteCharacter,

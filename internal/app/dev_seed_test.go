@@ -10,6 +10,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -267,5 +268,57 @@ func TestDevelopmentSeedWithAnotherDefaultPack(t *testing.T) {
 	rec := devRequest(t, a, http.MethodPost, "/v1/dev/login", map[string]string{"account": "master"}, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("demo login unavailable: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+// An overlay is a pack of prose over another pack's entities: it defines no
+// spell, so no row of the compendium is its own. Browsing each pack alone
+// therefore showed the base's spells without the overlay's descriptions and
+// linked them to a context the overlay was not in. Default packs are browsed
+// together, under the default rules.
+func TestCompendiumBrowsesDefaultPacksTogether(t *testing.T) {
+	cfg, err := config.Load(filepath.Join("..", "..", "config.dev.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "pack", "srd-5.1")
+	base, err := catalogfile.LoadPack(cfg.Data.SRDDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	overlay := t.TempDir()
+	manifest := map[string]any{
+		"schemaVersion": 1, "id": "prose-overlay", "title": "Prose overlay", "version": "1.0.0",
+		"edition": base.Manifest.Edition, "semantics": base.Manifest.Semantics, "defaultLocale": "en",
+		"dependencies": []map[string]string{{"id": base.Manifest.ID, "version": base.Manifest.Version}},
+	}
+	// Blade Ward is beyond the SRD: the base pack has its mechanics and no text.
+	prose := map[string]any{base.Manifest.ID + ":spell:blade-ward": map[string]any{"desc": []string{"A sigil of warding."}}}
+	for path, value := range map[string]any{"pack-manifest.json": manifest, filepath.Join("i18n", "en", "spells.json"): prose} {
+		encoded, _ := json.Marshal(value)
+		full := filepath.Join(overlay, path)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, encoded, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cfg.Data.PackFiles = []string{overlay}
+	cfg.Data.AutoloadPacks = nil
+	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	master, _ := devSignIn(t, a, "master")
+	page := devRequest(t, a, http.MethodGet, "/v1/packs/spells?q=blade+ward&limit=5", nil, master)
+	context := base.Manifest.ID + "@" + base.Manifest.Version
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "prose-overlay@1.0.0") || !strings.Contains(page.Body.String(), context) {
+		t.Fatalf("browse context: %d %s", page.Code, page.Body.String())
+	}
+	one := devRequest(t, a, http.MethodGet, "/v1/packs/catalog/spells?slugs=blade-ward&packs="+url.QueryEscape("prose-overlay@1.0.0,"+context), nil, master)
+	if !strings.Contains(one.Body.String(), "A sigil of warding.") {
+		t.Fatalf("overlay prose missing: %d %s", one.Code, one.Body.String())
 	}
 }

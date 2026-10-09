@@ -313,6 +313,8 @@ export interface Prompt {
    * character already has.
    */
   heldOnly: boolean
+  /** The class's advice for the six scores: every ability, most important first. On the ability-score prompt only. */
+  recommended?: string[]
 }
 
 export interface SpellRule {
@@ -587,4 +589,13 @@ export function reviseEvents(id: string, expectedSeq: number, expectedRevision: 
 /** Where one character's own routes live. */
 export function characterPath(id: string): string {
   return `/characters/${encodeURIComponent(id)}`
+}
+
+/**
+ * Dresses a character who has nothing on: one suitable item from the backpack
+ * in each slot. The build screen calls it on Finish; a character already
+ * wearing anything is left as it is, so calling it again is harmless.
+ */
+export function autoEquip(id: string): Promise<void> {
+  return request<void>(`${characterPath(id)}/auto-equip`, { method: 'POST' })
 }

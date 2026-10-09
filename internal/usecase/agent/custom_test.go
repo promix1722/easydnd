@@ -197,15 +197,22 @@ func TestSourceScoresAndInventoryCountsSurviveBatchTools(t *testing.T) {
 			t.Fatalf("lost source score %s: %+v", ability, sheet.Abilities)
 		}
 	}
-	counts := map[rules.Slug]int{}
+	// Quantities survive, wherever they sit: the sheet wields two daggers and
+	// four javelins, and one hand holds one of them -- the first -- while the
+	// rest are carried. The same item on a second page is not counted twice.
+	counts, worn := map[rules.Slug]int{}, map[rules.Slug]int{}
 	for _, stack := range sheet.Equipment.Equipped {
 		counts[stack.Item] += stack.Count
+		worn[stack.Item] += stack.Count
 	}
-	if len(counts) != 2 || counts["dagger"] != 2 || counts["javelin"] != 4 {
+	for _, stack := range sheet.Equipment.Backpack {
+		counts[stack.Item] += stack.Count
+	}
+	if counts["dagger"] != 2 || counts["javelin"] != 4 || len(worn) != 1 || worn["dagger"] != 1 {
 		t.Fatalf("quantity or duplicate source page lost: %+v", sheet.Equipment)
 	}
 	// The class's default kit is not on the sheet, so it is not in the pack.
-	if len(sheet.Equipment.Backpack) != 1 || sheet.Equipment.Backpack[0].Item != "rope-hempen-50-feet" {
+	if len(sheet.Equipment.Backpack) != 3 || counts["rope-hempen-50-feet"] != 1 {
 		t.Fatalf("backpack is not the sheet's: %+v", sheet.Equipment.Backpack)
 	}
 }

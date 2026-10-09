@@ -708,16 +708,14 @@ one on the first.
 
 **A row's actions are data, not markup.** A screen hands `ui/DataList` a
 `rowActions` list -- a label, an icon, a colour, a handler -- and `DataList`
-draws it twice: **spelled out as buttons on a desktop**, where a table has the
-room and a row's actions should be visible without opening anything, and
-**folded behind one `⋮` menu on a phone**, where they have nowhere to go. A list
-may ask for the menu at both widths with **`menuActions`**, and the character
-list does: three buttons on every row made a shelf of characters read as a
-control panel, and the folder above them already carries its own actions behind
-the same glyph. That split is the whole of the difference between the two
-renderings, and it is the
-reason the rule below is now kept by construction rather than by twenty call
-sites remembering it: each action carries its row's name as its accessible name
+draws it **behind one `⋮` menu at every width**, named for its row ("Actions for
+Ada"). A wide table used to spell them out as buttons instead, on the argument
+that there was room and actions should be visible without opening anything; in
+practice a three-action row -- Make DM, Make owner, Remove from group -- was a
+control panel wider than the data beside it, and the character list had already
+opted out with a `menuActions` switch. One rendering, no switch. The items
+inside the menu need no row name of their own: they are inside a menu that said
+whose row it is. The buttons did need one
 ("Delete Ada"), because a column of buttons all called "Delete" is ambiguous to
 a screen reader and to a test alike. Three of the eight lists used to spell that
 out by hand and five did not.
@@ -1452,6 +1450,13 @@ panel draws a "Level N" heading over each run instead of a tag on every card.
 What tells the two apart is that an open block is drawn to stand out, not
 where it sits.
 
+A question a **feat** opens carries the level the feat was taken at, and the
+server is what says so (`featLevel` in `domain/character/prompts.go`): Slasher
+taken at a fighter's fourth level asks "+1 to Strength or Dexterity" as part of
+what fourth level asked. It used to carry no level, which this list reads as
+"belongs to none" -- so it was drawn above Level 1, ahead of the improvement
+that opened it.
+
 **Nothing opens itself**, with one exception below. The screen used to open the
 first open question of the tab; it has no way of knowing which of five a player
 came here to make, and a surface that opens itself is one they have to close.
@@ -1647,6 +1652,17 @@ omission: in none of them is the number yours to pick.
 | Rolled | six numbers, 4d6 drop lowest | deal them out, or roll again |
 | Point buy | a 27-point budget | spend it |
 | Manual | an escape hatch | step or type anything from 1 to 30 |
+
+**Use recommended** deals the scores out for the player, and is there only
+when the server has advice to give: the ability-score prompt carries
+`recommended`, the character's class's abilities in order of importance, read
+from the class's `abilityPriority` in the pack (docs/packs.md). The advice is
+an order rather than six numbers so that it fits every method: the dealt
+numbers -- printed or rolled -- go out best-first by it, and point buy and
+manual, which have no numbers of their own, get the standard array placed the
+same way (point buy only where its budget can buy that array). No class yet,
+or a pack with no priority for it, means no button rather than a guess. It
+fills the form and stops; Confirm is still the player's.
 
 The two that deal out a set share `ScoreAssignment`: a pool you take from and
 six abilities to put numbers on. Two gestures, one operation: drag a number, or
@@ -1867,14 +1883,17 @@ going through the pack.
   pool is shown by capacity, as everywhere on a sheet; spending is the game
   tracker's.
 - **Spells** is drawn only for a character with a spell source.
-- **Resources** is what a class hands out besides actions, drawn only for a
-  character with any: the spendable pools ("Consumable slots"), and under them
-  the scaling values -- a Sneak Attack die, a Rage damage bonus. The two are
-  kept apart because they are different things: a pool is spent and comes back
-  on a rest, a scaling value is a number that grows with level and is never
-  spent. A scaling value of zero is one the class has not reached yet and is
-  not drawn. It was the foot of the Actions tab until the action list grew
-  long enough to push it off the screen.
+- **Resources** is what a class hands out to spend, drawn only for a
+  character with any: the pools ("Consumable slots"), and among them every
+  scaling value that is a plain number -- Extra Attacks: 1, Maneuvers: 3 -- as
+  that many marks, which a game spends like a pool (docs/backend.md). It grows
+  with level rather than coming back on a rest, but a table still counts it off
+  within a turn, and a number printed as "Extra Attacks: 1" offered nothing to
+  count with. **There is no box of scaling values.** A value that is read
+  rather than counted -- a Sneak Attack die -- is the size of a feature, so it
+  is on Overview with the features: "Sneak Attack: 1d6" in place of "Sneak
+  Attack", and a value no feature is named for follows them. A scaling value of
+  zero is one the class has not reached yet and is not drawn.
 - **Equipment** and **Items** are described
   [below](#equipment-is-what-is-worn-items-is-what-is-carried).
 
@@ -1937,6 +1956,22 @@ old log, an import, homebrew without the field -- is shown in an
 **Elsewhere** card that appears only when something is in it. That card is the
 honest remainder of what used to be a permanent *Worn* slot, which was not a
 body part but "everything we could not place".
+
+**A weapon's numbers are captioned, not written out**, on the Actions tab and
+the Equipment tab alike: `features/character/WeaponStats` draws **Damage**,
+**Hit** and **Range**, in that order everywhere, each under its own caption and
+the two that are rolled in colour. They used to be a dimmed sentence -- "+5 to
+hit · 1d8+3 · 5 ft." on Actions, "Damage: 1d8 Piercing · Range: 5/5 ft." on
+Equipment -- which is three things read off mid-turn written as prose, in two
+different orders. Where a row is wide they are columns at its right; on a slot
+card and on a phone's inventory row, which are too narrow for three columns
+beside a name, they are one compact line under it (`inline`) that wraps rather
+than clips. The numbers come from the sheet's action for the weapon when it is
+wielded (`weaponNumbers` in `options.ts`), so both tabs print the server's own
+sum -- die plus modifier, and the bonus to hit; a weapon that is only carried
+has no action, and shows the catalogue's die, type and range with no Hit.
+What is left of the old line -- properties, weight, thrown range -- stays a
+dimmed line beneath.
 
 Every inventory row, on both tabs, is a **bubble** (`features/character/
 Inventory`): the name, the item's numbers on one line -- armor class, damage
@@ -2393,6 +2428,22 @@ Nothing on the page writes. Changing a decision happens on the build screen,
 where the thing being changed is in front of you: one entry is replaced and
 everything after it revalidated. The log is where you come afterwards to see
 what that cost.
+
+## A session that ends while the page is open signs the page out
+
+`AuthProvider` asks who is signed in once, on mount. A session can end after
+that -- it expires, or the server restarts with a new signing key, which a
+development server does on every restart -- and the first anybody hears of it
+is a 401 on whatever a screen asked for next. Each screen used to report that
+as its own failure ("Could not load your folders -- That is not valid. Start
+again.") and leave the player on a private page that could no longer work.
+
+So the API client says it once: `onUnauthorized` in `lib/api/client.ts` calls
+its listeners whenever any request is answered 401, and `AuthProvider`, while
+somebody is signed in, answers by becoming anonymous with the session-expired
+message. Every private route then does what it does for an anonymous visitor
+and shows the landing page with its Log in button. The screen's own request
+still fails, but nobody is left looking at it.
 
 ## Private routes branch, they do not redirect
 
@@ -3060,7 +3111,8 @@ Every dialog in the app is a `ModalSheet`, so what a sheet looks like on a phone
 is decided once. Two things are, there: **`title` is required**, because a
 sheet without one opened as an empty header band over an unnamed form (the game
 tracker's edit sheet did, and is now titled with the entry's name); and the
-drawer's **body keeps its own top padding**, which Mantine zeroes under a
+**body keeps its own top padding** in both renderings -- the phone's drawer
+and the desktop's modal -- which Mantine zeroes under a
 header -- fine when the header is the panel's colour, flush against a band's
 edge when it is not.
 
@@ -4508,14 +4560,24 @@ Choice rows place their source badges on the right beside the name.
 Spell *lists* are the exception and carry no source badges -- not on a spell
 choice row, not in the compendium's list. A list is dozens of rows and the pack
 and book were the same two badges on every one of them; the compendium's Source
-*filter* stays. The badges are in one place for a spell: inside its description
+*filter* stays, its options reading pack first and then the book inside it
+("SRD 5.1 extended v2.0.0 / PHB"), the order the two filters stand in. The badges are in one place for a spell: inside its description
 box (`features/spells/SpellDetails`), as the last of its facts, which is where
 "which book is this from" is asked about one spell. On a spell's own page that
 box also opens with its level and school (in the builder's preview the row
 above already says both). They used to be the page's subtitle -- a dimmed
 line above the panel, apart from the facts they belong with.
-Homebrew uses a gear icon in desktop navigation and is omitted from the mobile
-menu; its direct routes remain available.
+Homebrew has no entry in the navigation at either width; its direct routes
+(`/homebrew`, `/homebrew/:id`) and the group screen's Homebrew tab remain.
+The custom background is listed last among the backgrounds -- it is the way
+out of the list rather than one more entry in it -- and the server is what
+orders it so (`customLast` in the catalogue handler; collections are otherwise
+in slug order, so a pack file's own order decides nothing). Builder options
+for equipment carry no artwork: a list of thirty weapons was thirty 66px tiles.
+A pick keeps the picked option in view and does not jump to Confirm, which in
+a long list threw the page to its foot on every click. The spell filters share
+one fixed width, so the row does not re-wrap when a value is chosen or the
+language changes.
 
 ### Portraits
 

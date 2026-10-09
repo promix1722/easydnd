@@ -5,6 +5,8 @@ import type { Entry, ResourcePool, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import { Accordion, Badge, BlockList, Group, Markdown, Stack, Text, joinProse } from '@/ui'
 
+import { WeaponStats } from './WeaponStats'
+
 const KINDS = {
   action: 'actions.kind.action',
   'bonus-action': 'actions.kind.bonusAction',
@@ -76,9 +78,6 @@ export function SheetActions({ actions, entries, pools }: {
           const key = action.origin ?? `${action.name}:${at}`
           const pool = action.uses ? pools[action.uses] : undefined
           const facts = [
-            action.toHit === undefined ? '' : t('actions.toHit', { bonus: signed(action.toHit) }),
-            action.damage,
-            action.range ? t('vitals.feet', { distance: action.range }) : '',
             pool ? t('actions.uses', { name: pool.name, max: pool.max }) : '',
             action.notes,
           ].filter(Boolean).join(' · ')
@@ -86,14 +85,21 @@ export function SheetActions({ actions, entries, pools }: {
           return {
             key,
             header: (
-              <Stack gap={2}>
-                <Group gap="xs">
-                  <Text fw={600}>{action.name}</Text>
-                  {/* An action is the default and says nothing; only the other parts of a turn are marked. */}
-                  {action.kind !== 'action' && <Badge variant="light">{kindName(action.kind)}</Badge>}
-                </Group>
-                {facts && <Text size="sm" c="dimmed">{facts}</Text>}
-              </Stack>
+              <Group gap="md" justify="space-between" wrap="nowrap">
+                <Stack gap={2} style={{ minWidth: 0 }}>
+                  <Group gap="xs">
+                    <Text fw={600}>{action.name}</Text>
+                    {/* An action is the default and says nothing; only the other parts of a turn are marked. */}
+                    {action.kind !== 'action' && <Badge variant="light">{kindName(action.kind)}</Badge>}
+                  </Group>
+                  {facts && <Text size="sm" c="dimmed">{facts}</Text>}
+                </Stack>
+                <WeaponStats
+                  damage={action.damage}
+                  hit={action.toHit === undefined ? undefined : signed(action.toHit)}
+                  range={action.range ? t('vitals.feet', { distance: action.range }) : undefined}
+                />
+              </Group>
             ),
             body: desc?.length ? <Markdown size="sm">{joinProse(desc)}</Markdown> : undefined,
           }

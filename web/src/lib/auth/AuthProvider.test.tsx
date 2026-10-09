@@ -8,6 +8,8 @@ import {
   removeAuthenticator,
 } from '@/test/webauthn'
 
+import { ApiError, request } from '@/lib/api'
+
 import { AuthProvider } from './AuthProvider'
 import { useAuth } from './state'
 import { setupUser } from '@/test/user'
@@ -106,6 +108,21 @@ describe('AuthProvider', () => {
   // Being unable to ask is not the same as being told no. Treating it as a
   // sign-out would eject people whenever the network dropped, and every time
   // an installed PWA opened offline.
+  // A session can die while the page is open: the server restarts with a new
+  // key, and the next request any screen makes is the first to hear of it.
+  it('signs out, and says why, when a later request is answered 401', async () => {
+    const fetch = vi.fn().mockResolvedValue(respond(200, { user: account }))
+    vi.stubGlobal('fetch', fetch)
+    renderProvider()
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
+
+    fetch.mockResolvedValue(respond(401, { error: { code: 'unauthenticated', message: 'bad token', reason: 'auth.tokenInvalid' } }))
+    await expect(request('/folders')).rejects.toBeInstanceOf(ApiError)
+
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
+    expect(screen.getByTestId('error')).toHaveTextContent('Your session had expired')
+  })
+
   it('reports offline, not anonymous, when the server cannot be reached', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('network down')))
     renderProvider()

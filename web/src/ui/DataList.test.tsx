@@ -175,15 +175,16 @@ describe('DataList', () => {
       { key: 'off', label: 'Take off', color: 'red', onClick: () => calls.push(row.id) },
     ]
 
-    it('spells them out as buttons on desktop, named for their row', () => {
+    // A table used to spell its actions out as buttons on a wide screen, which
+    // made a three-action row a control panel wider than its data. One menu
+    // per row at every width, named for the row.
+    it('folds them behind one control on desktop too, named for its row', () => {
       reset()
       at('desktop', <DataList items={rows} columns={columns} getKey={(r) => r.id} actions={takeOff} />)
 
-      // Named for the row, not just "Take off": a column of buttons all called
-      // the same thing is ambiguous to a screen reader and to a test alike.
-      expect(screen.getByRole('button', { name: 'Take off Vex' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Take off Grog' })).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Take off Vex' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Actions for Vex' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Actions for Grog' })).toBeInTheDocument()
     })
 
     it('folds them behind one control on a phone', async () => {

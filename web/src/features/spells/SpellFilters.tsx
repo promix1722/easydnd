@@ -10,6 +10,14 @@ const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 const CASTING_TIMES = ['action', 'bonus-action', 'reaction', 'over-time']
 
 /** Shared controls; browsing stores filters in the URL, build choices keep them local. */
+/**
+ * One width for every filter, and it does not move: a control sized by its
+ * placeholder is a different width in every language and changes again when a
+ * value longer or shorter than the placeholder is picked, so the row re-wraps
+ * under the cursor. Full width on a phone, where they stack.
+ */
+const FILTER_WIDTH = { w: { base: '100%', sm: 240 }, miw: 0, maw: '100%' } as const
+
 export function SpellFilters({ value, onChange, schools, classes, availableOnly, onAvailableOnlyChange, sourceOptions, onVersionChange }: {
   sourceOptions?: SourceOptions
   onVersionChange?: (pack: string, version: string) => void
@@ -32,7 +40,7 @@ export function SpellFilters({ value, onChange, schools, classes, availableOnly,
       <Group gap="sm">
         {sourceOptions && <>
           <SummaryMultiSelect
-            w={{ base: '100%', sm: 240 }} miw={0} maw="100%"
+            {...FILTER_WIDTH}
             aria-label={t('spells.filter.pack')} placeholder={t('spells.filter.allPacks')}
             data={sourceOptions.packs.flatMap((p) => (onVersionChange ? p.versions : [p.version])
               .map((version) => ({ value: `${p.id}@${version}`, label: `${p.title} v${version}` })))}
@@ -50,17 +58,19 @@ export function SpellFilters({ value, onChange, schools, classes, availableOnly,
             }}
           />
           <SummaryMultiSelect
-            w={{ base: '100%', sm: 240 }} miw={0} maw="100%"
+            {...FILTER_WIDTH}
             aria-label={t('spells.filter.source')} placeholder={t('spells.filter.allSources')}
             data={sourceOptions.sources.filter((s) => !value.packIds?.length || value.packIds.includes(s.packId)).map((s) => {
               const pack = sourceOptions.packs.find((p) => p.id === s.packId)
-              return { value: s.id, label: `${s.name} / ${pack ? `${pack.title} v${pack.version}` : s.packId}` }
+              // Pack first, then the book inside it: the order the two filters stand in.
+              return { value: s.id, label: `${pack ? `${pack.title} v${pack.version}` : s.packId} / ${s.name}` }
             })}
             value={value.sources ?? []} searchable clearable onChange={(sources) => onChange({ ...value, sources })}
           />
 
         </>}
         <Select
+          {...FILTER_WIDTH}
           aria-label={t('spells.filter.level')}
           placeholder={t('spells.filter.allLevels')}
           data={LEVELS.map((level) => ({ value: String(level), label: levelText(t, level) }))}
@@ -69,6 +79,7 @@ export function SpellFilters({ value, onChange, schools, classes, availableOnly,
           clearable
         />
         <Select
+          {...FILTER_WIDTH}
           aria-label={t('spells.filter.school')}
           placeholder={t('spells.filter.allSchools')}
           data={schools.map((entry) => ({ value: entry.slug, label: entry.name }))}
@@ -77,6 +88,7 @@ export function SpellFilters({ value, onChange, schools, classes, availableOnly,
           clearable
         />
         <Select
+          {...FILTER_WIDTH}
           aria-label={t('spells.filter.class')}
           placeholder={t('spells.filter.allClasses')}
           data={classes.map((entry) => ({ value: entry.slug, label: entry.name }))}
@@ -85,6 +97,7 @@ export function SpellFilters({ value, onChange, schools, classes, availableOnly,
           clearable
         />
         <Select
+          {...FILTER_WIDTH}
           aria-label={t('spells.filter.castingTime')}
           placeholder={t('spells.filter.anyTime')}
           data={CASTING_TIMES.map((kind) => ({

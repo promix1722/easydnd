@@ -152,10 +152,8 @@ func (p *projector) run(log Log) (State, error) {
 		}
 		p.state.Status.ProficiencyBonus = n
 	}
-	// The starting kit comes first: what a worn slot chose is the baseline
-	// the sheet's own equipped writes then replace. Applied after them, the
-	// kit's longsword was appended to a list that already carried it, once
-	// per edit.
+	// The starting kit comes first, into the backpack: the sheet's own
+	// equipment writes are counts of what it granted.
 	p.applyEquipmentChoices()
 	// Equipped items are explicit inputs to pack conditions as well as AC.
 	// Apply that independent list before rules; carried-item changes still
@@ -567,12 +565,11 @@ func (p *projector) addClassResources(row catalog.ClassLevel) {
 
 // applyEquipmentChoices resolves the starting-equipment prompts into stacks.
 //
-// A choice asked for a worn slot -- body, main hand, off hand -- is answered
-// by what goes there, so that item is equipped; the rest of its answer (the
-// bolts that come with a crossbow) and every
-// slotless choice land in the backpack. Nothing else is guessed: strapping on
-// a shield that came beside a two-handed weapon would produce an armor class
-// with no rule behind it. Everything further is an explicit change event.
+// Everything chosen lands in the backpack, whatever slot the question was
+// asked for. Putting it on is not this function's business and not a build's:
+// a kit choice "for the main hand" used to be worn, which read well for one
+// sword and badly for everything else -- see AutoEquip, which does it once,
+// at the end, one item to a slot.
 func (p *projector) applyEquipmentChoices() {
 	class, ok := p.cat.Classes.Get(p.firstClass())
 	if ok {
@@ -592,35 +589,13 @@ func (p *projector) addChosenEquipment(choice rules.Choice) {
 		switch opt := o.(type) {
 		case rules.RefOption:
 			if opt.Ref.Kind == rules.RefItem || opt.Ref.Kind == rules.RefMagicItem {
-				stack := ItemStack{Item: opt.Ref.Slug, Count: max(opt.Count, 1)}
-				if p.fillsSlot(choice.Slot, opt.Ref.Slug) {
-					p.state.Equipment.Equipped = append(p.state.Equipment.Equipped, stack)
-				} else {
-					p.addStacks([]catalog.ItemStack{{Item: stack.Item, Count: stack.Count}})
-				}
+				p.addStacks([]catalog.ItemStack{{Item: opt.Ref.Slug, Count: max(opt.Count, 1)}})
 			}
 		case rules.MoneyOption:
 			p.addCoins(opt.Coins)
 		}
 	})
 }
-
-// fillsSlot reports whether an item chosen for a kit slot is what goes there:
-// its own slot, or a held weapon in the off hand. Only the worn slots count;
-// "backup" or "pack" name the card and nothing on the body.
-func (p *projector) fillsSlot(slot rules.Slug, item rules.Slug) bool {
-	want, ok := kitSlots[slot]
-	if !ok {
-		return false
-	}
-	it, ok := p.cat.Items.Get(item)
-	if !ok {
-		return false
-	}
-	return it.Slot == want || (want == catalog.SlotOffHand && it.Slot == catalog.SlotMainHand)
-}
-
-var kitSlots = map[rules.Slug]catalog.Slot{"body": catalog.SlotBody, "main-hand": catalog.SlotMainHand, "off-hand": catalog.SlotOffHand}
 
 func (p *projector) firstClass() rules.Slug {
 	if len(p.state.Identity.Classes) == 0 {

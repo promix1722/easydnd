@@ -9,6 +9,7 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 
 import {
   appendEvents,
+  autoEquip,
   reviseEvents,
   createCharacter,
   deleteEvent,
@@ -686,7 +687,10 @@ export function BuildScreen() {
             actions: (
               <Button
                 variant={view.prompts.complete ? 'filled' : 'light'}
-                onClick={() => void navigate(`/characters/${id}`)}
+                // A build equips nothing; Finish is where the character is
+                // dressed. The sheet opens either way -- a failure here costs
+                // an empty paperdoll, not the way out of the builder.
+                onClick={() => void autoEquip(id).catch(() => undefined).then(() => navigate(`/characters/${id}`))}
               >
                 {t('build.finish')}
               </Button>

@@ -502,16 +502,30 @@ func TestProjectRogueResourcesAndEquipment(t *testing.T) {
 		}
 	}
 
-	// The main-hand pick is wielded; the armor was an explicit change;
-	// everything else stays packed -- and the burglar's pack is carried as
+	// A kit choice is carried, not worn, whatever slot it was asked for: the
+	// armor is on because an explicit change put it on, and the rapier is in
+	// the backpack until something equips it. The burglar's pack is carried as
 	// its contents, never as a pack.
 	has := func(list []ItemStack, want rules.Slug) bool {
 		return slices.ContainsFunc(list, func(st ItemStack) bool { return st.Item == want })
 	}
-	if len(s.Equipment.Equipped) != 2 || !has(s.Equipment.Equipped, "leather-armor") || !has(s.Equipment.Equipped, "rapier") {
-		t.Errorf("equipped = %+v, want the leather armor and the rapier", s.Equipment.Equipped)
+	if len(s.Equipment.Equipped) != 1 || !has(s.Equipment.Equipped, "leather-armor") {
+		t.Errorf("equipped = %+v, want only the leather armor", s.Equipment.Equipped)
 	}
-	for _, want := range []rules.Slug{"dagger", "thieves-tools", "shortbow", "crowbar", "ball-bearings-bag-of-1000"} {
+	// Something is already worn, so auto-equip has nothing to say.
+	if got := AutoEquip(s, LoadCatalog(t)); got != nil {
+		t.Errorf("AutoEquip over a dressed character = %+v, want nothing", got)
+	}
+	// With nothing worn it takes one thing per slot: the rapier for the hand
+	// and the armor for the body, and not the shortbow or a dagger as well.
+	bare := s
+	bare.Equipment.Backpack = append(slices.Clone(s.Equipment.Backpack), s.Equipment.Equipped...)
+	bare.Equipment.Equipped = nil
+	changes := AutoEquip(bare, LoadCatalog(t))
+	if len(changes) == 0 || changes[0].Path != "equipment.equipped" || !slices.Equal(changes[0].Value.Slugs, []rules.Slug{"rapier", "leather-armor"}) {
+		t.Errorf("AutoEquip = %+v, want the rapier and the leather armor", changes)
+	}
+	for _, want := range []rules.Slug{"rapier", "dagger", "thieves-tools", "shortbow", "crowbar", "ball-bearings-bag-of-1000"} {
 		if !has(s.Equipment.Backpack, want) {
 			t.Errorf("backpack %v is missing %q", s.Equipment.Backpack, want)
 		}
