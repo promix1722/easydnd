@@ -174,12 +174,12 @@ func (h *Handler) searchItems(c *gin.Context, search spellSearch) {
 	matches := make([]ItemHit, 0)
 	for _, item := range cat.Items.All() {
 		if strings.Contains(strings.ToLower(item.Name), q) {
-			matches = append(matches, ItemHit{Slug: item.Slug.String(), Name: item.Name, Category: item.Category.String()})
+			matches = append(matches, ItemHit{Slug: item.Slug.String(), Icon: item.Icon, Name: item.Name, Category: item.Category.String()})
 		}
 	}
 	for _, item := range cat.MagicItems.All() {
 		if strings.Contains(strings.ToLower(item.Name), q) {
-			matches = append(matches, ItemHit{Slug: item.Slug.String(), Name: item.Name, Category: item.Category.String(), Magic: true})
+			matches = append(matches, ItemHit{Slug: item.Slug.String(), Icon: item.Icon, Name: item.Name, Category: item.Category.String(), Magic: true})
 		}
 	}
 	slices.SortFunc(matches, func(a, b ItemHit) int {

@@ -86,7 +86,7 @@ func TestRepositoryArtworkJoinsPackAndSurvivesIdentityOverride(t *testing.T) {
 }
 
 func TestIconPackRoundTrips(t *testing.T) {
-	p := iconPack(t)
+	p := itemIconPack(t)
 	before, err := PackDigest(p)
 	if err != nil {
 		t.Fatal(err)
@@ -166,7 +166,7 @@ func TestIconPackRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p.Icons = nil
+	p.Icons.Spells = nil
 	missing, err := PackDigest(p)
 	if err != nil || old == missing {
 		t.Fatal("digest ignores artwork")
@@ -230,7 +230,9 @@ func TestIconNamespacesAndArchivedRelease(t *testing.T) {
 		t.Fatal("mixed namespaces")
 	}
 	old := *base
-	old.Icons = nil
+	oldIcons := *base.Icons
+	oldIcons.Spells = nil
+	old.Icons = &oldIcons
 	old.Manifest.Version = "1.1.0"
 	oldDir := filepath.Join(t.TempDir(), "old")
 	if err = SavePackDirectory(oldDir, &old); err != nil {

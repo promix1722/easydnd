@@ -77,6 +77,9 @@ func loadRepositoryIcons(p *PackDocument, dir string) error {
 		for _, data := range p.Icons.Spells {
 			total += len(data)
 		}
+		for _, data := range p.Icons.Items {
+			total += len(data)
+		}
 	}
 	for _, spell := range spells {
 		if !validLocalID(spell.Slug) {

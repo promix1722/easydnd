@@ -14,6 +14,7 @@ import { abilityName, choiceOptionName } from './labels'
  * client cannot get it wrong.
  */
 export interface Choosable {
+  icon?: Item['icon']
   provenance?: Entry['provenance']
   /** An entry the player wrote, rather than one the rules have. */
   manual?: boolean
@@ -61,6 +62,7 @@ export function choosableOptions(
   if (set.kind !== 'explicit') {
     return [...entries.values()].map((entry) => ({
       key: entry.slug,
+      icon: prompt.choice.kind === 'equipment' ? (entry as Item).icon : undefined,
       provenance: entry.provenance,
       ...(entry.manual === true ? { manual: true } : {}),
       label: entry.name,
@@ -74,6 +76,7 @@ export function choosableOptions(
     const reason = disabledBy(t, prompt, held, option.key)
     return {
       key: option.key,
+      icon: prompt.choice.kind === 'equipment' ? (entries.get(slugOf(firstRef(option) ?? '')) as Item | undefined)?.icon : undefined,
       provenance: entries.get(slugOf(firstRef(option) ?? ''))?.provenance,
       label: optionLabel(t, option, entries),
       ...maybeDetail(detailOf(t, option, entries)),

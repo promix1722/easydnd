@@ -383,6 +383,7 @@ type Vehicle struct {
 // Item is a piece of equipment.
 type Item struct {
 	Entry
+	Icon     string   `json:"icon,omitempty"`
 	Category string   `json:"category,omitempty"`
 	Slot     string   `json:"slot,omitempty"`
 	Cost     *Cost    `json:"cost,omitempty"`
@@ -397,6 +398,7 @@ type Item struct {
 // MagicItem is a magical piece of equipment.
 type MagicItem struct {
 	Entry
+	Icon     string   `json:"icon,omitempty"`
 	Category string   `json:"category,omitempty"`
 	Rarity   string   `json:"rarity,omitempty"`
 	Slot     string   `json:"slot,omitempty"`
@@ -449,6 +451,7 @@ type SpellSearchResult struct {
 // The sheet asks for the rest by slug once the item is owned.
 type ItemHit struct {
 	Slug     string `json:"slug"`
+	Icon     string `json:"icon,omitempty"`
 	Name     string `json:"name"`
 	Category string `json:"category,omitempty"`
 	Magic    bool   `json:"magic,omitempty"`

@@ -14,3 +14,12 @@ func TestSpellArtworkInSummaryAndDetail(t *testing.T) {
 		}
 	}
 }
+
+func TestItemArtworkInDetail(t *testing.T) {
+	c := converter{}
+	for _, icon := range []string{"", "data:image/webp;base64,cGFjayBieXRlcw=="} {
+		if c.item(domain.Item{Icon: icon}).Icon != icon || c.magicItem(domain.MagicItem{Icon: icon}).Icon != icon {
+			t.Fatal("catalog lost item artwork")
+		}
+	}
+}

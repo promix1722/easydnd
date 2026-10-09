@@ -18,6 +18,8 @@ type ItemStack struct {
 // classifies; all five are nil for the handful it leaves uncategorised.
 type Item struct {
 	Entry
+	// Icon is validated pack artwork, encoded as a WebP data URL.
+	Icon string
 
 	// Category is the top-level equipment category: weapon, armor, tools,
 	// adventuring-gear, mounts-and-vehicles.
@@ -200,6 +202,8 @@ const (
 // fill.
 type MagicItem struct {
 	Entry
+	// Icon is validated pack artwork, encoded as a WebP data URL.
+	Icon string
 
 	Category rules.Slug
 	Rarity   Rarity

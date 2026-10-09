@@ -143,6 +143,7 @@ export interface Class extends Entry {
 }
 
 export interface Item extends Entry {
+  icon?: string
   category?: string
   /** Where the item is worn or wielded; absent when it is only carried. */
   slot?: Slot
@@ -362,6 +363,7 @@ export function searchSpells(search: SpellSearch, signal?: AbortSignal, scope = 
 
 /** One row of an items search: enough to pick by. The sheet asks for the rest once it is owned. */
 export interface ItemHit {
+  icon?: string
   slug: string
   name: string
   category?: string

@@ -1,4 +1,6 @@
 {
+  "packs.field.icons": "Иконки",
+  "packs.field.icon": "Метка иконки",
   "account.profile": "Профиль",
   "avatar.portrait": "Портрет",
   "avatar.crop": "Обрезать изображение",

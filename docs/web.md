@@ -979,6 +979,15 @@ creation's spell prompts read that path and never met the envelope.
 The detail page asks the same endpoint for the whole entry with `?slugs=`,
 which is where the prose and the remaining rule values live.
 
+**Item artwork uses shared pack labels.** Equipment and magic items reference
+one pack-local `icons.items` library. Resolved API entries carry an optional
+`icon` data URL. `ui/ItemIcon` renders the 128×128 assets at 88×88, twice the
+spell icon dimensions, with pixelated scaling beside the visible item name. Inventory rows, equipped slots, equip
+selectors and starting-equipment choices use the same component; equipment
+columns stack on narrow screens to make room. Missing images leave the name
+and controls usable. Item artwork is decorative to screen readers. See
+`docs/packs.md` for the authored mapping and conversion workflow.
+
 **Spell artwork belongs to its pack release.** The SRD's 319 WebPs live in
 `data/srd_5.1/spell-icons/`, imported from the matching spell IDs in
 `easydnd-2014/spell-icons/`. Existing catalog summaries and details expose an
@@ -1910,10 +1919,11 @@ props, and they split the inventory by whether a thing *can* be worn rather than
 by whether it is: a wearable in the backpack is on the Equipment tab, under the
 doll it could go on.
 
-**Equipment** is, on top, a **paperdoll** of twelve cards in three columns, at
-every width: what is held -- Main hand, Off hand, Arms, Custom -- then what is
+**Equipment** is, on top, a **paperdoll** of twelve cards in three columns,
+stacking on narrow screens: what is held -- Main hand, Off hand, Arms, Custom -- then what is
 worn down the middle -- Head, Body, Belt, Legs -- then what hangs or is slipped
-on -- Back, Amulet, Ring 1, Ring 2. Each card holds one item. The labels are
+on -- Back, Amulet, Ring 1, Ring 2. Each occupied card shows the item's name,
+available stats and Markdown description beside its icon. The labels are
 the player's words for the catalogue's slots: Belt is `waist`, Amulet is
 `neck`, Legs is `feet`, and the two ring cards are the one `ring` slot with
 room for two. Arms is bracers *and* gloves, because the catalogue has one slot

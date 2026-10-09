@@ -100,6 +100,8 @@ const fields: Record<string, MessageKey> = {
   isVariant: 'packs.field.isVariant',
   item: 'packs.field.item',
   items: 'packs.field.items',
+  icon: 'packs.field.icon',
+  icons: 'packs.field.icons',
   key: 'packs.field.key',
   kind: 'packs.field.kind',
   languageOptions: 'packs.field.languageOptions',

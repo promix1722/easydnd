@@ -31,7 +31,10 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc["icons"] = map[string]any{"spells": map[string][]byte{"guiding-mark": icon}}
+	doc["icons"] = map[string]any{"spells": map[string][]byte{"guiding-mark": icon}, "items": map[string][]byte{"toolkit": icon}}
+	for _, value := range doc["entities"].(map[string]any)["equipment"].([]any) {
+		value.(map[string]any)["icon"] = "toolkit"
+	}
 	created := send(t, r, owner, http.MethodPost, "/v1/packs/import?title=My%20rules", doc)
 	if created.Code != 200 {
 		t.Fatal(created.Body.String())
@@ -79,16 +82,21 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 	if !strings.Contains(catalog.Body.String(), "data:image/webp;base64,") {
 		t.Fatal("shared catalog lost artwork")
 	}
+	itemCatalog := send(t, r, outsider, http.MethodGet, "/v1/packs/catalog/equipment?slugs="+p.ID+"/survey-tools&packs="+p.ID+"@1.0.0", nil)
+	if itemCatalog.Code != 200 || !strings.Contains(itemCatalog.Body.String(), "data:image/webp;base64,") {
+		t.Fatalf("shared item catalog lost artwork: %d %s", itemCatalog.Code, itemCatalog.Body)
+	}
 	exported := send(t, r, owner, http.MethodGet, "/v1/packs/"+p.ID+"/export?version=1.0.0", nil)
 	var exportedDoc struct {
 		Icons struct {
 			Spells map[string][]byte `json:"spells"`
+			Items  map[string][]byte `json:"items"`
 		} `json:"icons"`
 	}
 	if err := json.Unmarshal(exported.Body.Bytes(), &exportedDoc); err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(icon, exportedDoc.Icons.Spells["guiding-mark"]) {
+	if !bytes.Equal(icon, exportedDoc.Icons.Spells["guiding-mark"]) || !bytes.Equal(icon, exportedDoc.Icons.Items["toolkit"]) {
 		t.Fatal("published export lost artwork")
 	}
 	for _, path := range []string{"/v1/packs/spells?pack=" + p.ID, "/v1/packs/spell-filters"} {

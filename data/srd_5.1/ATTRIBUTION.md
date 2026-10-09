@@ -9,6 +9,11 @@ from the matching SRD spell IDs in easydnd-2014/spell-icons/. They are
 AI-generated illustrations; srdgen includes them in the pack manifest and
 copies them when writing another output directory.
 
+The WebP files under item-icons/ are original AI-generated pixel artwork.
+Equipment and magic items share them through the authored labels in
+data/rules/2014/item-icons.json. srdgen includes each referenced image once
+in the pack manifest and copies it when writing another output directory.
+
 ## SRD 5.1
 
 This work includes material taken from the System Reference Document 5.1

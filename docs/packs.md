@@ -15,7 +15,38 @@ default catalogue, and live in memory. The
 existing browser still uses its original ability editor; its resource displays
 read `resources.pools` and `resources.parameters`.
 
-## Spell artwork
+## Pack artwork
+
+Equipment and magic items share a pack-local asset library. Each definition
+may set `"icon": "sword"`; any number of rows in either collection can use
+that label. Labels are stable IDs, independent of item names and translations.
+Directory and ZIP manifests declare `"icons/items/sword": "item-icons/sword.webp"`.
+Portable JSON stores each image once in
+`"icons": { "items": { "sword": "<base64 WebP bytes>" } }`.
+An item's label must exist in its own pack; it cannot point into another pack.
+Missing references, invalid labels and malformed artwork fail validation.
+Artwork remains optional for older and custom packs.
+
+Item icons are transparent 128×128 WebPs. The SRD uses original pixel artwork,
+with shared silhouettes for variants. The authored assignments live in
+`data/rules/2014/item-icons.json`, and committed artwork inputs live in
+`data/srd_5.1/item-icons/`. `srdgen` requires a valid assignment for every
+equipment and magic-item row, rejects stale assignments, and copies referenced
+artwork into the generated pack. Never edit generated equipment JSON to assign
+icons. New artwork and assignments require a new release, now `1.6.0`.
+
+To convert approved PNGs from `output/imagegen/item-samples/` and
+`output/imagegen/item-icons/`, run `node web/scripts/item-icons.mjs` after
+installing the web dependencies. This uses nearest-neighbor resizing and
+lossless WebP, checks dimensions and transparency, and preserves source PNGs.
+Then run `make data/srd` and `make data/srd/check`. Regenerating the SRD itself
+needs only the committed WebPs, never the image generator or source PNGs.
+
+Item detail, collection, and search responses expose an optional `icon` data
+URL, just as spells do. The UI displays item artwork at 88×88 alongside its
+name in inventory, equipped slots, equip selectors and starting choices.
+
+### Spell artwork
 
 Artwork is optional and belongs to an immutable release. Directory and ZIP
 packs declare files in the manifest, using local spell IDs:
@@ -40,7 +71,7 @@ packs without icons retain their digests and remain valid. Existing catalog
 summary/detail routes expose an optional `icon` data URL; no image routes or
 separate image storage are used.
 
-The SRD pack's version is `data/rules/2014/release.json` (now `1.4.0`). Preserve
+The SRD pack's version is `data/rules/2014/release.json` (now `1.6.0`). Preserve
 `data.pack_archive` when deploying so characters pinned to an earlier release
 continue to use the archived bytes; startup refuses an archived release whose
 bytes have changed under the same version. An explicit

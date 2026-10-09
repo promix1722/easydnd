@@ -459,7 +459,7 @@ func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 // The sheet's item picker searches equipment and magic items together, by
 // name, a page at a time -- and like spells the bare list is refused.
 func TestItemSearchPagesEquipmentAndMagicItems(t *testing.T) {
-	r, session := newFullRouter(t)
+	r, session, _, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
 
 	search := func(query string) catalogapi.ItemSearchResult {
 		t.Helper()
@@ -481,6 +481,9 @@ func TestItemSearchPagesEquipmentAndMagicItems(t *testing.T) {
 	// Sorted by name across both collections, and a magic item says so.
 	var magic, mundane bool
 	for _, hit := range append(page.Items, rest.Items...) {
+		if !strings.HasPrefix(hit.Icon, "data:image/webp;base64,") {
+			t.Errorf("%s has no item artwork", hit.Slug)
+		}
 		if !strings.Contains(strings.ToLower(hit.Name), "sword") {
 			t.Errorf("%s does not match", hit.Name)
 		}

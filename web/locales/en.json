@@ -1,4 +1,6 @@
 {
+  "packs.field.icons": "Icons",
+  "packs.field.icon": "Icon label",
   "account.profile": "Profile",
   "avatar.portrait": "Portrait",
   "avatar.crop": "Crop image",

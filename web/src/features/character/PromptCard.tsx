@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Answer, Choice, Entry, Option, Prompt } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
-import { Badge, Box, Button, Group, Markdown, SourceTags, Stack, Text } from '@/ui'
+import { Badge, Box, Button, Group, ItemIcon, Markdown, SourceTags, Stack, Text } from '@/ui'
 
 import { SpellChoices } from './SpellChoices'
 
@@ -170,6 +170,7 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
               c="var(--mantine-color-text)"
               aria-pressed={count > 0}
               justify="space-between"
+              leftSection={option.icon ? <ItemIcon icon={option.icon} /> : undefined}
               styles={{ label: { width: '100%', minWidth: 0 } }}
               // The description underneath makes a picked option two or three
               // lines tall, and a button that fixes its own height would crop

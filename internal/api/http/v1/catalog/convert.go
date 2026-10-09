@@ -461,6 +461,7 @@ func (c converter) feat(f domain.Feat) Feat {
 func (c converter) item(i domain.Item) Item {
 	out := Item{
 		Entry:    entryOf(i.Entry),
+		Icon:     i.Icon,
 		Category: i.Category.String(),
 		Slot:     i.Slot.String(),
 		Cost:     costOf(i.Cost),
@@ -513,6 +514,7 @@ func (c converter) item(i domain.Item) Item {
 func (c converter) magicItem(m domain.MagicItem) MagicItem {
 	return MagicItem{
 		Entry:    entryOf(m.Entry),
+		Icon:     m.Icon,
 		Category: m.Category.String(),
 		Rarity:   m.Rarity.String(),
 		Slot:     m.Slot.String(),

@@ -4,9 +4,10 @@ import { CUSTOM, ELSEWHERE, equip, fitsSlot, groupOf, mergeStacks, setCoin, slot
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
 import type { Change, Equipment, Item } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Box, Button, Grid, ModalSheet, Panel, Paper, Stack, Text, UnstyledButton } from '@/ui'
+import { Box, Button, Grid, Group, ItemIcon, joinProse, Markdown, ModalSheet, Panel, Paper, Stack, Text, UnstyledButton } from '@/ui'
 
 import { InventoryRows, Purse } from './Inventory'
+import { itemFacts } from './options'
 
 /**
  * A card on the paperdoll. One per slot, except the ring slot, which holds
@@ -74,7 +75,19 @@ export function SheetEquipment({ equipment, items, name, lookup, disabled = fals
       <Text size="xs" c="dimmed" tt="uppercase">{labels[each]}</Text>
       {worn.length === 0
         ? <Text size="sm" c="dimmed">{t('equipment.slotEmpty')}</Text>
-        : worn.map((slug, at) => <Text key={`${slug}:${at}`} size="sm" fw={500}>{name(slug)}</Text>)}
+        : worn.map((slug, at) => {
+          const item = items.get(slug)
+          const facts = item === undefined ? undefined : itemFacts(t, item, (ref) =>
+            lookup(item.weapon?.properties?.includes(ref) ? 'weapon-properties' : 'damage-types', ref))
+          return <Group key={`${slug}:${at}`} gap={6} wrap="nowrap" align="flex-start">
+            <ItemIcon icon={item?.icon} />
+            <Stack gap={2} style={{ minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
+              <Text size="sm" fw={500}>{name(slug)}</Text>
+              {facts !== undefined && <Text size="xs" c="dimmed">{facts}</Text>}
+              {!!item?.desc?.length && <Markdown size="xs">{joinProse(item.desc)}</Markdown>}
+            </Stack>
+          </Group>
+        })}
     </Stack>
     return <Paper key={each} withBorder p="xs" radius="md">
       {onChange
@@ -87,7 +100,7 @@ export function SheetEquipment({ equipment, items, name, lookup, disabled = fals
   return <Stack gap="md">
     <Box component="section" aria-label={t('equipment.slots')}>
       <Grid gap="xs">
-        {COLUMNS.map((column, at) => <Grid.Col key={at} span={4}><Stack gap="xs">{column.map(card)}</Stack></Grid.Col>)}
+        {COLUMNS.map((column, at) => <Grid.Col key={at} span={{ base: 12, sm: 4 }} miw={160}><Stack gap="xs">{column.map(card)}</Stack></Grid.Col>)}
         {elsewhere.length > 0 && <Grid.Col span={12}>{card(ELSEWHERE)}</Grid.Col>}
       </Grid>
     </Box>
@@ -111,6 +124,7 @@ export function SheetEquipment({ equipment, items, name, lookup, disabled = fals
         {fitting.length === 0 && <Text size="sm" c="dimmed">{t('equipment.nothingFits')}</Text>}
         {slot !== ELSEWHERE && fitting.map((stack) => (
           <Button key={stack.item} variant="light" justify="space-between"
+            h="auto" py="xs" leftSection={<ItemIcon icon={items.get(stack.item ?? '')?.icon} />}
             onClick={() => { onChange(equip(equipment, items, stack.item ?? '', slot)); setPicking(null) }}>
             {name(stack.item ?? '')}
           </Button>

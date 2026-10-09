@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Entry, Prompt } from '@/lib/api'
+import type { Entry, Item, Prompt } from '@/lib/api'
 import { testT } from '@/test/i18n'
 
 import { choosableOptions, equipmentTitle } from './options'
@@ -16,7 +16,7 @@ function prompt(overrides: Partial<Prompt>): Prompt {
 }
 
 const entries = new Map<string, Entry>([
-  ['shortbow', { slug: 'shortbow', name: 'Shortbow', provenance: { packId: 'srd', packTitle: 'SRD', version: '1', digest: 'd', sources: [] } }],
+  ['shortbow', { slug: 'shortbow', name: 'Shortbow', icon: 'data:image/webp;base64,Ym93', provenance: { packId: 'srd', packTitle: 'SRD', version: '1', digest: 'd', sources: [] } } as Item],
   ['arrow', { slug: 'arrow', name: 'Arrow', gear: { gearCategory: 'ammunition' } } as Entry],
   ['shortsword', { slug: 'shortsword', name: 'Shortsword' }],
 ])
@@ -55,6 +55,7 @@ describe('choosableOptions', () => {
     // The arrows go without saying; the bundle wears its bow's badges.
     expect(got[0]?.label).toBe('Shortbow')
     expect(got[0]?.provenance?.packId).toBe('srd')
+    expect(got[0]?.icon).toBe('data:image/webp;base64,Ym93')
     expect(got[0]?.detail).toContain('Arrow ×20')
     expect(got[1]?.label).toBe('Shortsword')
   })

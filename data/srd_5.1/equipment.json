@@ -1,6 +1,7 @@
 [
   {
     "slug": "abacus",
+    "icon": "abacus",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -13,6 +14,7 @@
   },
   {
     "slug": "acid-vial",
+    "icon": "potion",
     "category": "adventuring-gear",
     "cost": {
       "amount": 25,
@@ -25,6 +27,7 @@
   },
   {
     "slug": "alchemists-fire-flask",
+    "icon": "potion",
     "category": "adventuring-gear",
     "cost": {
       "amount": 50,
@@ -37,6 +40,7 @@
   },
   {
     "slug": "alchemists-supplies",
+    "icon": "alchemy",
     "category": "tools",
     "cost": {
       "amount": 50,
@@ -49,6 +53,7 @@
   },
   {
     "slug": "alms-box",
+    "icon": "chest",
     "category": "adventuring-gear",
     "cost": {
       "amount": 0,
@@ -60,6 +65,7 @@
   },
   {
     "slug": "amulet",
+    "icon": "amulet",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -73,6 +79,7 @@
   },
   {
     "slug": "animal-feed-1-day",
+    "icon": "feed",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 5,
@@ -85,6 +92,7 @@
   },
   {
     "slug": "antitoxin-vial",
+    "icon": "potion",
     "category": "adventuring-gear",
     "cost": {
       "amount": 50,
@@ -96,6 +104,7 @@
   },
   {
     "slug": "arrow",
+    "icon": "arrow",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -109,6 +118,7 @@
   },
   {
     "slug": "backpack",
+    "icon": "backpack",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -121,6 +131,7 @@
   },
   {
     "slug": "bagpipes",
+    "icon": "bagpipes",
     "category": "tools",
     "cost": {
       "amount": 30,
@@ -133,6 +144,7 @@
   },
   {
     "slug": "ball-bearings-bag-of-1000",
+    "icon": "ball-bearings-bag-of-1000",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -145,6 +157,7 @@
   },
   {
     "slug": "barding-breastplate",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 1600,
@@ -157,6 +170,7 @@
   },
   {
     "slug": "barding-chain-mail",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 300,
@@ -169,6 +183,7 @@
   },
   {
     "slug": "barding-chain-shirt",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 200,
@@ -181,6 +196,7 @@
   },
   {
     "slug": "barding-half-plate",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 3000,
@@ -193,6 +209,7 @@
   },
   {
     "slug": "barding-hide",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 40,
@@ -205,6 +222,7 @@
   },
   {
     "slug": "barding-leather",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 40,
@@ -217,6 +235,7 @@
   },
   {
     "slug": "barding-padded",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 20,
@@ -229,6 +248,7 @@
   },
   {
     "slug": "barding-plate",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 6000,
@@ -241,6 +261,7 @@
   },
   {
     "slug": "barding-ring-mail",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 12,
@@ -253,6 +274,7 @@
   },
   {
     "slug": "barding-scale-mail",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 200,
@@ -265,6 +287,7 @@
   },
   {
     "slug": "barding-splint",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 800,
@@ -277,6 +300,7 @@
   },
   {
     "slug": "barding-studded-leather",
+    "icon": "horse-armor",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 180,
@@ -289,6 +313,7 @@
   },
   {
     "slug": "barrel",
+    "icon": "barrel",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -301,6 +326,7 @@
   },
   {
     "slug": "basket",
+    "icon": "basket",
     "category": "adventuring-gear",
     "cost": {
       "amount": 4,
@@ -313,6 +339,7 @@
   },
   {
     "slug": "battleaxe",
+    "icon": "axe",
     "category": "weapon",
     "cost": {
       "amount": 10,
@@ -334,6 +361,7 @@
   },
   {
     "slug": "bedroll",
+    "icon": "bedroll",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -346,6 +374,7 @@
   },
   {
     "slug": "bell",
+    "icon": "bell",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -357,6 +386,7 @@
   },
   {
     "slug": "bit-and-bridle",
+    "icon": "bit-and-bridle",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 2,
@@ -369,6 +399,7 @@
   },
   {
     "slug": "blanket",
+    "icon": "bedroll",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -381,6 +412,7 @@
   },
   {
     "slug": "block-and-tackle",
+    "icon": "block-and-tackle",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -393,6 +425,7 @@
   },
   {
     "slug": "block-of-incense",
+    "icon": "block-of-incense",
     "category": "adventuring-gear",
     "cost": {
       "amount": 0,
@@ -404,6 +437,7 @@
   },
   {
     "slug": "blowgun",
+    "icon": "blowgun",
     "category": "weapon",
     "cost": {
       "amount": 10,
@@ -425,6 +459,7 @@
   },
   {
     "slug": "blowgun-needle",
+    "icon": "arrow",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -438,6 +473,7 @@
   },
   {
     "slug": "book",
+    "icon": "book",
     "category": "adventuring-gear",
     "cost": {
       "amount": 25,
@@ -450,6 +486,7 @@
   },
   {
     "slug": "bottle-glass",
+    "icon": "bottle",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -462,6 +499,7 @@
   },
   {
     "slug": "breastplate",
+    "icon": "plate-armor",
     "category": "armor",
     "cost": {
       "amount": 400,
@@ -477,6 +515,7 @@
   },
   {
     "slug": "brewers-supplies",
+    "icon": "alchemy",
     "category": "tools",
     "cost": {
       "amount": 20,
@@ -489,6 +528,7 @@
   },
   {
     "slug": "bucket",
+    "icon": "bucket",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -501,6 +541,7 @@
   },
   {
     "slug": "burglars-pack",
+    "icon": "backpack",
     "category": "adventuring-gear",
     "cost": {
       "amount": 16,
@@ -570,6 +611,7 @@
   },
   {
     "slug": "calligraphers-supplies",
+    "icon": "ink-and-quill",
     "category": "tools",
     "cost": {
       "amount": 10,
@@ -582,6 +624,7 @@
   },
   {
     "slug": "caltrops",
+    "icon": "caltrops",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -594,6 +637,7 @@
   },
   {
     "slug": "camel",
+    "icon": "camel",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 50,
@@ -606,6 +650,7 @@
   },
   {
     "slug": "candle",
+    "icon": "candle",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -617,6 +662,7 @@
   },
   {
     "slug": "carpenters-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 8,
@@ -629,6 +675,7 @@
   },
   {
     "slug": "carriage",
+    "icon": "cart",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 100,
@@ -641,6 +688,7 @@
   },
   {
     "slug": "cart",
+    "icon": "cart",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 15,
@@ -653,6 +701,7 @@
   },
   {
     "slug": "cartographers-tools",
+    "icon": "ink-and-quill",
     "category": "tools",
     "cost": {
       "amount": 15,
@@ -665,6 +714,7 @@
   },
   {
     "slug": "case-crossbow-bolt",
+    "icon": "quiver",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -677,6 +727,7 @@
   },
   {
     "slug": "case-map-or-scroll",
+    "icon": "scroll",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -689,6 +740,7 @@
   },
   {
     "slug": "censer",
+    "icon": "brazier",
     "category": "adventuring-gear",
     "cost": {
       "amount": 0,
@@ -700,6 +752,7 @@
   },
   {
     "slug": "chain-10-feet",
+    "icon": "chain",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -712,6 +765,7 @@
   },
   {
     "slug": "chain-mail",
+    "icon": "chainmail",
     "category": "armor",
     "cost": {
       "amount": 75,
@@ -728,6 +782,7 @@
   },
   {
     "slug": "chain-shirt",
+    "icon": "chainmail",
     "category": "armor",
     "cost": {
       "amount": 50,
@@ -743,6 +798,7 @@
   },
   {
     "slug": "chalk-1-piece",
+    "icon": "chalk-1-piece",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -754,6 +810,7 @@
   },
   {
     "slug": "chariot",
+    "icon": "cart",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 250,
@@ -766,6 +823,7 @@
   },
   {
     "slug": "chest",
+    "icon": "chest",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -778,6 +836,7 @@
   },
   {
     "slug": "climbers-kit",
+    "icon": "artisan-tools",
     "category": "adventuring-gear",
     "cost": {
       "amount": 25,
@@ -790,6 +849,7 @@
   },
   {
     "slug": "clothes-common",
+    "icon": "clothes",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -803,6 +863,7 @@
   },
   {
     "slug": "clothes-costume",
+    "icon": "clothes",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -816,6 +877,7 @@
   },
   {
     "slug": "clothes-fine",
+    "icon": "clothes",
     "category": "adventuring-gear",
     "cost": {
       "amount": 15,
@@ -829,6 +891,7 @@
   },
   {
     "slug": "clothes-travelers",
+    "icon": "clothes",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -842,6 +905,7 @@
   },
   {
     "slug": "club",
+    "icon": "club",
     "category": "weapon",
     "cost": {
       "amount": 1,
@@ -862,6 +926,7 @@
   },
   {
     "slug": "cobblers-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 5,
@@ -874,6 +939,7 @@
   },
   {
     "slug": "component-pouch",
+    "icon": "pouch",
     "category": "adventuring-gear",
     "cost": {
       "amount": 25,
@@ -886,6 +952,7 @@
   },
   {
     "slug": "cooks-utensils",
+    "icon": "cooking-pot",
     "category": "tools",
     "cost": {
       "amount": 1,
@@ -898,6 +965,7 @@
   },
   {
     "slug": "crossbow-bolt",
+    "icon": "arrow",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -911,6 +979,7 @@
   },
   {
     "slug": "crossbow-hand",
+    "icon": "crossbow",
     "category": "weapon",
     "cost": {
       "amount": 75,
@@ -933,6 +1002,7 @@
   },
   {
     "slug": "crossbow-heavy",
+    "icon": "crossbow",
     "category": "weapon",
     "cost": {
       "amount": 50,
@@ -956,6 +1026,7 @@
   },
   {
     "slug": "crossbow-light",
+    "icon": "crossbow",
     "category": "weapon",
     "cost": {
       "amount": 25,
@@ -978,6 +1049,7 @@
   },
   {
     "slug": "crowbar",
+    "icon": "crowbar",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -990,6 +1062,7 @@
   },
   {
     "slug": "crystal",
+    "icon": "crystal",
     "category": "adventuring-gear",
     "cost": {
       "amount": 10,
@@ -1002,6 +1075,7 @@
   },
   {
     "slug": "dagger",
+    "icon": "dagger",
     "category": "weapon",
     "cost": {
       "amount": 2,
@@ -1026,6 +1100,7 @@
   },
   {
     "slug": "dart",
+    "icon": "arrow",
     "category": "weapon",
     "cost": {
       "amount": 5,
@@ -1049,6 +1124,7 @@
   },
   {
     "slug": "dice-set",
+    "icon": "dice-set",
     "category": "tools",
     "cost": {
       "amount": 1,
@@ -1060,6 +1136,7 @@
   },
   {
     "slug": "diplomats-pack",
+    "icon": "backpack",
     "category": "adventuring-gear",
     "cost": {
       "amount": 39,
@@ -1117,6 +1194,7 @@
   },
   {
     "slug": "disguise-kit",
+    "icon": "artisan-tools",
     "category": "adventuring-gear",
     "cost": {
       "amount": 25,
@@ -1129,6 +1207,7 @@
   },
   {
     "slug": "donkey",
+    "icon": "donkey",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 8,
@@ -1141,6 +1220,7 @@
   },
   {
     "slug": "drum",
+    "icon": "drum",
     "category": "tools",
     "cost": {
       "amount": 6,
@@ -1153,6 +1233,7 @@
   },
   {
     "slug": "dulcimer",
+    "icon": "lute",
     "category": "tools",
     "cost": {
       "amount": 25,
@@ -1165,6 +1246,7 @@
   },
   {
     "slug": "dungeoneers-pack",
+    "icon": "backpack",
     "category": "adventuring-gear",
     "cost": {
       "amount": 12,
@@ -1214,6 +1296,7 @@
   },
   {
     "slug": "elephant",
+    "icon": "elephant",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 200,
@@ -1226,6 +1309,7 @@
   },
   {
     "slug": "emblem",
+    "icon": "amulet",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -1237,6 +1321,7 @@
   },
   {
     "slug": "entertainers-pack",
+    "icon": "backpack",
     "category": "adventuring-gear",
     "cost": {
       "amount": 40,
@@ -1278,6 +1363,7 @@
   },
   {
     "slug": "explorers-pack",
+    "icon": "backpack",
     "category": "adventuring-gear",
     "cost": {
       "amount": 10,
@@ -1323,6 +1409,7 @@
   },
   {
     "slug": "fishing-tackle",
+    "icon": "fishing-tackle",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -1335,6 +1422,7 @@
   },
   {
     "slug": "flail",
+    "icon": "flail",
     "category": "weapon",
     "cost": {
       "amount": 10,
@@ -1351,6 +1439,7 @@
   },
   {
     "slug": "flask-or-tankard",
+    "icon": "flask",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -1363,6 +1452,7 @@
   },
   {
     "slug": "flute",
+    "icon": "flute",
     "category": "tools",
     "cost": {
       "amount": 2,
@@ -1375,6 +1465,7 @@
   },
   {
     "slug": "forgery-kit",
+    "icon": "artisan-tools",
     "category": "adventuring-gear",
     "cost": {
       "amount": 15,
@@ -1387,6 +1478,7 @@
   },
   {
     "slug": "galley",
+    "icon": "ship",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 30000,
@@ -1399,6 +1491,7 @@
   },
   {
     "slug": "glaive",
+    "icon": "spear",
     "category": "weapon",
     "cost": {
       "amount": 20,
@@ -1420,6 +1513,7 @@
   },
   {
     "slug": "glassblowers-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 30,
@@ -1432,6 +1526,7 @@
   },
   {
     "slug": "grappling-hook",
+    "icon": "grappling-hook",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -1444,6 +1539,7 @@
   },
   {
     "slug": "greataxe",
+    "icon": "axe",
     "category": "weapon",
     "cost": {
       "amount": 30,
@@ -1464,6 +1560,7 @@
   },
   {
     "slug": "greatclub",
+    "icon": "club",
     "category": "weapon",
     "cost": {
       "amount": 2,
@@ -1483,6 +1580,7 @@
   },
   {
     "slug": "greatsword",
+    "icon": "sword",
     "category": "weapon",
     "cost": {
       "amount": 50,
@@ -1503,6 +1601,7 @@
   },
   {
     "slug": "halberd",
+    "icon": "spear",
     "category": "weapon",
     "cost": {
       "amount": 20,
@@ -1524,6 +1623,7 @@
   },
   {
     "slug": "half-plate-armor",
+    "icon": "plate-armor",
     "category": "armor",
     "cost": {
       "amount": 750,
@@ -1540,6 +1640,7 @@
   },
   {
     "slug": "hammer",
+    "icon": "hammer",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -1552,6 +1653,7 @@
   },
   {
     "slug": "hammer-sledge",
+    "icon": "hammer",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -1564,6 +1666,7 @@
   },
   {
     "slug": "handaxe",
+    "icon": "axe",
     "category": "weapon",
     "cost": {
       "amount": 5,
@@ -1587,6 +1690,7 @@
   },
   {
     "slug": "healers-kit",
+    "icon": "medicine-kit",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -1599,6 +1703,7 @@
   },
   {
     "slug": "herbalism-kit",
+    "icon": "medicine-kit",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -1611,6 +1716,7 @@
   },
   {
     "slug": "hide-armor",
+    "icon": "leather-armor",
     "category": "armor",
     "cost": {
       "amount": 10,
@@ -1626,6 +1732,7 @@
   },
   {
     "slug": "holy-water-flask",
+    "icon": "potion",
     "category": "adventuring-gear",
     "cost": {
       "amount": 25,
@@ -1638,6 +1745,7 @@
   },
   {
     "slug": "horn",
+    "icon": "horn",
     "category": "tools",
     "cost": {
       "amount": 3,
@@ -1650,6 +1758,7 @@
   },
   {
     "slug": "horse-draft",
+    "icon": "horse",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 50,
@@ -1662,6 +1771,7 @@
   },
   {
     "slug": "horse-riding",
+    "icon": "horse",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 75,
@@ -1674,6 +1784,7 @@
   },
   {
     "slug": "hourglass",
+    "icon": "hourglass",
     "category": "adventuring-gear",
     "cost": {
       "amount": 25,
@@ -1686,6 +1797,7 @@
   },
   {
     "slug": "hunting-trap",
+    "icon": "hunting-trap",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -1698,6 +1810,7 @@
   },
   {
     "slug": "ink-1-ounce-bottle",
+    "icon": "ink-and-quill",
     "category": "adventuring-gear",
     "cost": {
       "amount": 10,
@@ -1709,6 +1822,7 @@
   },
   {
     "slug": "ink-pen",
+    "icon": "ink-and-quill",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -1720,6 +1834,7 @@
   },
   {
     "slug": "javelin",
+    "icon": "spear",
     "category": "weapon",
     "cost": {
       "amount": 5,
@@ -1742,6 +1857,7 @@
   },
   {
     "slug": "jewelers-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 25,
@@ -1754,6 +1870,7 @@
   },
   {
     "slug": "jug-or-pitcher",
+    "icon": "flask",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -1766,6 +1883,7 @@
   },
   {
     "slug": "keelboat",
+    "icon": "ship",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 3000,
@@ -1778,6 +1896,7 @@
   },
   {
     "slug": "ladder-10-foot",
+    "icon": "ladder-10-foot",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -1790,6 +1909,7 @@
   },
   {
     "slug": "lamp",
+    "icon": "lantern",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -1802,6 +1922,7 @@
   },
   {
     "slug": "lance",
+    "icon": "spear",
     "category": "weapon",
     "cost": {
       "amount": 10,
@@ -1822,6 +1943,7 @@
   },
   {
     "slug": "lantern-bullseye",
+    "icon": "lantern",
     "category": "adventuring-gear",
     "cost": {
       "amount": 10,
@@ -1834,6 +1956,7 @@
   },
   {
     "slug": "lantern-hooded",
+    "icon": "lantern",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -1846,6 +1969,7 @@
   },
   {
     "slug": "leather-armor",
+    "icon": "leather-armor",
     "category": "armor",
     "cost": {
       "amount": 10,
@@ -1860,6 +1984,7 @@
   },
   {
     "slug": "leatherworkers-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 5,
@@ -1872,6 +1997,7 @@
   },
   {
     "slug": "light-hammer",
+    "icon": "hammer",
     "category": "weapon",
     "cost": {
       "amount": 2,
@@ -1895,6 +2021,7 @@
   },
   {
     "slug": "little-bag-of-sand",
+    "icon": "pouch",
     "category": "adventuring-gear",
     "cost": {
       "amount": 0,
@@ -1906,6 +2033,7 @@
   },
   {
     "slug": "lock",
+    "icon": "lock",
     "category": "adventuring-gear",
     "cost": {
       "amount": 10,
@@ -1918,6 +2046,7 @@
   },
   {
     "slug": "longbow",
+    "icon": "bow",
     "category": "weapon",
     "cost": {
       "amount": 50,
@@ -1940,6 +2069,7 @@
   },
   {
     "slug": "longship",
+    "icon": "ship",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 10000,
@@ -1952,6 +2082,7 @@
   },
   {
     "slug": "longsword",
+    "icon": "sword",
     "category": "weapon",
     "cost": {
       "amount": 15,
@@ -1973,6 +2104,7 @@
   },
   {
     "slug": "lute",
+    "icon": "lute",
     "category": "tools",
     "cost": {
       "amount": 35,
@@ -1985,6 +2117,7 @@
   },
   {
     "slug": "lyre",
+    "icon": "lyre",
     "category": "tools",
     "cost": {
       "amount": 30,
@@ -1997,6 +2130,7 @@
   },
   {
     "slug": "mace",
+    "icon": "mace",
     "category": "weapon",
     "cost": {
       "amount": 5,
@@ -2016,6 +2150,7 @@
   },
   {
     "slug": "magnifying-glass",
+    "icon": "magnifying-glass",
     "category": "adventuring-gear",
     "cost": {
       "amount": 100,
@@ -2027,6 +2162,7 @@
   },
   {
     "slug": "manacles",
+    "icon": "chain",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -2039,6 +2175,7 @@
   },
   {
     "slug": "masons-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 10,
@@ -2051,6 +2188,7 @@
   },
   {
     "slug": "mastiff",
+    "icon": "mastiff",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 25,
@@ -2063,6 +2201,7 @@
   },
   {
     "slug": "maul",
+    "icon": "hammer",
     "category": "weapon",
     "cost": {
       "amount": 10,
@@ -2083,6 +2222,7 @@
   },
   {
     "slug": "mess-kit",
+    "icon": "cooking-pot",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -2095,6 +2235,7 @@
   },
   {
     "slug": "mirror-steel",
+    "icon": "mirror",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2107,6 +2248,7 @@
   },
   {
     "slug": "morningstar",
+    "icon": "mace",
     "category": "weapon",
     "cost": {
       "amount": 15,
@@ -2123,6 +2265,7 @@
   },
   {
     "slug": "mule",
+    "icon": "donkey",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 8,
@@ -2135,6 +2278,7 @@
   },
   {
     "slug": "navigators-tools",
+    "icon": "navigators-tools",
     "category": "tools",
     "cost": {
       "amount": 25,
@@ -2147,6 +2291,7 @@
   },
   {
     "slug": "net",
+    "icon": "net",
     "category": "weapon",
     "cost": {
       "amount": 1,
@@ -2168,6 +2313,7 @@
   },
   {
     "slug": "oil-flask",
+    "icon": "bottle",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -2180,6 +2326,7 @@
   },
   {
     "slug": "orb",
+    "icon": "orb",
     "category": "adventuring-gear",
     "cost": {
       "amount": 20,
@@ -2192,6 +2339,7 @@
   },
   {
     "slug": "padded-armor",
+    "icon": "leather-armor",
     "category": "armor",
     "cost": {
       "amount": 5,
@@ -2207,6 +2355,7 @@
   },
   {
     "slug": "painters-supplies",
+    "icon": "paint",
     "category": "tools",
     "cost": {
       "amount": 10,
@@ -2219,6 +2368,7 @@
   },
   {
     "slug": "pan-flute",
+    "icon": "pan-flute",
     "category": "tools",
     "cost": {
       "amount": 12,
@@ -2231,6 +2381,7 @@
   },
   {
     "slug": "paper-one-sheet",
+    "icon": "scroll",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -2242,6 +2393,7 @@
   },
   {
     "slug": "parchment-one-sheet",
+    "icon": "scroll",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -2253,6 +2405,7 @@
   },
   {
     "slug": "perfume-vial",
+    "icon": "potion",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2264,6 +2417,7 @@
   },
   {
     "slug": "pick-miners",
+    "icon": "pickaxe",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -2276,6 +2430,7 @@
   },
   {
     "slug": "pike",
+    "icon": "spear",
     "category": "weapon",
     "cost": {
       "amount": 5,
@@ -2297,6 +2452,7 @@
   },
   {
     "slug": "piton",
+    "icon": "piton",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2309,6 +2465,7 @@
   },
   {
     "slug": "plate-armor",
+    "icon": "plate-armor",
     "category": "armor",
     "cost": {
       "amount": 1500,
@@ -2325,6 +2482,7 @@
   },
   {
     "slug": "playing-card-set",
+    "icon": "cards",
     "category": "tools",
     "cost": {
       "amount": 5,
@@ -2336,6 +2494,7 @@
   },
   {
     "slug": "poison-basic-vial",
+    "icon": "potion",
     "category": "adventuring-gear",
     "cost": {
       "amount": 100,
@@ -2347,6 +2506,7 @@
   },
   {
     "slug": "poisoners-kit",
+    "icon": "medicine-kit",
     "category": "adventuring-gear",
     "cost": {
       "amount": 50,
@@ -2359,6 +2519,7 @@
   },
   {
     "slug": "pole-10-foot",
+    "icon": "pole-10-foot",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2371,6 +2532,7 @@
   },
   {
     "slug": "pony",
+    "icon": "horse",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 30,
@@ -2383,6 +2545,7 @@
   },
   {
     "slug": "pot-iron",
+    "icon": "cooking-pot",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -2395,6 +2558,7 @@
   },
   {
     "slug": "potters-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 10,
@@ -2407,6 +2571,7 @@
   },
   {
     "slug": "pouch",
+    "icon": "pouch",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2419,6 +2584,7 @@
   },
   {
     "slug": "prayer-book",
+    "icon": "book",
     "category": "adventuring-gear",
     "cost": {
       "amount": 0,
@@ -2427,6 +2593,7 @@
   },
   {
     "slug": "prayer-wheel",
+    "icon": "prayer-wheel",
     "category": "adventuring-gear",
     "cost": {
       "amount": 0,
@@ -2435,6 +2602,7 @@
   },
   {
     "slug": "priests-pack",
+    "icon": "backpack",
     "category": "adventuring-gear",
     "cost": {
       "amount": 19,
@@ -2488,6 +2656,7 @@
   },
   {
     "slug": "quarterstaff",
+    "icon": "staff",
     "category": "weapon",
     "cost": {
       "amount": 2,
@@ -2510,6 +2679,7 @@
   },
   {
     "slug": "quiver",
+    "icon": "quiver",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -2522,6 +2692,7 @@
   },
   {
     "slug": "ram-portable",
+    "icon": "ram-portable",
     "category": "adventuring-gear",
     "cost": {
       "amount": 4,
@@ -2534,6 +2705,7 @@
   },
   {
     "slug": "rapier",
+    "icon": "sword",
     "category": "weapon",
     "cost": {
       "amount": 25,
@@ -2553,6 +2725,7 @@
   },
   {
     "slug": "rations-1-day",
+    "icon": "rations-1-day",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2565,6 +2738,7 @@
   },
   {
     "slug": "reliquary",
+    "icon": "amulet",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2578,6 +2752,7 @@
   },
   {
     "slug": "ring-mail",
+    "icon": "chainmail",
     "category": "armor",
     "cost": {
       "amount": 30,
@@ -2593,6 +2768,7 @@
   },
   {
     "slug": "robes",
+    "icon": "robe",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -2606,6 +2782,7 @@
   },
   {
     "slug": "rod",
+    "icon": "rod",
     "category": "adventuring-gear",
     "cost": {
       "amount": 10,
@@ -2618,6 +2795,7 @@
   },
   {
     "slug": "rope-hempen-50-feet",
+    "icon": "rope",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -2630,6 +2808,7 @@
   },
   {
     "slug": "rope-silk-50-feet",
+    "icon": "rope",
     "category": "adventuring-gear",
     "cost": {
       "amount": 10,
@@ -2642,6 +2821,7 @@
   },
   {
     "slug": "rowboat",
+    "icon": "boat",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 50,
@@ -2654,6 +2834,7 @@
   },
   {
     "slug": "sack",
+    "icon": "sack",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -2666,6 +2847,7 @@
   },
   {
     "slug": "saddle-exotic",
+    "icon": "saddle",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 60,
@@ -2678,6 +2860,7 @@
   },
   {
     "slug": "saddle-military",
+    "icon": "saddle",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 20,
@@ -2690,6 +2873,7 @@
   },
   {
     "slug": "saddle-pack",
+    "icon": "saddle",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 5,
@@ -2702,6 +2886,7 @@
   },
   {
     "slug": "saddle-riding",
+    "icon": "saddle",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 10,
@@ -2714,6 +2899,7 @@
   },
   {
     "slug": "saddlebags",
+    "icon": "saddlebags",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 4,
@@ -2726,6 +2912,7 @@
   },
   {
     "slug": "sailing-ship",
+    "icon": "ship",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 10000,
@@ -2738,6 +2925,7 @@
   },
   {
     "slug": "scale-mail",
+    "icon": "chainmail",
     "category": "armor",
     "cost": {
       "amount": 50,
@@ -2754,6 +2942,7 @@
   },
   {
     "slug": "scale-merchants",
+    "icon": "scale-merchants",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2766,6 +2955,7 @@
   },
   {
     "slug": "scholars-pack",
+    "icon": "backpack",
     "category": "adventuring-gear",
     "cost": {
       "amount": 40,
@@ -2807,6 +2997,7 @@
   },
   {
     "slug": "scimitar",
+    "icon": "scimitar",
     "category": "weapon",
     "cost": {
       "amount": 25,
@@ -2827,6 +3018,7 @@
   },
   {
     "slug": "sealing-wax",
+    "icon": "sealing-wax",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2838,6 +3030,7 @@
   },
   {
     "slug": "shawm",
+    "icon": "flute",
     "category": "tools",
     "cost": {
       "amount": 2,
@@ -2850,6 +3043,7 @@
   },
   {
     "slug": "shield",
+    "icon": "shield",
     "category": "armor",
     "cost": {
       "amount": 10,
@@ -2864,6 +3058,7 @@
   },
   {
     "slug": "shortbow",
+    "icon": "bow",
     "category": "weapon",
     "cost": {
       "amount": 25,
@@ -2885,6 +3080,7 @@
   },
   {
     "slug": "shortsword",
+    "icon": "sword",
     "category": "weapon",
     "cost": {
       "amount": 10,
@@ -2906,6 +3102,7 @@
   },
   {
     "slug": "shovel",
+    "icon": "shovel",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -2918,6 +3115,7 @@
   },
   {
     "slug": "sickle",
+    "icon": "sickle",
     "category": "weapon",
     "cost": {
       "amount": 1,
@@ -2938,6 +3136,7 @@
   },
   {
     "slug": "signal-whistle",
+    "icon": "signal-whistle",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2949,6 +3148,7 @@
   },
   {
     "slug": "signet-ring",
+    "icon": "ring",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -2960,6 +3160,7 @@
   },
   {
     "slug": "sled",
+    "icon": "sled",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 20,
@@ -2972,6 +3173,7 @@
   },
   {
     "slug": "sling",
+    "icon": "sling",
     "category": "weapon",
     "cost": {
       "amount": 1,
@@ -2991,6 +3193,7 @@
   },
   {
     "slug": "sling-bullet",
+    "icon": "sling-bullet",
     "category": "adventuring-gear",
     "cost": {
       "amount": 4,
@@ -3004,6 +3207,7 @@
   },
   {
     "slug": "small-knife",
+    "icon": "dagger",
     "category": "adventuring-gear",
     "cost": {
       "amount": 0,
@@ -3015,6 +3219,7 @@
   },
   {
     "slug": "smiths-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 20,
@@ -3027,6 +3232,7 @@
   },
   {
     "slug": "soap",
+    "icon": "soap",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -3038,6 +3244,7 @@
   },
   {
     "slug": "spear",
+    "icon": "spear",
     "category": "weapon",
     "cost": {
       "amount": 1,
@@ -3063,6 +3270,7 @@
   },
   {
     "slug": "spellbook",
+    "icon": "book",
     "category": "adventuring-gear",
     "cost": {
       "amount": 50,
@@ -3075,6 +3283,7 @@
   },
   {
     "slug": "spike-iron",
+    "icon": "piton",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -3087,6 +3296,7 @@
   },
   {
     "slug": "splint-armor",
+    "icon": "chainmail",
     "category": "armor",
     "cost": {
       "amount": 200,
@@ -3103,6 +3313,7 @@
   },
   {
     "slug": "sprig-of-mistletoe",
+    "icon": "sprig-of-mistletoe",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -3114,6 +3325,7 @@
   },
   {
     "slug": "spyglass",
+    "icon": "spyglass",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1000,
@@ -3126,6 +3338,7 @@
   },
   {
     "slug": "stabling-1-day",
+    "icon": "stabling-1-day",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 5,
@@ -3137,6 +3350,7 @@
   },
   {
     "slug": "staff",
+    "icon": "staff",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -3149,6 +3363,7 @@
   },
   {
     "slug": "string-10-feet",
+    "icon": "rope",
     "category": "adventuring-gear",
     "cost": {
       "amount": 0,
@@ -3160,6 +3375,7 @@
   },
   {
     "slug": "studded-leather-armor",
+    "icon": "leather-armor",
     "category": "armor",
     "cost": {
       "amount": 45,
@@ -3174,6 +3390,7 @@
   },
   {
     "slug": "tent-two-person",
+    "icon": "tent-two-person",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -3186,6 +3403,7 @@
   },
   {
     "slug": "thieves-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 25,
@@ -3198,6 +3416,7 @@
   },
   {
     "slug": "tinderbox",
+    "icon": "tinderbox",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -3210,6 +3429,7 @@
   },
   {
     "slug": "tinkers-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 50,
@@ -3222,6 +3442,7 @@
   },
   {
     "slug": "torch",
+    "icon": "torch",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -3234,6 +3455,7 @@
   },
   {
     "slug": "totem",
+    "icon": "amulet",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -3245,6 +3467,7 @@
   },
   {
     "slug": "trident",
+    "icon": "trident",
     "category": "weapon",
     "cost": {
       "amount": 5,
@@ -3269,6 +3492,7 @@
   },
   {
     "slug": "vestments",
+    "icon": "robe",
     "category": "adventuring-gear",
     "cost": {
       "amount": 0,
@@ -3281,6 +3505,7 @@
   },
   {
     "slug": "vial",
+    "icon": "bottle",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -3292,6 +3517,7 @@
   },
   {
     "slug": "viol",
+    "icon": "lute",
     "category": "tools",
     "cost": {
       "amount": 30,
@@ -3304,6 +3530,7 @@
   },
   {
     "slug": "wagon",
+    "icon": "cart",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 35,
@@ -3316,6 +3543,7 @@
   },
   {
     "slug": "wand",
+    "icon": "wand",
     "category": "adventuring-gear",
     "cost": {
       "amount": 10,
@@ -3328,6 +3556,7 @@
   },
   {
     "slug": "war-pick",
+    "icon": "pickaxe",
     "category": "weapon",
     "cost": {
       "amount": 5,
@@ -3344,6 +3573,7 @@
   },
   {
     "slug": "warhammer",
+    "icon": "hammer",
     "category": "weapon",
     "cost": {
       "amount": 15,
@@ -3365,6 +3595,7 @@
   },
   {
     "slug": "warhorse",
+    "icon": "horse",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 400,
@@ -3377,6 +3608,7 @@
   },
   {
     "slug": "warship",
+    "icon": "ship",
     "category": "mounts-and-vehicles",
     "cost": {
       "amount": 25000,
@@ -3389,6 +3621,7 @@
   },
   {
     "slug": "waterskin",
+    "icon": "waterskin",
     "category": "adventuring-gear",
     "cost": {
       "amount": 2,
@@ -3401,6 +3634,7 @@
   },
   {
     "slug": "weavers-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 1,
@@ -3413,6 +3647,7 @@
   },
   {
     "slug": "whetstone",
+    "icon": "stone",
     "category": "adventuring-gear",
     "cost": {
       "amount": 1,
@@ -3425,6 +3660,7 @@
   },
   {
     "slug": "whip",
+    "icon": "whip",
     "category": "weapon",
     "cost": {
       "amount": 2,
@@ -3445,6 +3681,7 @@
   },
   {
     "slug": "woodcarvers-tools",
+    "icon": "artisan-tools",
     "category": "tools",
     "cost": {
       "amount": 1,
@@ -3457,6 +3694,7 @@
   },
   {
     "slug": "wooden-staff",
+    "icon": "staff",
     "category": "adventuring-gear",
     "cost": {
       "amount": 5,
@@ -3469,6 +3707,7 @@
   },
   {
     "slug": "yew-wand",
+    "icon": "wand",
     "category": "adventuring-gear",
     "cost": {
       "amount": 10,

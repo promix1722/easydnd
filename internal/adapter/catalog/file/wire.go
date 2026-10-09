@@ -315,6 +315,7 @@ type Feat struct {
 // Item is a piece of mundane equipment.
 type Item struct {
 	Slug     string  `json:"slug"`
+	Icon     string  `json:"icon,omitempty"`
 	Category string  `json:"category"`
 	Cost     Cost    `json:"cost"`
 	Weight   float64 `json:"weight,omitempty"`
@@ -384,6 +385,7 @@ type Vehicle struct {
 // MagicItem is an enchanted item.
 type MagicItem struct {
 	Slug      string   `json:"slug"`
+	Icon      string   `json:"icon,omitempty"`
 	Category  string   `json:"category,omitempty"`
 	Rarity    string   `json:"rarity,omitempty"`
 	Variants  []string `json:"variants,omitempty"`

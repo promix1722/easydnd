@@ -450,15 +450,20 @@ func readPackDirectory(read func(string) ([]byte, error)) (*PackDocument, error)
 			return nil, fmt.Errorf("pack exceeds size limit")
 		}
 		switch {
-		case strings.HasPrefix(logical, "icons/spells/"):
-			id := strings.TrimPrefix(logical, "icons/spells/")
+		case strings.HasPrefix(logical, "icons/spells/"), strings.HasPrefix(logical, "icons/items/"):
+			parts := strings.SplitN(logical, "/", 3)
+			id := parts[2]
 			if !validLocalID(id) {
 				return nil, fmt.Errorf("invalid icon ID %q", id)
 			}
 			if p.Icons == nil {
-				p.Icons = &PackIcons{Spells: map[string][]byte{}}
+				p.Icons = &PackIcons{Spells: map[string][]byte{}, Items: map[string][]byte{}}
 			}
-			p.Icons.Spells[id] = data
+			if parts[1] == "items" {
+				p.Icons.Items[id] = data
+			} else {
+				p.Icons.Spells[id] = data
+			}
 		case logical == "provenance":
 			if err = strictJSON(data, &p.Provenance); err != nil {
 				return nil, err
@@ -544,15 +549,18 @@ func SavePackDirectory(path string, p *PackDocument) error {
 		}
 	}
 	if p.Icons != nil {
-		for id, data := range p.Icons.Spells {
-			name := "spell-icons/" + id + ".webp"
-			if err = os.MkdirAll(filepath.Join(temp, "spell-icons"), 0755); err != nil {
-				return err
+		for kind, icons := range map[string]map[string][]byte{"spells": p.Icons.Spells, "items": p.Icons.Items} {
+			dir := strings.TrimSuffix(kind, "s") + "-icons"
+			for id, data := range icons {
+				name := dir + "/" + id + ".webp"
+				if err = os.MkdirAll(filepath.Join(temp, dir), 0755); err != nil {
+					return err
+				}
+				if err = os.WriteFile(filepath.Join(temp, name), data, 0644); err != nil {
+					return err
+				}
+				manifest.Files["icons/"+kind+"/"+id] = name
 			}
-			if err = os.WriteFile(filepath.Join(temp, name), data, 0644); err != nil {
-				return err
-			}
-			manifest.Files["icons/spells/"+id] = name
 		}
 	}
 	b, err := json.MarshalIndent(manifest, "", "  ")

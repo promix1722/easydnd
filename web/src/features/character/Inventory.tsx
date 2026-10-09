@@ -2,7 +2,7 @@ import { COINS, equip, groupOf, setTotal, slotOf, unequip } from '@/domain'
 import type { InventoryRow } from '@/domain'
 import type { Change, Equipment, Item } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { ACTION_ICON_SIZE, ActionIcon, Badge, Group, IconDotsVertical, Menu, NumberInput, Paper, SourceTags, Stack, Text } from '@/ui'
+import { ACTION_ICON_SIZE, ActionIcon, Badge, Group, IconDotsVertical, ItemIcon, Menu, NumberInput, Paper, SourceTags, Stack, Text } from '@/ui'
 
 import { itemFacts } from './options'
 
@@ -44,6 +44,7 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
       const total = (count: number) => onChange?.(setTotal(equipment, row.item ?? '', count))
       return <Paper key={row.key} withBorder radius="md" p="xs">
         <Group justify="space-between" wrap="nowrap" gap="sm" align="flex-start">
+          <ItemIcon icon={item?.icon} />
           <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
             <Group gap={8}>
               <Text size="sm" fw={500}>{label}</Text>
@@ -51,9 +52,9 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
               {row.equipped > 0 && <Badge size="xs" variant="light">{t('equipment.equippedMark')}</Badge>}
             </Group>
             {line !== undefined && <Text size="xs" c="dimmed">{line}</Text>}
+            <SourceTags provenance={item?.provenance} oneLine />
           </Stack>
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
-            <SourceTags provenance={item?.provenance} oneLine />
             {editable && (
               <Menu position="bottom-end">
                 <Menu.Target>

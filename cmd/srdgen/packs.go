@@ -126,6 +126,9 @@ func (g *generator) writePack(locales []rules.Locale) error {
 		}
 		manifest.Files["icons/spells/"+spell.Slug] = "spell-icons/" + name
 	}
+	if err = g.writeItemIcons(&manifest); err != nil {
+		return err
+	}
 	manifest.Files["provenance"] = "provenance.json"
 	if err = g.write("pack-manifest.json", manifest); err != nil {
 		return err
