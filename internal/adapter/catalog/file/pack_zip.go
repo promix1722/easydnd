@@ -77,7 +77,13 @@ func (a *Authoring) ImportZIP(data []byte) ([]byte, error) {
 		}
 		return b, nil
 	}
-	p, err := readPackDirectory(read)
+	layout := fs.FS(archive)
+	if root != "." {
+		if layout, err = fs.Sub(archive, root); err != nil {
+			return nil, err
+		}
+	}
+	p, err := readPackDirectory(read, layout)
 	if err != nil {
 		return nil, err
 	}

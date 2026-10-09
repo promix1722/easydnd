@@ -1,0 +1,223 @@
+{
+  "grappler": {
+    "name": "Захватчик",
+    "desc": [
+      "Вы развили умения, необходимые для того, чтобы держать свою позицию в ближнем бою при захвате. Вы получаете следующие преимущества:",
+      "- У вас есть преимущество на атаки против существа, которого вы захватываете.",
+      "- Вы можете использовать ваше действие, чтобы попытаться прижать существо, захваченное вами. Для этого сделайте еще одну проверку захвата. Если вам удастся, вы и существо будете оба скованы до конца захвата."
+    ]
+  },
+  "alert": {
+    "name": "Бдительный"
+  },
+  "healer": {
+    "name": "Лекарь"
+  },
+  "lucky": {
+    "name": "Везучий"
+  },
+  "magic-initiate": {
+    "name": "Посвящённый в магию"
+  },
+  "savage-attacker": {
+    "name": "Неистово атакующий"
+  },
+  "skilled": {
+    "name": "Одарённый"
+  },
+  "tavern-brawler": {
+    "name": "Дебошир"
+  },
+  "tough": {
+    "name": "Крепкий"
+  },
+  "actor": {
+    "name": "Актёр"
+  },
+  "athlete": {
+    "name": "Атлет"
+  },
+  "charger": {
+    "name": "Налётчик"
+  },
+  "chef": {
+    "name": "Шеф-повар"
+  },
+  "crossbow-expert": {
+    "name": "Эксперт по арбалетам"
+  },
+  "crusher": {
+    "name": "Крушитель"
+  },
+  "defensive-duelist": {
+    "name": "Парирующий дуэлянт"
+  },
+  "dual-wielder": {
+    "name": "Мастер боя двумя оружиями"
+  },
+  "durable": {
+    "name": "Стойкий"
+  },
+  "elemental-adept": {
+    "name": "Стихийный адепт"
+  },
+  "fey-touched": {
+    "name": "Затронутый феями"
+  },
+  "great-weapon-master": {
+    "name": "Мастер тяжёлого оружия"
+  },
+  "heavily-armored": {
+    "name": "Знаток тяжёлых доспехов"
+  },
+  "heavy-armor-master": {
+    "name": "Мастер тяжёлых доспехов"
+  },
+  "inspiring-leader": {
+    "name": "Воодушевляющий лидер"
+  },
+  "keen-mind": {
+    "name": "Острый ум"
+  },
+  "lightly-armored": {
+    "name": "Знаток лёгких доспехов"
+  },
+  "mage-slayer": {
+    "name": "Убийца магов"
+  },
+  "medium-armor-master": {
+    "name": "Мастер средних доспехов"
+  },
+  "moderately-armored": {
+    "name": "Знаток средних доспехов"
+  },
+  "mounted-combatant": {
+    "name": "Верховой боец"
+  },
+  "observant": {
+    "name": "Внимательный"
+  },
+  "piercer": {
+    "name": "Пронзатель"
+  },
+  "poisoner": {
+    "name": "Отравитель"
+  },
+  "polearm-master": {
+    "name": "Мастер древкового оружия"
+  },
+  "resilient": {
+    "name": "Устойчивый"
+  },
+  "ritual-caster": {
+    "name": "Ритуальный заклинатель"
+  },
+  "sentinel": {
+    "name": "Страж"
+  },
+  "shadow-touched": {
+    "name": "Затронутый тенью"
+  },
+  "sharpshooter": {
+    "name": "Меткий стрелок"
+  },
+  "shield-master": {
+    "name": "Мастер щита"
+  },
+  "skill-expert": {
+    "name": "Эксперт в навыке"
+  },
+  "skulker": {
+    "name": "Проныра"
+  },
+  "slasher": {
+    "name": "Рубака"
+  },
+  "spell-sniper": {
+    "name": "Меткий заклинатель"
+  },
+  "telekinetic": {
+    "name": "Телекинетик"
+  },
+  "telepathic": {
+    "name": "Телепат"
+  },
+  "war-caster": {
+    "name": "Боевой заклинатель"
+  },
+  "weapon-master": {
+    "name": "Мастер оружия"
+  },
+  "artificer-initiate": {
+    "name": "Посвящённый в изобретательство"
+  },
+  "bountiful-luck": {
+    "name": "Бездонная удача"
+  },
+  "dragon-fear": {
+    "name": "Драконий страх"
+  },
+  "dragon-hide": {
+    "name": "Драконья шкура"
+  },
+  "drow-high-magic": {
+    "name": "Высшая магия дроу"
+  },
+  "dungeon-delver": {
+    "name": "Исследователь подземелий"
+  },
+  "dwarven-fortitude": {
+    "name": "Дварфийская стойкость"
+  },
+  "eldritch-adept": {
+    "name": "Адепт таинств"
+  },
+  "elven-accuracy": {
+    "name": "Эльфийская точность"
+  },
+  "fade-away": {
+    "name": "Исчезновение"
+  },
+  "fey-teleportation": {
+    "name": "Телепортация фей"
+  },
+  "fighting-initiate": {
+    "name": "Посвящённый в боевое искусство"
+  },
+  "flames-of-phlegethos": {
+    "name": "Пламя Флегетоса"
+  },
+  "gunner": {
+    "name": "Знаток огнестрельного оружия"
+  },
+  "infernal-constitution": {
+    "name": "Инфернальное телосложение"
+  },
+  "linguist": {
+    "name": "Языковед"
+  },
+  "martial-adept": {
+    "name": "Воинский адепт"
+  },
+  "metamagic-adept": {
+    "name": "Адепт метамагии"
+  },
+  "mobile": {
+    "name": "Подвижный"
+  },
+  "orcish-fury": {
+    "name": "Орочье буйство"
+  },
+  "prodigy": {
+    "name": "Вундеркинд"
+  },
+  "second-chance": {
+    "name": "Второй шанс"
+  },
+  "squat-nimbleness": {
+    "name": "Низкорослое проворство"
+  },
+  "wood-elf-magic": {
+    "name": "Магия лесных эльфов"
+  }
+}

@@ -23,7 +23,7 @@ const testOwner domain.OwnerID = "test-owner"
 // for the reason the cache is: a Catalog is immutable, and Load is
 // mutex-guarded. The repositories stay per-service -- those are the state a
 // test is entitled to have to itself.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
 
 func newService(t *testing.T) *charuc.Service {
 	t.Helper()
@@ -389,7 +389,7 @@ func TestApplyRejectsAnUnknownReference(t *testing.T) {
 	c := mustCreateScored(t, s)
 
 	_, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, 2,
-		domain.Event{Type: domain.EventBackground, Ref: rules.NewRef(rules.RefBackground, "urchin")})
+		domain.Event{Type: domain.EventBackground, Ref: rules.NewRef(rules.RefBackground, "no-such-background")})
 	var fieldErr *types.FieldValidationError
 	if !errors.As(err, &fieldErr) {
 		t.Fatalf("Apply() error = %v, want a FieldValidationError", err)

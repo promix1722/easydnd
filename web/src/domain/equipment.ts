@@ -1,8 +1,8 @@
 /**
  * Where an item is worn, and what it is for.
  *
- * The catalogue says where: every item carries a `slot`, written by srdgen or
- * a homebrew pack, or derived by the server from what the item is. Whether an
+ * The catalogue says where: every item carries a `slot`, written on the pack's
+ * row or derived by the server from what the item is. Whether an
  * item is used up it does not say, so that is still guessed here.
  *
  * Everything here also writes the changes an inventory edit is posted as, so

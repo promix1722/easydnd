@@ -86,18 +86,18 @@ func TestSourceChecklistBlocksPrematureReviewAndBatchRetainsValidFacts(t *testin
 		turn++
 		if turn == 1 {
 			return agentuc.AgentResponse{Calls: []agentuc.AgentCall{
-				{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name","class:sorcerer","race:half-elf","finalAbilities.str","custom:criminal"]}`},
+				{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name","class:sorcerer","race:half-elf","finalAbilities.str","custom:smuggler"]}`},
 				{ID: "batch", Name: "import_facts", Arguments: `{"facts":[{"path":"identity.name","value":"Source hero"},{"ref":"class:sorcerer","level":3},{"ref":"srd-2014:race:half-elf"},{"path":"finalAbilities.str","value":8},{"path":"base.unsupported","value":30}]}`},
 				{ID: "early", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 			}}, nil
 		}
 		for _, raw := range request.Input {
-			if strings.Contains(string(raw), "missingSourceFacts") && strings.Contains(string(raw), "custom:criminal") {
+			if strings.Contains(string(raw), "missingSourceFacts") && strings.Contains(string(raw), "custom:smuggler") {
 				blocked = true
 			}
 		}
 		return agentuc.AgentResponse{Calls: []agentuc.AgentCall{
-			{ID: "custom", Name: "upsert_custom_option", Arguments: `{"id":"criminal","kind":"background","name":"Criminal","hit_die":0,"level":0,"description":"Source background"}`},
+			{ID: "custom", Name: "upsert_custom_option", Arguments: `{"id":"smuggler","kind":"background","name":"Smuggler","hit_die":0,"level":0,"description":"Source background"}`},
 			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
 	})
@@ -116,7 +116,7 @@ func TestSourceChecklistBlocksPrematureReviewAndBatchRetainsValidFacts(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sheet.Identity.Name != "Source hero" || sheet.Abilities.Score(rules.Ability("str")) != 8 || sheet.Identity.Background != "custom-criminal" {
+	if sheet.Identity.Name != "Source hero" || sheet.Abilities.Score(rules.Ability("str")) != 8 || sheet.Identity.Background != "custom-smuggler" {
 		t.Fatalf("batch/custom facts lost: %+v", sheet.Identity)
 	}
 	if len(s.Manual) != 1 {
@@ -138,7 +138,7 @@ func TestSourceIdentityReuseSubclassOrderAndInventoryCounts(t *testing.T) {
 	model := modelFunc(func(context.Context, agentuc.AgentRequest, func(string)) (agentuc.AgentResponse, error) {
 		return agentuc.AgentResponse{Calls: []agentuc.AgentCall{
 			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name","class:sorcerer","race:half-elf","spell:message"]}`},
-			{ID: "sub", Name: "upsert_custom_option", Arguments: `{"id":"wild-magic","kind":"subclass","name":"Wild Magic","parent":"class:sorcerer"}`},
+			{ID: "sub", Name: "upsert_custom_option", Arguments: `{"id":"chaos-weave","kind":"subclass","name":"Chaos Weave","parent":"class:sorcerer"}`},
 			{ID: "facts", Name: "import_facts", Arguments: `{"facts":[{"path":"identity.name","value":"Source hero"},{"ref":"class:sorcerer","level":3},{"ref":"race:half-elf"},{"path":"equipment.equipped.dagger","value":2}]}`},
 			{ID: "class", Name: "upsert_custom_option", Arguments: `{"id":"class-details","kind":"class","name":"Sorcerer","description":"Source wording"}`},
 			{ID: "race", Name: "upsert_custom_option", Arguments: `{"id":"race-details","kind":"race","name":"Half-Elf","description":"Source wording"}`},
@@ -159,7 +159,7 @@ func TestSourceIdentityReuseSubclassOrderAndInventoryCounts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sheet.Identity.Race != "half-elf" || sheet.Identity.Classes[0].Class != "sorcerer" || sheet.Identity.Classes[0].Level != 3 || sheet.Identity.Classes[0].Subclass != "custom-wild-magic" {
+	if sheet.Identity.Race != "half-elf" || sheet.Identity.Classes[0].Class != "sorcerer" || sheet.Identity.Classes[0].Level != 3 || sheet.Identity.Classes[0].Subclass != "custom-chaos-weave" {
 		t.Fatalf("source identities/order lost: %+v", sheet.Identity)
 	}
 	if len(sheet.Equipment.Equipped) != 1 || sheet.Equipment.Equipped[0].Item != "dagger" || sheet.Equipment.Equipped[0].Count != 2 {
@@ -211,7 +211,7 @@ func TestSourceScoresAndInventoryCountsSurviveBatchTools(t *testing.T) {
 }
 
 func TestImportedClassUsesSelectedPackNamespaceAndSurvivesEditing(t *testing.T) {
-	path := filepath.Join("..", "..", "..", "data", "srd_5.1")
+	path := filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")
 	base, err := catalogfile.LoadPack(path)
 	if err != nil {
 		t.Fatal(err)
@@ -223,9 +223,9 @@ func TestImportedClassUsesSelectedPackNamespaceAndSurvivesEditing(t *testing.T) 
 	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), registry, nil, nil, slog.New(slog.DiscardHandler))
 	model := modelFunc(func(context.Context, agentuc.AgentRequest, func(string)) (agentuc.AgentResponse, error) {
 		return agentuc.AgentResponse{Calls: []agentuc.AgentCall{
-			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name","class:sorcerer","race:half-elf","custom:wild-magic"],"scores":{"cha":17}}`},
+			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name","class:sorcerer","race:half-elf","custom:chaos-weave"],"scores":{"cha":17}}`},
 			{ID: "facts", Name: "import_facts", Arguments: `{"facts":[{"path":"identity.name","value":"Vas Pup"},{"ref":"srd-2014:class:sorcerer","level":3},{"ref":"class:sorcerer","level":3},{"ref":"race:half-elf"}]}`},
-			{ID: "subclass", Name: "upsert_custom_option", Arguments: `{"id":"wild-magic","kind":"subclass","name":"Wild Magic","parent":"class:sorcerer"}`},
+			{ID: "subclass", Name: "upsert_custom_option", Arguments: `{"id":"chaos-weave","kind":"subclass","name":"Chaos Weave","parent":"class:sorcerer"}`},
 			{ID: "message", Name: "upsert_custom_option", Arguments: `{"id":"message","kind":"cantrip","name":"Message","ref":"spell:message","parent":"sorcerer","ability":"cha"}`},
 			{ID: "done", Name: "prepare_review", Arguments: `{"text":"Ready","allow_incomplete":true}`},
 		}}, nil
@@ -241,7 +241,7 @@ func TestImportedClassUsesSelectedPackNamespaceAndSurvivesEditing(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(before.Identity.Classes) != 1 || before.Identity.Classes[0].Class != "dnd-2014/sorcerer" || before.Identity.Classes[0].Level != 3 || before.Identity.Classes[0].Subclass != "custom-wild-magic" {
+	if len(before.Identity.Classes) != 1 || before.Identity.Classes[0].Class != "dnd-2014/sorcerer" || before.Identity.Classes[0].Level != 3 || before.Identity.Classes[0].Subclass != "custom-chaos-weave" {
 		t.Fatalf("missing selected class: %+v", before.Identity)
 	}
 	if len(before.Spells.Cantrips) != 1 || before.Spells.Cantrips[0] != "dnd-2014/message" {

@@ -16,14 +16,14 @@ log:
 
 data:
   # Relative to the repo root, which is where `make run/server` runs.
-  srd_dir: data/srd_5.1
-  # Optional file-defined addons; see docs/packs.md.
-  pack_files: []
-  # Autoload this local dataset alongside SRD; accepts a pack or repository folder.
-  # Adjust/remove this entry on machines without the checkout.
-  autoload_packs:
-    - path: /home/orca-personal/projects/easydnd-2014
-      id: dnd-2014
+  srd_dir: data/pack/srd-5.1
+  # Optional file-defined packs; see docs/packs.md. A pack listed here is a
+  # default root, so new characters get it without picking it by hand. This
+  # one is the private descriptions overlay for the SRD pack -- remove the
+  # entry on machines without the checkout.
+  pack_files:
+    - /home/orca-personal/projects/easydnd-2014/pack
+  autoload_packs: []
   default_packs: {}
   # Set to .pack-archive when retaining released packs between runs.
   pack_archive: ""

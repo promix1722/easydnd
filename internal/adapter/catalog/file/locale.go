@@ -1,5 +1,7 @@
 package file
 
+import "fmt"
+
 // Prose is everything about a catalogue entry that changes with language.
 //
 // The shape is deliberately generic rather than one struct per entity type.
@@ -95,6 +97,44 @@ func mergeProse(base, over Prose) Prose {
 		out.Blocks = mergeMap(base.Blocks, over.Blocks)
 	}
 	return out
+}
+
+// fillProse overlays over onto base, but only into fields base leaves empty,
+// and reports the first field both set. Two packs that describe one entity
+// must not have a winner picked by load order (docs/packs-plan.md), so a
+// description both supply is an error rather than a merge -- which is also
+// what keeps a descriptions-only overlay honest about being exactly that.
+func fillProse(base, over Prose) (Prose, error) {
+	out := base
+	if over.Name != "" {
+		if base.Name != "" {
+			return out, fmt.Errorf("name set twice")
+		}
+		out.Name = over.Name
+	}
+	if len(over.Desc) > 0 {
+		if len(base.Desc) > 0 {
+			return out, fmt.Errorf("desc set twice")
+		}
+		out.Desc = over.Desc
+	}
+	for key := range over.Fields {
+		if base.Fields[key] != "" {
+			return out, fmt.Errorf("fields.%s set twice", key)
+		}
+	}
+	for key := range over.Blocks {
+		if len(base.Blocks[key]) > 0 {
+			return out, fmt.Errorf("blocks.%s set twice", key)
+		}
+	}
+	if len(over.Fields) > 0 {
+		out.Fields = mergeMap(base.Fields, over.Fields)
+	}
+	if len(over.Blocks) > 0 {
+		out.Blocks = mergeMap(base.Blocks, over.Blocks)
+	}
+	return out, nil
 }
 
 // mergeMap overlays over onto base without mutating either.

@@ -15,6 +15,20 @@ var localIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,119}$`)
 
 func validLocalID(id string) bool { return localIDPattern.MatchString(id) }
 
+// foreignProseKey reports whether a locale key names an entity of a declared
+// dependency in canonical form -- srd-2014:spell:fireball. That is how a pack
+// ships prose for entities it does not define: a descriptions-only overlay
+// fills what its base leaves blank without duplicating a single entity. The
+// compiler checks that the entity exists; see validateReferences.
+func foreignProseKey(p *PackDocument, collection, key string) bool {
+	owner, rest, ok := strings.Cut(key, ":")
+	if !ok || !slices.ContainsFunc(p.Manifest.Dependencies, func(d Dependency) bool { return d.ID == owner }) {
+		return false
+	}
+	kind, local, ok := strings.Cut(rest, ":")
+	return ok && kindCollections[kind] == collection && validLocalID(local)
+}
+
 // A pack can reference itself and explicitly declared dependencies only. An
 // unrelated root in the same installation must not make a dangling pack valid.
 func validatePackNamespaces(p *PackDocument) error {
@@ -109,8 +123,13 @@ func validatePackNamespaces(p *PackDocument) error {
 			}
 		}
 		for collection, bundle := range collections {
-			if collection != "sources" && collection != "terms" && collection != "actions" && collection != "resources" && len(bundle) > 0 && p.Entities[collection] == nil {
-				return fmt.Errorf("translations for absent collection %s", collection)
+			if collection == "sources" || collection == "terms" || collection == "actions" || collection == "resources" || p.Entities[collection] != nil {
+				continue
+			}
+			for key := range bundle {
+				if !foreignProseKey(p, collection, key) {
+					return fmt.Errorf("translations for absent collection %s", collection)
+				}
 			}
 		}
 	}

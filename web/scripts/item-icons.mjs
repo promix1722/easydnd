@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const mapping = JSON.parse(await readFile(join(root, 'data/rules/2014/item-icons.json'), 'utf8'))
 const labels = [...new Set(Object.values(mapping).flatMap(Object.values))].sort()
 const samples = new Set(['sword', 'shield', 'leather-armor', 'backpack', 'potion', 'rope'])
-const output = join(root, 'data/srd_5.1/item-icons')
+const output = join(root, 'data/pack/srd-5.1/item-icons')
 await mkdir(output, { recursive: true })
 for (const label of labels) {
   assert.match(label, /^[a-z0-9][a-z0-9-]{0,119}$/)

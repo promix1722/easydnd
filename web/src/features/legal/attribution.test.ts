@@ -13,17 +13,15 @@ import { resolve } from 'node:path'
 import { SRD_ATTRIBUTION } from './attribution'
 
 /**
- * The client's copy of the SRD 5.1 notice must not drift from the generated
+ * The client's copy of the SRD 5.1 notice must not drift from the canonical
  * one.
  *
- * `docs/licensing.md` names the `attribution` constant in `cmd/srdgen/main.go`
- * as canonical, on the grounds that it is the only copy CI checks -- `make
- * data/srd/check` regenerates `data/srd_5.1/` and fails on any difference.
- * That pins the generated file to the Go constant. This pins the browser
- * client to the generated file, so the three move together or `make verify`
- * fails. Without it, `attribution.ts` would be a fourth copy of a licence
- * notice with nothing watching it, which is the exact failure that document
- * warns about for the copies it does track.
+ * `docs/licensing.md` names the `## SRD 5.1` section of
+ * `data/pack/srd-5.1/ATTRIBUTION.md` as canonical: it is the copy that ships
+ * with the data it covers. This pins the browser client to that file, so the
+ * two move together or `make verify` fails. Without it, `attribution.ts`
+ * would be a copy of a licence notice with nothing watching it, which is the
+ * exact failure that document warns about for the copies it does track.
  *
  * Reaching outside `web/` is something only a test may do, and
  * `scripts/check-layers.mjs` permits it by skipping `*.test.*`. A Vite `?raw`
@@ -39,7 +37,7 @@ import { SRD_ATTRIBUTION } from './attribution'
  * the suite was invoked -- and jsdom is kept rather than switched to node for
  * this file, because `test/setup.ts`'s shared teardown reaches for `window`.
  */
-const ATTRIBUTION_MD = resolve(process.cwd(), '../data/srd_5.1/ATTRIBUTION.md')
+const ATTRIBUTION_MD = resolve(process.cwd(), '../data/pack/srd-5.1/ATTRIBUTION.md')
 
 /**
  * The paragraph under `## SRD 5.1`, as prose. The generated file is markdown:
@@ -58,7 +56,7 @@ function generatedNotice(): string {
 }
 
 describe('SRD_ATTRIBUTION', () => {
-  it('matches the notice cmd/srdgen generates', () => {
+  it('matches the notice ATTRIBUTION.md carries', () => {
     expect(SRD_ATTRIBUTION).toBe(generatedNotice())
   })
 })

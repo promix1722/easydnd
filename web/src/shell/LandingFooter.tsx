@@ -13,7 +13,7 @@ const REPO_URL = 'https://github.com/promix1722/easydnd'
  *
  * It exists for the middle one. The SRD 5.1 data this app is built on is
  * CC-BY-4.0, and that licence expects its notice in the *product* -- not only
- * in the repository, where `data/srd_5.1/ATTRIBUTION.md` has been carrying it
+ * in the repository, where `data/pack/srd-5.1/ATTRIBUTION.md` has been carrying it
  * to a directory nginx does not even serve. `docs/licensing.md` recorded the
  * absence as an open gap; this footer and the `/legal` page it points at are
  * what close it. The GitHub link and the version are the two things that

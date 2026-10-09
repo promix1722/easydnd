@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	in := flag.String("in", "data/srd_5.1", "comma-separated pack files/directories (dependencies included)")
+	in := flag.String("in", "data/pack/srd-5.1", "comma-separated pack files/directories (dependencies included)")
 	out := flag.String("out", "", "export the first pack to a new JSON file or directory")
 	directory := flag.Bool("directory", false, "export directory representation")
 	flag.Parse()

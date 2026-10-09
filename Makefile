@@ -4,7 +4,7 @@ BINARY      := easydnd
 MODULE      := github.com/promix1722/easydnd
 CMD         := ./cmd/$(BINARY)
 BIN_DIR     := bin
-SRD_DIR     := data/srd_5.1
+SRD_DIR     := data/pack/srd-5.1
 DEV_CONFIG  := config.dev.yaml
 
 # The release identifier: the tag on a tagged commit, a short SHA anywhere
@@ -329,27 +329,17 @@ test/cover:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -func=coverage.out | tail -1
 
-## data/srd: regenerate data/srd_5.1 from the vendored SRD dump
-data/srd:
-	go run ./cmd/srdgen
-
-## data/srd/check: fail if the committed data differs from srdgen's output
-data/srd/check:
-	@tmp=$$(mktemp -d); \
-	 go run ./cmd/srdgen -out $$tmp >/dev/null || { rm -rf $$tmp; exit 1; }; \
-	 if ! diff -rq $(SRD_DIR) $$tmp >/dev/null; then \
-	   diff -rq $(SRD_DIR) $$tmp || true; \
-	   rm -rf $$tmp; \
-	   echo "DATA DRIFT: $(SRD_DIR) does not match srdgen; run 'make data/srd'"; \
-	   exit 1; \
-	 fi; \
-	 rm -rf $$tmp; \
-	 echo "srd data current"
+## pack/check: load the hand-maintained SRD pack through the real loader
+# The pack is edited by hand, so there is nothing to regenerate and diff; the
+# gate is the same validation the server runs at startup -- schema, every
+# reference, every choice -- plus the item and spell icons it names.
+pack/check:
+	@go run ./cmd/pack -in $(SRD_DIR) >/dev/null && echo "srd pack loads"
 
 ## data/lint: report suspicious prose in a pack (PACK=dir, default the SRD)
 # See docs/packs.md#linting-the-prose.
 PACK ?= $(SRD_DIR)
-LINT_GLOSSARY ?= data/translations/ru.glossary.json
+LINT_GLOSSARY ?= data/locale-terms-locked/ru.glossary.json
 data/lint:
 	go run ./cmd/packlint -in $(PACK) -glossary $(LINT_GLOSSARY)
 
@@ -416,7 +406,7 @@ web/icons:
 	cd web && npm run icons
 
 ## web/icons/check: fail if the committed icons differ from the generator
-# Not a `diff -rq` like data/srd/check, and for a specific reason: the PNG
+# Not a `diff -rq` like pack/check, and for a specific reason: the PNG
 # encoder's zlib output is deterministic for a given zlib but is not promised
 # to be stable across Node versions, so a byte diff would go red on a machine
 # whose Node differs from CI's -- failing for a reason that has nothing to do
@@ -452,7 +442,6 @@ spell-icons:
 	go run ./cmd/llm images -in $(SPELL_ICON_CACHE)/prompts.json \
 	  -out $(SPELL_ICON_CACHE)/png -quality low -background transparent
 	node web/scripts/spell-icons.mjs convert $(SPELL_ICON_CACHE)/png
-	$(MAKE) data/srd
 
 ## translate/ru: re-translate the Russian spell prose -- manual, costs OpenAI credit
 # `-preserve name` is what makes this a reroll rather than a no-op: -existing
@@ -461,7 +450,7 @@ spell-icons:
 # leaves to keep re-requests every description and keeps the hand-checked names.
 #
 # Model and reasoning effort are pinned and explicit because
-# data/translations/ru.sources.json records both, and a record that says
+# data/locale-terms-locked/ru.sources.json records both, and a record that says
 # "whatever the alias meant that day" is not a record. Override either on the
 # command line to compare settings:
 #
@@ -477,14 +466,13 @@ translate/ru:
 	  echo "OPENAI_API_KEY is not set; source your secrets file first."; exit 1; }
 	go run ./cmd/llm translate \
 	  -in $(SRD_DIR)/i18n/en/spells.json \
-	  -out data/translations/ru/spells.json \
-	  -existing data/translations/ru/spells.json \
+	  -out data/pack/srd-5.1/i18n/ru/spells.json \
+	  -existing data/pack/srd-5.1/i18n/ru/spells.json \
 	  -preserve name \
-	  -glossary data/translations/ru.glossary.json \
+	  -glossary data/locale-terms-locked/ru.glossary.json \
 	  -model $(TRANSLATE_MODEL) \
 	  -reasoning $(TRANSLATE_REASONING) \
 	  -to ru $(TRANSLATE_FLAGS)
-	@test -n "$(findstring -dry-run,$(TRANSLATE_FLAGS))" || $(MAKE) data/srd
 
 # The standalone spellicon usecase owns its provider HTTP calls by design.
 # Excluding its root still catches any other usecase that imports it transitively.
@@ -532,7 +520,7 @@ tidy:
 VERIFY_JOBS ?= 2
 verify:
 	@$(MAKE) --no-print-directory -j$(VERIFY_JOBS) --output-sync=target \
-	  web/test web/build web/lint vet test/unit build/release data/srd/check data/lint/check \
+	  web/test web/build web/lint vet test/unit build/release pack/check data/lint/check \
 	  web/icons/check fmt/check lint/layers
 
 ## clean: remove build artefacts
@@ -546,7 +534,7 @@ clean:
         dev dev/up dev/down slots ports config/dev \
         preview preview/up config/preview \
         db/up db/down db/psql test/db \
-        data/srd data/srd/check data/lint data/lint/check \
+        pack/check data/lint data/lint/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \
         web/deps web/dev web/lint web/test web/check web/build web/release \
         web/icons web/icons/check spell-icons image/generate

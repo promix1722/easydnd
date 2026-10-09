@@ -12,7 +12,7 @@ import {
  * The terms, in the product rather than only in the repository.
  *
  * CC-BY-4.0 covers the SRD 5.1 material this app is built on, and it expects
- * its notice where the work is used. `data/srd_5.1/ATTRIBUTION.md` has been
+ * its notice where the work is used. `data/pack/srd-5.1/ATTRIBUTION.md` has been
  * travelling in the release tarball to a directory nginx does not serve, which
  * `docs/licensing.md` recorded as an open gap; this page is what closes it.
  *
@@ -41,7 +41,7 @@ export function LegalScreen() {
         The two notices below stay in English, and deliberately.
 
         The SRD 5.1 paragraph is the attribution CC-BY-4.0 requires, pinned to
-        `cmd/srdgen`'s `attribution` constant by `attribution.test.ts` -- see
+        `data/pack/srd-5.1/ATTRIBUTION.md` by `attribution.test.ts` -- see
         docs/licensing.md. A translated licence notice is a different notice,
         and this is the one place in the client where the exact words are the
         point rather than the meaning. The MIT paragraph beside it is left in

@@ -82,7 +82,7 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 // that touched a catalogue route. Everything else here stays per-router:
 // each test gets its own account store, its own characters and its own
 // ceremony, which is what keeps them independent.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
 
 // newFullRouterInEnv is the same table built for a named environment.
 //
@@ -140,7 +140,7 @@ func newFullRouterInEnv(
 	var packHandler *packapi.Handler
 	groupRepo := memory.NewGroupRepository(users)
 	if len(withPacks) > 0 && withPacks[0] {
-		base, err := catalogfile.NewRegistry([]string{"../../../data/srd_5.1"}, nil, "")
+		base, err := catalogfile.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -413,12 +413,12 @@ func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 
 	// A page carries the total behind it, and offsets walk the same order.
 	page := search("limit=50")
-	if page.Total != 319 || len(page.Spells) != 50 {
-		t.Errorf("first page = %d of %d, want 50 of 319", len(page.Spells), page.Total)
+	if page.Total != 477 || len(page.Spells) != 50 {
+		t.Errorf("first page = %d of %d, want 50 of 477", len(page.Spells), page.Total)
 	}
-	last := search("limit=50&offset=300")
-	if page.Total != last.Total || len(last.Spells) != 19 {
-		t.Errorf("last page = %d of %d, want 19 of %d", len(last.Spells), last.Total, page.Total)
+	last := search("limit=50&offset=450")
+	if page.Total != last.Total || len(last.Spells) != 27 {
+		t.Errorf("last page = %d of %d, want 27 of %d", len(last.Spells), last.Total, page.Total)
 	}
 
 	// Sorted by level then name: the cantrips lead, alphabetically.
@@ -451,7 +451,7 @@ func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 	}
 	rec = send(t, r, session, http.MethodGet, "/v1/catalog/spell-filters", nil)
 	if options := decode[catalogapi.SpellFilterOptions](t, rec); rec.Code != http.StatusOK ||
-		len(options.Schools) != 8 || len(options.Classes) != 12 || options.Classes[0].Name != "Barbarian" {
+		len(options.Schools) != 8 || len(options.Classes) != 13 || options.Classes[0].Name != "Artificer" {
 		t.Errorf("spell-filters = %d %+v", rec.Code, options)
 	}
 }
@@ -538,14 +538,14 @@ func TestSpellSearchOverAnOffer(t *testing.T) {
 	// An offer also takes "whatever fits": a level range on a class's list.
 	fitting := search(map[string]any{"limit": 200, "only": map[string]any{"slugs": []string{"fireball"},
 		"fitting": []map[string]any{{"minLevel": 0, "maxLevel": 0, "classes": []string{"cleric"}}}}})
-	if fitting.Total != 8 || fitting.Spells[len(fitting.Spells)-1].Slug != "fireball" {
-		t.Errorf("fitting = %d %v, want the seven cleric cantrips and fireball", fitting.Total, slugs(fitting))
+	if fitting.Total != 10 || fitting.Spells[len(fitting.Spells)-1].Slug != "fireball" {
+		t.Errorf("fitting = %d %v, want the nine cleric cantrips and fireball", fitting.Total, slugs(fitting))
 	}
 	// An offer of nothing is nothing, not everything; and a page is bounded.
 	if got := search(map[string]any{"limit": 20, "only": map[string]any{}}); got.Total != 0 {
 		t.Errorf("empty offer matched %d", got.Total)
 	}
-	if got := search(map[string]any{"limit": 20}); got.Total != 319 || len(got.Spells) != 20 {
+	if got := search(map[string]any{"limit": 20}); got.Total != 477 || len(got.Spells) != 20 {
 		t.Errorf("no offer = %d of %d", len(got.Spells), got.Total)
 	}
 	if rec := send(t, r, session, http.MethodPost, "/v1/catalog/spells/search", map[string]any{}); rec.Code != http.StatusBadRequest {

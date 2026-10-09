@@ -48,7 +48,7 @@ func (reviewModel) Respond(_ context.Context, r agentuc.AgentRequest, _ func(str
 }
 func TestImportHTTPUploadResumeOwnershipAndPoll(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	source, err := catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "..", "..", "data", "srd_5.1")}, nil, "")
+	source, err := catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "..", "..", "data", "pack", "srd-5.1")}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestImportHTTPUploadResumeOwnershipAndPoll(t *testing.T) {
 // begins. Every step is an event the page reads back.
 func TestImportHTTPOpenedChatIsAnsweredInSteps(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	source, err := catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "..", "..", "data", "srd_5.1")}, nil, "")
+	source, err := catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "..", "..", "data", "pack", "srd-5.1")}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

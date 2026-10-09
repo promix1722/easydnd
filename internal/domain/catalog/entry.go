@@ -14,8 +14,8 @@
 // isolation. References are always rules.Slug values, never Go pointers, so
 // the graph stays acyclic and a *Catalog can be shared immutably.
 //
-// The compendium is read-only at runtime. It is regenerated from the vendored
-// SRD dump by cmd/srdgen, never edited by the application.
+// The compendium is read-only at runtime: it is edited in the repository,
+// never by the application.
 package catalog
 
 import "github.com/promix1722/easydnd/internal/domain/rules"

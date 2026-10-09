@@ -19,10 +19,35 @@ terms, and MIT does not apply to them:
 
 | Path | Terms |
 | --- | --- |
-| `data/srd_5.1/` | Generated from `5e-bits/5e-database`, whose game material upstream states is **OGL 1.0a**. Ships in the deploy tarball. |
-| `docs/reference_srd_5.1/data/cc-srd5/` | Vendored SRD 5.1 prose, **CC-BY-4.0**. |
-| `docs/reference_srd_5.1/data/5e-database-2014-en/` | Vendored source dump, OGL-declared by upstream. |
+| `data/pack/srd-5.1/` | The compendium. Derived once from `5e-bits/5e-database`, whose game material upstream states is **OGL 1.0a**, and hand-maintained since. Ships in the deploy tarball. |
 | `docs/reference_hexsheet/` | A real exported character sheet, kept as a shape reference. |
+
+The upstream dump is no longer vendored: it was the generator's input, and the
+generator is gone. [docs/reference_srd_5.1/README.md](reference_srd_5.1/README.md)
+still records where it came from and what the licence question was.
+
+### What the compendium contains, and what it does not
+
+The pack is **SRD 5.1 extended**: every SRD entry, plus the *mechanics and
+names* of the other 2014 books -- the spells, subclasses, feats, backgrounds
+and the artificer that the SRD leaves out. `provenance.json` tags each row
+with its source (`srd-5.1`, `phb`, `xge`, `tce`); the manifest's `sources`
+map carries those as bare ids, with no book titles and no translations. A row
+tagged with a non-SRD source ships **no prose**: no description, no material
+component text, no "at higher levels". Dice, ranges, levels, prerequisites and
+a name are the facts a rules engine needs and carry thin copyright; the text
+is the exposure, and it is not in this repository.
+
+That text exists in the private `easydnd-2014` repository, as a
+descriptions-only overlay pack (see [packs.md](packs.md#prose-overlays)),
+which `NOTICE.md` there says is not to be pointed at a public deployment.
+Production gets the base pack alone, so a visitor to easydnd.org sees those
+entries with a blank description -- by design, not by accident.
+
+The one borderline case is named rather than hidden: the 309 ideals, bonds,
+flaws and personality traits of the non-SRD backgrounds are stored as `terms`,
+and a term's *name* is the sentence itself, because the engine requires every
+entity to have a name and the overlay cannot add entities. They ship.
 
 Dependency licenses are a separate matter again: the Go modules in `go.mod` and
 the npm packages in `web/package-lock.json` carry their own terms, and this
@@ -30,17 +55,17 @@ repository ships no aggregated `NOTICE` for them.
 
 ## Pack artifacts
 
-The generated base `pack-manifest.json` carries the generator's existing SRD
-source and attribution. Portable/directory exports preserve that metadata and
-locale bundles; repackaging does not change the underlying terms described here.
-`data/rules/2014/` supplies authored mechanics missing from the upstream dump.
-One file there is not authored: `actions.en.json` is SRD 5.1 text -- the combat
-actions from the vendored dump's rule sections, which the generator does not
-otherwise read -- and travels under the same attribution as the rest of the
-generated data, as does its translation in `data/translations/`.
-The Tactician fixture in `data/packs/examples/` is illustrative project content,
-not a claim that its subclass appears in the SRD. Custom packs can carry their
-own source/attribution; the loader does not determine their publication rights.
+The base `pack-manifest.json` carries the SRD source and attribution. Portable
+and directory exports preserve that metadata and the locale bundles;
+repackaging does not change the underlying terms described here.
+`mechanics.json` is authored project content -- the pools, rules and the
+actions open to everybody. One bundle beside it is not: `i18n/en/actions.json`
+is SRD 5.1 text, the combat actions from the SRD's rule sections, and travels
+under the same attribution as the rest of the data, as do its translations.
+The Tactician fixture under `internal/adapter/catalog/file/testdata/` is a test
+input and illustrative project content, not shipped data and not a claim that
+its subclass appears in the SRD. Custom packs can carry their own
+source/attribution; the loader does not determine their publication rights.
 
 ## SRD 5.1 attribution
 
@@ -51,46 +76,39 @@ licensed under the Creative Commons Attribution 4.0 International License,
 available at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
 That paragraph exists in several places in this repo. The **canonical** copy is
-the `attribution` constant in [`cmd/srdgen/main.go`](../cmd/srdgen/main.go) --
-it is the only one CI checks, because `make data/srd/check` regenerates
-`data/srd_5.1/` and fails on any difference. The copies in
-`docs/reference_srd_5.1/` are quoted from upstream and use curly quotes; this
-one follows srdgen. If the wording ever needs to change, change the constant
-first and let the generator propagate it.
+the `## SRD 5.1` section of
+[`data/pack/srd-5.1/ATTRIBUTION.md`](../data/pack/srd-5.1/ATTRIBUTION.md): it
+is the one that travels with the data it covers, into the deploy tarball
+included. The `attribution` field of `pack-manifest.json` carries the same
+text, so an export of the pack carries it too. The copy in
+`docs/reference_srd_5.1/README.md` is quoted from upstream and uses curly
+quotes; this one uses straight ones. If the wording ever needs to change,
+change the markdown file and the manifest together.
 
-There is now one more copy, and it is the first that reaches a visitor's
-browser: `SRD_ATTRIBUTION` in
+There is one more copy, and it is the first that reaches a visitor's browser:
+`SRD_ATTRIBUTION` in
 [`web/src/features/legal/attribution.ts`](../web/src/features/legal/attribution.ts),
 rendered on `/legal`. A browser cannot read a file at the repository root, so
-the copy is unavoidable; what is avoidable is its drifting. Two checks in
-series, both inside `make verify`, stop that:
+the copy is unavoidable; what is avoidable is its drifting. One check inside
+`make verify` stops that:
 
 ```
-attribution.ts --(web/src/features/legal/attribution.test.ts)--> data/srd_5.1/ATTRIBUTION.md
-                                                                          |
-                                                     (make data/srd/check) |
-                                                                          v
-                                                                cmd/srdgen/main.go
+attribution.ts --(web/src/features/legal/attribution.test.ts)--> data/pack/srd-5.1/ATTRIBUTION.md
 ```
 
-The test reads the generated file off disk and compares it with the client's
-string, ignoring only the markdown autolink brackets and the hard wrapping --
-neither of which is a difference in wording. So the rule is unchanged: change
-the Go constant first and let the generator propagate. The client is a leaf that
-a test drags along behind it.
+The test reads the markdown file off disk, takes its `## SRD 5.1` section and
+compares it with the client's string, ignoring only the markdown autolink
+brackets and the hard wrapping -- neither of which is a difference in wording.
+So the rule is: change the file first. The client is a leaf that a test drags
+along behind it.
 
 ## Where the detail lives
 
 | Document | Covers |
 | --- | --- |
 | [docs/reference_srd_5.1/README.md](reference_srd_5.1/README.md) | The fullest treatment: CC-BY-4.0 vs OGL 1.0a, why every machine-readable SRD is a community conversion, and what to check before redistributing |
-| [docs/reference_srd_5.1/data/ATTRIBUTION.md](reference_srd_5.1/data/ATTRIBUTION.md) | Per-dataset provenance for each vendored source |
-| [data/srd_5.1/ATTRIBUTION.md](../data/srd_5.1/ATTRIBUTION.md) | Generated; travels with the data it covers, including into the deploy tarball |
-| [web/src/features/legal/attribution.ts](../web/src/features/legal/attribution.ts) | The copy the browser shows, on `/legal`. Pinned to the generated notice by `attribution.test.ts` |
-
-One trap worth naming: `docs/reference_srd_5.1/data/cc-srd5/LICENSING.md` is
-**upstream's** notice, vendored along with the data, and it names its own author.
-It is not this project's license and should not be read as one.
+| [data/pack/srd-5.1/ATTRIBUTION.md](../data/pack/srd-5.1/ATTRIBUTION.md) | Canonical; travels with the data it covers, including into the deploy tarball |
+| [web/src/features/legal/attribution.ts](../web/src/features/legal/attribution.ts) | The copy the browser shows, on `/legal`. Pinned to the markdown file by `attribution.test.ts` |
 
 ## Known gaps
 
@@ -109,26 +127,26 @@ Recorded rather than quietly carried:
   footer -- closing this is a decision nobody has made rather than a thing that
   cannot be done. Either a footer in both shells, or an "About" entry beside
   the account icon. Open.
-- **The English prose is sourced from the OGL-declared dump.** Both mechanics and
-  prose currently come from `5e-bits/5e-database` (`src/2014/en`). The mechanics
-  -- dice, ranges, bonuses, slot tables -- are facts and carry thin copyright;
-  the prose under `i18n/en/` is the exposure. The clean fix is re-sourcing those
-  descriptions from the CC-BY-4.0 `gabrielrega/cc-srd5` and keeping only
-  mechanics from `5e-database`, which needs slug-to-heading matching in
-  `cmd/srdgen`. Tracked in the generated attribution, not yet done.
+- **The SRD prose was sourced from the OGL-declared dump.** Both the mechanics
+  and the English prose of the SRD rows were derived from `5e-bits/5e-database`
+  (`src/2014/en`). The mechanics -- dice, ranges, bonuses, slot tables -- are
+  facts and carry thin copyright; the prose under `i18n/en/` is the exposure.
+  The clean fix is re-sourcing those descriptions from the CC-BY-4.0
+  `gabrielrega/cc-srd5`, which with a hand-maintained pack is an edit of the
+  bundles, paragraph by paragraph, rather than a generator change. Not done.
 - **The images are AI-generated and unmentioned above.** The landing
-  photographs and backdrop tile (`web/src/assets/*.webp`) and the 319 spell
-  icons (`data/srd_5.1/spell-icons/`, imported from `easydnd-2014` and generated
-  through OpenAI's image API) are generated images. OpenAI's terms assign its output
-  to the customer, so the project treats them as its own and they fall under
-  MIT with the rest -- but their provenance is recorded here rather than
-  implied, and a jurisdiction that denies copyright to generated images would
-  make them public domain rather than the project's. Either way nothing
-  restricts shipping them.
-- **No OGL 1.0a text is vendored.** `docs/reference_srd_5.1/fetch-srd.sh` pulls
-  a license file for `cc-srd5` but none for `5e-database`. If that material
-  really is OGL, the license's own notice requirements are unmet.
-- **`data/srd_5.1/manifest.json` records `source` but no license field**, so the
+  photographs and backdrop tile (`web/src/assets/*.webp`), the spell icons
+  (`data/pack/srd-5.1/spell-icons/`, one per spell, SRD and non-SRD alike,
+  generated through OpenAI's image API) and the item icons are generated
+  images. OpenAI's terms assign its output to the customer, so the project
+  treats them as its own and they fall under MIT with the rest -- but their
+  provenance is recorded here rather than implied, and a jurisdiction that
+  denies copyright to generated images would make them public domain rather
+  than the project's. Either way nothing restricts shipping them.
+- **No OGL 1.0a text is carried.** The dump the SRD rows were derived from is
+  OGL-declared by upstream and its licence text was never vendored. If that
+  material really is OGL, the license's own notice requirements are unmet.
+- **`data/pack/srd-5.1/manifest.json` records `source` but no license field**, so the
   shipped data does not state its own terms in machine-readable form.
 
 Homebrew JSON export retains the pack's `source` and `attribution`. Importing or

@@ -110,8 +110,8 @@ func normalize(s string) string {
 // nonSlug is every run of characters a slug cannot contain.
 var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)
 
-// slugify renders a name the way cmd/srdgen does, so that a name whose prose
-// has drifted from its slug still resolves.
+// slugify renders a name the way the pack's slugs were made from names, so
+// that a name whose prose has drifted from its slug still resolves.
 func slugify(s string) string {
 	return strings.Trim(nonSlug.ReplaceAllString(strings.ToLower(s), "-"), "-")
 }

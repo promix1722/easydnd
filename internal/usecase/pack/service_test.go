@@ -17,7 +17,7 @@ import (
 func fixture(t *testing.T) (context.Context, *uc.Service, *file.Authoring, *memory.PackRepository, *memory.GroupRepository) {
 	t.Helper()
 	ctx := context.Background()
-	base, err := file.NewRegistry([]string{"../../../data/srd_5.1"}, nil, "")
+	base, err := file.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestDraftReleasesAndImportIsolation(t *testing.T) {
 		t.Fatal("old release changed")
 	}
 	// A fresh adapter can reconstruct pinned contexts from the repository.
-	base, err := file.NewRegistry([]string{"../../../data/srd_5.1"}, nil, "")
+	base, err := file.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

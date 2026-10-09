@@ -122,11 +122,11 @@ jobs:
       # graph is, and it is transitive, which is what catches a library that
       # pulls net/http in three hops down.
       #
-      # data/srd/check -- the committed compendium must match what cmd/srdgen
-      # produces. Without it, a hand-edit to data/srd_5.1 survives until someone
-      # regenerates and silently reverts it.
-      - name: gofmt, vet, layers, srd drift
-        run: make fmt/check vet lint/layers data/srd/check
+      # pack/check -- the committed compendium is hand-maintained, so the real
+      # pack loader is the gate: schema, references and choices, the same
+      # validation the server runs at startup.
+      - name: gofmt, vet, layers, pack
+        run: make fmt/check vet lint/layers pack/check
 
   check-frontend:
     runs-on: ubuntu-latest
@@ -198,7 +198,7 @@ jobs:
           path: |
             easydnd
             deploy/deploy.sh
-            data/srd_5.1
+            data/pack/srd-5.1
           retention-days: 7
 
   build-frontend:
@@ -432,10 +432,10 @@ jobs:
           # The SRD data is ~1.7 MB across 50-odd files in nested directories.
           # One tar beats fifty scp round trips, and lands the tree atomically
           # enough that deploy.sh's existence check is meaningful.
-          tar -czf srd.tgz -C data srd_5.1
+          tar -czf srd.tgz -C data/pack srd-5.1
           scp -i ~/.ssh/id_deploy srd.tgz "deploy@$HOST:$REL/srd.tgz"
           ssh -i ~/.ssh/id_deploy "deploy@$HOST" \
-            "tar -xzf $REL/srd.tgz -C $REL/data && rm -f $REL/srd.tgz"
+            "mkdir -p $REL/data/pack && tar -xzf $REL/srd.tgz -C $REL/data/pack && rm -f $REL/srd.tgz"
 
   deploy-frontend:
     needs: [check-frontend, build-frontend, test-frontend]

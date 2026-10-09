@@ -597,8 +597,8 @@ func (c *conv) item(w Item, b Bundle) catalog.Item {
 
 // slot reads an explicit slot, or asks the item's shape where it goes.
 //
-// The shape is asked here and nowhere else: srdgen writes a slot only where the
-// shape cannot tell (a cloak, a pair of boots, a robe), and a homebrew pack may
+// The shape is asked here and nowhere else: the SRD rows carry a slot only where
+// the shape cannot tell (a cloak, a pair of boots, a robe), and a homebrew pack may
 // write none at all and still have its armor worn and its swords held.
 func (c *conv) slot(explicit string, derive func() catalog.Slot) catalog.Slot {
 	if explicit == "" {

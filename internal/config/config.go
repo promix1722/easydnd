@@ -259,7 +259,7 @@ func Load(path string) (*Config, error) {
 		Data: DataConfig{
 			// Relative by default so `make run/server` works from the repo
 			// root; the deploy sets it to the release directory.
-			SRDDir:    p.str(f.Data.SRDDir, "data/srd_5.1"),
+			SRDDir:    p.str(f.Data.SRDDir, "data/pack/srd-5.1"),
 			PackFiles: f.Data.PackFiles, DefaultPacks: f.Data.DefaultPacks, PackArchive: f.Data.PackArchive,
 			AutoloadPacks: f.Data.AutoloadPacks,
 		},

@@ -120,7 +120,7 @@ func TestPortraitJPEGAndWebP(t *testing.T) {
 	if err := jpeg.Encode(&jpegBytes, image.NewRGBA(image.Rect(0, 0, 16, 16)), nil); err != nil {
 		t.Fatal(err)
 	}
-	webpBytes, err := os.ReadFile(filepath.Join("..", "..", "..", "data", "srd_5.1", "spell-icons", "magic-missile.webp"))
+	webpBytes, err := os.ReadFile(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1", "spell-icons", "magic-missile.webp"))
 	if err != nil {
 		t.Fatal(err)
 	}

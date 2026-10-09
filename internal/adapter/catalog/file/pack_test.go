@@ -13,9 +13,9 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
-func basePath() string { return filepath.Join("..", "..", "..", "..", "data", "srd_5.1") }
+func basePath() string { return filepath.Join("..", "..", "..", "..", "data", "pack", "srd-5.1") }
 func addonPath() string {
-	return filepath.Join("..", "..", "..", "..", "data", "packs", "examples", "tactician.json")
+	return filepath.Join("testdata", "tactician.json")
 }
 func registry(t *testing.T) *file.Registry {
 	t.Helper()
@@ -244,7 +244,7 @@ func TestRuleValidationAndGuardedOverrides(t *testing.T) {
 		t.Fatal(err)
 	}
 	replacement := file.ResourceDefinition{ID: "override", Owner: "srd-2014:class:warlock", MinimumLevel: 1, Kind: "pool", Input: "srd-2014:class:warlock", Rows: []file.ResourceRow{{From: 1, Capacity: 7, SlotLevel: 1}}}
-	p.Mechanics.Overrides = []file.Override{{Target: "srd-2014:resource:pact-magic", Version: "^1.0.0", Resource: &replacement}}
+	p.Mechanics.Overrides = []file.Override{{Target: "srd-2014:resource:pact-magic", Version: "^2.0.0", Resource: &replacement}}
 	path := writeDocument(t, p)
 	r, err := file.NewRegistry([]string{basePath(), path}, nil, "")
 	if err != nil {
@@ -255,11 +255,11 @@ func TestRuleValidationAndGuardedOverrides(t *testing.T) {
 	if err != nil || sheet.Resources.Pools["pact-magic"].Max != 7 {
 		t.Fatalf("replacement: %v %+v", err, sheet.Resources.Pools["pact-magic"])
 	}
-	p.Mechanics.Overrides[0].Version = ">=2.0.0"
+	p.Mechanics.Overrides[0].Version = ">=3.0.0"
 	if _, err := file.NewRegistry([]string{basePath(), writeDocument(t, p)}, nil, ""); err == nil {
 		t.Fatal("replacement precondition ignored")
 	}
-	p.Mechanics.Overrides[0].Version = "^1.0.0"
+	p.Mechanics.Overrides[0].Version = "^2.0.0"
 	p.Mechanics.Overrides = append(p.Mechanics.Overrides, p.Mechanics.Overrides[0])
 	if _, err := file.NewRegistry([]string{basePath(), writeDocument(t, p)}, nil, ""); err == nil {
 		t.Fatal("conflicting replacements accepted")

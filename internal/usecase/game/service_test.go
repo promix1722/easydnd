@@ -29,7 +29,7 @@ type fixture struct {
 // packs is the registry the app wires, loaded once: only a locked catalogue
 // has resource pools, and compiling it per test costs seconds.
 var packs = sync.OnceValues(func() (*catalogfile.Registry, error) {
-	return catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "srd_5.1")}, nil, "")
+	return catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, nil, "")
 })
 
 // newFixture seeds three accounts and wires the service over empty stores.

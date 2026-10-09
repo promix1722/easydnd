@@ -49,13 +49,13 @@ func itemIconPack(t *testing.T) *PackDocument {
 }
 
 func TestSharedItemIconsArePackLocal(t *testing.T) {
-	base, err := LoadPack("../../../../data/srd_5.1")
+	base, err := LoadPack("../../../../data/pack/srd-5.1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	a, b := itemIconPack(t), itemIconPack(t)
 	b.Manifest.ID = "other"
-	b.Icons.Items["blade"], err = os.ReadFile("../../../../data/srd_5.1/spell-icons/fireball.webp")
+	b.Icons.Items["blade"], err = os.ReadFile("../../../../data/pack/srd-5.1/spell-icons/fireball.webp")
 	if err != nil {
 		t.Fatal(err)
 	}

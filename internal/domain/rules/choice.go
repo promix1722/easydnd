@@ -5,9 +5,10 @@ package rules
 // two abilities. Those prompts nest -- an equipment option can itself be a
 // choice between bundles -- so the grammar below is recursive.
 //
-// It is a transcription of the option grammar in the vendored Zod schemas
-// (docs/reference_srd_5.1/data/5e-database-2014-en/schemas/_common.ts), which
-// is the authoritative spec for both the shape and the optionality.
+// It is a transcription of the option grammar in the Zod schemas of the
+// 5e-bits/5e-database dump the data was derived from (schemas/_common.ts,
+// no longer vendored), which was the authoritative spec for both the shape
+// and the optionality.
 
 // ChoiceKind names what a prompt is choosing, so a UI can render "pick two
 // skills" differently from "pick a weapon" without inspecting the options.

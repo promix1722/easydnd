@@ -135,10 +135,11 @@ right term for the *model*; the term to put on *screen* comes from
 
 ## The catalogue
 
-Twenty-two collections, 1,944 entries, generated from the vendored SRD dump into
-`data/srd_5.1/`. Every entry has a slug, a name and a description; references
-between entries are always slugs, never pointers, which keeps the data acyclic
-and lets one loaded catalogue be shared immutably across requests.
+Twenty-two collections in `data/pack/srd-5.1/`, hand-maintained. Every entry
+has a slug and a name; most have a description, and the ones that do not are
+missing it on purpose (see [below](#sources)). References between entries are
+always slugs, never pointers, which keeps the data acyclic and lets one loaded
+catalogue be shared immutably across requests.
 
 | Group | Collections |
 | --- | --- |
@@ -152,12 +153,21 @@ and lets one loaded catalogue be shared immutably across requests.
 Monsters are deliberately **out of scope** for now; the vendored file stays
 reference-only until the battle tracker gets its own pass.
 
-Spells additionally carry a **source** slug — `srd-5.1` for every one of them
-today. The SRD is the only spell text the project may legally ship (everything
-outside it is unlicensed WotC copyright), so more spells can only ever arrive
-from another licensed document or a user's own import; the source field is
-what lets that content join the same collection without a model change, and
-what an attribution page would group by if a second source ever exists.
+### Sources
+
+Every player-facing entry carries a **source** through the pack's
+`provenance.json` -- `srd-5.1`, or `phb`, `xge` and `tce` for what the SRD
+leaves out. The pack is *SRD 5.1 extended*: the mechanics and the name of
+every 2014 spell, subclass, feat, background and the artificer ship here,
+because dice, levels, components and prerequisites are facts; their text does
+not, because everything outside the SRD is unlicensed WotC copyright. So a
+Xanathar's spell in this catalogue has its level, school, range and class
+lists above an empty description, and that is the honest state of what may be
+shipped. The descriptions come from a separate, private pack that depends on
+this one and fills only what is blank ([packs.md](packs.md#prose-overlays));
+nothing is duplicated, and the public site never has it. The source is what
+lets both kinds of row sit in one collection, and what the sheet's attribution
+badge groups by.
 
 ### Choices
 
@@ -245,26 +255,17 @@ partial state is what a growing locale actually looks like, so it is the case
 that has to work well. `en` is complete; every other locale is as far as
 somebody has got.
 
-Translations are an **input**, not an edit of the output:
+Translations live in the pack, beside what they translate:
+`data/pack/srd-5.1/i18n/ru/spells.json`, hand-edited and checked in. Adding a
+language is adding a directory -- the loader reads whatever locales are present
+rather than a list in code -- and a slug that is not in the English bundle
+fails the load with the collection and the slug named, because a mistyped key
+is otherwise a word nobody ever sees.
 
-```
-data/translations/ru/spells.json   <- hand-edited, checked in
-        |  cmd/srdgen
-        v
-data/srd_5.1/i18n/ru/spells.json   <- generated, never hand-edited
-```
-
-`data/srd_5.1/` is regenerated and diffed by `make data/srd/check`, so anything
-typed into it is reverted; before the input tree existed there was nowhere to
-put a translation that survived a build. Adding a language is adding a directory
--- `srdgen` reads whatever locales are present rather than a list in code -- and
-a slug that is not in the English bundle fails the build with the file and the
-slug named, because a mistyped key is otherwise a word nobody ever sees.
-
-The generated locale directory holds **only what has been translated**. It is
-not a merged copy of English: the loader merges at read time, and writing the
-merge out would put a megabyte of untouched English into every language's diff.
-See [data/translations/README.md](../data/translations/README.md).
+A locale directory holds **only what has been translated**. It is not a merged
+copy of English: the loader merges at read time, and writing the merge out
+would put a megabyte of untouched English into every language's diff. See
+[data/locale-terms-locked/README.md](../data/locale-terms-locked/README.md).
 
 Rule strings like `"1 action"` and `"Up to 1 minute"` are *mechanics*, and are
 stored structured rather than as text — otherwise a Russian sheet would read
@@ -541,10 +542,11 @@ feature: the same hit point per level, and three armor class while no armor is
 worn. Both read the character's level, which is the sorcerer's own only while
 the character has one class.
 
-Spell class lists come from the upstream SRD dump, which gets five of them
-wrong against the SRD 5.1 text (Faerie Fire is not on the bard's list there).
-`srdgen` replaces those five (`spellClassErrata`): a class whose list lacks a
-spell is never offered it, so a wrong list is a wrong build, not a wrong label.
+Spell class lists were corrected against the SRD 5.1 text when the data was
+derived: the upstream dump got five of them wrong (Faerie Fire was not on the
+bard's list there). A class whose list lacks a spell is never offered it, so a
+wrong list is a wrong build, not a wrong label -- which is why a list is worth
+checking against the book whenever a spell row is edited.
 
 Worn armor counts whether it was equipped as a list entry
 (`equipment.equipped` add `leather-armor`) or as a counted stack
@@ -562,7 +564,7 @@ equipped, whichever path took it off.
 The target is [SRD 5.1](https://www.dndbeyond.com/attachments/39j2li89/SRD5.1-CCBY4.0License.pdf),
 using the vendored text for Equipment, each class's Spellcasting/Pact Magic,
 Fighting Style, Expertise and the SRD subclass features. Rule policy lives in
-`data/rules/2014/mechanics.json`; generated catalogues are never edited directly.
+`data/pack/srd-5.1/mechanics.json`, beside the entities it governs.
 
 Equipment categories are expanded by the catalogue before either validation or
 projection. The expanded set retains its category identity so existing branch
@@ -572,9 +574,9 @@ or two fighting styles cannot duplicate the same benefit. Class-specific names
 for the same fighting style count as one style. Collection choices such as feats
 and languages are also validated against explicit catalogue membership.
 
-**A class kit is asked slot by slot**, and is hand-written in `cmd/srdgen`
-(`kits.go`) rather than read from the upstream dump's "(a) … or (b) …"
-pairs. The book pairs things the way it sells them; a player fills a sheet
+**A class kit is asked slot by slot**, written by hand on each class row's
+`startingEquipmentOptions` rather than transcribed from the book's
+"(a) … or (b) …" pairs. The book pairs things the way it sells them; a player fills a sheet
 by its slots, and "a martial weapon and a shield, or two martial weapons"
 asked as one question was the card nobody could read. Each choice carries a
 `slot` -- `body`, `main-hand`, `off-hand`, or the kit-only `backup`, `pack`,
@@ -626,7 +628,7 @@ because archived releases and the private 2014 pack wrote it. The shape
 decides where an item can go: armor is `body`, a shield `off-hand`, a weapon or
 focus `main-hand`, a magic ring `ring`, a wand, staff or rod `main-hand`. That
 default is applied once, by the catalogue loader, so a pack writes a slot only
-where the shape cannot tell -- srdgen does so for the clothes, the amulet and
+where the shape cannot tell -- the SRD rows do so for the clothes, the amulet and
 reliquary, the magic shields and every wondrous item whose name says where it
 goes (a cloak is `back`, boots are `feet`). A wondrous item without one -- a
 bag of holding, an ioun stone -- is carried, not worn.

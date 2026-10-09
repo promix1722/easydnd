@@ -66,12 +66,12 @@ func TestForkRewritesReferencesButPreservesProse(t *testing.T) {
 	}
 }
 func TestImportedExampleCompilesAndRoundTrips(t *testing.T) {
-	base, err := NewRegistry([]string{"../../../../data/srd_5.1"}, nil, "")
+	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	a := NewAuthoring(base, nil)
-	raw, err := os.ReadFile("../../../../data/packs/examples/tactician.json")
+	raw, err := os.ReadFile("testdata/tactician.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestImportedExampleCompilesAndRoundTrips(t *testing.T) {
 }
 
 func TestForkedCoreRetainsExactlyTheSixStandardScores(t *testing.T) {
-	base, err := NewRegistry([]string{"../../../../data/srd_5.1"}, nil, "")
+	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

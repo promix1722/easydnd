@@ -28,19 +28,19 @@ Missing references, invalid labels and malformed artwork fail validation.
 Artwork remains optional for older and custom packs.
 
 Item icons are transparent 128×128 WebPs. The SRD uses original pixel artwork,
-with shared silhouettes for variants. The authored assignments live in
-`data/rules/2014/item-icons.json`, and committed artwork inputs live in
-`data/srd_5.1/item-icons/`. `srdgen` requires a valid assignment for every
-equipment and magic-item row, rejects stale assignments, and copies referenced
-artwork into the generated pack. Never edit generated equipment JSON to assign
-icons. New artwork and assignments require a new release, now `1.6.0`.
+with shared silhouettes for variants. The artwork lives in
+`data/pack/srd-5.1/item-icons/<label>.webp` and the assignment is the `icon`
+field on each equipment and magic-item row, edited in place; the loader
+rejects a label with no file behind it. A row without a label has no icon --
+the non-SRD items reuse an existing label where one fits and go without where
+none does. New artwork and assignments require a new release.
 
 To convert approved PNGs from `output/imagegen/item-samples/` and
 `output/imagegen/item-icons/`, run `node web/scripts/item-icons.mjs` after
 installing the web dependencies. This uses nearest-neighbor resizing and
 lossless WebP, checks dimensions and transparency, and preserves source PNGs.
-Then run `make data/srd` and `make data/srd/check`. Regenerating the SRD itself
-needs only the committed WebPs, never the image generator or source PNGs.
+Then run `make pack/check`: the loader finds the files by name, so a new WebP
+under `item-icons/` is in the pack the moment a row names it.
 
 Item detail, collection, and search responses expose an optional `icon` data
 URL, just as spells do. The UI displays item artwork at 88×88 alongside its
@@ -48,8 +48,9 @@ name in inventory, equipped slots, equip selectors and starting choices.
 
 ### Spell artwork
 
-Artwork is optional and belongs to an immutable release. Directory and ZIP
-packs declare files in the manifest, using local spell IDs:
+Artwork is optional and belongs to an immutable release. A directory laid out
+by convention holds `spell-icons/<local-spell-id>.webp` and says nothing more;
+a manifest that names its files declares them, using local spell IDs:
 
 ```json
 "files": {
@@ -71,7 +72,9 @@ packs without icons retain their digests and remain valid. Existing catalog
 summary/detail routes expose an optional `icon` data URL; no image routes or
 separate image storage are used.
 
-The SRD pack's version is `data/rules/2014/release.json` (now `1.6.0`). Preserve
+The SRD pack's version is the `version` field of
+`data/pack/srd-5.1/pack-manifest.json` (now `2.0.0`), bumped by hand with the
+content it describes. Preserve
 `data.pack_archive` when deploying so characters pinned to an earlier release
 continue to use the archived bytes; startup refuses an archived release whose
 bytes have changed under the same version. An explicit
@@ -87,21 +90,22 @@ armor `body`, a shield `off-hand`, a weapon or focus `main-hand`, a magic ring
 Write it for a wondrous item that is worn (a cloak, a belt) or to override the
 shape; any other unknown value fails the load.
 
-The committed `data/srd_5.1/spell-icons/` directory is the default artwork
-input for `srdgen`, including checks generating into temporary directories.
-`-icons` selects another input directory. SRD generation requires one matching
-file per SRD spell and never generates images or reads an external checkout by
-default.
+The committed `data/pack/srd-5.1/spell-icons/` directory holds one WebP per
+spell, SRD and non-SRD alike. `make spell-icons` fills whatever is missing
+through the image API and never reads an external checkout.
 
 ## Load and export
 
 ```sh
-# Validate the complete installation and print its exact lock.
-go run ./cmd/pack -in data/srd_5.1,data/packs/examples/tactician.json
+# Validate the SRD pack and print its exact lock -- what `make pack/check` runs.
+go run ./cmd/pack -in data/pack/srd-5.1
+
+# Validate the base with the private descriptions overlay installed beside it.
+go run ./cmd/pack -in data/pack/srd-5.1,../easydnd-2014/pack
 
 # Export the first input; supply its dependencies too. Destinations must be new.
-go run ./cmd/pack -in data/packs/examples/tactician.json,data/srd_5.1 -out /tmp/tactician.json
-go run ./cmd/pack -in data/packs/examples/tactician.json,data/srd_5.1 -out /tmp/tactician-pack -directory
+go run ./cmd/pack -in ../easydnd-2014/pack,data/pack/srd-5.1 -out /tmp/personal.json
+go run ./cmd/pack -in data/pack/srd-5.1 -out /tmp/srd-pack -directory
 ```
 
 ### Prose formats
@@ -157,27 +161,31 @@ that list for the SRD: the checks that have been driven to zero and are held
 there. `glossary-term` is not in it and is not meant to be -- it matches word
 stems, so it is a reading list, not a verdict. The Russian-only checks
 (Cyrillic dice, metric units, `[english]` in brackets, `nonstandard-abbreviation`)
-encode the rules in `data/translations/README.md`.
+encode the rules in `data/locale-terms-locked/README.md`.
 
 Configure the server through the existing YAML file:
 
 ```yaml
 data:
-  srd_dir: data/srd_5.1
+  srd_dir: data/pack/srd-5.1
   pack_files:
-    - data/packs/examples/tactician.json
+    - ../easydnd-2014/pack
   autoload_packs:
     - path: /path/to/another-pack-repository
       id: another-core # optional namespace override
   default_packs:
-    srd-2014: "1.0.0"
-    example: "2.0.0"
+    srd-2014: "2.0.0"
+    easydnd-2014-personal: "1.0.0"
   pack_archive: .pack-archive
 ```
 
 `pack_files` installs additional files or directories. `default_packs` selects
 roots; dependency ranges are resolved from installed releases only. When omitted,
-the explicitly configured inputs become exact default roots. An archive retains
+the explicitly configured inputs become exact default roots. That lock, whole,
+is the default: it is what a new character is pinned to and what the catalogue
+manifest reports as `defaultRules` -- every root in it, not only the base, so a
+pack listed in `pack_files` reaches new characters without anybody picking it
+(`Authoring.Default`). An archive retains
 portable releases by digest and makes older locks loadable after restart. Keep
 it outside a deployment's release directory. Changing content under an archived
 ID/version is an error. Bump the version instead. The archive never supplies
@@ -216,11 +224,15 @@ already declare its installed ID. Independent cores are selected separately;
 combining two core providers still fails validation. Autoloaded releases use the
 same immutable archive policy as `pack_files`.
 
-Development config points to `/home/orca-personal/projects/easydnd-2014` with ID
-`dnd-2014`, giving SRD 5.1 and D&D 2014 as two packs while retaining SRD as the
-default. Adjust or remove that entry on machines without this checkout.
-Generated worktree and preview configs copy the `data` section of
-`config.dev.yaml`; a private `config.local.yaml` remains a complete override
+Development config lists `/home/orca-personal/projects/easydnd-2014/pack` in
+`pack_files`: the private descriptions-only overlay (`easydnd-2014-personal`,
+see [Prose overlays](#prose-overlays)), which depends on the base and fills in
+the text the base deliberately leaves out. Being a `pack_files` entry rather
+than an autoloaded folder is what puts it in the default lock, so a character
+made in development has the descriptions from the start. Adjust or remove that
+entry on machines without this checkout; production has no such entry and gets
+the base alone. Generated worktree and preview configs copy the `data` section
+of `config.dev.yaml`; a private `config.local.yaml` remains a complete override
 and must include the same setting if desired.
 
 The archive preserves packs, **not characters**. Character logs, checkpoints,
@@ -229,11 +241,12 @@ separate dependency before replay across application restarts can be promised.
 
 ## File contract
 
-A portable file has `manifest`, `entities`, `mechanics` and `locales`. The checked
-example [tactician.json](../data/packs/examples/tactician.json) introduces a
-subclass, race, spell, tool, feature, numeric modifier, scaling dice
-pool and an action that spends it. It is illustrative custom content and is not
-installed by default.
+A portable file has `manifest`, `entities`, `mechanics` and `locales`. The test
+fixture [tactician.json](../internal/adapter/catalog/file/testdata/tactician.json)
+introduces a subclass, race, spell, tool, feature, numeric modifier, scaling
+dice pool and an action that spends it -- every kind of thing an addon can
+say, which is why the loader's tests are built on it. It is a test input, not
+shipped content.
 
 ```json
 {
@@ -253,23 +266,38 @@ installed by default.
 }
 ```
 
-A directory contains `manifest.json` (the generated SRD uses
-`pack-manifest.json` to coexist with its old catalogue index) and a `files` map:
+A directory contains `manifest.json` (the SRD uses `pack-manifest.json` to
+coexist with its old catalogue index) and either a `files` map or a layout.
+The map names each logical key's file:
 
 ```json
 {
-  "entities/subclasses": "entities/subclasses.json",
+  "entities/subclasses": "subclasses.json",
   "mechanics": "mechanics.json",
-  "locales/en/subclasses": "i18n/en/subclasses.json"
+  "locales/en/subclasses": "i18n/en/subclasses.json",
+  "icons/spells/guiding-mark": "spell-icons/guiding-mark.webp"
 }
 ```
+
+A manifest that names no files is read by convention instead: each collection
+in `MechanicsFiles()` as `<collection>.json` at the root, `mechanics.json`,
+`provenance.json`, every `i18n/<tag>/<bundle>.json`, every
+`spell-icons/<id>.webp` and `item-icons/<label>.webp`
+(`conventionalFiles`, `internal/adapter/catalog/file/pack_codec.go`). That is
+what a hand-maintained pack needs: the SRD's map had grown to 530 lines, one
+per icon, and a list that long goes stale with the next WebP or the next
+language. A map that is present wins, so a portable export -- which
+`SavePackDirectory` writes with an explicit map, in this same layout -- is
+read exactly as written. ZIP imports follow the same rule.
 
 File paths are relative and confined to the root, including symlink resolution.
 Input is bounded to 64 MiB and nesting depth 64. Duplicate keys, unknown typed
 fields, unsupported capabilities, unresolved references, missing dependencies,
 dependency cycles and conflicting definitions are errors. JSON Schema validates
 the envelope; strict typed decoding and semantic checks validate the contents.
-The wire types in `internal/adapter/catalog/file` are shared with the generator.
+The wire types in `internal/adapter/catalog/file` are the contract: whatever
+writes a pack -- `cmd/pack`, the private repository's exporter, the homebrew
+editor -- produces them, and the loader is the one reader.
 
 Pack IDs are lowercase letters/digits/hyphens starting with a letter. Local
 entity, rule, resource and action IDs contain lowercase letters/digits/hyphens.
@@ -336,6 +364,37 @@ replacement `rule` or `resource`. They retain the target identity and existing
 localized name. Two replacements of the same target fail; file order never
 selects a winner. Arbitrary JSON patches and whole-entity replacement are not
 supported operations.
+
+## Prose overlays
+
+A pack may ship prose for entities it does not define. A locale bundle's key
+is normally a local slug; it may instead be a canonical reference into a
+declared dependency -- `srd-2014:spell:fireball` in `locales/en/spells` -- and
+then names that pack's entity (`foreignProseKey`,
+`internal/adapter/catalog/file/pack_semantics.go`). The key's kind has to match
+the bundle's collection, and the pack it names has to be a dependency; a bare
+slug in a collection the pack does not define is still an error, as is a
+canonical key into a pack it never declared.
+
+At compile the prose is merged **fill-empty**: the overlay's fields land in
+whatever the base left blank, and a field both packs set -- a name, a
+description, one `fields` or `blocks` key -- fails the load with
+`localized identity <collection>/<id>: desc set twice` (`fillProse`,
+`locale.go`). That is the same rule overrides follow: load order never picks a
+winner. A field counts as set once the locale *or its fallback* supplies it, so
+an overlay cannot slip a Russian description under an English one the base
+already has. A canonical key naming no compiled entity fails too
+(`localized identity without entity`), because a typo there would otherwise
+vanish without a trace.
+
+This is what makes a **descriptions-only pack** possible: no entities, no
+mechanics, no icons, just bundles keyed into its base. The private
+`easydnd-2014` repository is one -- `easydnd-2014-personal`, depending on
+`srd-2014` 2.x -- and it carries the text the base deliberately does not ship
+(see [licensing.md](licensing.md)). Loading it adds descriptions to the
+entries that lack them and duplicates nothing; leaving it out leaves those
+entries with a name, their mechanics and an empty description. Whole-entity
+replacement is still not a thing a pack can do; an overlay only fills blanks.
 
 ## Resources and temporal events
 
@@ -407,14 +466,13 @@ because there is nothing to be eligible for or to afford. Its `actions` locale
 entry needs a `name` and may carry a Markdown `desc`.
 
 The SRD pack uses both. Its fourteen unowned actions -- Attack through Use an
-Object, Grapple, Shove, Two-Weapon Fighting, Opportunity Attack -- are authored
-in `data/rules/2014/mechanics.json` with their text in
-`data/rules/2014/actions.en.json` and `data/translations/<locale>/actions.json`.
-Its tags are authored in `data/rules/2014/action-tags.json`, a
-`{collection: {slug: tag}}` table, because the entities themselves are
-generated from an upstream dump that says "as a bonus action" only in prose;
-`srdgen` merges the table in and fails on a slug it did not emit. A pack that
-owns its entity JSON writes the tag straight onto the entry.
+Object, Grapple, Shove, Two-Weapon Fighting, Opportunity Attack -- are in
+`data/pack/srd-5.1/mechanics.json` with their text in
+`i18n/<locale>/actions.json`. Its tags sit on the entries themselves, the
+`action` field of a feature, trait or item row: the upstream dump said "as a
+bonus action" only in prose, so every tag was authored by hand, and now that
+the pack is edited in place the tag lives where it applies rather than in a
+side table that had to be merged in.
 
 Where a feature exists once per tier (`bardic-inspiration-d6`, `-d8`, ...),
 only the first is tagged, or a tenth-level bard would list it three times.
@@ -457,9 +515,12 @@ the repository boundary.
 
 ## Release and localization policy
 
-Edit base mechanics in `data/rules/2014/`, translations in `data/translations/`,
-and bump `data/rules/2014/release.json` for a new published artifact. Run
-`make data/srd`; never hand-edit its output. SemVer communicates compatibility:
+Edit the base pack in place -- mechanics in `data/pack/srd-5.1/mechanics.json`,
+entities in the collection files, translations in `i18n/<locale>/` -- and bump
+`version` in `pack-manifest.json` for a new published artifact; `make
+pack/check` is the gate. Rows whose provenance names `phb`, `xge` or `tce` are
+written by the private `easydnd-2014` repository's `make export` and are edited
+there. SemVer communicates compatibility:
 new optional content normally increments minor; renamed/removed IDs or changed
 choice contracts increment major; compatible corrections increment patch.
 All released bytes remain immutable, including translation changes.
@@ -519,8 +580,8 @@ these flags.
 on any of a list of proficiencies. Referenced owners, classes, spells and
 proficiencies must resolve in the pinned catalogue.
 
-The SRD input policy defines these in `data/rules/2014/mechanics.json`; regenerate
-with `make data/srd`. Older profiles that omit selection policy keep their
+The SRD defines these in `data/pack/srd-5.1/mechanics.json`, edited in place.
+Older profiles that omit selection policy keep their
 previous behavior. Character rules locks remain authoritative, so installing a
 new policy does not silently migrate existing pinned characters.
 
@@ -608,8 +669,12 @@ arrays of source IDs. A directory references it as `files.provenance`:
 }
 ```
 
-This is an excerpt, not a complete pack. Source mappings must name existing
-entities and declared sources. Membership ordering is not semantic. Provenance
+This is an excerpt, not a complete pack. The SRD pack itself keeps its sources
+to bare ids -- `{"srd-5.1": "SRD 5.1", "phb": "PHB", "xge": "XGE", "tce": "TCE"}`
+-- and ships no `sources` bundle: a tag, not a title, is all a row needs to
+say where it came from (`web/src/ui/sourceAbbreviation.ts` renders the
+abbreviation). Source mappings must name existing entities and declared
+sources. Membership ordering is not semantic. Provenance
 is part of the immutable release digest, survives JSON/directory/ZIP round trips,
 and requires a version bump when changed. Importing a copy retains book
 memberships but derives its owning identity from the new pack. Legacy spells'

@@ -43,8 +43,8 @@ type renderKey struct {
 
 // The collection names.
 //
-// They are the names of the generated files without their extension, which is
-// the vocabulary manifest.json and data/srd_5.1/ already use. Inventing a
+// They are the names of the pack's collection files without their extension, which is
+// the vocabulary manifest.json and data/pack/srd-5.1/ already use. Inventing a
 // third spelling of "the collections" is how a manifest and a router drift
 // apart.
 const (

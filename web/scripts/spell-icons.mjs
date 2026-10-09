@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const OUT_DIR = join(ROOT, 'data', 'srd_5.1', 'spell-icons')
+const OUT_DIR = join(ROOT, 'data', 'pack', 'srd-5.1', 'spell-icons')
 const ICON_SIZE = 128
 
 // One color voice per school, so the set reads as a system rather than 319
@@ -43,9 +43,9 @@ function prompt(name, school) {
 }
 
 function buildPrompts(outPath) {
-  const spells = JSON.parse(readFileSync(join(ROOT, 'data', 'srd_5.1', 'spells.json'), 'utf8'))
+  const spells = JSON.parse(readFileSync(join(ROOT, 'data', 'pack', 'srd-5.1', 'spells.json'), 'utf8'))
   const prose = JSON.parse(
-    readFileSync(join(ROOT, 'data', 'srd_5.1', 'i18n', 'en', 'spells.json'), 'utf8'),
+    readFileSync(join(ROOT, 'data', 'pack', 'srd-5.1', 'i18n', 'en', 'spells.json'), 'utf8'),
   )
   const out = {}
   for (const spell of spells) {

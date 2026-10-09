@@ -17,7 +17,7 @@ import (
 var _ catalog.Source = (*file.Source)(nil)
 
 // dataDir is the committed compendium, four levels up from this package.
-func dataDir() string { return filepath.Join("..", "..", "..", "..", "data", "srd_5.1") }
+func dataDir() string { return filepath.Join("..", "..", "..", "..", "data", "pack", "srd-5.1") }
 
 // loadSource is shared by every test in this package, because Source.Load
 // caches per locale and a fresh Source per call throws that cache away. One
@@ -54,19 +54,19 @@ func TestLoadEntryCounts(t *testing.T) {
 		{"damage types", c.DamageTypes.Len(), 13},
 		{"magic schools", c.MagicSchools.Len(), 8},
 		{"weapon properties", c.WeaponProperties.Len(), 11},
-		{"proficiencies", c.Proficiencies.Len(), 117},
+		{"proficiencies", c.Proficiencies.Len(), 118},
 		{"equipment categories", c.EquipmentCategories.Len(), 39},
 		{"races", c.Races.Len(), 9},
-		{"subraces", c.Subraces.Len(), 4},
-		{"traits", c.Traits.Len(), 38},
-		{"classes", c.Classes.Len(), 12},
-		{"subclasses", c.Subclasses.Len(), 12},
-		{"features", c.Features.Len(), 408},
-		{"backgrounds", c.Backgrounds.Len(), 1},
-		{"feats", c.Feats.Len(), 1},
-		{"items", c.Items.Len(), 239},
-		{"magic items", c.MagicItems.Len(), 362},
-		{"spells", c.Spells.Len(), 319},
+		{"subraces", c.Subraces.Len(), 9},
+		{"traits", c.Traits.Len(), 48},
+		{"classes", c.Classes.Len(), 13},
+		{"subclasses", c.Subclasses.Len(), 101},
+		{"features", c.Features.Len(), 1111},
+		{"backgrounds", c.Backgrounds.Len(), 19},
+		{"feats", c.Feats.Len(), 72},
+		{"items", c.Items.Len(), 293},
+		{"magic items", c.MagicItems.Len(), 489},
+		{"spells", c.Spells.Len(), 477},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -237,7 +237,7 @@ growing locale.
 
 Against a fixture rather than the shipped data, and that is the whole point of
 the rewrite. This test used to assert that `dwarf` was "Дварф" and `acid-arrow`
-was still "Acid Arrow" -- which held only while `data/srd_5.1/i18n/ru/` happened
+was still "Acid Arrow" -- which held only while `data/pack/srd-5.1/i18n/ru/` happened
 to contain races and not spells. It would have gone red on the day somebody
 translated a spell, reporting a broken fallback when what had actually happened
 was progress.
@@ -373,27 +373,6 @@ func TestLoadRejectsUnsupportedLocale(t *testing.T) {
 	}
 }
 
-// The manifest's counts must agree with what actually loads, which is what
-// makes a truncated write detectable.
-func TestManifestMatchesLoadedCounts(t *testing.T) {
-	m, err := file.ReadManifest(dataDir())
-	if err != nil {
-		t.Fatalf("ReadManifest() error = %v", err)
-	}
-	if m.Ruleset != "2014" {
-		t.Errorf("ruleset = %q, want %q", m.Ruleset, "2014")
-	}
-	c := load(t, rules.LocaleEN)
-	if got := m.Counts[file.FileSpells]; got != c.Spells.Len() {
-		t.Errorf("manifest spells = %d, loaded = %d", got, c.Spells.Len())
-	}
-	for _, name := range file.MechanicsFiles() {
-		if _, ok := m.Counts[name]; !ok {
-			t.Errorf("manifest has no count for %s", name)
-		}
-	}
-}
-
 // Terms are the prose behind rules.TextOption, DamageOption.Notes and
 // ActionOption. They have no mechanics file, so nothing about the mechanics
 // side of the loader would notice if they stopped being read -- the failure
@@ -402,8 +381,8 @@ func TestManifestMatchesLoadedCounts(t *testing.T) {
 func TestTermsResolveTextOptions(t *testing.T) {
 	c := load(t, rules.LocaleEN)
 
-	if got := c.Terms.Len(); got != 47 {
-		t.Errorf("Terms.Len() = %d, want 47", got)
+	if got := c.Terms.Len(); got != 356 {
+		t.Errorf("Terms.Len() = %d, want 356", got)
 	}
 
 	// The key comes from acolyte/ideal/0, which is a TextOption carrying

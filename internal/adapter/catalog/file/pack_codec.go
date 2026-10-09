@@ -6,11 +6,13 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"math"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -258,7 +260,7 @@ func (p *PackDocument) validateEncoded(b []byte) error {
 		}
 		for tag, localized := range p.Locales {
 			for id := range localized[collection] {
-				if !seen[id] {
+				if !seen[id] && !foreignProseKey(p, collection, id) {
 					return fmt.Errorf("unknown translation %s/%s/%s", tag, collection, id)
 				}
 			}
@@ -411,7 +413,7 @@ func LoadPack(path string) (*PackDocument, error) {
 		defer func() { _ = f.Close() }()
 		return io.ReadAll(io.LimitReader(f, maxPackBytes+1))
 	}
-	p, err := readPackDirectory(read)
+	p, err := readPackDirectory(read, root.FS())
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +423,78 @@ func LoadPack(path string) (*PackDocument, error) {
 	return p, nil
 }
 
-func readPackDirectory(read func(string) ([]byte, error)) (*PackDocument, error) {
+// conventionalFiles derives the manifest's files map from the directory layout
+// data/pack/srd-5.1 uses: entity collections at the root, mechanics.json,
+// provenance.json, i18n/<tag>/<bundle>.json, spell-icons/<slug>.webp and
+// item-icons/<label>.webp. A hand-maintained pack then needs no 500-line list
+// that goes stale with every icon or language added; a manifest that names its
+// files keeps them, which is what portable packs and exports do.
+func conventionalFiles(layout fs.FS) (map[string]string, error) {
+	files := map[string]string{}
+	present := func(name string) (bool, error) {
+		_, err := fs.Stat(layout, name)
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+		return err == nil, err
+	}
+	for _, name := range MechanicsFiles() {
+		if ok, err := present(name); err != nil {
+			return nil, err
+		} else if ok {
+			files["entities/"+strings.TrimSuffix(name, ".json")] = name
+		}
+	}
+	for _, name := range []string{"mechanics.json", "provenance.json"} {
+		if ok, err := present(name); err != nil {
+			return nil, err
+		} else if ok {
+			files[strings.TrimSuffix(name, ".json")] = name
+		}
+	}
+	list := func(dir string) ([]fs.DirEntry, error) {
+		entries, err := fs.ReadDir(layout, dir)
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+		return entries, err
+	}
+	tags, err := list(LocaleDir)
+	if err != nil {
+		return nil, err
+	}
+	for _, tag := range tags {
+		if !tag.IsDir() {
+			continue
+		}
+		bundles, err := list(path.Join(LocaleDir, tag.Name()))
+		if err != nil {
+			return nil, err
+		}
+		for _, b := range bundles {
+			if name := b.Name(); !b.IsDir() && strings.HasSuffix(name, ".json") {
+				files["locales/"+tag.Name()+"/"+strings.TrimSuffix(name, ".json")] = path.Join(LocaleDir, tag.Name(), name)
+			}
+		}
+	}
+	for kind, dir := range map[string]string{"spells": "spell-icons", "items": "item-icons"} {
+		icons, err := list(dir)
+		if err != nil {
+			return nil, err
+		}
+		for _, icon := range icons {
+			if name := icon.Name(); !icon.IsDir() && strings.HasSuffix(name, ".webp") {
+				files["icons/"+kind+"/"+strings.TrimSuffix(name, ".webp")] = path.Join(dir, name)
+			}
+		}
+	}
+	return files, nil
+}
+
+// readPackDirectory reads the files a manifest names, or -- when it names none
+// and the caller can list the layout -- the files the conventional layout
+// holds; see conventionalFiles.
+func readPackDirectory(read func(string) ([]byte, error), layout fs.FS) (*PackDocument, error) {
 	name := "pack-manifest.json"
 	b, err := read(name)
 	if os.IsNotExist(err) {
@@ -434,6 +507,11 @@ func readPackDirectory(read func(string) ([]byte, error)) (*PackDocument, error)
 	var manifest PackManifest
 	if err = strictJSON(b, &manifest); err != nil {
 		return nil, err
+	}
+	if len(manifest.Files) == 0 && layout != nil {
+		if manifest.Files, err = conventionalFiles(layout); err != nil {
+			return nil, err
+		}
 	}
 	p := &PackDocument{Manifest: manifest, Entities: map[string]json.RawMessage{}, Locales: map[string]map[string]Bundle{}}
 	total := len(b)
@@ -534,7 +612,7 @@ func SavePackDirectory(path string, p *PackDocument) error {
 		}
 	}
 	for name, data := range p.Entities {
-		if err = write("entities/"+name, "entities/"+name+".json", data); err != nil {
+		if err = write("entities/"+name, name+".json", data); err != nil {
 			return err
 		}
 	}

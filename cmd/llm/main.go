@@ -18,7 +18,7 @@
 // `node web/scripts/spell-icons.mjs prompts` and run the whole chain through
 // `make spell-icons`; a one-off can still be built by hand:
 //
-//	jq 'map({(.slug): ("icon of " + .slug)}) | add' data/srd_5.1/spells.json
+//	jq 'map({(.slug): ("icon of " + .slug)}) | add' data/pack/srd-5.1/spells.json
 //
 // The API key is read from OPENAI_API_KEY. `-dry-run` on either subcommand
 // shows what would be requested without needing the key or spending credit.

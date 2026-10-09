@@ -1,0 +1,59 @@
+{
+  "acolyte": {
+    "name": "Acolyte"
+  },
+  "charlatan": {
+    "name": "Charlatan"
+  },
+  "criminal": {
+    "name": "Criminal"
+  },
+  "custom-background": {
+    "name": "Custom Background"
+  },
+  "entertainer": {
+    "name": "Entertainer"
+  },
+  "folk-hero": {
+    "name": "Folk Hero"
+  },
+  "guild-artisan": {
+    "name": "Guild Artisan"
+  },
+  "hermit": {
+    "name": "Hermit"
+  },
+  "noble": {
+    "name": "Noble"
+  },
+  "outlander": {
+    "name": "Outlander"
+  },
+  "sage": {
+    "name": "Sage"
+  },
+  "sailor": {
+    "name": "Sailor"
+  },
+  "soldier": {
+    "name": "Soldier"
+  },
+  "urchin": {
+    "name": "Urchin"
+  },
+  "spy": {
+    "name": "Spy"
+  },
+  "gladiator": {
+    "name": "Gladiator"
+  },
+  "guild-merchant": {
+    "name": "Guild Merchant"
+  },
+  "knight": {
+    "name": "Knight"
+  },
+  "pirate": {
+    "name": "Pirate"
+  }
+}

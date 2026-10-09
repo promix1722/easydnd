@@ -9,7 +9,7 @@ import (
 )
 
 func TestAuthoringCacheRetainsAccessAndContentChecks(t *testing.T) {
-	base, err := NewRegistry([]string{"../../../../data/srd_5.1"}, nil, "")
+	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestAuthoringCacheRetainsAccessAndContentChecks(t *testing.T) {
 	}
 	// Reusing a claimed digest with changed bytes must not reuse decoded content.
 	forged := docs[0]
-	forged.Data = bytes.Replace(forged.Data, []byte(`"title": "SRD 5.1"`), []byte(`"title": "Changed"`), 1)
+	forged.Data = bytes.Replace(forged.Data, []byte(`"edition": "2014"`), []byte(`"edition": "2015"`), 1)
 	if bytes.Equal(forged.Data, docs[0].Data) {
 		t.Fatal("fixture was not changed")
 	}
@@ -54,7 +54,7 @@ func TestAuthoringCacheRetainsAccessAndContentChecks(t *testing.T) {
 }
 
 func BenchmarkAuthoringResolveInstalled(b *testing.B) {
-	base, err := NewRegistry([]string{"../../../../data/srd_5.1"}, nil, "")
+	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
 	if err != nil {
 		b.Fatal(err)
 	}

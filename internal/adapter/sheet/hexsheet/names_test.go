@@ -50,9 +50,9 @@ func TestIndexRejectsUnknownNames(t *testing.T) {
 	cat := loadTestCatalog(t)
 	backgrounds := newIndex(cat.Backgrounds, func(b catalog.Background) string { return b.Name })
 
-	// SRD 5.1 publishes exactly one background, and Urchin is not it.
-	if slug, ok := backgrounds.find("Urchin"); ok {
-		t.Errorf("Urchin resolved to %q; SRD 5.1 publishes only Acolyte", slug)
+	// The pack carries the 2014 backgrounds; one from another book is not it.
+	if slug, ok := backgrounds.find("Haunted One"); ok {
+		t.Errorf("Haunted One resolved to %q; the pack has no such background", slug)
 	}
 	items := newIndex(cat.Items, func(i catalog.Item) string { return i.Name })
 	for _, name := range []string{"", "   ", "Vorpal Sword of Nonsense"} {

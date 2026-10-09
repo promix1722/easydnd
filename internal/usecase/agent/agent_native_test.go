@@ -73,7 +73,7 @@ func namespacedService(t *testing.T) *charuc.Service {
 
 // Loaded once: reading the pack is most of what a test using it costs.
 var namespacedRegistry = sync.OnceValues(func() (*catalogfile.Registry, error) {
-	path := filepath.Join("..", "..", "..", "data", "srd_5.1")
+	path := filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")
 	base, err := catalogfile.LoadPack(path)
 	if err != nil {
 		return nil, err

@@ -21,7 +21,7 @@ import (
 // make -- one of them inside a seven-case subtest loop -- into a single one. A
 // fresh Source per call threw that cache away. Sharing is safe for the reason
 // the cache is: a Catalog is immutable, and Load is mutex-guarded.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
 
 // LoadCatalog loads the committed compendium.
 //

@@ -48,7 +48,7 @@ var patterns = []pattern{
 	// desc and blocks.* are Markdown.
 	{name: "markdown-in-plain-field", re: regexp.MustCompile(`\||\*\*|^#|^- |\n`), plainOnly: true},
 
-	// docs/packs.md and data/translations/README.md: Latin dice, imperial units.
+	// docs/packs.md and data/locale-terms-locked/README.md: Latin dice, imperial units.
 	{name: "cyrillic-dice", locale: "ru", re: regexp.MustCompile(`(^|[^а-яёА-ЯЁ])\d*к\d+`)},
 	{name: "metric-units", locale: "ru", re: regexp.MustCompile(`\d\s*(м|метр[а-я]*|км|кг|килограмм[а-я]*)([^а-яё]|$)`)},
 	// A scraped table whose cells were joined with spaces: "к6 Афера 1 Я ... 2 Я ...".
@@ -72,7 +72,7 @@ var (
 )
 
 func main() {
-	in := flag.String("in", "data/srd_5.1", "pack directory")
+	in := flag.String("in", "data/pack/srd-5.1", "pack directory")
 	only := flag.String("check", "", "print every finding of this check instead of the summary")
 	samples := flag.Int("samples", 3, "findings shown per check in the summary")
 	fail := flag.String("fail", "", "comma-separated checks that make the exit status 1 when they find anything")

@@ -36,7 +36,7 @@ import (
 // One Source for this test package: Source.Load caches per locale, so the
 // compendium is read once rather than once per test. Safe because a Catalog is
 // immutable and Load is mutex-guarded (see catalog/file/source.go).
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "data", "srd_5.1"))
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "data", "pack", "srd-5.1"))
 
 func loadCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
@@ -92,9 +92,9 @@ func TestImportIdentity(t *testing.T) {
 	if c := s.Identity.Classes[0]; c.Class != "rogue" || c.Level != 3 || c.Subclass != "thief" {
 		t.Errorf("class = %+v, want rogue 3 (thief)", c)
 	}
-	// Urchin is not in SRD 5.1, so no background is set and the report says so.
-	if s.Identity.Background != "" {
-		t.Errorf("background = %q, want none", s.Identity.Background)
+	// Urchin is a PHB background the pack carries by name.
+	if s.Identity.Background != "urchin" {
+		t.Errorf("background = %q, want urchin", s.Identity.Background)
 	}
 }
 
@@ -230,8 +230,8 @@ func TestImportTraitsAndFeatures(t *testing.T) {
 func TestImportReport(t *testing.T) {
 	_, report := importReference(t)
 
-	if !reported(report.Unresolved, "Urchin") {
-		t.Errorf("the report should name Urchin: %+v", report.Unresolved)
+	if reported(report.Unresolved, "Urchin") {
+		t.Errorf("Urchin resolves and must not be reported: %+v", report.Unresolved)
 	}
 	if !reported(report.Unresolved, "One language of your choice") {
 		t.Errorf("the report should name the unpicked language: %+v", report.Unresolved)

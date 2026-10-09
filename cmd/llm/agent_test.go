@@ -29,7 +29,7 @@ func (f cliTestModel) Respond(ctx context.Context, r agentuc.AgentRequest, delta
 func TestAgentCLIConversationAndDeadline(t *testing.T) {
 	for _, deadline := range []bool{false, true} {
 		t.Run(fmt.Sprint(deadline), func(t *testing.T) {
-			service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), catalogfile.NewSource("../../data/srd_5.1"), nil, nil, slog.New(slog.DiscardHandler))
+			service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), catalogfile.NewSource("../../data/pack/srd-5.1"), nil, nil, slog.New(slog.DiscardHandler))
 			turn := 0
 			model := cliTestModel(func(ctx context.Context, r agentuc.AgentRequest, _ func(string)) (agentuc.AgentResponse, error) {
 				if deadline {

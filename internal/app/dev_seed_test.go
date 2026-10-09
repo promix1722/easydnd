@@ -34,7 +34,7 @@ func developmentAppAtPort(t *testing.T, env, port string) *App {
 	}
 	cfg.Env = env
 	cfg.HTTP.Port = port
-	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "srd_5.1")
+	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "pack", "srd-5.1")
 	// Development's optional local dataset is not a dependency of these tests.
 	cfg.Data.AutoloadPacks = nil
 	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
@@ -252,7 +252,7 @@ func TestDevelopmentSeedWithAnotherDefaultPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "srd_5.1")
+	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "pack", "srd-5.1")
 	base, err := catalogfile.LoadPack(cfg.Data.SRDDir)
 	if err != nil {
 		t.Fatal(err)

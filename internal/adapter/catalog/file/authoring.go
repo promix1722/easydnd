@@ -43,15 +43,12 @@ func NewAuthoring(base *Registry, repo pack.Repository) *Authoring {
 	}
 	return a
 }
-func (a *Authoring) Default() pack.Lock {
-	for _, r := range a.base.defaultLock.Packs {
-		if r.ID == pack.BaseID {
-			l, _ := a.base.Resolve([]Dependency{{ID: r.ID, Version: r.Version}})
-			return l
-		}
-	}
-	return a.base.DefaultLock()
-}
+
+// Default is the configured default lock, whole: every root in default_packs
+// (or every explicit input when that is omitted), so a descriptions-only
+// overlay installed beside the SRD reaches new characters without being
+// picked by hand.
+func (a *Authoring) Default() pack.Lock { return a.base.DefaultLock() }
 func (a *Authoring) Builtins() []pack.Record {
 	a.builtinOnce.Do(func() { a.builtins = a.buildBuiltinRecords() })
 	out := make([]pack.Record, len(a.builtins))

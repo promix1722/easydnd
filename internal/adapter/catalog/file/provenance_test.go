@@ -15,7 +15,7 @@ import (
 
 func provenancePack(t *testing.T) *PackDocument {
 	t.Helper()
-	p, err := LoadPack("../../../../data/srd_5.1")
+	p, err := LoadPack("../../../../data/pack/srd-5.1")
 	if err != nil {
 		t.Fatal(err)
 	}

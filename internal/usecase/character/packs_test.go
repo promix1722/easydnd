@@ -15,7 +15,7 @@ import (
 
 func TestRulesMigrationPreviewCommitAndRollback(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "data")
-	r, err := file.NewRegistry([]string{filepath.Join(root, "srd_5.1"), filepath.Join(root, "packs", "examples", "tactician.json")}, []file.Dependency{{ID: "srd-2014", Version: "^1.0.0"}}, "")
+	r, err := file.NewRegistry([]string{filepath.Join(root, "pack", "srd-5.1"), filepath.Join("..", "..", "adapter", "catalog", "file", "testdata", "tactician.json")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}

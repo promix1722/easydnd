@@ -7,8 +7,8 @@ import (
 
 // The wire vocabulary: every enum the on-disk format spells as a string.
 //
-// These constants are exported because cmd/srdgen writes them and this
-// package reads them. Sharing the spelling is what stops the generator and
+// These constants are exported because the tools that write a pack use them
+// and this package reads them. Sharing the spelling is what stops a writer and
 // the loader from disagreeing about, say, whether a two-handed weapon's
 // category is "martial" or "Martial" -- a mismatch that would surface as a
 // silently uncategorised weapon rather than as an error.

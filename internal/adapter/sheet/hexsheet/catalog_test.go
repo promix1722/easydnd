@@ -12,7 +12,7 @@ import (
 
 // A second Source, because this file is the internal test package and
 // import_test.go's is the external one -- same binary, different packages.
-var internalCatalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "data", "srd_5.1"))
+var internalCatalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "data", "pack", "srd-5.1"))
 
 // loadTestCatalog loads the committed compendium for the internal tests.
 //

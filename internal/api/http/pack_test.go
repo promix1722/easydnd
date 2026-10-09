@@ -19,7 +19,7 @@ import (
 func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 	r, owner, _, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
 	outsider := guest(t, r, helpers.CookieOptions{Secure: false})
-	raw, err := os.ReadFile("../../../data/packs/examples/tactician.json")
+	raw, err := os.ReadFile("../../../internal/adapter/catalog/file/testdata/tactician.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 	if err = json.Unmarshal(raw, &doc); err != nil {
 		t.Fatal(err)
 	}
-	icon, err := os.ReadFile("../../../data/srd_5.1/spell-icons/magic-missile.webp")
+	icon, err := os.ReadFile("../../../data/pack/srd-5.1/spell-icons/magic-missile.webp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 func TestAggregateSpellBrowsePrivateSourcesAndVersions(t *testing.T) {
 	r, owner, _, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
 	outsider := guest(t, r, helpers.CookieOptions{Secure: false})
-	raw, err := os.ReadFile("../../../data/packs/examples/tactician.json")
+	raw, err := os.ReadFile("../../../internal/adapter/catalog/file/testdata/tactician.json")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -133,7 +133,7 @@ func TestOmittedKeysFallBackToDefaults(t *testing.T) {
 	if cfg.Log.Format != FormatJSON {
 		t.Errorf("Log.Format = %q, want %q", cfg.Log.Format, FormatJSON)
 	}
-	if cfg.Data.SRDDir != "data/srd_5.1" {
+	if cfg.Data.SRDDir != "data/pack/srd-5.1" {
 		t.Errorf("SRDDir = %q, want the repo-relative default", cfg.Data.SRDDir)
 	}
 }

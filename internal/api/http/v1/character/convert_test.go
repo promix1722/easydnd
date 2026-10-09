@@ -30,7 +30,7 @@ func TestSheetIncludesPortrait(t *testing.T) {
 // it means. The client used to download whole collections -- every spell in
 // the rules among them -- to do this lookup itself.
 func TestResolvedSheetNamesWhatItCarries(t *testing.T) {
-	cat, err := catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "..", "data", "srd_5.1")).Load(context.Background(), rules.LocaleEN)
+	cat, err := catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "..", "data", "pack", "srd-5.1")).Load(context.Background(), rules.LocaleEN)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,0 +1,7883 @@
+{
+  "backgrounds": {
+    "acolyte": [
+      "srd-5.1"
+    ],
+    "charlatan": [
+      "phb"
+    ],
+    "criminal": [
+      "phb"
+    ],
+    "custom-background": [
+      "phb"
+    ],
+    "entertainer": [
+      "phb"
+    ],
+    "folk-hero": [
+      "phb"
+    ],
+    "gladiator": [
+      "phb"
+    ],
+    "guild-artisan": [
+      "phb"
+    ],
+    "guild-merchant": [
+      "phb"
+    ],
+    "hermit": [
+      "phb"
+    ],
+    "knight": [
+      "phb"
+    ],
+    "noble": [
+      "phb"
+    ],
+    "outlander": [
+      "phb"
+    ],
+    "pirate": [
+      "phb"
+    ],
+    "sage": [
+      "phb"
+    ],
+    "sailor": [
+      "phb"
+    ],
+    "soldier": [
+      "phb"
+    ],
+    "spy": [
+      "phb"
+    ],
+    "urchin": [
+      "phb"
+    ]
+  },
+  "classes": {
+    "barbarian": [
+      "srd-5.1"
+    ],
+    "bard": [
+      "srd-5.1"
+    ],
+    "cleric": [
+      "srd-5.1"
+    ],
+    "druid": [
+      "srd-5.1"
+    ],
+    "fighter": [
+      "srd-5.1"
+    ],
+    "monk": [
+      "srd-5.1"
+    ],
+    "paladin": [
+      "srd-5.1"
+    ],
+    "ranger": [
+      "srd-5.1"
+    ],
+    "rogue": [
+      "srd-5.1"
+    ],
+    "sorcerer": [
+      "srd-5.1"
+    ],
+    "warlock": [
+      "srd-5.1"
+    ],
+    "wizard": [
+      "srd-5.1"
+    ],
+    "artificer": [
+      "tce"
+    ]
+  },
+  "equipment": {
+    "abacus": [
+      "srd-5.1"
+    ],
+    "acid-vial": [
+      "srd-5.1"
+    ],
+    "alchemists-fire-flask": [
+      "srd-5.1"
+    ],
+    "alchemists-supplies": [
+      "srd-5.1"
+    ],
+    "alms-box": [
+      "srd-5.1"
+    ],
+    "amulet": [
+      "srd-5.1"
+    ],
+    "animal-feed-1-day": [
+      "srd-5.1"
+    ],
+    "antitoxin-vial": [
+      "srd-5.1"
+    ],
+    "arrow": [
+      "srd-5.1"
+    ],
+    "backpack": [
+      "srd-5.1"
+    ],
+    "bagpipes": [
+      "srd-5.1"
+    ],
+    "ball-bearings-bag-of-1000": [
+      "srd-5.1"
+    ],
+    "barding-breastplate": [
+      "srd-5.1"
+    ],
+    "barding-chain-mail": [
+      "srd-5.1"
+    ],
+    "barding-chain-shirt": [
+      "srd-5.1"
+    ],
+    "barding-half-plate": [
+      "srd-5.1"
+    ],
+    "barding-hide": [
+      "srd-5.1"
+    ],
+    "barding-leather": [
+      "srd-5.1"
+    ],
+    "barding-padded": [
+      "srd-5.1"
+    ],
+    "barding-plate": [
+      "srd-5.1"
+    ],
+    "barding-ring-mail": [
+      "srd-5.1"
+    ],
+    "barding-scale-mail": [
+      "srd-5.1"
+    ],
+    "barding-splint": [
+      "srd-5.1"
+    ],
+    "barding-studded-leather": [
+      "srd-5.1"
+    ],
+    "barrel": [
+      "srd-5.1"
+    ],
+    "basket": [
+      "srd-5.1"
+    ],
+    "battleaxe": [
+      "srd-5.1"
+    ],
+    "bedroll": [
+      "srd-5.1"
+    ],
+    "bell": [
+      "srd-5.1"
+    ],
+    "bit-and-bridle": [
+      "srd-5.1"
+    ],
+    "blanket": [
+      "srd-5.1"
+    ],
+    "block-and-tackle": [
+      "srd-5.1"
+    ],
+    "block-of-incense": [
+      "srd-5.1"
+    ],
+    "blowgun": [
+      "srd-5.1"
+    ],
+    "blowgun-needle": [
+      "srd-5.1"
+    ],
+    "book": [
+      "srd-5.1"
+    ],
+    "bottle-glass": [
+      "srd-5.1"
+    ],
+    "breastplate": [
+      "srd-5.1"
+    ],
+    "brewers-supplies": [
+      "srd-5.1"
+    ],
+    "bucket": [
+      "srd-5.1"
+    ],
+    "burglars-pack": [
+      "srd-5.1"
+    ],
+    "calligraphers-supplies": [
+      "srd-5.1"
+    ],
+    "caltrops": [
+      "srd-5.1"
+    ],
+    "camel": [
+      "srd-5.1"
+    ],
+    "candle": [
+      "srd-5.1"
+    ],
+    "carpenters-tools": [
+      "srd-5.1"
+    ],
+    "carriage": [
+      "srd-5.1"
+    ],
+    "cart": [
+      "srd-5.1"
+    ],
+    "cartographers-tools": [
+      "srd-5.1"
+    ],
+    "case-crossbow-bolt": [
+      "srd-5.1"
+    ],
+    "case-map-or-scroll": [
+      "srd-5.1"
+    ],
+    "censer": [
+      "srd-5.1"
+    ],
+    "chain-10-feet": [
+      "srd-5.1"
+    ],
+    "chain-mail": [
+      "srd-5.1"
+    ],
+    "chain-shirt": [
+      "srd-5.1"
+    ],
+    "chalk-1-piece": [
+      "srd-5.1"
+    ],
+    "chariot": [
+      "srd-5.1"
+    ],
+    "chest": [
+      "srd-5.1"
+    ],
+    "climbers-kit": [
+      "srd-5.1"
+    ],
+    "clothes-common": [
+      "srd-5.1"
+    ],
+    "clothes-costume": [
+      "srd-5.1"
+    ],
+    "clothes-fine": [
+      "srd-5.1"
+    ],
+    "clothes-travelers": [
+      "srd-5.1"
+    ],
+    "club": [
+      "srd-5.1"
+    ],
+    "cobblers-tools": [
+      "srd-5.1"
+    ],
+    "component-pouch": [
+      "srd-5.1"
+    ],
+    "cooks-utensils": [
+      "srd-5.1"
+    ],
+    "crossbow-bolt": [
+      "srd-5.1"
+    ],
+    "crossbow-hand": [
+      "srd-5.1"
+    ],
+    "crossbow-heavy": [
+      "srd-5.1"
+    ],
+    "crossbow-light": [
+      "srd-5.1"
+    ],
+    "crowbar": [
+      "srd-5.1"
+    ],
+    "crystal": [
+      "srd-5.1"
+    ],
+    "dagger": [
+      "srd-5.1"
+    ],
+    "dart": [
+      "srd-5.1"
+    ],
+    "dice-set": [
+      "srd-5.1"
+    ],
+    "diplomats-pack": [
+      "srd-5.1"
+    ],
+    "disguise-kit": [
+      "srd-5.1"
+    ],
+    "donkey": [
+      "srd-5.1"
+    ],
+    "drum": [
+      "srd-5.1"
+    ],
+    "dulcimer": [
+      "srd-5.1"
+    ],
+    "dungeoneers-pack": [
+      "srd-5.1"
+    ],
+    "elephant": [
+      "srd-5.1"
+    ],
+    "emblem": [
+      "srd-5.1"
+    ],
+    "entertainers-pack": [
+      "srd-5.1"
+    ],
+    "explorers-pack": [
+      "srd-5.1"
+    ],
+    "fishing-tackle": [
+      "srd-5.1"
+    ],
+    "flail": [
+      "srd-5.1"
+    ],
+    "flask-or-tankard": [
+      "srd-5.1"
+    ],
+    "flute": [
+      "srd-5.1"
+    ],
+    "forgery-kit": [
+      "srd-5.1"
+    ],
+    "galley": [
+      "srd-5.1"
+    ],
+    "glaive": [
+      "srd-5.1"
+    ],
+    "glassblowers-tools": [
+      "srd-5.1"
+    ],
+    "grappling-hook": [
+      "srd-5.1"
+    ],
+    "greataxe": [
+      "srd-5.1"
+    ],
+    "greatclub": [
+      "srd-5.1"
+    ],
+    "greatsword": [
+      "srd-5.1"
+    ],
+    "halberd": [
+      "srd-5.1"
+    ],
+    "half-plate-armor": [
+      "srd-5.1"
+    ],
+    "hammer": [
+      "srd-5.1"
+    ],
+    "hammer-sledge": [
+      "srd-5.1"
+    ],
+    "handaxe": [
+      "srd-5.1"
+    ],
+    "healers-kit": [
+      "srd-5.1"
+    ],
+    "herbalism-kit": [
+      "srd-5.1"
+    ],
+    "hide-armor": [
+      "srd-5.1"
+    ],
+    "holy-water-flask": [
+      "srd-5.1"
+    ],
+    "horn": [
+      "srd-5.1"
+    ],
+    "horse-draft": [
+      "srd-5.1"
+    ],
+    "horse-riding": [
+      "srd-5.1"
+    ],
+    "hourglass": [
+      "srd-5.1"
+    ],
+    "hunting-trap": [
+      "srd-5.1"
+    ],
+    "ink-1-ounce-bottle": [
+      "srd-5.1"
+    ],
+    "ink-pen": [
+      "srd-5.1"
+    ],
+    "javelin": [
+      "srd-5.1"
+    ],
+    "jewelers-tools": [
+      "srd-5.1"
+    ],
+    "jug-or-pitcher": [
+      "srd-5.1"
+    ],
+    "keelboat": [
+      "srd-5.1"
+    ],
+    "ladder-10-foot": [
+      "srd-5.1"
+    ],
+    "lamp": [
+      "srd-5.1"
+    ],
+    "lance": [
+      "srd-5.1"
+    ],
+    "lantern-bullseye": [
+      "srd-5.1"
+    ],
+    "lantern-hooded": [
+      "srd-5.1"
+    ],
+    "leather-armor": [
+      "srd-5.1"
+    ],
+    "leatherworkers-tools": [
+      "srd-5.1"
+    ],
+    "light-hammer": [
+      "srd-5.1"
+    ],
+    "little-bag-of-sand": [
+      "srd-5.1"
+    ],
+    "lock": [
+      "srd-5.1"
+    ],
+    "longbow": [
+      "srd-5.1"
+    ],
+    "longship": [
+      "srd-5.1"
+    ],
+    "longsword": [
+      "srd-5.1"
+    ],
+    "lute": [
+      "srd-5.1"
+    ],
+    "lyre": [
+      "srd-5.1"
+    ],
+    "mace": [
+      "srd-5.1"
+    ],
+    "magnifying-glass": [
+      "srd-5.1"
+    ],
+    "manacles": [
+      "srd-5.1"
+    ],
+    "masons-tools": [
+      "srd-5.1"
+    ],
+    "mastiff": [
+      "srd-5.1"
+    ],
+    "maul": [
+      "srd-5.1"
+    ],
+    "mess-kit": [
+      "srd-5.1"
+    ],
+    "mirror-steel": [
+      "srd-5.1"
+    ],
+    "morningstar": [
+      "srd-5.1"
+    ],
+    "mule": [
+      "srd-5.1"
+    ],
+    "navigators-tools": [
+      "srd-5.1"
+    ],
+    "net": [
+      "srd-5.1"
+    ],
+    "oil-flask": [
+      "srd-5.1"
+    ],
+    "orb": [
+      "srd-5.1"
+    ],
+    "padded-armor": [
+      "srd-5.1"
+    ],
+    "painters-supplies": [
+      "srd-5.1"
+    ],
+    "pan-flute": [
+      "srd-5.1"
+    ],
+    "paper-one-sheet": [
+      "srd-5.1"
+    ],
+    "parchment-one-sheet": [
+      "srd-5.1"
+    ],
+    "perfume-vial": [
+      "srd-5.1"
+    ],
+    "pick-miners": [
+      "srd-5.1"
+    ],
+    "pike": [
+      "srd-5.1"
+    ],
+    "piton": [
+      "srd-5.1"
+    ],
+    "plate-armor": [
+      "srd-5.1"
+    ],
+    "playing-card-set": [
+      "srd-5.1"
+    ],
+    "poison-basic-vial": [
+      "srd-5.1"
+    ],
+    "poisoners-kit": [
+      "srd-5.1"
+    ],
+    "pole-10-foot": [
+      "srd-5.1"
+    ],
+    "pony": [
+      "srd-5.1"
+    ],
+    "pot-iron": [
+      "srd-5.1"
+    ],
+    "potters-tools": [
+      "srd-5.1"
+    ],
+    "pouch": [
+      "srd-5.1"
+    ],
+    "prayer-book": [
+      "srd-5.1"
+    ],
+    "prayer-wheel": [
+      "srd-5.1"
+    ],
+    "priests-pack": [
+      "srd-5.1"
+    ],
+    "quarterstaff": [
+      "srd-5.1"
+    ],
+    "quiver": [
+      "srd-5.1"
+    ],
+    "ram-portable": [
+      "srd-5.1"
+    ],
+    "rapier": [
+      "srd-5.1"
+    ],
+    "rations-1-day": [
+      "srd-5.1"
+    ],
+    "reliquary": [
+      "srd-5.1"
+    ],
+    "ring-mail": [
+      "srd-5.1"
+    ],
+    "robes": [
+      "srd-5.1"
+    ],
+    "rod": [
+      "srd-5.1"
+    ],
+    "rope-hempen-50-feet": [
+      "srd-5.1"
+    ],
+    "rope-silk-50-feet": [
+      "srd-5.1"
+    ],
+    "rowboat": [
+      "srd-5.1"
+    ],
+    "sack": [
+      "srd-5.1"
+    ],
+    "saddle-exotic": [
+      "srd-5.1"
+    ],
+    "saddle-military": [
+      "srd-5.1"
+    ],
+    "saddle-pack": [
+      "srd-5.1"
+    ],
+    "saddle-riding": [
+      "srd-5.1"
+    ],
+    "saddlebags": [
+      "srd-5.1"
+    ],
+    "sailing-ship": [
+      "srd-5.1"
+    ],
+    "scale-mail": [
+      "srd-5.1"
+    ],
+    "scale-merchants": [
+      "srd-5.1"
+    ],
+    "scholars-pack": [
+      "srd-5.1"
+    ],
+    "scimitar": [
+      "srd-5.1"
+    ],
+    "sealing-wax": [
+      "srd-5.1"
+    ],
+    "shawm": [
+      "srd-5.1"
+    ],
+    "shield": [
+      "srd-5.1"
+    ],
+    "shortbow": [
+      "srd-5.1"
+    ],
+    "shortsword": [
+      "srd-5.1"
+    ],
+    "shovel": [
+      "srd-5.1"
+    ],
+    "sickle": [
+      "srd-5.1"
+    ],
+    "signal-whistle": [
+      "srd-5.1"
+    ],
+    "signet-ring": [
+      "srd-5.1"
+    ],
+    "sled": [
+      "srd-5.1"
+    ],
+    "sling": [
+      "srd-5.1"
+    ],
+    "sling-bullet": [
+      "srd-5.1"
+    ],
+    "small-knife": [
+      "srd-5.1"
+    ],
+    "smiths-tools": [
+      "srd-5.1"
+    ],
+    "soap": [
+      "srd-5.1"
+    ],
+    "spear": [
+      "srd-5.1"
+    ],
+    "spellbook": [
+      "srd-5.1"
+    ],
+    "spike-iron": [
+      "srd-5.1"
+    ],
+    "splint-armor": [
+      "srd-5.1"
+    ],
+    "sprig-of-mistletoe": [
+      "srd-5.1"
+    ],
+    "spyglass": [
+      "srd-5.1"
+    ],
+    "stabling-1-day": [
+      "srd-5.1"
+    ],
+    "staff": [
+      "srd-5.1"
+    ],
+    "string-10-feet": [
+      "srd-5.1"
+    ],
+    "studded-leather-armor": [
+      "srd-5.1"
+    ],
+    "tent-two-person": [
+      "srd-5.1"
+    ],
+    "thieves-tools": [
+      "srd-5.1"
+    ],
+    "tinderbox": [
+      "srd-5.1"
+    ],
+    "tinkers-tools": [
+      "srd-5.1"
+    ],
+    "torch": [
+      "srd-5.1"
+    ],
+    "totem": [
+      "srd-5.1"
+    ],
+    "trident": [
+      "srd-5.1"
+    ],
+    "vestments": [
+      "srd-5.1"
+    ],
+    "vial": [
+      "srd-5.1"
+    ],
+    "viol": [
+      "srd-5.1"
+    ],
+    "wagon": [
+      "srd-5.1"
+    ],
+    "wand": [
+      "srd-5.1"
+    ],
+    "war-pick": [
+      "srd-5.1"
+    ],
+    "warhammer": [
+      "srd-5.1"
+    ],
+    "warhorse": [
+      "srd-5.1"
+    ],
+    "warship": [
+      "srd-5.1"
+    ],
+    "waterskin": [
+      "srd-5.1"
+    ],
+    "weavers-tools": [
+      "srd-5.1"
+    ],
+    "whetstone": [
+      "srd-5.1"
+    ],
+    "whip": [
+      "srd-5.1"
+    ],
+    "woodcarvers-tools": [
+      "srd-5.1"
+    ],
+    "wooden-staff": [
+      "srd-5.1"
+    ],
+    "yew-wand": [
+      "srd-5.1"
+    ],
+    "ale-gallon": [
+      "phb"
+    ],
+    "ale-mug": [
+      "phb"
+    ],
+    "canvas-1-sq-yd": [
+      "phb"
+    ],
+    "chicken": [
+      "phb"
+    ],
+    "chunk-of-meat": [
+      "phb"
+    ],
+    "cinnamon": [
+      "phb"
+    ],
+    "cloves": [
+      "phb"
+    ],
+    "common-wine-pitcher": [
+      "phb"
+    ],
+    "copper": [
+      "phb"
+    ],
+    "copper-cp": [
+      "phb"
+    ],
+    "cotton-cloth-1-sq-yd": [
+      "phb"
+    ],
+    "cow": [
+      "phb"
+    ],
+    "dragonchess-set": [
+      "phb"
+    ],
+    "electrum-ep": [
+      "phb"
+    ],
+    "fine-wine-bottle": [
+      "phb"
+    ],
+    "flour": [
+      "phb"
+    ],
+    "ginger": [
+      "phb"
+    ],
+    "goat": [
+      "phb"
+    ],
+    "gold": [
+      "phb"
+    ],
+    "gold-gp": [
+      "phb"
+    ],
+    "hunk-of-cheese": [
+      "phb"
+    ],
+    "iron": [
+      "phb"
+    ],
+    "linen-1-sq-yd": [
+      "phb"
+    ],
+    "loaf-of-bread": [
+      "phb"
+    ],
+    "ox": [
+      "phb"
+    ],
+    "pepper": [
+      "phb"
+    ],
+    "pig": [
+      "phb"
+    ],
+    "platinum": [
+      "phb"
+    ],
+    "platinum-pp": [
+      "phb"
+    ],
+    "saffron": [
+      "phb"
+    ],
+    "salt": [
+      "phb"
+    ],
+    "sheep": [
+      "phb"
+    ],
+    "silk-1-sq-yd": [
+      "phb"
+    ],
+    "silver": [
+      "phb"
+    ],
+    "silver-sp": [
+      "phb"
+    ],
+    "three-dragon-ante-set": [
+      "phb"
+    ],
+    "trinket": [
+      "phb"
+    ],
+    "wheat": [
+      "phb"
+    ]
+  },
+  "feats": {
+    "grappler": [
+      "srd-5.1"
+    ],
+    "actor": [
+      "phb"
+    ],
+    "alert": [
+      "phb"
+    ],
+    "artificer-initiate": [
+      "tce"
+    ],
+    "athlete": [
+      "phb"
+    ],
+    "bountiful-luck": [
+      "xge"
+    ],
+    "charger": [
+      "phb"
+    ],
+    "chef": [
+      "tce"
+    ],
+    "crossbow-expert": [
+      "phb"
+    ],
+    "crusher": [
+      "tce"
+    ],
+    "defensive-duelist": [
+      "phb"
+    ],
+    "dragon-fear": [
+      "xge"
+    ],
+    "dragon-hide": [
+      "xge"
+    ],
+    "drow-high-magic": [
+      "xge"
+    ],
+    "dual-wielder": [
+      "phb"
+    ],
+    "dungeon-delver": [
+      "phb"
+    ],
+    "durable": [
+      "phb"
+    ],
+    "dwarven-fortitude": [
+      "xge"
+    ],
+    "eldritch-adept": [
+      "tce"
+    ],
+    "elemental-adept": [
+      "phb"
+    ],
+    "elven-accuracy": [
+      "xge"
+    ],
+    "fade-away": [
+      "xge"
+    ],
+    "fey-teleportation": [
+      "xge"
+    ],
+    "fey-touched": [
+      "tce"
+    ],
+    "fighting-initiate": [
+      "tce"
+    ],
+    "flames-of-phlegethos": [
+      "xge"
+    ],
+    "great-weapon-master": [
+      "phb"
+    ],
+    "gunner": [
+      "tce"
+    ],
+    "healer": [
+      "phb"
+    ],
+    "heavily-armored": [
+      "phb"
+    ],
+    "heavy-armor-master": [
+      "phb"
+    ],
+    "infernal-constitution": [
+      "xge"
+    ],
+    "inspiring-leader": [
+      "phb"
+    ],
+    "keen-mind": [
+      "phb"
+    ],
+    "lightly-armored": [
+      "phb"
+    ],
+    "linguist": [
+      "phb"
+    ],
+    "lucky": [
+      "phb"
+    ],
+    "mage-slayer": [
+      "phb"
+    ],
+    "magic-initiate": [
+      "phb"
+    ],
+    "martial-adept": [
+      "phb"
+    ],
+    "medium-armor-master": [
+      "phb"
+    ],
+    "metamagic-adept": [
+      "tce"
+    ],
+    "mobile": [
+      "phb"
+    ],
+    "moderately-armored": [
+      "phb"
+    ],
+    "mounted-combatant": [
+      "phb"
+    ],
+    "observant": [
+      "phb"
+    ],
+    "orcish-fury": [
+      "xge"
+    ],
+    "piercer": [
+      "tce"
+    ],
+    "poisoner": [
+      "tce"
+    ],
+    "polearm-master": [
+      "phb"
+    ],
+    "prodigy": [
+      "xge"
+    ],
+    "resilient": [
+      "phb"
+    ],
+    "ritual-caster": [
+      "phb"
+    ],
+    "savage-attacker": [
+      "phb"
+    ],
+    "second-chance": [
+      "xge"
+    ],
+    "sentinel": [
+      "phb"
+    ],
+    "shadow-touched": [
+      "tce"
+    ],
+    "sharpshooter": [
+      "phb"
+    ],
+    "shield-master": [
+      "phb"
+    ],
+    "skill-expert": [
+      "tce"
+    ],
+    "skilled": [
+      "phb"
+    ],
+    "skulker": [
+      "phb"
+    ],
+    "slasher": [
+      "tce"
+    ],
+    "spell-sniper": [
+      "phb"
+    ],
+    "squat-nimbleness": [
+      "xge"
+    ],
+    "tavern-brawler": [
+      "phb"
+    ],
+    "telekinetic": [
+      "tce"
+    ],
+    "telepathic": [
+      "tce"
+    ],
+    "tough": [
+      "phb"
+    ],
+    "war-caster": [
+      "phb"
+    ],
+    "weapon-master": [
+      "phb"
+    ],
+    "wood-elf-magic": [
+      "xge"
+    ]
+  },
+  "features": {
+    "acolyte-shelter-of-the-faithful": [
+      "srd-5.1"
+    ],
+    "action-surge-1-use": [
+      "srd-5.1"
+    ],
+    "action-surge-2-uses": [
+      "srd-5.1"
+    ],
+    "additional-fighting-style": [
+      "srd-5.1"
+    ],
+    "additional-magical-secrets": [
+      "srd-5.1"
+    ],
+    "arcane-recovery": [
+      "srd-5.1"
+    ],
+    "arcane-tradition": [
+      "srd-5.1"
+    ],
+    "arcane-tradition-improvement-1": [
+      "srd-5.1"
+    ],
+    "arcane-tradition-improvement-2": [
+      "srd-5.1"
+    ],
+    "arcane-tradition-improvement-3": [
+      "srd-5.1"
+    ],
+    "archdruid": [
+      "srd-5.1"
+    ],
+    "aura-improvements": [
+      "srd-5.1"
+    ],
+    "aura-of-courage": [
+      "srd-5.1"
+    ],
+    "aura-of-devotion": [
+      "srd-5.1"
+    ],
+    "aura-of-protection": [
+      "srd-5.1"
+    ],
+    "barbarian-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "barbarian-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "barbarian-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "barbarian-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "barbarian-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "barbarian-extra-attack": [
+      "srd-5.1"
+    ],
+    "barbarian-unarmored-defense": [
+      "srd-5.1"
+    ],
+    "bard-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "bard-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "bard-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "bard-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "bard-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "bard-college": [
+      "srd-5.1"
+    ],
+    "bard-college-improvement-1": [
+      "srd-5.1"
+    ],
+    "bard-college-improvement-2": [
+      "srd-5.1"
+    ],
+    "bard-expertise-1": [
+      "srd-5.1"
+    ],
+    "bard-expertise-2": [
+      "srd-5.1"
+    ],
+    "bardic-inspiration-d10": [
+      "srd-5.1"
+    ],
+    "bardic-inspiration-d12": [
+      "srd-5.1"
+    ],
+    "bardic-inspiration-d6": [
+      "srd-5.1"
+    ],
+    "bardic-inspiration-d8": [
+      "srd-5.1"
+    ],
+    "beast-spells": [
+      "srd-5.1"
+    ],
+    "blessed-healer": [
+      "srd-5.1"
+    ],
+    "blindsense": [
+      "srd-5.1"
+    ],
+    "bonus-cantrip": [
+      "srd-5.1"
+    ],
+    "bonus-proficiencies": [
+      "srd-5.1"
+    ],
+    "bonus-proficiency": [
+      "srd-5.1"
+    ],
+    "brutal-critical-1-die": [
+      "srd-5.1"
+    ],
+    "brutal-critical-2-dice": [
+      "srd-5.1"
+    ],
+    "brutal-critical-3-dice": [
+      "srd-5.1"
+    ],
+    "channel-divinity": [
+      "srd-5.1"
+    ],
+    "channel-divinity-1-rest": [
+      "srd-5.1"
+    ],
+    "channel-divinity-2-rest": [
+      "srd-5.1"
+    ],
+    "channel-divinity-3-rest": [
+      "srd-5.1"
+    ],
+    "channel-divinity-preserve-life": [
+      "srd-5.1"
+    ],
+    "channel-divinity-sacred-weapon": [
+      "srd-5.1"
+    ],
+    "channel-divinity-turn-the-unholy": [
+      "srd-5.1"
+    ],
+    "channel-divinity-turn-undead": [
+      "srd-5.1"
+    ],
+    "circle-of-the-land": [
+      "srd-5.1"
+    ],
+    "circle-of-the-land-arctic": [
+      "srd-5.1"
+    ],
+    "circle-of-the-land-coast": [
+      "srd-5.1"
+    ],
+    "circle-of-the-land-desert": [
+      "srd-5.1"
+    ],
+    "circle-of-the-land-forest": [
+      "srd-5.1"
+    ],
+    "circle-of-the-land-grassland": [
+      "srd-5.1"
+    ],
+    "circle-of-the-land-mountain": [
+      "srd-5.1"
+    ],
+    "circle-of-the-land-swamp": [
+      "srd-5.1"
+    ],
+    "circle-spells-1": [
+      "srd-5.1"
+    ],
+    "circle-spells-2": [
+      "srd-5.1"
+    ],
+    "circle-spells-3": [
+      "srd-5.1"
+    ],
+    "circle-spells-4": [
+      "srd-5.1"
+    ],
+    "cleansing-touch": [
+      "srd-5.1"
+    ],
+    "cleric-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "cleric-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "cleric-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "cleric-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "cleric-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "countercharm": [
+      "srd-5.1"
+    ],
+    "cunning-action": [
+      "srd-5.1"
+    ],
+    "cutting-words": [
+      "srd-5.1"
+    ],
+    "danger-sense": [
+      "srd-5.1"
+    ],
+    "dark-ones-blessing": [
+      "srd-5.1"
+    ],
+    "dark-ones-own-luck": [
+      "srd-5.1"
+    ],
+    "defensive-tactics": [
+      "srd-5.1"
+    ],
+    "defensive-tactics-escape-the-horde": [
+      "srd-5.1"
+    ],
+    "defensive-tactics-multiattack-defense": [
+      "srd-5.1"
+    ],
+    "defensive-tactics-steel-will": [
+      "srd-5.1"
+    ],
+    "deflect-missiles": [
+      "srd-5.1"
+    ],
+    "destroy-undead-cr-1-2-or-below": [
+      "srd-5.1"
+    ],
+    "destroy-undead-cr-1-or-below": [
+      "srd-5.1"
+    ],
+    "destroy-undead-cr-2-or-below": [
+      "srd-5.1"
+    ],
+    "destroy-undead-cr-3-or-below": [
+      "srd-5.1"
+    ],
+    "destroy-undead-cr-4-or-below": [
+      "srd-5.1"
+    ],
+    "diamond-soul": [
+      "srd-5.1"
+    ],
+    "disciple-of-life": [
+      "srd-5.1"
+    ],
+    "divine-domain": [
+      "srd-5.1"
+    ],
+    "divine-domain-improvement-1": [
+      "srd-5.1"
+    ],
+    "divine-domain-improvement-2": [
+      "srd-5.1"
+    ],
+    "divine-domain-improvement-3": [
+      "srd-5.1"
+    ],
+    "divine-domain-improvement-4": [
+      "srd-5.1"
+    ],
+    "divine-health": [
+      "srd-5.1"
+    ],
+    "divine-intervention": [
+      "srd-5.1"
+    ],
+    "divine-intervention-improvement": [
+      "srd-5.1"
+    ],
+    "divine-sense": [
+      "srd-5.1"
+    ],
+    "divine-smite": [
+      "srd-5.1"
+    ],
+    "divine-strike": [
+      "srd-5.1"
+    ],
+    "domain-spells-1": [
+      "srd-5.1"
+    ],
+    "domain-spells-2": [
+      "srd-5.1"
+    ],
+    "domain-spells-3": [
+      "srd-5.1"
+    ],
+    "domain-spells-4": [
+      "srd-5.1"
+    ],
+    "domain-spells-5": [
+      "srd-5.1"
+    ],
+    "draconic-presence": [
+      "srd-5.1"
+    ],
+    "draconic-resilience": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-black---acid-damage": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-blue---lightning-damage": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-brass---fire-damage": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-bronze---lightning-damage": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-copper---acid-damage": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-gold---fire-damage": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-green---poison-damage": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-red---fire-damage": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-silver---cold-damage": [
+      "srd-5.1"
+    ],
+    "dragon-ancestor-white---cold-damage": [
+      "srd-5.1"
+    ],
+    "dragon-wings": [
+      "srd-5.1"
+    ],
+    "druid-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "druid-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "druid-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "druid-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "druid-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "druid-circle": [
+      "srd-5.1"
+    ],
+    "druid-circle-improvement-1": [
+      "srd-5.1"
+    ],
+    "druid-circle-improvement-2": [
+      "srd-5.1"
+    ],
+    "druid-circle-improvement-3": [
+      "srd-5.1"
+    ],
+    "druid-lands-stride": [
+      "srd-5.1"
+    ],
+    "druid-timeless-body": [
+      "srd-5.1"
+    ],
+    "druidic": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-agonizing-blast": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-armor-of-shadows": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-ascendant-step": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-beast-speech": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-beguiling-influence": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-bewitching-whispers": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-book-of-ancient-secrets": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-chains-of-carceri": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-devils-sight": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-dreadful-word": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-eldritch-sight": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-eldritch-spear": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-eyes-of-the-rune-keeper": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-fiendish-vigor": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-gaze-of-two-minds": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-lifedrinker": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-mask-of-many-faces": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-master-of-myriad-forms": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-minions-of-chaos": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-mire-the-mind": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-misty-visions": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-one-with-shadows": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-otherworldly-leap": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-repelling-blast": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-sculptor-of-flesh": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-sign-of-ill-omen": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-thief-of-five-fates": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-thirsting-blade": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-visions-of-distant-realms": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-voice-of-the-chain-master": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-whispers-of-the-grave": [
+      "srd-5.1"
+    ],
+    "eldritch-invocation-witch-sight": [
+      "srd-5.1"
+    ],
+    "eldritch-invocations": [
+      "srd-5.1"
+    ],
+    "eldritch-master": [
+      "srd-5.1"
+    ],
+    "elemental-affinity": [
+      "srd-5.1"
+    ],
+    "elusive": [
+      "srd-5.1"
+    ],
+    "empowered-evocation": [
+      "srd-5.1"
+    ],
+    "empty-body": [
+      "srd-5.1"
+    ],
+    "evocation-savant": [
+      "srd-5.1"
+    ],
+    "extra-attack-1": [
+      "srd-5.1"
+    ],
+    "extra-attack-2": [
+      "srd-5.1"
+    ],
+    "extra-attack-3": [
+      "srd-5.1"
+    ],
+    "fast-hands": [
+      "srd-5.1"
+    ],
+    "fast-movement": [
+      "srd-5.1"
+    ],
+    "favored-enemy-1-type": [
+      "srd-5.1"
+    ],
+    "favored-enemy-2-types": [
+      "srd-5.1"
+    ],
+    "favored-enemy-3-enemies": [
+      "srd-5.1"
+    ],
+    "feral-instinct": [
+      "srd-5.1"
+    ],
+    "feral-senses": [
+      "srd-5.1"
+    ],
+    "fiendish-resilience": [
+      "srd-5.1"
+    ],
+    "fighter-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "fighter-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "fighter-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "fighter-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "fighter-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "fighter-ability-score-improvement-6": [
+      "srd-5.1"
+    ],
+    "fighter-ability-score-improvement-7": [
+      "srd-5.1"
+    ],
+    "fighter-fighting-style": [
+      "srd-5.1"
+    ],
+    "fighter-fighting-style-archery": [
+      "srd-5.1"
+    ],
+    "fighter-fighting-style-defense": [
+      "srd-5.1"
+    ],
+    "fighter-fighting-style-dueling": [
+      "srd-5.1"
+    ],
+    "fighter-fighting-style-great-weapon-fighting": [
+      "srd-5.1"
+    ],
+    "fighter-fighting-style-protection": [
+      "srd-5.1"
+    ],
+    "fighter-fighting-style-two-weapon-fighting": [
+      "srd-5.1"
+    ],
+    "fighting-style-defense": [
+      "srd-5.1"
+    ],
+    "fighting-style-dueling": [
+      "srd-5.1"
+    ],
+    "fighting-style-great-weapon-fighting": [
+      "srd-5.1"
+    ],
+    "fighting-style-protection": [
+      "srd-5.1"
+    ],
+    "flexible-casting-converting-spell-slot": [
+      "srd-5.1"
+    ],
+    "flexible-casting-creating-spell-slots": [
+      "srd-5.1"
+    ],
+    "flurry-of-blows": [
+      "srd-5.1"
+    ],
+    "foe-slayer": [
+      "srd-5.1"
+    ],
+    "font-of-inspiration": [
+      "srd-5.1"
+    ],
+    "font-of-magic": [
+      "srd-5.1"
+    ],
+    "frenzy": [
+      "srd-5.1"
+    ],
+    "hide-in-plain-sight": [
+      "srd-5.1"
+    ],
+    "holy-nimbus": [
+      "srd-5.1"
+    ],
+    "hunters-prey": [
+      "srd-5.1"
+    ],
+    "hunters-prey-colossus-slayer": [
+      "srd-5.1"
+    ],
+    "hunters-prey-giant-killer": [
+      "srd-5.1"
+    ],
+    "hunters-prey-horde-breaker": [
+      "srd-5.1"
+    ],
+    "hurl-through-hell": [
+      "srd-5.1"
+    ],
+    "improved-critical": [
+      "srd-5.1"
+    ],
+    "improved-divine-smite": [
+      "srd-5.1"
+    ],
+    "indomitable-1-use": [
+      "srd-5.1"
+    ],
+    "indomitable-2-uses": [
+      "srd-5.1"
+    ],
+    "indomitable-3-uses": [
+      "srd-5.1"
+    ],
+    "indomitable-might": [
+      "srd-5.1"
+    ],
+    "intimidating-presence": [
+      "srd-5.1"
+    ],
+    "jack-of-all-trades": [
+      "srd-5.1"
+    ],
+    "ki": [
+      "srd-5.1"
+    ],
+    "ki-empowered-strikes": [
+      "srd-5.1"
+    ],
+    "lay-on-hands": [
+      "srd-5.1"
+    ],
+    "magical-secrets-1": [
+      "srd-5.1"
+    ],
+    "magical-secrets-2": [
+      "srd-5.1"
+    ],
+    "magical-secrets-3": [
+      "srd-5.1"
+    ],
+    "martial-archetype": [
+      "srd-5.1"
+    ],
+    "martial-archetype-improvement-1": [
+      "srd-5.1"
+    ],
+    "martial-archetype-improvement-2": [
+      "srd-5.1"
+    ],
+    "martial-archetype-improvement-3": [
+      "srd-5.1"
+    ],
+    "martial-archetype-improvement-4": [
+      "srd-5.1"
+    ],
+    "martial-arts": [
+      "srd-5.1"
+    ],
+    "metamagic-1": [
+      "srd-5.1"
+    ],
+    "metamagic-2": [
+      "srd-5.1"
+    ],
+    "metamagic-3": [
+      "srd-5.1"
+    ],
+    "metamagic-careful-spell": [
+      "srd-5.1"
+    ],
+    "metamagic-distant-spell": [
+      "srd-5.1"
+    ],
+    "metamagic-empowered-spell": [
+      "srd-5.1"
+    ],
+    "metamagic-extended-spell": [
+      "srd-5.1"
+    ],
+    "metamagic-heightened-spell": [
+      "srd-5.1"
+    ],
+    "metamagic-quickened-spell": [
+      "srd-5.1"
+    ],
+    "metamagic-subtle-spell": [
+      "srd-5.1"
+    ],
+    "metamagic-twinned-spell": [
+      "srd-5.1"
+    ],
+    "mindless-rage": [
+      "srd-5.1"
+    ],
+    "monastic-tradition": [
+      "srd-5.1"
+    ],
+    "monastic-tradition-improvement-1": [
+      "srd-5.1"
+    ],
+    "monastic-tradition-improvement-2": [
+      "srd-5.1"
+    ],
+    "monastic-tradition-improvement-3": [
+      "srd-5.1"
+    ],
+    "monk-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "monk-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "monk-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "monk-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "monk-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "monk-evasion": [
+      "srd-5.1"
+    ],
+    "monk-extra-attack": [
+      "srd-5.1"
+    ],
+    "monk-timeless-body": [
+      "srd-5.1"
+    ],
+    "monk-unarmored-defense": [
+      "srd-5.1"
+    ],
+    "multiattack": [
+      "srd-5.1"
+    ],
+    "multiattack-volley": [
+      "srd-5.1"
+    ],
+    "multiattack-whirlwind-attack": [
+      "srd-5.1"
+    ],
+    "mystic-arcanum-6th-level": [
+      "srd-5.1"
+    ],
+    "mystic-arcanum-7th-level": [
+      "srd-5.1"
+    ],
+    "mystic-arcanum-8th-level": [
+      "srd-5.1"
+    ],
+    "mystic-arcanum-9th-level": [
+      "srd-5.1"
+    ],
+    "natural-explorer-1-terrain-type": [
+      "srd-5.1"
+    ],
+    "natural-explorer-2-terrain-types": [
+      "srd-5.1"
+    ],
+    "natural-explorer-3-terrain-types": [
+      "srd-5.1"
+    ],
+    "natural-recovery": [
+      "srd-5.1"
+    ],
+    "natures-sanctuary": [
+      "srd-5.1"
+    ],
+    "natures-ward": [
+      "srd-5.1"
+    ],
+    "oath-spells": [
+      "srd-5.1"
+    ],
+    "open-hand-technique": [
+      "srd-5.1"
+    ],
+    "otherworldly-patron": [
+      "srd-5.1"
+    ],
+    "otherworldly-patron-improvement-1": [
+      "srd-5.1"
+    ],
+    "otherworldly-patron-improvement-2": [
+      "srd-5.1"
+    ],
+    "otherworldly-patron-improvement-3": [
+      "srd-5.1"
+    ],
+    "overchannel": [
+      "srd-5.1"
+    ],
+    "pact-boon": [
+      "srd-5.1"
+    ],
+    "pact-magic": [
+      "srd-5.1"
+    ],
+    "pact-of-the-blade": [
+      "srd-5.1"
+    ],
+    "pact-of-the-chain": [
+      "srd-5.1"
+    ],
+    "pact-of-the-tome": [
+      "srd-5.1"
+    ],
+    "paladin-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "paladin-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "paladin-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "paladin-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "paladin-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "paladin-extra-attack": [
+      "srd-5.1"
+    ],
+    "paladin-fighting-style": [
+      "srd-5.1"
+    ],
+    "patient-defense": [
+      "srd-5.1"
+    ],
+    "peerless-skill": [
+      "srd-5.1"
+    ],
+    "perfect-self": [
+      "srd-5.1"
+    ],
+    "persistent-rage": [
+      "srd-5.1"
+    ],
+    "potent-cantrip": [
+      "srd-5.1"
+    ],
+    "primal-champion": [
+      "srd-5.1"
+    ],
+    "primal-path": [
+      "srd-5.1"
+    ],
+    "primal-path-improvement-1": [
+      "srd-5.1"
+    ],
+    "primal-path-improvement-2": [
+      "srd-5.1"
+    ],
+    "primal-path-improvement-3": [
+      "srd-5.1"
+    ],
+    "primeval-awareness": [
+      "srd-5.1"
+    ],
+    "purity-of-body": [
+      "srd-5.1"
+    ],
+    "purity-of-spirit": [
+      "srd-5.1"
+    ],
+    "quivering-palm": [
+      "srd-5.1"
+    ],
+    "rage": [
+      "srd-5.1"
+    ],
+    "ranger-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "ranger-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "ranger-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "ranger-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "ranger-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "ranger-archetype": [
+      "srd-5.1"
+    ],
+    "ranger-archetype-improvement-1": [
+      "srd-5.1"
+    ],
+    "ranger-archetype-improvement-2": [
+      "srd-5.1"
+    ],
+    "ranger-archetype-improvement-3": [
+      "srd-5.1"
+    ],
+    "ranger-extra-attack": [
+      "srd-5.1"
+    ],
+    "ranger-fighting-style": [
+      "srd-5.1"
+    ],
+    "ranger-fighting-style-archery": [
+      "srd-5.1"
+    ],
+    "ranger-fighting-style-defense": [
+      "srd-5.1"
+    ],
+    "ranger-fighting-style-dueling": [
+      "srd-5.1"
+    ],
+    "ranger-fighting-style-two-weapon-fighting": [
+      "srd-5.1"
+    ],
+    "ranger-lands-stride": [
+      "srd-5.1"
+    ],
+    "reckless-attack": [
+      "srd-5.1"
+    ],
+    "relentless-rage": [
+      "srd-5.1"
+    ],
+    "reliable-talent": [
+      "srd-5.1"
+    ],
+    "remarkable-athlete": [
+      "srd-5.1"
+    ],
+    "retaliation": [
+      "srd-5.1"
+    ],
+    "rogue-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "rogue-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "rogue-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "rogue-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "rogue-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "rogue-ability-score-improvement-6": [
+      "srd-5.1"
+    ],
+    "rogue-evasion": [
+      "srd-5.1"
+    ],
+    "rogue-expertise-1": [
+      "srd-5.1"
+    ],
+    "rogue-expertise-2": [
+      "srd-5.1"
+    ],
+    "roguish-archetype": [
+      "srd-5.1"
+    ],
+    "roguish-archetype-improvement-1": [
+      "srd-5.1"
+    ],
+    "roguish-archetype-improvement-2": [
+      "srd-5.1"
+    ],
+    "roguish-archetype-improvement-3": [
+      "srd-5.1"
+    ],
+    "sacred-oath": [
+      "srd-5.1"
+    ],
+    "sacred-oath-improvement-1": [
+      "srd-5.1"
+    ],
+    "sacred-oath-improvement-2": [
+      "srd-5.1"
+    ],
+    "sacred-oath-improvement-3": [
+      "srd-5.1"
+    ],
+    "sculpt-spells": [
+      "srd-5.1"
+    ],
+    "second-story-work": [
+      "srd-5.1"
+    ],
+    "second-wind": [
+      "srd-5.1"
+    ],
+    "signature-spell": [
+      "srd-5.1"
+    ],
+    "slippery-mind": [
+      "srd-5.1"
+    ],
+    "slow-fall": [
+      "srd-5.1"
+    ],
+    "sneak-attack": [
+      "srd-5.1"
+    ],
+    "song-of-rest-d10": [
+      "srd-5.1"
+    ],
+    "song-of-rest-d12": [
+      "srd-5.1"
+    ],
+    "song-of-rest-d6": [
+      "srd-5.1"
+    ],
+    "song-of-rest-d8": [
+      "srd-5.1"
+    ],
+    "sorcerer-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "sorcerer-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "sorcerer-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "sorcerer-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "sorcerer-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "sorcerous-origin": [
+      "srd-5.1"
+    ],
+    "sorcerous-origin-improvement-1": [
+      "srd-5.1"
+    ],
+    "sorcerous-origin-improvement-2": [
+      "srd-5.1"
+    ],
+    "sorcerous-origin-improvement-3": [
+      "srd-5.1"
+    ],
+    "sorcerous-restoration": [
+      "srd-5.1"
+    ],
+    "spell-mastery": [
+      "srd-5.1"
+    ],
+    "spellcasting-bard": [
+      "srd-5.1"
+    ],
+    "spellcasting-cleric": [
+      "srd-5.1"
+    ],
+    "spellcasting-druid": [
+      "srd-5.1"
+    ],
+    "spellcasting-paladin": [
+      "srd-5.1"
+    ],
+    "spellcasting-ranger": [
+      "srd-5.1"
+    ],
+    "spellcasting-sorcerer": [
+      "srd-5.1"
+    ],
+    "spellcasting-wizard": [
+      "srd-5.1"
+    ],
+    "step-of-the-wind": [
+      "srd-5.1"
+    ],
+    "stillness-of-mind": [
+      "srd-5.1"
+    ],
+    "stroke-of-luck": [
+      "srd-5.1"
+    ],
+    "stunning-strike": [
+      "srd-5.1"
+    ],
+    "superior-critical": [
+      "srd-5.1"
+    ],
+    "superior-hunters-defense": [
+      "srd-5.1"
+    ],
+    "superior-hunters-defense-evasion": [
+      "srd-5.1"
+    ],
+    "superior-hunters-defense-stand-against-the-tide": [
+      "srd-5.1"
+    ],
+    "superior-hunters-defense-uncanny-dodge": [
+      "srd-5.1"
+    ],
+    "superior-inspiration": [
+      "srd-5.1"
+    ],
+    "supreme-healing": [
+      "srd-5.1"
+    ],
+    "supreme-sneak": [
+      "srd-5.1"
+    ],
+    "survivor": [
+      "srd-5.1"
+    ],
+    "thiefs-reflexes": [
+      "srd-5.1"
+    ],
+    "thieves-cant": [
+      "srd-5.1"
+    ],
+    "tongue-of-the-sun-and-moon": [
+      "srd-5.1"
+    ],
+    "tranquility": [
+      "srd-5.1"
+    ],
+    "unarmored-movement-1": [
+      "srd-5.1"
+    ],
+    "unarmored-movement-2": [
+      "srd-5.1"
+    ],
+    "uncanny-dodge": [
+      "srd-5.1"
+    ],
+    "use-magic-device": [
+      "srd-5.1"
+    ],
+    "vanish": [
+      "srd-5.1"
+    ],
+    "warlock-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "warlock-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "warlock-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "warlock-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "warlock-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "wholeness-of-body": [
+      "srd-5.1"
+    ],
+    "wild-shape-cr-1-2-or-below-no-flying-speed": [
+      "srd-5.1"
+    ],
+    "wild-shape-cr-1-4-or-below-no-flying-or-swim-speed": [
+      "srd-5.1"
+    ],
+    "wild-shape-cr-1-or-below": [
+      "srd-5.1"
+    ],
+    "wizard-ability-score-improvement-1": [
+      "srd-5.1"
+    ],
+    "wizard-ability-score-improvement-2": [
+      "srd-5.1"
+    ],
+    "wizard-ability-score-improvement-3": [
+      "srd-5.1"
+    ],
+    "wizard-ability-score-improvement-4": [
+      "srd-5.1"
+    ],
+    "wizard-ability-score-improvement-5": [
+      "srd-5.1"
+    ],
+    "ability-score-improvement": [
+      "tce"
+    ],
+    "abjuration-savant": [
+      "phb"
+    ],
+    "abjure-enemy": [
+      "phb"
+    ],
+    "abjure-the-extraplanar": [
+      "tce"
+    ],
+    "accursed-specter": [
+      "xge"
+    ],
+    "acolyte-of-nature": [
+      "phb"
+    ],
+    "additional-arcane-shot-option": [
+      "xge"
+    ],
+    "additional-maneuvers": [
+      "phb"
+    ],
+    "additional-rune-known": [
+      "tce"
+    ],
+    "additional-superiority-die": [
+      "phb"
+    ],
+    "agile-parry": [
+      "xge"
+    ],
+    "alchemical-savant": [
+      "tce"
+    ],
+    "alchemist-spells": [
+      "tce"
+    ],
+    "alter-memories": [
+      "phb"
+    ],
+    "ambush-master": [
+      "xge"
+    ],
+    "ancestral-protectors": [
+      "xge"
+    ],
+    "ancients-channel-divinity": [
+      "phb"
+    ],
+    "ancients-oath-spells": [
+      "phb"
+    ],
+    "animating-performance": [
+      "tce"
+    ],
+    "arcane-archer-additional-arcane-shot-option": [
+      "xge"
+    ],
+    "arcane-archer-additional-arcane-shot-option-2": [
+      "xge"
+    ],
+    "arcane-archer-lore": [
+      "xge"
+    ],
+    "arcane-armor": [
+      "tce"
+    ],
+    "arcane-charge": [
+      "phb"
+    ],
+    "arcane-deflection": [
+      "xge"
+    ],
+    "arcane-firearm": [
+      "tce"
+    ],
+    "arcane-jolt": [
+      "tce"
+    ],
+    "arcane-shot": [
+      "xge"
+    ],
+    "arcane-shot-banishing-arrow": [
+      "xge"
+    ],
+    "arcane-shot-beguiling-arrow": [
+      "xge"
+    ],
+    "arcane-shot-bursting-arrow": [
+      "xge"
+    ],
+    "arcane-shot-enfeebling-arrow": [
+      "xge"
+    ],
+    "arcane-shot-grasping-arrow": [
+      "xge"
+    ],
+    "arcane-shot-options": [
+      "xge"
+    ],
+    "arcane-shot-piercing-arrow": [
+      "xge"
+    ],
+    "arcane-shot-seeking-arrow": [
+      "xge"
+    ],
+    "arcane-shot-shadow-arrow": [
+      "xge"
+    ],
+    "arcane-trickster-spellcasting": [
+      "phb"
+    ],
+    "arcane-ward": [
+      "phb"
+    ],
+    "archer": [
+      "tce"
+    ],
+    "armor-model": [
+      "tce"
+    ],
+    "armor-modifications": [
+      "tce"
+    ],
+    "armor-of-hexes": [
+      "xge"
+    ],
+    "armorer-spells": [
+      "tce"
+    ],
+    "arms-of-the-astral-self": [
+      "tce"
+    ],
+    "artificer-ability-score-improvement": [
+      "tce"
+    ],
+    "artificer-ability-score-improvement-2": [
+      "tce"
+    ],
+    "artificer-ability-score-improvement-3": [
+      "tce"
+    ],
+    "artificer-ability-score-improvement-4": [
+      "tce"
+    ],
+    "artificer-artificer-specialist-feature": [
+      "tce"
+    ],
+    "artificer-artificer-specialist-feature-2": [
+      "tce"
+    ],
+    "artificer-specialist": [
+      "tce"
+    ],
+    "artificer-specialist-feature": [
+      "tce"
+    ],
+    "artillerist-spells": [
+      "tce"
+    ],
+    "artillerist-tool-proficiency": [
+      "tce"
+    ],
+    "aspect-of-the-beast": [
+      "phb"
+    ],
+    "assassin-bonus-proficiencies": [
+      "phb"
+    ],
+    "assassinate": [
+      "phb"
+    ],
+    "aura-of-alacrity": [
+      "tce"
+    ],
+    "aura-of-conquest": [
+      "xge"
+    ],
+    "aura-of-the-guardian": [
+      "xge"
+    ],
+    "aura-of-the-sentinel": [
+      "tce"
+    ],
+    "aura-of-warding": [
+      "phb"
+    ],
+    "avatar-of-battle": [
+      "phb"
+    ],
+    "avenging-angel": [
+      "phb"
+    ],
+    "awakened-astral-self": [
+      "tce"
+    ],
+    "awakened-mind": [
+      "phb"
+    ],
+    "awakened-spellbook": [
+      "tce"
+    ],
+    "balm-of-the-summer-court": [
+      "xge"
+    ],
+    "barbarian-bear": [
+      "phb"
+    ],
+    "barbarian-desert": [
+      "xge"
+    ],
+    "barbarian-eagle": [
+      "phb"
+    ],
+    "barbarian-sea": [
+      "xge"
+    ],
+    "barbarian-tundra": [
+      "xge"
+    ],
+    "barbarian-wolf": [
+      "phb"
+    ],
+    "bastion-of-law": [
+      "tce"
+    ],
+    "battle-magic": [
+      "phb"
+    ],
+    "battle-master-additional-maneuvers": [
+      "phb"
+    ],
+    "battle-master-additional-superiority-die": [
+      "phb"
+    ],
+    "battle-ready": [
+      "tce"
+    ],
+    "battle-smith-extra-attack": [
+      "tce"
+    ],
+    "battle-smith-spells": [
+      "tce"
+    ],
+    "battle-smith-tool-proficiency": [
+      "tce"
+    ],
+    "bear": [
+      "phb"
+    ],
+    "beguiling-defenses": [
+      "phb"
+    ],
+    "beguiling-twist": [
+      "tce"
+    ],
+    "bend-luck": [
+      "phb"
+    ],
+    "benign-transposition": [
+      "phb"
+    ],
+    "bestial-fury": [
+      "phb"
+    ],
+    "bestial-soul": [
+      "tce"
+    ],
+    "blade-flourish": [
+      "xge"
+    ],
+    "bladesinger-styles": [
+      "tce"
+    ],
+    "bladesinging-extra-attack": [
+      "tce"
+    ],
+    "bladesong": [
+      "tce"
+    ],
+    "blazing-revival": [
+      "tce"
+    ],
+    "blessed-strikes": [
+      "tce"
+    ],
+    "blessing-of-the-forge": [
+      "xge"
+    ],
+    "blessing-of-the-trickster": [
+      "phb"
+    ],
+    "blessings-of-knowledge": [
+      "phb"
+    ],
+    "body-of-the-astral-self": [
+      "tce"
+    ],
+    "bolstering-magic": [
+      "tce"
+    ],
+    "bonus-cantrips": [
+      "xge"
+    ],
+    "born-to-the-saddle": [
+      "xge"
+    ],
+    "bottled-respite": [
+      "tce"
+    ],
+    "bulwark-of-force": [
+      "tce"
+    ],
+    "call-the-hunt": [
+      "tce"
+    ],
+    "cauterizing-flames": [
+      "tce"
+    ],
+    "cavalier-bonus-proficiency": [
+      "xge"
+    ],
+    "celestial-resilience": [
+      "xge"
+    ],
+    "chalice": [
+      "tce"
+    ],
+    "channel-divinity-artisans-blessing": [
+      "xge"
+    ],
+    "channel-divinity-balm-of-peace": [
+      "tce"
+    ],
+    "channel-divinity-charm-animals-and-plants": [
+      "phb"
+    ],
+    "channel-divinity-cloak-of-shadows": [
+      "phb"
+    ],
+    "channel-divinity-destructive-wrath": [
+      "phb"
+    ],
+    "channel-divinity-guided-strike": [
+      "phb"
+    ],
+    "channel-divinity-invoke-duplicity": [
+      "phb"
+    ],
+    "channel-divinity-knowledge-of-the-ages": [
+      "phb"
+    ],
+    "channel-divinity-orders-demand": [
+      "tce"
+    ],
+    "channel-divinity-path-to-the-grave": [
+      "xge"
+    ],
+    "channel-divinity-radiance-of-the-dawn": [
+      "phb"
+    ],
+    "channel-divinity-read-thoughts": [
+      "phb"
+    ],
+    "channel-divinity-twilight-sanctuary": [
+      "tce"
+    ],
+    "channel-divinity-war-gods-blessing": [
+      "phb"
+    ],
+    "charlatan-false-identity": [
+      "phb"
+    ],
+    "chemical-mastery": [
+      "tce"
+    ],
+    "circle-forms": [
+      "phb"
+    ],
+    "circle-of-mortality": [
+      "xge"
+    ],
+    "circle-spells": [
+      "tce"
+    ],
+    "cloak-of-shadows": [
+      "phb"
+    ],
+    "clockwork-cavalcade": [
+      "tce"
+    ],
+    "clockwork-magic": [
+      "tce"
+    ],
+    "combat-inspiration": [
+      "phb"
+    ],
+    "combat-superiority": [
+      "phb"
+    ],
+    "combat-wild-shape": [
+      "phb"
+    ],
+    "command-undead": [
+      "phb"
+    ],
+    "conjuration-savant": [
+      "phb"
+    ],
+    "conquering-presence": [
+      "xge"
+    ],
+    "conquest-channel-divinity": [
+      "xge"
+    ],
+    "conquest-oath-spells": [
+      "xge"
+    ],
+    "consult-the-spirits": [
+      "xge"
+    ],
+    "controlled-chaos": [
+      "phb"
+    ],
+    "controlled-surge": [
+      "tce"
+    ],
+    "corona-of-light": [
+      "phb"
+    ],
+    "cosmic-omen": [
+      "tce"
+    ],
+    "create-thrall": [
+      "phb"
+    ],
+    "creative-crescendo": [
+      "tce"
+    ],
+    "criminal-criminal-contact": [
+      "phb"
+    ],
+    "curving-shot": [
+      "xge"
+    ],
+    "custom-background-choose-a-feature": [
+      "phb"
+    ],
+    "dampen-elements": [
+      "phb"
+    ],
+    "dampening-field": [
+      "tce"
+    ],
+    "dark-delirium": [
+      "phb"
+    ],
+    "death-strike": [
+      "phb"
+    ],
+    "deaths-friend": [
+      "tce"
+    ],
+    "defensive-field": [
+      "tce"
+    ],
+    "defensive-flourish": [
+      "xge"
+    ],
+    "deflecting-shroud": [
+      "xge"
+    ],
+    "desert": [
+      "xge"
+    ],
+    "detect-portal": [
+      "xge"
+    ],
+    "disciple-of-the-elements": [
+      "phb"
+    ],
+    "distant-strike": [
+      "xge"
+    ],
+    "divination-savant": [
+      "phb"
+    ],
+    "divine-fury": [
+      "xge"
+    ],
+    "divine-magic": [
+      "xge"
+    ],
+    "dragon": [
+      "tce"
+    ],
+    "dread-ambusher": [
+      "xge"
+    ],
+    "dreadful-strikes": [
+      "tce"
+    ],
+    "drunkards-luck": [
+      "xge"
+    ],
+    "drunken-master-bonus-proficiencies": [
+      "xge"
+    ],
+    "drunken-technique": [
+      "xge"
+    ],
+    "durable-magic": [
+      "xge"
+    ],
+    "durable-summons": [
+      "phb"
+    ],
+    "eagle": [
+      "phb"
+    ],
+    "ear-for-deceit": [
+      "xge"
+    ],
+    "elder-champion": [
+      "phb"
+    ],
+    "eldritch-cannon": [
+      "tce"
+    ],
+    "eldritch-invocation-aspect-of-the-moon": [
+      "xge"
+    ],
+    "eldritch-invocation-bond-of-the-talisman": [
+      "tce"
+    ],
+    "eldritch-invocation-cloak-of-flies": [
+      "xge"
+    ],
+    "eldritch-invocation-eldritch-mind": [
+      "tce"
+    ],
+    "eldritch-invocation-eldritch-smite": [
+      "xge"
+    ],
+    "eldritch-invocation-far-scribe": [
+      "tce"
+    ],
+    "eldritch-invocation-ghostly-gaze": [
+      "xge"
+    ],
+    "eldritch-invocation-gift-of-the-depths": [
+      "xge"
+    ],
+    "eldritch-invocation-gift-of-the-ever-living-ones": [
+      "xge"
+    ],
+    "eldritch-invocation-gift-of-the-protectors": [
+      "tce"
+    ],
+    "eldritch-invocation-grasp-of-hadar": [
+      "xge"
+    ],
+    "eldritch-invocation-improved-pact-weapon": [
+      "xge"
+    ],
+    "eldritch-invocation-investment-of-the-chain-master": [
+      "tce"
+    ],
+    "eldritch-invocation-lance-of-lethargy": [
+      "xge"
+    ],
+    "eldritch-invocation-maddening-hex": [
+      "xge"
+    ],
+    "eldritch-invocation-protection-of-the-talisman": [
+      "tce"
+    ],
+    "eldritch-invocation-rebuke-of-the-talisman": [
+      "tce"
+    ],
+    "eldritch-invocation-relentless-hex": [
+      "xge"
+    ],
+    "eldritch-invocation-shroud-of-shadow": [
+      "xge"
+    ],
+    "eldritch-invocation-tomb-of-levistus": [
+      "xge"
+    ],
+    "eldritch-invocation-tricksters-escape": [
+      "xge"
+    ],
+    "eldritch-invocation-undying-servitude": [
+      "tce"
+    ],
+    "eldritch-knight-spellcasting": [
+      "phb"
+    ],
+    "eldritch-strike": [
+      "phb"
+    ],
+    "elegant-courtier": [
+      "xge"
+    ],
+    "elegant-maneuver": [
+      "xge"
+    ],
+    "elemental-discipline-breath-of-winter": [
+      "phb"
+    ],
+    "elemental-discipline-clench-of-the-north-wind": [
+      "phb"
+    ],
+    "elemental-discipline-elemental-attunement": [
+      "phb"
+    ],
+    "elemental-discipline-eternal-mountain-defense": [
+      "phb"
+    ],
+    "elemental-discipline-fangs-of-the-fire-snake": [
+      "phb"
+    ],
+    "elemental-discipline-fist-of-four-thunders": [
+      "phb"
+    ],
+    "elemental-discipline-flames-of-the-phoenix": [
+      "phb"
+    ],
+    "elemental-discipline-gong-of-the-summit": [
+      "phb"
+    ],
+    "elemental-discipline-mist-stance": [
+      "phb"
+    ],
+    "elemental-discipline-ride-the-wind": [
+      "phb"
+    ],
+    "elemental-discipline-river-of-hungry-flame": [
+      "phb"
+    ],
+    "elemental-discipline-rush-of-the-gale-spirits": [
+      "phb"
+    ],
+    "elemental-discipline-shape-the-flowing-river": [
+      "phb"
+    ],
+    "elemental-discipline-sweeping-cinder-strike": [
+      "phb"
+    ],
+    "elemental-discipline-unbroken-air": [
+      "phb"
+    ],
+    "elemental-discipline-water-whip": [
+      "phb"
+    ],
+    "elemental-discipline-wave-of-rolling-earth": [
+      "phb"
+    ],
+    "elemental-disciplines": [
+      "phb"
+    ],
+    "elemental-gift": [
+      "tce"
+    ],
+    "elemental-wild-shape": [
+      "phb"
+    ],
+    "embodiment-of-the-law": [
+      "tce"
+    ],
+    "emboldening-bond": [
+      "tce"
+    ],
+    "emissary-of-peace": [
+      "xge"
+    ],
+    "emissary-of-redemption": [
+      "xge"
+    ],
+    "empowered-healing": [
+      "xge"
+    ],
+    "enchantment-savant": [
+      "phb"
+    ],
+    "enhanced-bond": [
+      "tce"
+    ],
+    "entertainer-by-popular-demand": [
+      "phb"
+    ],
+    "enthralling-performance": [
+      "xge"
+    ],
+    "entropic-ward": [
+      "phb"
+    ],
+    "ethereal-step": [
+      "xge"
+    ],
+    "ever-ready-shot": [
+      "xge"
+    ],
+    "exceptional-training": [
+      "phb"
+    ],
+    "expansive-bond": [
+      "tce"
+    ],
+    "experimental-elixir": [
+      "tce"
+    ],
+    "expert-divination": [
+      "phb"
+    ],
+    "explosive-cannon": [
+      "tce"
+    ],
+    "extra-attack": [
+      "tce"
+    ],
+    "extra-elemental-discipline": [
+      "phb"
+    ],
+    "eye-for-detail": [
+      "xge"
+    ],
+    "eye-for-weakness": [
+      "xge"
+    ],
+    "eyes-of-night": [
+      "tce"
+    ],
+    "eyes-of-the-dark": [
+      "xge"
+    ],
+    "eyes-of-the-grave": [
+      "xge"
+    ],
+    "faithful-summons": [
+      "xge"
+    ],
+    "fanatical-focus": [
+      "xge"
+    ],
+    "fancy-footwork": [
+      "xge"
+    ],
+    "fathomless-plunge": [
+      "tce"
+    ],
+    "favored-by-the-gods": [
+      "xge"
+    ],
+    "ferocious-charger": [
+      "xge"
+    ],
+    "fey-presence": [
+      "phb"
+    ],
+    "fey-reinforcements": [
+      "tce"
+    ],
+    "fey-wanderer-magic": [
+      "tce"
+    ],
+    "fighter-additional-arcane-shot-option": [
+      "xge"
+    ],
+    "fighter-additional-maneuvers": [
+      "phb"
+    ],
+    "fighter-additional-rune-known": [
+      "tce"
+    ],
+    "fighting-spirit": [
+      "xge"
+    ],
+    "fighting-style": [
+      "xge"
+    ],
+    "fighting-style-blessed-warrior": [
+      "tce"
+    ],
+    "fighting-style-blind-fighting": [
+      "tce"
+    ],
+    "fighting-style-druidic-warrior": [
+      "tce"
+    ],
+    "fighting-style-interception": [
+      "tce"
+    ],
+    "fighting-style-superior-technique": [
+      "tce"
+    ],
+    "fighting-style-thrown-weapon-fighting": [
+      "tce"
+    ],
+    "fighting-style-two-weapon-fighting": [
+      "phb",
+      "xge"
+    ],
+    "fighting-style-unarmed-fighting": [
+      "tce"
+    ],
+    "flash-of-genius": [
+      "tce"
+    ],
+    "flurry-of-healing-and-harm": [
+      "tce"
+    ],
+    "focused-conjuration": [
+      "phb"
+    ],
+    "folk-hero-rustic-hospitality": [
+      "phb"
+    ],
+    "forge-blessed-strikes": [
+      "tce"
+    ],
+    "forge-bonus-proficiency": [
+      "xge"
+    ],
+    "forge-divine-strike": [
+      "xge"
+    ],
+    "form-of-the-beast": [
+      "tce"
+    ],
+    "forms-of-your-astral-self": [
+      "tce"
+    ],
+    "fortified-position": [
+      "tce"
+    ],
+    "four-elements-extra-elemental-discipline": [
+      "phb"
+    ],
+    "full-of-stars": [
+      "tce"
+    ],
+    "fungal-body": [
+      "tce"
+    ],
+    "fungal-infestation": [
+      "tce"
+    ],
+    "gathered-swarm": [
+      "tce"
+    ],
+    "genies-vessel": [
+      "tce"
+    ],
+    "genies-wrath": [
+      "tce"
+    ],
+    "ghost-walk": [
+      "tce"
+    ],
+    "giants-might": [
+      "tce"
+    ],
+    "gift-of-the-sea": [
+      "tce"
+    ],
+    "gladiator-by-popular-demand": [
+      "phb"
+    ],
+    "gloom-stalker-magic": [
+      "xge"
+    ],
+    "glorious-defense": [
+      "tce"
+    ],
+    "glory-channel-divinity": [
+      "tce"
+    ],
+    "glory-oath-spells": [
+      "tce"
+    ],
+    "grasping-tentacles": [
+      "tce"
+    ],
+    "grave-blessed-strikes": [
+      "tce"
+    ],
+    "grave-potent-spellcasting": [
+      "xge"
+    ],
+    "great-stature": [
+      "tce"
+    ],
+    "greater-portent": [
+      "phb"
+    ],
+    "grim-harvest": [
+      "phb"
+    ],
+    "guarded-mind": [
+      "tce"
+    ],
+    "guardian": [
+      "tce"
+    ],
+    "guardian-coil": [
+      "tce"
+    ],
+    "guardian-spirit": [
+      "xge"
+    ],
+    "guided-strike": [
+      "xge"
+    ],
+    "guild-artisan-guild-membership": [
+      "phb"
+    ],
+    "halo-of-spores": [
+      "tce"
+    ],
+    "hand-of-harm": [
+      "tce"
+    ],
+    "hand-of-healing": [
+      "tce"
+    ],
+    "hand-of-ultimate-mercy": [
+      "tce"
+    ],
+    "healing-light": [
+      "xge"
+    ],
+    "heart-of-the-storm": [
+      "xge"
+    ],
+    "hearth-of-moonlight-and-shadow": [
+      "xge"
+    ],
+    "hermit-discovery": [
+      "phb"
+    ],
+    "hex-warrior": [
+      "xge"
+    ],
+    "hexblades-curse": [
+      "xge"
+    ],
+    "hidden-paths": [
+      "xge"
+    ],
+    "hold-the-line": [
+      "xge"
+    ],
+    "homing-strikes": [
+      "tce"
+    ],
+    "horizon-walker-magic": [
+      "xge"
+    ],
+    "hound-of-ill-omen": [
+      "xge"
+    ],
+    "hunters-sense": [
+      "xge"
+    ],
+    "hypnotic-gaze": [
+      "phb"
+    ],
+    "illusion-savant": [
+      "phb"
+    ],
+    "illusory-reality": [
+      "phb"
+    ],
+    "illusory-self": [
+      "phb"
+    ],
+    "implement-of-peace": [
+      "tce"
+    ],
+    "implements-of-mercy": [
+      "tce"
+    ],
+    "impostor": [
+      "phb"
+    ],
+    "improved-abjuration": [
+      "phb"
+    ],
+    "improved-combat-superiority-d10": [
+      "phb"
+    ],
+    "improved-combat-superiority-d12": [
+      "phb"
+    ],
+    "improved-defender": [
+      "tce"
+    ],
+    "improved-duplicity": [
+      "phb"
+    ],
+    "improved-flare": [
+      "phb"
+    ],
+    "improved-minor-illusion": [
+      "phb"
+    ],
+    "improved-war-magic": [
+      "phb"
+    ],
+    "infectious-fury": [
+      "tce"
+    ],
+    "infectious-inspiration": [
+      "tce"
+    ],
+    "infiltration-expertise": [
+      "phb"
+    ],
+    "infiltrator": [
+      "tce"
+    ],
+    "infuse-item": [
+      "tce"
+    ],
+    "infusion-arcane-propulsion-armor": [
+      "tce"
+    ],
+    "infusion-armor-of-magical-strength": [
+      "tce"
+    ],
+    "infusion-boots-of-the-winding-path": [
+      "tce"
+    ],
+    "infusion-enhanced-arcane-focus": [
+      "tce"
+    ],
+    "infusion-enhanced-defense": [
+      "tce"
+    ],
+    "infusion-enhanced-weapon": [
+      "tce"
+    ],
+    "infusion-helm-of-awareness": [
+      "tce"
+    ],
+    "infusion-homunculus-servant": [
+      "tce"
+    ],
+    "infusion-mind-sharpener": [
+      "tce"
+    ],
+    "infusion-radiant-weapon": [
+      "tce"
+    ],
+    "infusion-repeating-shot": [
+      "tce"
+    ],
+    "infusion-replicate-magic-item": [
+      "tce"
+    ],
+    "infusion-repulsion-shield": [
+      "tce"
+    ],
+    "infusion-resistant-armor": [
+      "tce"
+    ],
+    "infusion-returning-weapon": [
+      "tce"
+    ],
+    "infusion-spell-refueling-ring": [
+      "tce"
+    ],
+    "infusions-known": [
+      "tce"
+    ],
+    "insightful-fighting": [
+      "xge"
+    ],
+    "insightful-manipulator": [
+      "xge"
+    ],
+    "inspiring-smite": [
+      "tce"
+    ],
+    "instinctive-charm": [
+      "phb"
+    ],
+    "intoxicated-frenzy": [
+      "xge"
+    ],
+    "inured-to-undeath": [
+      "phb"
+    ],
+    "invincible-conqueror": [
+      "xge"
+    ],
+    "iron-mind": [
+      "xge"
+    ],
+    "keeper-of-souls": [
+      "xge"
+    ],
+    "kenseis-shot": [
+      "xge"
+    ],
+    "knight-retainers": [
+      "phb"
+    ],
+    "know-your-enemy": [
+      "phb"
+    ],
+    "leap-to-your-feet": [
+      "xge"
+    ],
+    "light-blessed-strikes": [
+      "tce"
+    ],
+    "light-bonus-cantrip": [
+      "phb"
+    ],
+    "light-potent-spellcasting": [
+      "phb"
+    ],
+    "lightning-launcher": [
+      "tce"
+    ],
+    "limited-wish": [
+      "tce"
+    ],
+    "living-legend": [
+      "tce"
+    ],
+    "mage-hand-legerdemain": [
+      "phb"
+    ],
+    "magic-arrow": [
+      "xge"
+    ],
+    "magic-awareness": [
+      "tce"
+    ],
+    "magic-item-adept": [
+      "tce"
+    ],
+    "magic-item-master": [
+      "tce"
+    ],
+    "magic-item-savant": [
+      "tce"
+    ],
+    "magic-users-nemesis": [
+      "xge"
+    ],
+    "magical-ambush": [
+      "phb"
+    ],
+    "magical-tinkering": [
+      "tce"
+    ],
+    "malleable-illusions": [
+      "phb"
+    ],
+    "maneuver-ambush": [
+      "tce"
+    ],
+    "maneuver-bait-and-switch": [
+      "tce"
+    ],
+    "maneuver-brace": [
+      "tce"
+    ],
+    "maneuver-commanders-strike": [
+      "phb"
+    ],
+    "maneuver-commanding-presence": [
+      "tce"
+    ],
+    "maneuver-disarming-attack": [
+      "phb"
+    ],
+    "maneuver-distracting-strike": [
+      "phb"
+    ],
+    "maneuver-evasive-footwork": [
+      "phb"
+    ],
+    "maneuver-feinting-attack": [
+      "phb"
+    ],
+    "maneuver-goading-attack": [
+      "phb"
+    ],
+    "maneuver-grappling-strike": [
+      "tce"
+    ],
+    "maneuver-lunging-attack": [
+      "phb"
+    ],
+    "maneuver-maneuvering-attack": [
+      "phb"
+    ],
+    "maneuver-menacing-attack": [
+      "phb"
+    ],
+    "maneuver-options": [
+      "tce"
+    ],
+    "maneuver-parry": [
+      "phb"
+    ],
+    "maneuver-precision-attack": [
+      "phb"
+    ],
+    "maneuver-pushing-attack": [
+      "phb"
+    ],
+    "maneuver-quick-toss": [
+      "tce"
+    ],
+    "maneuver-rally": [
+      "phb"
+    ],
+    "maneuver-riposte": [
+      "phb"
+    ],
+    "maneuver-sweeping-attack": [
+      "phb"
+    ],
+    "maneuver-tactical-assessment": [
+      "tce"
+    ],
+    "maneuver-trip-attack": [
+      "phb"
+    ],
+    "maneuvers": [
+      "phb"
+    ],
+    "manifest-mind": [
+      "tce"
+    ],
+    "mantle-of-inspiration": [
+      "xge"
+    ],
+    "mantle-of-majesty": [
+      "xge"
+    ],
+    "mantle-of-whispers": [
+      "xge"
+    ],
+    "master-duelist": [
+      "xge"
+    ],
+    "master-of-hexes": [
+      "xge"
+    ],
+    "master-of-intrigue": [
+      "xge"
+    ],
+    "master-of-nature": [
+      "phb"
+    ],
+    "master-of-runes": [
+      "tce"
+    ],
+    "master-of-tactics": [
+      "xge"
+    ],
+    "master-scrivener": [
+      "tce"
+    ],
+    "master-transmuter": [
+      "phb"
+    ],
+    "masters-flourish": [
+      "xge"
+    ],
+    "metamagic-seeking-spell": [
+      "tce"
+    ],
+    "metamagic-transmuted-spell": [
+      "tce"
+    ],
+    "mighty-summoner": [
+      "xge"
+    ],
+    "mighty-swarm": [
+      "tce"
+    ],
+    "minor-alchemy": [
+      "phb"
+    ],
+    "minor-conjuration": [
+      "phb"
+    ],
+    "misdirection": [
+      "xge"
+    ],
+    "misty-escape": [
+      "phb"
+    ],
+    "misty-wanderer": [
+      "tce"
+    ],
+    "mobile-flourish": [
+      "xge"
+    ],
+    "monk-extra-elemental-discipline": [
+      "phb"
+    ],
+    "monster-slayer-magic": [
+      "xge"
+    ],
+    "mortal-bulwark": [
+      "tce"
+    ],
+    "mote-of-potential": [
+      "tce"
+    ],
+    "nature-blessed-strikes": [
+      "tce"
+    ],
+    "nature-bonus-proficiency": [
+      "phb"
+    ],
+    "nature-divine-strike": [
+      "phb"
+    ],
+    "natures-wrath": [
+      "phb"
+    ],
+    "necromancy-savant": [
+      "phb"
+    ],
+    "noble-position-of-privilege": [
+      "phb"
+    ],
+    "oceanic-soul": [
+      "tce"
+    ],
+    "one-with-the-blade": [
+      "xge"
+    ],
+    "one-with-the-word": [
+      "tce"
+    ],
+    "opportunist": [
+      "phb"
+    ],
+    "optional-rule-firearm-proficiency": [
+      "tce"
+    ],
+    "order-blessed-strikes": [
+      "tce"
+    ],
+    "order-bonus-proficiencies": [
+      "tce"
+    ],
+    "order-divine-strike": [
+      "tce"
+    ],
+    "orders-wrath": [
+      "tce"
+    ],
+    "otherworldly-glamour": [
+      "tce"
+    ],
+    "otherworldly-wings": [
+      "xge"
+    ],
+    "outlander-wanderer": [
+      "phb"
+    ],
+    "pact-of-the-talisman": [
+      "tce"
+    ],
+    "panache": [
+      "xge"
+    ],
+    "path-of-the-kensei": [
+      "xge"
+    ],
+    "peace-blessed-strikes": [
+      "tce"
+    ],
+    "peace-potent-spellcasting": [
+      "tce"
+    ],
+    "peerless-athlete": [
+      "tce"
+    ],
+    "perfected-armor": [
+      "tce"
+    ],
+    "performance-of-creation": [
+      "tce"
+    ],
+    "physicians-touch": [
+      "tce"
+    ],
+    "pirate-bad-reputation": [
+      "phb"
+    ],
+    "planar-warrior": [
+      "xge"
+    ],
+    "portent": [
+      "phb"
+    ],
+    "potent-spellcasting": [
+      "phb"
+    ],
+    "power-surge": [
+      "xge"
+    ],
+    "powered-steps": [
+      "tce"
+    ],
+    "primal-companion": [
+      "tce"
+    ],
+    "primal-strike": [
+      "phb"
+    ],
+    "projected-ward": [
+      "phb"
+    ],
+    "protective-bond": [
+      "tce"
+    ],
+    "protective-field": [
+      "tce"
+    ],
+    "protective-spirit": [
+      "xge"
+    ],
+    "psi-bolstered-knack": [
+      "tce"
+    ],
+    "psi-powered-leap": [
+      "tce"
+    ],
+    "psionic-power": [
+      "tce"
+    ],
+    "psionic-sorcery": [
+      "tce"
+    ],
+    "psionic-spells": [
+      "tce"
+    ],
+    "psionic-strike": [
+      "tce"
+    ],
+    "psychic-blades": [
+      "xge"
+    ],
+    "psychic-defenses": [
+      "tce"
+    ],
+    "psychic-teleportation": [
+      "tce"
+    ],
+    "psychic-veil": [
+      "tce"
+    ],
+    "psychic-whispers": [
+      "tce"
+    ],
+    "radiant-soul": [
+      "xge"
+    ],
+    "radiant-sun-bolt": [
+      "xge"
+    ],
+    "rage-beyond-death": [
+      "xge"
+    ],
+    "raging-storm": [
+      "xge"
+    ],
+    "rakish-audacity": [
+      "xge"
+    ],
+    "rangers-companion": [
+      "phb"
+    ],
+    "rapid-strike": [
+      "xge"
+    ],
+    "rebuke-the-violent": [
+      "xge"
+    ],
+    "redemption-channel-divinity": [
+      "xge"
+    ],
+    "redemption-oath-spells": [
+      "xge"
+    ],
+    "redirect-attack": [
+      "xge"
+    ],
+    "relentless": [
+      "phb"
+    ],
+    "relentless-avenger": [
+      "phb"
+    ],
+    "rend-mind": [
+      "tce"
+    ],
+    "restorative-reagents": [
+      "tce"
+    ],
+    "restore-balance": [
+      "tce"
+    ],
+    "revelation-in-flesh": [
+      "tce"
+    ],
+    "rune-carver": [
+      "tce"
+    ],
+    "rune-cloud-rune": [
+      "tce"
+    ],
+    "rune-fire-rune": [
+      "tce"
+    ],
+    "rune-frost-rune": [
+      "tce"
+    ],
+    "rune-hill-rune": [
+      "tce"
+    ],
+    "rune-knight-additional-rune-known": [
+      "tce"
+    ],
+    "rune-knight-bonus-proficiencies": [
+      "tce"
+    ],
+    "rune-stone-rune": [
+      "tce"
+    ],
+    "rune-storm-rune": [
+      "tce"
+    ],
+    "runic-juggernaut": [
+      "tce"
+    ],
+    "runic-shield": [
+      "tce"
+    ],
+    "sage-researcher": [
+      "phb"
+    ],
+    "sailor-ships-passage": [
+      "phb"
+    ],
+    "saint-of-forge-and-fire": [
+      "xge"
+    ],
+    "samurai-bonus-proficiency": [
+      "xge"
+    ],
+    "sanctuary-vessel": [
+      "tce"
+    ],
+    "scornful-rebuke": [
+      "xge"
+    ],
+    "sea": [
+      "xge"
+    ],
+    "searing-arc-strike": [
+      "xge"
+    ],
+    "searing-sunburst": [
+      "xge"
+    ],
+    "searing-vengeance": [
+      "xge"
+    ],
+    "sentinel-at-deaths-door": [
+      "xge"
+    ],
+    "shadow-arts": [
+      "phb"
+    ],
+    "shadow-lore": [
+      "xge"
+    ],
+    "shadow-step": [
+      "phb"
+    ],
+    "shadow-walk": [
+      "xge"
+    ],
+    "shadowy-dodge": [
+      "xge"
+    ],
+    "shapechanger": [
+      "phb"
+    ],
+    "share-spells": [
+      "phb"
+    ],
+    "sharpen-the-blade": [
+      "xge"
+    ],
+    "shielding-storm": [
+      "xge"
+    ],
+    "silver-tongue": [
+      "tce"
+    ],
+    "skirmisher": [
+      "xge"
+    ],
+    "slashing-flourish": [
+      "xge"
+    ],
+    "slayers-counter": [
+      "xge"
+    ],
+    "slayers-prey": [
+      "xge"
+    ],
+    "soldier-military-rank": [
+      "phb"
+    ],
+    "song-of-defense": [
+      "tce"
+    ],
+    "song-of-victory": [
+      "tce"
+    ],
+    "soul-blades": [
+      "tce"
+    ],
+    "soul-of-artifice": [
+      "tce"
+    ],
+    "soul-of-deceit": [
+      "xge"
+    ],
+    "soul-of-the-forge": [
+      "xge"
+    ],
+    "soul-of-vengeance": [
+      "phb"
+    ],
+    "soulknife-psionic-power": [
+      "tce"
+    ],
+    "soulknife-psychic-blades": [
+      "tce"
+    ],
+    "spectral-defense": [
+      "xge"
+    ],
+    "speech-of-the-woods": [
+      "xge"
+    ],
+    "spell-bombardment": [
+      "phb"
+    ],
+    "spell-resistance": [
+      "phb"
+    ],
+    "spell-storing-item": [
+      "tce"
+    ],
+    "spell-thief": [
+      "phb"
+    ],
+    "spellcasting": [
+      "tce"
+    ],
+    "spirit-seeker": [
+      "phb"
+    ],
+    "spirit-shield": [
+      "xge"
+    ],
+    "spirit-totem": [
+      "xge"
+    ],
+    "spirit-walker": [
+      "phb"
+    ],
+    "split-enchantment": [
+      "phb"
+    ],
+    "spreading-spores": [
+      "tce"
+    ],
+    "spy-spy-contact": [
+      "phb"
+    ],
+    "stalkers-flurry": [
+      "xge"
+    ],
+    "star-map": [
+      "tce"
+    ],
+    "starry-form": [
+      "tce"
+    ],
+    "steady-eye": [
+      "xge"
+    ],
+    "steel-defender": [
+      "tce"
+    ],
+    "steps-of-night": [
+      "tce"
+    ],
+    "storm-aura": [
+      "xge"
+    ],
+    "storm-guide": [
+      "xge"
+    ],
+    "storm-herald-desert": [
+      "xge"
+    ],
+    "storm-herald-sea": [
+      "xge"
+    ],
+    "storm-herald-tundra": [
+      "xge"
+    ],
+    "storm-soul": [
+      "xge"
+    ],
+    "stormborn": [
+      "phb"
+    ],
+    "storms-fury": [
+      "xge"
+    ],
+    "strength-before-death": [
+      "xge"
+    ],
+    "strength-of-the-grave": [
+      "xge"
+    ],
+    "student-of-war": [
+      "phb"
+    ],
+    "sudden-strike": [
+      "xge"
+    ],
+    "summon-wildfire-spirit": [
+      "tce"
+    ],
+    "sun-shield": [
+      "xge"
+    ],
+    "superior-mobility": [
+      "xge"
+    ],
+    "supernatural-defense": [
+      "xge"
+    ],
+    "survivalist": [
+      "xge"
+    ],
+    "swarming-dispersal": [
+      "tce"
+    ],
+    "swarmkeeper-magic": [
+      "tce"
+    ],
+    "swords-bonus-proficiencies": [
+      "xge"
+    ],
+    "swords-extra-attack": [
+      "xge"
+    ],
+    "symbiotic-entity": [
+      "tce"
+    ],
+    "tactical-wit": [
+      "xge"
+    ],
+    "telekinetic-adept": [
+      "tce"
+    ],
+    "telekinetic-master": [
+      "tce"
+    ],
+    "telekinetic-movement": [
+      "tce"
+    ],
+    "telekinetic-thrust": [
+      "tce"
+    ],
+    "telepathic-speech": [
+      "tce"
+    ],
+    "tempest-blessed-strikes": [
+      "tce"
+    ],
+    "tempest-bonus-proficiencies": [
+      "phb"
+    ],
+    "tempest-divine-strike": [
+      "phb"
+    ],
+    "tempestuous-magic": [
+      "xge"
+    ],
+    "tenets-of-conquest": [
+      "xge"
+    ],
+    "tenets-of-glory": [
+      "tce"
+    ],
+    "tenets-of-redemption": [
+      "xge"
+    ],
+    "tenets-of-the-ancients": [
+      "phb"
+    ],
+    "tenets-of-the-watchers": [
+      "tce"
+    ],
+    "tenets-of-vengeance": [
+      "phb"
+    ],
+    "tentacle-of-the-deeps": [
+      "tce"
+    ],
+    "the-right-tool-for-the-job": [
+      "tce"
+    ],
+    "the-third-eye": [
+      "phb"
+    ],
+    "thought-shield": [
+      "phb"
+    ],
+    "thousand-forms": [
+      "phb"
+    ],
+    "thunder-gauntlets": [
+      "tce"
+    ],
+    "thunderbolt-strike": [
+      "phb"
+    ],
+    "tides-of-chaos": [
+      "phb"
+    ],
+    "tipsy-sway": [
+      "xge"
+    ],
+    "tireless-spirit": [
+      "xge"
+    ],
+    "tokens-of-the-departed": [
+      "tce"
+    ],
+    "tool-expertise": [
+      "tce"
+    ],
+    "tool-proficiency": [
+      "tce"
+    ],
+    "tools-of-the-trade": [
+      "tce"
+    ],
+    "totem-spirit": [
+      "phb"
+    ],
+    "totem-warrior-bear": [
+      "phb"
+    ],
+    "totem-warrior-eagle": [
+      "phb"
+    ],
+    "totem-warrior-wolf": [
+      "phb"
+    ],
+    "totemic-attunement": [
+      "phb"
+    ],
+    "training-in-war-and-song-bladesinging": [
+      "tce"
+    ],
+    "trance-of-order": [
+      "tce"
+    ],
+    "transmutation-savant": [
+      "phb"
+    ],
+    "transmuters-stone": [
+      "phb"
+    ],
+    "trickery-blessed-strikes": [
+      "tce"
+    ],
+    "trickery-divine-strike": [
+      "phb"
+    ],
+    "tundra": [
+      "xge"
+    ],
+    "turn-the-faithless": [
+      "phb"
+    ],
+    "twilight-blessed-strikes": [
+      "tce"
+    ],
+    "twilight-bonus-proficiencies": [
+      "tce"
+    ],
+    "twilight-divine-strike": [
+      "tce"
+    ],
+    "twilight-shroud": [
+      "tce"
+    ],
+    "twinkling-constellations": [
+      "tce"
+    ],
+    "umbral-form": [
+      "xge"
+    ],
+    "umbral-sight": [
+      "xge"
+    ],
+    "unbreakable-majesty": [
+      "xge"
+    ],
+    "undead-thralls": [
+      "phb"
+    ],
+    "undying-sentinel": [
+      "phb"
+    ],
+    "unearthly-recovery": [
+      "xge"
+    ],
+    "unerring-accuracy": [
+      "xge"
+    ],
+    "unerring-eye": [
+      "xge"
+    ],
+    "unfailing-inspiration": [
+      "tce"
+    ],
+    "universal-speech": [
+      "tce"
+    ],
+    "unsettling-words": [
+      "tce"
+    ],
+    "unstable-backlash": [
+      "tce"
+    ],
+    "unwavering-mark": [
+      "xge"
+    ],
+    "urchin-city-secrets": [
+      "phb"
+    ],
+    "valor-bonus-proficiencies": [
+      "phb"
+    ],
+    "valor-extra-attack": [
+      "phb"
+    ],
+    "vengeance-channel-divinity": [
+      "phb"
+    ],
+    "vengeance-oath-spells": [
+      "phb"
+    ],
+    "vengeful-ancestors": [
+      "xge"
+    ],
+    "versatile-trickster": [
+      "phb"
+    ],
+    "vigilant-blessing": [
+      "tce"
+    ],
+    "vigilant-defender": [
+      "xge"
+    ],
+    "vigilant-rebuke": [
+      "tce"
+    ],
+    "visage-of-the-astral-self": [
+      "tce"
+    ],
+    "visions-of-the-past": [
+      "phb"
+    ],
+    "voice-of-authority": [
+      "tce"
+    ],
+    "vow-of-enmity": [
+      "phb"
+    ],
+    "wails-from-the-grave": [
+      "tce"
+    ],
+    "walker-in-dreams": [
+      "xge"
+    ],
+    "war-blessed-strikes": [
+      "tce"
+    ],
+    "war-bonus-proficiencies": [
+      "phb"
+    ],
+    "war-divine-strike": [
+      "phb"
+    ],
+    "war-magic": [
+      "phb"
+    ],
+    "war-priest": [
+      "phb"
+    ],
+    "warding-flare": [
+      "phb"
+    ],
+    "warding-maneuver": [
+      "xge"
+    ],
+    "warping-implosion": [
+      "tce"
+    ],
+    "warrior-of-the-gods": [
+      "xge"
+    ],
+    "watchers-channel-divinity": [
+      "tce"
+    ],
+    "watchers-oath-spells": [
+      "tce"
+    ],
+    "watchers-will": [
+      "tce"
+    ],
+    "weapon-bond": [
+      "phb"
+    ],
+    "whispers-of-the-dead": [
+      "tce"
+    ],
+    "wild-magic-surge": [
+      "phb"
+    ],
+    "wild-surge": [
+      "tce"
+    ],
+    "wildfire-circle-spells": [
+      "tce"
+    ],
+    "wind-soul": [
+      "xge"
+    ],
+    "wind-speaker": [
+      "xge"
+    ],
+    "wizardly-quill": [
+      "tce"
+    ],
+    "wolf": [
+      "phb"
+    ],
+    "words-of-terror": [
+      "xge"
+    ],
+    "wrath-of-the-storm": [
+      "phb"
+    ],
+    "writhing-tide": [
+      "tce"
+    ],
+    "zealous-presence": [
+      "xge"
+    ]
+  },
+  "magic-items": {
+    "adamantine-armor": [
+      "srd-5.1"
+    ],
+    "ammunition": [
+      "srd-5.1"
+    ],
+    "ammunition-1": [
+      "srd-5.1"
+    ],
+    "ammunition-2": [
+      "srd-5.1"
+    ],
+    "ammunition-3": [
+      "srd-5.1"
+    ],
+    "amulet-of-health": [
+      "srd-5.1"
+    ],
+    "amulet-of-proof-against-detection-and-location": [
+      "srd-5.1"
+    ],
+    "amulet-of-the-planes": [
+      "srd-5.1"
+    ],
+    "animated-shield": [
+      "srd-5.1"
+    ],
+    "apparatus-of-the-crab": [
+      "srd-5.1"
+    ],
+    "armor": [
+      "srd-5.1"
+    ],
+    "armor-1": [
+      "srd-5.1"
+    ],
+    "armor-2": [
+      "srd-5.1"
+    ],
+    "armor-3": [
+      "srd-5.1"
+    ],
+    "armor-of-invulnerability": [
+      "srd-5.1"
+    ],
+    "armor-of-resistance": [
+      "srd-5.1"
+    ],
+    "armor-of-vulnerability": [
+      "srd-5.1"
+    ],
+    "arrow-catching-shield": [
+      "srd-5.1"
+    ],
+    "arrow-of-slaying": [
+      "srd-5.1"
+    ],
+    "bag-of-beans": [
+      "srd-5.1"
+    ],
+    "bag-of-devouring": [
+      "srd-5.1"
+    ],
+    "bag-of-holding": [
+      "srd-5.1"
+    ],
+    "bag-of-tricks": [
+      "srd-5.1"
+    ],
+    "bag-of-tricks-gray": [
+      "srd-5.1"
+    ],
+    "bag-of-tricks-rust": [
+      "srd-5.1"
+    ],
+    "bag-of-tricks-tan": [
+      "srd-5.1"
+    ],
+    "bead-of-force": [
+      "srd-5.1"
+    ],
+    "belt-of-dwarvenkind": [
+      "srd-5.1"
+    ],
+    "belt-of-giant-strength": [
+      "srd-5.1"
+    ],
+    "belt-of-giant-strength-cloud": [
+      "srd-5.1"
+    ],
+    "belt-of-giant-strength-fire": [
+      "srd-5.1"
+    ],
+    "belt-of-giant-strength-frost": [
+      "srd-5.1"
+    ],
+    "belt-of-giant-strength-hill": [
+      "srd-5.1"
+    ],
+    "belt-of-giant-strength-stone": [
+      "srd-5.1"
+    ],
+    "belt-of-giant-strength-storm": [
+      "srd-5.1"
+    ],
+    "berserker-axe": [
+      "srd-5.1"
+    ],
+    "boots-of-elvenkind": [
+      "srd-5.1"
+    ],
+    "boots-of-levitation": [
+      "srd-5.1"
+    ],
+    "boots-of-speed": [
+      "srd-5.1"
+    ],
+    "boots-of-striding-and-springing": [
+      "srd-5.1"
+    ],
+    "boots-of-the-winterlands": [
+      "srd-5.1"
+    ],
+    "bowl-of-commanding-water-elementals": [
+      "srd-5.1"
+    ],
+    "bracers-of-archery": [
+      "srd-5.1"
+    ],
+    "bracers-of-defense": [
+      "srd-5.1"
+    ],
+    "brazier-of-commanding-fire-elementals": [
+      "srd-5.1"
+    ],
+    "brooch-of-shielding": [
+      "srd-5.1"
+    ],
+    "broom-of-flying": [
+      "srd-5.1"
+    ],
+    "candle-of-invocation": [
+      "srd-5.1"
+    ],
+    "cape-of-the-mountebank": [
+      "srd-5.1"
+    ],
+    "carpet-of-flying": [
+      "srd-5.1"
+    ],
+    "carpet-of-flying-3x5": [
+      "srd-5.1"
+    ],
+    "carpet-of-flying-4x6": [
+      "srd-5.1"
+    ],
+    "carpet-of-flying-5x7": [
+      "srd-5.1"
+    ],
+    "carpet-of-flying-6x9": [
+      "srd-5.1"
+    ],
+    "censer-of-controlling-air-elementals": [
+      "srd-5.1"
+    ],
+    "chime-of-opening": [
+      "srd-5.1"
+    ],
+    "circlet-of-blasting": [
+      "srd-5.1"
+    ],
+    "cloak-of-arachnida": [
+      "srd-5.1"
+    ],
+    "cloak-of-displacement": [
+      "srd-5.1"
+    ],
+    "cloak-of-elvenkind": [
+      "srd-5.1"
+    ],
+    "cloak-of-protection": [
+      "srd-5.1"
+    ],
+    "cloak-of-the-bat": [
+      "srd-5.1"
+    ],
+    "cloak-of-the-manta-ray": [
+      "srd-5.1"
+    ],
+    "crystal-ball": [
+      "srd-5.1"
+    ],
+    "crystal-ball-of-mind-reading": [
+      "srd-5.1"
+    ],
+    "crystal-ball-of-telepathy": [
+      "srd-5.1"
+    ],
+    "crystal-ball-of-true-seeing": [
+      "srd-5.1"
+    ],
+    "cube-of-force": [
+      "srd-5.1"
+    ],
+    "cubic-gate": [
+      "srd-5.1"
+    ],
+    "dagger-of-venom": [
+      "srd-5.1"
+    ],
+    "dancing-sword": [
+      "srd-5.1"
+    ],
+    "decanter-of-endless-water": [
+      "srd-5.1"
+    ],
+    "deck-of-illusions": [
+      "srd-5.1"
+    ],
+    "deck-of-many-things": [
+      "srd-5.1"
+    ],
+    "defender": [
+      "srd-5.1"
+    ],
+    "demon-armor": [
+      "srd-5.1"
+    ],
+    "dimensional-shackles": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-black": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-blue": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-brass": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-bronze": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-copper": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-gold": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-green": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-red": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-silver": [
+      "srd-5.1"
+    ],
+    "dragon-scale-mail-white": [
+      "srd-5.1"
+    ],
+    "dragon-slayer": [
+      "srd-5.1"
+    ],
+    "dust-of-disappearance": [
+      "srd-5.1"
+    ],
+    "dust-of-dryness": [
+      "srd-5.1"
+    ],
+    "dust-of-sneezing-and-choking": [
+      "srd-5.1"
+    ],
+    "dwarven-plate": [
+      "srd-5.1"
+    ],
+    "dwarven-thrower": [
+      "srd-5.1"
+    ],
+    "efficient-quiver": [
+      "srd-5.1"
+    ],
+    "efreeti-bottle": [
+      "srd-5.1"
+    ],
+    "elemental-gem": [
+      "srd-5.1"
+    ],
+    "elemental-gem-air": [
+      "srd-5.1"
+    ],
+    "elemental-gem-earth": [
+      "srd-5.1"
+    ],
+    "elemental-gem-fire": [
+      "srd-5.1"
+    ],
+    "elemental-gem-water": [
+      "srd-5.1"
+    ],
+    "elven-chain": [
+      "srd-5.1"
+    ],
+    "eversmoking-bottle": [
+      "srd-5.1"
+    ],
+    "eyes-of-charming": [
+      "srd-5.1"
+    ],
+    "eyes-of-minute-seeing": [
+      "srd-5.1"
+    ],
+    "eyes-of-the-eagle": [
+      "srd-5.1"
+    ],
+    "feather-token": [
+      "srd-5.1"
+    ],
+    "feather-token-anchor": [
+      "srd-5.1"
+    ],
+    "feather-token-bird": [
+      "srd-5.1"
+    ],
+    "feather-token-fan": [
+      "srd-5.1"
+    ],
+    "feather-token-swan-boat": [
+      "srd-5.1"
+    ],
+    "feather-token-tree": [
+      "srd-5.1"
+    ],
+    "feather-token-whip": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power-bronze-griffon": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power-ebony-fly": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power-golden-lions": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power-ivory-goats": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power-marble-elephant": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power-obsidian-steed": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power-onyx-dog": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power-serpentine-owl": [
+      "srd-5.1"
+    ],
+    "figurine-of-wondrous-power-silver-raven": [
+      "srd-5.1"
+    ],
+    "flame-tongue": [
+      "srd-5.1"
+    ],
+    "folding-boat": [
+      "srd-5.1"
+    ],
+    "frost-brand": [
+      "srd-5.1"
+    ],
+    "gauntlets-of-ogre-power": [
+      "srd-5.1"
+    ],
+    "gem-of-brightness": [
+      "srd-5.1"
+    ],
+    "gem-of-seeing": [
+      "srd-5.1"
+    ],
+    "giant-slayer": [
+      "srd-5.1"
+    ],
+    "glamoured-studded-leather-armor": [
+      "srd-5.1"
+    ],
+    "gloves-of-missile-snaring": [
+      "srd-5.1"
+    ],
+    "gloves-of-swimming-and-climbing": [
+      "srd-5.1"
+    ],
+    "goggles-of-night": [
+      "srd-5.1"
+    ],
+    "hammer-of-thunderbolts": [
+      "srd-5.1"
+    ],
+    "handy-haversack": [
+      "srd-5.1"
+    ],
+    "hat-of-disguise": [
+      "srd-5.1"
+    ],
+    "headband-of-intellect": [
+      "srd-5.1"
+    ],
+    "helm-of-brilliance": [
+      "srd-5.1"
+    ],
+    "helm-of-comprehending-languages": [
+      "srd-5.1"
+    ],
+    "helm-of-telepathy": [
+      "srd-5.1"
+    ],
+    "helm-of-teleportation": [
+      "srd-5.1"
+    ],
+    "holy-avenger": [
+      "srd-5.1"
+    ],
+    "horn-of-blasting": [
+      "srd-5.1"
+    ],
+    "horn-of-valhalla": [
+      "srd-5.1"
+    ],
+    "horn-of-valhalla-brass": [
+      "srd-5.1"
+    ],
+    "horn-of-valhalla-bronze": [
+      "srd-5.1"
+    ],
+    "horn-of-valhalla-iron": [
+      "srd-5.1"
+    ],
+    "horn-of-valhalla-silver": [
+      "srd-5.1"
+    ],
+    "horseshoes-of-a-zephyr": [
+      "srd-5.1"
+    ],
+    "horseshoes-of-speed": [
+      "srd-5.1"
+    ],
+    "immovable-rod": [
+      "srd-5.1"
+    ],
+    "instant-fortress": [
+      "srd-5.1"
+    ],
+    "ioun-stone": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-absorption": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-agility": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-awareness": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-fortitude": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-greater-absorption": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-insight": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-intellect": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-leadership": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-mastery": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-protection": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-regeneration": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-reserve": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-strength": [
+      "srd-5.1"
+    ],
+    "ioun-stone-of-sustenance": [
+      "srd-5.1"
+    ],
+    "iron-bands-of-binding": [
+      "srd-5.1"
+    ],
+    "iron-flask": [
+      "srd-5.1"
+    ],
+    "javelin-of-lightning": [
+      "srd-5.1"
+    ],
+    "lantern-of-revealing": [
+      "srd-5.1"
+    ],
+    "luck-blade": [
+      "srd-5.1"
+    ],
+    "mace-of-disruption": [
+      "srd-5.1"
+    ],
+    "mace-of-smiting": [
+      "srd-5.1"
+    ],
+    "mace-of-terror": [
+      "srd-5.1"
+    ],
+    "mantle-of-spell-resistance": [
+      "srd-5.1"
+    ],
+    "manual-of-bodily-health": [
+      "srd-5.1"
+    ],
+    "manual-of-gainful-exercise": [
+      "srd-5.1"
+    ],
+    "manual-of-golems": [
+      "srd-5.1"
+    ],
+    "manual-of-golems-clay": [
+      "srd-5.1"
+    ],
+    "manual-of-golems-flesh": [
+      "srd-5.1"
+    ],
+    "manual-of-golems-iron": [
+      "srd-5.1"
+    ],
+    "manual-of-golems-stone": [
+      "srd-5.1"
+    ],
+    "manual-of-quickness-of-action": [
+      "srd-5.1"
+    ],
+    "marvelous-pigments": [
+      "srd-5.1"
+    ],
+    "medallion-of-thoughts": [
+      "srd-5.1"
+    ],
+    "mirror-of-life-trapping": [
+      "srd-5.1"
+    ],
+    "mithral-armor": [
+      "srd-5.1"
+    ],
+    "necklace-of-adaptation": [
+      "srd-5.1"
+    ],
+    "necklace-of-fireballs": [
+      "srd-5.1"
+    ],
+    "necklace-of-prayer-beads": [
+      "srd-5.1"
+    ],
+    "nine-lives-stealer": [
+      "srd-5.1"
+    ],
+    "oathbow": [
+      "srd-5.1"
+    ],
+    "oil-of-etherealness": [
+      "srd-5.1"
+    ],
+    "oil-of-sharpness": [
+      "srd-5.1"
+    ],
+    "oil-of-slipperiness": [
+      "srd-5.1"
+    ],
+    "orb-of-dragonkind": [
+      "srd-5.1"
+    ],
+    "pearl-of-power": [
+      "srd-5.1"
+    ],
+    "periapt-of-health": [
+      "srd-5.1"
+    ],
+    "periapt-of-proof-against-poison": [
+      "srd-5.1"
+    ],
+    "periapt-of-wound-closure": [
+      "srd-5.1"
+    ],
+    "philter-of-love": [
+      "srd-5.1"
+    ],
+    "pipes-of-haunting": [
+      "srd-5.1"
+    ],
+    "pipes-of-the-sewers": [
+      "srd-5.1"
+    ],
+    "plate-armor-of-etherealness": [
+      "srd-5.1"
+    ],
+    "portable-hole": [
+      "srd-5.1"
+    ],
+    "potion-of-animal-friendship": [
+      "srd-5.1"
+    ],
+    "potion-of-clairvoyance": [
+      "srd-5.1"
+    ],
+    "potion-of-climbing": [
+      "srd-5.1"
+    ],
+    "potion-of-diminution": [
+      "srd-5.1"
+    ],
+    "potion-of-flying": [
+      "srd-5.1"
+    ],
+    "potion-of-gaseous-form": [
+      "srd-5.1"
+    ],
+    "potion-of-giant-strength": [
+      "srd-5.1"
+    ],
+    "potion-of-giant-strength-cloud": [
+      "srd-5.1"
+    ],
+    "potion-of-giant-strength-fire": [
+      "srd-5.1"
+    ],
+    "potion-of-giant-strength-frost": [
+      "srd-5.1"
+    ],
+    "potion-of-giant-strength-hill": [
+      "srd-5.1"
+    ],
+    "potion-of-giant-strength-stone": [
+      "srd-5.1"
+    ],
+    "potion-of-giant-strength-storm": [
+      "srd-5.1"
+    ],
+    "potion-of-growth": [
+      "srd-5.1"
+    ],
+    "potion-of-healing": [
+      "srd-5.1"
+    ],
+    "potion-of-healing-common": [
+      "srd-5.1"
+    ],
+    "potion-of-healing-greater": [
+      "srd-5.1"
+    ],
+    "potion-of-healing-superior": [
+      "srd-5.1"
+    ],
+    "potion-of-healing-supreme": [
+      "srd-5.1"
+    ],
+    "potion-of-heroism": [
+      "srd-5.1"
+    ],
+    "potion-of-invisibility": [
+      "srd-5.1"
+    ],
+    "potion-of-mind-reading": [
+      "srd-5.1"
+    ],
+    "potion-of-poison": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-acid": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-cold": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-fire": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-force": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-lightning": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-necrotic": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-poison": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-psychic": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-radiant": [
+      "srd-5.1"
+    ],
+    "potion-of-resistance-thunder": [
+      "srd-5.1"
+    ],
+    "potion-of-speed": [
+      "srd-5.1"
+    ],
+    "potion-of-water-breathing": [
+      "srd-5.1"
+    ],
+    "restorative-ointment": [
+      "srd-5.1"
+    ],
+    "ring-of-animal-influence": [
+      "srd-5.1"
+    ],
+    "ring-of-djinni-summoning": [
+      "srd-5.1"
+    ],
+    "ring-of-elemental-command": [
+      "srd-5.1"
+    ],
+    "ring-of-elemental-command-air": [
+      "srd-5.1"
+    ],
+    "ring-of-elemental-command-earth": [
+      "srd-5.1"
+    ],
+    "ring-of-elemental-command-fire": [
+      "srd-5.1"
+    ],
+    "ring-of-elemental-command-water": [
+      "srd-5.1"
+    ],
+    "ring-of-evasion": [
+      "srd-5.1"
+    ],
+    "ring-of-feather-falling": [
+      "srd-5.1"
+    ],
+    "ring-of-free-action": [
+      "srd-5.1"
+    ],
+    "ring-of-invisibility": [
+      "srd-5.1"
+    ],
+    "ring-of-jumping": [
+      "srd-5.1"
+    ],
+    "ring-of-mind-shielding": [
+      "srd-5.1"
+    ],
+    "ring-of-protection": [
+      "srd-5.1"
+    ],
+    "ring-of-regeneration": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-acid": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-cold": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-fire": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-force": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-lightning": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-necrotic": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-poison": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-psychic": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-radiant": [
+      "srd-5.1"
+    ],
+    "ring-of-resistance-thunder": [
+      "srd-5.1"
+    ],
+    "ring-of-shooting-stars": [
+      "srd-5.1"
+    ],
+    "ring-of-spell-storing": [
+      "srd-5.1"
+    ],
+    "ring-of-spell-turning": [
+      "srd-5.1"
+    ],
+    "ring-of-swimming": [
+      "srd-5.1"
+    ],
+    "ring-of-telekinesis": [
+      "srd-5.1"
+    ],
+    "ring-of-the-ram": [
+      "srd-5.1"
+    ],
+    "ring-of-three-wishes": [
+      "srd-5.1"
+    ],
+    "ring-of-warmth": [
+      "srd-5.1"
+    ],
+    "ring-of-water-walking": [
+      "srd-5.1"
+    ],
+    "ring-of-x-ray-vision": [
+      "srd-5.1"
+    ],
+    "robe-of-eyes": [
+      "srd-5.1"
+    ],
+    "robe-of-scintillating-colors": [
+      "srd-5.1"
+    ],
+    "robe-of-stars": [
+      "srd-5.1"
+    ],
+    "robe-of-the-archmagi": [
+      "srd-5.1"
+    ],
+    "robe-of-useful-items": [
+      "srd-5.1"
+    ],
+    "rod-of-absorption": [
+      "srd-5.1"
+    ],
+    "rod-of-alertness": [
+      "srd-5.1"
+    ],
+    "rod-of-lordly-might": [
+      "srd-5.1"
+    ],
+    "rod-of-rulership": [
+      "srd-5.1"
+    ],
+    "rod-of-security": [
+      "srd-5.1"
+    ],
+    "rope-of-climbing": [
+      "srd-5.1"
+    ],
+    "rope-of-entanglement": [
+      "srd-5.1"
+    ],
+    "scarab-of-protection": [
+      "srd-5.1"
+    ],
+    "scimitar-of-speed": [
+      "srd-5.1"
+    ],
+    "shield-of-missile-attraction": [
+      "srd-5.1"
+    ],
+    "slippers-of-spider-climbing": [
+      "srd-5.1"
+    ],
+    "sovereign-glue": [
+      "srd-5.1"
+    ],
+    "spell-scroll": [
+      "srd-5.1"
+    ],
+    "spell-scroll-1st": [
+      "srd-5.1"
+    ],
+    "spell-scroll-2nd": [
+      "srd-5.1"
+    ],
+    "spell-scroll-3rd": [
+      "srd-5.1"
+    ],
+    "spell-scroll-4th": [
+      "srd-5.1"
+    ],
+    "spell-scroll-5th": [
+      "srd-5.1"
+    ],
+    "spell-scroll-6th": [
+      "srd-5.1"
+    ],
+    "spell-scroll-7th": [
+      "srd-5.1"
+    ],
+    "spell-scroll-8th": [
+      "srd-5.1"
+    ],
+    "spell-scroll-9th": [
+      "srd-5.1"
+    ],
+    "spell-scroll-cantrip": [
+      "srd-5.1"
+    ],
+    "spellguard-shield": [
+      "srd-5.1"
+    ],
+    "sphere-of-annihilation": [
+      "srd-5.1"
+    ],
+    "staff-of-charming": [
+      "srd-5.1"
+    ],
+    "staff-of-fire": [
+      "srd-5.1"
+    ],
+    "staff-of-frost": [
+      "srd-5.1"
+    ],
+    "staff-of-healing": [
+      "srd-5.1"
+    ],
+    "staff-of-power": [
+      "srd-5.1"
+    ],
+    "staff-of-striking": [
+      "srd-5.1"
+    ],
+    "staff-of-swarming-insects": [
+      "srd-5.1"
+    ],
+    "staff-of-the-magi": [
+      "srd-5.1"
+    ],
+    "staff-of-the-python": [
+      "srd-5.1"
+    ],
+    "staff-of-the-woodlands": [
+      "srd-5.1"
+    ],
+    "staff-of-thunder-and-lightning": [
+      "srd-5.1"
+    ],
+    "staff-of-withering": [
+      "srd-5.1"
+    ],
+    "stone-of-controlling-earth-elementals": [
+      "srd-5.1"
+    ],
+    "stone-of-good-luck-luckstone": [
+      "srd-5.1"
+    ],
+    "sun-blade": [
+      "srd-5.1"
+    ],
+    "sword-of-life-stealing": [
+      "srd-5.1"
+    ],
+    "sword-of-sharpness": [
+      "srd-5.1"
+    ],
+    "sword-of-wounding": [
+      "srd-5.1"
+    ],
+    "talisman-of-pure-good": [
+      "srd-5.1"
+    ],
+    "talisman-of-the-sphere": [
+      "srd-5.1"
+    ],
+    "talisman-of-ultimate-evil": [
+      "srd-5.1"
+    ],
+    "tome-of-clear-thought": [
+      "srd-5.1"
+    ],
+    "tome-of-leadership-and-influence": [
+      "srd-5.1"
+    ],
+    "tome-of-understanding": [
+      "srd-5.1"
+    ],
+    "trident-of-fish-command": [
+      "srd-5.1"
+    ],
+    "universal-solvent": [
+      "srd-5.1"
+    ],
+    "vicious-weapon": [
+      "srd-5.1"
+    ],
+    "vorpal-sword": [
+      "srd-5.1"
+    ],
+    "wand-of-binding": [
+      "srd-5.1"
+    ],
+    "wand-of-enemy-detection": [
+      "srd-5.1"
+    ],
+    "wand-of-fear": [
+      "srd-5.1"
+    ],
+    "wand-of-fireballs": [
+      "srd-5.1"
+    ],
+    "wand-of-lightning-bolts": [
+      "srd-5.1"
+    ],
+    "wand-of-magic-detection": [
+      "srd-5.1"
+    ],
+    "wand-of-magic-missiles": [
+      "srd-5.1"
+    ],
+    "wand-of-paralysis": [
+      "srd-5.1"
+    ],
+    "wand-of-polymorph": [
+      "srd-5.1"
+    ],
+    "wand-of-secrets": [
+      "srd-5.1"
+    ],
+    "wand-of-the-war-mage": [
+      "srd-5.1"
+    ],
+    "wand-of-the-war-mage-1": [
+      "srd-5.1"
+    ],
+    "wand-of-the-war-mage-2": [
+      "srd-5.1"
+    ],
+    "wand-of-the-war-mage-3": [
+      "srd-5.1"
+    ],
+    "wand-of-web": [
+      "srd-5.1"
+    ],
+    "wand-of-wonder": [
+      "srd-5.1"
+    ],
+    "weapon": [
+      "srd-5.1"
+    ],
+    "weapon-1": [
+      "srd-5.1"
+    ],
+    "weapon-2": [
+      "srd-5.1"
+    ],
+    "weapon-3": [
+      "srd-5.1"
+    ],
+    "well-of-many-worlds": [
+      "srd-5.1"
+    ],
+    "wind-fan": [
+      "srd-5.1"
+    ],
+    "winged-boots": [
+      "srd-5.1"
+    ],
+    "wings-of-flying": [
+      "srd-5.1"
+    ],
+    "1-all-purpose-tool": [
+      "tce"
+    ],
+    "1-amulet-of-the-devout": [
+      "tce"
+    ],
+    "1-arcane-grimoire": [
+      "tce"
+    ],
+    "1-bloodwell-vial": [
+      "tce"
+    ],
+    "1-moon-sickle": [
+      "tce"
+    ],
+    "1-rhythm-makers-drum": [
+      "tce"
+    ],
+    "2-all-purpose-tool": [
+      "tce"
+    ],
+    "2-amulet-of-the-devout": [
+      "tce"
+    ],
+    "2-arcane-grimoire": [
+      "tce"
+    ],
+    "2-bloodwell-vial": [
+      "tce"
+    ],
+    "2-moon-sickle": [
+      "tce"
+    ],
+    "2-rhythm-makers-drum": [
+      "tce"
+    ],
+    "3-all-purpose-tool": [
+      "tce"
+    ],
+    "3-amulet-of-the-devout": [
+      "tce"
+    ],
+    "3-arcane-grimoire": [
+      "tce"
+    ],
+    "3-bloodwell-vial": [
+      "tce"
+    ],
+    "3-moon-sickle": [
+      "tce"
+    ],
+    "3-rhythm-makers-drum": [
+      "tce"
+    ],
+    "acid-absorbing-tattoo": [
+      "tce"
+    ],
+    "alchemical-compendium": [
+      "tce"
+    ],
+    "astral-shard": [
+      "tce"
+    ],
+    "astromancy-archive": [
+      "tce"
+    ],
+    "atlas-of-endless-horizons": [
+      "tce"
+    ],
+    "baba-yagas-mortar-and-pestle": [
+      "tce"
+    ],
+    "baba-yagas-pestle": [
+      "tce"
+    ],
+    "barrier-tattoo-large": [
+      "tce"
+    ],
+    "barrier-tattoo-medium": [
+      "tce"
+    ],
+    "barrier-tattoo-small": [
+      "tce"
+    ],
+    "bead-of-nourishment": [
+      "xge"
+    ],
+    "bead-of-refreshment": [
+      "xge"
+    ],
+    "bell-branch": [
+      "tce"
+    ],
+    "blood-fury-tattoo": [
+      "tce"
+    ],
+    "boots-of-false-tracks": [
+      "xge"
+    ],
+    "candle-of-the-deep": [
+      "xge"
+    ],
+    "cauldron-of-rebirth": [
+      "tce"
+    ],
+    "charlatans-die": [
+      "xge"
+    ],
+    "cloak-of-billowing": [
+      "xge"
+    ],
+    "cloak-of-many-fashions": [
+      "xge"
+    ],
+    "clockwork-amulet": [
+      "xge"
+    ],
+    "clothes-of-mending": [
+      "xge"
+    ],
+    "coiling-grasp-tattoo": [
+      "tce"
+    ],
+    "cold-absorbing-tattoo": [
+      "tce"
+    ],
+    "crook-of-rao": [
+      "tce"
+    ],
+    "crystalline-chronicle": [
+      "tce"
+    ],
+    "dark-shard-amulet": [
+      "xge"
+    ],
+    "demonomicon-of-iggwilv": [
+      "tce"
+    ],
+    "devotees-censer": [
+      "tce"
+    ],
+    "dread-helm": [
+      "xge"
+    ],
+    "duplicitous-manuscript": [
+      "tce"
+    ],
+    "ear-horn-of-hearing": [
+      "xge"
+    ],
+    "eldritch-claw-tattoo": [
+      "tce"
+    ],
+    "elemental-essence-shard": [
+      "tce"
+    ],
+    "elemental-essence-shard-air": [
+      "tce"
+    ],
+    "elemental-essence-shard-earth": [
+      "tce"
+    ],
+    "elemental-essence-shard-fire": [
+      "tce"
+    ],
+    "elemental-essence-shard-water": [
+      "tce"
+    ],
+    "enduring-spellbook": [
+      "xge"
+    ],
+    "ersatz-eye": [
+      "xge"
+    ],
+    "far-realm-shard": [
+      "tce"
+    ],
+    "feywild-shard": [
+      "tce"
+    ],
+    "fire-absorbing-tattoo": [
+      "tce"
+    ],
+    "force-absorbing-tattoo": [
+      "tce"
+    ],
+    "fulminating-treatise": [
+      "tce"
+    ],
+    "ghost-step-tattoo": [
+      "tce"
+    ],
+    "guardian-emblem": [
+      "tce"
+    ],
+    "hat-of-vermin": [
+      "xge"
+    ],
+    "hat-of-wizardry": [
+      "xge"
+    ],
+    "heart-weavers-primer": [
+      "tce"
+    ],
+    "hewards-handy-spice-pouch": [
+      "xge"
+    ],
+    "horn-of-silent-alarm": [
+      "xge"
+    ],
+    "illuminators-tattoo": [
+      "tce"
+    ],
+    "instrument-of-illusions": [
+      "xge"
+    ],
+    "instrument-of-scribing": [
+      "xge"
+    ],
+    "libram-of-souls-and-flesh": [
+      "tce"
+    ],
+    "lifewell-tattoo": [
+      "tce"
+    ],
+    "lightning-absorbing-tattoo": [
+      "tce"
+    ],
+    "lock-of-trickery": [
+      "xge"
+    ],
+    "lubas-tarokka-of-souls": [
+      "tce"
+    ],
+    "lyre-of-building": [
+      "tce"
+    ],
+    "masquerade-tattoo": [
+      "tce"
+    ],
+    "mighty-servant-of-leuk-o": [
+      "tce"
+    ],
+    "mystery-key": [
+      "xge"
+    ],
+    "natures-mantle": [
+      "tce"
+    ],
+    "necrotic-absorbing-tattoo": [
+      "tce"
+    ],
+    "orb-of-direction": [
+      "xge"
+    ],
+    "orb-of-time": [
+      "xge"
+    ],
+    "outer-essence-shard": [
+      "tce"
+    ],
+    "outer-essence-shard-chaotic": [
+      "tce"
+    ],
+    "outer-essence-shard-evil": [
+      "tce"
+    ],
+    "outer-essence-shard-good": [
+      "tce"
+    ],
+    "outer-essence-shard-lawful": [
+      "tce"
+    ],
+    "perfume-of-bewitching": [
+      "xge"
+    ],
+    "pipe-of-smoke-monsters": [
+      "xge"
+    ],
+    "planecallers-codex": [
+      "tce"
+    ],
+    "poison-absorbing-tattoo": [
+      "tce"
+    ],
+    "pole-of-angling": [
+      "xge"
+    ],
+    "pole-of-collapsing": [
+      "xge"
+    ],
+    "pot-of-awakening": [
+      "xge"
+    ],
+    "prosthetic-limb": [
+      "tce"
+    ],
+    "protective-verses": [
+      "tce"
+    ],
+    "psychic-absorbing-tattoo": [
+      "tce"
+    ],
+    "radiant-absorbing-tattoo": [
+      "tce"
+    ],
+    "revelers-concertina": [
+      "tce"
+    ],
+    "rope-of-mending": [
+      "xge"
+    ],
+    "ruby-of-the-war-mage": [
+      "xge"
+    ],
+    "shadowfell-brand-tattoo": [
+      "tce"
+    ],
+    "shadowfell-shard": [
+      "tce"
+    ],
+    "shield-of-expression": [
+      "xge"
+    ],
+    "spellwrought-tattoo-1st-level": [
+      "tce"
+    ],
+    "spellwrought-tattoo-2nd-level": [
+      "tce"
+    ],
+    "spellwrought-tattoo-3rd-level": [
+      "tce"
+    ],
+    "spellwrought-tattoo-4th-level": [
+      "tce"
+    ],
+    "spellwrought-tattoo-5th-level": [
+      "tce"
+    ],
+    "spellwrought-tattoo-cantrip": [
+      "tce"
+    ],
+    "staff-of-adornment": [
+      "xge"
+    ],
+    "staff-of-birdcalls": [
+      "xge"
+    ],
+    "staff-of-flowers": [
+      "xge"
+    ],
+    "talking-doll": [
+      "xge"
+    ],
+    "tankard-of-sobriety": [
+      "xge"
+    ],
+    "teeth-of-dahlver-nar": [
+      "tce"
+    ],
+    "thunder-absorbing-tattoo": [
+      "tce"
+    ],
+    "unbreakable-arrow": [
+      "xge"
+    ],
+    "veterans-cane": [
+      "xge"
+    ],
+    "wand-of-conducting": [
+      "xge"
+    ],
+    "wand-of-pyrotechnics": [
+      "xge"
+    ],
+    "wand-of-scowls": [
+      "xge"
+    ],
+    "wand-of-smiles": [
+      "xge"
+    ]
+  },
+  "races": {
+    "dragonborn": [
+      "srd-5.1"
+    ],
+    "dwarf": [
+      "srd-5.1"
+    ],
+    "elf": [
+      "srd-5.1"
+    ],
+    "gnome": [
+      "srd-5.1"
+    ],
+    "half-elf": [
+      "srd-5.1"
+    ],
+    "half-orc": [
+      "srd-5.1"
+    ],
+    "halfling": [
+      "srd-5.1"
+    ],
+    "human": [
+      "srd-5.1"
+    ],
+    "tiefling": [
+      "srd-5.1"
+    ]
+  },
+  "spells": {
+    "acid-arrow": [
+      "srd-5.1"
+    ],
+    "acid-splash": [
+      "srd-5.1"
+    ],
+    "aid": [
+      "srd-5.1"
+    ],
+    "alarm": [
+      "srd-5.1"
+    ],
+    "alter-self": [
+      "srd-5.1"
+    ],
+    "animal-friendship": [
+      "srd-5.1"
+    ],
+    "animal-messenger": [
+      "srd-5.1"
+    ],
+    "animal-shapes": [
+      "srd-5.1"
+    ],
+    "animate-dead": [
+      "srd-5.1"
+    ],
+    "animate-objects": [
+      "srd-5.1"
+    ],
+    "antilife-shell": [
+      "srd-5.1"
+    ],
+    "antimagic-field": [
+      "srd-5.1"
+    ],
+    "antipathy-sympathy": [
+      "srd-5.1"
+    ],
+    "arcane-eye": [
+      "srd-5.1"
+    ],
+    "arcane-hand": [
+      "srd-5.1"
+    ],
+    "arcane-lock": [
+      "srd-5.1"
+    ],
+    "arcane-sword": [
+      "srd-5.1"
+    ],
+    "arcanists-magic-aura": [
+      "srd-5.1"
+    ],
+    "astral-projection": [
+      "srd-5.1"
+    ],
+    "augury": [
+      "srd-5.1"
+    ],
+    "awaken": [
+      "srd-5.1"
+    ],
+    "bane": [
+      "srd-5.1"
+    ],
+    "banishment": [
+      "srd-5.1"
+    ],
+    "barkskin": [
+      "srd-5.1"
+    ],
+    "beacon-of-hope": [
+      "srd-5.1"
+    ],
+    "bestow-curse": [
+      "srd-5.1"
+    ],
+    "black-tentacles": [
+      "srd-5.1"
+    ],
+    "blade-barrier": [
+      "srd-5.1"
+    ],
+    "bless": [
+      "srd-5.1"
+    ],
+    "blight": [
+      "srd-5.1"
+    ],
+    "blindness-deafness": [
+      "srd-5.1"
+    ],
+    "blink": [
+      "srd-5.1"
+    ],
+    "blur": [
+      "srd-5.1"
+    ],
+    "branding-smite": [
+      "srd-5.1"
+    ],
+    "burning-hands": [
+      "srd-5.1"
+    ],
+    "call-lightning": [
+      "srd-5.1"
+    ],
+    "calm-emotions": [
+      "srd-5.1"
+    ],
+    "chain-lightning": [
+      "srd-5.1"
+    ],
+    "charm-person": [
+      "srd-5.1"
+    ],
+    "chill-touch": [
+      "srd-5.1"
+    ],
+    "circle-of-death": [
+      "srd-5.1"
+    ],
+    "clairvoyance": [
+      "srd-5.1"
+    ],
+    "clone": [
+      "srd-5.1"
+    ],
+    "cloudkill": [
+      "srd-5.1"
+    ],
+    "color-spray": [
+      "srd-5.1"
+    ],
+    "command": [
+      "srd-5.1"
+    ],
+    "commune": [
+      "srd-5.1"
+    ],
+    "commune-with-nature": [
+      "srd-5.1"
+    ],
+    "comprehend-languages": [
+      "srd-5.1"
+    ],
+    "compulsion": [
+      "srd-5.1"
+    ],
+    "cone-of-cold": [
+      "srd-5.1"
+    ],
+    "confusion": [
+      "srd-5.1"
+    ],
+    "conjure-animals": [
+      "srd-5.1"
+    ],
+    "conjure-celestial": [
+      "srd-5.1"
+    ],
+    "conjure-elemental": [
+      "srd-5.1"
+    ],
+    "conjure-fey": [
+      "srd-5.1"
+    ],
+    "conjure-minor-elementals": [
+      "srd-5.1"
+    ],
+    "conjure-woodland-beings": [
+      "srd-5.1"
+    ],
+    "contact-other-plane": [
+      "srd-5.1"
+    ],
+    "contagion": [
+      "srd-5.1"
+    ],
+    "contingency": [
+      "srd-5.1"
+    ],
+    "continual-flame": [
+      "srd-5.1"
+    ],
+    "control-water": [
+      "srd-5.1"
+    ],
+    "control-weather": [
+      "srd-5.1"
+    ],
+    "counterspell": [
+      "srd-5.1"
+    ],
+    "create-food-and-water": [
+      "srd-5.1"
+    ],
+    "create-or-destroy-water": [
+      "srd-5.1"
+    ],
+    "create-undead": [
+      "srd-5.1"
+    ],
+    "creation": [
+      "srd-5.1"
+    ],
+    "cure-wounds": [
+      "srd-5.1"
+    ],
+    "dancing-lights": [
+      "srd-5.1"
+    ],
+    "darkness": [
+      "srd-5.1"
+    ],
+    "darkvision": [
+      "srd-5.1"
+    ],
+    "daylight": [
+      "srd-5.1"
+    ],
+    "death-ward": [
+      "srd-5.1"
+    ],
+    "delayed-blast-fireball": [
+      "srd-5.1"
+    ],
+    "demiplane": [
+      "srd-5.1"
+    ],
+    "detect-evil-and-good": [
+      "srd-5.1"
+    ],
+    "detect-magic": [
+      "srd-5.1"
+    ],
+    "detect-poison-and-disease": [
+      "srd-5.1"
+    ],
+    "detect-thoughts": [
+      "srd-5.1"
+    ],
+    "dimension-door": [
+      "srd-5.1"
+    ],
+    "disguise-self": [
+      "srd-5.1"
+    ],
+    "disintegrate": [
+      "srd-5.1"
+    ],
+    "dispel-evil-and-good": [
+      "srd-5.1"
+    ],
+    "dispel-magic": [
+      "srd-5.1"
+    ],
+    "divination": [
+      "srd-5.1"
+    ],
+    "divine-favor": [
+      "srd-5.1"
+    ],
+    "divine-word": [
+      "srd-5.1"
+    ],
+    "dominate-beast": [
+      "srd-5.1"
+    ],
+    "dominate-monster": [
+      "srd-5.1"
+    ],
+    "dominate-person": [
+      "srd-5.1"
+    ],
+    "dream": [
+      "srd-5.1"
+    ],
+    "druidcraft": [
+      "srd-5.1"
+    ],
+    "earthquake": [
+      "srd-5.1"
+    ],
+    "eldritch-blast": [
+      "srd-5.1"
+    ],
+    "enhance-ability": [
+      "srd-5.1"
+    ],
+    "enlarge-reduce": [
+      "srd-5.1"
+    ],
+    "entangle": [
+      "srd-5.1"
+    ],
+    "enthrall": [
+      "srd-5.1"
+    ],
+    "etherealness": [
+      "srd-5.1"
+    ],
+    "expeditious-retreat": [
+      "srd-5.1"
+    ],
+    "eyebite": [
+      "srd-5.1"
+    ],
+    "fabricate": [
+      "srd-5.1"
+    ],
+    "faerie-fire": [
+      "srd-5.1"
+    ],
+    "faithful-hound": [
+      "srd-5.1"
+    ],
+    "false-life": [
+      "srd-5.1"
+    ],
+    "fear": [
+      "srd-5.1"
+    ],
+    "feather-fall": [
+      "srd-5.1"
+    ],
+    "feeblemind": [
+      "srd-5.1"
+    ],
+    "find-familiar": [
+      "srd-5.1"
+    ],
+    "find-steed": [
+      "srd-5.1"
+    ],
+    "find-the-path": [
+      "srd-5.1"
+    ],
+    "find-traps": [
+      "srd-5.1"
+    ],
+    "finger-of-death": [
+      "srd-5.1"
+    ],
+    "fire-bolt": [
+      "srd-5.1"
+    ],
+    "fire-shield": [
+      "srd-5.1"
+    ],
+    "fire-storm": [
+      "srd-5.1"
+    ],
+    "fireball": [
+      "srd-5.1"
+    ],
+    "flame-blade": [
+      "srd-5.1"
+    ],
+    "flame-strike": [
+      "srd-5.1"
+    ],
+    "flaming-sphere": [
+      "srd-5.1"
+    ],
+    "flesh-to-stone": [
+      "srd-5.1"
+    ],
+    "floating-disk": [
+      "srd-5.1"
+    ],
+    "fly": [
+      "srd-5.1"
+    ],
+    "fog-cloud": [
+      "srd-5.1"
+    ],
+    "forbiddance": [
+      "srd-5.1"
+    ],
+    "forcecage": [
+      "srd-5.1"
+    ],
+    "foresight": [
+      "srd-5.1"
+    ],
+    "freedom-of-movement": [
+      "srd-5.1"
+    ],
+    "freezing-sphere": [
+      "srd-5.1"
+    ],
+    "gaseous-form": [
+      "srd-5.1"
+    ],
+    "gate": [
+      "srd-5.1"
+    ],
+    "geas": [
+      "srd-5.1"
+    ],
+    "gentle-repose": [
+      "srd-5.1"
+    ],
+    "giant-insect": [
+      "srd-5.1"
+    ],
+    "glibness": [
+      "srd-5.1"
+    ],
+    "globe-of-invulnerability": [
+      "srd-5.1"
+    ],
+    "glyph-of-warding": [
+      "srd-5.1"
+    ],
+    "goodberry": [
+      "srd-5.1"
+    ],
+    "grease": [
+      "srd-5.1"
+    ],
+    "greater-invisibility": [
+      "srd-5.1"
+    ],
+    "greater-restoration": [
+      "srd-5.1"
+    ],
+    "guardian-of-faith": [
+      "srd-5.1"
+    ],
+    "guards-and-wards": [
+      "srd-5.1"
+    ],
+    "guidance": [
+      "srd-5.1"
+    ],
+    "guiding-bolt": [
+      "srd-5.1"
+    ],
+    "gust-of-wind": [
+      "srd-5.1"
+    ],
+    "hallow": [
+      "srd-5.1"
+    ],
+    "hallucinatory-terrain": [
+      "srd-5.1"
+    ],
+    "harm": [
+      "srd-5.1"
+    ],
+    "haste": [
+      "srd-5.1"
+    ],
+    "heal": [
+      "srd-5.1"
+    ],
+    "healing-word": [
+      "srd-5.1"
+    ],
+    "heat-metal": [
+      "srd-5.1"
+    ],
+    "hellish-rebuke": [
+      "srd-5.1"
+    ],
+    "heroes-feast": [
+      "srd-5.1"
+    ],
+    "heroism": [
+      "srd-5.1"
+    ],
+    "hideous-laughter": [
+      "srd-5.1"
+    ],
+    "hold-monster": [
+      "srd-5.1"
+    ],
+    "hold-person": [
+      "srd-5.1"
+    ],
+    "holy-aura": [
+      "srd-5.1"
+    ],
+    "hunters-mark": [
+      "srd-5.1"
+    ],
+    "hypnotic-pattern": [
+      "srd-5.1"
+    ],
+    "ice-storm": [
+      "srd-5.1"
+    ],
+    "identify": [
+      "srd-5.1"
+    ],
+    "illusory-script": [
+      "srd-5.1"
+    ],
+    "imprisonment": [
+      "srd-5.1"
+    ],
+    "incendiary-cloud": [
+      "srd-5.1"
+    ],
+    "inflict-wounds": [
+      "srd-5.1"
+    ],
+    "insect-plague": [
+      "srd-5.1"
+    ],
+    "instant-summons": [
+      "srd-5.1"
+    ],
+    "invisibility": [
+      "srd-5.1"
+    ],
+    "irresistible-dance": [
+      "srd-5.1"
+    ],
+    "jump": [
+      "srd-5.1"
+    ],
+    "knock": [
+      "srd-5.1"
+    ],
+    "legend-lore": [
+      "srd-5.1"
+    ],
+    "lesser-restoration": [
+      "srd-5.1"
+    ],
+    "levitate": [
+      "srd-5.1"
+    ],
+    "light": [
+      "srd-5.1"
+    ],
+    "lightning-bolt": [
+      "srd-5.1"
+    ],
+    "locate-animals-or-plants": [
+      "srd-5.1"
+    ],
+    "locate-creature": [
+      "srd-5.1"
+    ],
+    "locate-object": [
+      "srd-5.1"
+    ],
+    "longstrider": [
+      "srd-5.1"
+    ],
+    "mage-armor": [
+      "srd-5.1"
+    ],
+    "mage-hand": [
+      "srd-5.1"
+    ],
+    "magic-circle": [
+      "srd-5.1"
+    ],
+    "magic-jar": [
+      "srd-5.1"
+    ],
+    "magic-missile": [
+      "srd-5.1"
+    ],
+    "magic-mouth": [
+      "srd-5.1"
+    ],
+    "magic-weapon": [
+      "srd-5.1"
+    ],
+    "magnificent-mansion": [
+      "srd-5.1"
+    ],
+    "major-image": [
+      "srd-5.1"
+    ],
+    "mass-cure-wounds": [
+      "srd-5.1"
+    ],
+    "mass-heal": [
+      "srd-5.1"
+    ],
+    "mass-healing-word": [
+      "srd-5.1"
+    ],
+    "mass-suggestion": [
+      "srd-5.1"
+    ],
+    "maze": [
+      "srd-5.1"
+    ],
+    "meld-into-stone": [
+      "srd-5.1"
+    ],
+    "mending": [
+      "srd-5.1"
+    ],
+    "message": [
+      "srd-5.1"
+    ],
+    "meteor-swarm": [
+      "srd-5.1"
+    ],
+    "mind-blank": [
+      "srd-5.1"
+    ],
+    "minor-illusion": [
+      "srd-5.1"
+    ],
+    "mirage-arcane": [
+      "srd-5.1"
+    ],
+    "mirror-image": [
+      "srd-5.1"
+    ],
+    "mislead": [
+      "srd-5.1"
+    ],
+    "misty-step": [
+      "srd-5.1"
+    ],
+    "modify-memory": [
+      "srd-5.1"
+    ],
+    "moonbeam": [
+      "srd-5.1"
+    ],
+    "move-earth": [
+      "srd-5.1"
+    ],
+    "nondetection": [
+      "srd-5.1"
+    ],
+    "pass-without-trace": [
+      "srd-5.1"
+    ],
+    "passwall": [
+      "srd-5.1"
+    ],
+    "phantasmal-killer": [
+      "srd-5.1"
+    ],
+    "phantom-steed": [
+      "srd-5.1"
+    ],
+    "planar-ally": [
+      "srd-5.1"
+    ],
+    "planar-binding": [
+      "srd-5.1"
+    ],
+    "plane-shift": [
+      "srd-5.1"
+    ],
+    "plant-growth": [
+      "srd-5.1"
+    ],
+    "poison-spray": [
+      "srd-5.1"
+    ],
+    "polymorph": [
+      "srd-5.1"
+    ],
+    "power-word-kill": [
+      "srd-5.1"
+    ],
+    "power-word-stun": [
+      "srd-5.1"
+    ],
+    "prayer-of-healing": [
+      "srd-5.1"
+    ],
+    "prestidigitation": [
+      "srd-5.1"
+    ],
+    "prismatic-spray": [
+      "srd-5.1"
+    ],
+    "prismatic-wall": [
+      "srd-5.1"
+    ],
+    "private-sanctum": [
+      "srd-5.1"
+    ],
+    "produce-flame": [
+      "srd-5.1"
+    ],
+    "programmed-illusion": [
+      "srd-5.1"
+    ],
+    "project-image": [
+      "srd-5.1"
+    ],
+    "protection-from-energy": [
+      "srd-5.1"
+    ],
+    "protection-from-evil-and-good": [
+      "srd-5.1"
+    ],
+    "protection-from-poison": [
+      "srd-5.1"
+    ],
+    "purify-food-and-drink": [
+      "srd-5.1"
+    ],
+    "raise-dead": [
+      "srd-5.1"
+    ],
+    "ray-of-enfeeblement": [
+      "srd-5.1"
+    ],
+    "ray-of-frost": [
+      "srd-5.1"
+    ],
+    "regenerate": [
+      "srd-5.1"
+    ],
+    "reincarnate": [
+      "srd-5.1"
+    ],
+    "remove-curse": [
+      "srd-5.1"
+    ],
+    "resilient-sphere": [
+      "srd-5.1"
+    ],
+    "resistance": [
+      "srd-5.1"
+    ],
+    "resurrection": [
+      "srd-5.1"
+    ],
+    "reverse-gravity": [
+      "srd-5.1"
+    ],
+    "revivify": [
+      "srd-5.1"
+    ],
+    "rope-trick": [
+      "srd-5.1"
+    ],
+    "sacred-flame": [
+      "srd-5.1"
+    ],
+    "sanctuary": [
+      "srd-5.1"
+    ],
+    "scorching-ray": [
+      "srd-5.1"
+    ],
+    "scrying": [
+      "srd-5.1"
+    ],
+    "secret-chest": [
+      "srd-5.1"
+    ],
+    "see-invisibility": [
+      "srd-5.1"
+    ],
+    "seeming": [
+      "srd-5.1"
+    ],
+    "sending": [
+      "srd-5.1"
+    ],
+    "sequester": [
+      "srd-5.1"
+    ],
+    "shapechange": [
+      "srd-5.1"
+    ],
+    "shatter": [
+      "srd-5.1"
+    ],
+    "shield": [
+      "srd-5.1"
+    ],
+    "shield-of-faith": [
+      "srd-5.1"
+    ],
+    "shillelagh": [
+      "srd-5.1"
+    ],
+    "shocking-grasp": [
+      "srd-5.1"
+    ],
+    "silence": [
+      "srd-5.1"
+    ],
+    "silent-image": [
+      "srd-5.1"
+    ],
+    "simulacrum": [
+      "srd-5.1"
+    ],
+    "sleep": [
+      "srd-5.1"
+    ],
+    "sleet-storm": [
+      "srd-5.1"
+    ],
+    "slow": [
+      "srd-5.1"
+    ],
+    "spare-the-dying": [
+      "srd-5.1"
+    ],
+    "speak-with-animals": [
+      "srd-5.1"
+    ],
+    "speak-with-dead": [
+      "srd-5.1"
+    ],
+    "speak-with-plants": [
+      "srd-5.1"
+    ],
+    "spider-climb": [
+      "srd-5.1"
+    ],
+    "spike-growth": [
+      "srd-5.1"
+    ],
+    "spirit-guardians": [
+      "srd-5.1"
+    ],
+    "spiritual-weapon": [
+      "srd-5.1"
+    ],
+    "stinking-cloud": [
+      "srd-5.1"
+    ],
+    "stone-shape": [
+      "srd-5.1"
+    ],
+    "stoneskin": [
+      "srd-5.1"
+    ],
+    "storm-of-vengeance": [
+      "srd-5.1"
+    ],
+    "suggestion": [
+      "srd-5.1"
+    ],
+    "sunbeam": [
+      "srd-5.1"
+    ],
+    "sunburst": [
+      "srd-5.1"
+    ],
+    "symbol": [
+      "srd-5.1"
+    ],
+    "telekinesis": [
+      "srd-5.1"
+    ],
+    "telepathic-bond": [
+      "srd-5.1"
+    ],
+    "teleport": [
+      "srd-5.1"
+    ],
+    "teleportation-circle": [
+      "srd-5.1"
+    ],
+    "thaumaturgy": [
+      "srd-5.1"
+    ],
+    "thunderwave": [
+      "srd-5.1"
+    ],
+    "time-stop": [
+      "srd-5.1"
+    ],
+    "tiny-hut": [
+      "srd-5.1"
+    ],
+    "tongues": [
+      "srd-5.1"
+    ],
+    "transport-via-plants": [
+      "srd-5.1"
+    ],
+    "tree-stride": [
+      "srd-5.1"
+    ],
+    "true-polymorph": [
+      "srd-5.1"
+    ],
+    "true-resurrection": [
+      "srd-5.1"
+    ],
+    "true-seeing": [
+      "srd-5.1"
+    ],
+    "true-strike": [
+      "srd-5.1"
+    ],
+    "unseen-servant": [
+      "srd-5.1"
+    ],
+    "vampiric-touch": [
+      "srd-5.1"
+    ],
+    "vicious-mockery": [
+      "srd-5.1"
+    ],
+    "wall-of-fire": [
+      "srd-5.1"
+    ],
+    "wall-of-force": [
+      "srd-5.1"
+    ],
+    "wall-of-ice": [
+      "srd-5.1"
+    ],
+    "wall-of-stone": [
+      "srd-5.1"
+    ],
+    "wall-of-thorns": [
+      "srd-5.1"
+    ],
+    "warding-bond": [
+      "srd-5.1"
+    ],
+    "water-breathing": [
+      "srd-5.1"
+    ],
+    "water-walk": [
+      "srd-5.1"
+    ],
+    "web": [
+      "srd-5.1"
+    ],
+    "weird": [
+      "srd-5.1"
+    ],
+    "wind-walk": [
+      "srd-5.1"
+    ],
+    "wind-wall": [
+      "srd-5.1"
+    ],
+    "wish": [
+      "srd-5.1"
+    ],
+    "word-of-recall": [
+      "srd-5.1"
+    ],
+    "zone-of-truth": [
+      "srd-5.1"
+    ],
+    "abi-dalzims-horrid-wilting": [
+      "xge"
+    ],
+    "absorb-elements": [
+      "xge"
+    ],
+    "aganazzars-scorcher": [
+      "xge"
+    ],
+    "arcane-gate": [
+      "phb"
+    ],
+    "armor-of-agathys": [
+      "phb"
+    ],
+    "arms-of-hadar": [
+      "phb"
+    ],
+    "aura-of-life": [
+      "phb"
+    ],
+    "aura-of-purity": [
+      "phb"
+    ],
+    "aura-of-vitality": [
+      "phb"
+    ],
+    "banishing-smite": [
+      "phb"
+    ],
+    "beast-bond": [
+      "xge"
+    ],
+    "beast-sense": [
+      "phb"
+    ],
+    "blade-of-disaster": [
+      "tce"
+    ],
+    "blade-ward": [
+      "phb"
+    ],
+    "blinding-smite": [
+      "phb"
+    ],
+    "bones-of-the-earth": [
+      "xge"
+    ],
+    "booming-blade": [
+      "tce"
+    ],
+    "catapult": [
+      "xge"
+    ],
+    "catnap": [
+      "xge"
+    ],
+    "cause-fear": [
+      "xge"
+    ],
+    "ceremony": [
+      "xge"
+    ],
+    "chaos-bolt": [
+      "xge"
+    ],
+    "charm-monster": [
+      "xge"
+    ],
+    "chromatic-orb": [
+      "phb"
+    ],
+    "circle-of-power": [
+      "phb"
+    ],
+    "cloud-of-daggers": [
+      "phb"
+    ],
+    "compelled-duel": [
+      "phb"
+    ],
+    "conjure-barrage": [
+      "phb"
+    ],
+    "conjure-volley": [
+      "phb"
+    ],
+    "control-flames": [
+      "xge"
+    ],
+    "control-winds": [
+      "xge"
+    ],
+    "cordon-of-arrows": [
+      "phb"
+    ],
+    "create-bonfire": [
+      "xge"
+    ],
+    "create-homunculus": [
+      "xge"
+    ],
+    "crown-of-madness": [
+      "phb"
+    ],
+    "crown-of-stars": [
+      "xge"
+    ],
+    "crusaders-mantle": [
+      "phb"
+    ],
+    "danse-macabre": [
+      "xge"
+    ],
+    "dawn": [
+      "xge"
+    ],
+    "destructive-wave": [
+      "phb"
+    ],
+    "dissonant-whispers": [
+      "phb"
+    ],
+    "dragons-breath": [
+      "xge"
+    ],
+    "dream-of-the-blue-veil": [
+      "tce"
+    ],
+    "druid-grove": [
+      "xge"
+    ],
+    "dust-devil": [
+      "xge"
+    ],
+    "earth-tremor": [
+      "xge"
+    ],
+    "earthbind": [
+      "xge"
+    ],
+    "elemental-bane": [
+      "xge"
+    ],
+    "elemental-weapon": [
+      "phb"
+    ],
+    "enemies-abound": [
+      "xge"
+    ],
+    "enervation": [
+      "xge"
+    ],
+    "ensnaring-strike": [
+      "phb"
+    ],
+    "erupting-earth": [
+      "xge"
+    ],
+    "far-step": [
+      "xge"
+    ],
+    "feign-death": [
+      "phb"
+    ],
+    "find-greater-steed": [
+      "xge"
+    ],
+    "flame-arrows": [
+      "xge"
+    ],
+    "friends": [
+      "phb"
+    ],
+    "frostbite": [
+      "xge"
+    ],
+    "grasping-vine": [
+      "phb"
+    ],
+    "green-flame-blade": [
+      "tce"
+    ],
+    "guardian-of-nature": [
+      "xge"
+    ],
+    "gust": [
+      "tce",
+      "xge"
+    ],
+    "hail-of-thorns": [
+      "phb"
+    ],
+    "healing-spirit": [
+      "xge"
+    ],
+    "hex": [
+      "phb"
+    ],
+    "holy-weapon": [
+      "xge"
+    ],
+    "hunger-of-hadar": [
+      "phb"
+    ],
+    "ice-knife": [
+      "xge"
+    ],
+    "illusory-dragon": [
+      "xge"
+    ],
+    "immolation": [
+      "xge"
+    ],
+    "infernal-calling": [
+      "xge"
+    ],
+    "infestation": [
+      "xge"
+    ],
+    "intellect-fortress": [
+      "tce"
+    ],
+    "investiture-of-flame": [
+      "xge"
+    ],
+    "investiture-of-ice": [
+      "xge"
+    ],
+    "investiture-of-stone": [
+      "xge"
+    ],
+    "investiture-of-wind": [
+      "xge"
+    ],
+    "invulnerability": [
+      "xge"
+    ],
+    "life-transference": [
+      "xge"
+    ],
+    "lightning-arrow": [
+      "phb"
+    ],
+    "lightning-lure": [
+      "tce"
+    ],
+    "maddening-darkness": [
+      "xge"
+    ],
+    "maelstrom": [
+      "xge"
+    ],
+    "magic-stone": [
+      "xge"
+    ],
+    "mass-polymorph": [
+      "xge"
+    ],
+    "maximilians-earthen-grasp": [
+      "xge"
+    ],
+    "melfs-minute-meteors": [
+      "xge"
+    ],
+    "mental-prison": [
+      "xge"
+    ],
+    "mighty-fortress": [
+      "xge"
+    ],
+    "mind-sliver": [
+      "tce"
+    ],
+    "mind-spike": [
+      "xge"
+    ],
+    "mold-earth": [
+      "xge"
+    ],
+    "negative-energy-flood": [
+      "xge"
+    ],
+    "phantasmal-force": [
+      "phb"
+    ],
+    "power-word-heal": [
+      "phb"
+    ],
+    "power-word-pain": [
+      "xge"
+    ],
+    "primal-savagery": [
+      "xge"
+    ],
+    "primordial-ward": [
+      "xge"
+    ],
+    "psychic-scream": [
+      "xge"
+    ],
+    "pyrotechnics": [
+      "xge"
+    ],
+    "ray-of-sickness": [
+      "phb"
+    ],
+    "scatter": [
+      "xge"
+    ],
+    "searing-smite": [
+      "phb"
+    ],
+    "shadow-blade": [
+      "xge"
+    ],
+    "shadow-of-moil": [
+      "xge"
+    ],
+    "shape-water": [
+      "xge"
+    ],
+    "sickening-radiance": [
+      "xge"
+    ],
+    "skill-empowerment": [
+      "xge"
+    ],
+    "skywrite": [
+      "xge"
+    ],
+    "snare": [
+      "xge"
+    ],
+    "snillocs-snowball-swarm": [
+      "xge"
+    ],
+    "soul-cage": [
+      "xge"
+    ],
+    "spirit-shroud": [
+      "tce"
+    ],
+    "staggering-smite": [
+      "phb"
+    ],
+    "steel-wind-strike": [
+      "xge"
+    ],
+    "storm-sphere": [
+      "xge"
+    ],
+    "summon-aberration": [
+      "tce"
+    ],
+    "summon-beast": [
+      "tce"
+    ],
+    "summon-celestial": [
+      "tce"
+    ],
+    "summon-construct": [
+      "tce"
+    ],
+    "summon-elemental": [
+      "tce"
+    ],
+    "summon-fey": [
+      "tce"
+    ],
+    "summon-fiend": [
+      "tce"
+    ],
+    "summon-greater-demon": [
+      "xge"
+    ],
+    "summon-lesser-demons": [
+      "xge"
+    ],
+    "summon-shadowspawn": [
+      "tce"
+    ],
+    "summon-undead": [
+      "tce"
+    ],
+    "swift-quiver": [
+      "phb"
+    ],
+    "sword-burst": [
+      "tce"
+    ],
+    "synaptic-static": [
+      "xge"
+    ],
+    "tashas-caustic-brew": [
+      "tce"
+    ],
+    "tashas-mind-whip": [
+      "tce"
+    ],
+    "tashas-otherworldly-guise": [
+      "tce"
+    ],
+    "telepathy": [
+      "phb"
+    ],
+    "temple-of-the-gods": [
+      "xge"
+    ],
+    "tensers-transformation": [
+      "xge"
+    ],
+    "thorn-whip": [
+      "phb"
+    ],
+    "thunder-step": [
+      "xge"
+    ],
+    "thunderclap": [
+      "xge"
+    ],
+    "thunderous-smite": [
+      "phb"
+    ],
+    "tidal-wave": [
+      "xge"
+    ],
+    "tiny-servant": [
+      "xge"
+    ],
+    "toll-the-dead": [
+      "xge"
+    ],
+    "transmute-rock": [
+      "xge"
+    ],
+    "tsunami": [
+      "phb"
+    ],
+    "vitriolic-sphere": [
+      "xge"
+    ],
+    "wall-of-light": [
+      "xge"
+    ],
+    "wall-of-sand": [
+      "xge"
+    ],
+    "wall-of-water": [
+      "xge"
+    ],
+    "warding-wind": [
+      "xge"
+    ],
+    "watery-sphere": [
+      "xge"
+    ],
+    "whirlwind": [
+      "xge"
+    ],
+    "witch-bolt": [
+      "phb"
+    ],
+    "word-of-radiance": [
+      "xge"
+    ],
+    "wrath-of-nature": [
+      "xge"
+    ],
+    "wrathful-smite": [
+      "phb"
+    ],
+    "zephyr-strike": [
+      "xge"
+    ]
+  },
+  "subclasses": {
+    "berserker": [
+      "srd-5.1"
+    ],
+    "champion": [
+      "srd-5.1"
+    ],
+    "devotion": [
+      "srd-5.1"
+    ],
+    "draconic": [
+      "srd-5.1"
+    ],
+    "evocation": [
+      "srd-5.1"
+    ],
+    "fiend": [
+      "srd-5.1"
+    ],
+    "hunter": [
+      "srd-5.1"
+    ],
+    "land": [
+      "srd-5.1"
+    ],
+    "life": [
+      "srd-5.1"
+    ],
+    "lore": [
+      "srd-5.1"
+    ],
+    "open-hand": [
+      "srd-5.1"
+    ],
+    "thief": [
+      "srd-5.1"
+    ],
+    "aberrant-mind": [
+      "tce"
+    ],
+    "abjuration": [
+      "phb"
+    ],
+    "alchemist": [
+      "tce"
+    ],
+    "ancestral-guardian": [
+      "xge"
+    ],
+    "ancients": [
+      "phb"
+    ],
+    "arcane-archer": [
+      "xge"
+    ],
+    "arcane-trickster": [
+      "phb"
+    ],
+    "archfey": [
+      "phb"
+    ],
+    "armorer": [
+      "tce"
+    ],
+    "artillerist": [
+      "tce"
+    ],
+    "assassin": [
+      "phb"
+    ],
+    "astral-self": [
+      "tce"
+    ],
+    "battle-master": [
+      "phb"
+    ],
+    "battle-smith": [
+      "tce"
+    ],
+    "beast": [
+      "tce"
+    ],
+    "beast-master": [
+      "phb"
+    ],
+    "bladesinging": [
+      "tce"
+    ],
+    "cavalier": [
+      "xge"
+    ],
+    "celestial": [
+      "xge"
+    ],
+    "clockwork-soul": [
+      "tce"
+    ],
+    "conjuration": [
+      "phb"
+    ],
+    "conquest": [
+      "xge"
+    ],
+    "creation": [
+      "tce"
+    ],
+    "divination": [
+      "phb"
+    ],
+    "divine-soul": [
+      "xge"
+    ],
+    "dreams": [
+      "xge"
+    ],
+    "drunken-master": [
+      "xge"
+    ],
+    "eldritch-knight": [
+      "phb"
+    ],
+    "eloquence": [
+      "tce"
+    ],
+    "enchantment": [
+      "phb"
+    ],
+    "fathomless": [
+      "tce"
+    ],
+    "fey-wanderer": [
+      "tce"
+    ],
+    "forge": [
+      "xge"
+    ],
+    "four-elements": [
+      "phb"
+    ],
+    "genie": [
+      "tce"
+    ],
+    "glamour": [
+      "xge"
+    ],
+    "gloom-stalker": [
+      "xge"
+    ],
+    "glory": [
+      "tce"
+    ],
+    "grave": [
+      "xge"
+    ],
+    "great-old-one": [
+      "phb"
+    ],
+    "hexblade": [
+      "xge"
+    ],
+    "horizon-walker": [
+      "xge"
+    ],
+    "illusion": [
+      "phb"
+    ],
+    "inquisitive": [
+      "xge"
+    ],
+    "kensei": [
+      "xge"
+    ],
+    "knowledge": [
+      "phb"
+    ],
+    "light": [
+      "phb"
+    ],
+    "mastermind": [
+      "xge"
+    ],
+    "mercy": [
+      "tce"
+    ],
+    "monster-slayer": [
+      "xge"
+    ],
+    "moon": [
+      "phb"
+    ],
+    "nature": [
+      "phb"
+    ],
+    "necromancy": [
+      "phb"
+    ],
+    "order": [
+      "tce"
+    ],
+    "peace": [
+      "tce"
+    ],
+    "phantom": [
+      "tce"
+    ],
+    "psi-warrior": [
+      "tce"
+    ],
+    "redemption": [
+      "xge"
+    ],
+    "rune-knight": [
+      "tce"
+    ],
+    "samurai": [
+      "xge"
+    ],
+    "scout": [
+      "xge"
+    ],
+    "scribes": [
+      "tce"
+    ],
+    "shadow": [
+      "phb"
+    ],
+    "shadow-magic": [
+      "xge"
+    ],
+    "shepherd": [
+      "xge"
+    ],
+    "soulknife": [
+      "tce"
+    ],
+    "spores": [
+      "tce"
+    ],
+    "stars": [
+      "tce"
+    ],
+    "storm": [
+      "xge"
+    ],
+    "storm-herald": [
+      "xge"
+    ],
+    "sun-soul": [
+      "xge"
+    ],
+    "swarmkeeper": [
+      "tce"
+    ],
+    "swashbuckler": [
+      "xge"
+    ],
+    "swords": [
+      "xge"
+    ],
+    "tempest": [
+      "phb"
+    ],
+    "totem-warrior": [
+      "phb"
+    ],
+    "transmutation": [
+      "phb"
+    ],
+    "trickery": [
+      "phb"
+    ],
+    "twilight": [
+      "tce"
+    ],
+    "valor": [
+      "phb"
+    ],
+    "vengeance": [
+      "phb"
+    ],
+    "war": [
+      "phb"
+    ],
+    "war-magic": [
+      "xge"
+    ],
+    "watchers": [
+      "tce"
+    ],
+    "whispers": [
+      "xge"
+    ],
+    "wild": [
+      "phb"
+    ],
+    "wild-magic": [
+      "tce"
+    ],
+    "wildfire": [
+      "tce"
+    ],
+    "zealot": [
+      "xge"
+    ]
+  },
+  "subraces": {
+    "high-elf": [
+      "srd-5.1"
+    ],
+    "hill-dwarf": [
+      "srd-5.1"
+    ],
+    "lightfoot-halfling": [
+      "srd-5.1"
+    ],
+    "rock-gnome": [
+      "srd-5.1"
+    ],
+    "drow": [
+      "phb"
+    ],
+    "forest-gnome": [
+      "phb"
+    ],
+    "mountain-dwarf": [
+      "phb"
+    ],
+    "stout-halfling": [
+      "phb"
+    ],
+    "wood-elf": [
+      "phb"
+    ]
+  },
+  "traits": {
+    "artificers-lore": [
+      "srd-5.1"
+    ],
+    "brave": [
+      "srd-5.1"
+    ],
+    "breath-weapon": [
+      "srd-5.1"
+    ],
+    "damage-resistance": [
+      "srd-5.1"
+    ],
+    "darkvision": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-black": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-blue": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-brass": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-bronze": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-copper": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-gold": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-green": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-red": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-silver": [
+      "srd-5.1"
+    ],
+    "draconic-ancestry-white": [
+      "srd-5.1"
+    ],
+    "dwarven-combat-training": [
+      "srd-5.1"
+    ],
+    "dwarven-resilience": [
+      "srd-5.1"
+    ],
+    "dwarven-toughness": [
+      "srd-5.1"
+    ],
+    "elf-weapon-training": [
+      "srd-5.1"
+    ],
+    "extra-language": [
+      "srd-5.1"
+    ],
+    "fey-ancestry": [
+      "srd-5.1"
+    ],
+    "gnome-cunning": [
+      "srd-5.1"
+    ],
+    "halfling-nimbleness": [
+      "srd-5.1"
+    ],
+    "hellish-resistance": [
+      "srd-5.1"
+    ],
+    "high-elf-cantrip": [
+      "srd-5.1"
+    ],
+    "infernal-legacy": [
+      "srd-5.1"
+    ],
+    "keen-senses": [
+      "srd-5.1"
+    ],
+    "lucky": [
+      "srd-5.1"
+    ],
+    "menacing": [
+      "srd-5.1"
+    ],
+    "naturally-stealthy": [
+      "srd-5.1"
+    ],
+    "relentless-endurance": [
+      "srd-5.1"
+    ],
+    "savage-attacks": [
+      "srd-5.1"
+    ],
+    "skill-versatility": [
+      "srd-5.1"
+    ],
+    "stonecunning": [
+      "srd-5.1"
+    ],
+    "tinker": [
+      "srd-5.1"
+    ],
+    "tool-proficiency": [
+      "srd-5.1"
+    ],
+    "trance": [
+      "srd-5.1"
+    ],
+    "drow-magic": [
+      "phb"
+    ],
+    "drow-weapon-training": [
+      "phb"
+    ],
+    "dwarven-armor-training": [
+      "phb"
+    ],
+    "fleet-of-foot": [
+      "phb"
+    ],
+    "mask-of-the-wild": [
+      "phb"
+    ],
+    "natural-illusionist": [
+      "phb"
+    ],
+    "speak-with-small-beasts": [
+      "phb"
+    ],
+    "stout-resilience": [
+      "phb"
+    ],
+    "sunlight-sensitivity": [
+      "phb"
+    ],
+    "superior-darkvision": [
+      "phb"
+    ]
+  }
+}

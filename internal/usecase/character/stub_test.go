@@ -13,7 +13,7 @@ import (
 // The stub is the one character this project builds from a hard-coded list of
 // selections, which makes these tests the only thing standing between a
 // compendium regeneration and a button that silently stops working. They are
-// written against the real data in data/srd_5.1 for that reason: a hand-built
+// written against the real data in data/pack/srd-5.1 for that reason: a hand-built
 // catalogue would only prove the list agrees with itself, and the prompt ids
 // the stub answers -- rogue-expertise-1/expertise/0/0 and the rest -- are
 // exactly what a regeneration could rename.

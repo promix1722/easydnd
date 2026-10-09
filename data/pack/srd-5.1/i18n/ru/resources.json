@@ -1,0 +1,209 @@
+{
+  "action-surges": {
+    "name": "Всплески действий"
+  },
+  "arcane-recovery": {
+    "name": "Магическое восстановление"
+  },
+  "arcane-recovery-levels": {
+    "name": "Уровни магического восстановления"
+  },
+  "aura-range": {
+    "name": "Радиус ауры"
+  },
+  "bardic-inspiration": {
+    "name": "Вдохновение барда"
+  },
+  "bardic-inspiration-die": {
+    "name": "Кость бардовского вдохновения"
+  },
+  "breath-weapon": {
+    "name": "Оружие дыхания"
+  },
+  "brutal-critical-dice": {
+    "name": "Кости жестокого критического удара"
+  },
+  "channel-divinity-charges": {
+    "name": "Использования Божественного канала"
+  },
+  "cleansing-touch": {
+    "name": "Очищающее касание"
+  },
+  "dark-ones-own-luck": {
+    "name": "Удача Тёмного"
+  },
+  "destroy-undead-cr": {
+    "name": "ПО уничтожаемой нежити"
+  },
+  "divine-intervention": {
+    "name": "Божественное вмешательство"
+  },
+  "divine-sense": {
+    "name": "Божественное чувство"
+  },
+  "eldritch-master": {
+    "name": "Таинственный мастер"
+  },
+  "extra-attacks": {
+    "name": "Дополнительные атаки"
+  },
+  "favored-enemies": {
+    "name": "Избранные враги"
+  },
+  "favored-terrain": {
+    "name": "Избранная местность"
+  },
+  "hurl-through-hell": {
+    "name": "Бросок через ад"
+  },
+  "indomitable-uses": {
+    "name": "Использования несгибаемости"
+  },
+  "invocations-known": {
+    "name": "Известные воззвания"
+  },
+  "ki-points": {
+    "name": "Очки ци"
+  },
+  "lay-on-hands": {
+    "name": "Наложение рук"
+  },
+  "magical-secrets-max-5": {
+    "name": "Магические тайны (макс. 5-й круг)"
+  },
+  "magical-secrets-max-7": {
+    "name": "Магические тайны (макс. 7-й круг)"
+  },
+  "magical-secrets-max-9": {
+    "name": "Магические тайны (макс. 9-й круг)"
+  },
+  "martial-arts": {
+    "name": "Боевые искусства"
+  },
+  "metamagic-known": {
+    "name": "Известные варианты метамагии"
+  },
+  "mystic-arcanum-level-6": {
+    "name": "Мистический арканум (6-й уровень)"
+  },
+  "mystic-arcanum-level-7": {
+    "name": "Мистический арканум (7-й уровень)"
+  },
+  "mystic-arcanum-level-8": {
+    "name": "Мистический арканум (8-й уровень)"
+  },
+  "mystic-arcanum-level-9": {
+    "name": "Мистический арканум (9-й уровень)"
+  },
+  "natural-recovery": {
+    "name": "Естественное восстановление"
+  },
+  "pact-magic": {
+    "name": "Магия договора"
+  },
+  "paladin-channel-divinity": {
+    "name": "Использования Божественного канала"
+  },
+  "rage-count": {
+    "name": "Использования ярости"
+  },
+  "rage-damage-bonus": {
+    "name": "Бонус урона ярости"
+  },
+  "relentless-endurance": {
+    "name": "Непоколебимая стойкость"
+  },
+  "second-wind": {
+    "name": "Второе дыхание"
+  },
+  "signature-spells": {
+    "name": "Фирменные заклинания"
+  },
+  "sneak-attack": {
+    "name": "Скрытая атака"
+  },
+  "song-of-rest-die": {
+    "name": "Кость песни отдыха"
+  },
+  "sorcery-points": {
+    "name": "Очки чародейства"
+  },
+  "stroke-of-luck": {
+    "name": "Удача"
+  },
+  "unarmored-movement": {
+    "name": "Передвижение без доспехов"
+  },
+  "wholeness-of-body": {
+    "name": "Цельность тела"
+  },
+  "wild-shape-fly": {
+    "name": "Полёт в диком облике"
+  },
+  "wild-shape-max-cr": {
+    "name": "Макс. ПО дикого облика"
+  },
+  "wild-shape-swim": {
+    "name": "Плавание в диком облике"
+  },
+  "wild-shape-uses": {
+    "name": "Использования Дикого облика"
+  },
+  "arcane-shot-uses": {
+    "name": "Магический выстрел"
+  },
+  "arcane-shots-known": {
+    "name": "Тайные выстрелы"
+  },
+  "bladesong": {
+    "name": "Песнь клинка"
+  },
+  "elemental-disciplines-known": {
+    "name": "Стихийные дисциплины"
+  },
+  "favored-by-the-gods": {
+    "name": "Избранник богов"
+  },
+  "fey-presence": {
+    "name": "Присутствие фей"
+  },
+  "fighting-spirit": {
+    "name": "Боевой дух"
+  },
+  "fighting-style-known": {
+    "name": "Стиль боя"
+  },
+  "flash-of-genius": {
+    "name": "Проблеск гениальности"
+  },
+  "giants-might": {
+    "name": "Мощь великана"
+  },
+  "hexblades-curse": {
+    "name": "Проклятие ведьмовского клинка"
+  },
+  "infusions-known": {
+    "name": "Инфузии"
+  },
+  "maneuvers-known": {
+    "name": "Приёмы"
+  },
+  "runes-known": {
+    "name": "Руны"
+  },
+  "superiority-dice": {
+    "name": "Кости превосходства"
+  },
+  "tides-of-chaos": {
+    "name": "Поток хаоса"
+  },
+  "war-priest": {
+    "name": "Боевой священник"
+  },
+  "warding-flare": {
+    "name": "Защитная вспышка"
+  },
+  "wrath-of-the-storm": {
+    "name": "Гнев бури"
+  }
+}

@@ -1,0 +1,143 @@
+[
+  {
+    "slug": "high-elf",
+    "race": "elf",
+    "abilityBonuses": [
+      {
+        "ability": "int",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "elf-weapon-training",
+      "high-elf-cantrip",
+      "extra-language"
+    ]
+  },
+  {
+    "slug": "hill-dwarf",
+    "race": "dwarf",
+    "abilityBonuses": [
+      {
+        "ability": "wis",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "dwarven-toughness"
+    ]
+  },
+  {
+    "slug": "lightfoot-halfling",
+    "race": "halfling",
+    "abilityBonuses": [
+      {
+        "ability": "cha",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "naturally-stealthy"
+    ]
+  },
+  {
+    "slug": "rock-gnome",
+    "race": "gnome",
+    "abilityBonuses": [
+      {
+        "ability": "con",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "artificers-lore",
+      "tinker"
+    ]
+  },
+  {
+    "slug": "drow",
+    "race": "elf",
+    "abilityBonuses": [
+      {
+        "ability": "cha",
+        "bonus": 1
+      }
+    ],
+    "startingProficiencies": [
+      "hand-crossbows",
+      "rapiers",
+      "shortswords"
+    ],
+    "traits": [
+      "superior-darkvision",
+      "sunlight-sensitivity",
+      "drow-magic",
+      "drow-weapon-training"
+    ]
+  },
+  {
+    "slug": "forest-gnome",
+    "race": "gnome",
+    "abilityBonuses": [
+      {
+        "ability": "dex",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "natural-illusionist",
+      "speak-with-small-beasts"
+    ]
+  },
+  {
+    "slug": "mountain-dwarf",
+    "race": "dwarf",
+    "abilityBonuses": [
+      {
+        "ability": "str",
+        "bonus": 2
+      }
+    ],
+    "startingProficiencies": [
+      "light-armor",
+      "medium-armor"
+    ],
+    "traits": [
+      "dwarven-armor-training"
+    ]
+  },
+  {
+    "slug": "stout-halfling",
+    "race": "halfling",
+    "abilityBonuses": [
+      {
+        "ability": "con",
+        "bonus": 1
+      }
+    ],
+    "traits": [
+      "stout-resilience"
+    ]
+  },
+  {
+    "slug": "wood-elf",
+    "race": "elf",
+    "abilityBonuses": [
+      {
+        "ability": "wis",
+        "bonus": 1
+      }
+    ],
+    "startingProficiencies": [
+      "longbows",
+      "longswords",
+      "shortbows",
+      "shortswords"
+    ],
+    "traits": [
+      "elf-weapon-training",
+      "fleet-of-foot",
+      "mask-of-the-wild"
+    ]
+  }
+]

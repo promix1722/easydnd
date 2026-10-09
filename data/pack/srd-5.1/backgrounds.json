@@ -1,0 +1,3915 @@
+[
+  {
+    "slug": "acolyte",
+    "startingProficiencies": [
+      "skill-insight",
+      "skill-religion"
+    ],
+    "languageOptions": {
+      "prompt": "acolyte/language/0",
+      "choose": 2,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "startingEquipment": [
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      },
+      {
+        "item": "block-of-incense",
+        "count": 5
+      },
+      {
+        "item": "vestments",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "acolyte/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "equipment-category",
+          "category": "holy-symbols"
+        }
+      },
+      {
+        "prompt": "acolyte/starting-equipment/1",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:prayer-book",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:prayer-wheel",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "startingGold": {
+      "amount": 15,
+      "unit": "gp"
+    },
+    "feature": "acolyte-shelter-of-the-faithful",
+    "personalityTraits": {
+      "prompt": "acolyte/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-idolize-a-particular-hero-of"
+          },
+          {
+            "kind": "text",
+            "key": "i-can-find-common-ground-between"
+          },
+          {
+            "kind": "text",
+            "key": "i-see-omens-in-every-event"
+          },
+          {
+            "kind": "text",
+            "key": "nothing-can-shake-my-optimistic-attitude"
+          },
+          {
+            "kind": "text",
+            "key": "i-quote-or-misquote-sacred-texts"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-tolerant-or-intolerant-of"
+          },
+          {
+            "kind": "text",
+            "key": "ive-enjoyed-fine-food-drink-and"
+          },
+          {
+            "kind": "text",
+            "key": "ive-spent-so-long-in-the"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "acolyte/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "tradition-the-ancient-traditions-of-worship",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "charity-i-always-try-to-help",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "change-we-must-help-bring-about",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "power-i-hope-to-one-day",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "faith-i-trust-that-my-deity",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "aspiration-i-seek-to-prove-myself",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "acolyte/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-would-die-to-recover-an"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-someday-get-revenge-on"
+          },
+          {
+            "kind": "text",
+            "key": "i-owe-my-life-to-the"
+          },
+          {
+            "kind": "text",
+            "key": "everything-i-do-is-for-the"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-do-anything-to-protect"
+          },
+          {
+            "kind": "text",
+            "key": "i-seek-to-preserve-a-sacred"
+          }
+        ]
+      }
+    },
+    "flaws": {
+      "prompt": "acolyte/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-judge-others-harshly-and-myself"
+          },
+          {
+            "kind": "text",
+            "key": "i-put-too-much-trust-in"
+          },
+          {
+            "kind": "text",
+            "key": "my-piety-sometimes-leads-me-to"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-inflexible-in-my-thinking"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-suspicious-of-strangers-and"
+          },
+          {
+            "kind": "text",
+            "key": "once-i-pick-a-goal-i"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "charlatan",
+    "startingProficiencies": [
+      "disguise-kit",
+      "forgery-kit",
+      "skill-deception",
+      "skill-sleight-of-hand"
+    ],
+    "startingEquipment": [
+      {
+        "item": "clothes-fine",
+        "count": 1
+      },
+      {
+        "item": "disguise-kit",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "charlatan/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:stoppered-bottles-filled-with-colored-liquid",
+              "count": 10
+            },
+            {
+              "kind": "ref",
+              "ref": "item:set-of-weighted-dice",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:deck-of-marked-cards",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:signet-ring-of-an-imaginary-duke",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "feature": "charlatan-false-identity",
+    "flaws": {
+      "prompt": "charlatan/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-cant-resist-a-pretty-face"
+          },
+          {
+            "kind": "text",
+            "key": "im-always-in-debt-i-spend"
+          },
+          {
+            "kind": "text",
+            "key": "im-convinced-that-no-one-could"
+          },
+          {
+            "kind": "text",
+            "key": "im-too-greedy-for-my-own"
+          },
+          {
+            "kind": "text",
+            "key": "i-cant-resist-swindling-people-who"
+          },
+          {
+            "kind": "text",
+            "key": "i-hate-to-admit-it-and"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "charlatan/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-fleeced-the-wrong-person-and"
+          },
+          {
+            "kind": "text",
+            "key": "i-owe-everything-to-my-mentora"
+          },
+          {
+            "kind": "text",
+            "key": "somewhere-out-there-i-have-a"
+          },
+          {
+            "kind": "text",
+            "key": "i-come-from-a-noble-family"
+          },
+          {
+            "kind": "text",
+            "key": "a-powerful-person-killed-someone-i"
+          },
+          {
+            "kind": "text",
+            "key": "i-swindled-and-ruined-a-person"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "charlatan/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "independence-i-am-a-free-spiritno",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "fairness-i-never-target-people-who",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "charity-i-distribute-the-money-i",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "creativity-i-never-run-the-same",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "friendship-material-goods-come-and-go",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "aspiration-im-determined-to-make-something",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "charlatan/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-fall-in-and-out-of"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-a-joke-for-every"
+          },
+          {
+            "kind": "text",
+            "key": "flattery-is-my-preferred-trick-for"
+          },
+          {
+            "kind": "text",
+            "key": "im-a-born-gambler-who-cant"
+          },
+          {
+            "kind": "text",
+            "key": "i-lie-about-almost-everything-even"
+          },
+          {
+            "kind": "text",
+            "key": "sarcasm-and-insults-are-my-weapons"
+          },
+          {
+            "kind": "text",
+            "key": "i-keep-multiple-holy-symbols-on"
+          },
+          {
+            "kind": "text",
+            "key": "i-pocket-anything-i-see-that"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "criminal",
+    "startingProficiencies": [
+      "skill-deception",
+      "skill-stealth",
+      "thieves-tools"
+    ],
+    "startingEquipment": [
+      {
+        "item": "crowbar",
+        "count": 1
+      },
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "criminal-criminal-contact",
+    "flaws": {
+      "prompt": "criminal/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "when-i-see-something-valuable-i"
+          },
+          {
+            "kind": "text",
+            "key": "when-faced-with-a-choice-between"
+          },
+          {
+            "kind": "text",
+            "key": "if-theres-a-plan-ill-forget"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-a-tell-that-reveals"
+          },
+          {
+            "kind": "text",
+            "key": "i-turn-tail-and-run-when"
+          },
+          {
+            "kind": "text",
+            "key": "an-innocent-person-is-in-prison"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "criminal/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "im-trying-to-pay-off-an"
+          },
+          {
+            "kind": "text",
+            "key": "my-ill-gotten-gains-go-to-support"
+          },
+          {
+            "kind": "text",
+            "key": "something-important-was-taken-from-me"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-become-the-greatest-thief"
+          },
+          {
+            "kind": "text",
+            "key": "im-guilty-of-a-terrible-crime"
+          },
+          {
+            "kind": "text",
+            "key": "someone-i-loved-died-because-of"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "criminal/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "honor-i-dont-steal-from-others",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "freedom-chains-are-meant-to-be",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "charity-i-steal-from-the-wealthy",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "greed-i-will-do-whatever-it",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "people-im-loyal-to-my-friends",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "redemption-theres-a-spark-of-good",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "criminal/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-always-have-a-plan-for"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-always-calm-no-matter"
+          },
+          {
+            "kind": "text",
+            "key": "the-first-thing-i-do-in"
+          },
+          {
+            "kind": "text",
+            "key": "i-would-rather-make-a-new"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-incredibly-slow-to-trust"
+          },
+          {
+            "kind": "text",
+            "key": "i-dont-pay-attention-to-the"
+          },
+          {
+            "kind": "text",
+            "key": "the-best-way-to-get-me"
+          },
+          {
+            "kind": "text",
+            "key": "i-blow-up-at-the-slightest"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "custom-background",
+    "languageOptions": {
+      "prompt": "custom-background/language/0",
+      "choose": 2,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "feature": "custom-background-choose-a-feature"
+  },
+  {
+    "slug": "entertainer",
+    "startingProficiencies": [
+      "disguise-kit",
+      "skill-acrobatics",
+      "skill-performance"
+    ],
+    "startingEquipment": [
+      {
+        "item": "the-favor-of-an-admirer-love-letter-lock-of-hair-or-trinket",
+        "count": 1
+      },
+      {
+        "item": "clothes-costume",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "entertainer-by-popular-demand",
+    "flaws": {
+      "prompt": "entertainer/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "ill-do-anything-to-win-fame"
+          },
+          {
+            "kind": "text",
+            "key": "im-a-sucker-for-a-pretty"
+          },
+          {
+            "kind": "text",
+            "key": "a-scandal-prevents-me-from-ever"
+          },
+          {
+            "kind": "text",
+            "key": "i-once-satirized-a-noble-who"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-trouble-keeping-my-true"
+          },
+          {
+            "kind": "text",
+            "key": "despite-my-best-efforts-i-am"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "entertainer/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "my-instrument-is-my-most-treasured"
+          },
+          {
+            "kind": "text",
+            "key": "someone-stole-my-precious-instrument-and"
+          },
+          {
+            "kind": "text",
+            "key": "i-want-to-be-famous-whatever"
+          },
+          {
+            "kind": "text",
+            "key": "i-idolize-a-hero-of-the"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-do-anything-to-prove"
+          },
+          {
+            "kind": "text",
+            "key": "i-would-do-anything-for-the"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "entertainer/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "beauty-when-i-perform-i-make",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "tradition-the-stories-legends-and-songs",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "creativity-the-world-is-in-need",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "greed-im-only-in-it-for",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "people-i-like-seeing-the-smiles",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "honesty-art-should-reflect-the-soul",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "entertainer/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-know-a-story-relevant-to"
+          },
+          {
+            "kind": "text",
+            "key": "whenever-i-come-to-a-new"
+          },
+          {
+            "kind": "text",
+            "key": "im-a-hopeless-romantic-always-searching"
+          },
+          {
+            "kind": "text",
+            "key": "nobody-stays-angry-at-me-or"
+          },
+          {
+            "kind": "text",
+            "key": "i-love-a-good-insult-even"
+          },
+          {
+            "kind": "text",
+            "key": "i-get-bitter-if-im-not"
+          },
+          {
+            "kind": "text",
+            "key": "ill-settle-for-nothing-less-than"
+          },
+          {
+            "kind": "text",
+            "key": "i-change-my-mood-or-my"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "folk-hero",
+    "startingProficiencies": [
+      "land-vehicles",
+      "skill-animal-handling",
+      "skill-survival"
+    ],
+    "startingEquipment": [
+      {
+        "item": "shovel",
+        "count": 1
+      },
+      {
+        "item": "pot-iron",
+        "count": 1
+      },
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "folk-hero-rustic-hospitality",
+    "flaws": {
+      "prompt": "folk-hero/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "the-tyrant-who-rules-my-land"
+          },
+          {
+            "kind": "text",
+            "key": "im-convinced-of-the-significance-of"
+          },
+          {
+            "kind": "text",
+            "key": "the-people-who-knew-me-when"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-a-weakness-for-the"
+          },
+          {
+            "kind": "text",
+            "key": "secretly-i-believe-that-things-would"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-trouble-trusting-in-my"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "folk-hero/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-have-a-family-but-i"
+          },
+          {
+            "kind": "text",
+            "key": "i-worked-the-land-i-love"
+          },
+          {
+            "kind": "text",
+            "key": "a-proud-noble-once-gave-me"
+          },
+          {
+            "kind": "text",
+            "key": "my-tools-are-symbols-of-my"
+          },
+          {
+            "kind": "text",
+            "key": "i-protect-those-who-cannot-protect"
+          },
+          {
+            "kind": "text",
+            "key": "i-wish-my-childhood-sweetheart-had"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "folk-hero/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "respect-people-deserve-to-be-treated",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "fairness-no-one-should-get-preferential",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "freedom-tyrants-must-not-be-allowed",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "might-if-i-become-strong-i",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "sincerity-theres-no-good-in-pretending",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "destiny-nothing-and-no-one-can",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "folk-hero/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-judge-people-by-their-actions"
+          },
+          {
+            "kind": "text",
+            "key": "if-someone-is-in-trouble-im"
+          },
+          {
+            "kind": "text",
+            "key": "when-i-set-my-mind-to"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-a-strong-sense-of"
+          },
+          {
+            "kind": "text",
+            "key": "im-confident-in-my-own-abilities"
+          },
+          {
+            "kind": "text",
+            "key": "thinking-is-for-other-people-i"
+          },
+          {
+            "kind": "text",
+            "key": "i-misuse-long-words-in-an"
+          },
+          {
+            "kind": "text",
+            "key": "i-get-bored-easily-when-am"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "gladiator",
+    "startingProficiencies": [
+      "disguise-kit",
+      "skill-acrobatics",
+      "skill-performance"
+    ],
+    "startingEquipment": [
+      {
+        "item": "the-favor-of-an-admirer-love-letter-lock-of-hair-or-trinket",
+        "count": 1
+      },
+      {
+        "item": "clothes-costume",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "gladiator-by-popular-demand",
+    "flaws": {
+      "prompt": "gladiator/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "ill-do-anything-to-win-fame"
+          },
+          {
+            "kind": "text",
+            "key": "im-a-sucker-for-a-pretty"
+          },
+          {
+            "kind": "text",
+            "key": "a-scandal-prevents-me-from-ever"
+          },
+          {
+            "kind": "text",
+            "key": "i-once-satirized-a-noble-who"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-trouble-keeping-my-true"
+          },
+          {
+            "kind": "text",
+            "key": "despite-my-best-efforts-i-am"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "gladiator/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "my-instrument-is-my-most-treasured"
+          },
+          {
+            "kind": "text",
+            "key": "someone-stole-my-precious-instrument-and"
+          },
+          {
+            "kind": "text",
+            "key": "i-want-to-be-famous-whatever"
+          },
+          {
+            "kind": "text",
+            "key": "i-idolize-a-hero-of-the"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-do-anything-to-prove"
+          },
+          {
+            "kind": "text",
+            "key": "i-would-do-anything-for-the"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "gladiator/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "beauty-when-i-perform-i-make",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "tradition-the-stories-legends-and-songs",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "creativity-the-world-is-in-need",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "greed-im-only-in-it-for",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "people-i-like-seeing-the-smiles",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "honesty-art-should-reflect-the-soul",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "gladiator/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-know-a-story-relevant-to"
+          },
+          {
+            "kind": "text",
+            "key": "whenever-i-come-to-a-new"
+          },
+          {
+            "kind": "text",
+            "key": "im-a-hopeless-romantic-always-searching"
+          },
+          {
+            "kind": "text",
+            "key": "nobody-stays-angry-at-me-or"
+          },
+          {
+            "kind": "text",
+            "key": "i-love-a-good-insult-even"
+          },
+          {
+            "kind": "text",
+            "key": "i-get-bitter-if-im-not"
+          },
+          {
+            "kind": "text",
+            "key": "ill-settle-for-nothing-less-than"
+          },
+          {
+            "kind": "text",
+            "key": "i-change-my-mood-or-my"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "guild-artisan",
+    "startingProficiencies": [
+      "skill-insight",
+      "skill-persuasion"
+    ],
+    "languageOptions": {
+      "prompt": "guild-artisan/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "startingEquipment": [
+      {
+        "item": "letter-of-introduction-from-your-guild",
+        "count": 1
+      },
+      {
+        "item": "clothes-travelers",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "guild-artisan-guild-membership",
+    "flaws": {
+      "prompt": "guild-artisan/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "ill-do-anything-to-get-my"
+          },
+          {
+            "kind": "text",
+            "key": "im-quick-to-assume-that-someone"
+          },
+          {
+            "kind": "text",
+            "key": "no-one-must-ever-learn-that"
+          },
+          {
+            "kind": "text",
+            "key": "im-never-satisfied-with-what-i"
+          },
+          {
+            "kind": "text",
+            "key": "i-would-kill-to-acquire-a"
+          },
+          {
+            "kind": "text",
+            "key": "im-horribly-jealous-of-anyone-who"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "guild-artisan/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "the-workshop-where-i-learned-my"
+          },
+          {
+            "kind": "text",
+            "key": "i-created-a-great-work-for"
+          },
+          {
+            "kind": "text",
+            "key": "i-owe-my-guild-a-great"
+          },
+          {
+            "kind": "text",
+            "key": "i-pursue-wealth-to-secure-someones"
+          },
+          {
+            "kind": "text",
+            "key": "one-day-i-will-return-to"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-get-revenge-on-the"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "guild-artisan/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "community-it-is-the-duty-of",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "generosity-my-talents-were-given-to",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "freedom-everyone-should-be-free-to",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "greed-im-only-in-it-for",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "people-im-committed-to-the-people",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "aspiration-i-work-hard-to-be",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "guild-artisan/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-believe-that-anything-worth-doing"
+          },
+          {
+            "kind": "text",
+            "key": "im-a-snob-who-looks-down"
+          },
+          {
+            "kind": "text",
+            "key": "i-always-want-to-know-how"
+          },
+          {
+            "kind": "text",
+            "key": "im-full-of-witty-aphorisms-and"
+          },
+          {
+            "kind": "text",
+            "key": "im-rude-to-people-who-lack"
+          },
+          {
+            "kind": "text",
+            "key": "i-like-to-talk-at-length"
+          },
+          {
+            "kind": "text",
+            "key": "i-dont-part-with-my-money"
+          },
+          {
+            "kind": "text",
+            "key": "im-well-known-for-my-work"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "guild-merchant",
+    "startingProficiencies": [
+      "skill-insight",
+      "skill-persuasion"
+    ],
+    "languageOptions": {
+      "prompt": "guild-merchant/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "startingEquipment": [
+      {
+        "item": "letter-of-introduction-from-your-guild",
+        "count": 1
+      },
+      {
+        "item": "clothes-travelers",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "guild-artisan-guild-membership",
+    "flaws": {
+      "prompt": "guild-merchant/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "ill-do-anything-to-get-my"
+          },
+          {
+            "kind": "text",
+            "key": "im-quick-to-assume-that-someone"
+          },
+          {
+            "kind": "text",
+            "key": "no-one-must-ever-learn-that"
+          },
+          {
+            "kind": "text",
+            "key": "im-never-satisfied-with-what-i"
+          },
+          {
+            "kind": "text",
+            "key": "i-would-kill-to-acquire-a"
+          },
+          {
+            "kind": "text",
+            "key": "im-horribly-jealous-of-anyone-who"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "guild-merchant/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "the-workshop-where-i-learned-my"
+          },
+          {
+            "kind": "text",
+            "key": "i-created-a-great-work-for"
+          },
+          {
+            "kind": "text",
+            "key": "i-owe-my-guild-a-great"
+          },
+          {
+            "kind": "text",
+            "key": "i-pursue-wealth-to-secure-someones"
+          },
+          {
+            "kind": "text",
+            "key": "one-day-i-will-return-to"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-get-revenge-on-the"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "guild-merchant/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "community-it-is-the-duty-of",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "generosity-my-talents-were-given-to",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "freedom-everyone-should-be-free-to",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "greed-im-only-in-it-for",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "people-im-committed-to-the-people",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "aspiration-i-work-hard-to-be",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "guild-merchant/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-believe-that-anything-worth-doing"
+          },
+          {
+            "kind": "text",
+            "key": "im-a-snob-who-looks-down"
+          },
+          {
+            "kind": "text",
+            "key": "i-always-want-to-know-how"
+          },
+          {
+            "kind": "text",
+            "key": "im-full-of-witty-aphorisms-and"
+          },
+          {
+            "kind": "text",
+            "key": "im-rude-to-people-who-lack"
+          },
+          {
+            "kind": "text",
+            "key": "i-like-to-talk-at-length"
+          },
+          {
+            "kind": "text",
+            "key": "i-dont-part-with-my-money"
+          },
+          {
+            "kind": "text",
+            "key": "im-well-known-for-my-work"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "hermit",
+    "startingProficiencies": [
+      "herbalism-kit",
+      "skill-medicine",
+      "skill-religion"
+    ],
+    "languageOptions": {
+      "prompt": "hermit/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "startingEquipment": [
+      {
+        "item": "case-map-or-scroll",
+        "count": 1
+      },
+      {
+        "item": "blanket",
+        "count": 1
+      },
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "herbalism-kit",
+        "count": 1
+      }
+    ],
+    "feature": "hermit-discovery",
+    "flaws": {
+      "prompt": "hermit/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "now-that-ive-returned-to-the"
+          },
+          {
+            "kind": "text",
+            "key": "i-harbor-dark-bloodthirsty-thoughts-that"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-dogmatic-in-my-thoughts"
+          },
+          {
+            "kind": "text",
+            "key": "i-let-my-need-to-win"
+          },
+          {
+            "kind": "text",
+            "key": "id-risk-too-much-to-uncover"
+          },
+          {
+            "kind": "text",
+            "key": "i-like-keeping-secrets-and-wont"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "hermit/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "nothing-is-more-important-than-the"
+          },
+          {
+            "kind": "text",
+            "key": "i-entered-seclusion-to-hide-from"
+          },
+          {
+            "kind": "text",
+            "key": "im-still-seeking-the-enlightenment-i"
+          },
+          {
+            "kind": "text",
+            "key": "i-entered-seclusion-because-i-loved"
+          },
+          {
+            "kind": "text",
+            "key": "should-my-discovery-come-to-light"
+          },
+          {
+            "kind": "text",
+            "key": "my-isolation-gave-me-great-insight"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "hermit/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "greater-good-my-gifts-are-meant",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "logic-emotions-must-not-cloud-our",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "free-thinking-inquiry-and-curiosity-are",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "power-solitude-and-contemplation-are-paths",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "live-and-let-live-meddling-in",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "self-knowledge-if-you-know-yourself-theres",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "hermit/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "ive-been-isolated-for-so-long"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-utterly-serene-even-in"
+          },
+          {
+            "kind": "text",
+            "key": "the-leader-of-my-community-had"
+          },
+          {
+            "kind": "text",
+            "key": "i-feel-tremendous-empathy-for-all"
+          },
+          {
+            "kind": "text",
+            "key": "im-oblivious-to-etiquette-and-social"
+          },
+          {
+            "kind": "text",
+            "key": "i-connect-everything-that-happens-to"
+          },
+          {
+            "kind": "text",
+            "key": "i-often-get-lost-in-my"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-working-on-a-grand"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "knight",
+    "startingProficiencies": [
+      "skill-history",
+      "skill-persuasion"
+    ],
+    "languageOptions": {
+      "prompt": "knight/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "startingEquipment": [
+      {
+        "item": "clothes-fine",
+        "count": 1
+      },
+      {
+        "item": "signet-ring",
+        "count": 1
+      },
+      {
+        "item": "scroll-of-pedigree",
+        "count": 1
+      },
+      {
+        "item": "purse",
+        "count": 1
+      }
+    ],
+    "feature": "knight-retainers",
+    "flaws": {
+      "prompt": "knight/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-secretly-believe-that-everyone-is"
+          },
+          {
+            "kind": "text",
+            "key": "i-hide-a-truly-scandalous-secret"
+          },
+          {
+            "kind": "text",
+            "key": "i-too-often-hear-veiled-insults"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-an-insatiable-desire-for"
+          },
+          {
+            "kind": "text",
+            "key": "in-fact-the-world-does-revolve"
+          },
+          {
+            "kind": "text",
+            "key": "by-my-words-and-actions-i"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "knight/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-will-face-any-challenge-to"
+          },
+          {
+            "kind": "text",
+            "key": "my-houses-alliance-with-another-noble"
+          },
+          {
+            "kind": "text",
+            "key": "nothing-is-more-important-than-the"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-in-love-with-the"
+          },
+          {
+            "kind": "text",
+            "key": "my-loyalty-to-my-sovereign-is"
+          },
+          {
+            "kind": "text",
+            "key": "the-common-folk-must-see-me"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "knight/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "respect-respect-is-due-to-me",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "responsibility-it-is-my-duty-to",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "independence-i-must-prove-that-i",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "power-if-i-can-attain-more",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "family-blood-runs-thicker-than-water",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "noble-obligation-it-is-my-duty",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "knight/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "my-eloquent-flattery-makes-everyone-i"
+          },
+          {
+            "kind": "text",
+            "key": "the-common-folk-love-me-for"
+          },
+          {
+            "kind": "text",
+            "key": "no-one-could-doubt-by-looking"
+          },
+          {
+            "kind": "text",
+            "key": "i-take-great-pains-to-always"
+          },
+          {
+            "kind": "text",
+            "key": "i-dont-like-to-get-my"
+          },
+          {
+            "kind": "text",
+            "key": "despite-my-noble-birth-i-do"
+          },
+          {
+            "kind": "text",
+            "key": "my-favor-once-lost-is-lost"
+          },
+          {
+            "kind": "text",
+            "key": "if-you-do-me-an-injury"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "noble",
+    "startingProficiencies": [
+      "skill-history",
+      "skill-persuasion"
+    ],
+    "languageOptions": {
+      "prompt": "noble/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "startingEquipment": [
+      {
+        "item": "clothes-fine",
+        "count": 1
+      },
+      {
+        "item": "signet-ring",
+        "count": 1
+      },
+      {
+        "item": "scroll-of-pedigree",
+        "count": 1
+      },
+      {
+        "item": "purse",
+        "count": 1
+      }
+    ],
+    "feature": "noble-position-of-privilege",
+    "flaws": {
+      "prompt": "noble/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-secretly-believe-that-everyone-is"
+          },
+          {
+            "kind": "text",
+            "key": "i-hide-a-truly-scandalous-secret"
+          },
+          {
+            "kind": "text",
+            "key": "i-too-often-hear-veiled-insults"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-an-insatiable-desire-for"
+          },
+          {
+            "kind": "text",
+            "key": "in-fact-the-world-does-revolve"
+          },
+          {
+            "kind": "text",
+            "key": "by-my-words-and-actions-i"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "noble/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-will-face-any-challenge-to"
+          },
+          {
+            "kind": "text",
+            "key": "my-houses-alliance-with-another-noble"
+          },
+          {
+            "kind": "text",
+            "key": "nothing-is-more-important-than-the"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-in-love-with-the"
+          },
+          {
+            "kind": "text",
+            "key": "my-loyalty-to-my-sovereign-is"
+          },
+          {
+            "kind": "text",
+            "key": "the-common-folk-must-see-me"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "noble/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "respect-respect-is-due-to-me",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "responsibility-it-is-my-duty-to",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "independence-i-must-prove-that-i",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "power-if-i-can-attain-more",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "family-blood-runs-thicker-than-water",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "noble-obligation-it-is-my-duty",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "noble/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "my-eloquent-flattery-makes-everyone-i"
+          },
+          {
+            "kind": "text",
+            "key": "the-common-folk-love-me-for"
+          },
+          {
+            "kind": "text",
+            "key": "no-one-could-doubt-by-looking"
+          },
+          {
+            "kind": "text",
+            "key": "i-take-great-pains-to-always"
+          },
+          {
+            "kind": "text",
+            "key": "i-dont-like-to-get-my"
+          },
+          {
+            "kind": "text",
+            "key": "despite-my-noble-birth-i-do"
+          },
+          {
+            "kind": "text",
+            "key": "my-favor-once-lost-is-lost"
+          },
+          {
+            "kind": "text",
+            "key": "if-you-do-me-an-injury"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "outlander",
+    "startingProficiencies": [
+      "skill-athletics",
+      "skill-survival"
+    ],
+    "languageOptions": {
+      "prompt": "outlander/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "startingEquipment": [
+      {
+        "item": "staff",
+        "count": 1
+      },
+      {
+        "item": "hunting-trap",
+        "count": 1
+      },
+      {
+        "item": "trophy-from-an-animal-you-killed",
+        "count": 1
+      },
+      {
+        "item": "clothes-travelers",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "outlander-wanderer",
+    "flaws": {
+      "prompt": "outlander/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-am-too-enamored-of-ale"
+          },
+          {
+            "kind": "text",
+            "key": "theres-no-room-for-caution-in"
+          },
+          {
+            "kind": "text",
+            "key": "i-remember-every-insult-ive-received"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-slow-to-trust-members"
+          },
+          {
+            "kind": "text",
+            "key": "violence-is-my-answer-to-almost"
+          },
+          {
+            "kind": "text",
+            "key": "dont-expect-me-to-save-those"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "outlander/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "my-family-clan-or-tribe-is"
+          },
+          {
+            "kind": "text",
+            "key": "an-injury-to-the-unspoiled-wilderness"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-bring-terrible-wrath-down"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-the-last-of-my"
+          },
+          {
+            "kind": "text",
+            "key": "i-suffer-awful-visions-of-a"
+          },
+          {
+            "kind": "text",
+            "key": "it-is-my-duty-to-provide"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "outlander/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "change-life-is-like-the-seasons",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "greater-good-it-is-each-persons",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "honor-if-i-dishonor-myself-i",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "might-the-strongest-are-meant-to",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "nature-the-natural-world-is-more",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "glory-i-must-earn-glory-in",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "outlander/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "im-driven-by-a-wanderlust-that"
+          },
+          {
+            "kind": "text",
+            "key": "i-watch-over-my-friends-as"
+          },
+          {
+            "kind": "text",
+            "key": "i-once-ran-twenty-five-miles-without"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-a-lesson-for-every"
+          },
+          {
+            "kind": "text",
+            "key": "i-place-no-stock-in-wealthy"
+          },
+          {
+            "kind": "text",
+            "key": "im-always-picking-things-up-absently"
+          },
+          {
+            "kind": "text",
+            "key": "i-feel-far-more-comfortable-around"
+          },
+          {
+            "kind": "text",
+            "key": "i-was-in-fact-raised-by"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "pirate",
+    "startingProficiencies": [
+      "navigators-tools",
+      "skill-athletics",
+      "skill-perception",
+      "water-vehicles"
+    ],
+    "startingEquipment": [
+      {
+        "item": "club",
+        "count": 1
+      },
+      {
+        "item": "rope-silk-50-feet",
+        "count": 1
+      },
+      {
+        "item": "trinket",
+        "count": 1
+      },
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "pirate-bad-reputation",
+    "flaws": {
+      "prompt": "pirate/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-follow-orders-even-if-i"
+          },
+          {
+            "kind": "text",
+            "key": "ill-say-anything-to-avoid-having"
+          },
+          {
+            "kind": "text",
+            "key": "once-someone-questions-my-courage-i"
+          },
+          {
+            "kind": "text",
+            "key": "once-i-start-drinking-its-hard"
+          },
+          {
+            "kind": "text",
+            "key": "i-cant-help-but-pocket-loose"
+          },
+          {
+            "kind": "text",
+            "key": "my-pride-will-probably-lead-to"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "pirate/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "im-loyal-to-my-captain-first"
+          },
+          {
+            "kind": "text",
+            "key": "the-ship-is-most-importantcrewmates-and"
+          },
+          {
+            "kind": "text",
+            "key": "ill-always-remember-my-first-ship"
+          },
+          {
+            "kind": "text",
+            "key": "in-a-harbor-town-i-have"
+          },
+          {
+            "kind": "text",
+            "key": "i-was-cheated-out-of-my"
+          },
+          {
+            "kind": "text",
+            "key": "ruthless-pirates-murdered-my-captain-and"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "pirate/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "respect-the-thing-that-keeps-a",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "fairness-we-all-do-the-work",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "freedom-the-sea-is-freedomthe-freedom",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "mastery-im-a-predator-and-the",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "people-im-committed-to-my-crewmates",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "aspiration-someday-ill-own-my-own",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "pirate/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "my-friends-know-they-can-rely"
+          },
+          {
+            "kind": "text",
+            "key": "i-work-hard-so-that-i"
+          },
+          {
+            "kind": "text",
+            "key": "i-enjoy-sailing-into-new-ports"
+          },
+          {
+            "kind": "text",
+            "key": "i-stretch-the-truth-for-the"
+          },
+          {
+            "kind": "text",
+            "key": "to-me-a-tavern-brawl-is"
+          },
+          {
+            "kind": "text",
+            "key": "i-never-pass-up-a-friendly"
+          },
+          {
+            "kind": "text",
+            "key": "my-language-is-as-foul-as"
+          },
+          {
+            "kind": "text",
+            "key": "i-like-a-job-well-done"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "sage",
+    "startingProficiencies": [
+      "skill-arcana",
+      "skill-history"
+    ],
+    "languageOptions": {
+      "prompt": "sage/language/0",
+      "choose": 2,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    },
+    "startingEquipment": [
+      {
+        "item": "ink-1-ounce-bottle",
+        "count": 1
+      },
+      {
+        "item": "quill",
+        "count": 1
+      },
+      {
+        "item": "small-knife",
+        "count": 1
+      },
+      {
+        "item": "letter-from-a-dead-colleague-posing-a-question-you-have-not-yet-been-able-to-answer",
+        "count": 1
+      },
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "sage-researcher",
+    "flaws": {
+      "prompt": "sage/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-am-easily-distracted-by-the"
+          },
+          {
+            "kind": "text",
+            "key": "most-people-scream-and-run-when"
+          },
+          {
+            "kind": "text",
+            "key": "unlocking-an-ancient-mystery-is-worth"
+          },
+          {
+            "kind": "text",
+            "key": "i-overlook-obvious-solutions-in-favor"
+          },
+          {
+            "kind": "text",
+            "key": "i-speak-without-really-thinking-through"
+          },
+          {
+            "kind": "text",
+            "key": "i-cant-keep-a-secret-to"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "sage/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "it-is-my-duty-to-protect"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-an-ancient-text-that"
+          },
+          {
+            "kind": "text",
+            "key": "i-work-to-preserve-a-library"
+          },
+          {
+            "kind": "text",
+            "key": "my-lifes-work-is-a-series"
+          },
+          {
+            "kind": "text",
+            "key": "ive-been-searching-my-whole-life"
+          },
+          {
+            "kind": "text",
+            "key": "i-sold-my-soul-for-knowledge"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "sage/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "knowledge-the-path-to-power-and",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "beauty-what-is-beautiful-points-us",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "logic-emotions-must-not-cloud-our",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "no-limits-nothing-should-fetter-the",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "power-knowledge-is-the-path-to",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "self-improvement-the-goal-of-a-life",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "sage/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-use-polysyllabic-words-that-convey"
+          },
+          {
+            "kind": "text",
+            "key": "ive-read-every-book-in-the"
+          },
+          {
+            "kind": "text",
+            "key": "im-used-to-helping-out-those"
+          },
+          {
+            "kind": "text",
+            "key": "theres-nothing-i-like-more-than"
+          },
+          {
+            "kind": "text",
+            "key": "im-willing-to-listen-to-every"
+          },
+          {
+            "kind": "text",
+            "key": "i-speak-slowly-when-talking-to"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-horribly-horribly-awkward-in"
+          },
+          {
+            "kind": "text",
+            "key": "im-convinced-that-people-are-always"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "sailor",
+    "startingProficiencies": [
+      "navigators-tools",
+      "skill-athletics",
+      "skill-perception",
+      "water-vehicles"
+    ],
+    "startingEquipment": [
+      {
+        "item": "club",
+        "count": 1
+      },
+      {
+        "item": "rope-silk-50-feet",
+        "count": 1
+      },
+      {
+        "item": "trinket",
+        "count": 1
+      },
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "sailor-ships-passage",
+    "flaws": {
+      "prompt": "sailor/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-follow-orders-even-if-i"
+          },
+          {
+            "kind": "text",
+            "key": "ill-say-anything-to-avoid-having"
+          },
+          {
+            "kind": "text",
+            "key": "once-someone-questions-my-courage-i"
+          },
+          {
+            "kind": "text",
+            "key": "once-i-start-drinking-its-hard"
+          },
+          {
+            "kind": "text",
+            "key": "i-cant-help-but-pocket-loose"
+          },
+          {
+            "kind": "text",
+            "key": "my-pride-will-probably-lead-to"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "sailor/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "im-loyal-to-my-captain-first"
+          },
+          {
+            "kind": "text",
+            "key": "the-ship-is-most-importantcrewmates-and"
+          },
+          {
+            "kind": "text",
+            "key": "ill-always-remember-my-first-ship"
+          },
+          {
+            "kind": "text",
+            "key": "in-a-harbor-town-i-have"
+          },
+          {
+            "kind": "text",
+            "key": "i-was-cheated-out-of-my"
+          },
+          {
+            "kind": "text",
+            "key": "ruthless-pirates-murdered-my-captain-and"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "sailor/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "respect-the-thing-that-keeps-a",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "fairness-we-all-do-the-work",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "freedom-the-sea-is-freedomthe-freedom",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "mastery-im-a-predator-and-the",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "people-im-committed-to-my-crewmates",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "aspiration-someday-ill-own-my-own",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "sailor/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "my-friends-know-they-can-rely"
+          },
+          {
+            "kind": "text",
+            "key": "i-work-hard-so-that-i"
+          },
+          {
+            "kind": "text",
+            "key": "i-enjoy-sailing-into-new-ports"
+          },
+          {
+            "kind": "text",
+            "key": "i-stretch-the-truth-for-the"
+          },
+          {
+            "kind": "text",
+            "key": "to-me-a-tavern-brawl-is"
+          },
+          {
+            "kind": "text",
+            "key": "i-never-pass-up-a-friendly"
+          },
+          {
+            "kind": "text",
+            "key": "my-language-is-as-foul-as"
+          },
+          {
+            "kind": "text",
+            "key": "i-like-a-job-well-done"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "soldier",
+    "startingProficiencies": [
+      "land-vehicles",
+      "skill-athletics",
+      "skill-intimidation"
+    ],
+    "startingEquipment": [
+      {
+        "item": "insignia-of-rank",
+        "count": 1
+      },
+      {
+        "item": "trophy-taken-from-a-fallen-enemy-a-dagger-broken-blade-or-piece-of-a-banner",
+        "count": 1
+      },
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "startingEquipmentOptions": [
+      {
+        "prompt": "soldier/starting-equipment/0",
+        "choose": 1,
+        "kind": "equipment",
+        "from": {
+          "kind": "explicit",
+          "options": [
+            {
+              "kind": "ref",
+              "ref": "item:dice-set",
+              "count": 1
+            },
+            {
+              "kind": "ref",
+              "ref": "item:playing-card-set",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "feature": "soldier-military-rank",
+    "flaws": {
+      "prompt": "soldier/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "the-monstrous-enemy-we-faced-in"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-little-respect-for-anyone"
+          },
+          {
+            "kind": "text",
+            "key": "i-made-a-terrible-mistake-in"
+          },
+          {
+            "kind": "text",
+            "key": "my-hatred-of-my-enemies-is"
+          },
+          {
+            "kind": "text",
+            "key": "i-obey-the-law-even-if"
+          },
+          {
+            "kind": "text",
+            "key": "id-rather-eat-my-armor-than"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "soldier/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-would-still-lay-down-my"
+          },
+          {
+            "kind": "text",
+            "key": "someone-saved-my-life-on-the"
+          },
+          {
+            "kind": "text",
+            "key": "my-honor-is-my-life"
+          },
+          {
+            "kind": "text",
+            "key": "ill-never-forget-the-crushing-defeat"
+          },
+          {
+            "kind": "text",
+            "key": "those-who-fight-beside-me-are"
+          },
+          {
+            "kind": "text",
+            "key": "i-fight-for-those-who-cannot"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "soldier/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "greater-good-our-lot-is-to",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "responsibility-i-do-what-i-must",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "independence-when-people-follow-orders-blindly",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "might-in-life-as-in-war",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "live-and-let-live-ideals-arent",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "nation-my-city-nation-or-people",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "soldier/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "im-always-polite-and-respectful"
+          },
+          {
+            "kind": "text",
+            "key": "im-haunted-by-memories-of-war"
+          },
+          {
+            "kind": "text",
+            "key": "ive-lost-too-many-friends-and"
+          },
+          {
+            "kind": "text",
+            "key": "im-full-of-inspiring-and-cautionary"
+          },
+          {
+            "kind": "text",
+            "key": "i-can-stare-down-a-hell"
+          },
+          {
+            "kind": "text",
+            "key": "i-enjoy-being-strong-and-like"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-a-crude-sense-of"
+          },
+          {
+            "kind": "text",
+            "key": "i-face-problems-head-on-a-simple"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "spy",
+    "startingProficiencies": [
+      "skill-deception",
+      "skill-stealth",
+      "thieves-tools"
+    ],
+    "startingEquipment": [
+      {
+        "item": "crowbar",
+        "count": 1
+      },
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "spy-spy-contact",
+    "flaws": {
+      "prompt": "spy/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "when-i-see-something-valuable-i"
+          },
+          {
+            "kind": "text",
+            "key": "when-faced-with-a-choice-between"
+          },
+          {
+            "kind": "text",
+            "key": "if-theres-a-plan-ill-forget"
+          },
+          {
+            "kind": "text",
+            "key": "i-have-a-tell-that-reveals"
+          },
+          {
+            "kind": "text",
+            "key": "i-turn-tail-and-run-when"
+          },
+          {
+            "kind": "text",
+            "key": "an-innocent-person-is-in-prison"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "spy/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "im-trying-to-pay-off-an"
+          },
+          {
+            "kind": "text",
+            "key": "my-ill-gotten-gains-go-to-support"
+          },
+          {
+            "kind": "text",
+            "key": "something-important-was-taken-from-me"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-become-the-greatest-thief"
+          },
+          {
+            "kind": "text",
+            "key": "im-guilty-of-a-terrible-crime"
+          },
+          {
+            "kind": "text",
+            "key": "someone-i-loved-died-because-of"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "spy/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "honor-i-dont-steal-from-others",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "freedom-chains-are-meant-to-be",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "charity-i-steal-from-the-wealthy",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "greed-i-will-do-whatever-it",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "people-im-loyal-to-my-friends",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "redemption-theres-a-spark-of-good",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "spy/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-always-have-a-plan-for"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-always-calm-no-matter"
+          },
+          {
+            "kind": "text",
+            "key": "the-first-thing-i-do-in"
+          },
+          {
+            "kind": "text",
+            "key": "i-would-rather-make-a-new"
+          },
+          {
+            "kind": "text",
+            "key": "i-am-incredibly-slow-to-trust"
+          },
+          {
+            "kind": "text",
+            "key": "i-dont-pay-attention-to-the"
+          },
+          {
+            "kind": "text",
+            "key": "the-best-way-to-get-me"
+          },
+          {
+            "kind": "text",
+            "key": "i-blow-up-at-the-slightest"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "urchin",
+    "startingProficiencies": [
+      "disguise-kit",
+      "skill-sleight-of-hand",
+      "skill-stealth",
+      "thieves-tools"
+    ],
+    "startingEquipment": [
+      {
+        "item": "small-knife",
+        "count": 1
+      },
+      {
+        "item": "map-of-the-city-you-grew-up-in",
+        "count": 1
+      },
+      {
+        "item": "pet-mouse",
+        "count": 1
+      },
+      {
+        "item": "token-to-remember-your-parents-by",
+        "count": 1
+      },
+      {
+        "item": "clothes-common",
+        "count": 1
+      },
+      {
+        "item": "pouch",
+        "count": 1
+      }
+    ],
+    "feature": "urchin-city-secrets",
+    "flaws": {
+      "prompt": "urchin/flaw/0",
+      "choose": 1,
+      "kind": "flaw",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "if-im-outnumbered-i-will-run"
+          },
+          {
+            "kind": "text",
+            "key": "gold-seems-like-a-lot-of"
+          },
+          {
+            "kind": "text",
+            "key": "i-will-never-fully-trust-anyone"
+          },
+          {
+            "kind": "text",
+            "key": "id-rather-kill-someone-in-their"
+          },
+          {
+            "kind": "text",
+            "key": "its-not-stealing-if-i-need"
+          },
+          {
+            "kind": "text",
+            "key": "people-who-cant-take-care-of"
+          }
+        ]
+      }
+    },
+    "bonds": {
+      "prompt": "urchin/bond/0",
+      "choose": 1,
+      "kind": "bond",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "my-town-or-city-is-my"
+          },
+          {
+            "kind": "text",
+            "key": "i-sponsor-an-orphanage-to-keep"
+          },
+          {
+            "kind": "text",
+            "key": "i-owe-my-survival-to-another"
+          },
+          {
+            "kind": "text",
+            "key": "i-owe-a-debt-i-can"
+          },
+          {
+            "kind": "text",
+            "key": "i-escaped-my-life-of-poverty"
+          },
+          {
+            "kind": "text",
+            "key": "no-one-else-should-have-to"
+          }
+        ]
+      }
+    },
+    "ideals": {
+      "prompt": "urchin/ideal/0",
+      "choose": 1,
+      "kind": "ideal",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "respect-all-people-rich-or-poor",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "community-we-have-to-take-care",
+            "alignments": [
+              "lawful-good",
+              "lawful-neutral",
+              "lawful-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "change-the-low-are-lifted-up",
+            "alignments": [
+              "chaotic-good",
+              "chaotic-neutral",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "retribution-the-rich-need-to-be",
+            "alignments": [
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "people-i-help-the-people-who",
+            "alignments": [
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "neutral-good",
+              "neutral-evil"
+            ]
+          },
+          {
+            "kind": "text",
+            "key": "aspiration-im-going-to-prove-that",
+            "alignments": [
+              "lawful-good",
+              "neutral-good",
+              "chaotic-good",
+              "lawful-neutral",
+              "neutral",
+              "chaotic-neutral",
+              "lawful-evil",
+              "neutral-evil",
+              "chaotic-evil"
+            ]
+          }
+        ]
+      }
+    },
+    "personalityTraits": {
+      "prompt": "urchin/personality/0",
+      "choose": 2,
+      "kind": "personality",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "text",
+            "key": "i-hide-scraps-of-food-and"
+          },
+          {
+            "kind": "text",
+            "key": "i-ask-a-lot-of-questions"
+          },
+          {
+            "kind": "text",
+            "key": "i-like-to-squeeze-into-small"
+          },
+          {
+            "kind": "text",
+            "key": "i-sleep-with-my-back-to"
+          },
+          {
+            "kind": "text",
+            "key": "i-eat-like-a-pig-and"
+          },
+          {
+            "kind": "text",
+            "key": "i-think-anyone-whos-nice-to"
+          },
+          {
+            "kind": "text",
+            "key": "i-dont-like-to-bathe"
+          },
+          {
+            "kind": "text",
+            "key": "i-bluntly-say-what-others-are"
+          }
+        ]
+      }
+    }
+  }
+]

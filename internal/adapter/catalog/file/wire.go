@@ -4,10 +4,11 @@
 // The domain forbids them, so the shapes below mirror the domain types with
 // their enums flattened to strings and their optional fields made pointers.
 //
-// The wire types are exported because cmd/srdgen builds them and marshals
-// them, while this package unmarshals them. Sharing one definition is what
-// guarantees the generator and the loader cannot drift: a change to the format
-// is a compile error in both, not a runtime surprise in one.
+// The wire types are exported because the tools that write a pack -- cmd/pack,
+// the homebrew editor, the private repository's exporter -- produce them,
+// while this package unmarshals them. One definition is the contract: a change
+// to the format is a compile error for every Go writer, not a runtime surprise
+// in the loader.
 //
 // # Layout
 //
@@ -15,7 +16,7 @@
 // under i18n/<locale>/ keyed by the same slug, so adding a translation never
 // touches a mechanics file and a partial locale falls back per key.
 //
-//	data/srd_5.1/
+//	data/pack/srd-5.1/
 //	  manifest.json
 //	  spells.json  races.json  classes.json  ...
 //	  i18n/en/spells.json  i18n/ru/spells.json  ...
@@ -31,11 +32,6 @@ type Manifest struct {
 
 	// Locales lists the locale directories present under i18n/.
 	Locales []string `json:"locales"`
-
-	// Counts maps each mechanics file to its entry count. It exists so a
-	// truncated write is caught at load rather than showing up as a spell
-	// that mysteriously does not exist.
-	Counts map[string]int `json:"counts"`
 }
 
 // Ref is a typed reference to another entry, written as "kind:slug".

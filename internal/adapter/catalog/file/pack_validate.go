@@ -361,7 +361,7 @@ func normalizedEntities(p *PackDocument) (map[string][]any, error) {
 	return out, nil
 }
 
-func validateReferences(docs []*PackDocument, entities map[string][]any, m PackMechanics) error {
+func validateReferences(docs []*PackDocument, entities map[string][]any, m PackMechanics, prose map[string]Bundle) error {
 	known := map[string]map[string]bool{}
 	for collection, rows := range entities {
 		known[collection] = map[string]bool{}
@@ -374,6 +374,18 @@ func validateReferences(docs []*PackDocument, entities map[string][]any, m PackM
 				return fmt.Errorf("duplicate compiled identity %s/%s", collection, id)
 			}
 			known[collection][id] = true
+		}
+	}
+	// Prose for an entity nobody defines would otherwise vanish silently --
+	// the one way a typo in an overlay's canonical key could go unnoticed.
+	for collection, bundle := range prose {
+		if collection == "class-levels" || known[collection] == nil {
+			continue
+		}
+		for id := range bundle {
+			if !known[collection][id] {
+				return fmt.Errorf("localized identity without entity %s/%s", collection, id)
+			}
 		}
 	}
 	known["resources"] = map[string]bool{}

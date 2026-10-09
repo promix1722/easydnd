@@ -16,7 +16,7 @@ const testOwner domain.OwnerID = "test-owner"
 // One Source for every service these tests build, as in the character
 // package's tests and for the same reason: a Catalog is immutable, and reading
 // the compendium once is most of what a service costs.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
 
 func newService(t *testing.T) *charuc.Service {
 	t.Helper()

@@ -24,7 +24,7 @@ import (
 // service_test.go's is the external one -- same binary, different packages, so
 // the var cannot be shared. Two loads of the compendium rather than one is
 // still two rather than the fifty this package used to do.
-var internalCatalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+var internalCatalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
 
 func loadCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()

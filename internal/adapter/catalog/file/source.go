@@ -14,8 +14,8 @@ import (
 	"github.com/promix1722/easydnd/internal/types"
 )
 
-// The mechanics files, relative to the data directory. Exported so cmd/srdgen
-// writes exactly the names this package reads.
+// The mechanics files, relative to the data directory. Exported so whatever
+// writes a pack uses exactly the names this package reads.
 const (
 	FileManifest            = "manifest.json"
 	FileAbilities           = "abilities.json"
@@ -47,7 +47,7 @@ const (
 const LocaleDir = "i18n"
 
 // MechanicsFiles lists every language-neutral data file, in load order.
-// cmd/srdgen writes this exact set, and the manifest counts them.
+// A pack directory holds this exact set, and the loader reads it by name.
 func MechanicsFiles() []string {
 	return []string{
 		FileAbilities, FileSkills, FileAlignments, FileLanguages,
@@ -67,9 +67,9 @@ func MechanicsFiles() []string {
 // prose and nothing else -- so it must be listed here rather than inferred
 // from MechanicsFiles, and Catalog.Terms is built from the bundle's own keys.
 //
-// Exported because cmd/srdgen writes exactly this set, once per locale. It is
-// the same argument MechanicsFiles and the wire types make: one definition
-// that the writer and the reader share cannot drift.
+// Exported because a pack holds exactly this set, once per locale. It is the
+// same argument MechanicsFiles and the wire types make: one definition that
+// the writer and the reader share cannot drift.
 func ProseFiles() []string {
 	return append(MechanicsFiles(), FileTerms)
 }

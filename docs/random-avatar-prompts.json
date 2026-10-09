@@ -2,8 +2,8 @@
   "generator": "Built-in image_gen tool",
   "transparent_background": true,
   "style_references": [
-    "data/srd_5.1/spell-icons/true-strike.webp",
-    "data/srd_5.1/spell-icons/light.webp",
+    "data/pack/srd-5.1/spell-icons/true-strike.webp",
+    "data/pack/srd-5.1/spell-icons/light.webp",
     "web/public/avatars/barbarian.webp"
   ],
   "prompts": {

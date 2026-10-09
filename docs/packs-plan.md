@@ -6,6 +6,12 @@ remain proposals, not copyable v1 wire contracts. Browser pack selection, homebr
 see [packs.md](packs.md#homebrew-authoring). Durable character storage remains later work. Repository
 guidance: `CLAUDE.md`.
 
+Note, 2026-10: the generator this record leans on -- `cmd/srdgen`,
+`data/rules/2014/`, `data/translations/` -- has been retired. The base pack at
+`data/pack/srd-5.1/` is hand-maintained, the loader reads a directory by
+layout, and a pack may ship prose for a dependency's entities. The transition
+plan below is history; [packs.md](packs.md) says what holds.
+
 Treat **pack** and **addon** as the same artifact. The built-in 2014 rules become
 a pack, loaded through the same pipeline as custom packs. A character remains
 an ordered stream of decisions and rule applications, evaluated against an
@@ -520,7 +526,7 @@ configured invalid pack fails startup with file/entity/rule diagnostics. Install
 new releases atomically; changing a default lock affects new characters only.
 Hot reload is unnecessary for the first implementation.
 
-Keep `data/srd_5.1/` generated throughout transition. Extend `cmd/srdgen` and
+Keep `data/pack/srd-5.1/` generated throughout transition. Extend `cmd/srdgen` and
 `make data/srd`, rather than editing generated files. Add a hand-authored input
 directory such as `data/rules/2014/` for mechanics missing from the upstream dump;
 validate and incorporate it during generation. Preserve

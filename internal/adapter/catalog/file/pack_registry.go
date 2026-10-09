@@ -444,8 +444,15 @@ func compilePacks(docs []*PackDocument, locale rules.Locale, lock pack.Lock) (*c
 				prose[name] = Bundle{}
 			}
 			for key, value := range localeBundle(p, locale, name) {
-				if _, exists := prose[name][key]; exists {
-					return nil, fmt.Errorf("duplicate localized identity %s/%s", name, key)
+				// A second pack may fill what the first left blank -- an
+				// overlay's descriptions -- but never restate it. A field
+				// counts as set once the locale or its fallback supplies it.
+				if existing, exists := prose[name][key]; exists {
+					merged, err := fillProse(existing, value)
+					if err != nil {
+						return nil, fmt.Errorf("localized identity %s/%s: %w", name, key, err)
+					}
+					value = merged
 				}
 				prose[name][key] = value
 			}
@@ -478,7 +485,7 @@ func compilePacks(docs []*PackDocument, locale rules.Locale, lock pack.Lock) (*c
 	if err := validateMechanics(mechanics); err != nil {
 		return nil, err
 	}
-	if err := validateReferences(docs, entities, mechanics); err != nil {
+	if err := validateReferences(docs, entities, mechanics, prose); err != nil {
 		return nil, err
 	}
 	if err := validateChoices(entities, mechanics); err != nil {

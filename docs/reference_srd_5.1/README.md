@@ -3,8 +3,13 @@
 Research notes for `easydnd` (character creation / level-up / battle tracker, **2014 rules**).
 
 Goal: find the D&D 5e SRD 5.1 in a **parsed** form (JSON / Markdown), not the PDF.
-Verified 2026-08-23. Everything described here is downloadable with [`fetch-srd.sh`](./fetch-srd.sh),
-which has already been run — see [`data/`](./data/).
+Verified 2026-08-23. The chosen sources were vendored under `data/` here and
+converted once, by a generator since retired, into what is now the
+hand-maintained pack at `data/pack/srd-5.1/`. Neither the dump nor the
+generator is in the repository any more: the pack is the thing being
+maintained, and a second copy of its input was a second thing to keep. These
+notes stay as the record of where the data came from and what the licence
+question was; the SRD rows are the ones `provenance.json` tags `srd-5.1`.
 
 ---
 
@@ -12,8 +17,8 @@ which has already been run — see [`data/`](./data/).
 
 | Need | Use |
 | --- | --- |
-| Structured game data to drive the app | **[`5e-bits/5e-database`](https://github.com/5e-bits/5e-database) → `src/2014/en/*.json`** — 25 files, 3.7 MB, vendored at [`data/5e-database-2014-en/`](./data/5e-database-2014-en/) |
-| Human-readable rules prose (tooltips, rules text, search) | **[`gabrielrega/cc-srd5`](https://github.com/gabrielrega/cc-srd5) → `cc-srd5.md`** — 1.8 MB, CC-BY-4.0, vendored at [`data/cc-srd5/`](./data/cc-srd5/) |
+| Structured game data to drive the app | **[`5e-bits/5e-database`](https://github.com/5e-bits/5e-database) → `src/2014/en/*.json`** — 25 files, 3.7 MB; the pack was derived from it (no longer vendored) |
+| Human-readable rules prose (tooltips, rules text, search) | **[`gabrielrega/cc-srd5`](https://github.com/gabrielrega/cc-srd5) → `cc-srd5.md`** — 1.8 MB, CC-BY-4.0 (no longer vendored) |
 | Canonical text to check anything against | Official PDF: <https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf> (3.0 MB, CC-BY-4.0) |
 
 There is **no official non-PDF release of SRD 5.1**. Wizards published it only as a PDF

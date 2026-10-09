@@ -19,11 +19,11 @@ import (
 
 func iconPack(t *testing.T) *PackDocument {
 	t.Helper()
-	p, err := LoadPack("../../../../data/packs/examples/tactician.json")
+	p, err := LoadPack("testdata/tactician.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	icon, err := os.ReadFile("../../../../data/srd_5.1/spell-icons/magic-missile.webp")
+	icon, err := os.ReadFile("../../../../data/pack/srd-5.1/spell-icons/magic-missile.webp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,14 +209,14 @@ func TestInvalidPackArtwork(t *testing.T) {
 }
 
 func TestIconNamespacesAndArchivedRelease(t *testing.T) {
-	base, err := LoadPack("../../../../data/srd_5.1")
+	base, err := LoadPack("../../../../data/pack/srd-5.1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	a := iconPack(t)
 	b := iconPack(t)
 	b.Manifest.ID = "other"
-	b.Icons.Spells["guiding-mark"], err = os.ReadFile("../../../../data/srd_5.1/spell-icons/fireball.webp")
+	b.Icons.Spells["guiding-mark"], err = os.ReadFile("../../../../data/pack/srd-5.1/spell-icons/fireball.webp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +244,7 @@ func TestIconNamespacesAndArchivedRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 	lock := r.DefaultLock()
-	r, err = NewRegistry([]string{"../../../../data/srd_5.1"}, nil, archive)
+	r, err = NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, archive)
 	if err != nil {
 		t.Fatal(err)
 	}

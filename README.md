@@ -2,11 +2,13 @@
 
 D&D 5e character creation, level-up and battle tracker. Go HTTP API plus a
 responsive React client, deployed to [easydnd.org](https://easydnd.org) via
-GitHub Actions. Targets the **2014 rules** and **SRD 5.1**.
+GitHub Actions. Targets the **2014 rules** on **SRD 5.1 extended**: the SRD
+plus the mechanics and names of the other 2014 books, with their text kept
+out -- see [docs/dnd.md](docs/dnd.md#the-catalogue).
 
 Status: **character creation and level-up work end to end.** The architecture,
-deploy path, entity model, SRD compendium, sign-in, the rules math and the
-browser client are built and tested. Levelling up is declaring the level a
+deploy path, entity model, the compendium in `data/pack/srd-5.1/`, sign-in,
+the rules math and the browser client are built and tested. Levelling up is declaring the level a
 character is built towards -- at creation, or later from the sheet's Level up
 button -- and answering the choices each level opens; see
 [docs/web.md](docs/web.md#level-up-is-the-desired-level). The battle tracker

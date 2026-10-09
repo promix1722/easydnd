@@ -988,9 +988,9 @@ columns stack on narrow screens to make room. Missing images leave the name
 and controls usable. Item artwork is decorative to screen readers. See
 `docs/packs.md` for the authored mapping and conversion workflow.
 
-**Spell artwork belongs to its pack release.** The SRD's 319 WebPs live in
-`data/srd_5.1/spell-icons/`, imported from the matching spell IDs in
-`easydnd-2014/spell-icons/`. Existing catalog summaries and details expose an
+**Spell artwork belongs to its pack release.** One WebP per spell lives in
+`data/pack/srd-5.1/spell-icons/`, the non-SRD spells included, and the loader
+picks them up by name. Existing catalog summaries and details expose an
 optional `icon` WebP data URL. The same 44px slate rounded square is used in
 spell lists, spell details and character spell choices. A small inset keeps
 transparent artwork inside the tile, and the dark background makes glowing
@@ -1943,8 +1943,8 @@ item has no UI either. The server's paged catalogue search (`searchItems`
 against `…/characters/{id}/catalog/items`, docs/backend.md) stays for when it
 comes back.
 
-The slot is the catalogue's: each item carries `slot`, written by srdgen or a
-homebrew pack or derived by the server from what the item is (see
+The slot is the catalogue's: each item carries `slot`, written on the pack's
+row or derived by the server from what the item is (see
 docs/dnd.md). `domain/equipment.ts` reads it and nothing else, so a cloak is on
 the back because the catalogue says so, not because the client knows the word.
 The group is still derived here: *wearable* is anything with a slot, and
@@ -2830,7 +2830,7 @@ offered apologises for a hole the visitor cannot see.
 The landing chrome now has a footer, and only the landing chrome does. It exists
 for one of the three things it carries: the SRD 5.1 data this app is built on is
 CC-BY-4.0, and that licence expects its attribution *in the product*. Until now
-`data/srd_5.1/ATTRIBUTION.md` had been travelling in the release tarball to a
+`data/pack/srd-5.1/ATTRIBUTION.md` had been travelling in the release tarball to a
 directory nginx does not serve, which `licensing.md` recorded against itself as
 an open gap. `/legal` closes it, the footer is how anybody reaches `/legal`, and
 the source link and the build are the two things that belong beside it once
@@ -3459,7 +3459,7 @@ two files to keep in step, and `check-layers.mjs` only walks `.ts`/`.tsx`, so
 
 It owns `public/favicon.svg` (previously hand-authored) and the four PNGs.
 `make web/icons` regenerates them; `make web/icons/check` fails on drift and is
-part of `make verify`, beside `data/srd/check`.
+part of `make verify`, beside `pack/check`.
 
 **The check compares decoded pixels, not file bytes.** `deflateSync` is
 deterministic for a given zlib but is not promised to be stable across Node
@@ -3734,7 +3734,7 @@ message with named arguments in it.
 ### What is not translated
 
 - **`src/features/legal/attribution.ts` and the notices on `/legal`.** The SRD
-  5.1 attribution is pinned to `cmd/srdgen`'s constant by a test, and a
+  5.1 attribution is pinned to `data/pack/srd-5.1/ATTRIBUTION.md` by a test, and a
   translated licence notice is a different notice. See
   [licensing.md](licensing.md).
 - **`index.html`'s `<title>` and `<meta description>`, and the PWA manifest.**

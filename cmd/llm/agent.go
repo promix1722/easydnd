@@ -63,7 +63,7 @@ func (m timedAgentModel) Respond(ctx context.Context, r agentuc.AgentRequest, de
 
 func agentCmd(args []string) error {
 	flags := flag.NewFlagSet("agent", flag.ContinueOnError)
-	pack := flags.String("pack", "data/srd_5.1", "pack directory or portable JSON")
+	pack := flags.String("pack", "data/pack/srd-5.1", "pack directory or portable JSON")
 	configPath := flags.String("config", "config.local.yaml", "existing EasyDND configuration (agent settings)")
 	locale := flags.String("locale", "en", "catalogue locale")
 	timeout := flags.Duration("timeout", 5*time.Minute, "maximum time per start/message/resume")
