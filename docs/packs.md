@@ -296,8 +296,8 @@ fields, unsupported capabilities, unresolved references, missing dependencies,
 dependency cycles and conflicting definitions are errors. JSON Schema validates
 the envelope; strict typed decoding and semantic checks validate the contents.
 The wire types in `internal/adapter/catalog/file` are the contract: whatever
-writes a pack -- `cmd/pack`, the private repository's exporter, the homebrew
-editor -- produces them, and the loader is the one reader.
+writes a pack -- `cmd/pack`, the homebrew editor -- produces them, and the
+loader is the one reader.
 
 Pack IDs are lowercase letters/digits/hyphens starting with a letter. Local
 entity, rule, resource and action IDs contain lowercase letters/digits/hyphens.
@@ -518,9 +518,7 @@ the repository boundary.
 Edit the base pack in place -- mechanics in `data/pack/srd-5.1/mechanics.json`,
 entities in the collection files, translations in `i18n/<locale>/` -- and bump
 `version` in `pack-manifest.json` for a new published artifact; `make
-pack/check` is the gate. Rows whose provenance names `phb`, `xge` or `tce` are
-written by the private `easydnd-2014` repository's `make export` and are edited
-there. SemVer communicates compatibility:
+pack/check` is the gate. SemVer communicates compatibility:
 new optional content normally increments minor; renamed/removed IDs or changed
 choice contracts increment major; compatible corrections increment patch.
 All released bytes remain immutable, including translation changes.

@@ -18,10 +18,11 @@
   is no generator and nothing to regenerate: edit the entity JSON, the
   `i18n/<locale>/` bundles and `mechanics.json` in place. The gates are
   `make pack/check` -- the real pack loader, the same validation the server
-  runs at startup -- and `make data/lint/check` for the prose. Rows whose
-  `provenance.json` entry names `phb`, `xge` or `tce` are owned by the private
-  `easydnd-2014` repo's `make export` and are re-applied from there; edit
-  those in that repo. The manifest names no files: the loader reads the layout.
+  runs at startup -- and `make data/lint/check` for the prose. Every row is
+  edited here; `provenance.json` is attribution, and the rows it tags `phb`,
+  `xge` or `tce` carry no description by design -- their text is a private
+  overlay pack that is never deployed. The manifest names no files: the loader
+  reads the layout.
 - **Pack translations live in the pack, UI captions do not.** A locale is
   `data/pack/srd-5.1/i18n/<tag>/`, one file per collection; adding a language
   is `mkdir` plus files, and a slug the English bundle does not define fails

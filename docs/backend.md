@@ -2266,18 +2266,16 @@ The shape of the pack is what the generator established, and it still holds:
    with confusingly similar names.
 
 The wire format is defined once, in `internal/adapter/catalog/file/wire.go`.
-The exported types are what a tool that writes a pack -- `cmd/pack`, the
-private repository's exporter, a homebrew editor -- has to produce, and the
-loader is the only reader.
+The exported types are what a tool that writes a pack -- `cmd/pack`, a
+homebrew editor -- has to produce, and the loader is the only reader.
 
-**Not every row is edited here.** `provenance.json` tags each row with its
-source. The rows tagged `phb`, `xge` or `tce` -- the non-SRD mechanics and
-names -- are produced by the private `easydnd-2014` repository's converter and
-applied with its `make export`, which rewrites exactly those rows and leaves
-the rest; an edit to one of them belongs in that repository, or the next
-export undoes it. Rows tagged `srd-5.1` are edited in place. The non-SRD rows
-carry no prose, by design; their text ships as a separate overlay pack, see
-[packs.md](packs.md#prose-overlays) and [licensing.md](licensing.md).
+**Every row is edited here.** `provenance.json` tags each row with its source,
+and that is attribution, not ownership: the rows tagged `phb`, `xge` or `tce`
+-- the non-SRD mechanics and names, converted once from a 5etools dump in
+2026-10 -- are maintained in place like the SRD rows. What sets them apart is
+what they lack: no prose, by design. Their text ships as a separate, private
+overlay pack that is never deployed, see [packs.md](packs.md#prose-overlays)
+and [licensing.md](licensing.md).
 
 A translation is a change to the pack like any other: `i18n/<locale>/`, see
 [data/locale-terms-locked/README.md](../data/locale-terms-locked/README.md)
