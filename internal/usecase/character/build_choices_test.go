@@ -163,7 +163,7 @@ func TestSpellChoicesThroughCharacterService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), r, nil, nil, slog.New(slog.DiscardHandler))
+	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), r, nil, slog.New(slog.DiscardHandler))
 	c := mustCreateScored(t, s)
 	b := (&builder{t: t, s: s, id: c.ID, seq: c.Log.LastSeq()}).add("wizard", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "wizard"), Level: 1})
 	bad := domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "wizard"), Level: 1, Choices: []domain.Answer{answer("wizard/spell/cantrip/1", "fire-bolt", "fire-bolt", "cure-wounds")}}
@@ -228,7 +228,7 @@ func TestSpellDraftRevisesSeveralAnswersAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), r, nil, nil, slog.New(slog.DiscardHandler))
+	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), r, nil, slog.New(slog.DiscardHandler))
 	c := mustCreateScored(t, s)
 	b := (&builder{t: t, s: s, id: c.ID, seq: c.Log.LastSeq()}).add("warlock", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "warlock"), Level: 1}).
 		add("cantrips", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "warlock"), Level: 1, Choices: []domain.Answer{answer("warlock/spell/cantrip/1", "eldritch-blast", "chill-touch")}}).
@@ -429,7 +429,7 @@ func spellBuilderForTest(t *testing.T) *builder {
 	if err != nil {
 		t.Fatal(err)
 	}
-	service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), registry, nil, nil, slog.New(slog.DiscardHandler))
+	service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), registry, nil, slog.New(slog.DiscardHandler))
 	character := mustCreateScored(t, service)
 	return &builder{t: t, s: service, id: character.ID, seq: character.Log.LastSeq()}
 }

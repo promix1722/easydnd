@@ -416,35 +416,6 @@ export interface NewCharacter {
   folder?: string
 }
 
-/** One line of an import report: a field of the export, and what became of it. */
-export interface ImportEntry {
-  field: string
-  detail: string
-}
-
-/**
- * Everything an import could not carry across.
- *
- * Not a failure list. SRD 5.1 publishes one background and one feat, so a
- * sheet from a tool with the full rules always leaves something behind; this
- * is what makes that visible instead of silent.
- */
-export interface ImportReport {
-  /** Named something SRD 5.1 does not publish. */
-  unresolved: ImportEntry[]
-  /** Real data the model has no home for. */
-  skipped: ImportEntry[]
-  /** Prompts the import left for the player to answer. */
-  open: string[]
-}
-
-export interface ImportResponse {
-  id: string
-  seq: number
-  sheet: Sheet
-  report: ImportReport
-}
-
 /**
  * Lists the account's characters, optionally narrowing to one folder.
  *
@@ -461,47 +432,6 @@ export function listCharacters(
 
 export function createCharacter(body: NewCharacter): Promise<CreateResponse> {
   return request<CreateResponse>('/characters', { method: 'POST', body })
-}
-
-/**
- * Imports a character from a sheet exported by another tool.
- *
- * The file's bytes are the body: the route takes the export itself, not a
- * wrapper object, so rawBody sends it untouched rather than re-encoding JSON
- * that is already JSON.
- *
- * An imported character arrives with every choice unanswered, so callers
- * should send the player to the build screen rather than the sheet.
- */
-export async function importCharacter(file: File, folder?: string): Promise<ImportResponse> {
-  // The folder rides in the query because the body is the export itself.
-  const path = folder
-    ? `/characters/import?folder=${encodeURIComponent(folder)}`
-    : '/characters/import'
-  return request<ImportResponse>(path, {
-    method: 'POST',
-    rawBody: await file.text(),
-  })
-}
-
-/**
- * Creates the reference character in one call: a finished level-3 half-elf
- * rogue, ready to read.
- *
- * Development only. The route is registered only when the server is in
- * `development`, so this is a 405 against a production build -- which is why
- * the button reaching it is behind `import.meta.env.DEV` rather than behind a
- * check on anything the server says.
- *
- * There is no body. Unlike creating, a stub has no opening state for the
- * caller to state -- the server supplies all of it -- so the folder rides in
- * the query as it does for an import.
- */
-export function createStubCharacter(folder?: string): Promise<CreateResponse> {
-  const path = folder
-    ? `/characters/stub?folder=${encodeURIComponent(folder)}`
-    : '/characters/stub'
-  return request<CreateResponse>(path, { method: 'POST' })
 }
 
 export function getSheet(id: string, signal?: AbortSignal): Promise<Sheet> {

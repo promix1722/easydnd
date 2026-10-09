@@ -90,13 +90,6 @@ export function slotOf(item: ItemLike | undefined): Slot | null {
   return slot !== undefined && slot !== CUSTOM && SLOTS.some((entry) => entry.slot === slot) ? (slot as Slot) : null
 }
 
-/** Whether an item may go in a slot: its own, the off hand for anything held, or Custom for anything wearable. */
-export function fitsSlot(item: ItemLike | undefined, slot: Slot): boolean {
-  const own = slotOf(item)
-  if (slot === CUSTOM) return own !== null
-  return own === slot || (slot === 'off-hand' && own === 'main-hand')
-}
-
 export function groupOf(item: ItemLike | undefined): ItemGroup {
   if (item === undefined) return 'gear'
   if (slotOf(item) !== null) return 'wearable'
@@ -130,9 +123,11 @@ export function mergeStacks(equipment: EquipmentLike): InventoryRow[] {
     if (equipped) row.equipped += stack.count
     rows.set(key, row)
   }
-  equipment.equipped.forEach((stack) => add(stack, true))
+  // What is carried first: a row keeps its place when one of several is put
+  // on, where leading with the worn would jump it to the top of the list.
   equipment.backpack.forEach((stack) => add(stack, false))
   equipment.loot.forEach((stack) => add(stack, false))
+  equipment.equipped.forEach((stack) => add(stack, true))
   return [...rows.values()]
 }
 
@@ -249,6 +244,23 @@ export function unequip(equipment: EquipmentLike, slug: string, from?: Slot): Eq
     setCount('backpack', slug, count(equipment.backpack, slug) + 1),
     ...(from === CUSTOM && equipment.custom === slug ? [setCustom()] : []),
   ]
+}
+
+/** Drops one worn `slug`: taken off, and not put in the backpack. */
+export function discard(equipment: EquipmentLike, slug: string, from?: Slot): EquipmentChange[] {
+  return unequip(equipment, slug, from).filter((change) => !change.path.startsWith('equipment.backpack.'))
+}
+
+/**
+ * The slots a row's menu offers for an item: its own, Custom, and the off hand
+ * for a held thing -- but only beside an occupied main hand, because seats are
+ * derived and a lone held item is in the main hand whatever it was asked for.
+ */
+export function slotsFor(equipment: EquipmentLike, items: ReadonlyMap<string, ItemLike>, item: ItemLike | undefined): Slot[] {
+  const own = slotOf(item)
+  if (own === null) return []
+  const held = own === 'main-hand' && (slotted(equipment, items).get('main-hand') ?? []).length > 0
+  return [own, ...(held ? ['off-hand' as const] : []), CUSTOM]
 }
 
 /**

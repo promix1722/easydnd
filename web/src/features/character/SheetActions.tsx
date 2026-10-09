@@ -3,9 +3,7 @@ import { useState } from 'react'
 import { signed } from '@/domain'
 import type { Entry, ResourcePool, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Badge, BlockList, Button, Group, Markdown, Stack, Text, TextInput, joinProse } from '@/ui'
-
-import { DEFAULT_ACTION_FILTERS, hasActionFilters, matchesActionFilters, toggled } from './filterActions'
+import { Accordion, Badge, BlockList, Group, Markdown, Stack, Text, joinProse } from '@/ui'
 
 const KINDS = {
   action: 'actions.kind.action',
@@ -14,30 +12,31 @@ const KINDS = {
   'free-action': 'actions.kind.freeAction',
 } as const
 
+/** Where an action comes from, in the order the groups are drawn. */
 const CATEGORIES = {
   equipment: 'actions.category.equipment',
   feature: 'actions.category.feature',
   basic: 'actions.category.basic',
 } as const
-
-/** Buttons in the order the tables above are written, whatever order the sheet lists its actions in. */
-const inOrder = (order: object) => (a: string, b: string) => Object.keys(order).indexOf(a) - Object.keys(order).indexOf(b)
+type Category = keyof typeof CATEGORIES
 
 /**
- * What the character can do on a turn, as a list that opens.
+ * What the character can do on a turn, as groups that fold, of rows that open.
  *
  * The server decides what is on it -- an equipped weapon, an entry a rule pack
  * tagged as an action, an action the pack gives everybody -- and sends the
  * prose behind each row in the same response, keyed by the row's `origin`. So
  * nothing here knows a class, and opening a row asks nobody for anything.
  *
+ * One group per source, each folded or not on its own, and every one folded
+ * to begin with: the tab opens as three headings with their counts, and the
+ * player unfolds the one they came for. There is no search and no filter: a
+ * sheet has a dozen actions of its own, and the groups are the only question
+ * worth asking of them.
+ *
  * A row with no prose is a statement: a mundane weapon has numbers and no
  * description, and `BlockList` draws that as a fact rather than a control that
  * opens onto nothing.
- *
- * Filters are local state, as they are for a build's spell choices: the list
- * is a dozen rows of one sheet, not a page worth a URL. It opens with the
- * basic actions switched off -- see `DEFAULT_ACTION_FILTERS`.
  */
 export function SheetActions({ actions, entries, pools }: {
   actions: readonly SheetAction[]
@@ -46,63 +45,34 @@ export function SheetActions({ actions, entries, pools }: {
   pools: Readonly<Record<string, ResourcePool>>
 }) {
   const t = useT()
-  const [filters, setFilters] = useState(DEFAULT_ACTION_FILTERS)
+  const [unfolded, setUnfolded] = useState<string[]>([])
   const [opened, setOpened] = useState<string | null>(null)
   const kindName = (kind: string) => (kind in KINDS ? t(KINDS[kind as keyof typeof KINDS]) : kind)
 
   if (actions.length === 0) return <Text size="sm" c="dimmed">{t('sheet.noActions')}</Text>
 
-  const visible = actions.filter((action) => matchesActionFilters(action, filters))
-  const present = (values: Array<string | undefined>) => [...new Set(values.filter((value): value is string => !!value))]
+  // An action with no source, or one this table does not know, is the character's own.
+  const categoryOf = (action: SheetAction): Category => action.category !== undefined && action.category in CATEGORIES ? action.category as Category : 'feature'
+  const groups = (Object.keys(CATEGORIES) as Category[])
+    .map((category) => ({ category, rows: actions.filter((action) => categoryOf(action) === category) }))
+    .filter((group) => group.rows.length > 0)
 
   return (
-    <Stack gap="sm">
-      <TextInput
-        aria-label={t('actions.search')}
-        placeholder={t('actions.search')}
-        value={filters.query}
-        onChange={(event) => setFilters({ ...filters, query: event.currentTarget.value })}
-      />
-      {/*
-        One button per value, each pressed or not on its own, rather than a
-        select: a turn is "my action and my bonus action", which a control
-        that holds one value cannot say. Only what this sheet has is offered.
-        Both sets share a line where there is room, the wider gap telling them
-        apart, and wrap as two on a phone.
-      */}
-      <Group gap="md">
-      <Group gap="xs" role="group" aria-label={t('actions.filter.kind')}>
-        {present(actions.map((action) => action.kind)).sort(inOrder(KINDS)).map((kind) => (
-          <FilterButton
-            key={kind}
-            label={kindName(kind)}
-            on={!filters.offKinds.includes(kind)}
-            onToggle={() => setFilters({ ...filters, offKinds: toggled(filters.offKinds, kind) })}
-          />
-        ))}
-      </Group>
-      <Group gap="xs" role="group" aria-label={t('actions.filter.category')}>
-        {present(actions.map((action) => action.category)).filter((category) => category in CATEGORIES).sort(inOrder(CATEGORIES)).map((category) => (
-          <FilterButton
-            key={category}
-            label={t(CATEGORIES[category as keyof typeof CATEGORIES])}
-            on={!filters.offCategories.includes(category)}
-            onToggle={() => setFilters({ ...filters, offCategories: toggled(filters.offCategories, category) })}
-          />
-        ))}
-      </Group>
-      </Group>
-      <Group gap="sm" justify="space-between">
-        <Text size="sm" c="dimmed" aria-live="polite">{t('actions.count', { count: visible.length })}</Text>
-        {hasActionFilters(filters) && (
-          <Button variant="subtle" onClick={() => setFilters(DEFAULT_ACTION_FILTERS)}>{t('prompt.resetSpellFilters')}</Button>
-        )}
-      </Group>
-      {visible.length === 0 && <Text size="sm" c="dimmed">{t('actions.empty')}</Text>}
+    <Accordion multiple value={unfolded} onChange={setUnfolded}>
+      {groups.map(({ category, rows }) => (
+        <Accordion.Item key={category} value={category}>
+          <Accordion.Control>
+            <Group gap="xs">
+              <Text fw={600}>{t(CATEGORIES[category])}</Text>
+              <Text size="sm" c="dimmed">{rows.length}</Text>
+            </Group>
+          </Accordion.Control>
+          {/* Mounted only while unfolded, as a BlockList body is: a folded group is not on the page. */}
+          <Accordion.Panel>{unfolded.includes(category) && (
       <BlockList
         open={opened}
         onOpen={setOpened}
-        items={visible.map((action, at) => {
+        items={rows.map((action, at) => {
           const key = action.origin ?? `${action.name}:${at}`
           const pool = action.uses ? pools[action.uses] : undefined
           const facts = [
@@ -119,7 +89,8 @@ export function SheetActions({ actions, entries, pools }: {
               <Stack gap={2}>
                 <Group gap="xs">
                   <Text fw={600}>{action.name}</Text>
-                  <Badge variant="light">{kindName(action.kind)}</Badge>
+                  {/* An action is the default and says nothing; only the other parts of a turn are marked. */}
+                  {action.kind !== 'action' && <Badge variant="light">{kindName(action.kind)}</Badge>}
                 </Group>
                 {facts && <Text size="sm" c="dimmed">{facts}</Text>}
               </Stack>
@@ -128,15 +99,9 @@ export function SheetActions({ actions, entries, pools }: {
           }
         })}
       />
-    </Stack>
-  )
-}
-
-/** A filter value that is pressed while it is let through, in the app's pressed-button idiom. */
-function FilterButton({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
-  return (
-    <Button size="xs" variant={on ? 'light' : 'default'} aria-pressed={on} onClick={onToggle}>
-      {label}
-    </Button>
+          )}</Accordion.Panel>
+        </Accordion.Item>
+      ))}
+    </Accordion>
   )
 }

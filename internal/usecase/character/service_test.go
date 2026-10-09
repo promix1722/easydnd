@@ -32,7 +32,6 @@ func newService(t *testing.T) *charuc.Service {
 		memory.NewFolderRepository(),
 		catalogSource,
 		nil,
-		nil,
 		slog.New(slog.DiscardHandler),
 	)
 }

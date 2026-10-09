@@ -264,7 +264,7 @@ export function FolderAdditions({
 }: {
   folder: Folder
   onNew: () => void
-  /** The development-only stub button, or nothing. */
+  /** Further ways to add to the folder, beside New character. */
   children?: ReactNode
 }) {
   const t = useT()

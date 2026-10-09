@@ -1,20 +1,13 @@
-import { useState } from 'react'
-
-import { CUSTOM, ELSEWHERE, equip, fitsSlot, groupOf, mergeStacks, setCoin, slotted, unequip } from '@/domain'
+import { CUSTOM, ELSEWHERE, discard, groupOf, mergeStacks, setCoin, slotted, unequip } from '@/domain'
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
 import type { Change, Equipment, Item } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Box, Button, Grid, Group, ItemIcon, joinProse, Markdown, ModalSheet, Panel, Paper, Stack, Text, UnstyledButton } from '@/ui'
+import { Box, Grid, Group, ITEM_ICON_SIZE, ItemIcon, Markdown, Menu, Panel, Paper, Stack, Text } from '@/ui'
 
-import { InventoryRows, Purse } from './Inventory'
+import { InventoryRows, ItemMenu, Purse } from './Inventory'
 import { itemFacts } from './options'
-
-/**
- * A card on the paperdoll. One per slot, except the ring slot, which holds
- * two and is drawn as two cards; and `elsewhere`, drawn only when something
- * equipped has no slot to be shown in.
- */
-type Card = Exclude<Slot, 'ring'> | 'ring:0' | 'ring:1' | typeof ELSEWHERE
+import { useSlotLabels } from './slotLabels'
+import type { Card } from './slotLabels'
 
 /** Three columns: what is held, what is worn down the middle, what hangs or is slipped on. */
 const COLUMNS: readonly (readonly Card[])[] = [
@@ -40,19 +33,13 @@ const rowName = (name: (slug: string) => string) => (row: InventoryRow) => row.c
 /**
  * The sheet's Equipment tab: what is worn where, then everything that could be.
  *
- * With `onChange`, a card is a button that offers what in the backpack fits
- * -- Custom, any wearable.
+ * A card is never pressed and an empty one does nothing: an item is put on
+ * from its row's menu below. With `onChange`, a worn item has the same menu on
+ * its card, to take it off or drop it.
  */
 export function SheetEquipment({ equipment, items, name, lookup, disabled = false, onChange }: InventoryProps) {
   const t = useT()
-  const [picking, setPicking] = useState<Card | null>(null)
-  const labels: Record<Card, string> = {
-    head: t('equipment.slot.head'), neck: t('equipment.slot.neck'), back: t('equipment.slot.back'), body: t('equipment.slot.body'),
-    arms: t('equipment.slot.arms'), waist: t('equipment.slot.waist'), feet: t('equipment.slot.feet'),
-    'main-hand': t('equipment.slot.main-hand'), 'off-hand': t('equipment.slot.off-hand'),
-    'ring:0': t('equipment.slot.ring1'), 'ring:1': t('equipment.slot.ring2'),
-    custom: t('equipment.slot.custom'), elsewhere: t('equipment.slot.elsewhere'),
-  }
+  const labels = useSlotLabels()
   const bySlot = slotted(equipment, items)
   // A ring card shows its own ring; every other card its whole slot, so that
   // a slot worn past its capacity still lists every occupant.
@@ -63,37 +50,37 @@ export function SheetEquipment({ equipment, items, name, lookup, disabled = fals
     return worn
   }
   const rows = mergeStacks(equipment).filter((row) => groupOf(items.get(row.item ?? '')) === 'wearable')
-  // Nothing fits "elsewhere": it only ever holds what is already there.
-  const slot = picking === null ? null : slotOfCard(picking)
-  const fitting = slot === null || slot === ELSEWHERE ? [] : equipment.backpack.filter((stack, at, all) =>
-    stack.item !== undefined && fitsSlot(items.get(stack.item), slot) &&
-    all.findIndex((other) => other.item === stack.item) === at)
-
   const card = (each: Card) => {
     const worn = occupants(each)
+    // Every card reserves one icon's height, and an item's text is cut to it,
+    // so wearing something never moves the cards below.
     const body = <Stack gap={2}>
       <Text size="xs" c="dimmed" tt="uppercase">{labels[each]}</Text>
-      {worn.length === 0
-        ? <Text size="sm" c="dimmed">{t('equipment.slotEmpty')}</Text>
-        : worn.map((slug, at) => {
-          const item = items.get(slug)
-          const facts = item === undefined ? undefined : itemFacts(t, item, (ref) =>
-            lookup(item.weapon?.properties?.includes(ref) ? 'weapon-properties' : 'damage-types', ref))
-          return <Group key={`${slug}:${at}`} gap={6} wrap="nowrap" align="flex-start">
-            <ItemIcon icon={item?.icon} />
-            <Stack gap={2} style={{ minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
-              <Text size="sm" fw={500}>{name(slug)}</Text>
-              {facts !== undefined && <Text size="xs" c="dimmed">{facts}</Text>}
-              {!!item?.desc?.length && <Markdown size="xs">{joinProse(item.desc)}</Markdown>}
-            </Stack>
-          </Group>
-        })}
+      <Stack gap={6} mih={ITEM_ICON_SIZE}>
+        {worn.length === 0
+          ? <Text size="sm" c="dimmed">{t('equipment.slotEmpty')}</Text>
+          : worn.map((slug, at) => {
+            const item = items.get(slug)
+            const facts = item === undefined ? undefined : itemFacts(t, item, (ref) =>
+              lookup(item.weapon?.properties?.includes(ref) ? 'weapon-properties' : 'damage-types', ref))
+            const from = slotOfCard(each)
+            const slot = from === ELSEWHERE ? undefined : from
+            return <Group key={`${slug}:${at}`} gap={6} wrap="nowrap" align="flex-start">
+              <ItemIcon icon={item?.icon} />
+              <Stack gap={2} mah={ITEM_ICON_SIZE} style={{ minWidth: 0, flex: 1, overflow: 'hidden', overflowWrap: 'anywhere' }}>
+                <Text size="sm" fw={500} truncate style={{ flexShrink: 0 }}>{name(slug)}</Text>
+                {facts !== undefined && <Text size="xs" c="dimmed" lineClamp={2} style={{ flexShrink: 0 }}>{facts}</Text>}
+                {!!item?.desc?.length && <Text component="div" size="xs" lineClamp={1} style={{ flexShrink: 0 }}><Markdown size="xs" inline>{item.desc[0] ?? ''}</Markdown></Text>}
+              </Stack>
+              {onChange && <ItemMenu name={name(slug)} disabled={disabled}>
+                <Menu.Item onClick={() => onChange(unequip(equipment, slug, slot))}>{t('equipment.takeOffNamed', { name: name(slug) })}</Menu.Item>
+                <Menu.Item color="red" onClick={() => onChange(discard(equipment, slug, slot))}>{t('equipment.drop')}</Menu.Item>
+              </ItemMenu>}
+            </Group>
+          })}
+      </Stack>
     </Stack>
-    return <Paper key={each} withBorder p="xs" radius="md">
-      {onChange
-        ? <UnstyledButton w="100%" disabled={disabled} aria-label={labels[each]} onClick={() => setPicking(each)}>{body}</UnstyledButton>
-        : body}
-    </Paper>
+    return <Paper key={each} withBorder p="xs" radius="md">{body}</Paper>
   }
   const elsewhere = bySlot.get(ELSEWHERE) ?? []
 
@@ -112,25 +99,6 @@ export function SheetEquipment({ equipment, items, name, lookup, disabled = fals
           empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
       </Stack>
     </Panel>
-
-    {onChange && <ModalSheet opened={picking !== null} onClose={() => setPicking(null)} title={picking === null ? '' : labels[picking]}>
-      {picking !== null && slot !== null && <Stack gap="xs">
-        {occupants(picking).map((slug, at) => (
-          <Button key={`${slug}:${at}`} variant="default" justify="space-between"
-            onClick={() => { onChange(unequip(equipment, slug, slot === ELSEWHERE ? undefined : slot)); setPicking(null) }}>
-            {t('equipment.takeOffNamed', { name: name(slug) })}
-          </Button>
-        ))}
-        {fitting.length === 0 && <Text size="sm" c="dimmed">{t('equipment.nothingFits')}</Text>}
-        {slot !== ELSEWHERE && fitting.map((stack) => (
-          <Button key={stack.item} variant="light" justify="space-between"
-            h="auto" py="xs" leftSection={<ItemIcon icon={items.get(stack.item ?? '')?.icon} />}
-            onClick={() => { onChange(equip(equipment, items, stack.item ?? '', slot)); setPicking(null) }}>
-            {name(stack.item ?? '')}
-          </Button>
-        ))}
-      </Stack>}
-    </ModalSheet>}
   </Stack>
 }
 

@@ -552,7 +552,7 @@ can be designed now without building authoring services or screens.
 | `internal/domain/character/{spellcasting,senses,armor,changes}.go` | Move game policy into pack rules; retain reusable evaluation operations and legacy path adapters |
 | `internal/adapter/catalog/file/` and new pack codec | Legacy catalogue adapter, schemas, JSON import/export, validation, digests, locale views |
 | `cmd/srdgen/`, `data/rules/2014/`, `data/translations/` | Generate base pack and its supplemental mechanics deterministically |
-| `internal/usecase/character/{service,validate,revise,import,stub}.go` | Resolve a character's exact context; one validation path; migration preview/apply; imports resolve IDs under an explicit legacy context |
+| `internal/usecase/character/{service,validate,revise,import}.go` | Resolve a character's exact context; one validation path; migration preview/apply; imports resolve IDs under an explicit legacy context |
 | `internal/usecase/game/service.go` | Read each shared character using its own lock; avoid projecting a mixed roster against the server default |
 | `internal/adapter/repository/memory/character.go` | Revision checks, event/lock cloning, migration checkpoints and command deduplication |
 | `internal/adapter/repository/postgres/` | Later durable logs, checkpoints, locks and artifact references; plan stable IDs and dependent folders/shares/games together |

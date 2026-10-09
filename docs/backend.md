@@ -90,7 +90,7 @@ Every API startup with `env: development`, including `make dev` and
 `make run/server`, creates a ready-to-play group **Development party** and
 three test accounts: **master**, **player1**, **player2**. The master owns the
 group; both other accounts are players. Each owns one finished first-level
-half-elf rogue, built through validated events rather than imported stats.
+half-elf rogue, built through validated events rather than asserted stats.
 The players' rogues are shared and seated in two games:
 
 - **Training encounter**: both players are unlocked, with initiative rolls,
@@ -103,8 +103,17 @@ Both games also seat two more shared characters, one per player: a fifth-level
 paladin and a fifth-level cleric. They exist to show the
 consumables tracker, which a first-level rogue cannot -- spell slots at several
 levels, Channel Divinity, a pool too large for marks (Lay on Hands, 25), Hit
-Dice. They are deliberately *unfinished*: a class event at level 5 and nothing
-else, so their open prompts are expected and they are no reference for a build.
+Dice. They are finished characters too -- a human acolyte each, with scores,
+skills, a subclass, a fourth-level improvement, cantrips and prepared spells.
+
+Every seed is a list of selections in `internal/app/dev_builds.go`, applied
+entry by entry through the same validation an append from the build screen
+takes, and `seedCharacter` refuses to return a character with a required
+prompt still open. So a compendium regeneration that renames a prompt fails
+start-up, naming the entry, rather than quietly seeding a sheet that opens as
+"Unfinished" with no race and six tens -- which is what the two casters were
+while they were seeded with a class event and nothing else. There is no
+"stub" route or button any more: the seeds are the ready-made characters.
 
 `POST /v1/dev/login` with `{"account":"master"}` (or `player1`, `player2`)
 issues the normal HttpOnly session cookie and returns the seeded `game_ids`.
@@ -365,7 +374,6 @@ internal/
   usecase/            application services                              (layer 2)
   adapter/catalog/    reads the compendium off disk                     (layer 3)
   adapter/repository/ outbound adapters: memory, and postgres for accounts (layer 3)
-  adapter/sheet/      reads character sheets exported by other tools     (layer 3)
   adapter/webauthn/   runs the WebAuthn ceremonies                       (layer 3)
   adapter/oidc/       exchanges authorization codes with Google          (layer 3)
   adapter/token/      signs the session and ceremony cookies             (layer 3)
@@ -419,9 +427,7 @@ that.
 | `POST` | `/v1/catalog/spells/search` | the same search with a body, for an offer too long for a URL; also at `/v1/characters/{id}/catalog/spells/search` |
 | `GET` | `/v1/characters` | summaries |
 | `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
-| `POST` | `/v1/characters/import` | import a sheet exported by another tool |
 | `POST` | `/v1/dev/login` | **development only** -- sign in as master, player1, or player2 in the seeded party |
-| `POST` | `/v1/characters/stub` | **development only** -- build the reference character in one call |
 | `GET` | `/v1/characters/{id}` | the log |
 | `DELETE` | `/v1/characters/{id}` | |
 | `GET` | `/v1/characters/{id}/sheet` | the projection, with what its slugs mean -- see [The sheet arrives resolved](#the-sheet-arrives-resolved) |
@@ -462,7 +468,7 @@ that.
 | `DELETE` | `/v1/games/{id}/entries/{entry}` | remove a player entry or monster; DM or owner |
 | `POST` | `/v1/games/{id}/monsters` | private copy: `{"character_id":"..."}`; `{}` creates a stub; DM or owner |
 | `POST` | `/v1/games/{id}/order` | stable sort: `{"by_initiative":true}`; move: `{"entry_id":"...","direction":-1}` (or `1`); DM or owner |
-| `POST` | `/v1/games/{id}/rest` | long rest: every entry gets all of its spent uses back; DM or owner |
+| `POST` | `/v1/games/{id}/rest` | a rest for the table; DM or owner. Long by default: every entry gets all of its spent uses back. `?kind=short`: only the pools a short rest refills |
 | `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only, resolved the same way |
 
 Three of those need a word about their shape.
@@ -517,8 +523,7 @@ line, and an invite token is usable for a day. The browser keeps it in a URL
 *fragment*, which is never sent to any server at all.
 
 `GET /v1/characters` takes `?folder=` to narrow the listing, and `POST
-/v1/characters` takes a `folder` in the body. `POST /v1/characters/import` takes
-`?folder=` instead, because its body is the exported sheet itself.
+/v1/characters` takes a `folder` in the body.
 
 ### Spells are never served whole
 
@@ -589,48 +594,6 @@ is now one response, sized by the character rather than by the rules.
 A write's echo of the sheet (`WriteResponse.sheet`) carries no `catalog`. It is
 there to confirm the write; a screen that draws a sheet reads the sheet.
 
-### Importing states, not histories
-
-`POST /v1/characters/import` takes a sheet exported from another tool -- today
-HexSheet -- as the request body, and answers with a character plus a **report**
-of what did not survive.
-
-The route exists in tension with everything above it. easydnd stores *choices*
-and derives the sheet; an exported sheet is the opposite, a set of finished
-numbers with no record of where they came from. It says the character is
-proficient in Stealth, not whether the class, the background or a racial trait
-granted it.
-
-The importer does not try to bridge that by reconstructing the choices.
-Recovering them means solving a matching problem -- six proficient skills
-across a class prompt taking four from a restricted list and a trait prompt
-taking two from all eighteen -- and then presenting one of several answers that
-fit as the one the player made. So instead:
-
-- the export's final state becomes the character's **opening** state, as an
-  `init` event carrying the numbers;
-- typed `race`, `class`, `level` and `subclass` events name what the export
-  states outright, so traits, features and level-scaled values attach -- each
-  level before the subclass it makes due, so that the log the importer writes
-  is one the build flow could have written itself and one a later replacement
-  will keep;
-- **no prompt is answered.** Every choice stays open, and the client sends the
-  player to the build screen rather than the sheet;
-- anything with no home in the model is named in the report rather than
-  dropped.
-
-One consequence is worth stating because it looks like a bug. Ability scores
-are input tier, applied *before* racial bonuses, so the init event records the
-export's scores **minus the race's fixed bonuses** -- a half-elf's Charisma 14
-is stored as 12 and projects back to 14. The race's *optional* bonuses are not
-subtracted and not guessed: the export does not record where they went, so that
-prompt simply stays open, which is why an imported character can look a point
-or two light until it is answered.
-
-`internal/adapter/sheet/hexsheet` also holds the codebase's only name-to-slug
-lookup. Everywhere else a reference is already a slug; an import is the one
-place a display name is all there is.
-
 ### Creating a character takes a name
 
 `POST /v1/characters` takes a name, and an alignment if the player already has
@@ -647,78 +610,6 @@ six `abilities.<ability>` paths, and the generation method travels with that
 answer rather than with creation. The bound on a score -- 1 to 30, wide enough
 for a DM's ruling and narrow enough to reject a typo -- moved with them, and is
 checked where they now arrive.
-
-### The stub builds a character; it does not import one
-
-`POST /v1/characters/stub` makes the level-3 half-elf rogue of
-`docs/reference_hexsheet/` in one call. It is a development convenience --
-reaching a character worth looking at otherwise means five tabs and a dozen
-answers, and the character store is in memory, so a restart costs that walk
-again.
-
-It would have been one line to point it at the importer, and that would have
-been wrong. An import records what a character *is* rather than what was
-chosen, so an imported log answers no prompts and arrives with every choice
-still open -- see [Importing states, not
-histories](#importing-states-not-histories). That is the honest way to carry a
-foreign sheet across and the exact opposite of what a stub is for. So the stub
-is *built*: `Create` writes the opening entry and one `Apply` puts the eight
-selections through `validateAndAttribute`, the same path an append from the
-build screen takes. Every entry is checked against the prompts open at that
-moment and stamped with the group of the prompt it answers, which is what keeps
-the stub a log the build flow could have written rather than a shape only this
-endpoint can produce.
-
-Two consequences of going through that path, both of which the tests pin:
-
-- **The level comes before the subclass it makes due.** A rogue is offered a
-  Roguish Archetype *because* they have reached level 3, so nothing offers
-  `subclass:thief` until the level granting it is in the log. Answering them the
-  other way round is rejected outright. The domain's own fixture in
-  `fixtures_test.go` has them the other way round and is not wrong to: it calls
-  `Log.Append`, which checks the shape of an entry and never asks whether
-  anything was offering it.
-- **One entry carries no source.** Equipping the leather armor a rogue's kit
-  contains answers no prompt and closes none, because no rule says a kit is
-  worn. It is therefore unattributed, exactly as a DM's ruling is, and sits in
-  no build-screen tab.
-
-The stub answers its **optional** prompts too, and that is worth saying because
-"complete" and "finished" are not the same thing. Seven prompts here are
-optional -- the half-elf's third language and all six acolyte poses -- so the
-character counted as complete while the build screen still listed seven rows
-under "still to choose". Those seven answers are the only part of the log that
-is *invented* rather than transcribed: the export names no third language, and
-its background is Urchin, which SRD 5.1 does not publish. Nothing at all is
-left open: the stub declares a desired level of 3, which *is* the rogue's
-third level, and answers what those levels open.
-
-`acolyte/starting-equipment/0` draws its options from an equipment *category*
-(`rules.OptionsFromEquipmentCategory`, "any item in holy-symbols"). The answer is
-checked against the category's membership and the chosen item lands in the
-backpack like any other pick; `TestStubOptionalAnswersReachTheSheet` and
-`TestEquipmentCategoriesValidateAndProject` hold both.
-
-The route exists **only when `env` is `development`**, which is why there is no
-check inside the handler: a guard in two places is a guard that can disagree
-with itself, and the routing table already answers "does this endpoint exist?".
-In production the path is not registered, so it answers 405 rather than 404 --
-`GET`/`DELETE /v1/characters/{id}` already claim that shape, and to gin "stub"
-is a character id there. Which of the two refusals gin picks is a routing
-detail; that no handler runs is the point.
-
-Gating it needed **no new configuration key**. `env` already distinguishes
-development from production and already defaults to production, which matters
-because unknown keys are fatal and a new one would have had to stage across two
-releases -- see [Configuration](#configuration).
-
-The stub's character is a second transcription of the one in
-`internal/domain/character/fixtures_test.go`, and they deliberately do not share
-a definition: that file is `package character` in the domain, so importing the
-application layer from it would be a cycle. They also differ in one place worth
-knowing when reconciling them -- the fixture carries the six ability scores in
-its `init` event, which is what an imported log looks like, whereas creation no
-longer bundles them and the stub answers `character/abilities` as its own entry.
 
 ### Creation and level-up are one flow
 
@@ -1215,10 +1106,14 @@ This deliberately does **not** use the character log's `resource.spent` and
 browser. A spent slot is a fact about one sitting, exactly as a hit point lost
 is: the same character seated in two games has two independent counts, the
 sheet always shows full pools, and a DM can correct a player's count without a
-write path into somebody else's character. The price is that the tracker does
-not know what a short rest restores. There is one recovery, `POST
-/v1/games/{id}/rest`, master-only, which clears every entry's spent uses -- Hit
-Dice included, where the rules would return half -- and leaves HP alone.
+write path into somebody else's character. There are two recoveries, both `POST
+/v1/games/{id}/rest` and both master-only, and neither touches HP. A **long
+rest** clears every entry's spent uses -- Hit Dice included, where the rules
+would return half. A **short rest** (`?kind=short`) clears only the pools whose
+own recovery policy says a short rest refills them in full -- Second Wind,
+Channel Divinity, a warlock's slots -- read from each player's sheet
+(`ResourcePool.RestoredBy`). A policy with a condition counts as not applying:
+no SRD pool has one, and evaluating it needs the catalogue.
 The row's plus button is the undo for everything smaller. Monsters have
 no pools.
 

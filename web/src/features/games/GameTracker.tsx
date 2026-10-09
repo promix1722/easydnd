@@ -40,7 +40,7 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
   const order = useAction(orderGameEntries)
   const monster = useAction(addGameMonster)
   const rest = useAction(restGame)
-  const [resting, setResting] = useState(false)
+  const [resting, setResting] = useState<'short' | 'long' | null>(null)
   const entries = game.entries
   const selected = entries.find((entry) => entry.id === editing)
   const consumer = entries.find((entry) => entry.id === consuming)
@@ -51,7 +51,9 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
     if (await work !== null) onChange()
   }
 
-  const draggable = master && !pending && entries.length > 1
+  // A phone has no grip: a row there is too narrow to give a column to one, and
+  // a drag under a thumb fights the page's scroll. Its order is the menu's Move up and Move down.
+  const draggable = desktop && master && !pending && entries.length > 1
 
   function endDrag() {
     gesture.current = null
@@ -112,21 +114,15 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
     <Stack gap="sm">
       {error !== null && <Alert color="red" title={t('group.actionFailed')}>{error}</Alert>}
       {master && (
-        <Group justify="space-between" align="flex-start">
-          <Group gap="xs">
-            <Button variant="light" leftSection={<IconPlus size={ACTION_ICON_SIZE} />} disabled={pending}
-              onClick={onAddFromGroup}>{t('game.addFromGroup')}</Button>
-            <Button variant="light" disabled={pending} onClick={() => setPickingMonster(true)}>{t('game.addMonsterFromMine')}</Button>
-            <Button variant="light" disabled={pending} onClick={() => void act(monster.run(game.id))}>{t('game.addMonsterStub')}</Button>
-          </Group>
-          <Group gap="xs">
-            <Button variant="subtle" disabled={pending} onClick={() => setResting(true)}>{t('game.longRest')}</Button>
-            <Button variant="subtle" leftSection={<IconArrowDown size={ACTION_ICON_SIZE} />}
-              disabled={pending || entries.length < 2}
-              onClick={() => void act(order.run(game.id, { by_initiative: true }))}>
-              {t('game.orderInitiative')}
-            </Button>
-          </Group>
+        // One row of one kind of button: what a DM does to the table as a whole.
+        <Group gap="xs">
+          <Button variant="light" disabled={pending} onClick={onAddFromGroup}>{t('game.addFromGroup')}</Button>
+          <Button variant="light" disabled={pending} onClick={() => void act(monster.run(game.id))}>{t('game.addMonsterStub')}</Button>
+          <Button variant="light" disabled={pending} onClick={() => setPickingMonster(true)}>{t('game.addMonsterFromMine')}</Button>
+          <Button variant="light" disabled={pending} onClick={() => setResting('long')}>{t('game.longRest')}</Button>
+          <Button variant="light" disabled={pending} onClick={() => setResting('short')}>{t('game.shortRest')}</Button>
+          <Button variant="light" disabled={pending || entries.length < 2}
+            onClick={() => void act(order.run(game.id, { by_initiative: true }))}>{t('game.orderInitiative')}</Button>
         </Group>
       )}
       {entries.length === 0 && <Text c="dimmed">{t('game.empty')}</Text>}
@@ -167,9 +163,6 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
                       style={{ touchAction: 'none', userSelect: 'none', cursor: dragging === entry.id ? 'grabbing' : 'grab', flexShrink: 0 }}>
                       <IconGripVertical size={ACTION_ICON_SIZE} aria-hidden />
                     </ActionIcon>}
-                    {!desktop && entry.stats && entry.initiative != null && <Text component="span" size="sm" fw={500}
-                      aria-label={t('vitals.initiative')} title={t('vitals.initiative')}
-                      style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>({entry.initiative})</Text>}
                     <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
                       <Group gap="xs">
                         <Avatar image={entry.image} fallback={fallback} />
@@ -215,7 +208,7 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
             </Box>
           )
         })}
-        {master && entries.length > 1 && (
+        {desktop && master && entries.length > 1 && (
           <Box h={16} aria-hidden data-game-drop-end>
             <Box h={2} bg={dragging !== null && over === '' ? 'var(--mantine-primary-color-filled)' : 'transparent'} />
           </Box>
@@ -228,12 +221,12 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
           setEditing(null)
           onChange()
         }} />}
-      <ModalSheet opened={resting} onClose={() => setResting(false)} title={t('game.longRest')}
-        onSubmit={() => { setResting(false); void act(rest.run(game.id)) }}>
+      <ModalSheet opened={resting !== null} onClose={() => setResting(null)} title={resting === 'short' ? t('game.shortRest') : t('game.longRest')}
+        onSubmit={() => { if (resting !== null) void act(rest.run(game.id, resting)); setResting(null) }}>
         <Stack gap="sm">
-          <Text size="sm">{t('game.longRestHint')}</Text>
+          <Text size="sm">{resting === 'short' ? t('game.shortRestHint') : t('game.longRestHint')}</Text>
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setResting(false)}>{t('common.cancel')}</Button>
+            <Button variant="default" onClick={() => setResting(null)}>{t('common.cancel')}</Button>
             <Button type="submit">{t('game.apply')}</Button>
           </Group>
         </Stack>
@@ -286,8 +279,12 @@ function CompactStats({ entry, expanded, detailsId }: { entry: GameEntry; expand
   </SimpleGrid>
   return <>
     <Divider />
-    <SimpleGrid cols={desktop ? STAT_COLUMNS : 4} spacing={desktop ? 'sm' : 'xs'} verticalSpacing="xs">
-      {(desktop ? values : [values[0]!, values[1]!, values[2]!, [t('game.spellDc'), (stats.spellcasting ?? []).map((caster) => caster.saveDC).join(' · ') || '—']]).map(field)}
+    <SimpleGrid cols={desktop ? STAT_COLUMNS : 5} spacing={desktop ? 'sm' : 'xs'} verticalSpacing="xs">
+      {(desktop ? values : [
+        // What is asked mid-turn, and five of them across a phone: current hit points without the maximum, and initiative as a letter.
+        [t('game.hp'), entry.hp ?? '—'], values[1]!, values[2]!, [t('game.initiativeShort'), entry.initiative ?? '—'],
+        [t('game.spellDc'), (stats.spellcasting ?? []).map((caster) => caster.saveDC).join(' · ') || '—'],
+      ] satisfies typeof values).map(field)}
     </SimpleGrid>
     {desktop ? abilities : expanded && <Stack gap="xs" id={detailsId}>
         <SimpleGrid cols={2} spacing="xs">{values.slice(4, 6).map(field)}</SimpleGrid>
@@ -387,7 +384,7 @@ function EntryEditor({ entry, pending, error, onClose, onSave }: {
     }
     await onSave(patch)
   }
-  return <ModalSheet opened onClose={onClose} onSubmit={() => void submit()}>
+  return <ModalSheet opened onClose={onClose} title={entry.name || t('common.unnamed')} onSubmit={() => void submit()}>
     <Stack gap="sm">
       {error && <Alert color="red">{error}</Alert>}
       {!entry.can_edit && <Alert color="yellow">{t('game.editLocked')}</Alert>}

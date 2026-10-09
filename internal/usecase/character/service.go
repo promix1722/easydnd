@@ -54,7 +54,6 @@ type Service struct {
 	repo       domain.Repository
 	folders    domain.FolderRepository
 	catalog    catalog.Source
-	importer   SheetImporter
 	sharing    domain.Sharing
 	log        *slog.Logger
 
@@ -63,8 +62,7 @@ type Service struct {
 	clock func() time.Time
 }
 
-// NewService wires a Service over the given repositories, catalogue source and
-// sheet importer.
+// NewService wires a Service over the given repositories and catalogue source.
 //
 // Characters and folders are two stores but one service, because two of this
 // package's rules span both: every character is in a folder, and deleting a
@@ -72,27 +70,21 @@ type Service struct {
 // reach into this one to keep either of them, which is a dependency drawn to
 // avoid a field.
 //
-// The importer may be nil, in which case Import reports that the feature is
-// not configured rather than panicking. That is not a convenience: a build
-// that ships without an importer should fail the one route that needs one, not
-// every route that does not. The sharing port may be nil on the same terms: a
-// build in which nothing can hold a reference to a character has nothing to
-// tell when one is deleted.
+// The sharing port may be nil: a build in which nothing can hold a reference
+// to a character has nothing to tell when one is deleted.
 func NewService(
 	repo domain.Repository,
 	folders domain.FolderRepository,
 	source catalog.Source,
-	importer SheetImporter,
 	sharing domain.Sharing,
 	log *slog.Logger,
 ) *Service {
 	return &Service{
-		repo:     repo,
-		folders:  folders,
-		catalog:  source,
-		importer: importer,
-		sharing:  sharing,
-		log:      log,
+		repo:    repo,
+		folders: folders,
+		catalog: source,
+		sharing: sharing,
+		log:     log,
 	}
 }
 

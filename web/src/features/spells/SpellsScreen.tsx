@@ -7,7 +7,6 @@ import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
 import {
   Alert,
-  SourceTags,
   Anchor,
   Badge,
   Box,
@@ -278,12 +277,6 @@ export function SpellsScreen() {
                             <Text size="sm">{spell.name}</Text>
                           </Anchor>
                         ),
-                      },
-                      {
-                        key: 'source',
-                        header: t('spells.filter.source'),
-                        slot: 'block',
-                        render: (spell) => <SourceTags provenance={spell.provenance} />,
                       },
                       {
                         key: 'level',

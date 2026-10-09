@@ -1,3 +1,6 @@
+/** One and a half spell icons. Equipment slots reserve this height. */
+export const ITEM_ICON_SIZE = 66
+
 /** Decorative pack artwork: the adjacent item name remains the accessible label. */
 export function ItemIcon({ icon }: { icon: string | undefined }) {
   if (!icon) return null
@@ -7,12 +10,12 @@ export function ItemIcon({ icon }: { icon: string | undefined }) {
     alt=""
     loading="lazy"
     decoding="async"
-    width={88}
-    height={88}
+    width={ITEM_ICON_SIZE}
+    height={ITEM_ICON_SIZE}
     onError={(event) => { event.currentTarget.style.visibility = 'hidden' }}
     style={{
       display: 'block', flexShrink: 0, objectFit: 'contain', imageRendering: 'pixelated',
-      width: 88, height: 88, padding: 3, boxSizing: 'border-box',
+      width: ITEM_ICON_SIZE, height: ITEM_ICON_SIZE, padding: 3, boxSizing: 'border-box',
       background: '#252c3b', borderRadius: 8,
     }}
   />

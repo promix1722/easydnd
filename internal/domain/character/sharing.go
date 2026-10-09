@@ -17,8 +17,7 @@ import "context"
 // the one that makes an id stop meaning anything.
 //
 // Implementations may be nil, in which case deleting a character tells nobody
-// -- correct for a build with no sharing in it, and the same accommodation
-// SheetImporter gets for the same reason.
+// -- correct for a build with no sharing in it.
 type Sharing interface {
 	// UnshareEverywhere removes id from every collection referring to it. It
 	// is not an error for there to be none.

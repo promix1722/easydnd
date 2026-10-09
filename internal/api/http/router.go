@@ -251,21 +251,6 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.POST("/agent-sessions/:id/control", h.Character.AgentControl)
 			authed.GET("/characters", h.Character.List)
 			authed.POST("/characters", h.Character.Create)
-			// Import is a sibling of create, not a sub-resource of a
-			// character: it is what makes one.
-			authed.POST("/characters/import", h.Character.Import)
-			// So is the stub, and it exists only in development. It builds
-			// the reference character in one call so that working on the
-			// sheet, the log or this list does not start with a walk through
-			// the build screen -- a development convenience with nothing to
-			// offer easydnd.org, so the route is simply not there in
-			// production rather than there and refusing. Gated on the
-			// environment the config already carries; no new key, which
-			// matters because unknown keys are fatal and a new one would have
-			// to stage across two releases.
-			if cfg.Env == config.EnvDevelopment {
-				authed.POST("/characters/stub", h.Character.Stub)
-			}
 			authed.GET("/characters/:id", h.Character.Get)
 			authed.DELETE("/characters/:id", h.Character.Delete)
 			authed.GET("/characters/:id/sheet", h.Character.Sheet)
@@ -370,7 +355,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.DELETE("/games/:id/entries/:entry", h.Game.DeleteEntry)
 			authed.POST("/games/:id/monsters", h.Game.AddMonster)
 			authed.POST("/games/:id/order", h.Game.OrderEntries)
-			authed.POST("/games/:id/rest", h.Game.LongRest)
+			authed.POST("/games/:id/rest", h.Game.Rest)
 
 			// One shared character's sheet, and only ever the sheet. It hangs
 			// off nothing because what grants the read is "some group we are

@@ -7,7 +7,6 @@ import { useResource } from '@/lib/useResource'
 import { Badge, Group, Page, Panel, pageState } from '@/ui'
 
 import { SpellIcon } from './spellIcon'
-import { levelText } from './spellText'
 import { SpellDetails } from './SpellDetails'
 
 /**
@@ -54,8 +53,6 @@ export function SpellScreen() {
     )
   }
 
-  const schoolName = bySlug(schools).get(spell.school ?? '')?.name
-
   return (
     <Page
       trail={[{ label: spell.name }]}
@@ -74,10 +71,9 @@ export function SpellScreen() {
           )}
         </Group>
       }
-      subtitle={[levelText(t, spell.level), schoolName].filter(Boolean).join(' · ')}
     >
       <Panel>
-        <SpellDetails spell={spell} entries={bySlug(classes)} />
+        <SpellDetails standalone spell={spell} entries={bySlug([...classes, ...schools])} />
       </Panel>
     </Page>
   )

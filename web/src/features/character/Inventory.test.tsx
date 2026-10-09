@@ -17,25 +17,26 @@ const equipment: Equipment = {
 }
 const name = (slug: string) => items.get(slug)?.name ?? slug
 
-it('shows 88px inventory artwork, keeps custom names, and still consumes an item', async () => {
+it('shows 66px inventory artwork, keeps custom names, and still consumes an item', async () => {
   const user = setupUser()
   const onChange = vi.fn()
   renderAt('mobile', <SheetItems equipment={equipment} items={items} name={name} lookup={(_, slug) => slug} onChange={onChange} />)
-  expect(screen.getByAltText('')).toHaveAttribute('width', '88')
+  expect(screen.getByAltText('')).toHaveAttribute('width', '66')
   expect(screen.getByText('Keepsake')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /Healing potion/ }))
   await user.click(screen.getByRole('menuitem', { name: /Use/ }))
   expect(onChange).toHaveBeenCalledOnce()
 })
 
-it('shows equipped item descriptions and facts and still opens slot controls', async () => {
+it('shows equipped item descriptions and facts beside a menu, on a card that is not a button', async () => {
   const user = setupUser()
   renderAt('desktop', <SheetEquipment equipment={equipment} items={items} name={name} lookup={(_, slug) => slug} onChange={vi.fn()} />)
-  const slot = screen.getByRole('button', { name: /Main hand/i })
-  expect(within(slot).getByText('Sword')).toBeInTheDocument()
-  expect(within(slot).getByText('well-balanced').tagName).toBe('STRONG')
-  expect(slot).toHaveTextContent('1d8 slashing')
-  expect(within(slot).getByAltText('')).toHaveAttribute('height', '88')
-  await user.click(slot)
-  expect(screen.getByRole('dialog')).toHaveTextContent('Sword')
+  const slots = screen.getByRole('region', { name: 'Worn and wielded' })
+  expect(within(slots).getByText('Sword')).toBeInTheDocument()
+  expect(within(slots).getByText('well-balanced').tagName).toBe('STRONG')
+  expect(slots).toHaveTextContent('1d8 slashing')
+  expect(within(slots).getByAltText('')).toHaveAttribute('height', '66')
+  expect(screen.queryByRole('button', { name: /Main hand/i })).not.toBeInTheDocument()
+  await user.click(within(slots).getByRole('button', { name: 'Actions for Sword' }))
+  expect(await screen.findByRole('menuitem', { name: 'Take off Sword' })).toBeInTheDocument()
 })

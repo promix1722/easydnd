@@ -52,7 +52,7 @@ func TestImportHTTPUploadResumeOwnershipAndPoll(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, nil, slog.New(slog.DiscardHandler))
+	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, slog.New(slog.DiscardHandler))
 	cat, err := source.Load(context.Background(), rules.DefaultLocale)
 	if err != nil {
 		t.Fatal(err)
@@ -195,7 +195,7 @@ func TestImportHTTPOpenedChatIsAnsweredInSteps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, nil, slog.New(slog.DiscardHandler))
+	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, slog.New(slog.DiscardHandler))
 	cat, err := source.Load(context.Background(), rules.DefaultLocale)
 	if err != nil {
 		t.Fatal(err)

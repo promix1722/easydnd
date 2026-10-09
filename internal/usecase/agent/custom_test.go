@@ -220,7 +220,7 @@ func TestImportedClassUsesSelectedPackNamespaceAndSurvivesEditing(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), registry, nil, nil, slog.New(slog.DiscardHandler))
+	svc := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), registry, nil, slog.New(slog.DiscardHandler))
 	model := modelFunc(func(context.Context, agentuc.AgentRequest, func(string)) (agentuc.AgentResponse, error) {
 		return agentuc.AgentResponse{Calls: []agentuc.AgentCall{
 			{ID: "plan", Name: "plan_import", Arguments: `{"expected":["identity.name","class:sorcerer","race:half-elf","custom:chaos-weave"],"scores":{"cha":17}}`},

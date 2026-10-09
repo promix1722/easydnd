@@ -8,7 +8,12 @@ import { useIsDesktop } from './useIsDesktop'
 export interface ModalSheetProps {
   opened: boolean
   onClose: () => void
-  title?: ReactNode
+  /**
+   * What the dialog is, in its header. Required: a sheet without one opens on
+   * a phone as an empty band with a close button over a form nobody named --
+   * the game tracker's edit sheet did exactly that.
+   */
+  title: ReactNode
   children: ReactNode
   /** Desktop modal width. Ignored on mobile, where the sheet is full-width. */
   size?: string | number
@@ -150,7 +155,13 @@ export function ModalSheet({
         // against the space left above the keyboard, so a form taller than that
         // -- the folder dialog, which carries a paragraph above its field --
         // keeps its field reachable instead of pushing it under the keys.
-        body: { overflowY: 'auto' },
+        //
+        // And its own space above. Mantine zeroes a body's top padding when a
+        // header precedes it, on the strength of the header's own padding --
+        // but the header is a band of its own colour here, so content with no
+        // label over it (a row of pips, a line of text) started flush against
+        // the band's edge.
+        body: { overflowY: 'auto', paddingTop: 'var(--mantine-spacing-md)' },
       }}
     >
       {body}

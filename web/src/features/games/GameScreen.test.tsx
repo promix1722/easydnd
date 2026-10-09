@@ -70,13 +70,16 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+/** A phone prints the hit points a character has; a wide screen, out of how many. */
+const shown = (viewport: 'mobile' | 'desktop', current: number) => viewport === 'mobile' ? new RegExp(`^${current}$`) : `${current} / 24`
+
 describe.each(['mobile', 'desktop'] as const)('GameScreen (%s)', (viewport) => {
   it('shows a DM the roster and the controls that change it', async () => {
     renderGame(viewport, gameAs('dm'))
 
     await waitFor(() => expect(screen.getByText('Thursday night')).toBeInTheDocument())
     expect(screen.getByText('Ada')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add character from group' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add from group' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add my characters' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
     // A row's action, so it is a named button on a desktop and one item inside
@@ -101,7 +104,7 @@ describe.each(['mobile', 'desktop'] as const)('GameScreen (%s)', (viewport) => {
 
     await waitFor(() => expect(screen.getByText('Thursday night')).toBeInTheDocument())
     expect(screen.getByText('Ada')).toBeInTheDocument()
-    for (const label of ['Add character from group', 'Add my characters', 'Rename', 'Delete']) {
+    for (const label of ['Add from group', 'Add my characters', 'Rename', 'Delete']) {
       expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
     }
     // And no way to unseat anybody: a player's row carries no control at all,
@@ -118,16 +121,16 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     renderGame(viewport, game)
     await screen.findByText('Ada')
     const hero = within(screen.getByRole('article', { name: 'Ada' }))
-    expect(hero.getByText('20 / 24')).toBeInTheDocument()
+    expect(hero.getByText('HP').nextElementSibling).toHaveTextContent(shown(viewport, 20))
     expect(screen.queryByText('No tags')).not.toBeInTheDocument()
     expect(hero.queryByRole('group', { name: 'Tags' })).not.toBeInTheDocument()
     const vitals = hero.getByText('HP').parentElement!.parentElement!
-    expect(within(vitals).getAllByText(/^(HP|Temp HP|AC|Spell DC)$/).map((label) => label.textContent))
-      .toEqual(['HP', 'Temp HP', 'AC', 'Spell DC'])
+    expect(within(vitals).getAllByText(/^(HP|Temp HP|AC|I|Spell DC)$/).map((label) => label.textContent))
+      .toEqual(viewport === 'mobile' ? ['HP', 'Temp HP', 'AC', 'I', 'Spell DC'] : ['HP', 'Temp HP', 'AC', 'Spell DC'])
     if (viewport === 'mobile') {
-      expect(hero.getByLabelText('Initiative')).toHaveTextContent('(0)')
-      expect(hero.getByText('Ada').parentElement!.parentElement!.parentElement).toContainElement(hero.getByText('(0)'))
-      expect(hero.getByText('(0)').compareDocumentPosition(hero.getByText('Ada')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      // Initiative is a letter on the vitals line, not a number beside the name.
+      expect(hero.getByText('I').nextElementSibling).toHaveTextContent('0')
+      expect(hero.queryByLabelText('Initiative')).not.toBeInTheDocument()
       expect(hero.queryByText('STR')).not.toBeInTheDocument()
       expect(hero.queryByText('Speed')).not.toBeInTheDocument()
       expect(hero.getByText('AC')).toBeInTheDocument()
@@ -144,13 +147,13 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     if (viewport === 'mobile') {
       await setupUser().click(hero.getByRole('button', { name: 'Hide details' }))
       expect(hero.queryByText('STR')).not.toBeInTheDocument()
-      expect(hero.getByText('20 / 24')).toBeInTheDocument()
+      expect(hero.getByText('HP').nextElementSibling).toHaveTextContent(shown(viewport, 20))
     }
     const goblin = within(screen.getByRole('article', { name: 'Goblin' }))
     expect(goblin.queryByText('HP:')).not.toBeInTheDocument()
     expect(goblin.queryByText('No tags')).not.toBeInTheDocument()
     expect(goblin.queryByLabelText('Initiative')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Order by initiative' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Order' })).not.toBeInTheDocument()
   })
 
   it('opens an entry\'s consumables in a dialog, spends one and rests the table', async () => {
@@ -180,9 +183,12 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     expect(JSON.parse(spend[1]!.body as string)).toEqual({ used: { 'spell-slots/1': 1 } })
     await user.click(dialog.getByRole('button', { name: 'Close' }))
 
-    await user.click(screen.getByRole('button', { name: 'Long rest' }))
-    await user.click(screen.getByRole('button', { name: 'Apply' }))
-    await waitFor(() => expect(fetch.mock.calls.some(([url, options]) => options?.method === 'POST' && /\/games\/gam_1\/rest\?/.test(String(url)))).toBe(true))
+    // Two rests, one dialog each, and the kind travels with the request.
+    for (const [label, kind] of [['Long rest', 'long'], ['Short rest', 'short']] as const) {
+      await user.click(screen.getByRole('button', { name: label }))
+      await user.click(screen.getByRole('button', { name: 'Apply' }))
+      await waitFor(() => expect(fetch.mock.calls.some(([url, options]) => options?.method === 'POST' && String(url).includes(`/games/gam_1/rest?kind=${kind}&`))).toBe(true))
+    }
   })
 
   it('lets an unlocked owner edit only changed game fields in the dialog', async () => {
@@ -209,7 +215,7 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     const request = fetch.mock.calls.find(([, options]) => options?.method === 'PATCH')!
     expect(String(request[0])).toMatch(/\/games\/gam_1\/entries\/pc_chr_1\?locale=en$/)
     expect(JSON.parse(request[1]!.body as string)).toEqual({ hp: 18, initiative: 17 })
-    await waitFor(() => expect(screen.getByText('18 / 24')).toBeInTheDocument())
+    await waitFor(() => expect(within(screen.getByRole('article', { name: 'Ada' })).getByText('HP').nextElementSibling).toHaveTextContent(shown(viewport, 18)))
   })
 
   it('keeps typed drafts during refresh and disables saving when the master locks the entry', async () => {
@@ -247,8 +253,8 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     renderGame(viewport, gameAs('dm'))
     await screen.findByText('Ada')
     expect(screen.getByRole('button', { name: 'Add NPC stub' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add NPC from my characters' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Order by initiative' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add prepared NPC' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Order' })).toBeInTheDocument()
     const fetch = vi.fn(async () => new Response(JSON.stringify(gameAs('dm')), { status: 200 }))
     vi.stubGlobal('fetch', fetch)
     await pressRowAction(viewport, 'Ada', 'Lock')
@@ -286,10 +292,17 @@ describe.each(['mobile', 'desktop'] as const)('tracker ordering and layout (%s)'
     renderGame(viewport, roster('dm'))
     await screen.findByText('Ada')
     const row = within(screen.getByRole('article', { name: 'Ada' }))
-    expect(row.getByText('HP').nextElementSibling).toHaveTextContent('20 / 24')
+    expect(row.getByText('HP').nextElementSibling).toHaveTextContent(shown(viewport, 20))
     if (viewport === 'mobile') await setupUser().click(row.getByRole('button', { name: 'Show details' }))
     expect(row.getByText('DEX').nextElementSibling).toHaveTextContent('16 (+3)')
     expect(row.getByText('Spell DC').nextElementSibling).toHaveTextContent('—')
+  })
+
+  // A phone orders from the menu only: no grip is drawn there, for a DM either.
+  it.runIf(viewport === 'mobile')('draws no drag grip on a phone', async () => {
+    renderGame(viewport, roster('dm'))
+    await screen.findByText('Ada')
+    expect(screen.queryByRole('button', { name: /^Drag to reorder / })).not.toBeInTheDocument()
   })
 
   function grip(name: string) {
@@ -302,7 +315,7 @@ describe.each(['mobile', 'desktop'] as const)('tracker ordering and layout (%s)'
     fireEvent.pointerMove(from, { clientX: 100, clientY: 100, pointerId })
   }
 
-  it('moves an entry down with a mouse or touch grip and renders the persisted order', async () => {
+  it.runIf(viewport === 'desktop')('moves an entry down with a mouse or touch grip and renders the persisted order', async () => {
     const game = roster('dm')
     renderGame(viewport, game)
     await screen.findByText('Ada')
@@ -328,7 +341,7 @@ describe.each(['mobile', 'desktop'] as const)('tracker ordering and layout (%s)'
     expect(JSON.parse(posts[0]![1]!.body as string)).toEqual({ entry_id: 'pc_chr_1', before_id: 'mon_b' })
   })
 
-  it('moves to the beginning and the reserved end target using stable IDs', async () => {
+  it.runIf(viewport === 'desktop')('moves to the beginning and the reserved end target using stable IDs', async () => {
     const game = roster('dm')
     renderGame(viewport, game)
     await screen.findByText('Ada')
@@ -350,7 +363,7 @@ describe.each(['mobile', 'desktop'] as const)('tracker ordering and layout (%s)'
       .toEqual({ entry_id: 'pc_chr_1', before_id: '' })
   })
 
-  it('does not reorder on a tap, a canceled gesture, or a drop outside the roster', async () => {
+  it.runIf(viewport === 'desktop')('does not reorder on a tap, a canceled gesture, or a drop outside the roster', async () => {
     const game = roster('dm')
     renderGame(viewport, game)
     await screen.findByText('Ada')
@@ -370,7 +383,7 @@ describe.each(['mobile', 'desktop'] as const)('tracker ordering and layout (%s)'
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it('ignores right-click and another pointer without interrupting the active drag', async () => {
+  it.runIf(viewport === 'desktop')('ignores right-click and another pointer without interrupting the active drag', async () => {
     const game = roster('dm')
     renderGame(viewport, game)
     await screen.findByText('Ada')
@@ -390,7 +403,7 @@ describe.each(['mobile', 'desktop'] as const)('tracker ordering and layout (%s)'
     await waitFor(() => expect(fetch.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(true))
   })
 
-  it('resolves the destination against the refreshed roster during a drag', async () => {
+  it.runIf(viewport === 'desktop')('resolves the destination against the refreshed roster during a drag', async () => {
     const game = roster('dm')
     renderGame(viewport, game)
     await screen.findByText('Ada')
@@ -438,15 +451,19 @@ describe.each(['mobile', 'desktop'] as const)('tracker refinements (%s)', (viewp
 
   it('puts character and NPC add buttons in the toolbar above the roster', async () => {
     renderGame(viewport, gameAs('dm'))
-    const button = await screen.findByRole('button', { name: 'Add NPC from my characters' })
+    const button = await screen.findByRole('button', { name: 'Add prepared NPC' })
     const toolbar = button.parentElement!
     expect(toolbar).toContainElement(screen.getByRole('button', { name: 'Add NPC stub' }))
     const row = screen.getByRole('article', { name: 'Ada' })
     expect(button.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    const addCharacter = screen.getByRole('button', { name: 'Add character from group' })
+    const addCharacter = screen.getByRole('button', { name: 'Add from group' })
     expect(addCharacter.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(addCharacter.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(toolbar).toContainElement(addCharacter)
+    // Six actions, one style: no button is drawn quieter than the others.
+    const buttons = within(toolbar).getAllByRole('button')
+    expect(buttons.map((each) => each.textContent)).toEqual(['Add from group', 'Add NPC stub', 'Add prepared NPC', 'Long rest', 'Short rest', 'Order'])
+    expect(new Set(buttons.map((each) => each.getAttribute('data-variant')))).toEqual(new Set(['light']))
     expect(screen.queryByRole('button', { name: 'Add my characters' })).not.toBeInTheDocument()
   })
 
@@ -502,7 +519,7 @@ describe.each(['mobile', 'desktop'] as const)('inline game tags (%s)', (viewport
     await user.type(row.getByRole('textbox', { name: 'Tags' }), ' Concentrating {Enter}')
     const remove = await row.findByRole('button', { name: 'Remove tag Concentrating' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(row.getByText('20 / 24')).toBeInTheDocument()
+    expect(row.getByText('HP').nextElementSibling).toHaveTextContent(shown(viewport, 20))
     await user.click(remove)
     await waitFor(() => expect(row.queryByRole('button', { name: 'Remove tag Concentrating' })).not.toBeInTheDocument())
     expect(row.queryByText('No tags')).not.toBeInTheDocument()
@@ -573,7 +590,7 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     await user.click(screen.getByRole('button', { name: 'Apply' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(JSON.parse(fetch.mock.calls.find(([, options]) => options?.method === 'PATCH')![1]!.body as string)).toEqual(patch)
-    await screen.findByText(`${hp} / 24`)
+    await waitFor(() => expect(within(screen.getByRole('article', { name: 'Ada' })).getByText('HP').nextElementSibling).toHaveTextContent(shown(viewport, hp)))
   })
 
   it('recalculates revised damage from the draft instead of subtracting on every keystroke', async () => {

@@ -981,9 +981,12 @@ which is where the prose and the remaining rule values live.
 
 **Item artwork uses shared pack labels.** Equipment and magic items reference
 one pack-local `icons.items` library. Resolved API entries carry an optional
-`icon` data URL. `ui/ItemIcon` renders the 128×128 assets at 88×88, twice the
-spell icon dimensions, with pixelated scaling beside the visible item name. Inventory rows, equipped slots, equip
-selectors and starting-equipment choices use the same component; equipment
+`icon` data URL. `ui/ItemIcon` renders the 128×128 assets at 66×66, one and
+a half times the spell icon, with pixelated scaling beside the visible item name.
+An equipment slot reserves that height whether or not anything is worn, and
+cuts the worn item's facts and description to it, so equipping never moves the
+cards below. Inventory rows, equipped slots
+and starting-equipment choices use the same component; equipment
 columns stack on narrow screens to make room. Missing images leave the name
 and controls usable. Item artwork is decorative to screen readers. See
 `docs/packs.md` for the authored mapping and conversion workflow.
@@ -1104,10 +1107,13 @@ rolled initiative, then six ability scores with modifiers, then free-text tags.
 Labels sit above values, using the sheet identity table's dimmed captions and
 plain bordered cards. Vitals and abilities use the same responsive column
 widths (seven on desktop), so both rows align. On mobile each row starts
-collapsed, showing HP, temporary HP, AC and spell DC in four columns. Russian
-roster captions use «Вр. ОЗ» and «СЗ» to fit the compact grid. Rolled initiative
-appears in parentheses before the name in the mobile header, and stays visible
-while collapsed. Unset initiative and private NPC values are omitted. A
+collapsed, showing HP, temporary HP, AC, initiative and spell DC in five
+columns -- the five numbers asked for mid-turn. HP there is the current value
+alone, without the maximum, and initiative is captioned with one letter, "I"
+or «И», because five columns at 390px leave no room for the word. Russian
+roster captions use «Вр. ОЗ» and «СЗ» to fit the compact grid. Initiative used
+to sit in parentheses before the name in the mobile header; it moved onto the
+line so the header is the name alone. Unset initiative reads "—", and private NPC values are omitted. A
 chevron in the header expands movement, vision and abilities independently
 for that entry. An entry's **consumables** are a dialog, opened from "Consumable slots" in the row's
 "…" menu and drawn by `features/character/ResourcePools`: one
@@ -1126,8 +1132,10 @@ shared one would disable every control on the page for the length of each
 request, which read as the whole page redrawing. The local count is dropped
 when the server reports the same number, so a long rest called meanwhile still
 shows. The plus is the whole undo; there is no per-player rest. Masters have
-one **Long rest** button in the toolbar, behind a confirmation because it
-cannot be undone, which returns everybody's spent uses.
+**Long rest** and **Short rest** in the toolbar, each behind a confirmation
+because it cannot be undone. A long rest returns everybody's spent uses; a
+short rest returns only what the catalogue says a short rest refills, which
+the server decides (docs/backend.md).
 A pool of more than twenty (Lay on Hands, high-level
 ki) is a number rather than a wall of marks, and a capacity
 of 9999 -- how a pack spells "no limit" -- reads "Unlimited". Counts are the
@@ -1135,13 +1143,15 @@ game's, not the character's: see
 [backend.md](backend.md#active-game-entries). Tags stay visible in the collapsed row; empty tag lists have no
 placeholder or blank row, while editable entries retain the inline add control. The six abilities occupy the first six desktop columns. Row actions use the same “…” menu
 at every width. Owners edit their own unlocked game values; masters can lock
-player entries and move or sort the shared list. Masters can drag an entry by
-the dedicated grip with a mouse, touch or stylus, using the folder list's
+player entries and move or sort the shared list. On a wide screen masters can drag an entry by
+the dedicated grip with a mouse or stylus, using the folder list's
 reserved drop indicator. The pointer is captured until release; a press must
 travel eight pixels before it becomes a drag. Canceled gestures and releases
 outside the roster leave ordering intact. Moving
 down lands after the hovered row; moving up lands before it. Move up/down in
-the menu provide keyboard ordering. Only masters can reorder. Sorting remains explicit.
+the menu provide keyboard ordering -- and on a phone they are the only ordering:
+no grip is drawn there, since it cost a narrow row a column and a drag under a
+thumb fights the page's scroll. Only masters can reorder. Sorting remains explicit.
 An edit sheet keeps its draft through background updates and disables saving
 if a refreshed permission says the entry is locked. The full-width Damage
 field previews how much temporary HP absorbs, then subtracts the remainder
@@ -1159,9 +1169,11 @@ spell save DC. Other copied movement modes and senses remain intact while
 editing walking; they are not exposed as extra form controls. A copied caster's
 highest DC initializes the field, and an explicit edit applies the new DC to
 its casting profiles. Players see only names and ordering. The private flow never calls the
-player seating/share action. The top-left toolbar starts with Add character
-from group, followed by the two NPC actions; initiative ordering sits on the
-right. Player seating uses only the group picker. The NPC name is the first field in its edit sheet.
+player seating/share action. The toolbar is one row of six buttons in one
+style -- Add from group, Add NPC stub, Add prepared NPC, Long rest, Short rest,
+Order -- with no icons and no quieter variant: the two rests and the ordering
+used to be `subtle` and pushed to the right, which read as a different kind of
+control for what is the same kind of act on the table. Player seating uses only the group picker. The NPC name is the first field in its edit sheet.
 Tags are managed directly in each row: adding or removing a tag immediately
 patches only tags, outside the stat editor. Read-only entries show badges;
 editable entries show removable tags and a small inline add field. Failed
@@ -1529,52 +1541,6 @@ whatever the list was showing is where the next character lands. Import did the
 same while its button was offered. Absent, the server resolves the account's
 default.
 
-### The Stub button is a development build's second button
-
-Beside New character there is a **Stub**, and it is there only in a development
-build.
-It posts to `/v1/characters/stub` and lands on a finished level-3 rogue -- the
-character in `docs/reference_hexsheet/` -- so that working on the sheet, the log
-page or the character list does not begin with a walk through five tabs.
-
-It goes to **the sheet**, and that is the one place it differs from Import,
-which goes to the build screen. An import answers no prompts, so there is always
-something left to decide; a stub is finished, so the sheet is the thing worth
-looking at. It carries `?folder=` like its neighbour.
-
-Finished means the build screen's "still to choose" panel is **empty**, not
-merely that the rules call the character complete. Seven of its prompts are
-optional -- acolyte's language and holy symbol, and the five questions about
-who the character is -- and a stub that left them would have shown seven
-untouched rows to anybody opening the build screen to look at one. The four
-written ones are answered as changes rather than picks, which is what they are
-now; the stub is a log the build screen could have written, so it writes what
-that screen would. Nothing at all remains open: the stub declares a desired
-level of 3 and takes all three, so even the level question has been answered.
-
-The gate is `import.meta.env.DEV`, not a runtime check on a version or a
-feature flag, and the difference is the point: Vite replaces it with a literal,
-so a production build **drops the branch and everything behind it** rather than
-shipping code it merely never reaches. The server does the same on its side --
-the route is not registered outside `development` -- so neither half relies on
-the other to stay hidden. See
-[backend.md](backend.md#the-stub-builds-a-character-it-does-not-import-one) for
-why it builds the character rather than importing it.
-
-That elimination is why the button is **its own component**, `StubButton.tsx`,
-rather than a few lines inline in the character list. A hook cannot sit inside a
-branch, so inline the `useAction(createStubCharacter)` would have to be called
-unconditionally -- and an unconditional call keeps the whole path reachable, so
-the bundle would ship it and merely never draw it. Behind its own module the
-one reference folds away with the branch and the module goes with it. The check
-is a grep: `characters/stub` appears zero times in `dist/`, where
-`characters/import` beside it appears twice. What the character list keeps is one
-`useState` holding an error nothing ever sets, because that too is a hook.
-
-It renders under Vitest, since `DEV` is set there, which is what makes the two
-tests in `CharacterListScreen.test.tsx` possible. That a production bundle omits
-it is not something a test in that environment can observe.
-
 ### Changing anything is one mechanism
 
 Every settled block is exactly one log entry, and opening it replaces that
@@ -1874,24 +1840,30 @@ the rulebook: looking the character up, taking a turn, casting, gearing up,
 going through the pack.
 
 - **Overview** is who the character is and the abilities everything else is
-  derived from, the body's state, then skills, proficiencies and traits as
-  headed panels -- two abreast on a wide screen, stacked on a phone.
+  derived from, the body's state, then skills, proficiencies, traits and
+  personality as headed panels -- two abreast on a wide screen, stacked on a
+  phone. Personality prints the trait, ideal, bond and flaw as the player wrote
+  them, and says so when one has not been written.
 - **Actions** lists what the server derived (`sheet.actions`) and nothing
   else. The list is
-  `features/character/SheetActions.tsx`: a `BlockList` whose rows open onto
-  their description, under a search box and two rows of filter buttons -- the
-  part of the turn and where the action comes from. Each value is its own
-  button, pressed while it is let through (`aria-pressed`, the same idiom as a
-  picked option), because a select holds one value and a turn is "my action
-  and my bonus action". The list opens with everything pressed except
-  **Basic**: those fourteen rows are the same on every sheet and would stand
-  between a player and their own abilities. What is on it is the rule pack's decision
+  `features/character/SheetActions.tsx`: one group per source -- **Equipment**,
+  **Class and race**, **Basic** -- each a heading with a count that folds on
+  its own, over a `BlockList` whose rows open onto their description. Only the
+  groups a sheet has are drawn. A row is marked with its part of the turn only
+  when that is not a plain action -- Bonus action, Reaction, No action -- since
+  "Action" on most rows of a list called Actions says nothing.
+  **Every group starts folded**: the tab opens as headings with their counts,
+  and the player unfolds the one they came for. There is no
+  search and no filter. There used to be both -- a search box and two rows of
+  pressed buttons, by part of the turn and by source -- and they were more
+  control than a dozen rows needed: the one question a player asked of them,
+  "hide the basic ones", is what a folded group already answers. What is on
+  the list is the rule pack's decision
   (see [packs.md](packs.md#action-tags)); the client knows no class. The prose
   arrives in the sheet response as `catalog.actions`, keyed by each action's
   `origin`, so opening a row is not a request. A row with no prose -- a mundane
-  weapon -- has no body and is drawn as a fact, not a control. Filters are
-  local state, offer only the kinds and sources the sheet actually has, and
-  record what is switched *off*, so a kind a pack adds later is shown. A
+  weapon -- has no body and is drawn as a fact, not a control. An action whose
+  source the client does not know is filed under Class and race. A
   pool is shown by capacity, as everywhere on a sheet; spending is the game
   tracker's.
 - **Spells** is drawn only for a character with a spell source.
@@ -1931,8 +1903,10 @@ for both (docs/dnd.md). **Custom** is the card that takes any wearable: a
 second cloak, a third ring, a helm over a circlet. No portrait between the
 columns; it
 is in the page header already. Below the doll, the **Wearable** rows:
-everything with a slot, worn or not, one row per entity however many lists the
-server splits it across.
+everything with a slot that is *not* worn, one row per entity however many
+lists the server splits it across. A worn item is on its card and nowhere
+else -- a row counts only the units still carried and is not drawn when there
+are none -- so nothing is listed twice and "where is my armor" has one answer.
 
 **Items** is the rest, read top-down with nothing to switch: the **Coins**
 panel first, then **Consumables**, then **Other gear**, each a panel with the
@@ -1968,20 +1942,30 @@ Every inventory row, on both tabs, is a **bubble** (`features/character/
 Inventory`): the name, the item's numbers on one line -- armor class, damage
 and its type, range, properties, weight, built by `itemFacts`, the same line
 the builder prints under a picked kit option -- and the pack and book badges on
-one line to the right. Nothing opens: everything a row has to say is on the
+one line: in the top right corner beside the menu on a wide screen, under the
+text on a phone, where that corner is the name's. Nothing opens: everything a row has to say is on the
 row. The words the line needs -- damage types, weapon properties -- arrive in
 the sheet's `catalogNames`, resolved by the server like everything else on the
 sheet (docs/backend.md#the-sheet-arrives-resolved).
 
 Both tabs are **editable only when `SheetBody` is given `onEquipment`**. Only
 the owner's `CharacterSheetScreen` passes it; `SharedSheetScreen` does not, so
-a sheet shared with a table has nothing to press. With it, a card opens a
-sheet offering what in the backpack fits -- for Custom, any wearable -- every
-row has a **menu** on the right: Wear and Take off on a wearable, **Use** on a
+a sheet shared with a table has nothing to press. With it, every row has a
+**menu** on the right, and so does every worn item on its card -- the same
+three dots, so there is one way to act on an item wherever it is drawn. A
+card itself is never pressed and an empty one does nothing: it used to open a
+sheet listing what in the backpack fits, which made an empty rectangle a
+button and gave equipping two different controls. A wearable's row menu has
+**one Equip entry per slot it could go in** -- its own, Custom, and the off
+hand for a held thing once the main hand is taken (`slotsFor` in
+`domain/equipment.ts`; alone, a held item is seated in the main hand whatever
+was asked, so the entry is not offered). A worn item's menu takes it off or
+drops it. A row also has **Use** on a
 consumable (one fewer, and nothing else yet -- no potion takes effect), and
 Drop on anything, offered as *Drop one* and *Drop all* once there is more than
 one. No count stepper: a dozen torches is still one row with one menu. The
-purse is five fields.
+purse is five fields, labelled with the coins' full names -- Copper, Gold --
+because "cp" and "зм" are rulebook shorthand a new player does not read.
 Every edit is one `change` event on `equipment.*` paths, appended to the log.
 Equipping writes the equipped list both whole and per slug -- see the comment
 on `equippedChanges` for why the server needs both -- and into Custom, the
@@ -2049,11 +2033,15 @@ why the Items tab's inner row does not pass it and sits in a `Panel` with
 its rows and the purse instead. Every tab's content is in panels for the same
 reason: two surfaces, the bar and then what it selects.
 
-**A slide is as tall as the tallest slide**, which is now the Overview. Swipe
-from its foot to Actions and you are a long way down a mostly empty slide with
-the tabs off-screen above. The alternative is to measure the showing slide and
-size the viewport to it -- a `ResizeObserver` reading a layout jsdom does not
-compute, so the suite could neither exercise it nor catch it breaking.
+**The deck is as tall as the slide that is showing.** Every other slide is
+given `height: 0` and left to overflow, so the viewport is sized by the one
+slide with a height and clips the rest to it -- a neighbour is still drawn
+sliding in during a swipe, cut at the foot of the panel being left. Nothing is
+measured: the alternative, a `ResizeObserver` sizing the viewport, reads a
+layout jsdom does not compute, so the suite could neither exercise it nor catch
+it breaking. It used to be the tallest slide's height, and a swipe from the foot
+of Overview landed a long way down a mostly empty Actions with the tabs
+off-screen above.
 
 The first tab is **`Main`**, and it is the one label here that names a place
 rather than its contents. The section holds two things -- the identity table and
@@ -2090,17 +2078,12 @@ and they are the ones a phone can afford least:
 None of this is assertable: the suite runs without CSS, so a spacing prop is a
 change no test can see. That is the honest reason there is nothing pinning it.
 
-**On a phone the main section leads with the ability cards, not with the
-identity table**, which is the reverse of the wide screen and the one thing on this sheet
-whose order depends on width. A wide screen shows both at once, so it reads in
-the order a sheet is written in: who the character is, then what everything
-about them is derived from. A phone shows one slide, and the first thing on the
-one you land on should be the thing reached for mid-turn -- six modifiers, not a
-background. It is swapped **in the document**, by the one `useIsDesktop` call in
-this feature, rather than with a `column-reverse` that would leave the page
-saying one order and the screen showing another. Two static blocks would survive
-that mismatch; a habit of it would not, and a test can assert a document order
-where it cannot assert a cascaded style.
+**The main section reads the same at every width: who the character is, then
+the ability cards.** A phone used to swap them -- six modifiers first, on the
+argument that a slide should open on what is reached for mid-turn -- which made
+this the one place on the sheet whose order depended on width, and opened a
+character's page on six numbers before saying whose they were. The swap and its
+`useIsDesktop` call are gone.
 
 Two of the six -- Main, Vitals -- are `desktop: 'full'` and
 are drawn bare on a wide screen, no border and no heading, exactly as they
@@ -2410,27 +2393,6 @@ Nothing on the page writes. Changing a decision happens on the build screen,
 where the thing being changed is in front of you: one entry is replaced and
 everything after it revalidated. The log is where you come afterwards to see
 what that cost.
-
-## Importing shows the report before the character
-
-`features/characters/ImportCharacterScreen` uploads a sheet exported from
-another tool, and it is deliberately two steps rather than one: the file is
-posted, and then the **report** is shown before anything navigates away.
-
-An import is lossy by construction -- SRD 5.1 publishes one background and one
-feat, so a sheet from a tool with the full rules always leaves something behind
--- and going straight to the new character would make the import look lossless
-and let the player find out otherwise from a wrong number weeks later. So the
-screen names what did not come across, says how many choices are still
-outstanding, and offers a way on.
-
-That way on is the **build screen**, not the sheet. An import answers no
-prompts (see [dnd.md](dnd.md#importing-a-foreign-sheet)), so an imported
-character always has something left to decide.
-
-The file's bytes are the request body, sent through `request`'s existing
-`rawBody` option: the route takes the export itself, not a wrapper object, and
-re-encoding JSON that is already JSON buys nothing.
 
 ## Private routes branch, they do not redirect
 
@@ -3093,6 +3055,14 @@ rather than at the call site:
 | `TabDeck` | tab strip, and the active panel | tab strip over a carousel of every panel |
 | `TabRow` | tab strip | the same, scrolled sideways, ends faded |
 | `BlockList` | a list of blocks, one open | the same |
+
+Every dialog in the app is a `ModalSheet`, so what a sheet looks like on a phone
+is decided once. Two things are, there: **`title` is required**, because a
+sheet without one opened as an empty header band over an unnamed form (the game
+tracker's edit sheet did, and is now titled with the entry's name); and the
+drawer's **body keeps its own top padding**, which Mantine zeroes under a
+header -- fine when the header is the panel's colour, flush against a band's
+edge when it is not.
 
 ### A dropdown inside a sheet stays inside it
 
@@ -4535,6 +4505,15 @@ Character creation treats confirmed rules and rule packs as final: the Rules tab
 shows the pinned pack selection read-only, with no migration controls. Final
 choices use neutral borders; red highlights indicate outstanding choices only.
 Choice rows place their source badges on the right beside the name.
+Spell *lists* are the exception and carry no source badges -- not on a spell
+choice row, not in the compendium's list. A list is dozens of rows and the pack
+and book were the same two badges on every one of them; the compendium's Source
+*filter* stays. The badges are in one place for a spell: inside its description
+box (`features/spells/SpellDetails`), as the last of its facts, which is where
+"which book is this from" is asked about one spell. On a spell's own page that
+box also opens with its level and school (in the builder's preview the row
+above already says both). They used to be the page's subtitle -- a dimmed
+line above the panel, apart from the facts they belong with.
 Homebrew uses a gear icon in desktop navigation and is omitted from the mobile
 menu; its direct routes remain available.
 

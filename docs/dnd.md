@@ -466,6 +466,13 @@ grants one of each, and spending one does not spend another.
 
 ## Importing a foreign sheet
 
+> The HexSheet JSON importer this section was written for has been removed
+> (`internal/adapter/sheet/hexsheet` and `POST /v1/characters/import`). What
+> it describes still explains two things that outlived it: the override-tier
+> `skills.<skill>` and `savingThrows.<ability>` paths, and
+> `ValidateImported`, which the AI Wizard's tools and custom options still
+> call. Read "an import" below as history.
+
 A sheet exported from another tool is a **state**, not a **history**. It says
 what the character is; it does not say what was chosen to get there. That is
 the exact inverse of the log, and the gap is not closable: "proficient in

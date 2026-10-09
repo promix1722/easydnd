@@ -67,13 +67,15 @@ export interface TabDeckProps {
  * the obvious hand-rolled version is a focus handler that fights the one
  * already there.
  *
- * The carousel is deliberately given no `height`. Mantine's own default is
- * `auto`, which makes the viewport as tall as its tallest slide; a slide is
- * then aligned to the top of it rather than stretched down it, so a short
- * panel keeps its own size and leaves the difference blank. Sizing the
- * viewport to whichever slide is showing would need to measure it, and jsdom
- * computes no layout -- the suite could neither exercise that nor catch it
- * breaking.
+ * **The deck is as tall as the panel that is showing**, not as tall as the
+ * tallest one. Every slide but the active one is given `height: 0` and left to
+ * overflow: the viewport is then sized by the one slide that has a height, and
+ * clips the others to it -- so a neighbour is still there to be seen sliding in
+ * during a swipe, cut off at the bottom of the panel you are leaving. Nothing
+ * is measured, which matters because jsdom computes no layout and a
+ * `ResizeObserver` would be code the suite could neither exercise nor catch
+ * breaking. It used to be the tallest slide's height, and a swipe from the
+ * foot of a long tab landed a long way down an empty one.
  *
  * **A wide screen gets the tabs and nothing else.** The carousel is the answer
  * to a phone: the panel is the biggest thing on the screen, a swipe across it
@@ -160,8 +162,8 @@ export function TabDeck({
           const shown = panels[shownAt]
           if (shown !== undefined && shown.value !== value) onChange(shown.value)
         }}
-        // Slides are stretched to the tallest one by default, which would draw
-        // one short panel down the height of the longest.
+        // Slides are stretched to the tallest one by default, which would undo
+        // the zero height the hidden ones are given below.
         styles={{ container: { alignItems: 'flex-start' } }}
         // Not looped. These are ordered -- a sheet and a build both decide what
         // order things come in -- so wrapping from the last back to the first
@@ -178,7 +180,8 @@ export function TabDeck({
           // there is no heading inside the slide to point at: the tab is where
           // the panel is named on screen. Both read the same `label`, so the
           // two cannot come to disagree.
-          <Carousel.Slide key={panel.value} aria-label={panel.label}>
+          <Carousel.Slide key={panel.value} aria-label={panel.label}
+            style={panel.value === value ? undefined : { height: 0 }}>
             {panel.content}
           </Carousel.Slide>
         ))}

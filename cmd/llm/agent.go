@@ -92,7 +92,7 @@ func agentCmd(args []string) error {
 		return err
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, nil, logger)
+	service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), source, nil, logger)
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 	return runAgentCLI(ctx, os.Stdin, os.Stdout, service, agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model, cfg.Agent.ReasoningEffort), lang, agentuc.AgentConfig{Workers: 1, MaxTurns: cfg.Agent.MaxTurns, Timeout: cfg.Agent.RequestTimeout}, *timeout)

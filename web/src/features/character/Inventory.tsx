@@ -1,20 +1,42 @@
-import { COINS, equip, groupOf, setTotal, slotOf, unequip } from '@/domain'
-import type { InventoryRow } from '@/domain'
+import type { ReactNode } from 'react'
+
+import { COINS, equip, groupOf, setTotal, slotsFor, slotted } from '@/domain'
+import type { InventoryRow, Slot } from '@/domain'
 import type { Change, Equipment, Item } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { ACTION_ICON_SIZE, ActionIcon, Badge, Group, IconDotsVertical, ItemIcon, Menu, NumberInput, Paper, SourceTags, Stack, Text } from '@/ui'
+import { ACTION_ICON_SIZE, ActionIcon, Group, IconDotsVertical, ItemIcon, Menu, NumberInput, Paper, SourceTags, Stack, Text, useIsDesktop } from '@/ui'
 
 import { itemFacts } from './options'
+import { useSlotLabels } from './slotLabels'
+
+/** The three dots on the right of a row or a worn item, and what they open. */
+export function ItemMenu({ name, disabled = false, children }: { name: string; disabled?: boolean; children: ReactNode }) {
+  const t = useT()
+  return <Menu position="bottom-end">
+    <Menu.Target>
+      {/* Its own padding pulled back, so the dots end where the badges do. */}
+      <ActionIcon variant="subtle" color="gray" mr={-6} aria-label={t('list.actions', { name })} disabled={disabled} style={{ flexShrink: 0 }}>
+        <IconDotsVertical size={ACTION_ICON_SIZE} />
+      </ActionIcon>
+    </Menu.Target>
+    <Menu.Dropdown>{children}</Menu.Dropdown>
+  </Menu>
+}
 
 /**
  * Inventory rows, one bubble per entity: the name, its numbers on one line,
  * and where it was published. Everything a row has to say is on the row;
  * nothing opens.
  *
- * With `onChange`, every row has a menu on the right: a wearable is worn or
- * taken off, a consumable is used (one fewer, nothing else yet), and anything
- * is dropped -- one or all of it, when there is more than one. A count is
- * printed only when it says something: one dagger is "Dagger".
+ * Only what is carried: a worn item is on its slot's card and nowhere else, so
+ * a row counts the units that are not on the character and is not drawn when
+ * there are none.
+ *
+ * With `onChange`, every row has a menu on the right: a wearable is put on,
+ * with one entry per slot it could go in; a consumable is used (one fewer,
+ * nothing else yet), and anything is dropped -- one or all of it, when there
+ * is more than one. A count is printed only when it says something: one
+ * dagger is "Dagger".
  */
 export function InventoryRows({ rows, equipment, items, name, lookup, empty, disabled = false, onChange }: {
   rows: readonly InventoryRow[]
@@ -28,63 +50,67 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
   onChange?: (changes: Change[]) => void
 }) {
   const t = useT()
-  if (rows.length === 0) return <Text size="sm" c="dimmed">{empty}</Text>
+  const labels = useSlotLabels()
+  const isDesktop = useIsDesktop()
+  const carried = rows.filter((row) => row.count > row.equipped)
+  if (carried.length === 0) return <Text size="sm" c="dimmed">{empty}</Text>
+  // A new ring is the last one on, so it is drawn on the second card unless it is the only one.
+  const rings = slotted(equipment, items).get('ring')?.length ?? 0
+  const slotLabel = (slot: Slot) => labels[slot === 'ring' ? (rings === 0 ? 'ring:0' : 'ring:1') : slot]
 
   return <Stack gap={6}>
-    {rows.map((row) => {
+    {carried.map((row) => {
       const label = name(row)
       const item = row.item === undefined ? undefined : items.get(row.item)
+      const count = row.count - row.equipped
       // A custom item has no slug to address a change to; it is edited where
       // it was written.
       const editable = row.item !== undefined && onChange !== undefined
-      const slot = slotOf(item)
       const group = groupOf(item)
       const line = item === undefined ? undefined : itemFacts(t, item, (slug) =>
         lookup(item.weapon?.properties?.includes(slug) ? 'weapon-properties' : 'damage-types', slug))
-      const total = (count: number) => onChange?.(setTotal(equipment, row.item ?? '', count))
+      // Totals count the worn units too, and `setTotal` takes from the backpack first.
+      const total = (all: number) => onChange?.(setTotal(equipment, row.item ?? '', all))
+      // In the top right corner where there is room; on a phone that corner is
+      // the name's, so the badges go under the text.
+      const tags = <SourceTags provenance={item?.provenance} oneLine />
       return <Paper key={row.key} withBorder radius="md" p="xs">
         <Group justify="space-between" wrap="nowrap" gap="sm" align="flex-start">
           <ItemIcon icon={item?.icon} />
           <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
             <Group gap={8}>
               <Text size="sm" fw={500}>{label}</Text>
-              {row.count > 1 && <Text size="sm" c="dimmed">×{row.count}</Text>}
-              {row.equipped > 0 && <Badge size="xs" variant="light">{t('equipment.equippedMark')}</Badge>}
+              {count > 1 && <Text size="sm" c="dimmed">×{count}</Text>}
             </Group>
             {line !== undefined && <Text size="xs" c="dimmed">{line}</Text>}
-            <SourceTags provenance={item?.provenance} oneLine />
+            {!isDesktop && tags}
           </Stack>
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
+            {isDesktop && tags}
             {editable && (
-              <Menu position="bottom-end">
-                <Menu.Target>
-                  {/* Its own padding pulled back, so the dots end where the badges do. */}
-                  <ActionIcon variant="subtle" color="gray" mr={-6} aria-label={t('list.actions', { name: label })} disabled={disabled}>
-                    <IconDotsVertical size={ACTION_ICON_SIZE} />
-                  </ActionIcon>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  {slot !== null && row.count > row.equipped && <Menu.Item onClick={() => onChange(equip(equipment, items, row.item ?? '', slot))}>{t('equipment.wear')}</Menu.Item>}
-                  {slot !== null && row.equipped > 0 && <Menu.Item onClick={() => onChange(unequip(equipment, row.item ?? ''))}>{t('equipment.takeOffNamed', { name: label })}</Menu.Item>}
-                  {group === 'consumable' && <Menu.Item onClick={() => total(row.count - 1)}>{t('equipment.use')}</Menu.Item>}
-                  {row.count > 1
-                    ? <>
-                      <Menu.Item color="red" onClick={() => total(row.count - 1)}>{t('equipment.dropOne')}</Menu.Item>
-                      <Menu.Item color="red" onClick={() => total(0)}>{t('equipment.dropAll')}</Menu.Item>
-                    </>
-                    : <Menu.Item color="red" onClick={() => total(0)}>{t('equipment.drop')}</Menu.Item>}
-                </Menu.Dropdown>
-              </Menu>
+            <ItemMenu name={label} disabled={disabled}>
+              {slotsFor(equipment, items, item).map((slot) => (
+                <Menu.Item key={slot} onClick={() => onChange(equip(equipment, items, row.item ?? '', slot))}>
+                  {t('equipment.wearIn', { slot: slotLabel(slot) })}
+                </Menu.Item>
+              ))}
+              {group === 'consumable' && <Menu.Item onClick={() => total(row.count - 1)}>{t('equipment.use')}</Menu.Item>}
+              {count > 1
+                ? <>
+                  <Menu.Item color="red" onClick={() => total(row.count - 1)}>{t('equipment.dropOne')}</Menu.Item>
+                  <Menu.Item color="red" onClick={() => total(row.equipped)}>{t('equipment.dropAll')}</Menu.Item>
+                </>
+                : <Menu.Item color="red" onClick={() => total(row.equipped)}>{t('equipment.drop')}</Menu.Item>}
+            </ItemMenu>
             )}
           </Group>
         </Group>
       </Paper>
     })}
-
   </Stack>
 }
 
-/** The coins a character carries: text to read, or five fields to edit. */
+/** The coins a character carries, by their full names: text to read, or five fields to edit. */
 export function Purse({ purse, disabled = false, onChange }: {
   purse: Record<string, number> | undefined
   disabled?: boolean
@@ -98,7 +124,7 @@ export function Purse({ purse, disabled = false, onChange }: {
   if (onChange === undefined) {
     return <Group gap="sm">
       {Object.entries(purse ?? {}).filter(([, amount]) => amount !== 0).map(([unit, amount]) => (
-        <Text key={unit} size="sm">{amount} {coins[unit] ?? unit}</Text>
+        <Text key={unit} size="sm">{coins[unit] ?? unit}: {amount}</Text>
       ))}
     </Group>
   }

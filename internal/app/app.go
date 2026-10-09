@@ -27,7 +27,6 @@ import (
 	oidcadapter "github.com/promix1722/easydnd/internal/adapter/oidc"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	"github.com/promix1722/easydnd/internal/adapter/repository/postgres"
-	"github.com/promix1722/easydnd/internal/adapter/sheet/hexsheet"
 	"github.com/promix1722/easydnd/internal/adapter/token"
 	webauthnadapter "github.com/promix1722/easydnd/internal/adapter/webauthn"
 	httpapi "github.com/promix1722/easydnd/internal/api/http"
@@ -224,7 +223,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		gameRepo, sharedRepo, groupRepo, characterRepo, packSource,
 		log.With("usecase", "game"))
 	characterService := charuc.NewService(
-		characterRepo, folderRepo, packSource, hexsheet.NewImporter(), gameService,
+		characterRepo, folderRepo, packSource, gameService,
 		log.With("usecase", "character"))
 	characterService.SetPackAccess(packService)
 	authService := authuc.NewService(userRepo, ceremony, signer, federations, authuc.Config{

@@ -231,6 +231,50 @@ func TestDraggingMovesOnlyOneEntryAndPreservesTheRoster(t *testing.T) {
 	check([]string{c, b, a, d})
 }
 
+// A short rest returns what the catalogue says a short rest refills -- a
+// fighter's Second Wind -- and leaves the rest spent: Hit Dice need a long one.
+func TestAShortRestReturnsOnlyShortRestPools(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer})
+	cid := f.character(t, "bob")
+	if err := f.characters.Append(ctx, cid, 0, character.Event{Type: character.EventInit},
+		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "fighter"), Level: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.Share(ctx, "bob", "table", cid); err != nil {
+		t.Fatal(err)
+	}
+	g, _ := f.svc.Create(ctx, "alice", "table", "Game")
+	if err := f.svc.AddCharacters(ctx, "alice", g.ID, []character.ID{cid}); err != nil {
+		t.Fatal(err)
+	}
+	used := func() map[string]int {
+		t.Helper()
+		entries, err := f.svc.Participants(ctx, "alice", g.ID, rules.DefaultLocale)
+		if err != nil || len(entries) != 1 {
+			t.Fatalf("entries: %+v, %v", entries, err)
+		}
+		out := map[string]int{}
+		for _, p := range entries[0].Pools {
+			out[string(p.ID)] = p.Used
+		}
+		return out
+	}
+	entries, _ := f.svc.Participants(ctx, "alice", g.ID, rules.DefaultLocale)
+	spent := map[string]int{"second-wind": 1, "hit-dice/fighter": 1}
+	if err := f.svc.PatchEntry(ctx, "alice", g.ID, entries[0].Entry.ID, gameuc.EntryPatch{Used: spent}); err != nil {
+		t.Fatal(err)
+	}
+	assertDenied(t, f.svc.Rest(ctx, "bob", g.ID, true), "player calling a short rest")
+	if err := f.svc.Rest(ctx, "alice", g.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	if got := used(); got["second-wind"] != 0 || got["hit-dice/fighter"] != 1 {
+		t.Fatalf("after short rest: %+v", got)
+	}
+}
+
 func TestSpentUsesBelongToTheGameAndALongRestReturnsThem(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
@@ -285,8 +329,8 @@ func TestSpentUsesBelongToTheGameAndALongRestReturnsThem(t *testing.T) {
 	if got := pools(); got["spell-slots/1"] != [2]int{2, 3} || got["hit-dice/paladin"] != [2]int{1, 3} {
 		t.Fatalf("spent: %+v", got)
 	}
-	assertDenied(t, f.svc.LongRest(ctx, "bob", g.ID), "player calling a rest")
-	if err := f.svc.LongRest(ctx, "alice", g.ID); err != nil {
+	assertDenied(t, f.svc.Rest(ctx, "bob", g.ID, false), "player calling a rest")
+	if err := f.svc.Rest(ctx, "alice", g.ID, false); err != nil {
 		t.Fatal(err)
 	}
 	if got := pools(); got["spell-slots/1"] != [2]int{0, 3} || got["hit-dice/paladin"] != [2]int{0, 3} {

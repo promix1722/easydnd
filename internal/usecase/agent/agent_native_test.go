@@ -68,7 +68,7 @@ func namespacedService(t *testing.T) *charuc.Service {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), registry, nil, nil, slog.New(slog.DiscardHandler))
+	return charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), registry, nil, slog.New(slog.DiscardHandler))
 }
 
 // Loaded once: reading the pack is most of what a test using it costs.

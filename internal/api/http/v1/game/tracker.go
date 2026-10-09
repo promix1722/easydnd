@@ -203,8 +203,14 @@ func (h *Handler) PatchEntry(c *gin.Context) {
 	h.detail(c, c.Request.Context(), h.actor(c), gameOf(c), http.StatusOK)
 }
 
-func (h *Handler) LongRest(c *gin.Context) {
-	if err := h.service.LongRest(c.Request.Context(), h.actor(c), gameOf(c)); err != nil {
+// Rest calls a rest for the table: a long one, or with ?kind=short a short one.
+func (h *Handler) Rest(c *gin.Context) {
+	kind := c.DefaultQuery("kind", "long")
+	if kind != "long" && kind != "short" {
+		helpers.FormatError(c, types.NewValidationError("kind must be long or short"))
+		return
+	}
+	if err := h.service.Rest(c.Request.Context(), h.actor(c), gameOf(c), kind == "short"); err != nil {
 		helpers.FormatError(c, err)
 		return
 	}

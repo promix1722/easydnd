@@ -89,6 +89,17 @@ describe('TabDeck', () => {
         expect.soft(within(slide).getByText(INSIDE[panel.value] ?? '')).toBeInTheDocument()
       }
     })
+
+    // The deck is as tall as the panel that is showing: every other slide has
+    // no height of its own, so it cannot hold the viewport open.
+    it('gives a height only to the slide that is showing', () => {
+      deck('mobile', 'class')
+
+      const height = (value: string) => screen.getByRole('group', { name: PANELS.find((panel) => panel.value === value)!.label }).style.height
+      expect.soft(height('class')).toBe('')
+      expect.soft(height('identity')).toBe('0px')
+      expect.soft(height('race')).toBe('0px')
+    })
   })
 
   // Embla owns the gesture in a browser and jsdom draws no carousel to press,

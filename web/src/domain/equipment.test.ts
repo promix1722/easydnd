@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { CUSTOM, ELSEWHERE, equip, fitsSlot, groupOf, mergeStacks, setTotal, slotOf, slotted, unequip } from './equipment'
+import { CUSTOM, ELSEWHERE, discard, equip, groupOf, mergeStacks, setTotal, slotOf, slotsFor, slotted, unequip } from './equipment'
 import type { ItemLike } from './equipment'
 
 // The slot comes from the catalogue; what an item otherwise is only decides
@@ -62,6 +62,9 @@ describe('equipment', () => {
 
   it('shows an item held in two lists once', () => {
     expect(mergeStacks(rogue).find((row) => row.item === 'leather-armor')).toMatchObject({ count: 2, equipped: 1 })
+    // Putting on one of two daggers leaves the row where it was.
+    const order = (equipment: typeof rogue) => mergeStacks(equipment).map((row) => row.item)
+    expect(order({ ...rogue, equipped: [...rogue.equipped, { item: 'dagger', count: 1 }] })).toEqual(order(rogue))
   })
 
   it('sends the slot\'s occupant back to the backpack', () => {
@@ -77,6 +80,9 @@ describe('equipment', () => {
   it('puts a second weapon in the off hand', () => {
     const armed = { ...rogue, equipped: [{ item: 'dagger', count: 2 }] }
     expect(slotted(armed, ITEMS).get('off-hand')).toEqual(['dagger'])
+    // The off hand is offered only beside a held main hand: alone, a held item sits in the main hand whatever was asked.
+    expect(slotsFor(rogue, ITEMS, ITEMS.get('dagger'))).toEqual(['main-hand', CUSTOM])
+    expect(slotsFor(armed, ITEMS, ITEMS.get('dagger'))).toEqual(['main-hand', 'off-hand', CUSTOM])
   })
 
   it('wears two rings, lists a slot worn past its capacity, and keeps the slotless in sight', () => {
@@ -103,9 +109,10 @@ describe('equipment', () => {
     expect(slotted(odd, ITEMS).get(CUSTOM)).toEqual(['torch'])
     expect(slotted(odd, ITEMS).get(ELSEWHERE)).toEqual([])
     // Any wearable, not anything: a bag has no slot and gets no slot.
-    expect(fitsSlot(ITEMS.get('cloak-of-protection'), CUSTOM)).toBe(true)
-    expect(fitsSlot(ITEMS.get('bag-of-holding'), CUSTOM)).toBe(false)
-    expect(fitsSlot(ITEMS.get('bag-of-holding'), 'head')).toBe(false)
+    expect(slotsFor(rogue, ITEMS, ITEMS.get('cloak-of-protection'))).toEqual(['back', CUSTOM])
+    expect(slotsFor(rogue, ITEMS, ITEMS.get('bag-of-holding'))).toEqual([])
+    // Dropping what is worn takes it off and puts it nowhere.
+    expect(discard(odd, 'torch', CUSTOM).map((change) => change.path)).toEqual(['equipment.equipped', 'equipment.equipped.torch', 'equipment.custom'])
     // A worn armor placed in Custom frees the body slot for another.
     const twice = { ...odd, equipped: [{ item: 'leather-armor', count: 1 }, { item: 'chain-mail', count: 1 }], custom: 'leather-armor' }
     expect(slotted(twice, ITEMS).get('body')).toEqual(['chain-mail'])

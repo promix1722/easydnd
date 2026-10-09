@@ -15,7 +15,6 @@ import {
   TabDeck,
   Text,
   Title,
-  useIsDesktop,
 } from '@/ui'
 import type { DeckPanel } from '@/ui'
 
@@ -90,22 +89,7 @@ export function SheetBody({
     })
     .sort()
 
-  /*
-   * The one viewport question this file asks, and it is a question about
-   * reading order rather than about layout.
-   *
-   * On a wide screen the sheet opens with who the character is and then what
-   * everything about them is derived from, because there is room for both at
-   * once and that is the order a sheet is written in. On a phone the tab is
-   * a slide you land on, and the first thing on it should be the thing reached
-   * for mid-turn: the six modifiers, not the background.
-   *
-   * Swapped in the document rather than with `column-reverse`, which would do
-   * it in CSS and leave the page saying one order and the screen showing
-   * another.
-   */
   const t = useT()
-  const isDesktop = useIsDesktop()
   const [tab, setTab] = useState('overview')
   const who = <IdentityTable identity={identity} names={names} />
   const abilities = <AbilityCards sheet={s} />
@@ -126,7 +110,9 @@ export function SheetBody({
       label: t('sheet.overview'),
       content: (
         <Stack gap="lg">
-          {isDesktop ? <>{who}{abilities}</> : <>{abilities}{who}</>}
+          {/* Who the character is, then what everything about them is derived from: the order a sheet is written in, at every width. */}
+          {who}
+          {abilities}
           <Vitals sheet={s} />
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
             {headed(t('sheet.skills'), <SkillsPanel skills={s.skills} catalog={skills} />)}
@@ -154,6 +140,24 @@ export function SheetBody({
                   items={(s.base.languages ?? []).map((slug) => named('languages', slug))}
                   empty={t('sheet.none')}
                 />
+              </Stack>
+            ))}
+            {/* In the player's own words, so each answer is a line of prose rather than a list entry. */}
+            {headed(t('stage.personality'), (
+              <Stack gap="sm">
+                {([
+                  [t('written.personalityTrait'), identity.personalityTraits],
+                  [t('written.ideal'), identity.ideals],
+                  [t('written.bond'), identity.bonds],
+                  [t('written.flaw'), identity.flaws],
+                ] as const).map(([label, lines]) => (
+                  <Stack key={label} gap={4}>
+                    <Text size="xs" c="dimmed" tt="uppercase">{label}</Text>
+                    {lines?.length
+                      ? lines.map((line, at) => <Text key={at} size="sm" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{line}</Text>)
+                      : <Text size="sm" c="dimmed">{t('sheet.none')}</Text>}
+                  </Stack>
+                ))}
               </Stack>
             ))}
           </SimpleGrid>

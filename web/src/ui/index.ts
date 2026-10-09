@@ -172,7 +172,7 @@ export { SummaryMultiSelect } from './SummaryMultiSelect'
 export { sourceAbbreviation } from './sourceAbbreviation'
 
 export { Avatar } from './Avatar'
-export { ItemIcon } from './ItemIcon'
+export { ITEM_ICON_SIZE, ItemIcon } from './ItemIcon'
 
 export { AvatarEditor } from './AvatarEditor'
 

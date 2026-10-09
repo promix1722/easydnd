@@ -206,9 +206,9 @@ export function patchGameEntry(id: string, entry: string, patch: EntryPatch): Pr
   return request<GameDetail>(`/games/${encodeURIComponent(id)}/entries/${encodeURIComponent(entry)}`, { method: 'PATCH', body: patch })
 }
 
-/** The table's only recovery: everybody gets every spent use back. */
-export function restGame(id: string): Promise<GameDetail> {
-  return request<GameDetail>(`/games/${encodeURIComponent(id)}/rest`, { method: 'POST' })
+/** A rest for the whole table: a long one returns every spent use, a short one only what a short rest refills. */
+export function restGame(id: string, kind: 'short' | 'long'): Promise<GameDetail> {
+  return request<GameDetail>(`/games/${encodeURIComponent(id)}/rest?kind=${kind}`, { method: 'POST' })
 }
 
 export function deleteGameEntry(id: string, entry: string): Promise<GameDetail> {

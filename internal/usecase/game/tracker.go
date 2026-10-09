@@ -336,15 +336,47 @@ func (s *Service) AddMonster(ctx context.Context, actor user.ID, id domain.ID, s
 	return s.games.MutateEntries(ctx, id, func(entries []domain.Entry) ([]domain.Entry, error) { return append(entries, entry), nil })
 }
 
-// LongRest gives every participant all of their spent uses back. It is the
-// table's only recovery: the tracker does not model what each rest restores.
-func (s *Service) LongRest(ctx context.Context, actor user.ID, id domain.ID) error {
+// Rest gives participants their spent uses back. A long rest returns
+// everything -- Hit Dice included, where the rules would return half. A short
+// rest returns only the pools whose own recovery says a short rest refills
+// them, read from each player's sheet before the roster lock is taken.
+func (s *Service) Rest(ctx context.Context, actor user.ID, id domain.ID, short bool) error {
 	if _, err := s.dm(ctx, actor, id, "call a rest"); err != nil {
 		return err
 	}
+	restored := map[string][]string{}
+	if short {
+		roster, err := s.games.Characters(ctx, id)
+		if err != nil {
+			return err
+		}
+		for _, e := range roster {
+			if e.Kind != "player" || len(e.Used) == 0 {
+				continue
+			}
+			_, state, err := s.project(ctx, e.Character, rules.DefaultLocale)
+			if types.IsNotFound(err) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			for pool := range e.Used {
+				if state.Resources.Pools[rules.Slug(pool)].RestoredBy("short-rest") {
+					restored[e.ID] = append(restored[e.ID], pool)
+				}
+			}
+		}
+	}
 	return s.games.MutateEntries(ctx, id, func(entries []domain.Entry) ([]domain.Entry, error) {
 		for i := range entries {
-			entries[i].Used = nil
+			if !short {
+				entries[i].Used = nil
+				continue
+			}
+			for _, pool := range restored[entries[i].ID] {
+				delete(entries[i].Used, pool)
+			}
 		}
 		return entries, nil
 	})

@@ -186,19 +186,11 @@ describe('the sheet body on a phone', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0)
   })
 
-  /**
-   * The one thing on this sheet whose *order* differs by width. A phone lands
-   * on a slide, so it leads with the numbers reached for mid-turn; a wide
-   * screen shows both at once and reads in the order a sheet is written in.
-   *
-   * Asserted on document position rather than on a style, because the swap is
-   * a swap in the document -- doing it with `column-reverse` would leave this
-   * assertion passing while the screen showed the other order.
-   */
-  it('leads with the ability scores, not with who the character is', () => {
+  // The same order as a wide screen: a sheet is read name first at every width.
+  it('reads who the character is before the ability scores', () => {
     body('mobile')
 
-    expect(leads()).toBe('abilities')
+    expect(leads()).toBe('who')
   })
 })
 
@@ -247,12 +239,14 @@ describe('the panels that were sentences', () => {
 
   // Only the owner's screen passes `onEquipment`; without it the test above
   // -- and "offers nothing to press but the tabs" -- hold.
-  it('takes off what a slot holds', () => {
+  it('takes off what a slot holds, from the menu on its card', async () => {
     const onEquipment = vi.fn()
+    const user = setupUser()
     renderAt('mobile', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Body' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Take off Leather Armor' }))
+    const slots = within(screen.getByRole('region', { name: 'Worn and wielded' }))
+    await user.click(slots.getByRole('button', { name: 'Actions for Leather Armor' }))
+    await user.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'Take off Leather Armor' }))
 
     expect(onEquipment).toHaveBeenCalledWith([
       { path: 'equipment.equipped', op: 'set', value: { kind: 'slugs', slugs: [] } },
@@ -261,17 +255,17 @@ describe('the panels that were sentences', () => {
     ])
   })
 
-  // Twelve cards, one item each, three columns; the two rings are two cards
-  // and hands are arms. No row has a stepper: every row's actions are a menu.
-  it('draws twelve one-item cards and gives every row a menu, not a stepper', () => {
+  // A card is not a button and an empty one offers nothing: the only thing
+  // to press on the doll is the menu of an item that is worn. What is worn is
+  // on its card only, so it has no row below. No row has a stepper.
+  it('presses nothing on the doll but a worn item\'s menu, and lists only what is carried', () => {
     renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={vi.fn()} />)
 
     const slots = within(screen.getByRole('region', { name: 'Worn and wielded' }))
-    expect.soft(slots.getAllByRole('button').map((card) => card.getAttribute('aria-label'))).toEqual([
-      'Main hand', 'Off hand', 'Arms', 'Custom', 'Head', 'Body', 'Belt', 'Legs', 'Back', 'Amulet', 'Ring 1', 'Ring 2',
-    ])
-    expect.soft(screen.queryByRole('button', { name: 'One fewer Leather Armor' })).not.toBeInTheDocument()
-    expect.soft(screen.getByRole('button', { name: 'Actions for Leather Armor' })).toBeInTheDocument()
+    expect.soft(slots.getAllByRole('button').map((each) => each.getAttribute('aria-label'))).toEqual(['Actions for Leather Armor'])
+    expect.soft(slots.getAllByText('Empty')).toHaveLength(11)
+    expect.soft(screen.getAllByRole('button', { name: 'Actions for Leather Armor' })).toHaveLength(1)
+    expect.soft(screen.getByRole('button', { name: 'Actions for Chain Mail' })).toBeInTheDocument()
     expect.soft(screen.queryByRole('button', { name: 'One more Crossbow Bolt' })).not.toBeInTheDocument()
     expect.soft(screen.getByRole('button', { name: 'Actions for Crossbow Bolt' })).toBeInTheDocument()
   })
@@ -301,13 +295,15 @@ describe('the panels that were sentences', () => {
     expect(menu.getByRole('menuitem', { name: 'Drop' })).toBeInTheDocument()
   })
 
-  it('wears and drops from a row\'s menu', async () => {
+  it('wears from a row\'s menu, one entry per slot, and drops from the card\'s', async () => {
     const onEquipment = vi.fn()
     const user = setupUser()
     renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={onEquipment} />)
 
     await user.click(screen.getByRole('button', { name: 'Actions for Chain Mail' }))
-    await user.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'Wear' }))
+    const row = within(await screen.findByRole('menu'))
+    expect(row.getAllByRole('menuitem').map((each) => each.textContent)).toEqual(['Equip: Body', 'Equip: Custom', 'Drop'])
+    await user.click(row.getByRole('menuitem', { name: 'Equip: Body' }))
     expect(onEquipment).toHaveBeenLastCalledWith([
       { path: 'equipment.equipped', op: 'set', value: { kind: 'slugs', slugs: ['chain-mail'] } },
       { path: 'equipment.equipped.leather-armor', op: 'set', value: { kind: 'int', int: 0 } },
@@ -316,29 +312,22 @@ describe('the panels that were sentences', () => {
       { path: 'equipment.backpack.leather-armor', op: 'set', value: { kind: 'int', int: 1 } },
     ])
 
+    // Dropping what is worn takes it off without putting it in the backpack.
     await user.click(screen.getByRole('button', { name: 'Actions for Leather Armor' }))
-    const menu = within(await screen.findByRole('menu'))
-    // Worn, and only one of it: nothing to wear, something to take off.
-    expect(menu.queryByRole('menuitem', { name: 'Wear' })).not.toBeInTheDocument()
-    expect(menu.getByRole('menuitem', { name: 'Take off Leather Armor' })).toBeInTheDocument()
-    await user.click(menu.getByRole('menuitem', { name: 'Drop' }))
+    await user.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'Drop' }))
     expect(onEquipment).toHaveBeenLastCalledWith([
       { path: 'equipment.equipped', op: 'set', value: { kind: 'slugs', slugs: [] } },
       { path: 'equipment.equipped.leather-armor', op: 'set', value: { kind: 'int', int: 0 } },
     ])
   })
 
-  // Custom takes any wearable in the backpack -- not the toolkit -- and the
-  // pick is recorded as a placement, since no shape could put a mail there
-  // while the body is taken.
-  it('offers the backpack\'s wearables to the Custom card and records the placement', () => {
+  it('puts a wearable in Custom from its row\'s menu and records the placement', async () => {
     const onEquipment = vi.fn()
+    const user = setupUser()
     renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={onEquipment} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
-    const dialog = within(screen.getByRole('dialog'))
-    expect(dialog.queryByRole('button', { name: "Thieves' Tools" })).not.toBeInTheDocument()
-    fireEvent.click(dialog.getByRole('button', { name: 'Chain Mail' }))
+    await user.click(screen.getByRole('button', { name: 'Actions for Chain Mail' }))
+    await user.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'Equip: Custom' }))
 
     expect(onEquipment).toHaveBeenCalledWith(expect.arrayContaining([
       { path: 'equipment.custom', op: 'set', value: { kind: 'slugs', slugs: ['chain-mail'] } },
@@ -381,7 +370,7 @@ describe('the panels that were sentences', () => {
     expect.soft(screen.queryByText(/Brutal Critical/)).not.toBeInTheDocument()
   })
 
-  it('lists actions that open onto their description and can be filtered', () => {
+  it('lists actions in groups that fold, each row opening onto its description', async () => {
     renderAt('desktop', <SheetBody sheet={{
       ...NAMED,
       actions: [
@@ -394,30 +383,33 @@ describe('the panels that were sentences', () => {
     }} />)
     fireEvent.click(screen.getByRole('tab', { name: 'Actions' }))
 
-    expect.soft(screen.getByText('+5 to hit · 1d8+3 · 5 ft.')).toBeInTheDocument()
+    // No search and no filters: the groups are the only control over the list.
+    expect.soft(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect.soft(screen.queryByRole('button', { name: 'Bonus action' })).not.toBeInTheDocument()
+    const group = (name: RegExp) => screen.getByRole('button', { name })
+
+    // Every group starts folded: the tab opens as headings with counts.
+    for (const name of [/^Equipment/, /^Class and race/, /^Basic/]) expect.soft(group(name)).toHaveAttribute('aria-expanded', 'false')
+    expect.soft(screen.queryByText('Rapier')).not.toBeInTheDocument()
+    expect.soft(screen.queryByText('Dash')).not.toBeInTheDocument()
+
+    fireEvent.click(group(/^Equipment/))
+    fireEvent.click(group(/^Class and race/))
+    expect.soft(await screen.findByText(/to hit/)).toHaveTextContent('+5 to hit')
     expect.soft(screen.getByText('Second Wind Uses: 1')).toBeInTheDocument()
     // A weapon with no prose is a fact, not a control that opens onto nothing.
     expect.soft(screen.queryByRole('button', { name: /Rapier/ })).not.toBeInTheDocument()
 
-    // The basic actions are on every sheet, so the list opens without them.
-    expect.soft(screen.getByText('2 actions')).toBeInTheDocument()
-    expect.soft(screen.queryByText('Dash')).not.toBeInTheDocument()
-    expect.soft(screen.getByRole('button', { name: 'Basic' })).toHaveAttribute('aria-pressed', 'false')
-    fireEvent.click(screen.getByRole('button', { name: 'Basic' }))
-    fireEvent.click(screen.getByRole('button', { name: /Dash/ }))
+    fireEvent.click(group(/^Basic/))
+    // The panel unfolds over a transition, and is hidden from roles until it has.
+    fireEvent.click(await screen.findByRole('button', { name: /Dash/ }))
     expect.soft(screen.getByText('You gain extra movement.')).toBeInTheDocument()
 
-    // Each button is pressed or not on its own.
-    fireEvent.click(screen.getByRole('button', { name: 'Bonus action' }))
+    // Each group folds on its own.
+    fireEvent.click(group(/^Class and race/))
     expect.soft(screen.queryByText('Second Wind')).not.toBeInTheDocument()
     expect.soft(screen.getByText('Rapier')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Bonus action' }))
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'Search actions' }), { target: { value: 'wind' } })
-    expect.soft(screen.getByText('1 action')).toBeInTheDocument()
-    expect.soft(screen.queryByText('Rapier')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
-    expect.soft(screen.getByText('2 actions')).toBeInTheDocument()
+    expect.soft(screen.getByText('Dash')).toBeInTheDocument()
   })
 
   // Capacity only: what a sheet has spent is a fact about one game, not the character.

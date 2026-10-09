@@ -19,7 +19,6 @@ import (
 
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
-	"github.com/promix1722/easydnd/internal/adapter/sheet/hexsheet"
 	"github.com/promix1722/easydnd/internal/adapter/token"
 	httpapi "github.com/promix1722/easydnd/internal/api/http"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
@@ -160,7 +159,7 @@ func newFullRouterInEnv(
 		memory.NewGameRepository(), memory.NewSharedRepository(),
 		groupRepo, characterRepo, source, log)
 	characterService := charuc.NewService(characterRepo,
-		memory.NewFolderRepository(), source, hexsheet.NewImporter(), gameService, log)
+		memory.NewFolderRepository(), source, gameService, log)
 	if packs != nil {
 		characterService.SetPackAccess(packs)
 	}

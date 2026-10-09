@@ -21,6 +21,19 @@ type ResourcePool struct {
 
 func (p ResourcePool) Available() int { return max(0, p.Max-p.Used) }
 
+// RestoredBy reports whether a rest of this kind ("short-rest", "long-rest")
+// gives every spent use back.
+//
+// ponytail: a conditional policy counts as not applying, because its
+// condition needs the catalogue to evaluate and no SRD pool has one. A pack
+// that adds one gets no short-rest recovery in the tracker; evaluate When the
+// way replay.go does when that matters.
+func (p ResourcePool) RestoredBy(trigger string) bool {
+	return slices.ContainsFunc(p.Recovery, func(policy catalog.RecoveryPolicy) bool {
+		return policy.When == nil && policy.Trigger == trigger && policy.Operation == "all"
+	})
+}
+
 type Parameter struct {
 	Rational   *catalog.Rational
 	Boolean    *bool

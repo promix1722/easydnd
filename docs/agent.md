@@ -62,7 +62,7 @@ The desktop and mobile menu has **AI Wizard / AI Помощник**. Folder acti
 to the same workspace while preserving the destination folder. The server
 needs `agent.api_key` and `agent.model` configured to process uploads. Without
 the provider, imports report that AI import is not configured; the workspace
-does not fall back to the legacy HexSheet JSON screen.
+has no other importer to fall back to.
 
 **The assistant leads and the player answers.** The page opens a session the
 moment it is arrived at (`Open`, status `opening`), and the conversation
@@ -771,7 +771,9 @@ Definitions cannot be erased by generic note replacement.
 The character itself is read and edited through the ordinary
 `/v1/characters/:id` routes. There is no draft surface.
 
-The existing `POST /v1/characters/import` contract is unchanged.
+The HexSheet JSON importer that used to sit beside this at `POST
+/v1/characters/import` is gone: the AI Wizard is the only way a foreign sheet
+comes in.
 
 ## Configuration and deployment
 

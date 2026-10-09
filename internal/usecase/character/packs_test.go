@@ -20,7 +20,7 @@ func TestRulesMigrationPreviewCommitAndRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := memory.NewCharacterRepository()
-	s := charuc.NewService(repo, memory.NewFolderRepository(), r, nil, nil, slog.New(slog.DiscardHandler))
+	s := charuc.NewService(repo, memory.NewFolderRepository(), r, nil, slog.New(slog.DiscardHandler))
 	c := mustCreate(t, s)
 	if c.Log.RulesLock().IsZero() {
 		t.Fatal("created unpinned character")
