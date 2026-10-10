@@ -2,13 +2,11 @@ import { CUSTOM, ELSEWHERE, discard, groupOf, mergeStacks, setCoin, slotted, une
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
 import type { Change, Equipment, Item, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Badge, Box, Grid, Group, ITEM_ICON_SIZE, ItemIcon, Markdown, Menu, Panel, Paper, Stack, Text } from '@/ui'
+import { Badge, Box, Grid, ITEM_ICON_SIZE, Menu, Panel, Paper, Stack, Text } from '@/ui'
 
-import { InventoryRows, ItemDetails, ItemMenu, Purse } from './Inventory'
+import { InventoryRows, ItemCard, ItemDetails, ItemMenu, NAME_LINE, Purse } from './Inventory'
 import { AddItems } from './ItemPicker'
-import { armorStats, itemFacts, weaponNumbers } from './options'
 import { useSlotLabels } from './slotLabels'
-import { StatColumns, WeaponStats } from './WeaponStats'
 import type { Card } from './slotLabels'
 
 /** Three columns: what is held, what is worn down the middle, what hangs or is slipped on. */
@@ -17,9 +15,6 @@ const COLUMNS: readonly (readonly Card[])[] = [
   ['head', 'body', 'waist', 'feet'],
   ['back', 'neck', 'ring:0', 'ring:1'],
 ]
-
-/** The line a card gives an item's name, the slot it is in and its menu, and the gap under it. */
-const NAME_LINE = 34
 
 const slotOfCard = (card: Card): Slot | typeof ELSEWHERE => card === 'ring:0' || card === 'ring:1' ? 'ring' : card
 
@@ -75,40 +70,18 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
     return <Paper key={each} withBorder p="xs" radius="md">
       <Stack gap="xs">
         {worn.map((slug, at) => {
-          const item = items.get(slug)
-          const word = (ref: string) => lookup(item?.weapon?.properties?.includes(ref) ? 'weapon-properties' : 'damage-types', ref)
-          const numbers = weaponNumbers(t, item, actions, word)
-          const armor = numbers === undefined ? armorStats(t, item) : undefined
-          // What a weapon or armor does is its columns, and its other facts
-          // are on its page; anything else says what it is in a line. Nothing
-          // worn says what it weighs.
-          const facts = item === undefined || numbers !== undefined || armor !== undefined ? undefined : itemFacts(t, item, word, false, false)
           const from = slotOfCard(each)
           const slot = from === ELSEWHERE ? undefined : from
-          return <Stack key={`${slug}:${at}`} gap={6}>
-            <Group gap={6} wrap="nowrap" mih={NAME_LINE - 6}>
-              <Text size="sm" fw={600} truncate style={{ minWidth: 0, flex: 1 }}>{name(slug)}</Text>
-              {slotName}
-              {/* Every worn item opens its page; taking it off or dropping it is the owner's. */}
-              <ItemMenu name={name(slug)}>
-                <ItemDetails slug={slug} />
-                {onChange && !disabled && <>
-                  <Menu.Item onClick={() => onChange(unequip(equipment, slug, slot))}>{t('equipment.takeOffNamed', { name: name(slug) })}</Menu.Item>
-                  <Menu.Item color="red" onClick={() => onChange(discard(equipment, slug, slot))}>{t('equipment.drop')}</Menu.Item>
-                </>}
-              </ItemMenu>
-            </Group>
-            <Group gap="sm" wrap="nowrap" mih={ITEM_ICON_SIZE}>
-              <ItemIcon icon={item?.icon} />
-              <Stack gap={2} style={{ minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
-                {numbers !== undefined && <WeaponStats wrap {...numbers} />}
-                {armor !== undefined && <StatColumns wrap stats={armor} />}
-                {item?.armor?.stealthDisadvantage && <Text size="xs" c="orange.8">{t('equipment.stealth')}</Text>}
-                {facts !== undefined && <Text size="xs" c="dimmed" lineClamp={2}>{facts}</Text>}
-                {!!item?.desc?.length && <Text component="div" size="xs" lineClamp={1}><Markdown size="xs" inline>{item.desc[0] ?? ''}</Markdown></Text>}
-              </Stack>
-            </Group>
-          </Stack>
+          // Every worn item opens its page; taking it off or dropping it is the owner's.
+          return <ItemCard key={`${slug}:${at}`} item={items.get(slug)} label={name(slug)} tag={slotName} actions={actions} lookup={lookup} menu={
+            <ItemMenu name={name(slug)}>
+              <ItemDetails slug={slug} />
+              {onChange && !disabled && <>
+                <Menu.Item onClick={() => onChange(unequip(equipment, slug, slot))}>{t('equipment.takeOffNamed', { name: name(slug) })}</Menu.Item>
+                <Menu.Item color="red" onClick={() => onChange(discard(equipment, slug, slot))}>{t('equipment.drop')}</Menu.Item>
+              </>}
+            </ItemMenu>
+          } />
         })}
       </Stack>
     </Paper>
@@ -126,7 +99,7 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
     <Panel>
       <Stack gap="sm">
         <Text size="xs" c="dimmed">{t('equipment.group.wearable')}</Text>
-        <InventoryRows rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup} actions={actions}
+        <InventoryRows cards rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup}
           empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
         {onChange && <AddItems label={t('equipment.addEquipment')} wearable equipment={equipment} disabled={disabled} onChange={onChange} />}
       </Stack>

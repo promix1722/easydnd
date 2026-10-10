@@ -39,14 +39,16 @@ export function WeaponStats({ damage, hit, range, wrap = false }: {
  * `wrap` is for a card a third of the page wide, where a third column going
  * under the first is better than one cut off. In a list of rows a column is
  * at least its `width`, so that one row's damage sits over the next row's
- * whatever either says; a card stands alone and takes only what it needs.
+ * whatever either says; a card stands alone and takes only what it needs,
+ * and so does anything on a phone, where three fixed widths are wider than
+ * the screen.
  */
 export function StatColumns({ stats, wrap = false }: { stats: readonly Stat[]; wrap?: boolean }) {
   if (stats.length === 0) return null
   return (
     <Group gap="sm" wrap={wrap ? 'wrap' : 'nowrap'} style={{ rowGap: 2, ...(wrap ? { minWidth: 0 } : { flexShrink: 0 }) }}>
       {stats.map((stat, at) => (
-        <Stack key={stat.key} gap={0} {...(wrap || stat.width === undefined ? {} : { miw: stat.width })} {...(at > 0 ? { pl: 'sm', style: { borderLeft: '1px solid var(--mantine-color-default-border)' } } : {})}>
+        <Stack key={stat.key} gap={0} {...(wrap || stat.width === undefined ? {} : { miw: { md: stat.width } })} {...(at > 0 ? { pl: 'sm', style: { borderLeft: '1px solid var(--mantine-color-default-border)' } } : {})}>
           <Text size="md" fw={700} lh={1.25} {...(stat.color ? { c: stat.color } : {})} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{stat.value}</Text>
           <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>{stat.label}</Text>
         </Stack>

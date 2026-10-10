@@ -2045,7 +2045,10 @@ phone's inventory row, which is too narrow for three columns beside a name,
 they lead the row's list of captioned facts. The numbers come from the sheet's action for the weapon when it is
 wielded (`weaponNumbers` in `options.ts`), so both tabs print the server's own
 sum -- die plus modifier, and the bonus to hit; a weapon that is only carried
-has no action, and shows the catalogue's die, type and range with no Hit.
+has no action, and shows the catalogue's die, type and range with no Hit --
+*every* carried one, a second dagger beside the one in the hand included: the
+list under the slots is never given the actions, where it used to find the
+wielded dagger's by slug and print a bonus the rapier next to it did not have.
 What is left of the old line -- properties, weight, thrown range -- is under
 the name, each under its own caption; see the bubble below.
 
@@ -2071,7 +2074,17 @@ slot is a dashed outline holding the word and the slot's badge, so what is
 worn is what the eye lands on; it keeps a full card's height where cards sit
 side by side and is as short as its two lines on a phone, where they do not.
 
-Every inventory row, on both tabs, is a **bubble** (`features/character/
+**What could be worn is drawn as what is worn.** The Equipment tab's list
+under the slots is the same card (`ItemCard` in `features/character/
+Inventory`), three across on a wide screen and one on a phone, with a count
+where the slot's badge would be: a dagger looks the same in the hand and in
+the pack, and its other facts are on its page either way. As rows of captioned
+facts, a Russian phone gave "Дистанция метания" half the row and broke the
+damage it was captioning over two lines. The fixed column widths that line
+rows up are a wide screen's only; on a phone three of them are wider than the
+screen, which is how the Actions tab came to cut **Range** off.
+
+Every inventory row on the Items tab is a **bubble** (`features/character/
 Inventory`): the name, then the item's facts, **each under its own caption**
 (`itemFactList` in `options.ts`, the list the item's page prints, less what
 the row draws as columns and what the thing cost). It used to be one grey

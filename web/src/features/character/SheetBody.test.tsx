@@ -429,11 +429,11 @@ describe('the panels that were sentences', () => {
   it('prints an item\'s numbers on its row, with the catalogue\'s words', () => {
     renderAt('mobile', <SheetBody sheet={PACKED} />)
 
-    // Each under its own caption, not one sentence of them.
+    // What could be worn is the card a worn thing is: each number over its caption.
     const row = within(screen.getByRole('button', { name: 'Actions for Chain Mail' }).closest('.mantine-Paper-root') as HTMLElement)
-    for (const [caption, value] of [['Armor class', '16'], ['Strength required', '13'], ['Stealth', 'Disadvantage']] as const) {
-      expect.soft(row.getByText(caption).nextElementSibling).toHaveTextContent(value)
-    }
+    expect.soft(row.getByText('Armor class').previousElementSibling).toHaveTextContent('16')
+    expect.soft(row.getByText('Strength').previousElementSibling).toHaveTextContent('13')
+    expect.soft(row.getByText('Disadvantage on Stealth checks')).toBeInTheDocument()
     // The row is not itself a control: the only button on it is its menu.
     expect(screen.queryAllByRole('button', { name: /Chain Mail/ }).map((each) => each.getAttribute('aria-label'))).toEqual(['Actions for Chain Mail'])
   })
