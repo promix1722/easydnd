@@ -38,6 +38,7 @@ type agentArgs struct {
 	Facts           []agentArgs     `json:"facts"`
 	Answers         []agentArgs     `json:"answers"`
 	Items           []agentArgs     `json:"items"`
+	Attacks         []string        `json:"attacks"`
 	Expected        []string        `json:"expected"`
 	Parent          string          `json:"parent"`
 	Ability         string          `json:"ability"`
@@ -248,8 +249,8 @@ func (a *Agent) tool(ctx context.Context, s *AgentSession, name string, b []byte
 			s.prepared = args.Prepared
 		}
 		out := map[string]any{"expected": localChecklist(s.expected), "rejected": rejected, "errors": failed, "proficient": printedProficiencies(s.Log, cat, s.printed), "next": "proficient is what the printed bonuses imply. Once race, class, subclass and background are set, assign_skills puts exactly those skills into the prompts that offer them, and assign_spells does the same for the sheet's spells. Resend any unmatched inventory item with set_inventory, by one of its candidate refs."}
-		if len(args.Items) > 0 {
-			out["inventory"] = a.setInventory(ctx, s, cat, args.Items)
+		if items := a.withAttackWeapons(ctx, s, cat, args.Items, args.Attacks); len(items) > 0 {
+			out["inventory"] = a.setInventory(ctx, s, cat, items)
 		}
 		if out["open"], err = a.openPrompts(s, cat); err != nil {
 			return nil, err
@@ -1078,6 +1079,42 @@ var promptPaths = map[string]string{
 	"character/desired-level": "identity.desiredLevel", "character/abilities": "finalAbilities",
 	"character/personality-trait": "identity.personalityTraits", "character/ideal": "identity.ideals",
 	"character/bond": "identity.bonds", "character/flaw": "identity.flaws", "character/alignment": "identity.alignment",
+}
+
+// withAttackWeapons heads a sheet's items with the weapons it attacks with.
+//
+// The attacks table is the better witness of what is in hand, and often the
+// only one: a sheet printing a longsword's to-hit and damage listed a rapier
+// among its equipment and no sword at all, and an inventory copied from the
+// equipment box alone left the character without the weapon it fights with.
+// First in the list is first to a hand -- setInventory seats one item to a
+// slot -- so the sword is wielded and the rapier carried. A row that names no
+// catalogue weapon (a breath weapon, an unarmed strike) is not an item and is
+// left to the checklist.
+func (a *Agent) withAttackWeapons(ctx context.Context, s *AgentSession, cat *catalog.Catalog, items []agentArgs, attacks []string) []agentArgs {
+	slugOf := func(item agentArgs) rules.Slug {
+		fact, _, err := a.inventoryFact(ctx, s, cat, item)
+		if err != nil {
+			return ""
+		}
+		return rules.Slug(fact.Path[strings.LastIndex(fact.Path, ".")+1:])
+	}
+	head, seen := []agentArgs{}, map[rules.Slug]bool{}
+	for _, name := range attacks {
+		slug := slugOf(agentArgs{Name: name})
+		if it, ok := cat.Items.Get(slug); !ok || it.Weapon == nil || seen[slug] {
+			continue
+		}
+		seen[slug] = true
+		wielded := agentArgs{Name: name, Count: 1}
+		// The equipment box lists it too: that line, with its count, moves up.
+		if at := slices.IndexFunc(items, func(item agentArgs) bool { return slugOf(item) == slug }); at >= 0 {
+			wielded, items = items[at], slices.Delete(slices.Clone(items), at, at+1)
+		}
+		wielded.Placement = "equipped"
+		head = append(head, wielded)
+	}
+	return append(head, items...)
 }
 
 // setInventory puts a sheet's items on the character, by printed name.

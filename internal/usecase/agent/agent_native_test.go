@@ -3,8 +3,10 @@ package agent_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -546,5 +548,47 @@ func TestHillDwarfBuildsWithDwarvenToughness(t *testing.T) {
 	dwarf := `{"kind":"race","name":"Dwarf"},{"kind":"class","name":"Cleric","level":8}`
 	if plain, hill := hitPoints(dwarf), hitPoints(dwarf+`,{"kind":"subrace","name":"Hill Dwarf"}`); hill-plain != 8 {
 		t.Errorf("hill dwarf cleric 8 has %d hit points, a dwarf without the subrace %d; want 8 apart", hill, plain)
+	}
+}
+
+// A sheet attacks with a longsword and lists a rapier among its equipment and
+// no sword. The weapons of the attacks table are items whether the equipment
+// box names them or not, and they are what is in hand: the sword is wielded,
+// the crossbow the box also lists is one crossbow, the rapier is carried, and
+// a breath weapon is not an item at all.
+func TestAgentWieldsTheWeaponsTheSheetAttacksWith(t *testing.T) {
+	svc := newService(t)
+	model := &script{turns: [][]agentuc.AgentCall{{
+		call("plan", "plan_import", `{"expected":["identity.name"],"level":3,"attacks":["Longsword","Light crossbow","Breath weapon"],"items":[{"name":"Rapier","placement":"equipped"},{"name":"Shield","placement":"equipped"},{"name":"Light crossbow"}]}`),
+		call("facts", "import_facts", `{"facts":[{"path":"identity.name","value":"Burra"},{"kind":"class","name":"Fighter","level":3}]}`),
+		call("review", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
+	}}}
+	a := agentuc.NewAgent(svc, answering{model}, agentuc.AgentConfig{Workers: 1})
+	defer a.Close()
+	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "review" })
+	if out := model.output("plan"); strings.Contains(out, "Breath") {
+		t.Errorf("an attack that is no weapon was treated as an item: %s", out)
+	}
+	sheet, err := svc.Sheet(context.Background(), testOwner, s.CharacterID, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	slugs := func(stacks []domain.ItemStack) string {
+		out := []string{}
+		for _, stack := range stacks {
+			out = append(out, fmt.Sprintf("%s x%d", stack.Item, stack.Count))
+		}
+		slices.Sort(out)
+		return strings.Join(out, ", ")
+	}
+	if got := slugs(sheet.Equipment.Equipped); got != "longsword x1, shield x1" {
+		t.Errorf("equipped = %s", got)
+	}
+	if got := slugs(sheet.Equipment.Backpack); got != "crossbow-light x1, rapier x1" {
+		t.Errorf("backpack = %s", got)
 	}
 }

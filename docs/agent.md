@@ -476,7 +476,7 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 | --- | --- |
 | `get_build_context` | The draft by fact path, open prompts **with their options** and what the owner has already said about each, the answers given so far, the owner's replies to every question (`userAnswers`), custom entries, differences from the sheet's printed numbers, checklist entries not yet covered |
 | `read_source` | Text/JSON source contents, or reference to an attached image/PDF |
-| `plan_import` | Transcribe the sheet in one typed call: name, alignment, personality traits, ideals, bonds and flaws, final ability totals, level, hit points, armor class, speed, every skill and save bonus, coins, inventory and spells, plus a checklist of what else it documents |
+| `plan_import` | Transcribe the sheet in one typed call: name, alignment, personality traits, ideals, bonds and flaws, final ability totals, level, hit points, armor class, speed, every skill and save bonus, coins, inventory, the attacks table's names and spells, plus a checklist of what else it documents |
 | `import_facts` | Race, subrace, class with its level, subclass, background and feats **by printed name**; printed values at a path. Per-fact errors with candidates |
 | `assign_skills` | Distribute the sheet's proficient skills over the prompts that grant skills, and its expertise over the expertise prompts |
 | `assign_spells` | Distribute the sheet's cantrips and spells over the build's spell prompts, and keep the ones past the build's count as spells known |
@@ -563,7 +563,14 @@ lists have slots for that reason: asked for afterwards as separate facts, a
 field's second paragraph was what got left out. The name slot is nullable, and
 a value that is only the box's caption ("Character Name") is refused, since a
 blank box still prints one. Level, coins, items and those identity fields are
-written to the character. The six scores are held by the session and *solved into* it (see
+written to the character. **`attacks` is the name in each row of the attacks
+table, and it is a slot of its own because a sentence asking for those weapons
+among the items was not enough**: a sheet attacking with a longsword listed a
+rapier in its equipment box and no sword, and the model copied the box. The
+server resolves each name, keeps the ones that are catalogue weapons, and puts
+them at the head of the inventory as equipped -- moving up the box's own line
+for one it lists too -- so with one item to a slot the sword is in hand and
+the rapier carried. A row that is no weapon (a breath weapon) is not an item. The six scores are held by the session and *solved into* it (see
 below). The derived numbers are kept as a reference and never written.
 
 **The server does the arithmetic and the matching.** From the printed bonuses
