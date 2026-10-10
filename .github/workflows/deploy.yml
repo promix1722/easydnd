@@ -124,9 +124,10 @@ jobs:
       #
       # pack/check -- the committed compendium is hand-maintained, so the real
       # pack loader is the gate: schema, references and choices, the same
-      # validation the server runs at startup.
-      - name: gofmt, vet, layers, pack
-        run: make fmt/check vet lint/layers pack/check
+      # validation the server runs at startup. data/lint/check holds its prose
+      # to the checks that are at zero.
+      - name: gofmt, vet, layers, pack, prose
+        run: make fmt/check vet lint/layers pack/check data/lint/check
 
   check-frontend:
     runs-on: ubuntu-latest
@@ -142,6 +143,10 @@ jobs:
         run: make web/deps
       - name: typecheck, lint, layers
         run: make web/lint
+      # The other half of what `make verify` checks here: the committed icons
+      # against the generator.
+      - name: icons
+        run: make web/icons/check
 
   # ---------------------------------------------------------------- BUILD -----
 
@@ -195,11 +200,10 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: api
-          path: |
-            easydnd
-            config.prod.yaml
-            deploy/deploy.sh
-            data/pack/srd-5.1
+          # The binary alone. The config, deploy.sh and the 19 MB compendium
+          # it used to carry are in the repository, and deploy-backend checks
+          # out this same commit before it downloads this.
+          path: easydnd
           retention-days: 7
 
   build-frontend:

@@ -310,7 +310,7 @@ fmt:
 
 ## fmt/check: fail if any file is unformatted (mirrors CI)
 fmt/check:
-	@test -z "$$(gofmt -l .)" || { gofmt -l .; exit 1; }
+	@test -z "$$(gofmt -l cmd internal)" || { gofmt -l cmd internal; exit 1; }
 
 ## vet: run go vet (mirrors CI)
 vet:
