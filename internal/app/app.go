@@ -105,12 +105,6 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	if cfg.Auth.EphemeralSecret {
 		log.Warn("auth.session_secret is unset; signing sessions with a key generated for this process only -- every restart signs everyone out")
 	}
-	// The config file holds the session signing key. World-readable means every
-	// account on the box can forge a session cookie.
-	if cfg.WorldReadable {
-		log.Warn("config file is world-readable and holds the session signing key; chmod 640 it",
-			slog.String("config", cfg.Source))
-	}
 
 	// Outbound adapters. The assignments in newRepositories are what
 	// type-check the adapters against the domain's ports: every store has an

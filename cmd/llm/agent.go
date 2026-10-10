@@ -64,7 +64,7 @@ func (m timedAgentModel) Respond(ctx context.Context, r agentuc.AgentRequest, de
 func agentCmd(args []string) error {
 	flags := flag.NewFlagSet("agent", flag.ContinueOnError)
 	pack := flags.String("pack", "data/pack/srd-5.1", "pack directory or portable JSON")
-	configPath := flags.String("config", "config.local.yaml", "existing EasyDND configuration (agent settings)")
+	configPath := flags.String("config", "config.dev.yaml", "EasyDND configuration (agent settings; the key is EASYDND_AGENT_API_KEY)")
 	locale := flags.String("locale", "en", "catalogue locale")
 	timeout := flags.Duration("timeout", 5*time.Minute, "maximum time per start/message/resume")
 	if err := flags.Parse(args); err != nil {
@@ -82,7 +82,7 @@ func agentCmd(args []string) error {
 		return err
 	}
 	if cfg.Agent.APIKey == "" || cfg.Agent.Model == "" {
-		return fmt.Errorf("configure agent.api_key and agent.model in %s", *configPath)
+		return fmt.Errorf("set EASYDND_AGENT_API_KEY, and agent.model in %s", *configPath)
 	}
 	source, err := catalogfile.NewRegistry([]string{*pack}, nil, "")
 	if err != nil {

@@ -22,10 +22,10 @@ SHA="${1:?usage: deploy.sh <git-sha>}"
 ROOT=/opt/easydnd
 NEW="$ROOT/releases/$SHA"
 LINK="$ROOT/current"
-# The health check's own port, not the app's: the app reads http.port from
-# CONFIG below. Keep the two in sync by hand -- nothing links them any more.
+# The health check's own port, not the app's: the app reads http.port from the
+# release's config.yaml. Keep the two in sync by hand -- nothing links them.
 PORT="${PORT:-8080}"
-CONFIG=/etc/easydnd/config.yaml
+SECRETS=/etc/easydnd/prod.env
 KEEP=5
 
 [ -x "$NEW/easydnd" ] || { echo "no executable at $NEW/easydnd"; exit 1; }
@@ -40,18 +40,22 @@ KEEP=5
 # refuses to boot.
 [ -d "$NEW/data/pack/srd-5.1" ] || { echo "no SRD data at $NEW/data/pack/srd-5.1"; exit 1; }
 
-# Same for the config file, which now carries every setting including the
-# session signing key. It is not part of a release -- it is installed once by
-# hand -- so this catches the case where supervisor was pointed at a path that
-# was never created. `-e` and not `-r`: the file is 640 root:easydnd and this
-# script runs as `deploy`, which is deliberately not allowed to read it.
+# The config travels with the release -- config.prod.yaml, shipped as
+# config.yaml beside the binary that parses it -- so a release without one
+# cannot start.
+[ -f "$NEW/config.yaml" ] || { echo "no config at $NEW/config.yaml"; exit 1; }
+
+# The secrets do not travel: they are installed once by hand and supervisor
+# loads them into the process environment. `-e` and not `-r`: the file is 640
+# root:easydnd and this script runs as `deploy`, which is deliberately not
+# allowed to read it.
 #
 # This needs /etc/easydnd to be mode 751, not 750: testing a path requires
 # execute permission on every parent directory, so a 750 directory fails this
 # check with EACCES while the file sits there perfectly readable by the service
-# account. That is how the v0.5.0 deploy failed. See deploy/config.example.yaml.
-[ -e "$CONFIG" ] || {
-    echo "no config at $CONFIG -- install it from deploy/config.example.yaml first"
+# account. That is how the v0.5.0 deploy failed.
+[ -e "$SECRETS" ] || {
+    echo "no secrets at $SECRETS -- install it from easydnd.example.env first"
     exit 1
 }
 

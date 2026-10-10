@@ -178,22 +178,23 @@ When you want accounts to survive a restart, use the three targets it composes
 instead -- `make db/up` once, then `make run/db` and `make web/dev` -- and
 `make dev/down` when you are finished with them.
 
-`make run/db` loads `config.local.yaml` if you have one (it is gitignored);
-otherwise `make config/dev` writes `config.dev-run.yaml` for it, carrying this
-worktree's ports and origins.
+Every one of those targets runs the API on the same committed
+`config.dev.yaml`. What that file cannot say reaches the process through its
+environment, in two layers that `make` puts there:
 
-**The generated config also turns the AI Wizard on, when there is a key to turn
-it on with.** `make config/dev` (and so `make dev`, and `make config/preview`)
-writes an `agent:` section from `OPENAI_API_KEY`; if that is unset it reads the
-variable out of `SECRETS_FILE` (default `~/.config/secrets.env`, a shell file
-with an `OPENAI_API_KEY=...` line), so a fresh worktree gets a working wizard
-without anyone sourcing anything. The model is `AGENT_MODEL` (default
-`gpt-6-luna`). The key is written into the file because the loader reads
-nothing from the environment; the file is gitignored and mode 600. With no key
-in either place the section is left out, the server starts without the feature,
-and the target says so: `wrote config.dev-run.yaml (AI Wizard off: no
-OPENAI_API_KEY)`. A hand-written `config.local.yaml` is never touched -- its
-`agent:` section, like its ports, is yours to keep.
+- **`~/config/easydnd/dev.env`** -- this machine's secrets, one file for every
+  worktree and outside all of them (`DEV_ENV` overrides the path). Copy
+  `easydnd.example.env` there, mode 600. **The AI Wizard's key is
+  `EASYDND_AGENT_API_KEY` in this file**; the model is `agent.model` in
+  `config.dev.yaml`. The file is optional: without it the server starts with
+  the feature off and the target says so.
+- **this worktree's slot** -- `EASYDND_HTTP_PORT`, `EASYDND_RP_ID`,
+  `EASYDND_RP_ORIGINS` and, for `run/db`, `EASYDND_DB_URL`. They are passed,
+  not written down: no config file is generated, so there is nothing per
+  worktree to go stale or to hold a copy of a key.
+
+`make spell-icons` and `make translate/ru` take their OpenAI key from the same
+file. See [Configuration](#configuration) for the full list of variables.
 
 Without `TEST_DATABASE_URL` the Postgres adapter tests skip themselves, which is
 what keeps `go test ./...` and `make verify` green on a machine with no Docker.
@@ -344,8 +345,8 @@ PUBLIC_HOST      := dev.example.org
 PUBLIC_PORT_BASE := 8880
 ```
 
-That is the whole configuration. `make dev` then puts
-`http://dev.example.org:{8880 + slot}` into the generated config's
+That is the whole configuration. `make dev` then passes
+`http://dev.example.org:{8880 + slot}` to the API as the first of its
 `auth.rp_origins` and hands it to Vite, which needs it for two things of its
 own -- see [web.md](web.md#one-dev-server-per-worktree).
 
@@ -361,7 +362,7 @@ Two consequences of reaching the app over plain HTTP on a name that is not
   this same rule.
 - **`env: development` is doing real work.** It is what clears the cookie
   `Secure` flag and the `__Host-` prefix; a production-mode cookie would never
-  be sent over such a connection. The generated config always sets it.
+  be sent over such a connection. `config.dev.yaml` sets it.
 - **`navigator.clipboard` is undefined**, for exactly the same reason as
   `PublicKeyCredential`. The invite sheet falls back to a selection copy and,
   if even that is refused, says so and selects the link -- see
@@ -1245,26 +1246,45 @@ The frontend has its own layer rule and its own checker; see
 
 ## Configuration
 
-All configuration lives in **one YAML file**. The app finds it via the
-`EASYDND_CONFIG` environment variable, or a `-config <path>` flag which takes
-precedence; there is no default location and the file is **mandatory in every
-environment**. `EASYDND_CONFIG` is the only environment variable the app reads —
-individual settings cannot be overridden from the environment, so what the file
-says is what the process runs.
+Configuration is **one committed YAML file per environment, plus an env file
+for what must not be committed**:
 
-`config.dev.yaml` is committed and is what `make run/server` loads.
-`deploy/config.example.yaml` is the production template; the live copy is
-installed by hand, once:
+| | Config -- committed, no secrets | Env file -- secrets, never committed |
+|---|---|---|
+| development | `config.dev.yaml` | `~/config/easydnd/dev.env`, one for every worktree, loaded by `make` |
+| production | `config.prod.yaml`, shipped in each release as `config.yaml` | `/etc/easydnd/prod.env`, loaded by supervisor |
+
+The app finds the YAML via the `EASYDND_CONFIG` environment variable, or a
+`-config <path>` flag which takes precedence; there is no default location and
+the file is **mandatory in every environment**. It logs which file it loaded.
+
+The app never reads an env *file*. Whatever starts the process loads it, and
+the loader lays a fixed list of variables over the parsed YAML -- a list, not a
+naming rule, so a stray export cannot reach a key nobody meant to open:
+
+| Variable | Sets | Where it comes from |
+|---|---|---|
+| `EASYDND_AGENT_API_KEY` | `agent.api_key` | the env file, both environments |
+| `EASYDND_SESSION_SECRET` | `auth.session_secret` | `prod.env` |
+| `EASYDND_DB_URL` | `db.url` | `prod.env`; in development, `make` from the slot |
+| `EASYDND_GOOGLE_CLIENT_ID`, `EASYDND_GOOGLE_CLIENT_SECRET` | `auth.google.*` | the env file, optional |
+| `EASYDND_HTTP_PORT`, `EASYDND_RP_ID`, `EASYDND_RP_ORIGINS` (comma-separated) | `http.port`, `auth.rp_id`, `auth.rp_origins` | `make`, from the worktree's slot |
+
+A set variable wins over the file; an unset or empty one leaves it alone. Two
+tests keep the split honest: neither committed config may set a secret key, and
+`config.prod.yaml` must be refused without the secrets and load with them.
+
+`easydnd.example.env` is the template for both env files. In production it is
+installed once, by hand:
 
 ```sh
 sudo install -d -o root -g easydnd -m 751 /etc/easydnd
-sudo install -o root -g easydnd -m 640 deploy/config.example.yaml /etc/easydnd/config.yaml
-sudo -e /etc/easydnd/config.yaml        # fill in auth.session_secret
+sudo install -o root -g easydnd -m 640 easydnd.example.env /etc/easydnd/prod.env
+sudo -e /etc/easydnd/prod.env        # session secret, database URL, LLM key
 ```
 
 Mode `640 root:easydnd` is the point: the service account can read the signing
-key and nothing else on the host can. The app warns at startup if the file is
-world-readable, and logs which file it loaded.
+key and nothing else on the host can.
 
 The directory is `751`, not `750`: `deploy/deploy.sh` runs as `deploy` and
 checks this file exists before swapping the release symlink, and testing a path
@@ -1272,6 +1292,12 @@ needs execute permission on every parent directory. A `750` directory fails that
 check with `EACCES` while the file itself is perfectly fine — which is how the
 v0.5.0 deploy failed. `751` grants others `--x`, so the path can be traversed
 but the directory cannot be listed and the `640` file still cannot be read.
+
+Because `config.prod.yaml` travels inside the release, the file a binary reads
+is always the one it was tested against: a key added or removed in the loader
+ships with the config that uses it, and a rollback takes both back together.
+Only a *new required secret* still needs a hand step on the server before the
+release that wants it.
 
 Every key is optional — the defaults below apply to anything the file omits —
 but an **unknown key is a startup error**, so `rp_origin` for `rp_origins` fails
@@ -1298,20 +1324,22 @@ rather than quietly defaulted.
 | `data.default_packs` | `{}` | selected root IDs and version constraints; omitted means configured inputs |
 | `data.pack_archive` | empty | optional persistent digest-addressed release directory |
 | `data.srd_dir` | `data/pack/srd-5.1` | read at startup; a missing or malformed directory is a fatal error, by design. Absolute in production, through `current/` so it follows the symlink swap |
-| `db.url` | *(none)* | **required in production**; libpq URL for the store that holds accounts, groups, characters, folders, games, packs and wizard chats. Say `sslmode=verify-full` -- an omitted `sslmode` means libpq's `prefer`, which is unauthenticated and permits a plaintext fallback. Unset in development falls back to the in-memory store with a warning. The example file's placeholder password is rejected by name |
+| `db.url` | *(none)* | **required in production**; libpq URL for the store that holds accounts, groups, characters, folders, games, packs and wizard chats. Say `sslmode=verify-full` -- an omitted `sslmode` means libpq's `prefer`, which is unauthenticated and permits a plaintext fallback. Unset in development falls back to the in-memory store with a warning. The template's placeholder password is rejected by name |
 | `db.max_conns` | `10` | pgxpool size |
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
-| `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The example file's placeholder is rejected by name |
+| `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The template's placeholder is rejected by name |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
-| `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
+| `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. The first is where Google sign-in returns to. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
 | `auth.session_ttl` | `168h` | how long a session cookie lasts |
 | `auth.guest_session_ttl` | `24h` | how long an anonymous session lasts. Deliberately its own key, and shorter: a guest token cannot be revoked and names nothing recoverable, so the only thing bounding a leaked one is how soon it expires |
 | `auth.ceremony_ttl` | `5m` | how long a begin/finish pair stays valid; also bounds an in-flight SSO redirect |
 | `auth.google.client_id` | *(none)* | omitting the whole `auth.google` block means Google sign-in is **not offered**, which is a supported deployment |
-| `auth.google.client_secret` | *(none)* | must be set together with the id; half a configuration is a startup error. The example file's placeholder is rejected by name |
-| `auth.google.redirect_url` | `https://easydnd.org/v1/auth/sso/google/callback` / `http://localhost:5173/v1/auth/sso/google/callback` | must match a URI registered with Google byte for byte. The development default is the **Vite dev server**, not this process |
+| `auth.google.client_secret` | *(none)* | must be set together with the id; half a configuration is a startup error. The template's placeholder is rejected by name |
+| `auth.google.redirect_url` | `/v1/auth/sso/google/callback` on the first of `auth.rp_origins` | must match a URI registered with Google byte for byte. In development that origin is the **Vite dev server**, not this process, and differs per worktree |
+| `agent.model` | *(none)* | the AI Wizard's model; inert without `agent.api_key`. The other `agent.*` keys are in [agent.md](agent.md#configuration) |
+| `agent.api_key` | *(none)* | **never in a committed file** -- `EASYDND_AGENT_API_KEY`. Unset means the AI Wizard is off |
 
 Cookie `Secure` and the `__Host-` / `__Secure-` name prefixes are derived from
 `env`, not configured: the Vite dev server is plain HTTP, and a `Secure`
@@ -1740,7 +1768,7 @@ Never renumber or delete a migration once it has been applied -- goose errors on
 a database version it cannot find in the embedded files.
 
 `easydnd -migrate=status|up|down` runs one command and exits without starting
-the server, for the operator who set `DB_MIGRATE_ON_START=false` to stage a
+the server, for the operator who set `db.migrate_on_start: false` to stage a
 risky change. `-migrate=down` in production additionally requires
 `-migrate-force`: it drops passkeys, and a passkey cannot be reissued.
 
@@ -1825,7 +1853,8 @@ git push origin v0.1.0
 ```
 
 That builds a static `linux/amd64` binary, a `web.tar.gz` of the frontend and a
-tarball of `data/pack/srd-5.1/`, ships all three into `/opt/easydnd/releases/<sha>/`,
+tarball of `data/pack/srd-5.1/`, ships all three and `config.prod.yaml` into
+`/opt/easydnd/releases/<sha>/`,
 and runs `deploy/deploy.sh`: unpack the bundle, atomic symlink swap, supervisor
 restart, health gate, automatic rollback on failure, prune to the last 5
 releases.
@@ -1835,7 +1864,9 @@ releases.
 /opt/easydnd/releases/<sha>/data/pack/srd-5.1/  the API reads this at startup
 /opt/easydnd/releases/<sha>/web/           nginx serves this
 /opt/easydnd/releases/<sha>/VERSION        what this release calls itself
-/opt/easydnd/current -> releases/<sha>     all four follow this symlink
+/opt/easydnd/releases/<sha>/config.yaml    config.prod.yaml; EASYDND_CONFIG reads it
+/opt/easydnd/current -> releases/<sha>     all five follow this symlink
+/etc/easydnd/prod.env                      the secrets; not part of any release
 ```
 
 A release is therefore a **directory, not a file** -- the compendium is read
@@ -1849,16 +1880,11 @@ Because all three sit behind one symlink they swap together, so a rollback
 reverts the UI, the API and its data as a unit.
 
 The path of the data inside a release is part of the contract between the
-tarball, `deploy.sh`'s existence check and the server's `data.srd_dir`. The
-first two travel with the tag; the third is in the hand-installed config and
-does not. When the directory moved from `data/srd_5.1` to `data/pack/srd-5.1`,
-that meant one manual step **before** tagging the release that moves it: set
-`srd_dir: /opt/easydnd/current/data/pack/srd-5.1` in `/etc/easydnd/config.yaml`.
-A release tagged without it fails the existence check, or boots, finds no data
-at the old path, and is rolled back by the health gate -- which is the gate
-doing its job, but minutes after the fact and with nothing on the run page
-saying why. The old release keeps running throughout, because it reads from
-its own directory; only the new one looks for the new path.
+tarball, `deploy.sh`'s existence check and the server's `data.srd_dir`. All
+three now travel with the tag -- `srd_dir` is in `config.prod.yaml`, inside the
+release -- so moving the directory is one change and one deploy. It used to
+take a hand edit on the server *before* tagging, and forgetting it cost a
+rollback with nothing on the run page saying why.
 
 The database is the exception, and the only piece of state that does **not**
 swap with a release. That is what makes the expand-only rule above binding: a
@@ -1954,25 +1980,42 @@ Once, by hand:
    the schema. There is no password, no email and no account recovery, so a lost
    `users` table orphans every passkey in every user's password manager
    permanently.
-7. Put `db.url` in `/etc/easydnd/config.yaml`, alongside `auth.session_secret`.
-   That file is `640 root:easydnd` precisely because it now holds two
-   credentials. **Install it before deploying the release that needs it** --
-   the new binary refuses to start without `db.url`, which the health gate
-   would turn into a rollback. Editing it while the old release is live is
-   safe: the old binary reads the same file and simply ignores a `db:` section
-   it does not know.
+7. Put `EASYDND_DB_URL` in `/etc/easydnd/prod.env`, alongside
+   `EASYDND_SESSION_SECRET`. That file is `640 root:easydnd` precisely because
+   it holds the credentials. **Install it before deploying the release that
+   needs it** -- the binary refuses to start without a database URL, which the
+   health gate would turn into a rollback. Adding a variable while an older
+   release is live is safe: a binary ignores variables it does not read.
+
+### What the server needs, in one place
+
+A deploy carries the binary, the bundle, the compendium and `config.yaml`.
+Everything below is set up once, by hand, and no tag changes it:
+
+| Where | What |
+|---|---|
+| GitHub repository secrets | `SSH_HOST`, `SSH_PRIVATE_KEY`, `SSH_KNOWN_HOSTS` -- the deploy key's public half in `deploy`'s `authorized_keys`. No application secret is ever stored in GitHub |
+| accounts | `deploy` (ships and activates releases), `easydnd` (runs the service), `www-data` in group `easydnd` |
+| `/opt/easydnd` | owned `deploy:easydnd`, mode `2750` |
+| `/etc/easydnd/prod.env` | from `easydnd.example.env`, `640 root:easydnd`, directory `751`: the session secret, the database URL, the LLM key, optionally the Google client |
+| sudoers | `deploy` may run `/usr/bin/supervisorctl restart easydnd` without a password |
+| `/etc/supervisor/conf.d/easydnd.conf` | from `deploy/supervisor/easydnd.conf`, **after** `prod.env` exists |
+| `/var/log/easydnd/` | exists; supervisor writes `out.log` and `err.log` there |
+| nginx and certbot | `deploy/nginx/easydnd.conf`, the `$connection_upgrade` map, the certificate |
+| Postgres | the steps above |
+
+`deploy.sh` checks before the swap that the release has its `config.yaml` and
+that `prod.env` exists; it cannot read the latter, so a *missing variable* still
+surfaces as a failed health gate and a rollback, with the reason in
+`/var/log/easydnd/err.log`.
 
 Two server-side configs are applied **by hand**, not by the pipeline, and both
 are mirrored in the repo as the source of truth for what the live copy should
 say:
 
-- `deploy/supervisor/easydnd.conf` -- the API process. It must set
-  `data.srd_dir` to an absolute path under `current/`, because the config
-  default is *relative* and resolves against `directory=`, not against the
-  release. Getting this wrong costs a deploy: the binary dies on every restart
-  with `load SRD data from data/pack/srd-5.1: ... no such file or directory`, the
-  health gate times out, and the release rolls back. It is written that way in
-  the committed copy for exactly that reason.
+- `deploy/supervisor/easydnd.conf` -- the API process. It loads
+  `/etc/easydnd/prod.env` into the environment and points `EASYDND_CONFIG` at
+  `/opt/easydnd/current/config.yaml`, so the config follows the symlink swap.
 - `deploy/nginx/easydnd.conf` -- the routing: `/v1/` to the Go process,
   everything else to the bundle with an SPA fallback, plus the whole of the
   HTTP caching policy. Its cache rules changed with the release-identifier

@@ -2,10 +2,12 @@
 
 ## Standalone agent CLI
 
-`go run ./cmd/llm agent -pack /path/to/easydnd-2014/pack -config config.local.yaml`
+`go run ./cmd/llm agent -pack /path/to/easydnd-2014/pack`
 runs the same wizard locally, without a web server or database. It reads
-`agent.api_key`, `agent.model`, `agent.reasoning_effort`, `agent.max_turns`
-and `agent.request_timeout` from the existing YAML configuration. `-locale` defaults to `en`;
+`agent.model`, `agent.reasoning_effort`, `agent.max_turns` and
+`agent.request_timeout` from `config.dev.yaml` (`-config` names another file)
+and the key from `EASYDND_AGENT_API_KEY`, so export your env file first:
+`set -a; . ~/config/easydnd/dev.env; set +a`. `-locale` defaults to `en`;
 `-timeout` defaults to `5m` for each start, message or resumption. The supplied
 pack is loaded as an immutable rules lock. Nothing is written to the pack.
 
@@ -793,16 +795,15 @@ nothing.
 
 ## Configuration and deployment
 
-Add this to the YAML file selected by `EASYDND_CONFIG`. Keep the actual API key
-out of version control. No provider model is silently selected for operators.
-
-A development server needs none of this done by hand: `make dev` writes the
-section into its generated config from `OPENAI_API_KEY` or your secrets file.
-See the paragraph on the generated config in [backend.md](backend.md).
+The settings are in the committed configs, `config.dev.yaml` and
+`config.prod.yaml`. **The key is not**: it is `EASYDND_AGENT_API_KEY` in the
+env file -- `~/config/easydnd/dev.env` in development, `/etc/easydnd/prod.env`
+in production -- and a server without it starts with the AI Wizard off. See
+[backend.md](backend.md#configuration). No provider model is silently selected
+for operators.
 
 ```yaml
 agent:
-  api_key: "YOUR_API_KEY"
   model: "YOUR_RESPONSES_MODEL_WITH_PDF_IMAGE_AND_TOOL_SUPPORT"
   reasoning_effort: low
   workers: 4

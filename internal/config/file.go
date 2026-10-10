@@ -4,15 +4,43 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-yaml"
 )
 
-// EnvConfigPath names the one and only environment variable this package reads.
-// Every other setting lives in the YAML file it points at: a single source of
-// truth beats a config file that any stray export can quietly override.
+// EnvConfigPath names the config file. The file is committed and carries no
+// secret; what it cannot carry arrives through the variables in applyEnv.
 const EnvConfigPath = "EASYDND_CONFIG"
+
+// applyEnv lays the environment over the parsed file. Two kinds of value come
+// this way and no others: secrets, which a committed config must not hold, and
+// what differs per machine or per worktree -- a development slot's port and
+// origins. The process reads only its environment; the env *file* is loaded by
+// whatever starts it, make in development and supervisor in production.
+//
+// A fixed list rather than a naming rule, so that a stray export cannot reach
+// a key nobody meant to open, and an unset or empty variable leaves the file's
+// value alone.
+func applyEnv(f *fileConfig) {
+	for name, dst := range map[string]*string{
+		"EASYDND_AGENT_API_KEY":        &f.Agent.APIKey,
+		"EASYDND_SESSION_SECRET":       &f.Auth.SessionSecret,
+		"EASYDND_DB_URL":               &f.DB.URL,
+		"EASYDND_GOOGLE_CLIENT_ID":     &f.Auth.Google.ClientID,
+		"EASYDND_GOOGLE_CLIENT_SECRET": &f.Auth.Google.ClientSecret,
+		"EASYDND_HTTP_PORT":            &f.HTTP.Port,
+		"EASYDND_RP_ID":                &f.Auth.RPID,
+	} {
+		if v := os.Getenv(name); v != "" {
+			*dst = v
+		}
+	}
+	if v := os.Getenv("EASYDND_RP_ORIGINS"); v != "" {
+		f.Auth.RPOrigins = strings.Split(v, ",")
+	}
+}
 
 // fileConfig mirrors Config with YAML tags. It exists as a separate type so
 // that "absent from the file" is distinguishable from "resolved value": every
@@ -98,7 +126,6 @@ type fileAuth struct {
 	Google fileGoogle `yaml:"google"`
 }
 
-// fileSource is a parsed config file plus what we learned about the file itself.
 type fileGoogle struct {
 	ClientID     string `yaml:"client_id"`
 	ClientSecret string `yaml:"client_secret"`
@@ -113,9 +140,6 @@ type fileSource struct {
 	// path is echoed in logs so that "which config is this process running?"
 	// is answerable from the log stream alone.
 	path string
-	// worldReadable records that the file is readable by every account on the
-	// box. It holds the session signing key, so this is worth saying out loud.
-	worldReadable bool
 }
 
 // resolvePath picks the config path: an explicit flag value wins over
@@ -130,7 +154,7 @@ func resolvePath(flagPath string) (string, error) {
 		return v, nil
 	}
 	return "", fmt.Errorf(
-		"no config file: pass -config <path> or set %s (see deploy/config.example.yaml)",
+		"no config file: pass -config <path> or set %s (see config.prod.yaml)",
 		EnvConfigPath)
 }
 
@@ -151,13 +175,9 @@ func readFile(path string) (*fileSource, error) {
 		return nil, fmt.Errorf("parse config %s: %w", path, err)
 	}
 
-	src := &fileSource{cfg: cfg, path: path}
-	// A stat failure here is not fatal: we have already read the file, and
-	// losing the permission warning is not worth refusing to start over.
-	if info, err := os.Stat(path); err == nil {
-		src.worldReadable = info.Mode().Perm()&0o004 != 0
-	}
-	return src, nil
+	applyEnv(&cfg)
+
+	return &fileSource{cfg: cfg, path: path}, nil
 }
 
 // parser accumulates the first conversion error so that the mapping code below

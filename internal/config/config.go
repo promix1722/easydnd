@@ -59,9 +59,6 @@ type Config struct {
 	// Source is the config file this was loaded from, logged at startup so the
 	// log stream answers "which config is this process running?".
 	Source string
-	// WorldReadable reports that Source is readable by every account on the
-	// host. It holds the session signing key, so the app warns about it.
-	WorldReadable bool
 }
 
 // DBConfig points at the Postgres instance holding accounts and passkeys.
@@ -220,6 +217,8 @@ func Load(path string) (*Config, error) {
 		return nil, err
 	}
 
+	// The model sits in the committed config and the key arrives from the
+	// environment, so a model without a key is simply the feature left off.
 	if f.Agent.APIKey != "" && strings.TrimSpace(f.Agent.Model) == "" {
 		return nil, fmt.Errorf("agent.model is required when agent.api_key is set")
 	}
@@ -227,11 +226,10 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("invalid agent limits")
 	}
 	cfg := &Config{
-		Agent:         AgentConfig{APIKey: strings.TrimSpace(f.Agent.APIKey), Model: strings.TrimSpace(f.Agent.Model), ReasoningEffort: strings.TrimPrefix(p.str(strings.TrimSpace(f.Agent.ReasoningEffort), "low"), "default"), Workers: p.intVal(f.Agent.Workers, 4), MaxTurns: p.intVal(f.Agent.MaxTurns, 40), MaxSessions: p.intVal(f.Agent.MaxSessions, 100), RequestTimeout: p.duration("agent.request_timeout", f.Agent.RequestTimeout, 2*time.Minute)},
-		Env:           env,
-		Auth:          auth,
-		Source:        src.path,
-		WorldReadable: src.worldReadable,
+		Agent:  AgentConfig{APIKey: strings.TrimSpace(f.Agent.APIKey), Model: strings.TrimSpace(f.Agent.Model), ReasoningEffort: strings.TrimPrefix(p.str(strings.TrimSpace(f.Agent.ReasoningEffort), "low"), "default"), Workers: p.intVal(f.Agent.Workers, 4), MaxTurns: p.intVal(f.Agent.MaxTurns, 40), MaxSessions: p.intVal(f.Agent.MaxSessions, 100), RequestTimeout: p.duration("agent.request_timeout", f.Agent.RequestTimeout, 2*time.Minute)},
+		Env:    env,
+		Auth:   auth,
+		Source: src.path,
 		HTTP: HTTPConfig{
 			// Loopback on purpose: the reverse proxy terminates TLS and
 			// forwards here. Binding 0.0.0.0 would expose the API directly.
@@ -331,13 +329,13 @@ func (c *Config) validate() error {
 			"db.url is required in production; without it accounts live in memory " +
 				"and every restart destroys every registered passkey")
 	}
-	// A known-value password is worse than no password: deploy/config.example.yaml
+	// A known-value password is worse than no password: easydnd.example.env
 	// is published in this repository, so an operator who installed it and
 	// forgot to edit would be running production on credentials anyone can read.
 	// Rejected by name, exactly as the session secret is.
 	if c.DB.Enabled() && strings.Contains(c.DB.URL, placeholderDBPassword) {
 		return fmt.Errorf(
-			"db.url still contains the placeholder password from deploy/config.example.yaml")
+			"db.url still contains the placeholder password from easydnd.example.env")
 	}
 	if c.DB.Enabled() {
 		if c.DB.MaxConns < 1 {
@@ -380,7 +378,7 @@ func loadAuth(p *parser, f fileAuth, production bool) (AuthConfig, error) {
 	cfg.SessionSecret = secret
 	cfg.EphemeralSecret = f.SessionSecret == ""
 
-	google, err := loadGoogle(p, f.Google, production)
+	google, err := loadGoogle(p, f.Google, cfg.RPOrigins[0])
 	if err != nil {
 		return AuthConfig{}, err
 	}
@@ -412,21 +410,21 @@ func loadAuth(p *parser, f fileAuth, production bool) (AuthConfig, error) {
 	return cfg, nil
 }
 
-// placeholderSecret is what deploy/config.example.yaml ships. It is 38 bytes of
+// placeholderSecret is what easydnd.example.env ships. It is 38 bytes of
 // non-base64 text, so it clears the length floor on its own -- meaning an
 // operator who installed the example and forgot to edit it would boot
 // production with a signing key published in this repository. Reject it by
 // name; a known-value key is worse than no key at all.
 const placeholderSecret = "REPLACE-ME-WITH-openssl-rand-base64-48"
 
-// placeholderDBPassword is what deploy/config.example.yaml ships in db.url.
+// placeholderDBPassword is what easydnd.example.env ships in db.url.
 // Same reasoning as placeholderSecret: a credential published in this
 // repository must never be able to reach production unedited.
 const placeholderDBPassword = "REPLACE-ME-WITH-THE-RDS-PASSWORD"
 
 // sessionSecret decodes auth.session_secret, or in development invents one.
 
-// placeholderGoogleSecret is what deploy/config.example.yaml would ship if the
+// placeholderGoogleSecret is what easydnd.example.env would ship if the
 // Google block were ever filled in. Same reasoning as the two above: a
 // credential published in this repository must not be able to reach production
 // unedited. It matters more here than it looks, because "configured" for this
@@ -442,16 +440,15 @@ const placeholderGoogleSecret = "REPLACE-ME-WITH-THE-GOOGLE-CLIENT-SECRET"
 // not have to supply credentials it will never use. What is an error is
 // supplying half of it -- a client id without its secret would pass startup and
 // then fail at the first click, which is the worst place to find out.
-func loadGoogle(p *parser, f fileGoogle, production bool) (GoogleConfig, error) {
-	defaultRedirect := "http://localhost:5173" + GoogleRedirectPath
-	if production {
-		defaultRedirect = "https://easydnd.org" + GoogleRedirectPath
-	}
-
+//
+// The redirect defaults to the callback on the first allowed origin: the
+// browser is sent back to the page it signed in from, which in development is
+// a different port for every worktree.
+func loadGoogle(p *parser, f fileGoogle, origin string) (GoogleConfig, error) {
 	cfg := GoogleConfig{
 		ClientID:     f.ClientID,
 		ClientSecret: f.ClientSecret,
-		RedirectURL:  p.str(f.RedirectURL, defaultRedirect),
+		RedirectURL:  p.str(f.RedirectURL, origin+GoogleRedirectPath),
 	}
 
 	if (cfg.ClientID == "") != (cfg.ClientSecret == "") {
@@ -498,7 +495,7 @@ func sessionSecret(raw string, production bool) ([]byte, error) {
 
 	if strings.Contains(raw, placeholderSecret) {
 		return nil, fmt.Errorf(
-			"auth.session_secret is still the placeholder from deploy/config.example.yaml; generate a real one with `openssl rand -base64 48`")
+			"auth.session_secret is still the placeholder from easydnd.example.env; generate a real one with `openssl rand -base64 48`")
 	}
 
 	secret, err := base64.StdEncoding.DecodeString(raw)

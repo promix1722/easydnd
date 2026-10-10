@@ -197,6 +197,7 @@ jobs:
           name: api
           path: |
             easydnd
+            config.prod.yaml
             deploy/deploy.sh
             data/pack/srd-5.1
           retention-days: 7
@@ -408,7 +409,7 @@ jobs:
       - name: release identifier
         run: echo "RELEASE_VERSION=$(./deploy/release-version.sh)" >> "$GITHUB_ENV"
 
-      - name: ship the binary, deploy.sh and the compendium
+      - name: ship the binary, its config, deploy.sh and the compendium
         env:
           HOST: ${{ secrets.SSH_HOST }}
         run: |
@@ -417,6 +418,10 @@ jobs:
           chmod +x easydnd deploy/deploy.sh
           ssh -i ~/.ssh/id_deploy "deploy@$HOST" "mkdir -p $REL/data /opt/easydnd/bin"
           scp -i ~/.ssh/id_deploy easydnd "deploy@$HOST:$REL/easydnd"
+          # The config is part of the release, so the file a binary reads is
+          # always the one it was tested against. It holds no secret; those are
+          # in /etc/easydnd/prod.env on the server and never pass through here.
+          scp -i ~/.ssh/id_deploy config.prod.yaml "deploy@$HOST:$REL/config.yaml"
           scp -i ~/.ssh/id_deploy deploy/deploy.sh "deploy@$HOST:/opt/easydnd/bin/deploy.sh"
 
           # What this release calls itself, recorded beside the binary that

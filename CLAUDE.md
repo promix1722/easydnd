@@ -46,8 +46,13 @@
   `npm run lint:layers` for the web client. Inner layers import no framework. The standalone `internal/usecase/spellicon`
   generator owns outbound HTTP; it is excluded only from the HTTP dependency
   restriction and must not be imported by other usecases.
-- Configuration is one YAML file (`EASYDND_CONFIG`); individual settings cannot
-  be overridden from the environment. See `docs/backend.md#configuration`.
+- Configuration is a committed YAML per environment -- `config.dev.yaml`,
+  `config.prod.yaml` -- and **no secret goes in either**. Secrets come from an
+  env file the process never reads itself: `~/config/easydnd/dev.env` (loaded
+  by `make`, one for every worktree) and `/etc/easydnd/prod.env` (loaded by
+  supervisor). The loader overlays a fixed list of `EASYDND_*` variables, so a
+  new one is a line in `internal/config/file.go`, `easydnd.example.env` and
+  `docs/backend.md#configuration`.
 - Deploying is a tag: `git tag -a vX.Y.Z && git push origin vX.Y.Z`. A tag
   ending `-notest` skips CI's Test stage -- both suites, and only the suites --
   for a release whose `make verify` you have just run yourself. The two version

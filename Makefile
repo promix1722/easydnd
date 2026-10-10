@@ -74,10 +74,34 @@ DEVSLOT_FLAGS := -count $(SLOT_COUNT) -web $(WEB_PORT_BASE) -api $(API_PORT_BASE
 # RDS over TLS; this is sslmode=disable because a throwaway container has no CA.
 TEST_DATABASE_URL ?= postgres://easydnd:easydnd@127.0.0.1:$(PG_PORT)/easydnd?sslmode=disable
 
-# Written by config/dev: a whole development config for this worktree's slot.
-# Gitignored, never edited by hand -- edit config.dev.yaml, or make a
-# config.local.yaml, instead.
-DEV_RUN_CONFIG := config.dev-run.yaml
+# What a committed config cannot carry: secrets, and anything true of this
+# machine only. One file for every worktree, outside all of them, loaded into
+# the API's environment by the targets that run it -- see easydnd.example.env
+# for the names. Optional: without it the stack still runs, with the AI Wizard
+# off.
+DEV_ENV ?= $(HOME)/config/easydnd/dev.env
+
+# The origins a browser may reach this worktree on. The public one first when
+# there is one, because the first is where Google sign-in sends people back to.
+comma := ,
+DEV_ORIGINS := $(if $(WEB_PUBLIC_URL),$(WEB_PUBLIC_URL)$(comma))http://localhost:$(WEB_PORT)
+
+# dev_env: the environment a development API runs in -- DEV_ENV, then this
+# worktree's slot laid over it. $(1) port, $(2) origins, $(3) database URL.
+# The slot is passed rather than written down: config.dev.yaml is the same file
+# in every worktree, and internal/config reads these four over it.
+define dev_env
+set -a; \
+	if [ -f "$(DEV_ENV)" ]; then . "$(DEV_ENV)"; else echo "no $(DEV_ENV) -- AI Wizard off, see easydnd.example.env"; fi; \
+	EASYDND_HTTP_PORT='$(1)'; EASYDND_RP_ID='$(RP_ID)'; EASYDND_RP_ORIGINS='$(2)'; \
+	$(if $(3),EASYDND_DB_URL='$(3)';) \
+	set +a
+endef
+
+# llm_key: the same key for the command-line tools that spend OpenAI credit.
+define llm_key
+if [ -f "$(DEV_ENV)" ]; then . "$(DEV_ENV)"; fi; export OPENAI_API_KEY="$${OPENAI_API_KEY:-$$EASYDND_AGENT_API_KEY}"
+endef
 
 # `make preview`: the built bundle and the API on one origin, behind TLS.
 #
@@ -91,7 +115,6 @@ DEV_RUN_CONFIG := config.dev-run.yaml
 # deliberate; a preview is a verification pass, not somewhere to live.
 PREVIEW_PORT        := 8090
 PREVIEW_PUBLIC_PORT := 8890
-PREVIEW_CONFIG      := config.preview.yaml
 PREVIEW_URL         := $(if $(PUBLIC_HOST),https://$(PUBLIC_HOST):$(PREVIEW_PUBLIC_PORT),https://localhost:$(PREVIEW_PUBLIC_PORT))
 
 .DEFAULT_GOAL := help
@@ -111,11 +134,9 @@ build/release:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BINARY) $(CMD)
 
 ## run/server: run the API in development mode, no database
-# Unclaimed, this is config.dev.yaml exactly as it always was. Once the
-# worktree holds a slot it needs that slot's port and origin instead, so it
-# runs the generated config.
-run/server: $(if $(SLOT),config/dev)
-	go run -ldflags "$(LDFLAGS)" $(CMD) -config $(if $(SLOT),$(DEV_RUN_CONFIG),$(DEV_CONFIG))
+run/server:
+	@$(call dev_env,$(API_PORT),$(DEV_ORIGINS),); \
+	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_CONFIG)
 
 ## test/unit: run the test suite (~4s)
 # No -race here, and that is a deliberate trade rather than an oversight: the
@@ -182,62 +203,6 @@ db/psql:
 test/db:
 	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test -p 1 ./...
 
-# The AI Wizard in a development server. Configuration is one YAML file and the
-# loader reads nothing from the environment, so the key has to be *written*
-# into the generated file -- which is the right place for it: gitignored, mode
-# 600, rebuilt on every `make dev`. It is taken from OPENAI_API_KEY, or failing
-# that from SECRETS_FILE, so a fresh worktree gets a working wizard without
-# anybody sourcing anything first. With neither, the section is left out and
-# the server runs without the feature, as it always did.
-#
-# The model is pinned here rather than defaulted in the loader, which refuses
-# a key without one on purpose. See docs/agent.md#which-model for the choice.
-SECRETS_FILE ?= $(HOME)/.config/secrets.env
-AGENT_MODEL  ?= gpt-6-luna
-define agent_section
-key="$$OPENAI_API_KEY"; \
-	   if [ -z "$$key" ] && [ -f "$(SECRETS_FILE)" ]; then \
-	     key=$$(. "$(SECRETS_FILE)" >/dev/null 2>&1; printf %s "$$OPENAI_API_KEY"); fi; \
-	   if [ -n "$$key" ]; then printf 'agent:\n  api_key: "%s"\n  model: %s\n' "$$key" '$(AGENT_MODEL)'; fi
-endef
-
-## config/dev: write the generated development config for this worktree
-# Written whole rather than appended to config.dev.yaml, because a slot needs
-# http.port and auth.rp_origins -- and a second `auth:` block in one file is a
-# duplicate mapping key, which the loader rejects outright. What it leaves out
-# the loader defaults for. Copy the data section from config.dev.yaml so
-# folder-autoload settings also apply to worktree and preview servers.
-#
-# No auth.session_secret: development invents one per process and says so,
-# and a restart signing everyone out is the only thing it costs.
-config/dev:
-	@{ printf 'env: development\n'; \
-	   printf 'log:\n  format: text\n  level: debug\n'; \
-	   awk '/^data:/ { copying=1 } copying && /^[^[:space:]#]/ && !/^data:/ { exit } copying { print }' $(DEV_CONFIG); \
-	   printf 'http:\n  port: "%s"\n' '$(API_PORT)'; \
-	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - http://localhost:%s\n' '$(RP_ID)' '$(WEB_PORT)'; \
-	   $(if $(WEB_PUBLIC_URL),printf '    - %s\n' '$(WEB_PUBLIC_URL)';) \
-	   $(if $(DEV_DB_URL),printf 'db:\n  url: %s\n' '$(DEV_DB_URL)';) \
-	   $(agent_section); } > $(DEV_RUN_CONFIG)
-	@chmod 600 $(DEV_RUN_CONFIG)
-	@echo "wrote $(DEV_RUN_CONFIG) ($$(grep -q '^agent:' $(DEV_RUN_CONFIG) && echo 'AI Wizard on, $(AGENT_MODEL)' || echo 'AI Wizard off: no OPENAI_API_KEY'))"
-
-## config/preview: write the config `make preview` runs the API with
-# Same shape as config/dev and a different pair of answers: one port, because
-# Go is serving the bundle as well as the API, and an https origin, because
-# middleware.SameOrigin compares auth.rp_origins against the browser's Origin
-# byte for byte and the browser will say https here.
-config/preview:
-	@{ printf 'env: development\n'; \
-	   printf 'log:\n  format: text\n  level: debug\n'; \
-	   awk '/^data:/ { copying=1 } copying && /^[^[:space:]#]/ && !/^data:/ { exit } copying { print }' $(DEV_CONFIG); \
-	   printf 'http:\n  port: "%s"\n' '$(PREVIEW_PORT)'; \
-	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - %s\n' '$(RP_ID)' '$(PREVIEW_URL)'; \
-	   printf 'db:\n  url: %s\n' '$(TEST_DATABASE_URL)'; \
-	   $(agent_section); } > $(PREVIEW_CONFIG)
-	@chmod 600 $(PREVIEW_CONFIG)
-	@echo "wrote $(PREVIEW_CONFIG) ($$(grep -q '^agent:' $(PREVIEW_CONFIG) && echo 'AI Wizard on, $(AGENT_MODEL)' || echo 'AI Wizard off: no OPENAI_API_KEY'))"
-
 ## preview: serve the BUILT bundle and the API on one TLS origin, for PWA testing
 # What the dev server cannot do. `make web/dev` has no service worker at all
 # (devOptions.enabled is false in vite.config.ts, so a worker cannot shadow the
@@ -254,24 +219,20 @@ preview:
 	@go run ./cmd/devslot claim $(DEVSLOT_FLAGS) >/dev/null
 	@$(MAKE) preview/up
 
-preview/up: db/up web/build config/preview
+# One port, because Go is serving the bundle as well as the API, and an https
+# origin, because middleware.SameOrigin compares auth.rp_origins against the
+# browser's Origin byte for byte and the browser will say https here.
+preview/up: db/up web/build
 	@echo "preview  $(PREVIEW_URL)  (127.0.0.1:$(PREVIEW_PORT))"; \
 	 trap 'exit 0' INT TERM; \
 	 trap '$(MAKE) --no-print-directory db/down' EXIT; \
-	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(PREVIEW_CONFIG) -web web/dist
+	 $(call dev_env,$(PREVIEW_PORT),$(PREVIEW_URL),$(TEST_DATABASE_URL)); \
+	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_CONFIG) -web web/dist
 
 ## run/db: run the API in development mode against this worktree's Postgres
-# config.local.yaml wins if you have made one (it is gitignored), which is the
-# hook for anything the generated file cannot carry -- auth.google, say. Its
-# ports and origins are then yours to keep correct: nothing rewrites it.
-run/db: DEV_DB_URL := $(TEST_DATABASE_URL)
-run/db: $(if $(wildcard config.local.yaml),,config/dev)
-	@if [ -f config.local.yaml ]; then \
-	  echo "using config.local.yaml -- its ports and origins are yours to keep correct"; \
-	  go run -ldflags "$(LDFLAGS)" $(CMD) -config config.local.yaml; \
-	else \
-	  go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_RUN_CONFIG); \
-	fi
+run/db:
+	@$(call dev_env,$(API_PORT),$(DEV_ORIGINS),$(TEST_DATABASE_URL)); \
+	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_CONFIG)
 
 ## dev: this worktree's whole stack -- Postgres, the API and the web client
 # Claims a slot first, then re-enters make: SLOT is resolved when the Makefile
@@ -436,10 +397,10 @@ image/generate:
 # `verify` -- icons are art, and art has no drift check.
 SPELL_ICON_CACHE := $(HOME)/.cache/easydnd/spell-icons
 spell-icons:
-	@test -n "$$OPENAI_API_KEY" || { \
-	  echo "OPENAI_API_KEY is not set; source your secrets file first."; exit 1; }
+	@$(llm_key); test -n "$$OPENAI_API_KEY" || { \
+	  echo "no LLM key: set EASYDND_AGENT_API_KEY in $(DEV_ENV)."; exit 1; }
 	node web/scripts/spell-icons.mjs prompts $(SPELL_ICON_CACHE)/prompts.json
-	go run ./cmd/llm images -in $(SPELL_ICON_CACHE)/prompts.json \
+	$(llm_key); go run ./cmd/llm images -in $(SPELL_ICON_CACHE)/prompts.json \
 	  -out $(SPELL_ICON_CACHE)/png -quality low -background transparent
 	node web/scripts/spell-icons.mjs convert $(SPELL_ICON_CACHE)/png
 
@@ -462,9 +423,9 @@ TRANSLATE_MODEL     ?= gpt-5.4-2026-03-05
 TRANSLATE_REASONING ?= medium
 TRANSLATE_FLAGS     ?=
 translate/ru:
-	@test -n "$$OPENAI_API_KEY" || test -n "$(findstring -dry-run,$(TRANSLATE_FLAGS))" || { \
-	  echo "OPENAI_API_KEY is not set; source your secrets file first."; exit 1; }
-	go run ./cmd/llm translate \
+	@$(llm_key); test -n "$$OPENAI_API_KEY" || test -n "$(findstring -dry-run,$(TRANSLATE_FLAGS))" || { \
+	  echo "no LLM key: set EASYDND_AGENT_API_KEY in $(DEV_ENV)."; exit 1; }
+	$(llm_key); go run ./cmd/llm translate \
 	  -in $(SRD_DIR)/i18n/en/spells.json \
 	  -out data/pack/srd-5.1/i18n/ru/spells.json \
 	  -existing data/pack/srd-5.1/i18n/ru/spells.json \
@@ -527,12 +488,11 @@ verify:
 clean:
 # Not .dev-slot: that is this worktree's identity, and deleting it would move
 # the address you reach it on.
-	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist \
-	       $(DEV_RUN_CONFIG) $(PREVIEW_CONFIG)
+	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist
 
 .PHONY: help build/server build/release run/server run/db test/unit test/race test/cover \
-        dev dev/up dev/down slots ports config/dev \
-        preview preview/up config/preview \
+        dev dev/up dev/down slots ports \
+        preview preview/up \
         db/up db/down db/psql test/db \
         pack/check data/lint data/lint/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \

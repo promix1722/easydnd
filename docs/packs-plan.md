@@ -556,7 +556,7 @@ can be designed now without building authoring services or screens.
 | `internal/usecase/game/service.go` | Read each shared character using its own lock; avoid projecting a mixed roster against the server default |
 | `internal/adapter/repository/memory/character.go` | Revision checks, event/lock cloning, migration checkpoints and command deduplication |
 | `internal/adapter/repository/postgres/` | Later durable logs, checkpoints, locks and artifact references; plan stable IDs and dependent folders/shares/games together |
-| `internal/config/`, `internal/app/app.go`, `config.dev.yaml`, `deploy/config.example.yaml` | Pack configuration and startup compilation |
+| `internal/config/`, `internal/app/app.go`, `config.dev.yaml`, `config.prod.yaml` | Pack configuration and startup compilation |
 | `internal/api/http/v1/{catalog,character,game}/` | Pack-qualified refs, lock/revision metadata, contextual catalogue and prompt conversion, structured resource DTOs/errors |
 | `web/src/lib/api/{catalog,characters,games}.ts` | Later matching DTOs; cache by context and locale |
 | `web/src/domain/{abilities,event}.ts`, character `labels.ts`, `SheetBody.tsx`, forms | Later consume metadata and policy; remove closed resource dictionaries; retain the six standard scores |

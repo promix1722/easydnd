@@ -224,16 +224,9 @@ already declare its installed ID. Independent cores are selected separately;
 combining two core providers still fails validation. Autoloaded releases use the
 same immutable archive policy as `pack_files`.
 
-Development config lists `/home/orca-personal/projects/easydnd-2014/pack` in
-`pack_files`: the private descriptions-only overlay (`easydnd-2014-personal`,
-see [Prose overlays](#prose-overlays)), which depends on the base and fills in
-the text the base deliberately leaves out. Being a `pack_files` entry rather
-than an autoloaded folder is what puts it in the default lock, so a character
-made in development has the descriptions from the start. Adjust or remove that
-entry on machines without this checkout; production has no such entry and gets
-the base alone. Generated worktree and preview configs copy the `data` section
-of `config.dev.yaml`; a private `config.local.yaml` remains a complete override
-and must include the same setting if desired.
+Neither committed config lists an extra pack: `config.dev.yaml` and
+`config.prod.yaml` both install the base alone, and every worktree runs on the
+same `config.dev.yaml`.
 
 The archive preserves packs, **not characters**. Character logs, checkpoints,
 folders, shares and games are in PostgreSQL when `db.url` is set, and in
