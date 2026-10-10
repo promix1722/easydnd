@@ -48,6 +48,7 @@ export type {
   CollectionInfo,
   Entry,
   Item,
+  ItemFilters,
   ItemHit,
   ItemPage,
   Manifest,

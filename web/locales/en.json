@@ -1243,5 +1243,18 @@
   "admin.characters.count_one": "{{count}} character",
   "admin.characters.count_other": "{{count}} characters",
   "admin.characters.empty": "No characters match.",
-  "admin.characters.loadFailed": "Could not load the characters"
+  "admin.characters.loadFailed": "Could not load the characters",
+  "equipment.addEquipment": "Add equipment",
+  "equipment.addItem": "Add item",
+  "equipment.searchItems": "Search by name",
+  "equipment.filter.category": "Category",
+  "equipment.filter.allCategories": "All categories",
+  "equipment.filter.kind": "Mundane or magic",
+  "equipment.filter.allKinds": "Mundane and magic",
+  "equipment.filter.mundane": "Mundane",
+  "equipment.filter.magic": "Magic",
+  "equipment.magic": "Magic",
+  "equipment.itemCount_one": "{{count}} item",
+  "equipment.itemCount_other": "{{count}} items",
+  "equipment.noItemsFound": "Nothing matches."
 }

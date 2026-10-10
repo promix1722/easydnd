@@ -521,6 +521,55 @@ func TestItemSearchPagesEquipmentAndMagicItems(t *testing.T) {
 	if rec := send(t, r, session, http.MethodGet, "/v1/catalog/items", nil); rec.Code != http.StatusBadRequest {
 		t.Errorf("plain collection = %d, want 400", rec.Code)
 	}
+
+	// The sheet's two tabs each ask for their own half: with a slot, without.
+	everything := search("limit=1").Total
+	worn, carried := search("wearable=true&limit=200"), search("wearable=false&limit=1")
+	if worn.Total == 0 || carried.Total == 0 || worn.Total+carried.Total != everything {
+		t.Errorf("wearable %d + carried %d, want both and a sum of %d", worn.Total, carried.Total, everything)
+	}
+	has := func(query, slug string) bool {
+		return slices.ContainsFunc(search(query+"&limit=200").Items, func(hit catalogapi.ItemHit) bool { return hit.Slug == slug })
+	}
+	if !has("wearable=true&q=shield", "shield") || !has("wearable=true&q=longsword", "longsword") ||
+		has("wearable=true&q=rope", "rope-hempen-50-feet") || !has("wearable=false&q=rope", "rope-hempen-50-feet") {
+		t.Errorf("a shield and a longsword are worn and rope is carried; the search disagrees")
+	}
+
+	// Category and magic narrow further, and a hit carries what a row shows.
+	armor := search("wearable=true&category=armor&magic=false&limit=200")
+	if armor.Total == 0 || armor.Total >= worn.Total {
+		t.Fatalf("mundane armor = %d of %d wearables, want some and fewer", armor.Total, worn.Total)
+	}
+	for _, hit := range armor.Items {
+		if hit.Category != "armor" || hit.CategoryName != "Armor" || hit.Magic || hit.Cost == nil {
+			t.Errorf("mundane armor hit = %+v", hit)
+		}
+	}
+	if potions := search("magic=true&category=potion&limit=1"); potions.Total == 0 || !potions.Items[0].Magic {
+		t.Errorf("magic potions = %+v, want some, each marked magic", potions)
+	}
+
+	// The category options follow the wearable scope and nothing else, so
+	// picking one does not empty the list it was picked from.
+	names := func(page catalogapi.ItemSearchResult) (out []string) {
+		for _, c := range page.Categories {
+			out = append(out, c.Slug)
+		}
+		return out
+	}
+	if got := names(armor); !slices.Equal(got, names(worn)) || !slices.Contains(got, "weapon") {
+		t.Errorf("categories under a category filter = %v, want the scope's %v", got, names(worn))
+	}
+	if slices.Contains(names(worn), "potion") || !slices.Contains(names(carried), "potion") {
+		t.Errorf("potion: wearable %v, carried %v; want only carried", names(worn), names(carried))
+	}
+
+	for _, bad := range []string{"wearable=maybe&limit=1", "magic=2&limit=1"} {
+		if rec := send(t, r, session, http.MethodGet, "/v1/catalog/items?"+bad, nil); rec.Code != http.StatusBadRequest {
+			t.Errorf("?%s = %d, want 400", bad, rec.Code)
+		}
+	}
 }
 
 // A build screen pages through what one character may pick. The offer goes in

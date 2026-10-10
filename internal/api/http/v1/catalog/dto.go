@@ -447,14 +447,26 @@ type SpellSearchResult struct {
 	Total  int     `json:"total"`
 }
 
-// ItemHit is one row of an items search: enough to pick an item by, no more.
-// The sheet asks for the rest by slug once the item is owned.
+// ItemHit is one row of an items search: what the picker's table shows, and
+// no more. The sheet asks for the rest by slug once the item is owned.
 type ItemHit struct {
 	Slug     string `json:"slug"`
 	Icon     string `json:"icon,omitempty"`
 	Name     string `json:"name"`
 	Category string `json:"category,omitempty"`
-	Magic    bool   `json:"magic,omitempty"`
+	// CategoryName is the category in the request's locale, sent resolved so
+	// the picker never fetches the categories to name one.
+	CategoryName string `json:"categoryName,omitempty"`
+	// Cost and Weight are equipment's: a magic item has neither.
+	Cost   *Cost   `json:"cost,omitempty"`
+	Weight float64 `json:"weight,omitempty"`
+	Magic  bool    `json:"magic,omitempty"`
+}
+
+// ItemCategory is one option of the item search's category filter.
+type ItemCategory struct {
+	Slug string `json:"slug"`
+	Name string `json:"name"`
 }
 
 // ItemSearchResult is a page of equipment and magic items searched by name,
@@ -462,6 +474,9 @@ type ItemHit struct {
 type ItemSearchResult struct {
 	Items []ItemHit `json:"items"`
 	Total int       `json:"total"`
+	// Categories are the category filter's options: every category present
+	// under the request's wearable scope, whatever else it filtered by.
+	Categories []ItemCategory `json:"categories"`
 }
 
 // RuleValue is a structured rule string: a casting time, a range, a duration.

@@ -1976,12 +1976,38 @@ are none -- so nothing is listed twice and "where is my armor" has one answer.
 
 **Items** is the rest, read top-down with nothing to switch: the **Coins**
 panel first, then **Consumables**, then **Other gear**, each a panel with the
-same heading the Wearable rows have. There is no Add item yet: a sheet has no
-way, for now, to gain an item the character was not granted, since the wizard
-asks about the starting kit once and never lists the inventory, and a custom
-item has no UI either. The server's paged catalogue search (`searchItems`
-against `…/characters/{id}/catalog/items`, docs/backend.md) stays for when it
-comes back.
+same heading the Wearable rows have.
+
+**Each tab ends with an Add button, and each adds from its own half of the
+catalogue.** `AddItems` in `ItemPicker.tsx` is the button and the search it
+turns into **in place, under the list it adds to** -- not a dialog, so what
+was just added is visible above the search that added it. It is a name
+search, a category select and a mundane / magic select over rows with **Add**
+on each and **Load more** under them -- the spell selection's shape, because
+like spells the items are never pulled whole (`searchItems` against
+`…/characters/{id}/catalog/items`, docs/backend.md). **Close** puts the
+button back.
+
+- **Add equipment**, after the Wearable rows, lists only what has a slot;
+  **Add item**, after Other gear, only what has none. That scope is the tab's
+  and is not a filter the player can clear, so a thing added from a tab
+  appears on that tab.
+- **The category options arrive with the page.** The server names them and
+  scopes them to the tab's half; nothing here derives them from data.
+- **A row is pressed to read the item.** It opens to the same `ItemBody` the
+  item page draws -- numbers, source, prose -- through `ChoiceDetails`, so it
+  is inline on desktop and a full screen with Back and Add on a phone, as a
+  spell's is. The description is asked for when the row opens
+  (`getEntries` by slug): a search hit carries a row's worth and no prose.
+- **One Add is one more in the backpack and one write** --
+  `setTotal(equipment, slug, owned + 1)` through the same `onChange` every row
+  menu uses -- and the search stays open for the next. A row shows `×n` for
+  what the character already has, read from the sheet, so it counts up as the
+  writes land.
+- The buttons exist only with `onChange`, which is how a sheet says it is
+  editable: the shared, read-only sheet has neither.
+
+A custom item -- one the catalogue does not hold -- still has no UI here.
 
 The slot is the catalogue's: each item carries `slot`, written on the pack's
 row or derived by the server from what the item is (see

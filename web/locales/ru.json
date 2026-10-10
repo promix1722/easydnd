@@ -1299,5 +1299,20 @@
   "admin.characters.count_many": "{{count}} персонажей",
   "admin.characters.count_other": "{{count}} персонажей",
   "admin.characters.empty": "Ни один персонаж не подходит.",
-  "admin.characters.loadFailed": "Не удалось загрузить персонажей"
+  "admin.characters.loadFailed": "Не удалось загрузить персонажей",
+  "equipment.addEquipment": "Добавить снаряжение",
+  "equipment.addItem": "Добавить предмет",
+  "equipment.searchItems": "Поиск по названию",
+  "equipment.filter.category": "Категория",
+  "equipment.filter.allCategories": "Все категории",
+  "equipment.filter.kind": "Обычные или магические",
+  "equipment.filter.allKinds": "Обычные и магические",
+  "equipment.filter.mundane": "Обычные",
+  "equipment.filter.magic": "Магические",
+  "equipment.magic": "Магический",
+  "equipment.itemCount_one": "{{count}} предмет",
+  "equipment.itemCount_few": "{{count}} предмета",
+  "equipment.itemCount_many": "{{count}} предметов",
+  "equipment.itemCount_other": "{{count}} предметов",
+  "equipment.noItemsFound": "Ничего не найдено."
 }

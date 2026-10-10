@@ -5,6 +5,7 @@ import { useT } from '@/lib/i18n'
 import { Badge, Box, Grid, Group, ITEM_ICON_SIZE, ItemIcon, Markdown, Menu, Panel, Paper, Stack, Text } from '@/ui'
 
 import { InventoryRows, ItemDetails, ItemMenu, Purse } from './Inventory'
+import { AddItems } from './ItemPicker'
 import { armorStats, itemFacts, weaponNumbers } from './options'
 import { useSlotLabels } from './slotLabels'
 import { StatColumns, WeaponStats } from './WeaponStats'
@@ -41,7 +42,8 @@ const rowName = (name: (slug: string) => string) => (row: InventoryRow) => row.c
  *
  * A card is never pressed and an empty one does nothing: an item is put on
  * from its row's menu below. With `onChange`, a worn item has the same menu on
- * its card, to take it off or drop it.
+ * its card, to take it off or drop it, and Add equipment under the rows
+ * searches the catalogue's wearable half in place.
  */
 export function SheetEquipment({ equipment, items, name, lookup, actions = [], disabled = false, onChange }: InventoryProps) {
   const t = useT()
@@ -126,6 +128,7 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
         <Text size="xs" c="dimmed">{t('equipment.group.wearable')}</Text>
         <InventoryRows rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup} actions={actions}
           empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
+        {onChange && <AddItems label={t('equipment.addEquipment')} wearable equipment={equipment} disabled={disabled} onChange={onChange} />}
       </Stack>
     </Panel>
   </Stack>
@@ -134,7 +137,8 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
 /**
  * The sheet's Items tab, read top-down: the purse, then what is used up, then
  * everything else carried but not worn. With `onChange`, the purse is five
- * fields and each row has a menu. Nothing here adds an item yet.
+ * fields, each row has a menu, and Add item at the foot searches the half of
+ * the catalogue that is carried rather than worn.
  */
 export function SheetItems({ equipment, items, name, lookup, disabled = false, onChange }: InventoryProps) {
   const t = useT()
@@ -158,5 +162,8 @@ export function SheetItems({ equipment, items, name, lookup, disabled = false, o
     </Panel>
     {section('consumable', t('equipment.group.consumable'))}
     {section('gear', t('equipment.group.gear'))}
+    {onChange && <Panel>
+      <AddItems label={t('equipment.addItem')} wearable={false} equipment={equipment} disabled={disabled} onChange={onChange} />
+    </Panel>}
   </Stack>
 }

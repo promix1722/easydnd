@@ -60,26 +60,32 @@ export function ItemScreen() {
   // The endpoint drops a slug it does not know rather than failing.
   if (item === null) return <Page trail={[...above, { label: slug }]} state={{ kind: 'failed', title: t('item.loadFailed'), detail: t('item.notFound') }} />
 
-  const word = (ref: string) => words.get(ref)?.name ?? ref
-  const facts = itemFactList(t, item, word)
-
   return (
     <Page trail={[...above, { label: item.name }]} mark={<ItemIcon icon={item.icon} />}>
       <Panel>
-        <Stack gap="md">
-          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-            {facts.map((fact) => <div key={fact.key}>
-              <Text size="xs" c="dimmed">{fact.label}</Text>
-              <Text size="sm">{fact.value}</Text>
-            </div>)}
-            {item.provenance !== undefined && <div>
-              <Text size="xs" c="dimmed">{t('spells.filter.source')}</Text>
-              <SourceTags provenance={item.provenance} />
-            </div>}
-          </SimpleGrid>
-          {!!item.desc?.length && <Markdown>{joinProse(item.desc)}</Markdown>}
-        </Stack>
+        <ItemBody item={item} words={words} />
       </Panel>
     </Page>
+  )
+}
+
+/** What an item is: its numbers, where it is from, and its prose. The item page's body, and the Add picker's opened row. */
+export function ItemBody({ item, words }: { item: Item; words: ReadonlyMap<string, Entry> }) {
+  const t = useT()
+  const facts = itemFactList(t, item, (ref: string) => words.get(ref)?.name ?? ref)
+  return (
+    <Stack gap="md">
+      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+        {facts.map((fact) => <div key={fact.key}>
+          <Text size="xs" c="dimmed">{fact.label}</Text>
+          <Text size="sm">{fact.value}</Text>
+        </div>)}
+        {item.provenance !== undefined && <div>
+          <Text size="xs" c="dimmed">{t('spells.filter.source')}</Text>
+          <SourceTags provenance={item.provenance} />
+        </div>}
+      </SimpleGrid>
+      {!!item.desc?.length && <Markdown>{joinProse(item.desc)}</Markdown>}
+    </Stack>
   )
 }

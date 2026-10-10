@@ -246,6 +246,87 @@ describe('the panels that were sentences', () => {
     expect.soft(screen.queryByText('×1')).not.toBeInTheDocument()
   })
 
+  // Each tab adds from its own half of the catalogue: the search opens in
+  // place under the list, and the server filters and pages it.
+  it('adds from the catalogue: each tab asks for its half in place, a row opens to its description, and Add is one more in the backpack', async () => {
+    const searches: URLSearchParams[] = []
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://test')
+      const collection = url.pathname.split('/').at(-1)
+      const offset = Number(url.searchParams.get('offset'))
+      let body: unknown = []
+      if (collection === 'items') {
+        searches.push(url.searchParams)
+        body = offset === 0
+          ? {
+              items: [
+                { slug: 'crossbow-bolt', name: 'Crossbow Bolt', category: 'adventuring-gear', categoryName: 'Adventuring Gear', cost: { amount: 1, unit: 'gp' }, weight: 1.5 },
+                { slug: 'potion-of-healing', name: 'Potion of Healing', category: 'potion', categoryName: 'Potion', magic: true },
+              ],
+              total: 3,
+              categories: [{ slug: 'adventuring-gear', name: 'Adventuring Gear' }, { slug: 'potion', name: 'Potion' }],
+            }
+          : { items: [{ slug: 'rope', name: 'Rope' }], total: 3, categories: [] }
+      } else if (collection === 'magic-items') {
+        body = [{ slug: 'potion-of-healing', name: 'Potion of Healing', desc: ['You regain hit points when you drink this potion.'] }]
+      }
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }))
+    const onEquipment = vi.fn()
+    const user = setupUser()
+    renderAt('desktop', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
+    const last = () => searches.at(-1)
+
+    // Nothing is fetched until a search is opened, and nothing opens a dialog.
+    expect(searches).toHaveLength(0)
+    await user.click(screen.getByRole('tab', { name: 'Equipment' }))
+    await user.click(screen.getByRole('button', { name: 'Add equipment' }))
+    await within(screen.getByRole('region', { name: 'Add equipment' })).findByText('3 items')
+    expect(last()?.get('wearable')).toBe('true')
+    expect(last()?.get('limit')).toBe('20')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Items' }))
+    await user.click(screen.getByRole('button', { name: 'Add item' }))
+    const search = within(screen.getByRole('region', { name: 'Add item' }))
+    await search.findByText('Potion of Healing')
+    expect(last()?.get('wearable')).toBe('false')
+    // What a row shows came resolved: the category's name, a price, a weight,
+    // and how many the character already has.
+    expect.soft(search.getByText('Adventuring Gear · 1 gp · 1.5 lb.')).toBeInTheDocument()
+    expect.soft(search.getByText('×20')).toBeInTheDocument()
+
+    // Pressing a row opens the item's own description, asked for then.
+    await user.click(search.getByRole('button', { name: 'Potion of Healing' }))
+    expect(await search.findByText('You regain hit points when you drink this potion.')).toBeInTheDocument()
+
+    // Owned twenty already, so one more is twenty-one; a new thing is one.
+    await user.click(search.getByRole('button', { name: 'Add Crossbow Bolt' }))
+    expect(onEquipment).toHaveBeenLastCalledWith([
+      { path: 'equipment.backpack.crossbow-bolt', op: 'set', value: { kind: 'int', int: 21 } },
+    ])
+    await user.click(search.getByRole('button', { name: 'Add Potion of Healing' }))
+    expect(onEquipment).toHaveBeenLastCalledWith([
+      { path: 'equipment.backpack.potion-of-healing', op: 'set', value: { kind: 'int', int: 1 } },
+    ])
+
+    await user.click(search.getByRole('button', { name: 'Load more' }))
+    await search.findByText('Rope')
+    expect(last()?.get('offset')).toBe('2')
+    expect(search.getByText('Crossbow Bolt')).toBeInTheDocument()
+
+    await user.click(search.getByRole('combobox', { name: 'Mundane or magic' }))
+    await user.click(await screen.findByRole('option', { name: 'Magic' }))
+    await vi.waitFor(() => expect(last()?.get('magic')).toBe('true'))
+    expect(last()?.get('offset')).toBe('0')
+
+    // Close puts the button back where the search was.
+    await user.click(search.getByRole('button', { name: 'Close' }))
+    expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument()
+
+    vi.unstubAllGlobals()
+  })
+
   // Only the owner's screen passes `onEquipment`; without it the test above
   // -- and "offers nothing to press but the tabs" -- hold.
   it('takes off what a slot holds, from the menu on its card', async () => {
