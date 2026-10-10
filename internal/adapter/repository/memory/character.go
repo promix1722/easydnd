@@ -3,8 +3,8 @@
 // It exists so the service compiles, runs and deploys with zero
 // infrastructure. State is per-process and lost on restart.
 //
-// It is the development fallback: with no db.url the server runs on these,
-// and in production every store here has a sibling in
+// It is what the tests run on. The server runs on Postgres, where every
+// store here has a sibling in
 // internal/adapter/repository/postgres. The two are held to one contract by
 // internal/adapter/repository/repotest, and the rules a write applies live in
 // the domain so that neither adapter can carry its own version of them.

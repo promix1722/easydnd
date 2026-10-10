@@ -159,7 +159,7 @@ type AuthConfig struct {
 
 	// Google configures Sign in with Google. Zero value means not configured,
 	// which is not an error: the provider is simply not offered, and
-	// `make run/server` with no environment at all keeps working.
+	// a development server with no Google client keeps working.
 	Google GoogleConfig
 }
 
@@ -272,7 +272,7 @@ func Load(path string) (*Config, error) {
 			Format: p.str(f.Log.Format, FormatJSON),
 		},
 		Data: DataConfig{
-			// Relative by default so `make run/server` works from the repo
+			// Relative by default so `make run/db` works from the repo
 			// root; the deploy sets it to the release directory.
 			SRDDir:    p.str(f.Data.SRDDir, "data/pack/srd-5.1"),
 			PackFiles: f.Data.PackFiles, DefaultPacks: f.Data.DefaultPacks, PackArchive: f.Data.PackArchive,

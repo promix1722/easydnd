@@ -128,11 +128,6 @@ help:
 build/release:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BINARY) $(CMD)
 
-## run/server: run the API in development mode, no database
-run/server:
-	@$(call dev_env,$(API_PORT),$(DEV_ORIGINS),); \
-	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_CONFIG)
-
 ## test/unit: run the test suite (~60s cold, ~3s with the test cache warm)
 # No -race here, and that is a deliberate trade rather than an oversight: the
 # detector multiplies the cold minute several times over. A gate slow enough
@@ -477,7 +472,7 @@ clean:
 # the address you reach it on.
 	rm -rf $(BINARY) web.tar.gz web/dist web/dev-dist
 
-.PHONY: help build/release run/server run/db test/unit test/race \
+.PHONY: help build/release run/db test/unit test/race \
         dev dev/up dev/down slots ports \
         preview preview/up \
         db/up db/down db/psql test/db \

@@ -76,7 +76,7 @@ func TestConfigPathComesFromTheEnvironment(t *testing.T) {
 	}
 }
 
-// The flag wins so that `make run/server` can name config.dev.yaml without
+// The flag wins so that `make run/db` can name config.dev.yaml without
 // caring what happens to be exported in the shell.
 func TestFlagPathBeatsTheEnvironment(t *testing.T) {
 	t.Setenv(EnvConfigPath, writeConfig(t, "env: production\nauth:\n  session_secret: \""+base64Secret+"\"\n"))
@@ -361,9 +361,9 @@ func TestProductionRequiresADatabase(t *testing.T) {
 	}
 }
 
-// Development must keep working with no infrastructure at all: `make
-// run/server`, `go test ./...` and `make verify` all run on a machine with no
-// Postgres, and the in-memory fallback is what allows that.
+// A development config has no db.url of its own: make passes this worktree's,
+// and the tests run on the in-memory stores, so `go test ./...` and `make
+// verify` work on a machine with no Postgres. The config must load without one.
 func TestDevelopmentRunsWithoutADatabase(t *testing.T) {
 	cfg := loadOK(t, "env: development\n")
 	if cfg.DB.Enabled() {

@@ -3,7 +3,7 @@
 // It implements every repository port -- accounts, groups, characters,
 // folders, shared pools, games, rule packs and AI Wizard chats -- against
 // PostgreSQL, which in production means an AWS RDS instance. Its in-memory
-// sibling, internal/adapter/repository/memory, is the development fallback
+// sibling, internal/adapter/repository/memory, is what the tests run on
 // and nothing else.
 //
 // This is an outbound adapter, so it depends inward and never sideways. It

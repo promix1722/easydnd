@@ -46,7 +46,7 @@ func developmentAppAtPort(t *testing.T, env, port string) *App {
 	// tests, and each one a boot carries is two more locales to compile.
 	cfg.Data.AutoloadPacks = nil
 	cfg.Data.PackFiles = nil
-	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
+	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{InMemory: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +274,7 @@ func TestDevelopmentSeedWithAnotherDefaultPack(t *testing.T) {
 	cfg.Data.AutoloadPacks = []config.PackFolder{{Path: cfg.Data.SRDDir, ID: "another-core"}}
 	cfg.Data.DefaultPacks = map[string]string{"another-core": base.Manifest.Version}
 	cfg.Data.PackFiles = nil
-	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
+	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{InMemory: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +321,7 @@ func TestCompendiumBrowsesDefaultPacksTogether(t *testing.T) {
 	}
 	cfg.Data.PackFiles = []string{overlay}
 	cfg.Data.AutoloadPacks = nil
-	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
+	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{InMemory: true})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -27,7 +27,7 @@ func main() {
 
 func run() error {
 	showVersion := flag.Bool("version", false, "print the build version and exit")
-	// Overrides EASYDND_CONFIG. Mostly for development -- `make run/server`
+	// Overrides EASYDND_CONFIG. Mostly for development -- `make run/db`
 	// says -config config.dev.yaml rather than exporting a variable.
 	configPath := flag.String("config", "", "path to the YAML config file (overrides $"+config.EnvConfigPath+")")
 	migrateCmd := flag.String("migrate", "",

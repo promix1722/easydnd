@@ -35,7 +35,7 @@ make web/check                      # typecheck, lint, layer-check, tests -- mir
 make web/icons                      # after changing PALETTE_NAME or the mark
 ```
 
-`make web/dev` proxies `/v1` to the API, so run `make run/server` alongside it
+`make web/dev` proxies `/v1` to the API, so run `make run/db` alongside it
 -- or `make dev` at the repo root, which starts both and a Postgres. `make
 verify` at the repo root runs the frontend checks and the Go ones together, and
 runs them **at the same time**: `web/test` is by far the longest thing in it, so

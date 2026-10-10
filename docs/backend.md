@@ -67,8 +67,8 @@ PostgreSQL whenever accounts are; see
 ## Quick start
 
 ```sh
-make run/server                     # dev mode: text logs, debug level
-curl localhost:8080/v1/health       # {"status":"ok"}
+make dev                            # Postgres, the API and the web client, one Ctrl-C
+make ports                          # what this worktree claimed, and where to open it
 
 make verify                         # everything CI checks, back and front, two jobs at once
 ```
@@ -77,22 +77,18 @@ Everything past `health` and `version` needs a session; in development
 `POST /v1/dev/login` gives one, see
 [Seeded development party](#seeded-development-party).
 
-`make run/server` needs no database: `config.dev.yaml` sets no `db.url`, so it
-runs on the in-memory account store and says so. For durable accounts locally:
+The server needs a database and does not start without `db.url`.
+`config.dev.yaml` sets none, because the URL depends on the worktree's slot:
+`make` passes it. The pieces `make dev` runs, one at a time:
 
 ```sh
-make db/up                          # throwaway Postgres on :5433
+make db/up                          # this worktree's throwaway Postgres
 make run/db                         # the API against it, migrating on startup
 make test/db                        # the suite including the Postgres adapter (-p 1: shared database)
 make db/down                        # and delete it again
 ```
 
-Or all of it at once, which is also the way to run more than one worktree:
-
-```sh
-make dev                            # Postgres, the API and the web client, one Ctrl-C
-make ports                          # what this worktree claimed, and where to open it
-```
+`make verify` needs no database: the tests run on the in-memory stores.
 
 ### An opened character is read by its link
 
@@ -115,8 +111,7 @@ beside the log (`characters.public`), not an event in it.
 
 ### Seeded development party
 
-Every API startup with `env: development`, including `make dev` and
-`make run/server`, creates a ready-to-play group **Development party** and
+Every API startup with `env: development` creates a ready-to-play group **Development party** and
 three test accounts: **master**, **player1**, **player2**. The master owns the
 group; both other accounts are players. Each owns one finished first-level
 half-elf rogue, built through validated events rather than asserted stats.
@@ -2032,10 +2027,11 @@ the local zone, so **compare stored times with `time.Time.Equal`, never `==` or
 
 #### Two adapters, one contract
 
-`user.Repository` still has two implementations. The in-memory one is the
-development fallback: with no `db.url` the server logs a warning and runs
-on it, so `make run/server`, `go test ./...` and `make verify` all work with no
-Postgres installed. `config.validate` refuses that combination in production.
+`user.Repository` has two implementations, as every store does. The server
+runs on the Postgres one and refuses to start without `db.url`. The in-memory
+one is what the tests run on, so `go test ./...` and `make verify` work with no
+Postgres installed; `app.Options.InMemory` is the only way to select it, and
+only this repository's tests set it.
 
 Both run the same test suite, `internal/adapter/repository/repotest`. That is
 not tidiness. `internal/api/http/helpers` maps a `*types.ValidationError` to 400

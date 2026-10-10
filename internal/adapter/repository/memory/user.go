@@ -15,11 +15,9 @@ import (
 // It is no longer how production stores accounts -- that is
 // internal/adapter/repository/postgres. Two jobs remain for it.
 //
-// It is the development fallback: with no db.url the server runs on this
-// and warns, so `make run/server`, `go test ./...` and `make verify` all work
-// on a machine with no Postgres. config.validate refuses that combination in
-// production, where losing accounts means losing passkeys that cannot be
-// reissued.
+// It is what the tests run on: the server runs on Postgres and does not
+// start without db.url, so `go test ./...` and `make verify` are the callers
+// that need a store with no infrastructure behind it.
 //
 // And it is the reference implementation of domain.Repository. Both adapters
 // run internal/adapter/repository/repotest, so the contract is defined by what
