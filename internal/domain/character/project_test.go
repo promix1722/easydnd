@@ -626,26 +626,6 @@ func TestProjectRejectsAnUnresolvablePath(t *testing.T) {
 	}
 }
 
-// The formula and the compendium must agree wherever the compendium has an
-// opinion, which is every single-class case.
-func TestProficiencyBonusMatchesTheData(t *testing.T) {
-	t.Parallel()
-	cat := LoadCatalog(t)
-
-	for _, class := range cat.Classes.All() {
-		for level := 1; level <= 20; level++ {
-			row, ok := cat.ClassLevel(class.Slug, level)
-			if !ok {
-				continue
-			}
-			if got := proficiencyBonus(level); got != row.ProficiencyBonus {
-				t.Errorf("%s level %d: formula = %d, compendium = %d",
-					class.Slug, level, got, row.ProficiencyBonus)
-			}
-		}
-	}
-}
-
 // The action list is derived from what is wielded and what the pack tagged.
 // The actions a pack gives everybody live in its mechanics, which this
 // package's bare Source does not read; the file adapter's tests cover them.

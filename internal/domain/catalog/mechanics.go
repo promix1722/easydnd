@@ -2,8 +2,8 @@ package catalog
 
 import "github.com/promix1722/easydnd/internal/domain/rules"
 
-// Mechanics is compiled pack policy. Empty policy is supported only by legacy
-// in-memory fixtures; installed packs always carry an explicit policy.
+// Mechanics is compiled pack policy. A loaded pack always carries one: the
+// loader refuses a rules context with no core policy.
 type Mechanics struct {
 	Core               CoreRules
 	Actions            []ActionDefinition

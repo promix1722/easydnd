@@ -924,10 +924,7 @@ func (b *promptBuilder) featLevel(owner rules.Ref) int {
 }
 
 func abilityScoreIncrease(cat *catalog.Catalog) int {
-	if cat.Mechanics.Core.AbilityScoreIncrease > 0 {
-		return cat.Mechanics.Core.AbilityScoreIncrease
-	}
-	return 2
+	return cat.Mechanics.Core.AbilityScoreIncrease
 }
 
 // ResolvedSelections reads answers through their original choice trees. Bundle

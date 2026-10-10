@@ -144,14 +144,13 @@ func (p *projector) run(log Log) (State, error) {
 	p.applyRace()
 	p.applyBackground()
 	p.applyClasses()
-	p.state.Status.ProficiencyBonus = proficiencyBonus(p.state.Identity.Level())
-	if e := p.cat.Mechanics.Core.Proficiency; e.Op != "" {
-		n, err := e.Eval(rules.Variables{"level": p.state.Identity.Level()})
-		if err != nil {
-			return State{}, err
-		}
-		p.state.Status.ProficiencyBonus = n
+	// The bonus is the pack's to state: a loaded pack always carries the
+	// expression, so there is no table here for it to disagree with.
+	bonus, err := p.cat.Mechanics.Core.Proficiency.Eval(rules.Variables{"level": p.state.Identity.Level()})
+	if err != nil {
+		return State{}, err
 	}
+	p.state.Status.ProficiencyBonus = bonus
 	// The starting kit comes first, into the backpack: the sheet's own
 	// equipment writes are counts of what it granted.
 	p.applyEquipmentChoices()
@@ -511,35 +510,22 @@ func (p *projector) addHitPoints(hitDie, level int, first bool) {
 	if hitDie <= 0 || level < 1 {
 		return
 	}
-	conModifier := p.state.Abilities.Modifier(rules.Constitution)
-	average := hitDie/2 + 1
-
-	gained := 0
-	if core := p.cat.Mechanics.Core; core.HitPointFirst.Op != "" {
-		vars := variables(p.state, p.cat)
-		vars["hitDie"] = hitDie
-		firstHP, err := core.HitPointFirst.Eval(vars)
-		if err != nil {
-			p.err = err
-			return
-		}
-		laterHP, err := core.HitPointLater.Eval(vars)
-		if err != nil {
-			p.err = err
-			return
-		}
-		gained = level * laterHP
-		if first {
-			gained += firstHP - laterHP
-		}
-		p.state.Base.HitPoints.Max += gained
+	core := p.cat.Mechanics.Core
+	vars := variables(p.state, p.cat)
+	vars["hitDie"] = hitDie
+	firstHP, err := core.HitPointFirst.Eval(vars)
+	if err != nil {
+		p.err = err
 		return
 	}
+	laterHP, err := core.HitPointLater.Eval(vars)
+	if err != nil {
+		p.err = err
+		return
+	}
+	gained := level * laterHP
 	if first {
-		gained += hitDie + conModifier
-		gained += (level - 1) * (average + conModifier)
-	} else {
-		gained += level * (average + conModifier)
+		gained += firstHP - laterHP
 	}
 	p.state.Base.HitPoints.Max += gained
 }
@@ -819,13 +805,9 @@ func (p *projector) addCoins(coins rules.Coins) {
 // is fixed because each stage feeds the next.
 func (p *projector) deriveStatus() {
 	level := p.state.Identity.Level()
-	profBonus := proficiencyBonus(level)
-	if p.cat.Mechanics.Core.Proficiency.Op != "" {
-		if n, err := p.cat.Mechanics.Core.Proficiency.Eval(rules.Variables{"level": level}); err == nil {
-			profBonus = n
-		} else {
-			p.err = err
-		}
+	profBonus, err := p.cat.Mechanics.Core.Proficiency.Eval(rules.Variables{"level": level})
+	if err != nil {
+		p.err = err
 	}
 	p.state.Status.ProficiencyBonus = profBonus
 
@@ -874,22 +856,6 @@ func (p *projector) deriveStatus() {
 
 // perceptionSkill is the skill passive Perception reads.
 const perceptionSkill rules.Slug = "perception"
-
-// proficiencyBonus is the number added to anything the character is
-// proficient in, derived from character level.
-//
-// It is computed rather than read from ClassLevel.ProficiencyBonus because a
-// multiclassed character has no single class level to read it at: a cleric
-// 3 / wizard 3 has proficiency bonus +3, the bonus of a 6th-level character,
-// not the +2 either class row would report. The formula and the compendium
-// agree for every single-class case, which TestProficiencyBonusMatchesTheData
-// pins.
-func proficiencyBonus(characterLevel int) int {
-	if characterLevel < 1 {
-		return 2
-	}
-	return 2 + (characterLevel-1)/4
-}
 
 // Private definitions travel in the locked projection, including shared and
 // copied sheets. The global compendium intentionally cannot resolve them.
