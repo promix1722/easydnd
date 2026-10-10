@@ -314,7 +314,7 @@ jobs:
 
       # make test/db, not make test/unit, and the difference is `-p 1`.
       #
-      # Three packages reach the one database and each opens by wiping it --
+      # Two packages reach the one database and each opens by wiping it --
       # internal/adapter/repository/postgres (users, and groups), and
       # internal/api/http's durability test. Run in parallel, one truncates the
       # table another has just written and the red lands on whichever lost the
