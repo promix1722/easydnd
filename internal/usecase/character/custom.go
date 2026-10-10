@@ -16,6 +16,47 @@ import (
 	"github.com/promix1722/easydnd/internal/types"
 )
 
+// RemoveCustomOption deletes a note: the one kind of custom entry nothing can
+// be built on. Every other kind may be the character's class or a spell it
+// knows, and is switched off through its own Selected flag instead.
+func (s *Service) RemoveCustomOption(ctx context.Context, owner domain.OwnerID, id domain.ID, locale rules.Locale, optionID string) (Revision, error) {
+	character, cat, err := s.load(ctx, owner, id, locale)
+	if err != nil {
+		return Revision{}, err
+	}
+	if err = checkRevision(ctx, character); err != nil {
+		return Revision{}, err
+	}
+	kept := make([]domain.Event, 0, character.Log.Len())
+	for _, e := range character.Log.Events {
+		if e.Custom == nil || e.Custom.ID != optionID {
+			kept = append(kept, e)
+			continue
+		}
+		if e.Custom.Kind != "note" {
+			return Revision{}, types.NewValidationError("only a note can be deleted").Because("custom.notRemovable")
+		}
+	}
+	if len(kept) == character.Log.Len() {
+		return Revision{}, types.NewNotFoundError("custom option %q", optionID).Because("custom.notFound")
+	}
+	log, err := domain.Rebuild(kept)
+	if err != nil {
+		return Revision{}, err
+	}
+	if err = ValidateImported(cat, log); err != nil {
+		return Revision{}, err
+	}
+	sheet, err := domain.Project(log, cat)
+	if err != nil {
+		return Revision{}, err
+	}
+	if err = s.repo.Commit(ctx, id, character.Revision, log, commandID(ctx), nil); err != nil {
+		return Revision{}, err
+	}
+	return Revision{Revision: character.Revision + 1, Seq: log.LastSeq(), Sheet: sheet}, nil
+}
+
 var customID = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,100}$`)
 
 // UpsertCustomOption shares the same scoped, revision-checked operation between

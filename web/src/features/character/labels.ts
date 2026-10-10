@@ -81,6 +81,7 @@ const STAGE_KEYS = {
   cantrips: 'stage.cantrips',
   spells: 'stage.spells',
   equipment: 'stage.equipment',
+  custom: 'stage.custom',
 } as const satisfies Record<Stage, string>
 
 export function stageLabel(t: Translate, stage: Stage): string {

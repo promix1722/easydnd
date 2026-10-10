@@ -268,6 +268,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.GET("/characters/:id/events", h.Character.Events)
 			authed.GET("/characters/:id/custom-options", h.Character.CustomOptions)
 			authed.POST("/characters/:id/custom-options", h.Character.UpsertCustomOption)
+			authed.DELETE("/characters/:id/custom-options/:option", h.Character.RemoveCustomOption)
 			authed.GET("/characters/:id/catalog/:collection", h.Character.Catalog)
 			authed.POST("/characters/:id/catalog/spells/search", h.Character.SpellSearch)
 			authed.POST("/characters/:id/rules", h.Character.MigrateRules)

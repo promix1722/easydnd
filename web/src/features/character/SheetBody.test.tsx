@@ -115,6 +115,15 @@ const ITEMS: Sheet = {
   },
 }
 
+/** A note the player wrote, beside a custom background that is not one. */
+const NOTED: Sheet = {
+  ...SHEET,
+  customOptions: [
+    { id: 'n1', kind: 'note', name: 'Backstory', description: 'Born at sea.\nRaised by gulls.', source: '', selected: true },
+    { id: 'criminal', kind: 'background', name: 'Criminal', description: '', source: '', selected: true },
+  ],
+}
+
 /** A spare armor in the backpack, so that a row has something to wear. */
 const PACKED: Sheet = {
   ...ITEMS,
@@ -256,6 +265,76 @@ describe('the panels that were sentences', () => {
     expect.soft(screen.getByText("Thieves' Tools")).toBeInTheDocument()
     // One of a thing is the thing: no "×1".
     expect.soft(screen.queryByText('×1')).not.toBeInTheDocument()
+  })
+
+  // Custom is the player's own text: any number of titled items, written on
+  // the sheet by its owner and only read by anybody else.
+  it('adds, rewrites and deletes a custom item in place, each at the log\'s current revision', async () => {
+    const writes: { method: string; path: string; search: string; body: unknown }[] = []
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), 'http://test')
+      if ((init?.method ?? 'GET') === 'GET') return new Response(JSON.stringify({ seq: 9, revision: 12, events: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      writes.push({ method: init?.method ?? '', path: url.pathname, search: url.searchParams.get('revision') ?? '', body: JSON.parse(String(init?.body ?? 'null')) })
+      return new Response(JSON.stringify({ seq: 10, sheet: NOTED }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }))
+    const onChanged = vi.fn()
+    const user = setupUser()
+    renderAt('desktop', <SheetBody sheet={NOTED} characterId="chr_1" onChanged={onChanged} />)
+    await user.click(screen.getByRole('tab', { name: 'Custom' }))
+    const tab = within(screen.getByRole('tabpanel', { name: 'Custom' }))
+
+    // What is there is read as it was typed, line breaks and all.
+    expect(tab.getByRole('article', { name: 'Backstory' })).toHaveTextContent('Born at sea. Raised by gulls.')
+    // A background the import kept is a custom entry too, and is not a note.
+    expect(tab.queryByText('Criminal')).not.toBeInTheDocument()
+
+    // Add turns into the form where it stood; no dialog opens.
+    await user.click(tab.getByRole('button', { name: 'Add' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.type(tab.getByRole('textbox', { name: 'Title' }), 'Debts')
+    await user.type(tab.getByRole('textbox', { name: 'Text' }), '30 gp to the harbourmaster')
+    await user.click(tab.getByRole('button', { name: 'Save' }))
+    await vi.waitFor(() => expect(writes).toHaveLength(1))
+    expect(writes[0]).toMatchObject({
+      method: 'POST', path: '/v1/characters/chr_1/custom-options',
+      body: { revision: 12, option: { kind: 'note', name: 'Debts', description: '30 gp to the harbourmaster', selected: true } },
+    })
+    await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1))
+
+    // Edit replaces the item with its form, and the write names the item.
+    await user.click(tab.getByRole('button', { name: 'Edit Backstory' }))
+    const title = tab.getByRole('textbox', { name: 'Title' })
+    await user.clear(title)
+    await user.type(title, 'Origins')
+    await user.click(tab.getByRole('button', { name: 'Save' }))
+    await vi.waitFor(() => expect(writes).toHaveLength(2))
+    expect(writes[1]?.body).toMatchObject({ option: { id: 'n1', kind: 'note', name: 'Origins', description: 'Born at sea.\nRaised by gulls.' } })
+
+    // Delete asks first, then names the item and the revision in the URL.
+    await user.click(tab.getByRole('button', { name: 'Delete Backstory' }))
+    const confirm = within(await screen.findByRole('dialog', { name: 'Delete Backstory?' }))
+    expect(writes).toHaveLength(2)
+    await user.click(confirm.getByRole('button', { name: 'Delete' }))
+    await vi.waitFor(() => expect(writes).toHaveLength(3))
+    expect(writes[2]).toMatchObject({ method: 'DELETE', path: '/v1/characters/chr_1/custom-options/n1', search: '12' })
+
+    vi.unstubAllGlobals()
+  })
+
+  it('shows a reader the custom items and nothing to change them with, and no Custom tab when there are none', async () => {
+    const user = setupUser()
+    const { unmount } = renderAt('desktop', <SheetBody sheet={NOTED} />)
+    await user.click(screen.getByRole('tab', { name: 'Custom' }))
+    const tab = within(screen.getByRole('tabpanel', { name: 'Custom' }))
+    expect(tab.getByText('Backstory')).toBeInTheDocument()
+    expect(tab.queryAllByRole('button')).toHaveLength(0)
+    unmount()
+
+    renderAt('desktop', <SheetBody sheet={SHEET} />)
+    expect(screen.queryByRole('tab', { name: 'Custom' })).not.toBeInTheDocument()
+    // The owner has the tab even when it is empty: it is where the first one is written.
+    renderAt('desktop', <SheetBody sheet={SHEET} characterId="chr_1" />)
+    expect(screen.getByRole('tab', { name: 'Custom' })).toBeInTheDocument()
   })
 
   // Each tab adds from its own half of the catalogue: the search opens in

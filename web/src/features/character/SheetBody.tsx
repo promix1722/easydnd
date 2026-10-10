@@ -20,6 +20,7 @@ import {
 } from '@/ui'
 import type { DeckPanel } from '@/ui'
 
+import { CustomNotes } from './CustomNotes'
 import { IdentityTable } from './IdentityTable'
 import { ProficienciesPanel } from './ProficienciesPanel'
 import { ResourcePools } from './ResourcePools'
@@ -47,7 +48,7 @@ import { abilityAbbr, abilityName } from './labels'
  * the sheet can be pressed.
  *
  * The sheet is a handful of tabs at every width -- Overview, Actions, Spells,
- * Resources, Equipment, Items -- handed to `ui/TabDeck`, which draws a tab row on a wide screen
+ * Resources, Equipment, Items, Custom -- handed to `ui/TabDeck`, which draws a tab row on a wide screen
  * and the same row over a swiped deck on a phone. A handful rather than a tab per
  * section: a sheet is read by what you are doing (looking someone up, taking a
  * turn, casting, gearing up), not by which table of the rulebook a number is in.
@@ -265,6 +266,18 @@ export function SheetBody({
       />
     ),
   })
+  // Last, and only where there is something to read or somebody to write it:
+  // a sheet shared with a table has no empty tab to open.
+  if (characterId !== undefined || s.customOptions?.some((option) => option.kind === 'note')) {
+    panels.push({
+      value: 'custom',
+      label: t('sheet.custom'),
+      content: <Panel>
+        <CustomNotes options={s.customOptions} disabled={pending}
+          {...(characterId !== undefined ? { characterId } : {})} {...(onChanged ? { onChanged } : {})} />
+      </Panel>,
+    })
+  }
 
   // "Character sheet" rather than the character's name: the name is already the
   // heading above this, and a landmark whose name changed per character would

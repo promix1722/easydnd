@@ -1286,14 +1286,16 @@ dialog, because it asks nothing.
 ## The build screen is a loop, not a wizard
 
 `features/character/BuildScreen` reads `/prompts`, `/events` and `/sheet`, and
-draws up to ten tabs -- Cantrips and Spells only for a caster, Equipment only
-on a visit that was asked about a starting kit, see [Builder choice
+draws up to eleven tabs -- Cantrips and Spells only for a caster, Equipment only
+on a visit that was asked about a starting kit, Custom once the character
+exists, see [Builder choice
 behavior](#builder-choice-behavior). It is still a loop rather than an N-step wizard, and it has to
 be: prompts nest -- answering the "two skills" branch of a rogue's Expertise is
 what brings the two-skill prompt into existence -- so the total number of steps
 is not knowable until the last one is answered. The tabs are not steps. They
 are display categories in the order `domain/stages.ts` states: rules, identity,
-class, abilities, race, background, cantrips, spells, equipment, personality. Spell and equipment
+class, abilities, race, background, cantrips, spells, equipment, personality,
+custom. Spell and equipment
 choices use their kind to select a tab; other choices use the server's group.
 Saved answers use the same mapping, with prompt IDs as a fallback for older
 events without choice metadata. Rule ownership remains class/race/background.
@@ -1302,8 +1304,10 @@ choices hang off -- and the scores straight after it, because they are
 what the class was picked *for*: a barbarian wants the 15 in Strength, and
 deciding that while the class is still the last thing you looked at is the
 difference between building a character and filling in a form. Personality is
-last, and the only tab that asks nothing about the rules -- see
-[below](#who-the-character-is-is-its-own-tab-and-its-own-words).
+the last tab that asks anything, and asks nothing about the rules -- see
+[below](#who-the-character-is-is-its-own-tab-and-its-own-words). **Custom** is
+after it and asks nothing at all -- see
+[Custom is what the player writes unasked](#custom-is-what-the-player-writes-unasked).
 
 ### The tabs are a deck, so a phone can swipe between them
 
@@ -1313,6 +1317,16 @@ carousel to it and swiping the panel reports the tab it landed on, and neither
 can drive the other in a loop -- scrolling to the slide embla already holds does
 nothing, and the deck only reports a slide that is not the one the caller asked
 for.
+
+**The strip scrolls on a phone and wraps on a wide screen.** `ui/TabRow` keeps
+its tabs on one line under `md`, where a swipe finds the ones off the edge and
+the strip comes to rest on the active tab. Above `md` there is no swipe, and
+that same rest position hid the *first* tabs: a caster's builder in Russian is
+ten or eleven tabs, wider than the page's content column, and opened on
+Spells it showed the row from "Race" on with nothing to say there was more to
+the left. So on a wide screen the list wraps onto a second line instead. It
+costs a row of height and hides nothing; the scroller is still there and has
+nothing to scroll, so the edge fade never draws.
 
 **On a wide screen there is no carousel at all**, only the strip and the panel
 that is showing. The carousel answers a phone and nothing else: there the panel
@@ -1797,9 +1811,9 @@ this.
 
 ### Who the character is is its own tab, and its own words
 
-`personality` is the last tab -- after spells and equipment, since none of it
-is required and the character can be played without it -- and the only one
-that asks nothing about the rules: a personality trait, an ideal, a bond, a flaw and an alignment. They are
+`personality` is the last tab with questions -- after spells and equipment,
+since none of it is required and the character can be played without it --
+and the only one whose questions are not about the rules: a personality trait, an ideal, a bond, a flaw and an alignment. They are
 the *background's* questions -- it is the acolyte entry that suggests what an
 acolyte tends to believe -- and they used to sit under background for exactly
 that reason, which put five questions nobody has to answer in front of the one
@@ -1894,8 +1908,10 @@ whole class of real decisions off the screen.
 
 ## The sheet decides what order things come in
 
-Five tabs, at every width: **Overview**, **Actions**, **Spells**, **Equipment**,
-**Items**.
+Up to seven tabs, at every width: **Overview**, **Actions**, **Spells**,
+**Resources**, **Equipment**, **Items**, **Custom**. Spells and Resources are
+there when the character has any; Custom is there for the owner always and
+for a reader when there is something in it.
 `features/character/SheetBody` builds them and `ui/TabDeck` draws them -- a tab
 row over the showing panel on a wide screen, the same row over a swiped deck on
 a phone. They are named for what a player is doing rather than for a table of
@@ -1943,10 +1959,12 @@ going through the pack.
   zero is one the class has not reached yet and is not drawn.
 - **Equipment** and **Items** are described
   [below](#equipment-is-what-is-worn-items-is-what-is-carried).
+- **Custom** is described
+  [below](#custom-is-what-the-player-writes-unasked).
 
 A wide screen used to draw every section at once with no tabs, and a phone a tab
 per section -- eight of them. Both were the same list read two ways, and the
-phone's strip had grown past what a thumb could scan. Five is one layout to
+phone's strip had grown past what a thumb could scan. A handful is one layout to
 learn, and the cost is deliberate: the phone's Overview is a scroll rather than
 five slides.
 
@@ -4611,8 +4629,9 @@ slide and the dots' bounce become plain fades. Tests switch the pacing off
 through the hook's exported `pacing.on`. New messages
 scroll into view unless the user has scrolled up.
 
-Source notes and private catalogue names appear in the shared `SheetBody`, so
-copies and shared sheets retain custom content. Captions/errors have English
+Private catalogue names appear in the shared `SheetBody`, and so do a
+character's notes, on its Custom tab, so copies and shared sheets retain
+custom content. Captions/errors have English
 and Russian translations. See [agent.md](agent.md) for the tool/question
 contract and the session lifetime.
 
@@ -4627,7 +4646,7 @@ writes: an imported character's scores are the ability-scores card and open
 level is the Level card. What an import still lays over the build (inventory,
 coins) is shown by the sheet's Equipment and Items tabs.
 
-### Nothing in the builder writes a custom entry
+### No picker writes a custom entry
 
 A picker used to end with **Custom…**, a way to write a race, class, background,
 item or spell the rules do not have. It is gone from every list: it was offered
@@ -4638,7 +4657,38 @@ list with a Custom badge.
 `CustomOptionsPanel` remains for entries a character already has -- an AI Wizard
 import writes them for anything it could not match -- and draws them as
 `BlockList` blocks inside the tab's panel, above Next, with the form to edit
-one. It has no add button, and nothing else opens it.
+one. It has no add button, and nothing else opens it. It no longer draws
+**notes**: those are the Custom tab's.
+
+### Custom is what the player writes unasked
+
+A character has things the rules have no field for -- a backstory, a boon a DM
+granted, a debt. **Custom** is the last tab of both the build screen and the
+sheet, and holds any number of them, each a **title and a text**.
+`features/character/CustomNotes` is the one component both mount.
+
+- **An item is a custom entry of kind `note`** -- a name and a description
+  the server stores and gives no meaning to (docs/backend.md). So a note an
+  old import left on a character is here too, where it can at last be read,
+  rewritten or deleted; it used to be drawn on the builder's Personal *and*
+  Personality tabs and nowhere on the sheet.
+- **The text is drawn as typed**, `pre-wrap`, never as Markdown: the player
+  wrote it, and a stray asterisk is not formatting. The personality fields
+  are drawn the same way for the same reason.
+- **Nothing opens a dialog but the question before a delete.** Add turns into
+  the form where the button stood; Edit replaces the item with its form.
+- **A write reads the log's head first** (`getEvents`), as the sheet's other
+  edits do, then posts or deletes through `/custom-options` and refreshes its
+  screen. Neither screen hands a revision down, which is what lets one
+  component serve both.
+- **Read-only without `characterId`.** The owner has the tab even when it is
+  empty -- it is where the first item is written; a sheet shared with a table
+  has it only when there is something to read, and nothing to press on it.
+- **In the builder it is not a `StagePanel`**, which would say "Nothing to
+  answer yet" about a tab that never asks, and **Next never leads to it**:
+  `stageAfter` follows tabs with open questions, so the last question's Next is
+  still Finish and Custom is reached by its tab. It is not drawn until the
+  character exists, since there is nothing to attach a note to.
 
 ## Admin is two tables, for one kind of account
 

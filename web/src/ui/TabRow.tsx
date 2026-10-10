@@ -2,6 +2,8 @@ import { Paper, ScrollArea, Tabs } from '@mantine/core'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
+import { useIsDesktop } from './useIsDesktop'
+
 export interface TabRowTab {
   value: string
   label: string
@@ -92,6 +94,7 @@ export function TabRow({ tabs, value, onChange, bar = false, children }: TabRowP
   const viewportRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef(new Map<string, HTMLButtonElement>())
   const [edges, setEdges] = useState<Edges>(NO_EDGES)
+  const isDesktop = useIsDesktop()
 
   /**
    * Which ends have something behind them, which is which ends fade.
@@ -162,7 +165,15 @@ export function TabRow({ tabs, value, onChange, bar = false, children }: TabRowP
         along, which from a scrolled position reads as a stray dash beside the
         first tab you can see.
       */}
-      <Tabs.List style={{ flexWrap: 'nowrap', width: 'max-content' }}>
+      {/*
+        On a wide screen the tabs wrap onto a second line instead: there is no
+        swipe to find the ones a scroll hides, and a strip that came to rest on
+        the active tab's left edge showed a caster's builder from "Race" on --
+        the first four tabs simply were not there. A second line costs a row of
+        height and hides nothing, so the scroller below has nothing to scroll
+        and the fade never draws.
+      */}
+      <Tabs.List style={isDesktop ? { flexWrap: 'wrap' } : { flexWrap: 'nowrap', width: 'max-content' }}>
         {tabs.map((tab) => (
           <Tabs.Tab
             key={tab.value}

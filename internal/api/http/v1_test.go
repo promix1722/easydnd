@@ -1415,3 +1415,53 @@ func TestReviseEventsAtomically(t *testing.T) {
 		t.Fatalf("unauthenticated = %d", rec.Code)
 	}
 }
+
+// A note is written through custom-options and deleted through it too; the
+// delete names the revision in the query, a DELETE having no body.
+func TestCustomNoteIsDeletedThroughItsRoute(t *testing.T) {
+	t.Parallel()
+	r, session := newFullRouter(t)
+	created := send(t, r, session, http.MethodPost, "/v1/characters", map[string]any{"name": "Scribe"})
+	if created.Code != http.StatusCreated && created.Code != http.StatusOK {
+		t.Fatalf("create = %d: %s", created.Code, created.Body)
+	}
+	id := decode[struct {
+		ID string `json:"id"`
+	}](t, created).ID
+	base := "/v1/characters/" + id + "/custom-options"
+	type listing struct {
+		Revision int `json:"revision"`
+		Options  []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"options"`
+	}
+	list := func() listing { return decode[listing](t, send(t, r, session, http.MethodGet, base, nil)) }
+
+	added := send(t, r, session, http.MethodPost, base, map[string]any{
+		"revision": list().Revision,
+		"option":   map[string]any{"kind": "note", "name": "Backstory", "description": "Born at sea.", "selected": true},
+	})
+	if added.Code != http.StatusOK {
+		t.Fatalf("add = %d: %s", added.Code, added.Body)
+	}
+	now := list()
+	if len(now.Options) != 1 || now.Options[0].Name != "Backstory" {
+		t.Fatalf("options = %+v, want the note", now.Options)
+	}
+	one := base + "/" + now.Options[0].ID
+	for query, want := range map[string]int{
+		"": http.StatusBadRequest,
+		"?revision=" + strconv.Itoa(now.Revision+7): http.StatusBadRequest,
+	} {
+		if rec := send(t, r, session, http.MethodDelete, one+query, nil); rec.Code != want {
+			t.Errorf("DELETE %q = %d, want %d", query, rec.Code, want)
+		}
+	}
+	if rec := send(t, r, session, http.MethodDelete, one+"?revision="+strconv.Itoa(now.Revision), nil); rec.Code != http.StatusOK {
+		t.Fatalf("delete = %d: %s", rec.Code, rec.Body)
+	}
+	if left := list(); len(left.Options) != 0 {
+		t.Errorf("after delete = %+v, want none", left.Options)
+	}
+}

@@ -913,13 +913,31 @@ describe('BuildScreen', () => {
     await waitFor(() => expect(first).toHaveFocus())
   })
 
+  // Custom asks nothing: it is where the player writes what no question covers.
+  it('writes a custom item from the Custom tab, which no question leads to', async () => {
+    const user = setupUser()
+    renderBuild(viewport)
+    await screen.findByText('A race')
+
+    await user.click(tab('custom'))
+    const custom = panel('custom')
+    expect(custom.queryByText('Nothing to answer yet.')).not.toBeInTheDocument()
+    await user.click(custom.getByRole('button', { name: 'Add' }))
+    await user.type(custom.getByRole('textbox', { name: 'Title' }), 'Backstory')
+    await user.click(custom.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(posted.some((write) => apiPath(write.url).endsWith('/custom-options'))).toBe(true))
+    expect(posted.find((write) => apiPath(write.url).endsWith('/custom-options'))?.body)
+      .toMatchObject({ option: { kind: 'note', name: 'Backstory', selected: true } })
+  })
+
   it('keeps non-spell categories available but hides spell tabs without choices', async () => {
     renderBuild(viewport)
     await screen.findByText('A race')
 
     // The spell tabs appear when a choice is available; the remaining tabs
     // remain places the player can visit before choosing a class.
-    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
+    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality', 'Custom'])
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
   })
 
@@ -950,7 +968,7 @@ describe('BuildScreen', () => {
     await user.click(await panel('class').findByRole('button', { name: 'Confirm' }))
 
     await screen.findByRole('tab', { name: 'Cantrips' })
-    expect(tabs().slice(-3)).toEqual(['Cantrips', 'Spells', 'Personality'])
+    expect(tabs().slice(-4)).toEqual(['Cantrips', 'Spells', 'Personality', 'Custom'])
   })
 
   // One mount, walked across three tabs: each shows only what belongs to it,
@@ -1650,7 +1668,7 @@ describe('a new character', () => {
     // that had already succeeded. It read as a reload because it looked like
     // one. The tabs never go, and neither does the block being answered.
     expect(screen.queryByText('Working out what is next...')).not.toBeInTheDocument()
-    expect(tabs()).toHaveLength(7)
+    expect(tabs()).toHaveLength(8) // the seven it had, and Custom, which a character that exists gains
     expect(screen.getByText('A name')).toBeInTheDocument()
 
     // And what replaces the block being answered is that block with an answer
@@ -1850,7 +1868,7 @@ it('places spell and equipment questions in their own tabs', async () => {
   })
   renderBuild('mobile')
   await screen.findByRole('tab', { name: 'Spells' })
-  expect(tabs().slice(-3)).toEqual(['Spells', 'Equipment', 'Personality'])
+  expect(tabs().slice(-4)).toEqual(['Spells', 'Equipment', 'Personality', 'Custom'])
   expect(current()).toBe('Spells')
   expect(panel('spells').queryByRole('combobox', { name: 'Spell selection' })).not.toBeInTheDocument()
   expect(panel('equipment').getAllByRole('button', { name: /Starting equipment/ })).toHaveLength(2)

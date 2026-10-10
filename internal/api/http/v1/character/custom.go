@@ -2,10 +2,12 @@ package character
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/types"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
@@ -56,6 +58,24 @@ func (h *Handler) UpsertCustomOption(c *gin.Context) {
 		return
 	}
 	result, err := h.service.UpsertCustomOption(charuc.WithRevision(c.Request.Context(), p.Revision), h.owner(c), idOf(c), helpers.Locale(c), p.Option.domain())
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, WriteResponse{Revision: result.Revision, Seq: result.Seq, Sheet: SheetOf(result.Sheet)})
+}
+
+// RemoveCustomOption handles DELETE /v1/characters/:id/custom-options/:option.
+// The revision rides in the query: a DELETE has no body to carry it.
+func (h *Handler) RemoveCustomOption(c *gin.Context) {
+	revision, err := strconv.Atoi(c.Query("revision"))
+	if err != nil {
+		helpers.FormatError(c, types.NewFieldValidationError("invalid revision", types.FieldError{
+			Field: "revision", Rule: "invalid", Reason: "field.revision.invalid",
+		}))
+		return
+	}
+	result, err := h.service.RemoveCustomOption(charuc.WithRevision(c.Request.Context(), revision), h.owner(c), idOf(c), helpers.Locale(c), c.Param("option"))
 	if err != nil {
 		helpers.FormatError(c, err)
 		return

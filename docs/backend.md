@@ -516,6 +516,9 @@ that.
 | `GET` | `/v1/characters/{id}/events` | the log |
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
 | `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
+| `GET` | `/v1/characters/{id}/custom-options` | the character's custom entries, `{revision, options}` |
+| `POST` | `/v1/characters/{id}/custom-options` | add or rewrite one, `{revision, option}`; an option without an `id` is new. Answers the new revision and sheet |
+| `DELETE` | `/v1/characters/{id}/custom-options/{option}?revision=` | erase a custom entry of kind `note`; any other kind is a 400 -- see [below](#a-note-is-the-one-custom-entry-that-can-be-deleted) |
 | `POST` | `/v1/characters/{id}/auto-equip` | dress a character who has nothing on: one suitable backpack item per slot; 204, and a no-op once anything is equipped |
 | `GET` / `PUT` | `/v1/characters/{id}/visibility` | `{"public": bool}`: whether anybody signed in who has the character's link may read its sheet; owner only |
 | `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
@@ -1229,6 +1232,27 @@ change nobody's character.
 **A flag on the session.** `GET /v1/auth/me` carries `admin: true` for a
 superadmin, so the client knows to draw the section. It grants nothing; the
 routes above ask again on every request.
+
+### A note is the one custom entry that can be deleted
+
+A custom entry lives in the log as a `note` event carrying the definition, and
+every kind but one may be something the character is built on: a custom class
+it has levels in, a custom spell it prepared. Those are switched off through
+their own `selected` flag and never removed, which is why
+`DELETE …/events/{seq}` refuses a custom event outright.
+
+Kind `note` is the exception because nothing can depend on it: it is a name
+and a description the server gives no meaning to -- the player's own titled
+text, drawn on the Custom tab of the sheet and the build screen. So
+`DELETE /v1/characters/{id}/custom-options/{option}?revision=` drops that one
+event and rebuilds the log, under the same ownership and revision checks as
+the POST; the revision is in the query because a DELETE carries no body. A
+non-note answers 400 `custom.notRemovable`, an unknown id 404. The AI Wizard's
+tools still may not write a note, so what is on that tab is what the player
+put there, plus whatever an older import left.
+
+A title is 1-300 **bytes** and a text at most 16000, not characters: Cyrillic
+gets about half. That is every custom entry's limit, not this route's.
 
 ### Active game entries
 

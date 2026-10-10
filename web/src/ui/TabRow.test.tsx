@@ -110,18 +110,24 @@ describe('TabRow', () => {
 
 describe('TabRow', () => {
   /**
-   * The claim the primitive is built on. `ModalSheet`, `Columns` and
-   * `TabDeck` swap components at the breakpoint and so need testing twice
-   * over; this one is one rendering with a ScrollArea that is inert at a width the tabs fit in,
-   * which is what makes a test at either width a test of both.
+   * One rendering at both widths, with one difference and only one: how the
+   * list lays its tabs out. A phone keeps them on one line and scrolls, with a
+   * swipe to find the rest; a wide screen has no swipe, so it wraps them onto
+   * a second line rather than hide the ones a scroll would.
    */
-  it('renders the same markup at both viewports', () => {
+  it('renders the same markup at both viewports, but for the list wrapping on a wide screen', () => {
     const mobile = renderRow('mobile')
+    expect(screen.getByRole('tablist').style.flexWrap).toBe('nowrap')
     const mobileHtml = structure(mobile.container.innerHTML)
     mobile.unmount()
 
     const desktop = renderRow('desktop')
+    const list = screen.getByRole('tablist')
+    expect(list.style.flexWrap).toBe('wrap')
+    // Nothing forces the list wider than its box, which is what lets it wrap.
+    expect(list.style.width).toBe('')
 
+    list.setAttribute('style', 'flex-wrap: nowrap; width: max-content;')
     expect(structure(desktop.container.innerHTML)).toBe(mobileHtml)
   })
 })

@@ -1257,5 +1257,13 @@
   "equipment.magic": "Magic",
   "equipment.itemCount_one": "{{count}} item",
   "equipment.itemCount_other": "{{count}} items",
-  "equipment.noItemsFound": "Nothing matches."
+  "equipment.noItemsFound": "Nothing matches.",
+  "stage.custom": "Custom",
+  "sheet.custom": "Custom",
+  "customNotes.empty": "Nothing here yet. Add anything the sheet has no place for.",
+  "customNotes.new": "New custom item",
+  "customNotes.title": "Title",
+  "customNotes.text": "Text",
+  "customNotes.deleteTitle": "Delete {{name}}?",
+  "customNotes.deleteWarning": "The item and its text are removed from the character. This cannot be undone."
 }

@@ -52,6 +52,7 @@ import { eventLabel, stageLabel } from './labels'
 import { resolveRefNames } from './refNames'
 import { settledByStage, settledPickName } from './settled'
 import type { SettledRow } from './settled'
+import { CustomNotes } from './CustomNotes'
 import { CustomOptionsPanel } from './CustomOptionsPanel'
 import { StagePanel } from './StagePanel'
 import { SpellStagePanel } from './SpellStagePanel'
@@ -290,7 +291,8 @@ export function BuildScreen() {
   // finished flag is the upgrade.
   const asked = (each: Stage) => open.some((prompt) => stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each)
   if (!kitSeen && asked('equipment')) setKitSeen(true)
-  const visibleStages = STAGES.filter((each) => each === 'equipment' ? kitSeen || asked(each) : each !== 'cantrips' && each !== 'spells' ||
+  // Custom holds what the player writes unasked, on a character that exists.
+  const visibleStages = STAGES.filter((each) => each === 'custom' ? !isNew : each === 'equipment' ? kitSeen || asked(each) : each !== 'cantrips' && each !== 'spells' ||
     asked(each) ||
     (settled.get(each)?.length ?? 0) > 0 || view.sheet?.customOptions?.some((option) => option.kind === (each === 'cantrips' ? 'cantrip' : 'spell')))
   const preferredStage = chosenStage ?? (isNew ? 'rules' : firstUnfinished(open))
@@ -751,7 +753,14 @@ export function BuildScreen() {
               return {
                 value: each,
                 label: stageLabel(t, each),
-                content: each === 'spells' || each === 'cantrips' ? (
+                // Not a StagePanel: nothing is asked here, and an empty one
+                // says "Nothing to answer yet" about a tab that never asks.
+                content: each === 'custom' ? (
+                  <Stack>
+                    <CustomNotes options={view.sheet?.customOptions} characterId={id} onChanged={() => build.refresh()} />
+                    {next !== undefined && <Group><Button variant="light" onClick={next}>{t('stagePanel.next')}</Button></Group>}
+                  </Stack>
+                ) : each === 'spells' || each === 'cantrips' ? (
                   <SpellStagePanel
                     cantripsOnly={each === 'cantrips'}
                     rules={view.prompts.spellRules ?? []}

@@ -1315,5 +1315,13 @@
   "equipment.itemCount_few": "{{count}} предмета",
   "equipment.itemCount_many": "{{count}} предметов",
   "equipment.itemCount_other": "{{count}} предметов",
-  "equipment.noItemsFound": "Ничего не найдено."
+  "equipment.noItemsFound": "Ничего не найдено.",
+  "stage.custom": "Своё",
+  "sheet.custom": "Своё",
+  "customNotes.empty": "Здесь пока пусто. Добавьте всё, чему на листе не нашлось места.",
+  "customNotes.new": "Новая запись",
+  "customNotes.title": "Заголовок",
+  "customNotes.text": "Текст",
+  "customNotes.deleteTitle": "Удалить «{{name}}»?",
+  "customNotes.deleteWarning": "Запись и её текст будут удалены у персонажа. Отменить это нельзя."
 }

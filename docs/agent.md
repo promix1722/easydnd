@@ -739,8 +739,11 @@ a control of its own. The builder offers six: a custom **race**, **class** and
 **background** as the last option of those pickers, a custom **item** as the
 last option of an equipment choice, and a custom **cantrip** or **spell** as
 the last entry of the spell tabs' list. Each opens the entry's form with its
-kind already said. No tab has a "Custom…" button under it -- the Personal tab
-used to end with one that made a note. Entries written earlier are offered in
+kind already said. No tab has a "Custom…" button under it. Notes are the one
+exception to all of this: they answer no question, so they have a tab of their
+own, Custom, where the player adds, rewrites and deletes them
+(docs/web.md#custom-is-what-the-player-writes-unasked). The assistant still
+may not write one. Entries written earlier are offered in
 their list beside the catalogue's, marked Custom.
 
 A custom entry on a character is a block on its tab like any other decision
@@ -781,6 +784,8 @@ Normal characters expose GET/POST `/v1/characters/:id/custom-options`.
 GET returns `{revision, options}`; POST accepts `{revision, option}` and returns
 the updated sheet and revision. Writes check ownership and optimistic revision.
 Definitions cannot be erased by generic note replacement.
+`DELETE /v1/characters/:id/custom-options/:option?revision=` erases one, and
+only a `note`: see docs/backend.md.
 
 The character itself is read and edited through the ordinary
 `/v1/characters/:id` routes. There is no draft surface.

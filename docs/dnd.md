@@ -350,7 +350,7 @@ discriminator, not a sealed interface. Fields a given type does not use are zero
 | `race`, `subrace`, `background`, `class`, `subclass` | A catalogue entry plus the answers to its prompts |
 | `level` | What a level granted, answered — an improvement, an Expertise, a feature's pick |
 | `feat` | A feat taken |
-| `note` | A player's annotation; changes nothing |
+| `note` | A player's annotation; changes nothing. One carrying a custom entry of kind `note` is a titled text the player wrote, shown on the Custom tab |
 
 An event names a catalogue entry by typed reference, records `Choices` as
 answers keyed by prompt id, and — for `init` and `change` only — carries
