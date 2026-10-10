@@ -262,7 +262,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	// stood here was waiting for.
 	router, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		Development:   devHandler,
-		System:        system.New(buildinfo.Version),
+		System:        system.New(buildinfo.Version, system.AnalyticsConfigResponse{Environment: cfg.Env, Token: cfg.Analytics.Token, Host: cfg.Analytics.Host}),
 		Version:       buildinfo.Version,
 		WebDir:        opts.WebDir,
 		Admin:         adminapi.New(adminuc.NewService(userRepo, characterRepo)),

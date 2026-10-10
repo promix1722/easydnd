@@ -8,6 +8,7 @@ import {
   removeAuthenticator,
 } from '@/test/webauthn'
 
+import * as analytics from '@/lib/analytics'
 import { ApiError, request } from '@/lib/api'
 
 import { AuthProvider } from './AuthProvider'
@@ -77,6 +78,7 @@ function renderProvider() {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   removeAuthenticator()
   // The auth_error tests navigate; leaving that behind would leak a query
@@ -86,11 +88,15 @@ afterEach(() => {
 
 describe('AuthProvider', () => {
   it('reports the account when the server recognises the cookie', async () => {
+    const identify = vi.spyOn(analytics, 'setAnalyticsUser')
+    const capture = vi.spyOn(analytics, 'track')
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(respond(200, { user: account })))
     renderProvider()
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
     expect(screen.getByTestId('user')).toHaveTextContent('Alice')
+    expect(identify).toHaveBeenCalledWith(account)
+    expect(capture).not.toHaveBeenCalled()
   })
 
   it('reports anonymous on a 401, which is the only thing that signs someone out', async () => {
@@ -111,6 +117,7 @@ describe('AuthProvider', () => {
   // A session can die while the page is open: the server restarts with a new
   // key, and the next request any screen makes is the first to hear of it.
   it('signs out, and says why, when a later request is answered 401', async () => {
+    const identify = vi.spyOn(analytics, 'setAnalyticsUser')
     const fetch = vi.fn().mockResolvedValue(respond(200, { user: account }))
     vi.stubGlobal('fetch', fetch)
     renderProvider()
@@ -121,6 +128,7 @@ describe('AuthProvider', () => {
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
     expect(screen.getByTestId('error')).toHaveTextContent('Your session had expired')
+    expect(identify).toHaveBeenLastCalledWith(null)
   })
 
   it('reports offline, not anonymous, when the server cannot be reached', async () => {
@@ -170,6 +178,7 @@ describe('AuthProvider', () => {
   // A guest session is established by one POST rather than a ceremony, but it
   // lands in exactly the same state: authenticated, with a user attached.
   it('adopts a guest session from a single request', async () => {
+    const capture = vi.spyOn(analytics, 'track')
     // Routed by URL rather than by call order: the provider list is fetched on
     // mount too, and a mockResolvedValueOnce chain would hand its response to
     // whichever request happened to go second.
@@ -189,6 +198,7 @@ describe('AuthProvider', () => {
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
     expect(screen.getByTestId('user')).toHaveTextContent('Guest')
+    expect(capture).toHaveBeenCalledExactlyOnceWith('signed_in')
     // The flag is what every guest-aware surface branches on downstream.
     expect(screen.getByTestId('anonymous')).toHaveTextContent('true')
 

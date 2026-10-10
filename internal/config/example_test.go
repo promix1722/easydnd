@@ -84,6 +84,7 @@ func TestCommittedConfigsCarryNoSecret(t *testing.T) {
 		}
 		f := src.cfg
 		for key, v := range map[string]string{
+			"analytics.token":           f.Analytics.Token,
 			"agent.api_key":             f.Agent.APIKey,
 			"auth.session_secret":       f.Auth.SessionSecret,
 			"db.url":                    f.DB.URL,

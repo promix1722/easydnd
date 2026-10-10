@@ -33,7 +33,7 @@ func routerServing(t *testing.T, webDir string) *gin.Engine {
 			Auth: config.AuthConfig{RPOrigins: []string{testOrigin}},
 		},
 		slog.New(slog.NewJSONHandler(io.Discard, nil)),
-		httpapi.Handlers{System: system.New(testVersion), Version: testVersion, WebDir: webDir},
+		httpapi.Handlers{System: system.New(testVersion, system.AnalyticsConfigResponse{Environment: "development"}), Version: testVersion, WebDir: webDir},
 	)
 	if err != nil {
 		t.Fatalf("NewRouter: %v", err)

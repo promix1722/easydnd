@@ -1,3 +1,4 @@
+import { track } from '@/lib/analytics'
 import type { BuildPolicy } from './packPolicy'
 import type { RulesLock } from './packs'
 import type { Choice, Entry, Item, Option, Proficiency, Skill as CatalogSkill, Spell } from './catalog'
@@ -439,8 +440,10 @@ export function listCharacters(
   return request<{ characters: Summary[] }>(path, signal ? { signal } : {})
 }
 
-export function createCharacter(body: NewCharacter): Promise<CreateResponse> {
-  return request<CreateResponse>('/characters', { method: 'POST', body })
+export async function createCharacter(body: NewCharacter): Promise<CreateResponse> {
+  const result = await request<CreateResponse>('/characters', { method: 'POST', body })
+  track('character_created')
+  return result
 }
 
 export function getSheet(id: string, signal?: AbortSignal): Promise<Sheet> {

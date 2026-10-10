@@ -1,3 +1,4 @@
+import { track } from '@/lib/analytics'
 import type { ClassLevel, Sheet } from './characters'
 import { request } from './client'
 import { ApiError } from './errors'
@@ -131,11 +132,13 @@ export function listGames(signal?: AbortSignal): Promise<{ games: GameSummary[] 
   return request<{ games: GameSummary[] }>('/games', signal ? { signal } : {})
 }
 
-export function createGame(group: string, name: string): Promise<GameDetail> {
-  return request<GameDetail>('/games', {
+export async function createGame(group: string, name: string): Promise<GameDetail> {
+  const result = await request<GameDetail>('/games', {
     method: 'POST',
     body: { group_id: group, name },
   })
+  track('game_created')
+  return result
 }
 
 export function getGame(id: string, signal?: AbortSignal): Promise<GameDetail> {

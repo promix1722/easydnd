@@ -178,7 +178,7 @@ func newTestRouterOver(
 	cookies := helpers.NewCookieOptions(cfg)
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
-		System:        system.New(testVersion),
+		System:        system.New(testVersion, system.AnalyticsConfigResponse{Environment: "development"}),
 		Version:       testVersion,
 		Auth:          authapi.New(svc, cookies),
 		Appearance:    appearanceapi.New(appearanceuc.NewService(repo)),

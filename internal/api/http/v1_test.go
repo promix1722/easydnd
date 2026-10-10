@@ -181,7 +181,7 @@ func newFullRouterInEnv(
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		Pack:          packHandler,
-		System:        system.New(testVersion),
+		System:        system.New(testVersion, system.AnalyticsConfigResponse{Environment: "development"}),
 		Auth:          authapi.New(authService, cookies),
 		Authenticator: authService,
 		Catalog:       catalogapi.New(source, log),

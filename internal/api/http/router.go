@@ -140,6 +140,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// nginx happens to have no proxy_cache configured.
 		v1.GET("/version", middleware.NoStore(), h.System.Version)
 		v1.GET("/health", h.System.Health)
+		v1.GET("/analytics-config", middleware.NoStore(), h.System.AnalyticsConfig)
 		if cfg.Env == config.EnvDevelopment && h.Development != nil {
 			v1.POST("/dev/login", middleware.NoStore(), h.Development.Login)
 		}

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -48,17 +49,24 @@ type AgentConfig struct {
 }
 
 type Config struct {
-	Agent AgentConfig
-	Env   string
-	HTTP  HTTPConfig
-	Auth  AuthConfig
-	Log   LogConfig
-	Data  DataConfig
-	DB    DBConfig
+	Analytics AnalyticsConfig
+	Agent     AgentConfig
+	Env       string
+	HTTP      HTTPConfig
+	Auth      AuthConfig
+	Log       LogConfig
+	Data      DataConfig
+	DB        DBConfig
 
 	// Source is the config file this was loaded from, logged at startup so the
 	// log stream answers "which config is this process running?".
 	Source string
+}
+
+// AnalyticsConfig contains only public browser ingestion settings.
+type AnalyticsConfig struct {
+	Token string `yaml:"token"`
+	Host  string `yaml:"host"`
 }
 
 // DBConfig points at the Postgres instance holding accounts and passkeys.
@@ -234,10 +242,11 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("invalid agent limits")
 	}
 	cfg := &Config{
-		Agent:  AgentConfig{APIKey: strings.TrimSpace(f.Agent.APIKey), Model: strings.TrimSpace(f.Agent.Model), ReasoningEffort: strings.TrimPrefix(p.str(strings.TrimSpace(f.Agent.ReasoningEffort), "low"), "default"), Workers: p.intVal(f.Agent.Workers, 4), MaxTurns: p.intVal(f.Agent.MaxTurns, 40), MaxSessions: p.intVal(f.Agent.MaxSessions, 100), RequestTimeout: p.duration("agent.request_timeout", f.Agent.RequestTimeout, 2*time.Minute)},
-		Env:    env,
-		Auth:   auth,
-		Source: src.path,
+		Analytics: AnalyticsConfig{Token: strings.TrimSpace(f.Analytics.Token), Host: strings.TrimSpace(f.Analytics.Host)},
+		Agent:     AgentConfig{APIKey: strings.TrimSpace(f.Agent.APIKey), Model: strings.TrimSpace(f.Agent.Model), ReasoningEffort: strings.TrimPrefix(p.str(strings.TrimSpace(f.Agent.ReasoningEffort), "low"), "default"), Workers: p.intVal(f.Agent.Workers, 4), MaxTurns: p.intVal(f.Agent.MaxTurns, 40), MaxSessions: p.intVal(f.Agent.MaxSessions, 100), RequestTimeout: p.duration("agent.request_timeout", f.Agent.RequestTimeout, 2*time.Minute)},
+		Env:       env,
+		Auth:      auth,
+		Source:    src.path,
 		HTTP: HTTPConfig{
 			// Loopback on purpose: the reverse proxy terminates TLS and
 			// forwards here. Binding 0.0.0.0 would expose the API directly.
@@ -297,6 +306,15 @@ func Load(path string) (*Config, error) {
 }
 
 func (c *Config) validate() error {
+	if c.Analytics.Token != "" {
+		u, err := url.Parse(c.Analytics.Host)
+		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+			return fmt.Errorf("analytics.host must be an HTTPS ingestion URL when analytics.token is set")
+		}
+		if !strings.HasPrefix(c.Analytics.Token, "phc_") {
+			return fmt.Errorf("analytics.token must be a public PostHog project token (phc_), never a personal or secret API key")
+		}
+	}
 	if c.Agent.RequestTimeout <= 0 || c.Agent.RequestTimeout > 10*time.Minute {
 		return fmt.Errorf("agent.request_timeout must be positive and at most 10m")
 	}

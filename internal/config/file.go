@@ -25,6 +25,7 @@ const EnvConfigPath = "EASYDND_CONFIG"
 // value alone.
 func applyEnv(f *fileConfig) {
 	for name, dst := range map[string]*string{
+		"EASYDND_POSTHOG_TOKEN":        &f.Analytics.Token,
 		"EASYDND_AGENT_API_KEY":        &f.Agent.APIKey,
 		"EASYDND_SESSION_SECRET":       &f.Auth.SessionSecret,
 		"EASYDND_DB_URL":               &f.DB.URL,
@@ -55,13 +56,14 @@ func applyEnv(f *fileConfig) {
 // Durations are strings ("10s") rather than time.Duration so that a malformed
 // value produces our own error naming the key, not a yaml type error.
 type fileConfig struct {
-	Agent fileAgent `yaml:"agent"`
-	Env   string    `yaml:"env"`
-	HTTP  fileHTTP  `yaml:"http"`
-	Log   fileLog   `yaml:"log"`
-	Data  fileData  `yaml:"data"`
-	Auth  fileAuth  `yaml:"auth"`
-	DB    fileDB    `yaml:"db"`
+	Analytics AnalyticsConfig `yaml:"analytics"`
+	Agent     fileAgent       `yaml:"agent"`
+	Env       string          `yaml:"env"`
+	HTTP      fileHTTP        `yaml:"http"`
+	Log       fileLog         `yaml:"log"`
+	Data      fileData        `yaml:"data"`
+	Auth      fileAuth        `yaml:"auth"`
+	DB        fileDB          `yaml:"db"`
 }
 
 type fileAgent struct {

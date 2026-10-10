@@ -1431,6 +1431,15 @@ for what must not be committed**:
 | development | `config.dev.yaml` | `~/config/easydnd/dev.env`, one for every worktree, loaded by `make` |
 | production | `config.prod.yaml`, shipped in each release as `config.yaml` | `/etc/easydnd/prod.env`, loaded by supervisor |
 
+Analytics takes its token from `EASYDND_POSTHOG_TOKEN` in the existing env file,
+entered by the operator and never committed. `analytics.host` remains in the
+committed YAML as the HTTPS ingestion URL. With no env token, the committed
+configs leave analytics disabled. Use the browser project token (`phc_`), not
+a personal or secret API key. The public, uncached `GET /v1/analytics-config`
+exposes only `environment`, `token`, and `host`, with environment taken from
+the running server's `env`. It never serializes the full server config. See
+[browser analytics](web.md#analytics) for setup and tracking behavior.
+
 The app finds the YAML via the `EASYDND_CONFIG` environment variable, or a
 `-config <path>` flag which takes precedence; there is no default location and
 the file is **mandatory in every environment**. It logs which file it loaded.
@@ -1441,6 +1450,7 @@ naming rule, so a stray export cannot reach a key nobody meant to open:
 
 | Variable | Sets | Where it comes from |
 |---|---|---|
+| `EASYDND_POSTHOG_TOKEN` | `analytics.token` | the env file, both environments |
 | `EASYDND_AGENT_API_KEY` | `agent.api_key` | the env file, both environments |
 | `EASYDND_SESSION_SECRET` | `auth.session_secret` | `prod.env` |
 | `EASYDND_DB_URL` | `db.url` | `prod.env`; in development, `make` from the slot |

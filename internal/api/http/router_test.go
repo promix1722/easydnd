@@ -129,6 +129,16 @@ func TestHealth(t *testing.T) {
 	}
 }
 
+func TestAnalyticsConfigIsPublicAndNotCached(t *testing.T) {
+	rec := do(t, newTestRouter(t), http.MethodGet, "/v1/analytics-config", nil)
+	if rec.Code != http.StatusOK || rec.Body.String() != `{"environment":"development","token":"","host":""}` {
+		t.Fatalf("unexpected response: %d %s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Cache-Control"); !strings.Contains(got, "no-store") {
+		t.Fatalf("Cache-Control = %q", got)
+	}
+}
+
 // TestUnknownRouteReturnsErrorEnvelope covers NoRoute going through
 // helpers.FormatError rather than gin's plain-text 404.
 func TestUnknownRouteReturnsErrorEnvelope(t *testing.T) {

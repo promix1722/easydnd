@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { setAnalyticsUser, track, beginAnalyticsRedirectSignIn, finishAnalyticsRedirectSignIn } from '@/lib/analytics'
 import { clearDevelopmentSession } from '@/lib/api/devSession'
 
 import {
@@ -85,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const adopt = useCallback((account: SessionUser) => {
     if (!mounted.current) return
+    setAnalyticsUser(account)
     setUser(account)
     setStatus('authenticated')
     // Deliberately does NOT clear the error. Every attempt clears it on the
@@ -98,10 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       adopt(await getSession())
+      finishAnalyticsRedirectSignIn(!new URL(window.location.href).searchParams.has(AUTH_ERROR_PARAM))
     } catch (cause) {
       if (!mounted.current) return
       if (cause instanceof ApiError && cause.status === 401) {
         // The server said so. This is the only thing that signs someone out.
+        finishAnalyticsRedirectSignIn(false)
+        setAnalyticsUser(null)
         setUser(null)
         setStatus('anonymous')
         return
@@ -113,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus('offline')
         return
       }
+      setAnalyticsUser(null)
       setUser(null)
       setStatus('anonymous')
     }
@@ -130,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return onUnauthorized(() => {
       if (!mounted.current) return
       clearDevelopmentSession()
+      setAnalyticsUser(null)
       setUser(null)
       setStatus('anonymous')
       setError(t('authError.sessionExpired'))
@@ -188,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null)
       try {
         adopt(await attempt())
+        if (mounted.current) track('signed_in')
         return true
       } catch (cause) {
         if (!mounted.current) return false
@@ -251,6 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
     // OAuth navigations use the ordinary browser session, without fetch headers.
     clearDevelopmentSession()
+    beginAnalyticsRedirectSignIn()
     window.location.assign(ssoStartUrl(provider, currentPath()))
   }, [])
 
@@ -286,6 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // server rejects is indistinguishable from none.
     }
     if (!mounted.current) return
+    setAnalyticsUser(null)
     setUser(null)
     setStatus('anonymous')
     setError(null)
@@ -354,6 +364,7 @@ function takeAuthError(t: Translate): string | null {
   const url = new URL(window.location.href)
   const code = url.searchParams.get(AUTH_ERROR_PARAM)
   if (code === null) return null
+  finishAnalyticsRedirectSignIn(false)
 
   url.searchParams.delete(AUTH_ERROR_PARAM)
   window.history.replaceState(null, '', url.pathname + url.search + url.hash)

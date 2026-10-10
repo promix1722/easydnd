@@ -1,3 +1,4 @@
+import { track } from '@/lib/analytics'
 import { request } from './client'
 
 /**
@@ -122,6 +123,8 @@ export function previewInvite(token: string, signal?: AbortSignal): Promise<Invi
   })
 }
 
-export function acceptInvite(token: string): Promise<GroupDetail> {
-  return request<GroupDetail>('/invites/accept', { method: 'POST', body: { token } })
+export async function acceptInvite(token: string): Promise<GroupDetail> {
+  const result = await request<GroupDetail>('/invites/accept', { method: 'POST', body: { token } })
+  track('group_joined')
+  return result
 }

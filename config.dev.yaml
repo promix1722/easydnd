@@ -66,3 +66,9 @@ auth:
 # without it the feature is off. See docs/agent.md#which-model for the choice.
 agent:
   model: gpt-6-luna
+
+# The token is EASYDND_POSTHOG_TOKEN in the env file, entered by the operator.
+# Without it analytics is disabled; the public ingestion host stays here.
+analytics:
+  token: ""
+  host: "https://eu.i.posthog.com"

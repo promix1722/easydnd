@@ -4849,3 +4849,79 @@ SVG glyph inside the same tile.
 
 The public `/avatar-gallery` page shows all 12 class emblems and 24 random icons
 in separate responsive grids with localized names and larger rounded-square previews.
+
+
+## Analytics
+
+PostHog is optional. In its installation screen, expand **Need to set up
+manually?**, choose React, and copy the browser **project token** (`phc_`).
+Enter it yourself in the existing env files, outside the repository:
+
+| Environment | File | Loaded by |
+|---|---|---|
+| Development | `~/config/easydnd/dev.env` | Make; shared across worktrees |
+| Production | `/etc/easydnd/prod.env` | Supervisor |
+
+```sh
+EASYDND_POSTHOG_TOKEN="phc_your_project_token"
+```
+
+Do not commit the token. The browser receives it at runtime, so this keeps it
+out of Git rather than making it a browser secret. Never use a personal API key.
+An unset or empty variable leaves analytics disabled with the committed configs.
+The HTTPS ingestion host stays in `analytics.host` in `config.dev.yaml` and
+`config.prod.yaml`; both currently use `https://eu.i.posthog.com`.
+
+No `web/.env.local`, `VITE_POSTHOG_*`, or GitHub build variables are needed.
+The development path is `~/config`, not `~/.config`. Keep `dev.env` mode 600
+and `prod.env` mode 640 with owner `root:easydnd`, as for the existing secrets.
+After editing `prod.env`, run `sudo supervisorctl restart easydnd`; for local
+development, restart the API through its Make target so it reloads `dev.env`.
+
+Restart the development API after changing its YAML and reload the browser.
+Production configuration ships through the normal release process. The browser
+fetches `/v1/analytics-config` once, then loads `posthog-js` asynchronously. The
+page stays usable if the API, SDK, or tracker is blocked. There is no startup
+event queue or retry loop; actions before initialization may be missed.
+
+Every event carries `environment` from the API's `env`, `app_version` from
+`WEB_VERSION`, and `account_type` (`visitor`, `guest`, or `registered`). A built
+bundle served by `make preview` therefore stays tagged `development`. One
+PostHog project receives both environments: filter production reports with
+`environment = production`, and use a development-filtered view for testing.
+
+Tracked events:
+
+| Event | Trigger |
+|---|---|
+| `$pageview` | Initial page after auth resolves, and navigation to a different path |
+| `signed_in` | Successful passkey/guest sign-in or a pending Google/development sign-in confirmed after redirect |
+| `character_created` | Successful manual character creation API call, before finishing the builder |
+| `group_joined` | Successful invite acceptance |
+| `game_created` | Successful game creation |
+
+Restoring an existing session does not generate another sign-in. Identified
+users use `<environment>:<account-id>`; logout, session expiry, and account
+switches reset identity. SDK persistence is scoped to the browser tab to match
+development's independent tab accounts. Registered users reconnect to their
+stable identity on subsequent visits; anonymous/guest retention across closed
+tabs is not measured.
+
+Automatic click capture, session replay, surveys, exceptions, and performance
+capture are off. Outbound event properties are allowlisted, including SDK-added
+properties: raw URLs, query strings, fragments, referrers, person traits, names,
+emails, character content, and AI conversations are excluded. Page URLs use
+router templates, such as `/characters/:id`; unknown paths become `/*`.
+
+To verify, use an ordinary browser to open the development site, sign in, create
+a character, and navigate. PostHog's live events should show `development`, the
+app version, and the actions above, without private URL values. Its installation
+screen should then detect events. Automated tests use a mocked SDK and never
+send ingestion requests. Keep the free plan and billing disabled; development
+traffic shares the project's monthly event allowance.
+
+Suggested production reports are daily distinct active users, a
+`$pageview → signed_in → character_created` activation funnel, and weekly
+retention from `character_created` to `$pageview`. The activation funnel covers
+manual creation; AI imports and character copies are not creation events in
+this first integration.
