@@ -1,9 +1,13 @@
+import { MemoryRouter } from 'react-router'
 import { screen, within } from '@testing-library/react'
 import { vi } from 'vitest'
 import type { Equipment, Item } from '@/lib/api'
-import { renderAt } from '@/test/render'
+import { renderAt as renderBare } from '@/test/render'
 import { setupUser } from '@/test/user'
 import { SheetEquipment, SheetItems } from './SheetEquipment'
+
+// A row's menu links to the item's page, so the sheet is always inside a router.
+const renderAt: typeof renderBare = (viewport, ui, ...rest) => renderBare(viewport, <MemoryRouter>{ui}</MemoryRouter>, ...rest)
 
 const icon = 'data:image/webp;base64,YXJ0'
 const items = new Map<string, Item>([

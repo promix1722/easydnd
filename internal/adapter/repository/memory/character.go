@@ -114,6 +114,20 @@ func (r *CharacterRepository) SetFolder(
 	return nil
 }
 
+// SetPublic opens or hides a character.
+func (r *CharacterRepository) SetPublic(_ context.Context, id domain.ID, public bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	c, ok := r.items[id]
+	if !ok {
+		return types.NewNotFoundError("character %q", id).Because("character.notFound")
+	}
+	c.Public = public
+	r.items[id] = c
+	return nil
+}
+
 // Append adds events to a character's log, rejecting a stale expectedSeq.
 func (r *CharacterRepository) Append(_ context.Context, id domain.ID, expectedSeq int, events ...domain.Event) error {
 	r.mu.Lock()

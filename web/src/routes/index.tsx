@@ -4,7 +4,7 @@ import { createBrowserRouter } from 'react-router'
 import { AvatarGalleryScreen } from '@/features/avatars'
 import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
-import { BuildScreen, CharacterLogScreen, CharacterSheetScreen } from '@/features/character'
+import { BuildScreen, CharacterLogScreen, CharacterSheetScreen, ItemScreen } from '@/features/character'
 import { ImportCharacterScreen } from '@/features/characters'
 import { DiceScreen } from '@/features/dice'
 import { GameScreen, GamesScreen, SharedSheetScreen } from '@/features/games'
@@ -99,6 +99,10 @@ export const router = createBrowserRouter([
       // what the record means. Not a NAV_ITEMS entry -- it hangs off a
       // character, not off the app.
       {
+        path: 'characters/:id/items/:slug',
+        element: <Private><ItemScreen /></Private>,
+      },
+      {
         path: 'characters/:id/log',
         element: (
           <Private>
@@ -139,6 +143,20 @@ export const router = createBrowserRouter([
 
       // A shared character's sheet stays under its group, because sharing is a
       // group's doing and the group is what grants the read.
+      // A character its owner opened, read by its link: no group in the path,
+      // because no group grants this read.
+      {
+        path: 'shared/:character',
+        element: <Private><SharedSheetScreen /></Private>,
+      },
+      {
+        path: 'shared/:character/items/:slug',
+        element: <Private><ItemScreen /></Private>,
+      },
+      {
+        path: 'groups/:id/characters/:character/items/:slug',
+        element: <Private><ItemScreen /></Private>,
+      },
       {
         path: 'groups/:id/characters/:character',
         element: (

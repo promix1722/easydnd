@@ -79,7 +79,7 @@ func TestPromptsAdvanceAsAnswersArrive(t *testing.T) {
 
 	mustAppend := func(events ...Event) {
 		t.Helper()
-		if err := log.Append(events...); err != nil {
+		if err := log.Append(oneQuestionEach(events...)...); err != nil {
 			t.Fatalf("Append() error = %v", err)
 		}
 	}

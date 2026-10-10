@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 
 import { COINS, equip, groupOf, setTotal, slotsFor, slotted } from '@/domain'
 import type { InventoryRow, Slot } from '@/domain'
@@ -9,6 +10,15 @@ import { ACTION_ICON_SIZE, ActionIcon, Group, IconDotsVertical, ItemIcon, Menu, 
 import { itemFacts, weaponNumbers } from './options'
 import { WeaponStats } from './WeaponStats'
 import { useSlotLabels } from './slotLabels'
+
+/**
+ * The menu entry that opens an item's own page. A relative link, so it lands
+ * under whichever sheet is showing -- the owner's or one shared with a table.
+ */
+export function ItemDetails({ slug }: { slug: string }) {
+  const t = useT()
+  return <Menu.Item component={Link} to={`items/${encodeURIComponent(slug)}`}>{t('item.details')}</Menu.Item>
+}
 
 /** The three dots on the right of a row or a worn item, and what they open. */
 export function ItemMenu({ name, disabled = false, children }: { name: string; disabled?: boolean; children: ReactNode }) {
@@ -94,8 +104,10 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, act
           {isDesktop && numbers !== undefined && <WeaponStats {...numbers} />}
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
             {isDesktop && tags}
-            {editable && (
-            <ItemMenu name={label} disabled={disabled}>
+            {row.item !== undefined && (
+            <ItemMenu name={label}>
+              <ItemDetails slug={row.item} />
+              {editable && !disabled && <>
               {slotsFor(equipment, items, item).map((slot) => (
                 <Menu.Item key={slot} onClick={() => onChange(equip(equipment, items, row.item ?? '', slot))}>
                   {t('equipment.wearIn', { slot: slotLabel(slot) })}
@@ -108,8 +120,9 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, act
                   <Menu.Item color="red" onClick={() => total(row.equipped)}>{t('equipment.dropAll')}</Menu.Item>
                 </>
                 : <Menu.Item color="red" onClick={() => total(row.equipped)}>{t('equipment.drop')}</Menu.Item>}
+              </>}
             </ItemMenu>
-            )}
+          )}
           </Group>
         </Group>
       </Paper>

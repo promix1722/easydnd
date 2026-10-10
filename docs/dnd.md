@@ -313,6 +313,33 @@ Creation used to seed the name, the generation method and all six scores into
 the opening event, which is exactly why identity and abilities were the two
 things a build screen could not offer to revisit.
 
+**The rule is enforced, in two places, so that no writer can break it.** It
+used to be a convention the build screen kept and nothing checked, and the
+development seeds did not keep it: a rogue's class was one entry carrying its
+skills, its Expertise and three kit picks. The editor draws one box per entry
+on the tab the entry belongs to, so that character's whole first level was one
+box under Class, with the boxes its other answers should have had simply
+missing.
+
+- **The log itself** (`Log.Validate`, which every repository write and every
+  projection runs) refuses an entry whose answers belong to more than one
+  question. A branch and the picks made inside it are one question -- the
+  improvement's "two scores" and which two -- which is why a nested prompt's id
+  sits under its parent's, and an answer nested under the entry's first answer
+  travels with it. Anything else is a second question. This holds for an
+  import, a migration and a repository handed a whole log, not only for the
+  service.
+- **The service** (`oneSelection` in `usecase/character/validate.go`, on
+  append and on revise) refuses the same thing with a field error a client can
+  point at, and one shape more that only it can see: an entry that *selects*
+  something -- a race, a class, a subclass, a background, the answer to "which
+  one?" -- and also carries answers. What a selection opens is asked next and
+  answered in entries of its own; whether an event is a selection depends on
+  which prompt is open, which the log alone cannot know.
+
+Tests that transcribe a character as one literal per step keep doing so and
+split it on the way in (`oneQuestionEach` in the domain's fixtures).
+
 Every event has the **same field structure** — one struct with a `Type`
 discriminator, not a sealed interface. Fields a given type does not use are zero.
 

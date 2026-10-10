@@ -11,6 +11,7 @@ import { Avatar, characterAvatar, Badge, Button, Group, ModalSheet, NumberInput,
 
 import { desiredLevelChange } from './desiredLevel'
 import { SheetBody } from './SheetBody'
+import { VisibilityAction } from './VisibilityAction'
 
 import { MAX_LEVEL } from '@/domain'
 
@@ -168,6 +169,7 @@ export function CharacterSheetScreen() {
               {t('sheet.levelUp')}
             </Button>
           )}
+          <VisibilityAction id={id} />
           <Button component={Link} to={`/characters/${id}/build`} variant="light">
             {t('common.edit')}
           </Button>

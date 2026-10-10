@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import type { EntryPatch, EntryStats, GameDetail, GameEntry } from '@/lib/api'
 import { addGameMonster, deleteGameEntry, orderGameEntries, patchGameEntry, restGame } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
+import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 import {
   Avatar, characterAvatar, playerAvatar,
@@ -15,6 +16,7 @@ import { ABILITY_ORDER, signed, titleCase } from '@/domain'
 import { abilityAbbr, senseName, speedName } from '../character/labels'
 import { ResourcePools } from '../character/ResourcePools'
 import { FolderTreeSheet } from './FolderTreeSheet'
+import { sheetPath } from './sheetPath'
 
 const STAT_COLUMNS = { base: 2, sm: 4, md: 7 } as const
 
@@ -26,6 +28,7 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
 }) {
   const t = useT()
   const desktop = useIsDesktop()
+  const me = useAuth().user?.id ?? ''
   const detailsPrefix = useId()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const master = game.role === 'owner' || game.role === 'dm'
@@ -169,7 +172,7 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
                         {entry.character_id ? (
                           <Anchor component={Link} draggable={false} size="sm" fw={500}
                             style={{ overflowWrap: 'anywhere' }}
-                            to={`/groups/${game.group_id}/characters/${entry.character_id}`}>{name}</Anchor>
+                            to={sheetPath(game.group_id, game.characters.find((each) => each.id === entry.character_id) ?? { id: entry.character_id }, me)}>{name}</Anchor>
                         ) : <Text size="sm" fw={500} style={{ overflowWrap: 'anywhere' }}>{name}</Text>}
                         {entry.kind === 'monster' && <Badge size="xs" variant="light">{t('game.monster')}</Badge>}
                         {entry.locked && <Badge size="xs" color="gray" variant="light">{t('game.locked')}</Badge>}

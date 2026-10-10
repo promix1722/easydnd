@@ -502,3 +502,34 @@ func TestARefusedNameSaysSoOnTheField(t *testing.T) {
 		t.Error("the field error carries neither a reason nor a rule, so the input shows nothing")
 	}
 }
+
+// A character its owner opened is read by anybody signed in who has its link,
+// table or no table, and by nobody once it is hidden again. Reading is all it
+// grants: nothing here writes.
+func TestAnOpenedCharacterIsReadableByLinkUntilHidden(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	bobs := f.character(t, "bob")
+	if err := f.characters.Append(ctx, bobs, 0, character.Event{Type: character.EventInit}); err != nil {
+		t.Fatal(err)
+	}
+	read := func() error {
+		_, err := f.svc.Sheet(ctx, "stranger", bobs, rules.DefaultLocale)
+		return err
+	}
+	if err := read(); !types.IsNotFound(err) {
+		t.Fatalf("a private character was read by a stranger: %v", err)
+	}
+	if err := f.characters.SetPublic(ctx, bobs, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := read(); err != nil {
+		t.Fatalf("an opened character was refused: %v", err)
+	}
+	if err := f.characters.SetPublic(ctx, bobs, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := read(); !types.IsNotFound(err) {
+		t.Fatalf("a hidden character was still read: %v", err)
+	}
+}

@@ -663,6 +663,14 @@ export function BuildScreen() {
         ? answer.fields
         : revise.fields
 
+  // Both ways out of the builder -- the header's Finish, and Next on the last
+  // tab once nothing required is open -- go through here. A build equips
+  // nothing, so this is where the character is dressed: wired to only one of
+  // the two, a character finished by the other arrived with a full backpack
+  // and nothing on. The sheet opens either way; a failure here costs an
+  // empty paperdoll, not the way out.
+  const finish = () => void autoEquip(id).catch(() => undefined).then(() => navigate(`/characters/${id}`))
+
   return (
     <CharacterPolicy.Provider value={view.prompts.buildPolicy ?? DEFAULT_BUILD_POLICY}><RulesEdition.Provider value={(isNew ? selectedRules : view.rules)?.edition ?? '2014'}><CatalogScope.Provider value={id ? `${characterPath(id)}/catalog` : ''}><Page
       // The draft, while the character it names is being created: the sheet
@@ -687,10 +695,7 @@ export function BuildScreen() {
             actions: (
               <Button
                 variant={view.prompts.complete ? 'filled' : 'light'}
-                // A build equips nothing; Finish is where the character is
-                // dressed. The sheet opens either way -- a failure here costs
-                // an empty paperdoll, not the way out of the builder.
-                onClick={() => void autoEquip(id).catch(() => undefined).then(() => navigate(`/characters/${id}`))}
+                onClick={finish}
               >
                 {t('build.finish')}
               </Button>
@@ -741,7 +746,7 @@ export function BuildScreen() {
               // Next with nowhere left to go is Finish, once nothing required
               // is open; until then there is no Next on the last tab.
               const next = after !== null ? () => goToStage(after)
-                : !posingName && view.prompts.complete ? () => void navigate(`/characters/${id}`)
+                : !posingName && view.prompts.complete ? finish
                 : undefined
               return {
                 value: each,

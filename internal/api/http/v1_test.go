@@ -630,7 +630,8 @@ func TestCharacterBuildFlow(t *testing.T) {
 
 	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
 		"expectedSeq": 3,
-		"events": []map[string]any{{
+		// The race, then what the race asked: one entry per selection.
+		"events": []map[string]any{{"type": "race", "ref": "race:half-elf"}, {
 			"type": "race",
 			"ref":  "race:half-elf",
 			"choices": []map[string]any{
@@ -642,8 +643,8 @@ func TestCharacterBuildFlow(t *testing.T) {
 		t.Fatalf("append = %d, want 200: %s", rec.Code, rec.Body)
 	}
 	written := decode[characterapi.WriteResponse](t, rec)
-	if written.Seq != 4 {
-		t.Errorf("seq = %d, want 4", written.Seq)
+	if written.Seq != 5 {
+		t.Errorf("seq = %d, want 5", written.Seq)
 	}
 	// The write returns the new sheet, which is why the client needs no
 	// cache invalidation: the response is the invalidation.
@@ -677,6 +678,10 @@ func TestEventsReturnsTheLog(t *testing.T) {
 			// A source the server must not repeat: it writes its own, from
 			// the prompt the event turns out to answer.
 			"source": "background",
+		}, {
+			// What the race asked, as an entry of its own.
+			"type": "race",
+			"ref":  "race:half-elf",
 			"choices": []map[string]any{
 				{"prompt": "half-elf/ability-bonus/0", "picks": []string{"dex", "con"}},
 			},
@@ -687,11 +692,11 @@ func TestEventsReturnsTheLog(t *testing.T) {
 	}
 
 	got := decode[characterapi.EventsResponse](t, readLog(t, r, session, id))
-	if got.Seq != 3 {
-		t.Errorf("seq = %d, want 3", got.Seq)
+	if got.Seq != 4 {
+		t.Errorf("seq = %d, want 4", got.Seq)
 	}
-	if len(got.Events) != 3 {
-		t.Fatalf("events = %d, want 3", len(got.Events))
+	if len(got.Events) != 4 {
+		t.Fatalf("events = %d, want 4", len(got.Events))
 	}
 
 	// Creation seeds the log, and what it seeds is the name -- one entry, one
@@ -725,8 +730,12 @@ func TestEventsReturnsTheLog(t *testing.T) {
 	if third.At == "" {
 		t.Error("an appended event has no At, so the log cannot say when it happened")
 	}
-	if len(third.Choices) != 1 || third.Choices[0].Prompt != "half-elf/ability-bonus/0" {
-		t.Errorf("choices = %+v, want the answer as it was posted", third.Choices)
+	if len(third.Choices) != 0 {
+		t.Errorf("choices = %+v, want none: the race is the whole of its entry", third.Choices)
+	}
+	fourth := got.Events[3]
+	if len(fourth.Choices) != 1 || fourth.Choices[0].Prompt != "half-elf/ability-bonus/0" || fourth.Source != "race" {
+		t.Errorf("fourth event = %+v, want the race's answer as it was posted", fourth)
 	}
 }
 
@@ -767,7 +776,7 @@ func TestBadAnswerIsAFieldError(t *testing.T) {
 
 	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
 		"expectedSeq": 1,
-		"events": []map[string]any{{
+		"events": []map[string]any{{"type": "race", "ref": "race:half-elf"}, {
 			"type": "race",
 			"ref":  "race:half-elf",
 			// Charisma is the half-elf's fixed +2 and is not on offer.
@@ -1226,7 +1235,7 @@ func TestSavedEquipmentSelectionsPreserveBundleQuantities(t *testing.T) {
 	id := createCharacter(t, r, session)
 	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
 		"expectedSeq": 1,
-		"events": []map[string]any{{"type": "class", "ref": "class:fighter", "level": 1,
+		"events": []map[string]any{{"type": "class", "ref": "class:fighter", "level": 1}, {"type": "class", "ref": "class:fighter", "level": 1,
 			"choices":    []map[string]any{{"prompt": "fighter/starting-equipment/backup", "picks": []string{"crossbow-light+crossbow-bolt"}}},
 			"selections": []map[string]any{{"kind": "ref", "key": "plate", "ref": "item:plate-armor", "count": 999}},
 		}},

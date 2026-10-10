@@ -214,7 +214,7 @@ export function optionLabel(
  * No price: starting equipment is granted, not bought, and a "Cost: 12 gp"
  * under a free pack reads as a bill. The price belongs where things are bought.
  */
-export function itemFacts(t: Translate, item: Item, name: (slug: string) => string, statsElsewhere = false): string | undefined {
+export function itemFacts(t: Translate, item: Item, name: (slug: string) => string, statsElsewhere = false, withWeight = true): string | undefined {
   const facts: string[] = []
   if (item.armor !== undefined) {
     const armor = item.armor
@@ -232,7 +232,8 @@ export function itemFacts(t: Translate, item: Item, name: (slug: string) => stri
     if (weapon.throwNormalRange) facts.push(t('equipment.thrownRange', { normal: weapon.throwNormalRange, long: weapon.throwLongRange ?? weapon.throwNormalRange }))
     if (weapon.properties?.length) facts.push(weapon.properties.map(name).join(', '))
   }
-  if (item.weight !== undefined) facts.push(t('equipment.weight', { value: item.weight }))
+  // Weight is a fact about carrying a thing, and is left off where it is worn.
+  if (item.weight !== undefined && withWeight) facts.push(t('equipment.weight', { value: item.weight }))
   return facts.length === 0 ? undefined : facts.join(' · ')
 }
 

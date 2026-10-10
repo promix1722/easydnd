@@ -599,3 +599,17 @@ export function characterPath(id: string): string {
 export function autoEquip(id: string): Promise<void> {
   return request<void>(`${characterPath(id)}/auto-equip`, { method: 'POST' })
 }
+
+/** Who may read a character besides its owner and the groups it is shared with. */
+export interface Visibility {
+  /** Open to anybody signed in who has its link: a read of the sheet, never a write. */
+  public: boolean
+}
+
+export function getVisibility(id: string, signal?: AbortSignal): Promise<Visibility> {
+  return request<Visibility>(`${characterPath(id)}/visibility`, signal ? { signal } : {})
+}
+
+export function setVisibility(id: string, visible: boolean): Promise<Visibility> {
+  return request<Visibility>(`${characterPath(id)}/visibility`, { method: 'PUT', body: { public: visible } })
+}

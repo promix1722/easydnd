@@ -134,6 +134,12 @@ func (s *Service) readable(
 	if c.Owner == character.OwnerID(actor) {
 		return c, nil
 	}
+	// Its owner opened it: anybody signed in who has the link may read it,
+	// whatever table they do or do not sit at. Still only a read -- every
+	// write goes through the character service, which asks who owns it.
+	if c.Public {
+		return c, nil
+	}
 
 	groups, err := s.shared.GroupsSharing(ctx, id)
 	if err != nil {

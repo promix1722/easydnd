@@ -359,7 +359,7 @@ func TestProjectPutsEveryUntrainedSkillOnTheSheet(t *testing.T) {
 // all eighteen and the guard has to ask about the training level instead.
 func TestProjectGivesExpertiseOnlyToTrainedSkills(t *testing.T) {
 	var log Log
-	err := log.Append(
+	err := log.Append(oneQuestionEach(
 		Event{Type: EventInit, Changes: []Change{
 			{Path: "identity.name", Op: OpSet, Value: StringValue("Test")},
 			{Path: "abilities.str", Op: OpSet, Value: IntValue(16)},
@@ -379,7 +379,7 @@ func TestProjectGivesExpertiseOnlyToTrainedSkills(t *testing.T) {
 				}},
 			},
 		},
-	)
+	)...)
 	if err != nil {
 		t.Fatalf("Append() error = %v", err)
 	}

@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/pack"
@@ -160,11 +162,48 @@ func seedCharacter(ctx context.Context, chars *charuc.Service, owner character.O
 		set("identity.ruleset", character.SlugValue("2014")),
 	}})
 	events = append(events, build.events...)
-	// One entry at a time, so a refused answer names the entry it was in.
+	// One entry per selection, which is how the build screen writes a log and
+	// the only shape it can draw: a class is one entry, and each thing the
+	// class asked -- its skills, its expertise, each kit slot -- is its own,
+	// posted as the event its prompt says an answer must be. Written as one
+	// entry carrying five answers, the editor drew the rogue's whole first
+	// level as one box under Class and never showed an Equipment tab, because
+	// a box belongs to one tab and that one held three tabs' worth.
 	seq := created.Log.LastSeq()
-	for at, event := range events {
+	apply := func(event character.Event, what string) error {
 		if seq, err = chars.Apply(ctx, owner, created.ID, rules.DefaultLocale, seq, event); err != nil {
-			return character.Character{}, fmt.Errorf("seed %s, entry %d (%s %s): %w", name, at, event.Type, event.Ref.Canonical(), err)
+			return fmt.Errorf("seed %s, %s: %w", name, what, err)
+		}
+		return nil
+	}
+	for _, event := range events {
+		answers := event.Choices
+		if event.Type != character.EventLevel || len(answers) == 0 {
+			event.Choices = nil
+			if err := apply(event, event.Type.String()+" "+event.Ref.Canonical()); err != nil {
+				return character.Character{}, err
+			}
+		}
+		for len(answers) > 0 {
+			// A branch and the picks made inside it are one answer: the
+			// improvement's "two scores" and which two travel together.
+			group := 1
+			for group < len(answers) && strings.HasPrefix(string(answers[group].Prompt), string(answers[0].Prompt)+"/") {
+				group++
+			}
+			open, err := chars.Prompts(ctx, owner, created.ID, rules.DefaultLocale)
+			if err != nil {
+				return character.Character{}, err
+			}
+			at := slices.IndexFunc(open, func(p character.Prompt) bool { return p.Choice.Prompt == answers[0].Prompt })
+			if at < 0 {
+				return character.Character{}, fmt.Errorf("seed %s: nothing is asking %s", name, answers[0].Prompt)
+			}
+			asked := open[at].Event
+			if err := apply(character.Event{Type: asked.Type, Ref: asked.Ref, Level: asked.Level, Choices: answers[:group]}, string(answers[0].Prompt)); err != nil {
+				return character.Character{}, err
+			}
+			answers = answers[group:]
 		}
 	}
 	// Dressed the way a finished build is: nothing above equips anything.

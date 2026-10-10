@@ -1,11 +1,15 @@
+import { MemoryRouter } from 'react-router'
 import { fireEvent, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Sheet } from '@/lib/api'
-import { renderAt } from '@/test/render'
+import { renderAt as renderBare } from '@/test/render'
 import { setupUser } from '@/test/user'
 
 import { SheetBody } from './SheetBody'
+
+// A row's menu links to the item's page, so the sheet is always inside a router.
+const renderAt: typeof renderBare = (viewport, ui, ...rest) => renderBare(viewport, <MemoryRouter>{ui}</MemoryRouter>, ...rest)
 
 /**
  * The sheet body's own tests, rendered from props.
@@ -172,18 +176,23 @@ describe('the sheet body on a phone', () => {
   it('leaves every section open', () => {
     body('mobile')
 
-    expect.soft(document.querySelectorAll('[aria-expanded]')).toHaveLength(0)
+    // An item's menu is the one thing that opens; no section does.
+    expect.soft([...document.querySelectorAll('[aria-expanded]')].filter((each) => !each.getAttribute('aria-label')?.startsWith('Actions for '))).toHaveLength(0)
     expect.soft(screen.getByTitle('Strength')).toBeInTheDocument()
     expect.soft(screen.getByText('Hit points')).toBeInTheDocument()
     expect.soft(skillRows()).toHaveLength(6)
   })
 
-  // Pressing a tab is the only thing there is to press: the deck has no
-  // controls of its own on the slides, and the panels no longer carry a filter.
-  it('offers nothing to press but the tabs', () => {
+  // A sheet that is only being read offers one thing besides its tabs: each
+  // item's menu, which holds its Details page and nothing that changes it.
+  it('offers nothing to press but the tabs and each item\'s details', async () => {
     body('mobile')
 
-    expect(screen.queryAllByRole('button')).toHaveLength(0)
+    const buttons = screen.queryAllByRole('button')
+    expect(buttons.length).toBeGreaterThan(0)
+    expect(buttons.every((each) => each.getAttribute('aria-label')?.startsWith('Actions for '))).toBe(true)
+    await setupUser().click(buttons[0]!)
+    expect(within(await screen.findByRole('menu')).getAllByRole('menuitem').map((each) => each.textContent)).toEqual(['Details'])
   })
 
   // The same order as a wide screen: a sheet is read name first at every width.
@@ -302,7 +311,7 @@ describe('the panels that were sentences', () => {
 
     await user.click(screen.getByRole('button', { name: 'Actions for Chain Mail' }))
     const row = within(await screen.findByRole('menu'))
-    expect(row.getAllByRole('menuitem').map((each) => each.textContent)).toEqual(['Equip: Body', 'Equip: Custom', 'Drop'])
+    expect(row.getAllByRole('menuitem').map((each) => each.textContent)).toEqual(['Details', 'Equip: Body', 'Equip: Custom', 'Drop'])
     await user.click(row.getByRole('menuitem', { name: 'Equip: Body' }))
     expect(onEquipment).toHaveBeenLastCalledWith([
       { path: 'equipment.equipped', op: 'set', value: { kind: 'slugs', slugs: ['chain-mail'] } },
@@ -340,7 +349,8 @@ describe('the panels that were sentences', () => {
     renderAt('mobile', <SheetBody sheet={PACKED} />)
 
     expect(screen.getByText('Armor class: 16 · Strength required: 13 · Disadvantage on Stealth checks')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Chain Mail/ })).not.toBeInTheDocument()
+    // The row is not itself a control: the only button on it is its menu.
+    expect(screen.queryAllByRole('button', { name: /Chain Mail/ }).map((each) => each.getAttribute('aria-label'))).toEqual(['Actions for Chain Mail'])
   })
 
   it('uses localized catalogue names and a localized class-resource label', () => {

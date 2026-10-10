@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -68,7 +69,7 @@ func RogueLog(t *testing.T) Log {
 	at := time.Date(2026, time.August, 23, 14, 27, 51, 0, time.UTC)
 
 	var log Log
-	err := log.Append(
+	err := log.Append(oneQuestionEach(
 		Event{
 			Type: EventInit,
 			At:   at,
@@ -149,9 +150,39 @@ func RogueLog(t *testing.T) Log {
 			Level: 3,
 		},
 		Event{Type: EventLevel, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 3},
-	)
+	)...)
 	if err != nil {
 		t.Fatalf("Append() error = %v", err)
 	}
 	return log
+}
+
+// oneQuestionEach spells a fixture out the way a log has to be stored: an
+// entry that answers several questions becomes one entry per question, in
+// order, each carrying the first one's type, reference and level.
+//
+// The fixtures here were written before a log refused such an entry, and what
+// they transcribe -- "a half-elf, with these two bonuses and these two skills"
+// -- reads better as one literal than as three. So they stay written that
+// way and are split on the way in.
+func oneQuestionEach(events ...Event) []Event {
+	var out []Event
+	for _, event := range events {
+		answers := event.Choices
+		if len(answers) < 2 {
+			out = append(out, event)
+			continue
+		}
+		for len(answers) > 0 {
+			group := 1
+			for group < len(answers) && strings.HasPrefix(string(answers[group].Prompt), string(answers[0].Prompt)+"/") {
+				group++
+			}
+			each := event
+			each.Choices = answers[:group]
+			out = append(out, each)
+			answers = answers[group:]
+		}
+	}
+	return out
 }

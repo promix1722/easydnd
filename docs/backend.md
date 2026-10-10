@@ -86,6 +86,23 @@ make dev                            # Postgres, the API and the web client, one 
 make ports                          # what this worktree claimed, and where to open it
 ```
 
+### An opened character is read by its link
+
+A character has one switch its owner throws, `Public`, stored beside its
+folder rather than in its log -- who may look at a character is not a fact
+about the character. Open, **anybody signed in who has the link** may read the
+sheet through the same `/v1/shared/{id}/...` routes a group's read uses,
+whatever table they do or do not sit at; a guest session counts as signed in.
+Hidden, which is the default, the character is its owner's and its groups'.
+
+It is one line in one place: `readable` in `usecase/game/service.go`, the gate
+every shared read already passes, answers yes for a public character before it
+asks about groups. Nothing about writing changes -- every write goes through
+the character service, which asks who owns the character and nothing else. A
+hidden character and a missing one both answer 404, so a link says nothing
+about a character it does not open. Like the folder, the switch lives with the
+in-memory character and is gone when the process is.
+
 ### Seeded development party
 
 Every API startup with `env: development`, including `make dev` and
@@ -439,6 +456,7 @@ that.
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
 | `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
 | `POST` | `/v1/characters/{id}/auto-equip` | dress a character who has nothing on: one suitable backpack item per slot; 204, and a no-op once anything is equipped |
+| `GET` / `PUT` | `/v1/characters/{id}/visibility` | `{"public": bool}`: whether anybody signed in who has the character's link may read its sheet; owner only |
 | `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
 | `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
 | `PUT` | `/v1/characters/{id}/folder` | file it elsewhere |
@@ -607,6 +625,13 @@ the name and the scores were the two things a build screen could not offer to
 revisit. The log is **one entry per selection**; a selection with no entry of
 its own is a selection nobody can point at. See
 [dnd.md](dnd.md#log-and-events).
+
+That rule is refused, not just kept: an append or a revise whose entry selects
+something *and* answers a question, or answers more than one question, is a
+400 with the field rule `one-selection` (reason `field.answer.oneSelection`),
+and the log's own validation refuses the second case for every other writer.
+See [dnd.md](dnd.md#log-and-events). A batch may still carry several entries
+-- a race, then what the race asked -- in one request.
 
 So the scores are an ordinary open choice now. A freshly created character has
 `character/abilities` outstanding, answered with a `change` event carrying the

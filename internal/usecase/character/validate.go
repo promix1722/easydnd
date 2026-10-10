@@ -78,7 +78,7 @@ func validateEvent(
 			})
 		}
 	}
-	fields := ValidateChanges(cat, event, index)
+	fields := append(oneSelection(open, event, index), ValidateChanges(cat, event, index)...)
 
 	_, lost, err := surviving(log, cat, event, index)
 	if err != nil {
@@ -94,6 +94,51 @@ func validateEvent(
 		return types.NewFieldValidationError("some answers are not valid", fields...)
 	}
 	return nil
+}
+
+// oneSelection holds an entry to one selection: the rule the log is built on,
+// enforced rather than hoped for.
+//
+// "One entry per selection" is why a player can point at any decision and
+// change it, and why a build screen can draw a log at all -- a box is one
+// entry, and it belongs to one tab. An entry that picks a class *and* answers
+// that class's skills and three of its kit slots is five decisions nobody can
+// take apart: the editor drew it as one box under Class, and the tabs its
+// other answers belonged to were simply missing. Nothing refused such an
+// entry, so the development seeds wrote them for months.
+//
+// Two shapes are wrong, and both are refused here, for every writer:
+//
+//   - an entry that *selects* something -- a race, a class, a subclass, a
+//     background: an answer to "which one?" -- and also carries answers. What
+//     the selection opens is asked next, and answered in entries of its own;
+//   - an entry whose answers belong to more than one question. A branch and
+//     the picks made inside it are one question -- the improvement's "two
+//     scores" and which two -- so an answer whose prompt is nested under the
+//     first one's travels with it. Anything else is a second question.
+func oneSelection(open []domain.Prompt, event domain.Event, index int) []types.FieldError {
+	if len(event.Choices) == 0 {
+		return nil
+	}
+	refuse := func(prompt rules.Slug) types.FieldError {
+		return types.FieldError{
+			Field: fmt.Sprintf("events[%d].choices.%s", index, prompt), Rule: "one-selection",
+			Reason: "field.answer.oneSelection",
+		}
+	}
+	var fields []types.FieldError
+	// A prompt that names no entry of its own is asking which entry: the
+	// event answering it is the selection, and is the whole of the entry.
+	if asked, ok := answersAnOpenPrompt(open, event); ok && requiredRef(event) && asked.Event.Ref.IsZero() {
+		fields = append(fields, refuse(event.Choices[0].Prompt))
+	}
+	root := string(event.Choices[0].Prompt) + "/"
+	for _, answer := range event.Choices[1:] {
+		if !strings.HasPrefix(string(answer.Prompt), root) {
+			fields = append(fields, refuse(answer.Prompt))
+		}
+	}
+	return fields
 }
 
 // answerLoss is one answer that did not survive, and why.

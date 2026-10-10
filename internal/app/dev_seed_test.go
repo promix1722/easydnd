@@ -377,3 +377,25 @@ func TestDevelopmentSeedIsIdempotent(t *testing.T) {
 		t.Fatalf("master has %d characters after two seeds, want 1", len(mine))
 	}
 }
+
+// A seed is a log the build screen could have written, and the build screen
+// writes one entry per selection. An entry carrying several unrelated answers
+// -- a class with its skills and its three kit picks -- is drawn by the editor
+// as one box on one tab, with the tabs those answers belong to missing.
+func TestDevelopmentSeedsWriteOneEntryPerSelection(t *testing.T) {
+	a := developmentApp(t, config.EnvDevelopment)
+	for _, account := range []string{"master", "player1", "player2"} {
+		cookie, _ := devSignIn(t, a, account)
+		list := devDecode[characterapi.ListResponse](t, devRequest(t, a, "GET", "/v1/characters", nil, cookie))
+		for _, summary := range list.Characters {
+			c := devDecode[characterapi.Character](t, devRequest(t, a, "GET", "/v1/characters/"+summary.ID, nil, cookie))
+			for _, event := range c.Events {
+				for at := 1; at < len(event.Choices); at++ {
+					if !strings.HasPrefix(event.Choices[at].Prompt, event.Choices[0].Prompt+"/") {
+						t.Errorf("%s: one entry answers both %s and %s", summary.Name, event.Choices[0].Prompt, event.Choices[at].Prompt)
+					}
+				}
+			}
+		}
+	}
+}

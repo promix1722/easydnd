@@ -1047,10 +1047,42 @@ here, which is precedented (`features/games` imports `../groups/roles`).
 The header enforces it now. A game's trail is `Games / Thursday night`, and the
 group it is played at is a **subtitle, never a crumb** -- a trail reading
 `Groups / Wednesday Night / Thursday night` would say the opposite of this
-section and would disagree with the navbar, which lights Games. A *shared
-character* is the other way round, and consistently so: its trail is
-`Groups / <group> / <character>`, because a shared sheet really does hang off
-the group, which is what grants the read.
+section and would disagree with the navbar, which lights Games.
+
+**A character's trail runs through whose it is.** Somebody else's character,
+opened from a game or from a group's table, reads `Groups / <player> /
+<character>` -- the player first, because a character is somebody's and that
+is the fact a reader wants before its name. It used to be the group
+(`Groups / <group> / <character>`), which is how the read was *granted* rather
+than whose sheet it is. A player has no page yet, so that crumb is a name and
+not a link; `Page` draws a crumb with no `to` at the trail's size, dimmed.
+`getSharedOwner` in `lib/api/games.ts` finds the name from two requests the
+group's screens already make, since a sheet does not say who owns it.
+
+**Your own character opens as your own sheet.** `features/games/sheetPath`
+is the one place the group's table and a game's roster decide where a
+character links to: yours to `/characters/:id`, anybody else's to the group's
+read. A stale or hand-typed shared URL for your own character redirects the
+same way, so there is one view of a character you can change.
+
+**The owner opens or hides a character from its sheet.** The header's
+**Access** button (`features/character/VisibilityAction`) opens a sheet with
+one switch -- open to anyone with the link -- and, once it is on, the link
+itself as a field and a Copy button. The sheet says what "open" means before
+the switch is thrown: anybody *signed in* who has the link reads it, only the
+owner changes it, and the groups it is shared with read it either way. The
+link is `/shared/:character`, a route with no group in it because no group
+grants that read; it draws the same read-only sheet, without a player crumb,
+since with no group there is nobody to ask whose it is. Its items are at
+`/shared/:character/items/:slug`.
+
+**An item is a sub-page of its character**: `<character> / <item>` on your
+own sheet, `<player> / <character> / <item>` on a shared one, the character
+crumb leading back to the sheet the item was opened from.
+
+The trail is smaller on a phone than on a wide screen (`h4` against `h3`). It
+was the other way round while a trail was one name deep; two or three names at
+`h2` wrapped a 390px line twice.
 
 One wrinkle, recorded because it is a gap rather than a decision: that subtitle
 points at the group without naming it, because `GameDetail` carries `group_id`
@@ -1972,6 +2004,22 @@ sum -- die plus modifier, and the bonus to hit; a weapon that is only carried
 has no action, and shows the catalogue's die, type and range with no Hit.
 What is left of the old line -- properties, weight, thrown range -- stays a
 dimmed line beneath.
+
+**Every item has a page of its own**, `features/character/ItemScreen`, opened
+by **Details** in its menu -- on an inventory row and on a slot card alike, and
+on a sheet that is only being read, where Details is the menu's one entry. It
+is the spell page's shape: the icon beside the name, captioned facts (armor
+class, damage, range, properties, weight, cost, the book it is from), then the
+description. It reads the *character's* catalogue rather than the compendium's,
+since an item on a sheet is that sheet's pack's item, homebrew included; the
+two routes say whose -- `/characters/:id/items/:slug`, and the same under
+`/groups/:id/characters/:character` for a shared sheet -- and the menu links
+relatively, so it lands under whichever is showing.
+
+That page is also why a **slot card says less than it did**. A card is one
+icon tall: a weapon's shows its name and its three numbers and none of its
+other facts, and nothing worn says what it weighs -- weight is a fact about
+carrying a thing. Properties, weight and the rest are one press away.
 
 Every inventory row, on both tabs, is a **bubble** (`features/character/
 Inventory`): the name, the item's numbers on one line -- armor class, damage
@@ -4574,7 +4622,10 @@ out of the list rather than one more entry in it -- and the server is what
 orders it so (`customLast` in the catalogue handler; collections are otherwise
 in slug order, so a pack file's own order decides nothing). Builder options
 for equipment carry no artwork: a list of thirty weapons was thirty 66px tiles.
-The builder's **Finish** asks the server to dress the character
+The builder's **Finish** -- both of them, the header's and the last tab's
+Next, which share one `finish` handler because wiring only the first left a
+character finished by the second with nothing on -- asks the server to dress
+the character
 (`POST /v1/characters/{id}/auto-equip`) before it opens the sheet: a build
 equips nothing on its way, so that is the one moment a new character gets
 anything on, and a failure there costs an empty paperdoll rather than the way

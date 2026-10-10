@@ -18,17 +18,20 @@ import (
 
 func TestEquipmentCategoriesValidateAndProject(t *testing.T) {
 	b := build(t).add("fighter", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 1})
-	event := domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Choices: []domain.Answer{
-		answer("fighter/starting-equipment/main-hand", "longsword"),
-		answer("fighter/starting-equipment/off-hand", "longsword"),
-	}}
-	invalid := event
-	invalid.Choices = append([]domain.Answer{}, event.Choices...)
-	invalid.Choices[1] = answer("fighter/starting-equipment/off-hand", "plate-armor")
-	if _, err := b.s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq, invalid); err == nil {
+	kit := func(slot, item rules.Slug) domain.Event {
+		return domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Choices: []domain.Answer{answer("fighter/starting-equipment/"+slot, item)}}
+	}
+	// Two kit slots are two questions, and one entry answers one: the pair
+	// posted together is refused before either item is looked at.
+	both := kit("main-hand", "longsword")
+	both.Choices = append(both.Choices, answer("fighter/starting-equipment/off-hand", "longsword"))
+	if _, err := b.s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq, both); err == nil {
+		t.Fatal("accepted two questions answered in one entry")
+	}
+	if _, err := b.s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq, kit("off-hand", "plate-armor")); err == nil {
 		t.Fatal("accepted items outside martial-weapons")
 	}
-	b.add("two identical martial weapons", event)
+	b.add("a martial weapon", kit("main-hand", "longsword")).add("the same again", kit("off-hand", "longsword"))
 	cat, _ := b.s.Catalog(context.Background(), rules.DefaultLocale)
 	state, err := domain.Project(b.log(), cat)
 	if err != nil {

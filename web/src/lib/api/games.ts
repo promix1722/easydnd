@@ -1,6 +1,7 @@
 import type { ClassLevel, Sheet } from './characters'
 import { request } from './client'
 import { ApiError } from './errors'
+import { getGroup } from './groups'
 import type { GroupRole } from './groups'
 
 /**
@@ -53,6 +54,26 @@ export interface GameDetail {
   role: GroupRole
   characters: TableCharacter[]
   entries: GameEntry[]
+}
+
+/**
+ * Who a shared character belongs to: their id and the name the group knows
+ * them by. Null when either lookup fails or the character is not on the table
+ * -- a trail is worth drawing without its player.
+ *
+ * Two requests the group's screens already make, because a sheet does not say
+ * whose it is: the table lists each character's owner, and the group's roster
+ * names them.
+ */
+export async function getSharedOwner(group: string, character: string, signal?: AbortSignal): Promise<{ id: string; name: string } | null> {
+  try {
+    const [table, detail] = await Promise.all([listTable(group, signal), getGroup(group, signal)])
+    const owner = table.characters.find((each) => each.id === character)?.owner_id
+    const member = detail.members.find((each) => each.user_id === owner)
+    return owner === undefined ? null : { id: owner, name: member?.display_name ?? '' }
+  } catch {
+    return null
+  }
 }
 
 // The group's table.

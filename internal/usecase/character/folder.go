@@ -288,3 +288,12 @@ func validateFolderName(name string) (string, error) {
 	}
 	return name, nil
 }
+
+// SetPublic opens a character to anybody signed in who has its link, or hides
+// it again. Only its owner may: an unowned id is not found, as everywhere.
+func (s *Service) SetPublic(ctx context.Context, owner domain.OwnerID, id domain.ID, public bool) error {
+	if _, err := s.owned(ctx, owner, id); err != nil {
+		return err
+	}
+	return s.repo.SetPublic(ctx, id, public)
+}

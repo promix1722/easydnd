@@ -71,6 +71,8 @@ export type { Folder } from './folders'
 export {
   appendEvents,
   autoEquip,
+  getVisibility,
+  setVisibility,
   copyCharacter,
   createCharacter,
   deleteCharacter,
@@ -146,6 +148,7 @@ export {
   createGame,
   deleteGame,
   getGame,
+  getSharedOwner,
   getSharedSheet,
   listGames,
   listTable,

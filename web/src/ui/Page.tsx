@@ -253,10 +253,13 @@ export function Page({
                             this keeps it that way.
                           */}
                           {crumb.to === undefined ? (
-                            <>
+                            // A parent with nowhere to go -- a player, who has
+                            // no page yet -- is still a parent: the trail's
+                            // size and weight, dimmed because it is not a link.
+                            <Text span fz={HEADING_SIZE} fw={650} c="dimmed">
                               {isSection && <SectionIcon size={GLYPH} aria-hidden />}
                               <CrumbLabel label={crumb.label} size="lg" />
-                            </>
+                            </Text>
                           ) : (
                             <Anchor
                               component={Link}
@@ -348,12 +351,13 @@ const READY: PageState = { kind: 'ready' }
 /**
  * The trail's size, which is the heading's size, which is one size.
  *
- * Smaller on a wide screen than on a narrow one, and that is the way round it
- * sounds wrong: desktop is where the line carries the *most* -- a section, a
- * separator, a page name, a badge -- because the phone drops the section crumb
- * entirely. A responsive value rather than a branch, so the tree stays one tree.
+ * Smaller on a phone than on a wide screen. It used to be the other way round
+ * -- an `h2` on a phone, on the argument that the phone drops the section
+ * crumb and so carries less -- but a trail is now two or three names deep (a
+ * player, a character, an item) and at `h2` that wrapped a 390px line twice.
+ * A responsive value rather than a branch, so the tree stays one tree.
  */
-const HEADING_SIZE = { base: 'h2', md: 'h3' } as const
+const HEADING_SIZE = { base: 'h4', md: 'h3' } as const
 
 /**
  * One glyph size for the trail -- the navbar's, exactly.

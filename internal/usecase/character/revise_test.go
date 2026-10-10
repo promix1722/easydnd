@@ -67,24 +67,31 @@ func answer(prompt rules.Slug, picks ...rules.Slug) domain.Answer {
 //
 //	1 init        the name
 //	2 change      the six scores and the method
-//	3 race        half-elf, and the two ability bonuses it offers
-//	4 race        the two skills Skill Versatility grants
-//	5 background  acolyte
-//	6 class       rogue, and its four skill proficiencies
-//	7 level       the level-1 Expertise, doubling two of the acolyte's skills
-//	8 class       the rapier
-//	9 change      the declared level, which is what makes them third
-//	10 subclass   thief, due at third
+//	3 race        half-elf
+//	4 race        the two ability bonuses it offers
+//	5 race        the two skills Skill Versatility grants
+//	6 background  acolyte
+//	7 class       rogue
+//	8 class       its four skill proficiencies
+//	9 level       the level-1 Expertise, doubling two of the acolyte's skills
+//	10 class      the rapier
+//	11 change     the declared level, which is what makes them third
+//	12 subclass   thief, due at third
+//
+// A selection and what it opens are separate entries, and the service refuses
+// anything else: see oneSelection in validate.go.
 func rogue3(t *testing.T) *builder {
 	t.Helper()
 	return build(t).
-		add("race", domain.Event{Type: domain.EventRace, Ref: ref(rules.RefRace, "half-elf"),
+		add("race", domain.Event{Type: domain.EventRace, Ref: ref(rules.RefRace, "half-elf")}).
+		add("ability bonuses", domain.Event{Type: domain.EventRace, Ref: ref(rules.RefRace, "half-elf"),
 			Choices: []domain.Answer{answer("half-elf/ability-bonus/0", "dex", "con")}}).
 		add("skill versatility", domain.Event{Type: domain.EventRace, Ref: ref(rules.RefRace, "half-elf"),
 			Choices: []domain.Answer{
 				answer("skill-versatility/proficiency/0", "skill-acrobatics", "skill-investigation")}}).
 		add("background", domain.Event{Type: domain.EventBackground, Ref: ref(rules.RefBackground, "acolyte")}).
-		add("class", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
+		add("class", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1}).
+		add("skills", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
 			Choices: []domain.Answer{answer("rogue/proficiency/0",
 				"skill-perception", "skill-stealth", "skill-deception", "skill-persuasion")}}).
 		add("expertise", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "rogue"), Level: 1,
@@ -155,7 +162,7 @@ func TestReviseReplacesAnEntryWithNoDependants(t *testing.T) {
 	b := rogue3(t)
 	before := b.log()
 
-	out, dropped := revised(t, b, 8, &domain.Event{
+	out, dropped := revised(t, b, 10, &domain.Event{
 		Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
 		Choices: []domain.Answer{answer("rogue/starting-equipment/main-hand", "shortsword")},
 	})
@@ -166,13 +173,13 @@ func TestReviseReplacesAnEntryWithNoDependants(t *testing.T) {
 	if out.Len() != before.Len() {
 		t.Errorf("log length = %d, want %d", out.Len(), before.Len())
 	}
-	got := out.Events[7].Choices
+	got := out.Events[9].Choices
 	if len(got) != 1 || !slices.Contains(got[0].Picks, "shortsword") {
-		t.Errorf("entry 8 = %+v, want the shortsword", got)
+		t.Errorf("entry 10 = %+v, want the shortsword", got)
 	}
 	// And the entries around it are untouched, seq and all.
-	if out.Events[6].Seq != 7 || out.Events[8].Seq != 9 {
-		t.Errorf("neighbours renumbered: %d, %d", out.Events[6].Seq, out.Events[8].Seq)
+	if out.Events[8].Seq != 9 || out.Events[10].Seq != 11 {
+		t.Errorf("neighbours renumbered: %d, %d", out.Events[8].Seq, out.Events[10].Seq)
 	}
 }
 
@@ -225,7 +232,8 @@ func TestReviseReturnsDroppedChoicesOutstandingUnderTheirGroup(t *testing.T) {
 		add("subrace", domain.Event{Type: domain.EventSubrace, Ref: ref(rules.RefSubrace, "high-elf")}).
 		add("cantrip", domain.Event{Type: domain.EventRace, Ref: ref(rules.RefRace, "elf"),
 			Choices: []domain.Answer{answer("high-elf-cantrip/spell/0", "light")}}).
-		add("class", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
+		add("class", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1}).
+		add("skills", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
 			Choices: []domain.Answer{answer("rogue/proficiency/0",
 				"skill-acrobatics", "skill-stealth", "skill-deception", "skill-persuasion")}})
 
@@ -236,7 +244,6 @@ func TestReviseReturnsDroppedChoicesOutstandingUnderTheirGroup(t *testing.T) {
 
 	out, dropped := revised(t, b, 3, &domain.Event{
 		Type: domain.EventRace, Ref: ref(rules.RefRace, "half-elf"),
-		Choices: []domain.Answer{answer("half-elf/ability-bonus/0", "dex", "con")},
 	})
 
 	cantrip, ok := droppedAt(dropped, cantripSeq)
@@ -303,7 +310,7 @@ func TestReviseKeepsAnEntryThatLostAnAnswer(t *testing.T) {
 		Type: domain.EventRace, Ref: ref(rules.RefRace, "elf"),
 	})
 
-	class, ok := droppedAt(dropped, 6)
+	class, ok := droppedAt(dropped, 8)
 	if !ok {
 		t.Fatalf("dropped = %+v, want the class entry's lost answer reported", dropped)
 	}
@@ -354,14 +361,17 @@ func TestReviseKeepsAnEntryThatLostAnAnswer(t *testing.T) {
 		t.Errorf("group = %s, want class", skills.Group)
 	}
 
-	// One entry did go, and it is the right one: the half-elf's own trait
-	// answer, which an elf poses no prompt for. Exactly one -- the class,
-	// the levels, the subclass and the background all stand.
-	if orphan, ok := droppedAt(dropped, 4); !ok || orphan.Reason != charuc.DropNotOffered {
-		t.Errorf("dropped = %+v, want the half-elf trait entry at 4 as not-offered", dropped)
+	// Two entries did go, and they are the right ones: the half-elf's two
+	// own answers -- its ability bonuses and its Skill Versatility -- which an
+	// elf poses no prompt for. Exactly those: the class, the levels, the
+	// subclass and the background all stand.
+	for _, seq := range []int{4, 5} {
+		if orphan, ok := droppedAt(dropped, seq); !ok || orphan.Reason != charuc.DropNotOffered {
+			t.Errorf("dropped = %+v, want the half-elf's entry at %d as not-offered", dropped, seq)
+		}
 	}
-	if out.Len() != before.Len()-1 {
-		t.Errorf("log length = %d, want %d", out.Len(), before.Len()-1)
+	if out.Len() != before.Len()-2 {
+		t.Errorf("log length = %d, want %d", out.Len(), before.Len()-2)
 	}
 }
 
@@ -392,12 +402,12 @@ func TestAStalePreviewCannotBeCommitted(t *testing.T) {
 func TestReviseLowersTheDeclaredLevel(t *testing.T) {
 	b := rogue3(t)
 
-	out, dropped := revised(t, b, 9, &domain.Event{
+	out, dropped := revised(t, b, 11, &domain.Event{
 		Type:    domain.EventChange,
 		Changes: []domain.Change{{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(2)}},
 	})
 
-	if d, ok := droppedAt(dropped, 10); !ok || d.Reason != charuc.DropNotOffered {
+	if d, ok := droppedAt(dropped, 12); !ok || d.Reason != charuc.DropNotOffered {
 		t.Errorf("dropped = %+v, want the subclass gone as not-offered", dropped)
 	}
 
@@ -415,8 +425,8 @@ func TestReviseLowersTheDeclaredLevel(t *testing.T) {
 	}
 	// Everything before the revised entry is untouched and renumbered
 	// contiguously, which is what Rebuild is for.
-	if out.Len() != 9 {
-		t.Errorf("log = %d entries, want 9", out.Len())
+	if out.Len() != 11 {
+		t.Errorf("log = %d entries, want 11", out.Len())
 	}
 }
 
@@ -442,8 +452,8 @@ func TestSourceSurvivesAReplace(t *testing.T) {
 	}
 	// And the values are the ones a client groups tabs by, not "none".
 	want := []domain.PromptGroup{
-		domain.GroupIdentity, domain.GroupAbilities, domain.GroupRace, domain.GroupRace,
-		domain.GroupBackground, domain.GroupClass, domain.GroupClass, domain.GroupClass,
+		domain.GroupIdentity, domain.GroupAbilities, domain.GroupRace, domain.GroupRace, domain.GroupRace,
+		domain.GroupBackground, domain.GroupClass, domain.GroupClass, domain.GroupClass, domain.GroupClass,
 		domain.GroupIdentity, domain.GroupClass,
 	}
 	for i, group := range want {

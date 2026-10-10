@@ -22,6 +22,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/types"
 )
@@ -62,6 +63,13 @@ type Character struct {
 	Owner  OwnerID
 	Folder FolderID
 	Log    Log
+
+	// Public opens the character to anybody signed in who has its link: a
+	// read of the sheet, never a write. False -- the default -- leaves it to
+	// its owner and to the groups it is shared with. It is the owner's switch
+	// and not part of the log: who may look at a character is not a fact
+	// about the character.
+	Public bool
 }
 
 // Summary is the short form used for listings, where projecting every
@@ -224,6 +232,19 @@ func (l Log) Validate() error {
 			}
 			initSeen = true
 		}
+		// One entry, one question. A branch and the picks made inside it are
+		// one question -- the nested prompt's id is under its parent's -- and
+		// anything else in the same entry is a second decision nobody can
+		// point at or change apart from the first. The service refuses such
+		// an entry with a field error (see oneSelection there); this is the
+		// same rule for every writer that does not go through it -- an
+		// import, a migration, a repository handed a whole log -- so that no
+		// stored log can hold one.
+		for at := 1; at < len(e.Choices); at++ {
+			if !strings.HasPrefix(string(e.Choices[at].Prompt), string(e.Choices[0].Prompt)+"/") {
+				return types.NewValidationError("event %d answers both %s and %s: one entry answers one question", e.Seq, e.Choices[0].Prompt, e.Choices[at].Prompt)
+			}
+		}
 	}
 	if len(l.Events) > 0 && !initSeen {
 		return types.NewValidationError("log does not begin with an init event")
@@ -277,6 +298,10 @@ type Repository interface {
 	// caller owns it are authorization questions, and those are settled in
 	// the application layer where every other one is.
 	SetFolder(ctx context.Context, id ID, folder FolderID) error
+
+	// SetPublic opens or hides a character. Like SetFolder it changes
+	// nothing in the log and verifies nothing about the caller.
+	SetPublic(ctx context.Context, id ID, public bool) error
 
 	// Append adds events to a character's log, but only if the stored log
 	// still ends at expectedSeq. Implementations report a

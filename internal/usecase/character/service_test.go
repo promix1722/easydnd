@@ -268,18 +268,19 @@ func TestApplyAdvancesTheCharacter(t *testing.T) {
 	s := newService(t)
 	c := mustCreateScored(t, s)
 
-	seq, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, 2, domain.Event{
-		Type: domain.EventRace,
-		Ref:  rules.NewRef(rules.RefRace, "half-elf"),
-		Choices: []domain.Answer{
+	// The race, and then what the race asked: two selections, two entries,
+	// which one request may carry as a batch.
+	halfElf := rules.NewRef(rules.RefRace, "half-elf")
+	seq, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, 2,
+		domain.Event{Type: domain.EventRace, Ref: halfElf},
+		domain.Event{Type: domain.EventRace, Ref: halfElf, Choices: []domain.Answer{
 			{Prompt: "half-elf/ability-bonus/0", Picks: []rules.Slug{"dex", "con"}},
-		},
-	})
+		}})
 	if err != nil {
 		t.Fatalf("Apply() error = %v", err)
 	}
-	if seq != 3 {
-		t.Errorf("sequence = %d, want 3", seq)
+	if seq != 4 {
+		t.Errorf("sequence = %d, want 4", seq)
 	}
 
 	sheet, err := s.Sheet(ctx, testOwner, c.ID, rules.DefaultLocale)
@@ -563,5 +564,22 @@ func TestAbilityPromptCarriesTheClassPriority(t *testing.T) {
 	}
 	if got := recommended(); len(got) != 6 || got[0] != "int" || got[5] != "str" {
 		t.Fatalf("wizard priority = %v", got)
+	}
+}
+
+// One entry is one selection, and the service refuses anything else -- so no
+// writer can produce the log the editor cannot draw: a race or a class chosen
+// *and* answered in the same entry.
+func TestApplyRefusesASelectionThatCarriesAnswers(t *testing.T) {
+	ctx := context.Background()
+	s := newService(t)
+	c := mustCreateScored(t, s)
+	_, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, c.Log.LastSeq(), domain.Event{
+		Type: domain.EventRace, Ref: rules.NewRef(rules.RefRace, "half-elf"),
+		Choices: []domain.Answer{{Prompt: "half-elf/ability-bonus/0", Picks: []rules.Slug{"dex", "con"}}},
+	})
+	var fields *types.FieldValidationError
+	if !errors.As(err, &fields) || len(fields.Fields) == 0 || fields.Fields[0].Rule != "one-selection" {
+		t.Fatalf("Apply() error = %v, want a one-selection field error", err)
 	}
 }

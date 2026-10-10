@@ -65,7 +65,7 @@ export interface Section {
  *   or sitting.
  */
 export const SECTIONS: readonly Section[] = [
-  { to: '/', label: 'section.characters', icon: IconUsers, owns: ['/characters'] },
+  { to: '/', label: 'section.characters', icon: IconUsers, owns: ['/characters', '/shared'] },
   { to: '/ai-wizard', label: 'section.aiWizard', icon: IconSparkles, owns: ['/ai-wizard'] },
   { to: '/groups', label: 'section.groups', icon: IconShield, owns: ['/groups'] },
   { to: '/games', label: 'section.games', icon: IconDice5, owns: ['/games'] },

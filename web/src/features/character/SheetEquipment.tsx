@@ -4,7 +4,7 @@ import type { Change, Equipment, Item, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import { Box, Grid, Group, ITEM_ICON_SIZE, ItemIcon, Markdown, Menu, Panel, Paper, Stack, Text } from '@/ui'
 
-import { InventoryRows, ItemMenu, Purse } from './Inventory'
+import { InventoryRows, ItemDetails, ItemMenu, Purse } from './Inventory'
 import { itemFacts, weaponNumbers } from './options'
 import { useSlotLabels } from './slotLabels'
 import { WeaponStats } from './WeaponStats'
@@ -66,7 +66,10 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
             const item = items.get(slug)
             const word = (ref: string) => lookup(item?.weapon?.properties?.includes(ref) ? 'weapon-properties' : 'damage-types', ref)
             const numbers = weaponNumbers(t, item, actions, word)
-            const facts = item === undefined ? undefined : itemFacts(t, item, word, numbers !== undefined)
+            // A card is one icon tall. A weapon's three numbers take what is left
+            // beside its name, so its other facts are on its page, not here; and
+            // nothing worn says what it weighs.
+            const facts = item === undefined || numbers !== undefined ? undefined : itemFacts(t, item, word, false, false)
             const from = slotOfCard(each)
             const slot = from === ELSEWHERE ? undefined : from
             return <Group key={`${slug}:${at}`} gap={6} wrap="nowrap" align="flex-start">
@@ -74,13 +77,17 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
               <Stack gap={2} mah={ITEM_ICON_SIZE} style={{ minWidth: 0, flex: 1, overflow: 'hidden', overflowWrap: 'anywhere' }}>
                 <Text size="sm" fw={500} truncate style={{ flexShrink: 0 }}>{name(slug)}</Text>
                 {numbers !== undefined && <WeaponStats inline {...numbers} />}
-                {facts !== undefined && <Text size="xs" c="dimmed" lineClamp={numbers === undefined ? 2 : 1} style={{ flexShrink: 0 }}>{facts}</Text>}
+                {facts !== undefined && <Text size="xs" c="dimmed" lineClamp={2} style={{ flexShrink: 0 }}>{facts}</Text>}
                 {!!item?.desc?.length && <Text component="div" size="xs" lineClamp={1} style={{ flexShrink: 0 }}><Markdown size="xs" inline>{item.desc[0] ?? ''}</Markdown></Text>}
               </Stack>
-              {onChange && <ItemMenu name={name(slug)} disabled={disabled}>
-                <Menu.Item onClick={() => onChange(unequip(equipment, slug, slot))}>{t('equipment.takeOffNamed', { name: name(slug) })}</Menu.Item>
-                <Menu.Item color="red" onClick={() => onChange(discard(equipment, slug, slot))}>{t('equipment.drop')}</Menu.Item>
-              </ItemMenu>}
+              {/* Every worn item opens its page; taking it off or dropping it is the owner's. */}
+              <ItemMenu name={name(slug)}>
+                <ItemDetails slug={slug} />
+                {onChange && !disabled && <>
+                  <Menu.Item onClick={() => onChange(unequip(equipment, slug, slot))}>{t('equipment.takeOffNamed', { name: name(slug) })}</Menu.Item>
+                  <Menu.Item color="red" onClick={() => onChange(discard(equipment, slug, slot))}>{t('equipment.drop')}</Menu.Item>
+                </>}
+              </ItemMenu>
             </Group>
           })}
       </Stack>

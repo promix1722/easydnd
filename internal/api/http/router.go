@@ -279,6 +279,8 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// invitation to patch a name or a level, and those only the
 			// log can change.
 			authed.PUT("/characters/:id/folder", h.Character.SetFolder)
+			authed.GET("/characters/:id/visibility", h.Character.GetVisibility)
+			authed.PUT("/characters/:id/visibility", h.Character.SetVisibility)
 			authed.POST("/characters/:id/copy", h.Character.Copy)
 
 			// Folders: where one account files its own characters. The
