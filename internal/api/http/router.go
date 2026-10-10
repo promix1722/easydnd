@@ -294,6 +294,14 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.PUT("/characters/:id/visibility", h.Character.SetVisibility)
 			authed.POST("/characters/:id/copy", h.Character.Copy)
 
+			// A copy for somebody else, by link. Minting hangs off the
+			// character; redeeming is a tree of its own for the reason
+			// /invites is -- the holder cannot address a character that is
+			// not theirs, and the token goes in the body, not the URL.
+			authed.POST("/characters/:id/copy-links", h.Character.CreateCopyLink)
+			authed.POST("/copy-links/preview", h.Character.PreviewCopyLink)
+			authed.POST("/copy-links/accept", h.Character.AcceptCopyLink)
+
 			// Folders: where one account files its own characters. The
 			// neighbouring word is taken and this is not it -- a folder
 			// has one owner and shares nothing. Deleting one deletes the

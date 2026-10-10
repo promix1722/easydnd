@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { classLine } from '@/domain'
 import {
   copyCharacter,
+  createCopyLink,
   createFolder,
   deleteCharacter,
   deleteFolder,
@@ -15,6 +16,7 @@ import {
   fieldMessage,
 } from '@/lib/api'
 import type { Folder, Summary } from '@/lib/api'
+import { copyText } from '@/lib/clipboard'
 import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
@@ -29,6 +31,7 @@ import { Avatar, characterAvatar,
   IconCopy,
   IconFolder,
   IconFolderPlus,
+  IconSend,
   IconTrash,
   ModalSheet,
   Page,
@@ -354,8 +357,13 @@ function useCharacterActions(folders: Folder[], onChanged: () => void) {
   const [target, setTarget] = useState('')
   const [deleting, setDeleting] = useState<Summary | null>(null)
 
+  const [sending, setSending] = useState<Summary | null>(null)
+  const [link, setLink] = useState('')
+  const [copied, setCopied] = useState<boolean | null>(null)
+
   const move = useAction(moveCharacter)
   const copy = useAction(copyCharacter)
+  const mint = useAction(createCopyLink)
   const remove = useAction(deleteCharacter)
 
   // Every action carries its row's name, which `DataList` appends: a list of
@@ -382,6 +390,20 @@ function useCharacterActions(folders: Folder[], onChanged: () => void) {
       },
     },
     {
+      key: 'send',
+      label: t('characters.sendCopy'),
+      icon: <IconSend size={ACTION_ICON_SIZE} />,
+      onClick: () => {
+        setLink('')
+        setCopied(null)
+        setSending(character)
+        // The token rides in the fragment, which no browser sends to a server.
+        void mint.run(character.id).then((made) => {
+          if (made !== null) setLink(`${window.location.origin}/characters/receive#${made.token}`)
+        })
+      },
+    },
+    {
       key: 'delete',
       label: t('common.delete'),
       color: 'red' as const,
@@ -391,6 +413,7 @@ function useCharacterActions(folders: Folder[], onChanged: () => void) {
   ]
 
   const movingLabel = moving === null ? '' : moving.name || t('characters.thisCharacter')
+  const sendingLabel = sending === null ? '' : sending.name || t('characters.thisCharacter')
   const deletingLabel = deleting === null ? '' : deleting.name || t('characters.thisCharacter')
 
   const sheets = (
@@ -428,6 +451,37 @@ function useCharacterActions(folders: Folder[], onChanged: () => void) {
               }}
             >
               {t('characters.move')}
+            </Button>
+          </Group>
+        </Stack>
+      </ModalSheet>
+
+      <ModalSheet
+        opened={sending !== null}
+        onClose={() => setSending(null)}
+        title={t('sendCopy.title', { name: sendingLabel })}
+      >
+        <Stack gap="md">
+          <Text size="sm">{t('sendCopy.bargain')}</Text>
+          {mint.error !== null && <Alert color="red">{mint.error}</Alert>}
+          {/* A field as well as a button: copying needs a secure context, and
+              a link that can be selected is still a link that can be sent. */}
+          <TextInput
+            readOnly
+            aria-label={t('sendCopy.link')}
+            value={link}
+            disabled={link === ''}
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          {copied === false && <Text size="sm" c="dimmed">{t('invite.clipboard.detail')}</Text>}
+          <Group justify="flex-end">
+            <Button
+              variant={copied ? 'light' : 'filled'}
+              loading={mint.pending}
+              disabled={link === ''}
+              onClick={() => void copyText(link).then(setCopied)}
+            >
+              {copied ? t('invite.copied') : t('invite.copyLink')}
             </Button>
           </Group>
         </Stack>

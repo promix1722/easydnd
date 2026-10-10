@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -179,6 +180,27 @@ func (s *Service) CopyCharacter(
 	if err != nil {
 		return domain.Character{}, err
 	}
+	if target.IsZero() {
+		target = source.Folder
+	}
+	return s.copyTo(ctx, source, cat, owner, target, " (copy)")
+}
+
+// copyTo writes a duplicate of source into one of to's folders, the zero
+// folder meaning their default. suffix is appended to the copy's name, and an
+// empty one leaves the name alone.
+//
+// The pack check is against to, not against the source's owner: a copy is a
+// new character, and nobody gets one built on rules they could not have
+// chosen themselves.
+func (s *Service) copyTo(
+	ctx context.Context,
+	source domain.Character,
+	cat *catalog.Catalog,
+	to domain.OwnerID,
+	target domain.FolderID,
+	suffix string,
+) (domain.Character, error) {
 	if s.packAccess != nil {
 		retained := pack.Lock{}
 		if private, ok := s.catalog.(interface {
@@ -186,19 +208,16 @@ func (s *Service) CopyCharacter(
 		}); ok {
 			retained = private.PrivateReleases(ctx, source.Log.RulesLock())
 		}
-		if err := s.packAccess.AuthorizeLock(ctx, user.ID(owner), source.Log.RulesLock(), retained); err != nil {
+		if err := s.packAccess.AuthorizeLock(ctx, user.ID(to), source.Log.RulesLock(), retained); err != nil {
 			return domain.Character{}, err
 		}
 	}
-	if target.IsZero() {
-		target = source.Folder
-	}
-	target, err = s.ResolveFolder(ctx, owner, target)
+	target, err := s.ResolveFolder(ctx, to, target)
 	if err != nil {
 		return domain.Character{}, err
 	}
 
-	created, err := s.repo.Create(ctx, owner, target)
+	created, err := s.repo.Create(ctx, to, target)
 	if err != nil {
 		return domain.Character{}, err
 	}
@@ -211,13 +230,14 @@ func (s *Service) CopyCharacter(
 		e.Seq = 0
 		events = append(events, e)
 	}
-	if name := domain.Summarize(id, owner, source.Folder, source.Log, cat).Name; name != "" {
+	name := domain.Summarize(source.ID, source.Owner, source.Folder, source.Log, cat).Name
+	if name != "" && suffix != "" {
 		events = append(events, domain.Event{
 			Type: domain.EventChange,
 			Changes: []domain.Change{{
 				Path:  "identity.name",
 				Op:    domain.OpSet,
-				Value: domain.StringValue(name + " (copy)"),
+				Value: domain.StringValue(name + suffix),
 			}},
 		})
 	}

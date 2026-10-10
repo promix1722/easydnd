@@ -1278,10 +1278,12 @@ is precisely the moment the row leaves for another folder's table. It survived
 only because the reload happened to arrive after the dialog had already closed
 itself.
 
-`useCharacterActions` is what replaced it: a hook that returns the three actions
-to hand to each folder's list and the two sheets to render once at the bottom of
-the screen, beside the folder dialogs that were already there. Copy has no
-dialog, because it asks nothing.
+`useCharacterActions` is what replaced it: a hook that returns the four actions
+to hand to each folder's list and the three sheets to render once at the bottom
+of the screen, beside the folder dialogs that were already there. Copy has no
+dialog, because it asks nothing. **Send a copy** has one because it has
+something to show: the link is minted as the sheet opens and drawn as a
+selectable field beside its Copy button, for the reason the invite link is.
 
 ## The build screen is a loop, not a wizard
 
@@ -2624,6 +2626,9 @@ carry it and the least durable one, and three things used to lose it:
    search and the fragment, so an invitation link came back as a bare
    `/groups/join`. `LoginScreen` now rebuilds `pathname + search + hash`, and
    ignores a `from` that is not a path of ours -- history is attacker-reachable.
+   Its "already signed in" branch goes to that same `from`, not to `/`: that
+   render and the post-sign-in `navigate` both fire when a sign-in succeeds,
+   and when they disagreed the root won, leaving the invitation behind.
 3. **Google leaves the origin entirely.** Nothing in a URL survives that, and
    it cannot: `currentPath()` sends `pathname + search`, and the server refuses
    any `return_to` containing `#` outright (`SafeReturnTo`). So the token is
@@ -2637,6 +2642,13 @@ followed a link somebody sent them on purpose, and a dragon with no explanation
 does not tell them the thing they came for is one button away. It cannot name
 the group -- previewing needs a session, and opening that up so a stranger
 could read a group's name off a link is not a trade worth one sentence.
+
+**A copy link is the second such link**, and it takes the same road rather
+than a parallel one: `/characters/receive#<token>` is `routes/ReceiveRoute.tsx`,
+the token is stashed by the same `inviteToken.ts` under a key of its own (so it
+and a pending group invitation cannot overwrite each other), and the signed-out
+visitor gets `InvitePrompt` with its `character` wording. `ReceiveScreen` shows
+the character's name and class line, and accepting lands on the new sheet.
 
 ### Copying the invite link
 

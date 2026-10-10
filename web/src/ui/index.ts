@@ -47,6 +47,7 @@ export {
   IconPencil,
   IconPaperclip,
   IconPlus,
+  IconSend,
   IconShield,
   IconTrash,
   IconUserCircle,

@@ -584,6 +584,43 @@ export function copyCharacter(id: string, folder?: string): Promise<CreateRespon
   })
 }
 
+/** A minted copy link: the token to put in a URL fragment, and when it stops working. */
+export interface CopyLink {
+  token: string
+  expires_at: string
+}
+
+/** What the holder of a copy link is shown before taking the copy. */
+export interface CopyLinkPreview {
+  name: string
+  level: number
+  classes?: ClassLevel[]
+}
+
+/**
+ * Mints a link whose holder may take their own copy of a character.
+ *
+ * Reusable for a day and not cancellable short of deleting the character --
+ * what it gives away is a copy, so the original is never at stake.
+ */
+export function createCopyLink(id: string): Promise<CopyLink> {
+  return request<CopyLink>(`${characterPath(id)}/copy-links`, { method: 'POST' })
+}
+
+/** Reads a copy link without taking it. The token goes in the body; see `previewInvite`. */
+export function previewCopyLink(token: string, signal?: AbortSignal): Promise<CopyLinkPreview> {
+  return request<CopyLinkPreview>('/copy-links/preview', {
+    method: 'POST',
+    body: { token },
+    ...(signal ? { signal } : {}),
+  })
+}
+
+/** Takes the copy: a new character of the caller's own, in their default folder. */
+export function acceptCopyLink(token: string): Promise<CreateResponse> {
+  return request<CreateResponse>('/copy-links/accept', { method: 'POST', body: { token } })
+}
+
 /** Atomically save edits to several past choices together with new answers. */
 export function reviseEvents(id: string, expectedSeq: number, expectedRevision: number,
   replacements: { seq: number; event: CharacterEvent }[], events: CharacterEvent[], dryRun = false,

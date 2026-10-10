@@ -16,6 +16,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	domain "github.com/promix1722/easydnd/internal/domain/auth"
+	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/group"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
@@ -30,6 +31,7 @@ const (
 	kindSession  = "session"
 	kindCeremony = "ceremony"
 	kindInvite   = "invite"
+	kindCopyLink = "copylink"
 )
 
 // signingMethod is pinned rather than read from the token header. Trusting the
@@ -50,7 +52,9 @@ type claims struct {
 
 	// GroupRole and Inviter carry an invite. The group itself is the
 	// Subject, because that is what a registered claim is for and one id in
-	// two places is one id that can disagree with itself.
+	// two places is one id that can disagree with itself. A copy link uses
+	// the same pair of slots: the character is the Subject and its owner the
+	// Inviter.
 	GroupRole string `json:"rol,omitempty"`
 	Inviter   string `json:"inv,omitempty"`
 }
@@ -230,8 +234,44 @@ func (s *Signer) VerifyInvite(token string, now time.Time) (group.Invite, error)
 	}, nil
 }
 
+// SignCopyLink renders a copy link as a token. The kind claim is what stops a
+// group invite, signed with the same key, from being redeemed as one.
+func (s *Signer) SignCopyLink(l character.CopyLink) (string, error) {
+	if l.Character == "" || l.From == "" {
+		return "", types.NewServerError("sign copy link: empty character or owner id")
+	}
+	return s.sign(claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   string(l.Character),
+			IssuedAt:  jwt.NewNumericDate(l.IssuedAt),
+			ExpiresAt: jwt.NewNumericDate(l.ExpiresAt),
+		},
+		Kind:    kindCopyLink,
+		Inviter: string(l.From),
+	})
+}
+
+// VerifyCopyLink checks a token and returns the copy link it carries.
+func (s *Signer) VerifyCopyLink(token string, now time.Time) (character.CopyLink, error) {
+	parsed, err := s.parse(token, kindCopyLink, now)
+	if err != nil {
+		return character.CopyLink{}, err
+	}
+	if parsed.Subject == "" || parsed.Inviter == "" || parsed.ExpiresAt == nil || parsed.IssuedAt == nil {
+		return character.CopyLink{}, types.NewUnauthenticatedError("copy link token is not valid").
+			Because("invite.invalid")
+	}
+	return character.CopyLink{
+		Character: character.ID(parsed.Subject),
+		From:      character.OwnerID(parsed.Inviter),
+		IssuedAt:  parsed.IssuedAt.Time,
+		ExpiresAt: parsed.ExpiresAt.Time,
+	}, nil
+}
+
 // Compile-time proof that this adapter satisfies the ports.
 var (
-	_ domain.Signer = (*Signer)(nil)
-	_ group.Inviter = (*Signer)(nil)
+	_ domain.Signer       = (*Signer)(nil)
+	_ group.Inviter       = (*Signer)(nil)
+	_ character.CopyLinks = (*Signer)(nil)
 )

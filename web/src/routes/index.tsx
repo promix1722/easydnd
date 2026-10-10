@@ -18,6 +18,7 @@ import { RootGate } from '@/shell/RootGate'
 
 import { HomeRoute } from './HomeRoute'
 import { JoinRoute } from './JoinRoute'
+import { ReceiveRoute } from './ReceiveRoute'
 import { AdminOnly } from './AdminOnly'
 import { NotFoundPage } from './NotFoundPage'
 import { Private } from './Private'
@@ -80,6 +81,9 @@ export const router = createBrowserRouter([
       },
       { path: 'characters/import', element: <LegacyImportRedirect /> },
       { path: 'characters/import/:sessionId/:importView?', element: <LegacyImportRedirect /> },
+      // Not `Private`, and ahead of `characters/:id`, for the reasons
+      // `groups/join` is both.
+      { path: 'characters/receive', element: <ReceiveRoute /> },
       {
         path: 'characters/:id',
         element: (

@@ -48,6 +48,11 @@ about a game, not the way in to one. The characters shared with a group and
 the games run from them are in PostgreSQL beside it. See
 [Ownership, and membership](docs/backend.md#ownership-and-membership).
 
+A character changes hands by **copy**: its owner sends a link, good for 24
+hours, and whoever opens it gets their own copy while the original stays where
+it is. See
+[Giving a character to somebody](docs/backend.md#giving-a-character-to-somebody-is-giving-them-a-copy).
+
 A **group**, a **game** and a **folder** are different things and the words are
 not interchangeable. A group is people, shared, with ranks. A game is one
 sitting at that group's table, with the characters a DM seats at it -- never

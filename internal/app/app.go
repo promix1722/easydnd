@@ -212,6 +212,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		characterRepo, folderRepo, packSource, gameService,
 		log.With("usecase", "character"))
 	characterService.SetPackAccess(packService)
+	characterService.SetCopyLinks(signer)
 	authService := authuc.NewService(userRepo, ceremony, signer, federations, authuc.Config{
 		SessionTTL:      cfg.Auth.SessionTTL,
 		GuestSessionTTL: cfg.Auth.GuestSessionTTL,

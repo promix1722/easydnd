@@ -525,6 +525,9 @@ that.
 | `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
 | `PUT` | `/v1/characters/{id}/folder` | file it elsewhere |
 | `POST` | `/v1/characters/{id}/copy` | duplicate it, log and all |
+| `POST` | `/v1/characters/{id}/copy-links` | mint a link whose holder may take a copy; owner only |
+| `POST` | `/v1/copy-links/preview` | read a copy link: the character's name and class line |
+| `POST` | `/v1/copy-links/accept` | take the copy, into your default folder |
 | `GET` | `/v1/folders` | the account's folders, default first, then in their owner's order |
 | `POST` | `/v1/folders` | create: a name |
 | `PUT` | `/v1/folders/order` | the whole order: every movable folder, in sequence |
@@ -608,7 +611,8 @@ it** -- the token carries the id, so there is no addressed parent to hang them
 off. Both take the token in the **body** and never in the URL: our own access
 log records the route pattern, but nginx in front of it logs the whole request
 line, and an invite token is usable for a day. The browser keeps it in a URL
-*fragment*, which is never sent to any server at all.
+*fragment*, which is never sent to any server at all. `/v1/copy-links` is the
+same shape for the same two reasons.
 
 `GET /v1/characters` takes `?folder=` to narrow the listing, and `POST
 /v1/characters` takes a `folder` in the body.
@@ -1347,6 +1351,28 @@ would sign out the perfectly signed-in person who clicked it. `openInvite`
 translates it into a `*types.ValidationError` -- a 400 -- and there is a test
 for it.
 
+### Giving a character to somebody is giving them a copy
+
+There is one way to hand a character to another person, and it does not change
+who owns anything: the owner mints a **copy link**, and whoever opens it gets a
+new character of their own with the same log. The original keeps its owner, its
+folder, its group shares, its game seats and its AI Wizard chats, because
+nothing about it was touched -- which is the whole reason this is a copy and
+not a transfer. Moving `owner_id` would have to reconcile every one of those:
+a folder that belongs to the old owner, a game seat whose stored owner decides
+who may edit it, a chat that can still commit.
+
+The link is the invite's design again (`internal/domain/character/copylink.go`):
+a signed token naming the character and the owner who made it, 24 hours,
+**reusable and not revocable**. That is a cheaper trade here than for a group,
+since any number of redemptions cost the sender nothing. Redeeming loads the
+character *as the owner in the token*, so a link dies with the character, and
+the same 401-to-400 translation applies. Unlike the same-owner Copy there is no
+`(copy)` suffix -- the recipient has no original to tell it from -- and the pack
+check runs against the **recipient**: a character built on a pack they cannot
+use is refused with `pack.unavailable` rather than handed over. A guest may
+accept, as a guest may own a character.
+
 ### Dependency rule
 
 ```
@@ -1775,7 +1801,10 @@ visitor already holds would verify perfectly well as an invitation to any group
 whose id they could guess -- and an invite link, which is meant to be forwarded
 to strangers, would verify as somebody's session. `internal/adapter/token` is
 still the only package that knows any of these are JWTs; the group usecase
-sees an `Inviter` port trading in strings and domain types.
+sees an `Inviter` port trading in strings and domain types. A **copy link is a
+fifth**, behind `character.CopyLinks`; it reuses the invite's two claim slots,
+so the kind claim is also all that keeps a group invitation from being redeemed
+as a copy of whichever character shares its id.
 
 CSRF is covered three ways, in `middleware.SameOrigin`: `SameSite` on the
 cookie, an `Origin` check against `auth.rp_origins`, and a required

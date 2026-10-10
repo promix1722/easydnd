@@ -1265,5 +1265,18 @@
   "customNotes.title": "Title",
   "customNotes.text": "Text",
   "customNotes.deleteTitle": "Delete {{name}}?",
-  "customNotes.deleteWarning": "The item and its text are removed from the character. This cannot be undone."
+  "customNotes.deleteWarning": "The item and its text are removed from the character. This cannot be undone.",
+  "characters.sendCopy": "Send a copy",
+  "sendCopy.title": "Send a copy of {{name}}",
+  "sendCopy.bargain": "Anyone with this link can add their own copy of this character for the next 24 hours, as many times as they like. Yours stays as it is. The link cannot be cancelled, but deleting the character ends it.",
+  "sendCopy.link": "Link to a copy",
+  "receive.action": "Add to my characters",
+  "receive.checking": "Checking the link...",
+  "receive.failed": "Could not add the character",
+  "receive.offer": "You have been sent this character. Adding it makes a copy that is yours to change.",
+  "receive.unusable.title": "That link is not usable",
+  "receive.yourCharacters": "Your characters",
+  "receivePrompt.action": "Log in to get it",
+  "receivePrompt.detail": "Sign in to add a copy to your characters. If you have never been here before, the same button makes you an account -- there is nothing to fill in.",
+  "receivePrompt.title": "You have been sent a character"
 }

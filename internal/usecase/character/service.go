@@ -55,6 +55,7 @@ type Service struct {
 	folders    domain.FolderRepository
 	catalog    catalog.Source
 	sharing    domain.Sharing
+	copyLinks  domain.CopyLinks
 	log        *slog.Logger
 
 	// clock is injected so that an import stamps a time a test can predict.
