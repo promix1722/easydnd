@@ -16,6 +16,7 @@ import (
 // ability-bonus options. Both the validator and the build screen used to key
 // the rule on that kind, which meant a half-elf could take +2 to one score.
 func TestOnlyTheImprovementTakesBothPointsInOneScore(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	// The half-elf's, which must refuse.

@@ -35,6 +35,7 @@ func do(t *testing.T, r *gin.Engine, method, path string, header map[string]stri
 // greps this response for the release SHA, so the endpoint must echo whatever
 // build version it was given, under the key "version".
 func TestVersionServesInjectedValue(t *testing.T) {
+	t.Parallel()
 	rec := do(t, newTestRouter(t), http.MethodGet, "/v1/version", nil)
 
 	if rec.Code != http.StatusOK {
@@ -67,6 +68,7 @@ func TestVersionServesInjectedValue(t *testing.T) {
 // deploy gate and a browser deciding whether to reload -- are misled by an
 // answer that was allowed to be held somewhere.
 func TestVersionIsNotCacheable(t *testing.T) {
+	t.Parallel()
 	rec := do(t, newTestRouter(t), http.MethodGet, "/v1/version", nil)
 
 	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
@@ -82,6 +84,7 @@ func TestVersionIsNotCacheable(t *testing.T) {
 // present only on success would go missing at the moment it is needed. The 404
 // also proves the middleware is global -- NoRoute is outside every group.
 func TestEveryResponseCarriesTheAppVersion(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 
 	cases := []struct {
@@ -109,6 +112,7 @@ func TestEveryResponseCarriesTheAppVersion(t *testing.T) {
 }
 
 func TestHealth(t *testing.T) {
+	t.Parallel()
 	rec := do(t, newTestRouter(t), http.MethodGet, "/v1/health", nil)
 
 	if rec.Code != http.StatusOK {
@@ -128,6 +132,7 @@ func TestHealth(t *testing.T) {
 // TestUnknownRouteReturnsErrorEnvelope covers NoRoute going through
 // helpers.FormatError rather than gin's plain-text 404.
 func TestUnknownRouteReturnsErrorEnvelope(t *testing.T) {
+	t.Parallel()
 	rec := do(t, newTestRouter(t), http.MethodGet, "/v1/nope", nil)
 
 	if rec.Code != http.StatusNotFound {
@@ -152,6 +157,7 @@ func TestUnknownRouteReturnsErrorEnvelope(t *testing.T) {
 
 // TestRootIsNotRouted documents that / was deliberately freed up.
 func TestRootIsNotRouted(t *testing.T) {
+	t.Parallel()
 	rec := do(t, newTestRouter(t), http.MethodGet, "/", nil)
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusNotFound)
@@ -159,6 +165,7 @@ func TestRootIsNotRouted(t *testing.T) {
 }
 
 func TestRequestIDIsMintedAndEchoed(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 
 	rec := do(t, r, http.MethodGet, "/v1/health", nil)
@@ -176,6 +183,7 @@ func TestRequestIDIsMintedAndEchoed(t *testing.T) {
 }
 
 func TestMethodNotAllowed(t *testing.T) {
+	t.Parallel()
 	rec := do(t, newTestRouter(t), http.MethodPost, "/v1/health", nil)
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)

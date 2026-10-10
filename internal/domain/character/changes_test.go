@@ -40,6 +40,7 @@ func skillLog(t *testing.T, changes ...Change) State {
 }
 
 func TestChangeSkillSetsLevelAndRecomputesBonus(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		level     string
@@ -70,6 +71,7 @@ func TestChangeSkillSetsLevelAndRecomputesBonus(t *testing.T) {
 // Passive Perception reads the Perception bonus, so a change to that skill has
 // to carry it along or the two disagree on the same sheet.
 func TestChangeSkillRecomputesPassivePerception(t *testing.T) {
+	t.Parallel()
 	s := skillLog(t, Change{
 		Path: "skills.perception", Op: OpSet, Value: StringValue("expertise"),
 	})
@@ -86,6 +88,7 @@ func TestChangeSkillRecomputesPassivePerception(t *testing.T) {
 // crossing a threshold advances nobody. The test is here rather than in
 // project_test.go because a change event is the only thing that sets it.
 func TestChangeExperienceRecordsWithoutAdvancing(t *testing.T) {
+	t.Parallel()
 	s := skillLog(t, Change{
 		Path: "identity.experience", Op: OpSet, Value: IntValue(900),
 	})
@@ -110,6 +113,7 @@ func TestChangeExperienceRecordsWithoutAdvancing(t *testing.T) {
 }
 
 func TestChangeSavingThrow(t *testing.T) {
+	t.Parallel()
 	// The rogue already has a Dexterity save, so setting Charisma is the case
 	// that proves a change can add one the class does not grant.
 	s := skillLog(t, Change{
@@ -128,6 +132,7 @@ func TestChangeSavingThrow(t *testing.T) {
 // Taking a proficiency away has to work too, or a change event cannot undo a
 // DM's earlier ruling.
 func TestChangeSavingThrowCanRemove(t *testing.T) {
+	t.Parallel()
 	s := skillLog(t, Change{
 		Path: "savingThrows.dex", Op: OpSet, Value: BoolValue(false),
 	})
@@ -141,6 +146,7 @@ func TestChangeSavingThrowCanRemove(t *testing.T) {
 }
 
 func TestChangeRejectsBadSkillPaths(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		change Change

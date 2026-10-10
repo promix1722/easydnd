@@ -60,6 +60,7 @@ func startSSO(
 // federated sign-in with "no sign-in is in progress" and nothing in the logs
 // to say why.
 func TestFlightCookieIsLaxSoItSurvivesTheCallback(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, federation := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	flight, _ := startSSO(t, r, cookies, federation, "/v1/auth/sso/google/start")
@@ -82,6 +83,7 @@ func TestFlightCookieIsLaxSoItSurvivesTheCallback(t *testing.T) {
 // The prefixes are not decoration: a browser enforces them, and __Secure-
 // requires Secure while permitting the narrow path this cookie wants.
 func TestFlightCookieIsPrefixedInProduction(t *testing.T) {
+	t.Parallel()
 	secure := helpers.CookieOptions{Secure: true}
 	insecure := helpers.CookieOptions{Secure: false}
 
@@ -94,6 +96,7 @@ func TestFlightCookieIsPrefixedInProduction(t *testing.T) {
 }
 
 func TestSSOStartRedirectsCarryingStateAndPKCE(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, federation := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	rec := getWith(t, r, "/v1/auth/sso/google/start")
@@ -125,6 +128,7 @@ func TestSSOStartRedirectsCarryingStateAndPKCE(t *testing.T) {
 // An unknown provider reached by a link is still a navigation, so it comes
 // back as a redirect rather than as a 404 envelope rendered on screen.
 func TestSSOStartRejectsAnUnknownProvider(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, _ := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	rec := getWith(t, r, "/v1/auth/sso/nope/start")
@@ -147,6 +151,7 @@ func TestSSOStartRejectsAnUnknownProvider(t *testing.T) {
 // application with a page of braces. It is guarded just as tightly -- no
 // flight cookie is issued -- but reported as a redirect.
 func TestSSOLinkWithNoSessionRedirectsRatherThanReturningJSON(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, _ := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	rec := getWith(t, r, "/v1/auth/sso/google/link?return_to=%2Faccount")
@@ -170,6 +175,7 @@ func TestSSOLinkWithNoSessionRedirectsRatherThanReturningJSON(t *testing.T) {
 // A failure must land back where the attempt started, or a failed link dumps
 // somebody on the party list with no explanation and no way back.
 func TestSSOFailureReturnsToThePageItStartedFrom(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, federation := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	session := register(t, r, cookies)
@@ -186,6 +192,7 @@ func TestSSOFailureReturnsToThePageItStartedFrom(t *testing.T) {
 // The return path on a failed start comes straight from the query string, so
 // it is the one place a hostile value could reach a Location header.
 func TestSSOFailureWillNotRedirectOffSite(t *testing.T) {
+	t.Parallel()
 	r, _, _, _ := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	for _, hostile := range []string{
@@ -204,6 +211,7 @@ func TestSSOFailureWillNotRedirectOffSite(t *testing.T) {
 // The provider's own error code is attacker-influenced by way of a crafted
 // callback URL, so it must not choose the key the client looks up.
 func TestSSOCallbackNarrowsTheProvidersRefusal(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, federation := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	flight, _ := startSSO(t, r, cookies, federation, "/v1/auth/sso/google/start")
@@ -215,6 +223,7 @@ func TestSSOCallbackNarrowsTheProvidersRefusal(t *testing.T) {
 }
 
 func TestSSOCallbackSignsInAndRedirectsHome(t *testing.T) {
+	t.Parallel()
 	federation := &stubFederation{identity: user.Identity{
 		Subject: "google-1", Email: "rogue@example.test", DisplayName: "Rogue",
 	}}
@@ -280,6 +289,7 @@ type wireUser struct {
 // A callback that does not match the attempt that started it must establish
 // nothing at all.
 func TestSSOCallbackWithABadStateSetsNoSession(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, federation := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	flight, _ := startSSO(t, r, cookies, federation, "/v1/auth/sso/google/start")
@@ -297,6 +307,7 @@ func TestSSOCallbackWithABadStateSetsNoSession(t *testing.T) {
 }
 
 func TestSSOCallbackWithoutAFlightCookieFails(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, _ := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	rec := getWith(t, r, "/v1/auth/sso/google/callback?code=abc&state=anything")
@@ -312,6 +323,7 @@ func TestSSOCallbackWithoutAFlightCookieFails(t *testing.T) {
 // but it must still land the browser back in the application rather than on a
 // page of JSON.
 func TestSSOCallbackHandlesAProviderRefusal(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, federation := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	flight, _ := startSSO(t, r, cookies, federation, "/v1/auth/sso/google/start")
@@ -332,6 +344,7 @@ func TestSSOCallbackHandlesAProviderRefusal(t *testing.T) {
 // sentence rendered from a query parameter is a way to put chosen text on
 // somebody else's page.
 func TestSSOCallbackDoesNotLeakTheFailureReason(t *testing.T) {
+	t.Parallel()
 	federation := &stubFederation{
 		err: types.NewUnauthenticatedError("client_secret is wrong for client 12345.apps.googleusercontent.com"),
 	}
@@ -352,6 +365,7 @@ func TestSSOCallbackDoesNotLeakTheFailureReason(t *testing.T) {
 // --- guards ---
 
 func TestSSOPublicRoutesNeedNoSession(t *testing.T) {
+	t.Parallel()
 	r, _, _, _ := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	for _, path := range []string{
@@ -368,6 +382,7 @@ func TestSSOPublicRoutesNeedNoSession(t *testing.T) {
 
 // unlink is a fetch, not a navigation, so the envelope is right for it.
 func TestSSOUnlinkRequiresASession(t *testing.T) {
+	t.Parallel()
 	r, _, _, _ := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	if rec := post(t, r, "/v1/auth/sso/google/unlink", `{"subject":"google-1"}`); rec.Code != http.StatusUnauthorized {
@@ -376,6 +391,7 @@ func TestSSOUnlinkRequiresASession(t *testing.T) {
 }
 
 func TestProvidersListsGoogle(t *testing.T) {
+	t.Parallel()
 	r, _, _, _ := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 
 	rec := getWith(t, r, "/v1/auth/providers")
@@ -402,6 +418,7 @@ func TestProvidersListsGoogle(t *testing.T) {
 // --- linking over HTTP ---
 
 func TestLinkingGoogleToAPasskeyAccount(t *testing.T) {
+	t.Parallel()
 	federation := &stubFederation{identity: user.Identity{Subject: "google-1", Email: "a@example.test"}}
 	r, _, cookies, _ := newTestRouterWithFederation(t, &stubCeremony{}, federation)
 
@@ -446,6 +463,7 @@ func TestLinkingGoogleToAPasskeyAccount(t *testing.T) {
 }
 
 func TestUnlinkRefusesTheLastWayIn(t *testing.T) {
+	t.Parallel()
 	federation := &stubFederation{identity: user.Identity{Subject: "google-1"}}
 	r, _, cookies, _ := newTestRouterWithFederation(t, &stubCeremony{}, federation)
 
@@ -469,6 +487,7 @@ func TestUnlinkRefusesTheLastWayIn(t *testing.T) {
 }
 
 func TestUnlinkRequiresASubject(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, _ := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 	session := register(t, r, cookies)
 
@@ -481,6 +500,7 @@ func TestUnlinkRequiresASubject(t *testing.T) {
 // Unlink changes something, so unlike the rest of this flow it must travel
 // through the CSRF guard rather than around it.
 func TestUnlinkIsRefusedCrossOrigin(t *testing.T) {
+	t.Parallel()
 	r, _, cookies, _ := newTestRouterWithFederation(t, &stubCeremony{}, &stubFederation{})
 	session := register(t, r, cookies)
 

@@ -159,6 +159,7 @@ func openIn(prompts []domain.Prompt, id rules.Slug) (domain.Prompt, bool) {
 
 // The plain case: an entry nothing else depends on, swapped for another.
 func TestReviseReplacesAnEntryWithNoDependants(t *testing.T) {
+	t.Parallel()
 	b := rogue3(t)
 	before := b.log()
 
@@ -188,6 +189,7 @@ func TestReviseReplacesAnEntryWithNoDependants(t *testing.T) {
 // nothing is asking. Before answersAnOpenPrompt existed, the append that put
 // it there was accepted, and a replay had no way to notice.
 func TestReviseDropsASubraceTheNewRaceDoesNotOffer(t *testing.T) {
+	t.Parallel()
 	b := build(t).
 		add("race", domain.Event{Type: domain.EventRace, Ref: ref(rules.RefRace, "dwarf")}).
 		add("subrace", domain.Event{Type: domain.EventSubrace, Ref: ref(rules.RefSubrace, "hill-dwarf")}).
@@ -227,6 +229,7 @@ func TestReviseDropsASubraceTheNewRaceDoesNotOffer(t *testing.T) {
 // race a thing a player can recover from rather than a thing that quietly
 // costs them a spell.
 func TestReviseReturnsDroppedChoicesOutstandingUnderTheirGroup(t *testing.T) {
+	t.Parallel()
 	b := build(t).
 		add("race", domain.Event{Type: domain.EventRace, Ref: ref(rules.RefRace, "elf")}).
 		add("subrace", domain.Event{Type: domain.EventSubrace, Ref: ref(rules.RefSubrace, "high-elf")}).
@@ -303,6 +306,7 @@ func promptIDs(prompts []domain.Prompt) []rules.Slug {
 // built on top, and a revalidation that silently eats a player's choices is
 // worse than the truncation it replaces.
 func TestReviseKeepsAnEntryThatLostAnAnswer(t *testing.T) {
+	t.Parallel()
 	b := rogue3(t)
 	before := b.log()
 
@@ -379,6 +383,7 @@ func TestReviseKeepsAnEntryThatLostAnAnswer(t *testing.T) {
 // log. It must not commit against a log it never saw -- and it does not,
 // because expectedSeq makes it the ordinary sequence conflict.
 func TestAStalePreviewCannotBeCommitted(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	b := rogue3(t)
 	at := b.log().LastSeq()
@@ -400,6 +405,7 @@ func TestAStalePreviewCannotBeCommitted(t *testing.T) {
 // Everything those levels bought goes with them: a thief was due at third,
 // and a second-level rogue is not owed one.
 func TestReviseLowersTheDeclaredLevel(t *testing.T) {
+	t.Parallel()
 	b := rogue3(t)
 
 	out, dropped := revised(t, b, 11, &domain.Event{
@@ -433,6 +439,7 @@ func TestReviseLowersTheDeclaredLevel(t *testing.T) {
 // Source is written on append and written again on replay, from the same
 // function -- so an entry that still means what it meant still says so.
 func TestSourceSurvivesAReplace(t *testing.T) {
+	t.Parallel()
 	b := rogue3(t)
 	before := b.log()
 

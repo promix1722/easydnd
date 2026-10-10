@@ -7,6 +7,7 @@ import (
 )
 
 func TestActionTagsAndKindsAreValidated(t *testing.T) {
+	t.Parallel()
 	c := &conv{where: "test"}
 	c.tagged(catalog.Entry{Slug: "x"}, &ActionTag{Kind: "swift"})
 	if c.Err() == nil {

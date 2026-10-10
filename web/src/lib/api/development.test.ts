@@ -50,7 +50,10 @@ it('logs out the selected session without falling back to an older browser sessi
 it('does not establish a session that cannot survive navigation when storage is blocked', async () => {
   const fetch = vi.fn()
   vi.stubGlobal('fetch', fetch)
-  const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+  // The instance, not Storage.prototype: the code writes through
+  // window.sessionStorage, and happy-dom's storage is a proxy whose prototype
+  // a call never reaches.
+  const blocked = vi.spyOn(window.sessionStorage, 'setItem').mockImplementation(() => { throw new Error('blocked') })
   try {
     await expect(loginDevelopmentAccount('master')).rejects.toThrow('blocked')
     expect(fetch).not.toHaveBeenCalled()

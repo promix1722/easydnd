@@ -206,8 +206,8 @@ CI sets it against a service container, so they are not skipped there.
 ## Tests
 
 ```sh
-make test/unit                      # the suite, ~4s
-make test/race                      # the same suite under the race detector, ~9s
+make test/unit                      # the suite, ~60s cold and ~3s with a warm test cache
+make test/race                      # the same suite under the race detector, minutes
 make test/db                        # including the Postgres adapter (needs make db/up)
 ```
 
@@ -229,36 +229,53 @@ reintroduce: set `TEST_DATABASE_URL`, run `test/db`.
 deliberate trade rather than an oversight.
 
 The race detector used to be on by default, and it cost far more than it
-looked: 46s against 10s. Two thirds of that gap was not even work. A `-race`
-test binary sleeps a full second at exit -- `GORACE`'s `atexit_sleep_ms`,
-defaulting to 1000 -- and this module has sixteen test packages, so every run
-spent sixteen seconds on an idle machine. `make test/race` sets
-`atexit_sleep_ms=0` and takes that back, which is why it now costs 9s rather
-than 25s. What the sleep buys is a last chance to check a goroutine still
-running when `main` returns, and nothing here leaves one: the HTTP tests drive
-`httptest` in-process and synchronously, and `internal/app`, which owns the
-only real server lifecycle, has no tests. A race *during* a test is reported
-exactly as before.
+looked. Part of that was not even work: a `-race` test binary sleeps a full
+second at exit -- `GORACE`'s `atexit_sleep_ms`, defaulting to 1000 -- and this
+module has a couple of dozen test packages, so every run spent that long on an
+idle machine. `make test/race` sets `atexit_sleep_ms=0` and takes it back.
+What the sleep buys is a last chance to check a goroutine still running when
+`main` returns, and nothing here leaves one: the HTTP tests drive `httptest`
+in-process and synchronously, and `internal/app`, which owns the only real
+server lifecycle, builds its server without listening. A race *during* a test
+is reported exactly as before. The rest is real: the detector slows the
+catalogue adapter's CPU-bound tests about ten times over, so the whole suite
+takes minutes under it.
 
-That leaves 9s against 4s, and the reason the detector still sits outside
-`verify` is what `verify` is for. Nothing runs on `main`, so it is the only
+That is the reason the detector still sits outside `verify`, which is what
+`verify` is for. Nothing runs on `main`, so it is the only
 gate there is, and a gate slow enough to be worth skipping stops being a gate.
 The detector moved onto the path worth taking before a `git tag` -- the point
 where a missed race would otherwise ship. **Run `make test/race` before
 tagging.** It found real races in the HTTP layer and the stores once, and
 `make test/unit` will not find the next one.
 
+The heavy packages also run their tests in parallel: every top-level test in
+`internal/adapter/catalog/file`, `internal/domain/character`,
+`internal/usecase/character`, `internal/api/http` and `internal/app` calls
+`t.Parallel()`, which is what lets the catalogue adapter's CPU-bound tests use
+all four cores instead of one. `internal/usecase/agent` deliberately does not:
+its tests wait on the agent settling under four-second deadlines, and under
+load they starve. A new test in a parallel package calls `t.Parallel()` too,
+unless it writes a package variable; `make test/race` is the check.
+
 ### verify runs two jobs, longest first
 
 `verify` used to be a serial chain, which meant the Go side's time was added to
-the frontend's rather than spent inside it. It is now a `make -j2` over the same
-leaf targets, and **the order they are named in is the schedule**: `make -j`
-starts goals left to right as slots come free, so `web/test` -- fifteen seconds
-against six for everything else put together -- has to go first. Left at the end
-of the list it lands in the last slot and the run costs its length plus
-everything before it. Named first, the Go lane, the frontend's typecheck and the
-production build all happen inside its shadow, and `verify` costs about what
-`web/test` costs.
+the frontend's rather than spent inside it. It is now a `make -j2` over the
+leaf targets other than `test/unit`, and **the order they are named in is the
+schedule**: `make -j` starts goals left to right as slots come free, so
+`web/test` -- about forty seconds -- goes first, and the frontend's typecheck,
+the production build and the small Go checks all happen inside its shadow.
+Left at the end of the list it would land in the last slot and the run would
+cost its length plus everything before it.
+
+`test/unit` then runs **after** that group, alone. That is a measurement, not
+tidiness: the heavy Go packages run their tests in parallel now, so the Go
+suite and vitest each want every core, and side by side they thrash -- a cold
+Go suite that takes 60s alone took 100s beside vitest, vitest's 40s became
+167s, and `verify` took 184s. One after the other it is 40s + 60s with a cold
+test cache and 40s + 3s with a warm one, and the warm number is the one a
+developer sees most.
 
 Two jobs, not more. One of them is vitest, which forks
 `availableParallelism - 1` workers of its own, so `-j2` is already the whole of
@@ -274,13 +291,22 @@ its six check, build and test jobs all start at once. See
 and the order they are named in does the scheduling.
 
 The other reason the suite is fast is that each test package shares **one**
-`catalogfile.Source`. `Source.Load` caches a converted `*catalog.Catalog` per
-locale, and a `Catalog` is immutable, so one read of the 1.55 MB compendium
-serves every test in the binary. Building a fresh `Source` per test threw that
-cache away, and the suite was doing it about 120 times a run -- which was most
-of its remaining runtime. `internal/domain/character` alone went from 3.0s to
-0.06s. If you add a helper that needs the compendium, reach for the package's
-existing `catalogSource` rather than calling `NewSource` again; the internal
+`catalogfile.Source` and **one** `catalogfile.Registry`. `Source.Load` caches a
+converted `*catalog.Catalog` per locale, and a `Catalog` is immutable, so one
+read of the compendium serves every test in the binary. Building a fresh
+`Source` per test threw that cache away, and the suite was doing it about 120
+times a run. A `Registry` is dearer still: `NewRegistry` decodes the pack with
+the strict two-pass decoder, re-marshals the whole document -- 13.5 MB of WebP
+icons in base64 included -- to digest and validate it, then compiles every
+locale, about eight CPU-seconds per build. The suite built one about 45 times
+a run, which was most of its three minutes; those sites now share one through
+a `sync.OnceValues` helper per package (`sharedRegistry`, `spellCatalog`,
+`packBase`, `namespacedRegistry`), and reads of a registry are safe to share.
+A test that *writes* into one -- `CompilePrivate` installs a release -- takes
+a fresh one, and a test that changes a shared catalogue clones the map it
+touches first. If you add a helper that needs the compendium, reach for the
+package's existing `catalogSource` or shared registry rather than calling
+`NewSource` or `NewRegistry` again; the internal
 and external test packages of one directory need one each, since a package-level
 var cannot cross that line.
 

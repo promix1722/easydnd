@@ -52,6 +52,7 @@ func logFrom(t *testing.T, events ...domain.Event) domain.Log {
 }
 
 func TestAnswersAnOpenPrompt(t *testing.T) {
+	t.Parallel()
 	cat := loadCatalog(t)
 
 	race := func(slug rules.Slug) domain.Event {
@@ -157,6 +158,7 @@ func TestAnswersAnOpenPrompt(t *testing.T) {
 // offers is where the kind is checked as well as the slug, so a prompt
 // offering races cannot be answered with a class that happens to share one.
 func TestOffersChecksTheKindAndNotOnlyTheSlug(t *testing.T) {
+	t.Parallel()
 	inline := rules.OptionSet{Kind: rules.OptionsExplicit, Options: []rules.Option{
 		rules.RefOption{Ref: rules.NewRef(rules.RefSubrace, "hill-dwarf"), Count: 1},
 	}}
@@ -180,6 +182,7 @@ func TestOffersChecksTheKindAndNotOnlyTheSlug(t *testing.T) {
 // a pick. A pick under one of their ids names a real option of a real open
 // question, so it used to be accepted, and settled nothing.
 func TestAPickDoesNotAnswerTheCharactersOwnQuestion(t *testing.T) {
+	t.Parallel()
 	cat := loadCatalog(t)
 	log := logFrom(t)
 	open, err := domain.Prompts(log, cat)

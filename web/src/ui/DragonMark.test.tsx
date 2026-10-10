@@ -1,3 +1,7 @@
+// @vitest-environment jsdom
+// jsdom, not the suite's happy-dom: happy-dom's CSS parser drops a CSS math
+// function (`min(64vw, 300px)`) from an inline style, so the size test below
+// could only ever see ''. The browser keeps it; jsdom does too.
 import { describe, expect, it } from 'vitest'
 import { screen } from '@testing-library/react'
 

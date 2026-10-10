@@ -9,7 +9,8 @@ import (
 )
 
 func TestAuthoringCacheRetainsAccessAndContentChecks(t *testing.T) {
-	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
+	t.Parallel()
+	base, err := testBase()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +55,7 @@ func TestAuthoringCacheRetainsAccessAndContentChecks(t *testing.T) {
 }
 
 func BenchmarkAuthoringResolveInstalled(b *testing.B) {
-	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
+	base, err := testBase()
 	if err != nil {
 		b.Fatal(err)
 	}

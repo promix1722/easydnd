@@ -12,7 +12,8 @@ import (
 )
 
 func TestPrivateDefinitionsArePinnedAndNotGlobal(t *testing.T) {
-	r := registry(t)
+	t.Parallel()
+	r := freshRegistry(t)
 	base := r.DefaultLock()
 	body := []byte(`{"entities":{"feats":[{"slug":"star-touched"}]},"locales":{"en":{"feats":{"star-touched":{"name":"Star Touched","desc":["Source text"]}}}}}`)
 	cat, err := r.CompilePrivate(context.Background(), base, "testsession", body, rules.DefaultLocale)
@@ -55,7 +56,8 @@ func TestPrivateDefinitionsArePinnedAndNotGlobal(t *testing.T) {
 	}
 }
 func TestPrivateDefinitionsRejectCoreAndForeignIdentity(t *testing.T) {
-	r := registry(t)
+	t.Parallel()
+	r := freshRegistry(t)
 	for _, body := range []string{`{"entities":{"feats":[{"slug":"srd-2014:feat:grappler"}]},"locales":{"en":{}}}`, `{"entities":{},"locales":{"en":{}},"mechanics":{"core":{}}}`} {
 		if _, err := r.CompilePrivate(context.Background(), r.DefaultLock(), "test", []byte(body), rules.DefaultLocale); err == nil {
 			t.Fatalf("accepted unsafe definition: %s", body)
@@ -64,6 +66,7 @@ func TestPrivateDefinitionsRejectCoreAndForeignIdentity(t *testing.T) {
 }
 
 func TestAuthoringRetainsPrivateImportDefinitions(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	a := catalogfile.NewAuthoring(registry(t), memory.NewPackRepository())
 	body := []byte(`{"entities":{"feats":[{"slug":"star-touched"}]},"locales":{"en":{"feats":{"star-touched":{"name":"Star Touched","desc":["Source text"]}}}}}`)

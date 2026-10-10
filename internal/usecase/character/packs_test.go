@@ -14,6 +14,7 @@ import (
 )
 
 func TestRulesMigrationPreviewCommitAndRollback(t *testing.T) {
+	t.Parallel()
 	root := filepath.Join("..", "..", "..", "data")
 	r, err := file.NewRegistry([]string{filepath.Join(root, "pack", "srd-5.1"), filepath.Join("..", "..", "adapter", "catalog", "file", "testdata", "tactician.json")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
 	if err != nil {
@@ -74,6 +75,7 @@ func TestRulesMigrationPreviewCommitAndRollback(t *testing.T) {
 }
 
 func TestRevisionTokenRejectsSameLengthRewrite(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	c := mustCreate(t, s)
 	ctx := context.Background()

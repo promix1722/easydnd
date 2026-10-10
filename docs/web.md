@@ -50,14 +50,27 @@ it is started first and the Go side happens inside its shadow. See
 ## The test suite does not isolate test files
 
 `vite.config.ts` runs the suite with `isolate: false`, so the test files a
-worker picks up share **one** module registry and **one** jsdom rather than
+worker picks up share **one** module registry and **one** DOM rather than
 forking a fresh pair per file. Rebuilding the Mantine, embla and React module
-graph 48 times over cost 36s of imports and 78s of jsdom construction out of
+graph 48 times over cost 36s of imports and 78s of DOM construction out of
 229s total; sharing both took the run to 64s without a single assertion
 changing. Passing `delay: null` to user-event (see `src/test/user.ts`) took it
-to 38s from there, and the two rules below took it to 24s. On a four-core
-machine, where vitest forks `availableParallelism - 1` workers of its own, the
-whole suite is about fourteen seconds.
+to 38s from there, and the two rules below took it to 24s.
+
+The DOM is **happy-dom**, not jsdom. At a hundred files the suite had grown to
+186s of test time -- nearly all of it React rendering into the DOM -- which on
+the three workers vitest forks on a four-core machine is 66s of wall. happy-dom
+renders the same trees in half the time: 92s of test time, about 40s of wall.
+It cost two test-side changes and no production code: a storage spy targets
+the `sessionStorage` instance rather than `Storage.prototype`, because
+happy-dom's storage is a proxy a call never routes through the prototype of;
+and `DragonMark.test.tsx` carries `// @vitest-environment jsdom`, because
+happy-dom's CSS parser drops a math function such as `min(64vw, 300px)` from
+an inline style and that test asserts exactly that value survives. The pin is
+the pattern for any test that needs a DOM behaviour happy-dom lacks: one
+comment on the file, never a flag on the suite. Neither engine computes layout
+or evaluates `@media`, so everything below that says the DOM cannot measure
+something is true of both.
 
 Nothing sets the worker count. vitest's own default is the right answer on
 every machine this runs on, and a number written down here would be wrong on
@@ -106,7 +119,7 @@ that was reverted -- worth a sentence because "make the theme responsive" is the
 obvious wrong turn both times. Anything that must differ by width and is not a
 *layout* belongs in `ui/app.css`, so nothing branches in JavaScript and nothing
 re-renders at the breakpoint. It also means no test here can assert a rendered
-size: the suite parses no CSS and jsdom evaluates no `@media`.
+size: the suite parses no CSS and the DOM evaluates no `@media`.
 
 `ui/Page` is deliberately **not** a seventh, and its own test proves it rather
 than asserting it in prose: the last case there compares the two renderings byte
@@ -583,7 +596,7 @@ value used once with antipodes summing to 21, and -- the one that matters most
 -- all twenty faces rotated upward in turn and read back, which is what stands
 between the player and a reader that is out by one face. None of it needs a
 GPU. `D20.test.tsx` pins only that the heavy chunk stays unloaded, because a
-WebGL die is untestable in jsdom and asserting on a mock of one would be
+WebGL die is untestable in happy-dom and asserting on a mock of one would be
 asserting on the mock.
 
 The numerals are drawn to a canvas at load rather than shipped as an image:
@@ -608,8 +621,8 @@ underneath it ships its own types and nothing stopped a feature importing
 package wider.
 
 It costs something in the test suite too. embla constructs a `ResizeObserver`
-and an `IntersectionObserver` unconditionally, and jsdom implements neither, so
-`test/setup.ts` installs inert stubs. They deliberately never fire: jsdom has no
+and an `IntersectionObserver` unconditionally, and the test DOM implements neither, so
+`test/setup.ts` installs inert stubs. They deliberately never fire: happy-dom has no
 layout, so anything they reported would be fiction, and a test that leaned on one
 would be testing the stub. A carousel is therefore asserted on its structure --
 its panels named, in order, in a named region, and whatever the call site does
@@ -618,7 +631,7 @@ about height -- and never on which panel is scrolled into view. That is why
 offsets, while a `TabDeck` never sets `--carousel-height` at all.
 
 It is also why the deck's tab strip reads React state rather than embla's
-`selectedScrollSnap()`. Pressing a tab is therefore observable in jsdom and
+`selectedScrollSnap()`. Pressing a tab is therefore observable in happy-dom and
 swiping is not, which is the right way round: the press is the thing a test can
 honestly make a claim about.
 
@@ -677,7 +690,7 @@ the same result. That is what makes a drag safe to re-send. See
 The drag itself is hand-rolled over the native events, the way
 `features/character/ScoreAssignment` is, and for the same two reasons: there is
 no drag library below `@/ui`, and a native drag fires on neither a touchscreen
-nor jsdom. So it is never the only way to do something -- **Move up** and
+nor happy-dom. So it is never the only way to do something -- **Move up** and
 **Move down** in each folder's menu are the real path, and the one the tests
 press. Four folder actions is also the case `@/ui` blesses a `Menu` for, rather
 than the spelled-out buttons a table row gets.
@@ -1743,7 +1756,7 @@ must be pure, placing a number is not, and StrictMode invokes it twice to prove
 the point.
 
 The suite drives the drag by hand, with `document.elementFromPoint` stubbed:
-jsdom computes no layout, so the browser's one contribution to the gesture is
+happy-dom computes no layout, so the browser's one contribution to the gesture is
 the one thing a test has to supply. The threshold, the swap and the click that
 must not undo the drop are the real code.
 
@@ -1816,7 +1829,7 @@ sometimes several. Nothing written is the same as not answering, and these are
 optional, so the button simply stays disabled.
 
 It is a fixed three rows rather than an autosizing one. Mantine's autosize is
-`react-textarea-autosize`, which measures through a listener jsdom has no
+`react-textarea-autosize`, which measures through a listener happy-dom has no
 element to attach -- the field could not even be focused under test -- and
 `vi.mock` is not available to paper over it. Three rows and a scrollbar is a
 smaller loss than a control the suite cannot drive.
@@ -2121,7 +2134,7 @@ given `height: 0` and left to overflow, so the viewport is sized by the one
 slide with a height and clips the rest to it -- a neighbour is still drawn
 sliding in during a swipe, cut at the foot of the panel being left. Nothing is
 measured: the alternative, a `ResizeObserver` sizing the viewport, reads a
-layout jsdom does not compute, so the suite could neither exercise it nor catch
+layout happy-dom does not compute, so the suite could neither exercise it nor catch
 it breaking. It used to be the tallest slide's height, and a swipe from the foot
 of Overview landed a long way down a mostly empty Actions with the tabs
 off-screen above.
@@ -3001,7 +3014,7 @@ checks `instanceof` before trusting what came back) and a
 `navigator.credentials` defined onto the existing navigator rather than stubbed
 wholesale, which would break `userEvent`. It carries no `parse*OptionsFromJSON`
 statics on purpose -- adding them would route the tests around the hand-rolled
-decoding every real jsdom run uses.
+decoding every real happy-dom run uses.
 
 A guest session is one POST rather than a ceremony, so `AuthProvider` shares the
 busy/error/unmounted plumbing with it through `runAuth` and lets the flows
@@ -3027,7 +3040,7 @@ nothing. Redundancy is a matter of connecting a provider -- see
 showing someone, and -- in `isCeremonyDismissed` -- judging which of those
 sentences means "there was nothing to sign in with". It prefers the spec's own
 `parse*OptionsFromJSON` where a browser has them and falls back to hand-rolled
-decoding, which is the path the tests exercise -- jsdom has neither.
+decoding, which is the path the tests exercise -- happy-dom has neither.
 
 ## Signing in with Google is a navigation, not a request
 
@@ -3323,11 +3336,11 @@ What that measures is now one boolean per end -- whether the scroller has
 anything left that way -- rather than the geometry of whichever tab lies across
 the edge. The per-tab spans, the search for the tab across a given x, and the
 mid-drag cap they needed went with the rule that wanted them. It is still the
-one thing in this component the suite cannot press: jsdom computes no layout, so
+one thing in this component the suite cannot press: happy-dom computes no layout, so
 every strip there is 0px wide, never overflows, and never draws a mask. What the
 tests hold is that the absence is identical at both viewports. The active tab is brought into view by setting `scrollLeft`, not
 by `scrollIntoView`, which scrolls every scrollable ancestor -- it would drag
-the document as well as the strip, and jsdom does not implement it. A stack of
+the document as well as the strip, and happy-dom does not implement it. A stack of
 bordered disclosures needs no branch either: it is right at 390px and at
 1440px, and the only difference is padding the spacing scale already handles.
 
@@ -3485,7 +3498,7 @@ aliases. Paper's background binds to the semantic surface variable in the theme.
 This makes cards, inputs, tables and panels follow the active palette.
 
 **Computed colors need a browser check.** Vitest runs with `css: false`
-and jsdom lays nothing out, so no test can read a computed colour. That leaves
+and happy-dom lays nothing out, so no test can read a computed colour. That leaves
 the data as the only surface to hold, and `theme/palettes.test.ts` holds it:
 ten valid steps, a brand colour drawn from its own ramp, both schemes complete,
 and -- the one that earns its keep -- text-on-background contrast of at least

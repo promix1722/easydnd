@@ -26,6 +26,7 @@ func provenancePack(t *testing.T) *PackDocument {
 }
 
 func TestBuiltinVersionsKeepTheirProvenance(t *testing.T) {
+	t.Parallel()
 	p := provenancePack(t)
 	paths := []string{}
 	for _, version := range []string{"1.9.0", "1.10.0"} {
@@ -59,6 +60,7 @@ func TestBuiltinVersionsKeepTheirProvenance(t *testing.T) {
 }
 
 func TestProvenanceRoundTripAndFork(t *testing.T) {
+	t.Parallel()
 	p := provenancePack(t)
 	first, err := PackDigest(p)
 	if err != nil {
@@ -117,6 +119,7 @@ func TestProvenanceRoundTripAndFork(t *testing.T) {
 	}
 }
 func TestProvenanceRejectsUnknownEntitiesAndSources(t *testing.T) {
+	t.Parallel()
 	p := provenancePack(t)
 	p.Provenance["spells"]["missing"] = []string{"phb"}
 	if err := p.Validate(); err == nil {
@@ -129,6 +132,7 @@ func TestProvenanceRejectsUnknownEntitiesAndSources(t *testing.T) {
 	}
 }
 func TestZIPImportPortableEquivalence(t *testing.T) {
+	t.Parallel()
 	p := provenancePack(t)
 	dir := filepath.Join(t.TempDir(), "pack")
 	if err := SavePackDirectory(dir, p); err != nil {
@@ -180,6 +184,7 @@ func TestZIPImportPortableEquivalence(t *testing.T) {
 	}
 }
 func TestZIPRejectsUnsafeAmbiguousAndIncompleteArchives(t *testing.T) {
+	t.Parallel()
 	manifest, _ := json.Marshal(PackManifest{Files: map[string]string{"entities/spells": "missing.json"}})
 	cases := map[string][]string{"traversal": {"../manifest.json"}, "absolute": {"/manifest.json"}, "duplicate": {"manifest.json", "manifest.json"}, "multiple": {"one/manifest.json", "two/manifest.json"}, "nested": {"a/b/manifest.json"}, "missing": {"manifest.json"}}
 	for name, paths := range cases {
@@ -202,6 +207,7 @@ func TestZIPRejectsUnsafeAmbiguousAndIncompleteArchives(t *testing.T) {
 }
 
 func TestZIPRejectsSymlinksAndExpansionLimits(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		count   int

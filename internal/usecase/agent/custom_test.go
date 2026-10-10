@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -218,12 +216,7 @@ func TestSourceScoresAndInventoryCountsSurviveBatchTools(t *testing.T) {
 }
 
 func TestImportedClassUsesSelectedPackNamespaceAndSurvivesEditing(t *testing.T) {
-	path := filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")
-	base, err := catalogfile.LoadPack(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	registry, err := catalogfile.NewRegistry([]string{path}, []catalogfile.Dependency{{ID: "dnd-2014", Version: base.Manifest.Version}}, "", catalogfile.PackFolder{Path: path, ID: "dnd-2014"})
+	registry, err := namespacedRegistry()
 	if err != nil {
 		t.Fatal(err)
 	}

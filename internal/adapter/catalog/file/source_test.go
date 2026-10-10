@@ -39,6 +39,7 @@ func load(t *testing.T, locale rules.Locale) *catalog.Catalog {
 // generator that silently drops records is otherwise indistinguishable from
 // one that works: nothing errors, a spell simply does not exist.
 func TestLoadEntryCounts(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	tests := []struct {
@@ -81,6 +82,7 @@ func TestLoadEntryCounts(t *testing.T) {
 // This pins one spell of each shape, so a parser regression is caught as a
 // wrong structure and not as a range that quietly becomes zero feet.
 func TestSpellRuleStringsAreStructured(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	spell, ok := c.Spells.Get("acid-arrow")
@@ -135,6 +137,7 @@ func TestSpellRuleStringsAreStructured(t *testing.T) {
 // separate collections and so must the catalogue, or a character cannot say
 // which source granted it.
 func TestTraitsAndFeaturesStaySeparate(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	if _, ok := c.Traits.Get("darkvision"); !ok {
@@ -154,6 +157,7 @@ func TestTraitsAndFeaturesStaySeparate(t *testing.T) {
 // The recursive option grammar is the hardest shape in the data. These are the
 // two deepest real cases.
 func TestChoiceTreeDecodes(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	fighter, ok := c.Classes.Get("fighter")
@@ -199,6 +203,7 @@ func TestChoiceTreeDecodes(t *testing.T) {
 // Class resources are the thing DND.md called "slots". Sneak attack is a die,
 // ki is a count, and both have to survive the same generic shape.
 func TestClassLevelResources(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	rogue3, ok := c.ClassLevel("rogue", 3)
@@ -248,6 +253,7 @@ which is the thing that has to keep working, and none of it is a statement about
 how much of the SRD anybody has got through.
 */
 func TestLocaleFallsBackPerKey(t *testing.T) {
+	t.Parallel()
 	dir := copyData(t)
 	ruDir := filepath.Join(dir, file.LocaleDir, rules.LocaleRU.String())
 	if err := os.RemoveAll(ruDir); err != nil {
@@ -357,6 +363,7 @@ func writeBundle(t *testing.T, path, body string) {
 }
 
 func TestLocalesListsWhatIsPresent(t *testing.T) {
+	t.Parallel()
 	got, err := file.NewSource(dataDir()).Locales(context.Background())
 	if err != nil {
 		t.Fatalf("Locales() error = %v", err)
@@ -367,6 +374,7 @@ func TestLocalesListsWhatIsPresent(t *testing.T) {
 }
 
 func TestLoadRejectsUnsupportedLocale(t *testing.T) {
+	t.Parallel()
 	_, err := file.NewSource(dataDir()).Load(context.Background(), "xx")
 	if err == nil {
 		t.Fatal("Load() with an unsupported locale succeeded, want an error")
@@ -379,6 +387,7 @@ func TestLoadRejectsUnsupportedLocale(t *testing.T) {
 // would surface as a background asking a player to choose between
 // "i-idolize-a-particular-hero-of" and "i-can-find-common-ground-between".
 func TestTermsResolveTextOptions(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	if got := c.Terms.Len(); got != 356 {
@@ -425,6 +434,7 @@ func TestTermsResolveTextOptions(t *testing.T) {
 // string, and no test looked. A rogue's Burglar's Pack simply contained
 // fourteen of nothing.
 func TestEquipmentPackContentsResolve(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	pack, ok := c.Items.Get("burglars-pack")
@@ -465,6 +475,7 @@ func TestEquipmentPackContentsResolve(t *testing.T) {
 // them, and the failure is silent -- a weapon that simply has no category.
 // This asserts they agree.
 func TestDomainNamesMatchTheWireVocabulary(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		wire   string
 		domain string

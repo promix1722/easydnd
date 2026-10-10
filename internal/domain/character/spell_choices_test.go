@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"slices"
+	"sync"
 	"testing"
 
 	file "github.com/promix1722/easydnd/internal/adapter/catalog/file"
@@ -11,18 +12,26 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
+// spellCatalog is the installed SRD, compiled once for the binary: building
+// the registry is most of what a test using it costs. The catalogue is shared
+// and read-only; a test that needs to change it clones what it touches, as
+// subclassCastingCatalog does.
 func spellCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
-	registry, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	cat, err := registry.Load(context.Background(), rules.DefaultLocale)
+	cat, err := sharedSpellCatalog()
 	if err != nil {
 		t.Fatal(err)
 	}
 	return cat
 }
+
+var sharedSpellCatalog = sync.OnceValues(func() (*catalog.Catalog, error) {
+	registry, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
+	if err != nil {
+		return nil, err
+	}
+	return registry.Load(context.Background(), rules.DefaultLocale)
+})
 
 func spellState(class rules.Slug, level int) State {
 	return State{Identity: Identity{Classes: []ClassLevel{{Class: class, Level: level}}}, Abilities: Abilities{Scores: map[rules.Ability]int{rules.Intelligence: 16, rules.Wisdom: 16, rules.Charisma: 16}}}
@@ -62,6 +71,7 @@ func answerSpellPrompts(t *testing.T, state State, cat *catalog.Catalog) (answer
 }
 
 func TestSpellAcquisitionEveryClassAndLevel(t *testing.T) {
+	t.Parallel()
 	cat := spellCatalog(t)
 	for class, profile := range cat.Mechanics.Casting {
 		for level := 1; level <= 20; level++ {
@@ -95,6 +105,7 @@ func TestSpellAcquisitionEveryClassAndLevel(t *testing.T) {
 }
 
 func TestSpellPreparationAndMulticlassEligibility(t *testing.T) {
+	t.Parallel()
 	cat := spellCatalog(t)
 	state := spellState("wizard", 1)
 	state.Identity.Classes = append(state.Identity.Classes, ClassLevel{Class: "cleric", Level: 4})
@@ -126,6 +137,7 @@ func TestSpellPreparationAndMulticlassEligibility(t *testing.T) {
 }
 
 func TestSpellBenefitsRespectTheirSource(t *testing.T) {
+	t.Parallel()
 	cat := spellCatalog(t)
 	state := spellState("druid", 9)
 	state.Identity.Classes[0].Subclass = "land"
@@ -161,6 +173,7 @@ func TestSpellBenefitsRespectTheirSource(t *testing.T) {
 }
 
 func TestLegacySpellReplacementStillProjects(t *testing.T) {
+	t.Parallel()
 	cat := spellCatalog(t)
 	state := spellState("sorcerer", 2)
 	a, sources := answerSpellPrompts(t, state, cat)
@@ -188,6 +201,7 @@ func TestLegacySpellReplacementStillProjects(t *testing.T) {
 }
 
 func TestConditionalClericEquipment(t *testing.T) {
+	t.Parallel()
 	cat := spellCatalog(t)
 	state := spellState("cleric", 1)
 	builder := promptBuilder{cat: cat, state: state, answers: answers{}}
@@ -203,6 +217,7 @@ func TestConditionalClericEquipment(t *testing.T) {
 }
 
 func TestHigherLevelSpellBenefitsAndProjectedSources(t *testing.T) {
+	t.Parallel()
 	cat := spellCatalog(t)
 	for _, tc := range []struct {
 		class, subclass rules.Slug

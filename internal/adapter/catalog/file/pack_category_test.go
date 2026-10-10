@@ -5,6 +5,7 @@ import "testing"
 // A class's "any arcane focus" must name the category the way the pack's own
 // equipment-categories are named, or the choice resolves to no options.
 func TestOptionSetCategoryIsQualifiedWithThePack(t *testing.T) {
+	t.Parallel()
 	set := func() map[string]any {
 		return map[string]any{"kind": "equipment-category", "category": "arcane-foci"}
 	}

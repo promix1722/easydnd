@@ -49,6 +49,7 @@ func itemIconPack(t *testing.T) *PackDocument {
 }
 
 func TestSharedItemIconsArePackLocal(t *testing.T) {
+	t.Parallel()
 	base, err := LoadPack("../../../../data/pack/srd-5.1")
 	if err != nil {
 		t.Fatal(err)
@@ -82,6 +83,7 @@ func TestSharedItemIconsArePackLocal(t *testing.T) {
 }
 
 func TestInvalidItemIcons(t *testing.T) {
+	t.Parallel()
 	for _, mode := range []string{"missing assets", "missing label", "qualified label", "bad label", "invalid image", "wrong size", "bad base64"} {
 		t.Run(mode, func(t *testing.T) {
 			p := itemIconPack(t)

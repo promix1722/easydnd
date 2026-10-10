@@ -10,6 +10,7 @@ import (
 )
 
 func TestCustomOptionsRoundTripRevisionAndIsolation(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	svc := newService(t)
 	c := mustCreateScored(t, svc)
@@ -60,6 +61,7 @@ func TestCustomOptionsRoundTripRevisionAndIsolation(t *testing.T) {
 }
 
 func TestCustomSpellPreservesCanonicalIdentityAndUnknownClassMechanics(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	svc := newService(t)
 	c := mustCreateScored(t, svc)

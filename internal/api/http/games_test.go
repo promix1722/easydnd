@@ -55,6 +55,7 @@ func seatSecondAccount(
 // The whole feature end to end: a player puts a character on the table, the DM
 // opens a game and seats everybody, and the table reads a sheet it does not own.
 func TestAGameFromTheTableToItsRoster(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -123,6 +124,7 @@ func TestAGameFromTheTableToItsRoster(t *testing.T) {
 // The regression test for the whole design: sharing grants a read and nothing
 // else, and character.Service.owned was not loosened to achieve it.
 func TestTheTableCanReadTheSheetAndNotTouchIt(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -165,6 +167,7 @@ func TestTheTableCanReadTheSheetAndNotTouchIt(t *testing.T) {
 }
 
 func TestAnUnsharedCharacterIsInvisibleToTheTable(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -180,6 +183,7 @@ func TestAnUnsharedCharacterIsInvisibleToTheTable(t *testing.T) {
 }
 
 func TestASharedCharacterIsInvisibleOutsideTheGroup(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	mine := makeCharacter(t, r, owner, "Ada")
@@ -200,6 +204,7 @@ func TestASharedCharacterIsInvisibleOutsideTheGroup(t *testing.T) {
 }
 
 func TestUnsharingClearsTheSeatInEveryGame(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -235,6 +240,7 @@ func TestUnsharingClearsTheSeatInEveryGame(t *testing.T) {
 }
 
 func TestSeatingYourOwnCharacterPutsItOnTheTable(t *testing.T) {
+	t.Parallel()
 	r, owner, _ := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	private := makeCharacter(t, r, owner, "Ada")
@@ -256,6 +262,7 @@ func TestSeatingYourOwnCharacterPutsItOnTheTable(t *testing.T) {
 }
 
 func TestGameRoutesRequireASession(t *testing.T) {
+	t.Parallel()
 	r, _, _ := newFullRouterWithCeremony(t)
 	for _, probe := range []struct{ method, path string }{
 		{http.MethodGet, "/v1/groups/grp_x/characters"},
@@ -275,6 +282,7 @@ func TestGameRoutesRequireASession(t *testing.T) {
 // Deleting a character takes it off every table it was on, rather than leaving
 // a row that names nothing.
 func TestDeletingACharacterTakesItOffTheTable(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -301,6 +309,7 @@ func TestDeletingACharacterTakesItOffTheTable(t *testing.T) {
 
 // Deleting a group takes its games and its table with it.
 func TestDeletingAGroupTakesItsGamesWithIt(t *testing.T) {
+	t.Parallel()
 	r, owner, _ := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	mine := makeCharacter(t, r, owner, "Ada")
@@ -328,6 +337,7 @@ func TestDeletingAGroupTakesItsGamesWithIt(t *testing.T) {
 // A game is a section of its own: it comes back from /v1/games with the table
 // it sits at named, without the caller having to say which table first.
 func TestYourGamesComeBackWithTheTableTheySitAt(t *testing.T) {
+	t.Parallel()
 	r, owner, _ := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	rec := send(t, r, owner, http.MethodPost, "/v1/games",
@@ -356,6 +366,7 @@ func TestYourGamesComeBackWithTheTableTheySitAt(t *testing.T) {
 
 // Somebody else's game is not in your list, and naming it directly is a 404.
 func TestAnotherTablesGamesAreNotYours(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	rec := send(t, r, owner, http.MethodPost, "/v1/games",
@@ -377,6 +388,7 @@ func TestAnotherTablesGamesAreNotYours(t *testing.T) {
 
 // Monster privacy is enforced in JSON, including responses to rejected writes.
 func TestTrackerHTTPPermissionsAndMonsterRedaction(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Table")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -506,6 +518,7 @@ func TestTrackerHTTPPermissionsAndMonsterRedaction(t *testing.T) {
 }
 
 func TestSpentUsesOverHTTP(t *testing.T) {
+	t.Parallel()
 	// Packs on, as in the running app: only a locked catalogue has resource pools.
 	r, owner, ceremony, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
 	group := createGroup(t, r, owner, "Table")

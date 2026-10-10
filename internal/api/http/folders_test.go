@@ -40,6 +40,7 @@ func listFolders(t *testing.T, r *gin.Engine, session *http.Cookie) []folderapi.
 // The promise the feature rests on: an account that has done nothing already
 // has somewhere to put a character.
 func TestANewAccountAlreadyHasADefaultFolder(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	folders := listFolders(t, r, session)
@@ -55,6 +56,7 @@ func TestANewAccountAlreadyHasADefaultFolder(t *testing.T) {
 }
 
 func TestACharacterLandsInTheDefaultFolder(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	def := listFolders(t, r, session)[0]
@@ -75,6 +77,7 @@ func TestACharacterLandsInTheDefaultFolder(t *testing.T) {
 }
 
 func TestCreateFilterMoveAndCopyAcrossFolders(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	def := listFolders(t, r, session)[0]
@@ -148,6 +151,7 @@ func TestCreateFilterMoveAndCopyAcrossFolders(t *testing.T) {
 // Copying with no body at all: the common case is a Copy button on a row, and
 // it should not have to send `{}`.
 func TestCopyWithNoBodyLandsBesideTheOriginal(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	folder := decode[folderapi.Folder](t,
@@ -168,6 +172,7 @@ func TestCopyWithNoBodyLandsBesideTheOriginal(t *testing.T) {
 }
 
 func TestRenamingAFolderIncludingTheDefault(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	def := listFolders(t, r, session)[0]
@@ -188,6 +193,7 @@ func TestRenamingAFolderIncludingTheDefault(t *testing.T) {
 }
 
 func TestCreatingAFolderWithNoNameIsAFieldError(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	rec := send(t, r, session, http.MethodPost, "/v1/folders", map[string]any{"name": "  "})
@@ -205,6 +211,7 @@ func TestCreatingAFolderWithNoNameIsAFieldError(t *testing.T) {
 // The destructive one, end to end. A deleted folder takes its characters with
 // it, and nothing gives them back.
 func TestDeletingAFolderDeletesItsCharacters(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	folder := decode[folderapi.Folder](t,
@@ -233,6 +240,7 @@ func TestDeletingAFolderDeletesItsCharacters(t *testing.T) {
 // A 400, not a 404: the folder exists and the caller owns it. The honest answer
 // is that this particular folder cannot go.
 func TestTheDefaultFolderCannotBeDeleted(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	def := listFolders(t, r, session)[0]
@@ -253,6 +261,7 @@ func TestTheDefaultFolderCannotBeDeleted(t *testing.T) {
 // are. This is the test that notices one declared a line above the guarded
 // group.
 func TestFolderRoutesRequireASession(t *testing.T) {
+	t.Parallel()
 	r, _ := newFullRouter(t)
 
 	for _, tc := range []struct{ method, path string }{
@@ -275,6 +284,7 @@ func TestFolderRoutesRequireASession(t *testing.T) {
 // else's folder is indistinguishable from one that never existed. A 403 would
 // confirm the id, and folders are numbered from one.
 func TestAnotherAccountCannotReachTheFolder(t *testing.T) {
+	t.Parallel()
 	r, alice, _, federation := newFullRouterWithFederation(t)
 	cookies := helpers.CookieOptions{Secure: false}
 
@@ -329,6 +339,7 @@ func TestAnotherAccountCannotReachTheFolder(t *testing.T) {
 // The order is a PUT of the whole collection, so sending it twice says the
 // same thing -- which is what lets a client re-send a drag it is unsure landed.
 func TestReorderingFolders(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	first := decode[folderapi.Folder](t,
@@ -361,6 +372,7 @@ func TestReorderingFolders(t *testing.T) {
 // Every way of naming the wrong set, and the one that is not a set problem at
 // all: the default folder, which leads the listing and has no position to take.
 func TestReorderingFoldersRefusesAWrongSet(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	def := listFolders(t, r, session)[0]
@@ -398,6 +410,7 @@ func TestReorderingFoldersRefusesAWrongSet(t *testing.T) {
 // An account whose only folder is the default has nothing to order, and saying
 // so is not an error.
 func TestReorderingWithNothingToOrder(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	rec := send(t, r, session, http.MethodPut, "/v1/folders/order",

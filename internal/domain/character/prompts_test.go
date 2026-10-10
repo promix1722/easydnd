@@ -62,6 +62,7 @@ func find(t *testing.T, prompts []Prompt, id rules.Slug) Prompt {
 }
 
 func TestEmptyLogAsksForIdentityFirst(t *testing.T) {
+	t.Parallel()
 	got := promptsFor(t, Log{})
 	if firstRequired(got) != "character/init" {
 		t.Errorf("first required prompt = %q, want character/init", firstRequired(got))
@@ -74,6 +75,7 @@ func TestEmptyLogAsksForIdentityFirst(t *testing.T) {
 // The flow's spine: each answer opens the next question, and nothing is
 // skipped. This walks a character from nothing to a level-1 rogue.
 func TestPromptsAdvanceAsAnswersArrive(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	var log Log
 
@@ -174,6 +176,7 @@ func TestPromptsAdvanceAsAnswersArrive(t *testing.T) {
 // artisan's tool or one musical instrument" is two branches over different
 // pools and stays a real question about which branch you are in.
 func TestAnsweringAPromptOpensItsNestedPrompt(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	branch := func(picks ...rules.Slug) Log {
 		t.Helper()
@@ -217,6 +220,7 @@ func TestAnsweringAPromptOpensItsNestedPrompt(t *testing.T) {
 // data -- so this is the transcription being reconciled, not a rule being
 // bent. oneList is what does it, on the asking side and the reading side both.
 func TestExpertiseIsAskedAsOneList(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	var log Log
 	if err := log.Append(
@@ -254,6 +258,7 @@ func TestExpertiseIsAskedAsOneList(t *testing.T) {
 // desired level *is* the level, and what those levels open is what is asked.
 // That is what makes creation and level-up one flow.
 func TestDeclaringALevelIsTakingIt(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	log := RogueLog(t)
 	// RogueLog predates both identity questions, as an imported log does.
@@ -321,6 +326,7 @@ func TestDeclaringALevelIsTakingIt(t *testing.T) {
 // exact trap that narrowing a prompt's options by what is already held would
 // have set.
 func TestPromptsAreOrderIndependent(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	init := Event{Type: EventInit, At: at, Changes: []Change{
 		{Path: "abilities.dex", Op: OpSet, Value: IntValue(15)},
@@ -350,6 +356,7 @@ func TestPromptsAreOrderIndependent(t *testing.T) {
 // four-skill prompt must still offer them -- greyed out by the client -- and
 // must still be the same prompt it was before.
 func TestHeldOptionsAreReportedNotRemoved(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	var log Log
 	if err := log.Append(
@@ -388,6 +395,7 @@ func TestHeldOptionsAreReportedNotRemoved(t *testing.T) {
 // mere presence: if it ever stopped, this prompt would quietly offer every
 // skill in the game and Expertise would become free.
 func TestExpertiseOffersOnlyTheSkillsAlreadyTrained(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	var log Log
 	if err := log.Append(
@@ -434,6 +442,7 @@ func TestExpertiseOffersOnlyTheSkillsAlreadyTrained(t *testing.T) {
 // The subclass prompt appears at the level the compendium says, derived from
 // where the subclass's own advancement rows begin.
 func TestSubclassPromptAppearsWhenDue(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	build := func(level int) Log {
 		t.Helper()
@@ -465,6 +474,7 @@ func TestSubclassPromptAppearsWhenDue(t *testing.T) {
 // only with a cumulative counter. It must appear at 4 and not at 3, and the
 // answer must actually move a score.
 func TestAbilityScoreImprovementIsOfferedAndApplied(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	log := RogueLog(t)
 
@@ -520,6 +530,7 @@ func TestAbilityScoreImprovementIsOfferedAndApplied(t *testing.T) {
 // Twentieth level is where the 2014 rules stop, and declaring it must produce
 // a twentieth-level character rather than run off the end of the class table.
 func TestDeclaringTheMaximumLevel(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 23, 0, 0, 0, 0, time.UTC)
 	var log Log
 	if err := log.Append(
@@ -551,6 +562,7 @@ func TestDeclaringTheMaximumLevel(t *testing.T) {
 // prompt offers nothing to pick between, which is how a client tells a
 // question it writes an answer to from a question it picks one for.
 func TestRoleplayingPromptsAreTextInTheirOwnGroup(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 26, 0, 0, 0, 0, time.UTC)
 	var log Log
 	if err := log.Append(
@@ -608,6 +620,7 @@ func TestRoleplayingPromptsAreTextInTheirOwnGroup(t *testing.T) {
 // ability scores -- there are no picks to compare against an option set, so a
 // prompt that stayed open after being answered would be asked forever.
 func TestWritingATraitClosesItsPrompt(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 26, 0, 0, 0, 0, time.UTC)
 	var log Log
 	if err := log.Append(
@@ -642,6 +655,7 @@ func TestWritingATraitClosesItsPrompt(t *testing.T) {
 // projector used to assign all four from the picked suggestion, which meant
 // applyBackground overwrote whatever had been typed.
 func TestChoosingABackgroundKeepsWhatWasWritten(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, time.August, 26, 0, 0, 0, 0, time.UTC)
 	var log Log
 	if err := log.Append(
@@ -664,6 +678,7 @@ func TestChoosingABackgroundKeepsWhatWasWritten(t *testing.T) {
 }
 
 func TestPersonalityIsAvailableBeforeBackground(t *testing.T) {
+	t.Parallel()
 	var log Log
 	if err := log.Append(Event{Type: EventInit}); err != nil {
 		t.Fatal(err)

@@ -6,10 +6,18 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 )
 
+// testBase is the SRD registry the authoring tests build on, loaded once:
+// NewAuthoring only reads it, and a build is most of what a test costs.
+var testBase = sync.OnceValues(func() (*Registry, error) {
+	return NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
+})
+
 func TestVisualSchemaCoversWireCollectionsAndRecursiveMechanics(t *testing.T) {
+	t.Parallel()
 	a := &Authoring{}
 	var schema struct {
 		Root        EditorField
@@ -45,6 +53,7 @@ func TestVisualSchemaCoversWireCollectionsAndRecursiveMechanics(t *testing.T) {
 	}
 }
 func TestForkRewritesReferencesButPreservesProse(t *testing.T) {
+	t.Parallel()
 	a := &Authoring{}
 	raw := []byte(`{"manifest":{"id":"original","version":"2.0.0","dependencies":[{"id":"other","version":"^1.0.0"}],"attribution":"original:feature:sample"},"entities":{"features":[{"id":"sample","class":"original:class:mage","desc":["original:feature:sample"],"text":"original:feature:sample"}]},"mechanics":{"casting":{"original:class:mage":{"kind":"shared"}},"rules":[{"owner":"original:feature:sample","effects":[{"ref":"other:spell:spell"}]}]},"locales":{"en":{"features":{"sample":{"name":"original:feature:sample"}}}}}`)
 	b, err := a.Fork(raw, "copy", map[string]string{"other": "other-copy"})
@@ -66,7 +75,8 @@ func TestForkRewritesReferencesButPreservesProse(t *testing.T) {
 	}
 }
 func TestImportedExampleCompilesAndRoundTrips(t *testing.T) {
-	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
+	t.Parallel()
+	base, err := testBase()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +119,8 @@ func TestImportedExampleCompilesAndRoundTrips(t *testing.T) {
 }
 
 func TestForkedCoreRetainsExactlyTheSixStandardScores(t *testing.T) {
-	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
+	t.Parallel()
+	base, err := testBase()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,6 +148,7 @@ func TestForkedCoreRetainsExactlyTheSixStandardScores(t *testing.T) {
 }
 
 func TestForkRewritesQualifiedExpressionInputs(t *testing.T) {
+	t.Parallel()
 	a := &Authoring{}
 	raw := []byte(`{"manifest":{"id":"original","version":"1.0.0"},"mechanics":{"rules":[{"effects":[{"target":"abilities.original:ability:wis","value":{"op":"read","ref":"modifier:original:ability:wis"}}]}]},"entities":{},"locales":{}}`)
 	b, err := a.Fork(raw, "copy", nil)

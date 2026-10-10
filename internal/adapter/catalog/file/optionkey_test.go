@@ -94,6 +94,7 @@ func everyChoice(c *catalog.Catalog, visit func(rules.Choice)) {
 // builder titles the card by -- so every kit choice must carry one the client
 // has a caption for, under the prompt id it names.
 func TestClassKitsAreAskedBySlot(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 	known := map[rules.Slug]bool{"body": true, "main-hand": true, "off-hand": true, "backup": true, "pack": true, "focus": true, "instrument": true}
 	for _, cl := range c.Classes.All() {
@@ -112,6 +113,7 @@ func TestClassKitsAreAskedBySlot(t *testing.T) {
 }
 
 func TestStartingEquipmentOptionsContainOneEquipmentType(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 	var choices []rules.Choice
 	for _, class := range c.Classes.All() {
@@ -171,6 +173,7 @@ func TestStartingEquipmentOptionsContainOneEquipmentType(t *testing.T) {
 // This is the test that would catch a future SRD collection whose options are
 // all bundles, or a generator change that drops a TextOption's key.
 func TestOptionKeysAreTotalAndUniquePerPrompt(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	prompts := 0
@@ -206,6 +209,7 @@ func TestOptionKeysAreTotalAndUniquePerPrompt(t *testing.T) {
 // The rogue's starting kit and Expertise are the two prompts that motivated
 // OptionKey; pin them so a regression is legible rather than statistical.
 func TestRogueBundleAndNestedPromptsAreAnswerable(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	rogue, ok := c.Classes.Get("rogue")
@@ -268,6 +272,7 @@ func TestRogueBundleAndNestedPromptsAreAnswerable(t *testing.T) {
 // both derived "rogue-expertise-1/expertise/0/0" while asking for a different
 // number of picks.
 func TestPromptIDsAreGloballyUnique(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	seen := make(map[rules.Slug]bool)

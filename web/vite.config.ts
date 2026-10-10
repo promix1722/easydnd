@@ -262,13 +262,26 @@ export default defineConfig({
    *
    * `isolate: false` is what makes it fast, and it is worth a lot. With
    * isolation on, vitest forks a process per test file and each one rebuilds
-   * the whole Mantine + embla + React module graph and its own jsdom -- across
-   * 48 files that was 36s spent on imports and 78s on constructing jsdoms, out
+   * the whole Mantine + embla + React module graph and its own DOM -- across
+   * 48 files that was 36s spent on imports and 78s on constructing them, out
    * of 229s total. Sharing both took the run to 64s without changing a single
    * assertion. The pool is left at the default `forks` deliberately: `threads`
    * measured no better, and the worker count is left alone too -- vitest takes
    * `availableParallelism - 1`, which is the right answer on every machine this
    * runs on.
+   *
+   * `happy-dom` rather than jsdom, for the same reason: at 100 files the
+   * suite was CPU-bound at 186s of test time across three workers, 66s of
+   * wall, and nearly all of it was React rendering into the DOM. happy-dom
+   * renders the same trees in half the time -- 92s of test time, 40s of wall
+   * -- and cost two test-side changes: a storage spy that targets the instance
+   * rather than `Storage.prototype` (happy-dom's storage is a proxy), and
+   * `DragonMark.test.tsx` pinned to jsdom with `@vitest-environment`, because
+   * happy-dom's CSS parser drops a math function such as `min(64vw, 300px)`
+   * from an inline style. That pin is the pattern for any test that needs a
+   * DOM behaviour happy-dom lacks: one comment on the file, not a flag on the
+   * suite. The `environment` summary line vitest prints overstates DOM setup
+   * by a hundred times -- it counts one per-worker setup once per file.
    *
    * What it costs is the guarantee that a file starts from nothing, and two
    * things follow from that. Both are load-bearing:
@@ -290,7 +303,7 @@ export default defineConfig({
    * 53 took 16.3s. One optional prop bought that 2.4s back.
    */
   test: {
-    environment: 'jsdom',
+    environment: 'happy-dom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     isolate: false,
@@ -306,6 +319,6 @@ export default defineConfig({
     // style assertions are on inline `element.style` -- DragonMark's width and
     // the carousel's custom properties, both written by JS -- and Mantine emits
     // its class names whether or not a stylesheet was ever parsed. Running
-    // @mantine/core's CSS through PostCSS and into every jsdom bought nothing.
+    // @mantine/core's CSS through PostCSS and into every DOM bought nothing.
   },
 })

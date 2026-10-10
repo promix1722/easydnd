@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	file "github.com/promix1722/easydnd/internal/adapter/catalog/file"
@@ -17,7 +18,25 @@ func basePath() string { return filepath.Join("..", "..", "..", "..", "data", "p
 func addonPath() string {
 	return filepath.Join("testdata", "tactician.json")
 }
+
+// registry is the SRD plus the tactician addon, built once for the binary:
+// a build reads, digests and compiles both locales, and it is most of what
+// a test using it costs. Reads share safely; a test that writes into the
+// registry -- CompilePrivate installs a release -- takes freshRegistry.
 func registry(t *testing.T) *file.Registry {
+	t.Helper()
+	r, err := sharedRegistry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
+var sharedRegistry = sync.OnceValues(func() (*file.Registry, error) {
+	return file.NewRegistry([]string{basePath(), addonPath()}, nil, "")
+})
+
+func freshRegistry(t *testing.T) *file.Registry {
 	t.Helper()
 	r, err := file.NewRegistry([]string{basePath(), addonPath()}, nil, "")
 	if err != nil {
@@ -36,6 +55,7 @@ func build(t *testing.T, classes ...character.Event) character.Log {
 func ref(kind rules.RefKind, id string) rules.Ref { return rules.NewRef(kind, rules.Slug(id)) }
 
 func TestPackRoundTripAndCanonicalDigest(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -69,6 +89,7 @@ func TestPackRoundTripAndCanonicalDigest(t *testing.T) {
 	}
 }
 func TestAddonResourcesAndLocale(t *testing.T) {
+	t.Parallel()
 	r := registry(t)
 	cat, err := r.Load(context.Background(), rules.LocaleEN)
 	if err != nil {
@@ -108,6 +129,7 @@ func TestAddonResourcesAndLocale(t *testing.T) {
 	}
 }
 func TestResourceReplayAndSeparateCastingPools(t *testing.T) {
+	t.Parallel()
 	r := registry(t)
 	cat, err := r.Load(context.Background(), rules.LocaleEN)
 	if err != nil {
@@ -133,6 +155,7 @@ func TestResourceReplayAndSeparateCastingPools(t *testing.T) {
 	}
 }
 func TestRejectDuplicateKeysMissingDependenciesAndChangedRelease(t *testing.T) {
+	t.Parallel()
 	if _, err := file.DecodePack([]byte(`{"manifest":{},"manifest":{}}`)); err == nil {
 		t.Fatal("duplicate keys accepted")
 	}
@@ -173,6 +196,7 @@ func TestRejectDuplicateKeysMissingDependenciesAndChangedRelease(t *testing.T) {
 }
 
 func TestActionCostRecoveryBudgetAndReplay(t *testing.T) {
+	t.Parallel()
 	r := registry(t)
 	cat, err := r.Load(context.Background(), rules.LocaleEN)
 	if err != nil {
@@ -239,6 +263,7 @@ func writeDocument(t *testing.T, p *file.PackDocument) string {
 	return path
 }
 func TestRuleValidationAndGuardedOverrides(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -280,6 +305,7 @@ func TestRuleValidationAndGuardedOverrides(t *testing.T) {
 	}
 }
 func TestPinnedReleaseSurvivesUpdateAndRestart(t *testing.T) {
+	t.Parallel()
 	archive := t.TempDir()
 	old := registry(t)
 	oldLock := old.DefaultLock()
@@ -319,6 +345,7 @@ func TestPinnedReleaseSurvivesUpdateAndRestart(t *testing.T) {
 }
 
 func TestExplicitCasterProfilesAndTypedParameters(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -371,6 +398,7 @@ func TestExplicitCasterProfilesAndTypedParameters(t *testing.T) {
 }
 
 func TestSubclassCastingProfileCompilesAndProjects(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -437,6 +465,7 @@ func TestSubclassCastingProfileCompilesAndProjects(t *testing.T) {
 }
 
 func TestEquipmentConditionsApplyDuringProjection(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -484,6 +513,7 @@ func TestEquipmentConditionsApplyDuringProjection(t *testing.T) {
 }
 
 func TestPacksRejectCustomAbilityScores(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -502,6 +532,7 @@ func TestPacksRejectCustomAbilityScores(t *testing.T) {
 // standalone action. Under a namespaced pack the tag's pool has to resolve to
 // the pack's own resource, and the SRD's unowned actions still reach everyone.
 func TestTaggedEntriesAndStandaloneActionsReachTheActionList(t *testing.T) {
+	t.Parallel()
 	cat, err := registry(t).Load(context.Background(), rules.LocaleEN)
 	if err != nil {
 		t.Fatal(err)

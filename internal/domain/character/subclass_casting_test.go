@@ -1,6 +1,7 @@
 package character
 
 import (
+	"maps"
 	"slices"
 	"testing"
 
@@ -38,6 +39,9 @@ func subclassCastingCatalog(t *testing.T) *catalog.Catalog {
 	}
 	cat := catalog.New(rules.LocaleEN, levels)
 	cat.Classes, cat.Spells, cat.Mechanics = base.Classes, base.Spells, base.Mechanics
+	// The casting map is written below, and base is shared with every other
+	// test in the binary.
+	cat.Mechanics.Casting = maps.Clone(base.Mechanics.Casting)
 	cat.Subclasses = catalog.NewCollection([]catalog.Subclass{
 		{Entry: catalog.Entry{Slug: "homebrew/knight"}, Class: "fighter"},
 		{Entry: catalog.Entry{Slug: "homebrew/trickster"}, Class: "rogue"},
@@ -49,6 +53,7 @@ func subclassCastingCatalog(t *testing.T) *catalog.Catalog {
 }
 
 func TestSubclassCastingAcquisitionAndAbility(t *testing.T) {
+	t.Parallel()
 	cat := subclassCastingCatalog(t)
 	for _, tc := range []struct{ class, subclass rules.Slug }{
 		{"fighter", "homebrew/knight"}, {"rogue", "homebrew/trickster"},
@@ -97,6 +102,7 @@ func TestSubclassCastingAcquisitionAndAbility(t *testing.T) {
 }
 
 func TestSubclassSlotsAndMulticlassContribution(t *testing.T) {
+	t.Parallel()
 	cat := subclassCastingCatalog(t)
 	knight := ClassLevel{Class: "fighter", Subclass: "homebrew/knight", Level: 4}
 	slots, _ := spellSlots(cat, []ClassLevel{knight})
@@ -126,6 +132,7 @@ func TestSubclassSlotsAndMulticlassContribution(t *testing.T) {
 }
 
 func TestEquipmentExpressionFlags(t *testing.T) {
+	t.Parallel()
 	cat := spellCatalog(t)
 	for _, tc := range []struct {
 		items         []ItemStack
