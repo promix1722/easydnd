@@ -286,13 +286,11 @@ export default defineConfig({
    * suite was CPU-bound at 186s of test time across three workers, 66s of
    * wall, and nearly all of it was React rendering into the DOM. happy-dom
    * renders the same trees in half the time -- 92s of test time, 40s of wall
-   * -- and cost two test-side changes: a storage spy that targets the instance
-   * rather than `Storage.prototype` (happy-dom's storage is a proxy), and
-   * `DragonMark.test.tsx` pinned to jsdom with `@vitest-environment`, because
-   * happy-dom's CSS parser drops a math function such as `min(64vw, 300px)`
-   * from an inline style. That pin is the pattern for any test that needs a
-   * DOM behaviour happy-dom lacks: one comment on the file, not a flag on the
-   * suite. The `environment` summary line vitest prints overstates DOM setup
+   * -- and cost one test-side change: a storage spy that targets the instance
+   * rather than `Storage.prototype` (happy-dom's storage is a proxy). A test
+   * that needs a DOM behaviour happy-dom lacks pins its own environment with
+   * `@vitest-environment`: one comment on the file, not a flag on the suite.
+   * The `environment` summary line vitest prints overstates DOM setup
    * by a hundred times -- it counts one per-worker setup once per file.
    *
    * What it costs is the guarantee that a file starts from nothing, and two

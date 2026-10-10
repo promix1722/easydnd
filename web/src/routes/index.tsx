@@ -130,7 +130,7 @@ export const router = createBrowserRouter([
       },
 
       // The log rather than the sheet: same character, the record instead of
-      // what the record means. Not a NAV_ITEMS entry -- it hangs off a
+      // what the record means. Not a SECTIONS entry -- it hangs off a
       // character, not off the app.
       {
         path: 'characters/:id/items/:slug',
@@ -215,7 +215,7 @@ export const router = createBrowserRouter([
 
       // Games are their own section, so they sit at the top level rather than
       // under the group they are played at -- which is also what keeps
-      // activeNavPath lighting Games instead of Groups when one is open.
+      // the navbar lighting Games instead of Groups when one is open.
       // Not behind Private: AdminOnly answers a signed-out visitor with the
       // same not-found page as everybody else who is not a superadmin.
       {
@@ -312,7 +312,7 @@ export const router = createBrowserRouter([
   // /legal sits outside RootGate: a licence notice you have to sign in to read
   // is not a notice. The SRD 5.1 data is CC-BY-4.0 and that licence expects its
   // attribution in the product, so the landing footer links here and this
-  // renders for everybody. Absent from shell/nav.ts -- it is a document, not a
+  // renders for everybody. Absent from ui/sections.ts -- it is a document, not a
   // section of the app.
   {
     path: '/legal',

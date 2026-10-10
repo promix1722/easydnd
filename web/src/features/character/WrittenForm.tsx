@@ -54,7 +54,7 @@ export function WrittenForm({
         aria-label={noun}
         placeholder={t('written.placeholder')}
         // Fixed rows rather than autosize: Mantine's autosizing textarea is
-        // `react-textarea-autosize`, which measures with a listener jsdom has
+        // `react-textarea-autosize`, which measures with a listener the test DOM has
         // no element to attach -- so the field could not even be focused in a
         // test. Three rows holds the answers these questions actually get, and
         // a longer one scrolls.

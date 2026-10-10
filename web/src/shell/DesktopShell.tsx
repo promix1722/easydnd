@@ -90,8 +90,7 @@ function rowStyles(opened: boolean) {
  * whole of the navigation, so each keeps its name in a tooltip and in its
  * accessible name -- see `ui/sections.ts`, where the glyphs are chosen.
  *
- * **The state is not remembered.** There is no `localStorage` anywhere in this
- * client, and the sheet's "Hide untrained" toggle is already deliberately
+ * **The state is not remembered.** The sheet's "Hide untrained" toggle is already deliberately
  * unpersisted; a second unpersisted toggle is consistent, where a persisted one
  * would be this app's first stored preference and would have to earn that. It
  * would also be a *setting* that no page lists, which is how you get a bug

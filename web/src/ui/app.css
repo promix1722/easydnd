@@ -1,5 +1,5 @@
 /*
- * The application's only stylesheet, and it holds one rule.
+ * The application's only stylesheet. Its first rule is the reason it exists.
  *
  * **iOS Safari zooms the whole page when a field smaller than 16px takes
  * focus.** Every field in this app is Mantine's `sm`, which is 14px, so every

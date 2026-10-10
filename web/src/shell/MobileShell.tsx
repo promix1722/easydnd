@@ -145,14 +145,7 @@ export function MobileShell() {
 
           <Menu position="bottom-start" withinPortal>
             <Menu.Target>
-              {/* This used to pass `size="sm"`, and the comment here explained
-                  that it was the one deliberate override of the theme's `xs`
-                  Button because 30px is under every guideline there is for the
-                  whole of a phone's navigation. The override is gone and the
-                  argument won: `ui/app.css` makes every control 44px below the
-                  breakpoint, so this one is thumb-sized by being ordinary.
-
-                  No aria-label -- the visible text is the name, and Menu.Target
+              {/* No aria-label -- the visible text is the name, and Menu.Target
                   supplies aria-haspopup and aria-expanded on its own. */}
               <Button
                 variant="subtle"
