@@ -722,6 +722,7 @@
   "agent.instructions": "Instructions (optional)",
   "agent.scrollDown": "Scroll to the latest message",
   "agent.send": "Send",
+  "agent.stop": "Stop",
   "agent.failed": "Something went wrong on my side and I had to stop. Nothing imported so far is lost — Retry picks up where I left off.",
   "agent.paused": "I stopped before I was done. Resume picks up where I left off.",
   "agent.retry": "Retry",

@@ -853,6 +853,17 @@ func (a *Agent) Control(owner domain.OwnerID, id, action, text string, revision 
 			}
 			return nil, nil
 		}
+		// Stopping a turn in flight does not wait on the revision either: a
+		// running turn moves it with every tool call, so the page pressing
+		// Stop is a step behind more often than not, and a stop that answered
+		// "session changed" would be a button that works by luck. A press that
+		// arrives after the turn ended has nothing to stop and says nothing.
+		if action == "stop" && !s.Finished && s.Revision != revision {
+			if s.Status != "queued" && s.Status != "running" {
+				return nil, nil
+			}
+			revision = s.Revision
+		}
 		if s.Finished || s.Revision != revision {
 			return nil, types.NewValidationError("session changed").Because("agent.changed")
 		}

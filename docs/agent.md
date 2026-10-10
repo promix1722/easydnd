@@ -332,13 +332,17 @@ the same list a second time passes. It used to block until every entry was
 satisfied, and a model that had worded one in a way nothing could satisfy
 responded by inventing custom content until the list went quiet.
 
-There is no interruption control in the UI. The message box stays open while
-the assistant is running, but nothing can be sent from it: Send and the reply
+**Stop** takes Send's place while a turn is running or queued. It sends the
+`stop` control, which ends the turn `paused` with the usual Resume: everything
+imported so far is kept. A stop is honoured from a stale revision while a turn
+is in flight, because a running turn moves the revision with every tool call
+and the page is usually a step behind; one that arrives after the turn ended
+does nothing. The message box stays open while
+the assistant is running, but nothing can be sent from it: the reply
 buttons wait for the turn to end. Terminal status snapshots enable them and
 focus it. The page learns of them by [polling](polling.md), which
 never disables input.
 Resume continues a paused conversation; Retry continues after a failure.
-The internal stop API remains for cancellation and lifecycle handling.
 Waiting for a reply holds no worker. **Discard deletes the character with the
 chat** -- it is what discarding the draft used to mean -- while leaving the
 chat any other way leaves the character where it is. A character whose

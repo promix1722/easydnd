@@ -332,7 +332,12 @@ it('lets a message be sent only on the player\'s turn, and keeps the opening in 
   // While the assistant works the box stays open; only sending waits.
   await waitFor(() => expect(screen.getByRole('status', { name: 'The assistant is working…' })).toBeInTheDocument())
   expect(screen.getByRole('textbox')).toBeEnabled()
-  expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+  // Send's place is Stop's while a turn is in flight, and pressing it sends
+  // the stop control.
+  expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Stop' }))
+  await waitFor(() => expect(writes.map((write) => (write.body as { action: string }).action)).toEqual(['stop']))
+  writes = []
   // The opening is part of the log like everything after it.
   const transcript = screen.getByRole('log')
   expect(transcript.textContent).toMatch(/Which rules should I use.*D&D 2014 v1\.0\.0.*describe the character.*Please import Zephyr/)
@@ -461,7 +466,7 @@ it('takes the end of a turn from the poll so the next reply can be sent', async 
   // The answer can be written while the assistant is still working, and sent
   // once it has finished.
   await user.type(await screen.findByLabelText('Message the assistant'), 'My answer')
-  expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+  expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
   await act(() =>
     Stream.emit('snapshot', {
       ...VIEW,

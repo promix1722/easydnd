@@ -529,13 +529,22 @@ export function AgentImportScreen() {
                         </FileButton>
                       )}
 
-                      <Button
-                        type="submit"
-                        loading={action.pending}
-                        disabled={!myTurn || choose.pending || (!message.trim() && !files.length)}
-                      >
-                        {t('agent.send')}
-                      </Button>
+                      {/* While a turn is in flight Send has nothing to do, so its
+                          place is where the turn is stopped. It ends paused,
+                          with Resume: nothing imported so far is lost. */}
+                      {session?.status === 'running' || session?.status === 'queued' ? (
+                        <Button type="button" variant="default" loading={action.pending} onClick={() => void control('stop')}>
+                          {t('agent.stop')}
+                        </Button>
+                      ) : (
+                        <Button
+                          type="submit"
+                          loading={action.pending}
+                          disabled={!myTurn || choose.pending || (!message.trim() && !files.length)}
+                        >
+                          {t('agent.send')}
+                        </Button>
+                      )}
                     </Group>
                   </Stack>
                 </form>
