@@ -1,94 +1,58 @@
 # easydnd
 
-D&D 5e character creation, level-up and battle tracker. Go HTTP API plus a
-responsive React client, deployed to [easydnd.org](https://easydnd.org) via
-GitHub Actions. Targets the **2014 rules** on **SRD 5.1 extended**: the SRD
-plus the mechanics and names of the other 2014 books, with their text kept
-out -- see [docs/dnd.md](docs/dnd.md#the-catalogue).
+A D&D 5e character builder and table tracker, live at
+[easydnd.org](https://easydnd.org). It targets the **2014 rules** on SRD 5.1,
+extended with the mechanics and names of the other 2014 books and none of
+their text.
 
-Status: **character creation and level-up work end to end.** The architecture,
-deploy path, entity model, the compendium in `data/pack/srd-5.1/`, sign-in,
-the rules math and the browser client are built and tested. Levelling up is declaring the level a
-character is built towards -- at creation, or later from the sheet's Level up
-button -- and answering the choices each level opens; see
-[docs/web.md](docs/web.md#level-up-is-the-desired-level). The battle tracker
-is not built. A character can also carry **custom items** -- its owner writes
-one with any icon the packs have and the full numbers of a weapon or a suit of
-armor, and it is worn and swung like a catalogue item; see
-[Custom items](docs/dnd.md#a-custom-item-is-an-item).
+A Go HTTP API and a React client, with everything stored in PostgreSQL.
 
-An account is reached by **a passkey or a Google account**, either or both --
-there is no password, no reset link and nothing to fill in: one button either
-signs you in with the passkey you already have or creates an account around the
-one your device makes, saved as `easydnd` in your credential manager so you can
-find it there later. Connecting the second method is the only recovery there
-is; the passkey an account is created with is the only one it ever has. Google is optional configuration; without it the app
-is passkeys only. Accounts, their passkeys and their linked accounts are
-stored in PostgreSQL, with the schema migrating itself at startup, so a restart
-no longer costs anybody their account. There is also a **guest session**: one
-click, no account, nothing stored beyond the group roster a guest asks to be
-named in and the characters they make. **Characters and the folders they are
-filed in are in PostgreSQL too**, and survive a restart with everything else.
-See [Authentication](docs/backend.md#authentication) and
-[Folders](docs/backend.md#folders). **AI Wizard chats are in PostgreSQL**,
-kept for a day after they were last used; see
-[Session lifetime](docs/agent.md#session-lifetime).
+## What it does
 
-**Groups** are the second main section: a table of people with three ranks --
-owner, DM, player -- who invite each other with a link that works for 24 hours.
-They live in PostgreSQL and survive a restart.
+- **Characters.** Create one, answer the choices each level opens, level up
+  from the sheet. A character is an event log, replayed into a sheet.
+- **AI Wizard.** Upload a character sheet and a model builds the character
+  from it, using tools the server supplies.
+- **Groups.** A table of people with three ranks -- owner, DM, player -- who
+  join by an invitation link.
+- **Games.** One sitting at a group's table: a roster of shared characters and
+  NPCs, with hit points, initiative, rests, items and coins tracked per game.
+- **Rule packs.** The compendium is a versioned pack. Homebrew packs are
+  authored in the browser, shared with a group, and imported or exported as
+  JSON.
+- **Accounts.** A passkey or a Google account, or a guest session; no
+  passwords.
 
-A group is no longer only people. Any member may **share** a character with it,
-and that grants a read to whoever runs the table: its DMs and its owner can
-open the sheet, a player only once the character's owner opens it, and only
-its owner can change it -- except for what a table hands over: at a game, a DM
-gives a seated character an item -- the catalogue's or a custom one -- or coins, and a player passes one of their
-own items to another. See
-[What a table hands over](docs/backend.md#what-a-table-hands-over).
+Three words are not interchangeable. A **group** is people. A **game** is one
+sitting at a group's table, never called a *session*, which here means being
+signed in. A **folder** is one account's private shelf for its own characters.
 
-**Games** are the third main section, beside Characters and Groups. A game is
-one sitting run by a DM, played at one group's table, with a roster of the
-characters that group has shared. They are listed together across every table
-you sit at rather than being reached through a group -- the group is a fact
-about a game, not the way in to one. The characters shared with a group and
-the games run from them are in PostgreSQL beside it. See
-[Ownership, and membership](docs/backend.md#ownership-and-membership).
+## Run it
 
-A character changes hands by **copy**: its owner sends a link, good for 24
-hours, and whoever opens it gets their own copy while the original stays where
-it is. See
-[Giving a character to somebody](docs/backend.md#giving-a-character-to-somebody-is-giving-them-a-copy).
+```sh
+make dev      # Postgres, the API and the web client, on this worktree's ports
+make verify   # everything CI checks; run it before every commit
+```
 
-A **group**, a **game** and a **folder** are different things and the words are
-not interchangeable. A group is people, shared, with ranks. A game is one
-sitting at that group's table, with the characters a DM seats at it -- never
-called a *session*, which here means being signed in. A folder is one account's
-private shelf for its own characters, shared with nobody.
+`make dev` seeds three accounts -- **master**, **player1**, **player2** -- with
+a shared group, two games and a few characters. Open `/login` and pick one.
+Secrets and the AI Wizard's key come from `~/config/easydnd/dev.env`; see
+`easydnd.example.env`.
 
-An account named in `auth.superadmins` also gets an **Admin** section on
-desktop: every player and every character in two filterable tables, any
-sheet opened read-only, and a private pack handed to a player. See
-[A superadmin reads everything](docs/backend.md#a-superadmin-reads-everything-and-writes-one-thing).
-
-For development, `make dev` seeds **master**, **player1**, and **player2**,
-a shared group, two games, first-level characters and two fifth-level casters. Open `/login` and choose
-an account; use the account icon in the header to switch roles. See
-[Seeded development party](docs/backend.md#seeded-development-party).
+Deploying is a tag: `git tag -a vX.Y.Z && git push origin vX.Y.Z`.
 
 ## Documentation
 
 | Doc | Covers |
 | --- | --- |
-| [docs/dnd.md](docs/dnd.md) | The game model: catalogue entities, the event-sourced character, and the SRD terminology the code follows |
-| [docs/packs.md](docs/packs.md) | JSON packs, version locks, extensible resources and configuration |
-| [docs/agent.md](docs/agent.md) | Character import tools, chat workspace, private content, configuration and resumability |
-| [docs/polling.md](docs/polling.md) | How the AI Wizard page follows a running import: one request a second, answered at once |
+| [docs/backend.md](docs/backend.md) | The Go service: layout, layer rules, API, configuration, deployment |
+| [docs/web.md](docs/web.md) | The browser client: layout, layer rules, design decisions, how it ships |
+| [docs/dnd.md](docs/dnd.md) | The game model: catalogue, the event-sourced character, SRD terminology |
+| [docs/packs.md](docs/packs.md) | Rule packs: format, versions and locks, resources, homebrew authoring |
+| [docs/agent.md](docs/agent.md) | The AI Wizard: tools, chat workspace, private content, resumability |
+| [docs/polling.md](docs/polling.md) | How the AI Wizard page follows a running import |
 | [docs/known-caveats.md](docs/known-caveats.md) | Limits that are known and deliberate |
-| [docs/backend.md](docs/backend.md) | The Go service: layout, layer rules, configuration, deployment |
-| [docs/web.md](docs/web.md) | The browser client: layout, layer rules, how it ships |
-| [docs/seo.md](docs/seo.md) | Search-engine and answer-engine discovery, submission, and monitoring |
-| [docs/licensing.md](docs/licensing.md) | MIT for the project's own code, and the SRD 5.1 attribution the data carries |
+| [docs/seo.md](docs/seo.md) | Search and answer-engine discovery |
+| [docs/licensing.md](docs/licensing.md) | MIT for the code, and the SRD 5.1 attribution the data carries |
 
-Homebrew packs can be authored visually, shared with groups, and imported/exported
-as JSON. See [rule packs](docs/packs.md#homebrew-authoring) for versions,
-dependencies, storage, and character selection.
+`CLAUDE.md` holds the working rules for changing this repository.
