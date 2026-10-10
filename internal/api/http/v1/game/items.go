@@ -6,6 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
+	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/types"
 )
@@ -72,4 +74,30 @@ func (h *Handler) GiveItem(c *gin.Context) {
 		return
 	}
 	h.detail(c, ctx, h.actor(c), gameOf(c), http.StatusOK)
+}
+
+// GrantCustomItem is the DM giving a seated character an item written on the
+// spot. The body names no id, placement or count: the route adds one new
+// item and does nothing else.
+func (h *Handler) GrantCustomItem(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 32<<10)
+	var params struct {
+		Name        string           `json:"name"`
+		Description string           `json:"description"`
+		Item        *catalogapi.Item `json:"item"`
+	}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helpers.FormatError(c, types.NewValidationError("invalid item"))
+		return
+	}
+	item, err := characterapi.CustomItemOf(params.Item)
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	if err = h.service.GrantCustomItem(c.Request.Context(), h.actor(c), gameOf(c), c.Param("entry"), helpers.Locale(c), params.Name, params.Description, item); err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }

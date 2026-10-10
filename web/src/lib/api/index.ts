@@ -166,6 +166,7 @@ export {
   renameGame,
   shareCharacter,
   unshareCharacter,
+  grantCustomItem,
 } from './games'
 export type { GameDetail, GameSummary, TableCharacter, GameEntry, EntryPool, EntryStats, EntryPatch } from './games'
 

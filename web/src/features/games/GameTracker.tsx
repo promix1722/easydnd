@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type PointerEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 
 import type { Change, EntryPatch, EntryStats, GameDetail, GameEntry, Item, ItemHit } from '@/lib/api'
 import {
@@ -46,7 +46,13 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
   const [carrying, setCarrying] = useState<{ id: string; mode: 'use' | 'give' } | null>(null)
   const [paying, setPaying] = useState<string | null>(null)
   // What changed hands, said in a corner and gone by itself: nothing on the roster shows an inventory.
-  const [notice, setNotice] = useState<{ title: string; text: string } | null>(null)
+  // The custom item page comes back with what it gave, to be said the same way.
+  const navigate = useNavigate()
+  const arrived = (useLocation().state as { given?: { item: string; name: string } } | null)?.given
+  const [notice, setNotice] = useState<{ title: string; text: string } | null>(
+    () => arrived === undefined ? null : { title: t('game.added'), text: t('game.gave', arrived) })
+  // Said once: the navigation's state is dropped, so a reload does not say it again.
+  useEffect(() => { if (arrived !== undefined) void navigate('.', { replace: true, state: null }) }, [arrived, navigate])
   useEffect(() => {
     if (notice === null) return
     const timer = setTimeout(() => setNotice(null), 4000)
@@ -173,6 +179,9 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
             // Handing over starts at whoever receives: on their card, to anybody with a character of their own to give from.
             ...(entry.kind === 'player' && myPlayers.some((each) => each.id !== entry.id)
               ? [{ label: t('game.transferItem'), icon: IconArrowsExchange, run: () => setCarrying({ id: entry.id, mode: 'give' }) }] : []),
+            // An item no catalogue holds is written on a page of its own; the search under the roster gives the rest.
+            ...(master && entry.kind === 'player' && entry.character_id ? [{ label: t('customItem.add'), icon: IconPlus,
+              run: () => void navigate(`/games/${game.id}/characters/${entry.character_id}/custom-item?entry=${encodeURIComponent(entry.id)}`) }] : []),
             ...(master ? [
               ...(entry.kind === 'player' ? [{ label: entry.locked ? t('game.unlock') : t('game.lock'), icon: IconShield,
                 run: () => void act(patch.run(game.id, entry.id, { locked: !entry.locked })) }] : []),

@@ -71,6 +71,10 @@ func TestSharedItemIconsArePackLocal(t *testing.T) {
 	if !strings.HasPrefix(first.Icon, "data:image/webp;base64,") || first.Icon != shared.Icon || first.Icon != magic.Icon || first.Icon == other.Icon {
 		t.Fatal("shared artwork lost or mixed between packs")
 	}
+	// The palette a custom item picks from holds every label, sword included.
+	if c.ItemIcons["blade"] == "" || c.ItemIcons["sword"] == "" {
+		t.Fatalf("item icon palette = %d labels, want the packs' own", len(c.ItemIcons))
+	}
 	before, err := PackDigest(a)
 	if err != nil {
 		t.Fatal(err)

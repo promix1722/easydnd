@@ -2,8 +2,10 @@ package character_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/types"
@@ -141,5 +143,50 @@ func TestCustomNotesAreAddedEditedAndDeleted(t *testing.T) {
 	stored, sheet, err := svc.View(ctx, testOwner, c.ID, rules.DefaultLocale)
 	if err != nil || stored.Revision != removed.Revision || len(sheet.CustomOptions) != 1 {
 		t.Fatalf("stored revision %d with %d entries (err %v), want %d with 1", stored.Revision, len(sheet.CustomOptions), err, removed.Revision)
+	}
+}
+
+// A custom item's mechanics are checked against the character's own rules,
+// wherever the write comes from.
+func TestACustomItemIsHeldToTheRules(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	svc := newService(t)
+	c := mustCreateScored(t, svc)
+	d := func(count, faces int, kind rules.Slug) *rules.Damage {
+		return &rules.Damage{Dice: rules.Dice{Terms: []rules.DiceTerm{{Count: count, Faces: faces}}}, Type: kind}
+	}
+	sword := catalog.Weapon{Category: catalog.MartialWeapon, Range: catalog.MeleeWeapon, Damage: d(1, 8, "slashing"), Properties: []rules.Slug{"finesse"}}
+	refused := map[string]domain.CustomOption{
+		"mechanics on a note": {Kind: "note", Name: "n", Item: &domain.CustomItem{}},
+		"weapon and armor":    {Kind: "item", Name: "n", Item: &domain.CustomItem{Weapon: &sword, Armor: &catalog.Armor{Category: catalog.LightArmor}}},
+		"unknown icon":        {Kind: "item", Name: "n", Item: &domain.CustomItem{Icon: "no-such-picture"}},
+		"absurd dice":         {Kind: "item", Name: "n", Item: &domain.CustomItem{Weapon: &catalog.Weapon{Category: catalog.SimpleWeapon, Range: catalog.MeleeWeapon, Damage: d(1000, 6, "slashing")}}},
+		"unknown damage type": {Kind: "item", Name: "n", Item: &domain.CustomItem{Weapon: &catalog.Weapon{Category: catalog.SimpleWeapon, Range: catalog.MeleeWeapon, Damage: d(1, 6, "sarcasm")}}},
+		"armor of no kind":    {Kind: "item", Name: "n", Item: &domain.CustomItem{Armor: &catalog.Armor{BaseAC: 12}}},
+		"coins of no kind":    {Kind: "item", Name: "n", Item: &domain.CustomItem{Cost: rules.Coins{Amount: 5}}},
+	}
+	for name, option := range refused {
+		var field *types.FieldValidationError
+		if _, err := svc.UpsertCustomOption(ctx, testOwner, c.ID, rules.DefaultLocale, option); !errors.As(err, &field) {
+			t.Errorf("%s: error = %v, want a field error", name, err)
+		}
+	}
+
+	made, err := svc.UpsertCustomOption(ctx, testOwner, c.ID, rules.DefaultLocale, domain.CustomOption{ID: "blade", Kind: "item", Name: "Blade", Selected: true, Item: &domain.CustomItem{Weapon: &sword}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	scoped, err := svc.CharacterCatalog(ctx, testOwner, c.ID, rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it, _ := scoped.Items.Get("custom-blade"); it.Slot != catalog.SlotMainHand || it.Weapon == nil {
+		t.Errorf("custom blade in the catalogue = %+v, want a held weapon", it)
+	}
+	// A rename that says nothing about mechanics keeps them.
+	renamed, err := svc.UpsertCustomOption(ctx, testOwner, c.ID, rules.DefaultLocale, domain.CustomOption{ID: "blade", Kind: "item", Name: "Old Blade", Selected: true})
+	if err != nil || len(made.Sheet.CustomOptions) != 1 || renamed.Sheet.CustomOptions[0].Item == nil {
+		t.Errorf("rename lost the mechanics: %+v, %v", renamed.Sheet.CustomOptions, err)
 	}
 }

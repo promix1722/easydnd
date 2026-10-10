@@ -1,5 +1,5 @@
 import { track } from '@/lib/analytics'
-import type { ClassLevel, Sheet } from './characters'
+import type { ClassLevel, CustomItem, Sheet } from './characters'
 import { request } from './client'
 import { ApiError } from './errors'
 import { getGroup } from './groups'
@@ -242,6 +242,11 @@ const entryURL = (id: string, entry: string) => `/games/${encodeURIComponent(id)
 /** The DM gives a seated character an item: the one write of somebody else's character a table makes. */
 export function grantItem(id: string, entry: string, item: string, count = 1): Promise<GameDetail> {
   return request<GameDetail>(`${entryURL(id, entry)}/items`, { method: 'POST', body: { item, count } })
+}
+
+/** The DM gives a seated character a new custom item: `grantItem` for something no catalogue holds. */
+export function grantCustomItem(id: string, entry: string, item: { name: string; description: string; item: CustomItem }): Promise<void> {
+  return request<void>(`${entryURL(id, entry)}/custom-items`, { method: 'POST', body: item })
 }
 
 /** The DM adds to a seated character's purse, or with a negative amount takes from it. */

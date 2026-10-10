@@ -105,7 +105,6 @@ export interface Status {
 export interface ItemStack {
   item?: string
   count: number
-  custom?: { name: string; description?: string; weight?: number }
 }
 
 export interface Equipment {
@@ -184,7 +183,11 @@ export interface CustomOption {
  speed?: number
  count?: number
  selected: boolean
+ /** A custom item's mechanics. Absent for every other kind, and for an item written before it could say. */
+ item?: CustomItem
 }
+/** What a custom item is beyond its name, in the catalogue's item shape -- except `icon`, which is the pack's label and not the picture. */
+export type CustomItem = Pick<Item, 'icon' | 'category' | 'slot' | 'cost' | 'weight' | 'weapon' | 'armor'>
 export const upsertCustomOption = (id: string, revision: number, option: CustomOption) =>
  request<WriteResponse>(`${characterPath(id)}/custom-options`, { method: 'POST', body: { revision, option } })
 /** Deletes a custom entry. The server allows it for a `note` only: any other kind may be something the character is built on. */

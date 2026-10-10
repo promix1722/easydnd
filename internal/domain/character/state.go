@@ -296,24 +296,12 @@ type Status struct {
 	Spellcasting []SpellcastingSummary
 }
 
-// CustomItem is a homebrew or DM-granted item with no catalogue entry.
-type CustomItem struct {
-	Name        string
-	Description string
-	Weight      float64
-	Cost        rules.Coins
-}
-
-// ItemStack is a quantity of one item in a character's possession.
-//
-// Custom is nil for catalogue items, which are the common case. When it is
-// set, Item is zero and the stack describes something the catalogue has never
-// heard of -- which SRD 5.1 makes routine, since it publishes one background
-// and one feat.
+// ItemStack is a quantity of one item in a character's possession. A custom
+// item is a stack like any other: its slug is custom-<id>, and the character's
+// own catalogue overlay holds what it is.
 type ItemStack struct {
-	Item   rules.Slug
-	Count  int
-	Custom *CustomItem
+	Item  rules.Slug
+	Count int
 }
 
 // Equipment is everything the character carries.

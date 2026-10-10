@@ -75,7 +75,8 @@ const (
 // Sharing is what makes a character visible to anybody but its owner, and it
 // is the only thing that does. It grants *reading* and nothing else: the owner
 // remains the only account that can write to the log, which is enforced a
-// layer up by character.Service.owned, untouched by any of this.
+// layer up by character.Service.owned, untouched by any of this. The one
+// exception is a game's, not a share's: usecase/game/items.go.
 //
 // Owner is recorded here rather than read back from the character, because
 // every question this type has to answer -- may this person unshare it, whose
@@ -124,7 +125,7 @@ type Entry struct {
 	Locked     bool
 	Monster    *Stats
 	// Used counts spent uses per resource pool id, for this game only. The
-	// character's own log is never written by the tracker.
+	// character's own log is never written by the tracker's counters.
 	Used map[string]int
 }
 

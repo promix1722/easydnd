@@ -301,13 +301,7 @@ func equipmentOf(e domain.Equipment) Equipment {
 func stacksOf(stacks []domain.ItemStack) []ItemStack {
 	out := make([]ItemStack, 0, len(stacks))
 	for _, s := range stacks {
-		stack := ItemStack{Item: s.Item.String(), Count: s.Count}
-		if s.Custom != nil {
-			stack.Custom = &CustomItem{
-				Name: s.Custom.Name, Description: s.Custom.Description, Weight: s.Custom.Weight,
-			}
-		}
-		out = append(out, stack)
+		out = append(out, ItemStack{Item: s.Item.String(), Count: s.Count})
 	}
 	return out
 }

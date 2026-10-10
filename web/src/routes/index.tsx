@@ -4,7 +4,7 @@ import { createBrowserRouter } from 'react-router'
 import { AvatarGalleryScreen } from '@/features/avatars'
 import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
-import { BuildScreen, CharacterLogScreen, CharacterSheetScreen, ItemScreen } from '@/features/character'
+import { BuildScreen, CharacterLogScreen, CharacterSheetScreen, CustomItemScreen, ItemScreen } from '@/features/character'
 import { ImportCharacterScreen } from '@/features/characters'
 import { DiceScreen } from '@/features/dice'
 import { AdminScreen } from '@/features/admin'
@@ -107,6 +107,12 @@ export const router = createBrowserRouter([
         path: 'characters/:id/items/:slug',
         element: <Private><ItemScreen /></Private>,
       },
+      // Writing an item the catalogue does not hold, or with an entry's id
+      // changing one. A page under the sheet, so its crumb is the way back.
+      {
+        path: 'characters/:id/custom-item/:option?',
+        element: <Private><CustomItemScreen /></Private>,
+      },
       {
         path: 'characters/:id/log',
         element: (
@@ -198,6 +204,12 @@ export const router = createBrowserRouter([
             <GamesScreen />
           </Private>
         ),
+      },
+      // The same screen as `characters/:id/custom-item`, reached from a game:
+      // under /games so the trail reads Games / the game / the character.
+      {
+        path: 'games/:id/characters/:character/custom-item',
+        element: <Private><CustomItemScreen /></Private>,
       },
       {
         path: 'games/:id',

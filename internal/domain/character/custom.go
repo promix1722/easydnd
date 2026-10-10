@@ -2,6 +2,7 @@ package character
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -14,6 +15,43 @@ type CustomOption struct {
 	Level, HitDie, Speed                                                             *int
 	Count                                                                            int
 	Selected                                                                         bool
+
+	// Item is what a custom item is, beyond its name: nil for every other
+	// kind, and for an item written before it could say.
+	Item *CustomItem
+}
+
+// CustomItem is the mechanics of an item the player or their DM wrote. It is
+// the part of a catalog.Item a person can fill in, and the overlay turns it
+// into one, so an equipped custom item is worn and swung by the same code as
+// a catalogue one.
+type CustomItem struct {
+	// Icon is a pack item-icon label, resolved against the catalogue's palette.
+	Icon     string
+	Category rules.Slug
+	// Slot is SlotNone to let the item's shape decide.
+	Slot   catalog.Slot
+	Cost   rules.Coins
+	Weight float64
+	Weapon *catalog.Weapon
+	Armor  *catalog.Armor
+}
+
+func (i *CustomItem) clone() *CustomItem {
+	if i == nil {
+		return nil
+	}
+	c := *i
+	if i.Weapon != nil {
+		w := *i.Weapon
+		w.Properties = slices.Clone(w.Properties)
+		c.Weapon = &w
+	}
+	if i.Armor != nil {
+		a := *i.Armor
+		c.Armor = &a
+	}
+	return &c
 }
 
 func (c CustomOption) Slug() rules.Slug {
@@ -98,7 +136,27 @@ func WithCustomCatalog(log Log, base *catalog.Catalog) *catalog.Catalog {
 			}
 			cat.Spells = catalog.NewCollection(append(cat.Spells.All(), catalog.Spell{Entry: entry, Level: level}))
 		case "item":
-			cat.Items = catalog.NewCollection(append(cat.Items.All(), catalog.Item{Entry: entry}))
+			it := catalog.Item{Entry: entry}
+			if c.Item != nil {
+				it.Icon, it.Category, it.Slot, it.Cost, it.Weight = base.ItemIcons[c.Item.Icon], c.Item.Category, c.Item.Slot, c.Item.Cost, c.Item.Weight
+				it.Weapon, it.Armor = c.Item.Weapon, c.Item.Armor
+				if it.Slot == catalog.SlotNone {
+					it.Slot = it.DefaultSlot()
+				}
+			}
+			if it.Weapon != nil {
+				// ponytail: local slug, as actions.go reads "finesse". A pack that
+				// renames these two categories loses proficiency with custom weapons.
+				group := map[catalog.WeaponCategory]string{catalog.SimpleWeapon: "simple-weapons", catalog.MartialWeapon: "martial-weapons"}[it.Weapon.Category]
+				categories := cat.EquipmentCategories.All()
+				for i := range categories {
+					if localSlug(categories[i].Slug) == group {
+						categories[i].Items = append(slices.Clone(categories[i].Items), it.Slug)
+					}
+				}
+				cat.EquipmentCategories = catalog.NewCollection(categories)
+			}
+			cat.Items = catalog.NewCollection(append(cat.Items.All(), it))
 		}
 	}
 	return &cat
@@ -193,18 +251,32 @@ func (p *projector) customDetails(log Log) {
 			p.state.Features = uniqueSlugs(append(p.state.Features, c.Slug()))
 		case "trait":
 			p.state.Traits = uniqueSlugs(append(p.state.Traits, c.Slug()))
-		case "item":
-			stack := ItemStack{Item: c.Slug(), Count: max(c.Count, 1)}
-			list := &p.state.Equipment.Backpack
-			if c.Placement == "equipped" {
-				list = &p.state.Equipment.Equipped
-			}
-			if c.Placement == "loot" {
-				list = &p.state.Equipment.Loot
-			}
-			*list = slices.DeleteFunc(*list, func(old ItemStack) bool { return old.Item == stack.Item })
-			*list = append(*list, stack)
 		}
+	}
+}
+
+// seedCustomItems puts each selected custom item where its definition says it
+// starts, as the equipment change the player would have made by hand. The seed
+// goes just ahead of the first counted write that names the item, so anything
+// the player did to it since -- wearing it, moving it, dropping it -- still
+// has the last word; an item nobody has touched is seeded last, where a
+// whole-list write cannot clear it.
+func (p *projector) seedCustomItems(log Log) {
+	for _, c := range CustomOptions(log) {
+		if c.Kind != "item" || !c.Selected || !p.cat.Items.Has(c.Slug()) {
+			continue
+		}
+		placement := c.Placement
+		if placement == "" {
+			placement = "backpack"
+		}
+		slug := c.Slug().String()
+		seed := seqChange{Change: Change{Path: Path("equipment." + placement + "." + slug), Op: OpSet, Value: IntValue(max(c.Count, 1))}}
+		at := slices.IndexFunc(p.equipment, func(sc seqChange) bool { return strings.HasSuffix(string(sc.Change.Path), "."+slug) })
+		if at < 0 {
+			at = len(p.equipment)
+		}
+		p.equipment = slices.Insert(p.equipment, at, seed)
 	}
 }
 func uniqueSlugs(values []rules.Slug) []rules.Slug {

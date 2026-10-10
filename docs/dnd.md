@@ -61,7 +61,8 @@ with.
 
 A group is no longer only people. Its members may **share** characters with it,
 and what that grants is a read: every member can open a shared character's
-sheet, and only its owner can ever change it. The shared characters are not a
+sheet, and only its owner can ever change it -- save for what a table hands
+over at a game (docs/backend.md). The shared characters are not a
 party -- they are everything the table has to hand.
 
 A **folder** is the third word and the smallest of them: one account's private
@@ -691,6 +692,37 @@ Custom slot, the slot that takes a wearable of any shape. Every other placement 
 derived from the list and the catalogue on every read, because the shape
 decides it; Custom is stored because nothing else could decide it, and it only
 ever names something equipped.
+
+### A custom item is an item
+
+A character may carry an item no pack holds: a custom entry of kind `item`
+(`CustomOption.Item`, a `CustomItem`). It is the part of a catalogue item a
+person can fill in -- an icon, a category, a slot, a cost, a weight, and the
+whole of a weapon or of a suit of armor, never both -- and
+`WithCustomCatalog` turns it into a real `catalog.Item` named `custom-<id>` in
+that one character's overlay. From there nothing knows it is custom: its slot
+is the one it names or the one its shape gives (`Item.DefaultSlot`, the same
+function a pack row asks), a worn custom breastplate sets the armor class, and
+a wielded custom spear is an attack. A custom weapon joins the pack's
+`simple-weapons` or `martial-weapons` category in the overlay, which is what
+makes a proficiency with the category cover it.
+
+The icon is a **label**, not a picture: one of the pack item icons
+(`Catalog.ItemIcons`), resolved when the overlay is built, so a log stays small
+and no image is ever uploaded. The enum fields are stored as their numbers,
+which is why the constants in `domain/catalog/item.go` may be appended to and
+never reordered.
+
+**The definition says where the item starts, not where it is.** A selected
+custom item is seeded into the list its `Placement` names -- the backpack
+unless it says otherwise -- as an ordinary counted equipment change, placed
+just ahead of the first change the player made to that item, or last when
+there is none. So equipping, moving and dropping a custom item are the same
+`equipment.*` changes as for any other, and they have the final word; before
+this the item was put back on every projection, after the armor class had
+been worked out, and could be neither worn to any effect nor dropped. An
+untouched item is seeded last so that a whole-list write -- an import clears
+a list that way -- does not take it.
 
 ### Spell acquisition and preparation
 

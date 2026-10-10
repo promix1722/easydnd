@@ -1,4 +1,4 @@
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 
 import type { Entry, Item } from '@/lib/api'
 import { bySlug, getCollection, getEntries, getGame, getSharedOwner, getSharedSheet, getSheet } from '@/lib/api'
@@ -6,7 +6,7 @@ import { characterPath } from '@/lib/api/characters'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
 import { itemFactList } from './options'
-import { ItemIcon, joinProse, Markdown, Page, Panel, SimpleGrid, SourceTags, Stack, Text, pageState } from '@/ui'
+import { ACTION_ICON_SIZE, Button, IconPencil, ItemIcon, joinProse, Markdown, Page, Panel, SimpleGrid, SourceTags, Stack, Text, pageState } from '@/ui'
 
 /**
  * One item, at full length: what it is, every number it has, what it says.
@@ -64,7 +64,9 @@ export function ItemScreen() {
   if (item === null) return <Page trail={[...above, { label: slug }]} state={{ kind: 'failed', title: t('item.loadFailed'), detail: t('item.notFound') }} />
 
   return (
-    <Page trail={[...above, { label: item.name }]} mark={<ItemIcon icon={item.icon} />}>
+    <Page trail={[...above, { label: item.name }]} mark={<ItemIcon icon={item.icon} />}
+      // An item its owner wrote is theirs to rewrite, on the page that wrote it.
+      {...(!shared && slug.startsWith('custom-') ? { actions: <Button component={Link} to={`/characters/${id}/custom-item/${encodeURIComponent(slug.slice('custom-'.length))}`} variant="subtle" leftSection={<IconPencil size={ACTION_ICON_SIZE} />}>{t('common.edit')}</Button> } : {})}>
       <Panel>
         <ItemBody item={item} words={words} />
       </Panel>

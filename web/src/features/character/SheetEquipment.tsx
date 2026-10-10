@@ -1,13 +1,25 @@
+import { Link } from 'react-router'
+
 import { CUSTOM, ELSEWHERE, discard, equip, groupOf, mergeStacks, setCoin, setTotal, slotsFor, slotted, unequip } from '@/domain'
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
 import type { Change, Equipment, Item, ItemHit, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Badge, Box, Grid, Group, ITEM_ICON_SIZE, Menu, Panel, Paper, Stack, Text } from '@/ui'
+import { Badge, Box, Button, Grid, Group, ITEM_ICON_SIZE, Menu, Panel, Paper, Stack, Text } from '@/ui'
 
 import { InventoryRows, ItemCard, ItemDetails, ItemMenu, NAME_LINE, Purse } from './Inventory'
 import { AddItems } from './ItemPicker'
 import { useSlotLabels } from './slotLabels'
 import type { Card } from './slotLabels'
+
+/**
+ * The way to the page that writes an item the catalogue does not hold, drawn
+ * beside the tab's Add as its equal. A relative link, as an item's Details
+ * is, naming the tab to come back to.
+ */
+function AddCustomItem({ tab }: { tab: 'equipment' | 'items' }) {
+  const t = useT()
+  return <Button component={Link} to={`custom-item?tab=${tab}`} variant="light">{t('customItem.add')}</Button>
+}
 
 /** Three columns: what is held, what is worn down the middle, what hangs or is slipped on. */
 const COLUMNS: readonly (readonly Card[])[] = [
@@ -35,14 +47,15 @@ const ownedOf = (equipment: Equipment) => new Map(mergeStacks(equipment).map((ro
 const addOne = (equipment: Equipment, onChange: (changes: Change[]) => void) => (hit: ItemHit) =>
   onChange(setTotal(equipment, hit.slug, (ownedOf(equipment).get(hit.slug) ?? 0) + 1))
 
-const rowName = (name: (slug: string) => string) => (row: InventoryRow) => row.customName ?? name(row.item ?? '')
+const rowName = (name: (slug: string) => string) => (row: InventoryRow) => name(row.item ?? '')
 
 /**
  * The sheet's Equipment tab: what is worn where, then everything that could be.
  *
  * A card is never pressed. With `onChange`, each has a menu: a worn item's
  * takes it off or drops it, and an empty slot's lists by name what is carried
- * that could go there -- the same put-on its row's menu below offers. Add
+ * that could go there -- the same put-on its row's menu below offers -- and
+ * ends with the way to write a custom item straight into the slot. Add
  * equipment under the rows searches the catalogue's wearable half in place.
  */
 export function SheetEquipment({ equipment, items, name, lookup, actions = [], disabled = false, onChange }: InventoryProps) {
@@ -74,12 +87,13 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
         <Stack gap={6}>
           <Group gap={6} wrap="nowrap" justify="flex-end" mih={NAME_LINE - 6}>
             {slotName}
-            {onChange && slot !== ELSEWHERE && <ItemMenu name={labels[each]} disabled={disabled || fits.length === 0}>
+            {onChange && slot !== ELSEWHERE && <ItemMenu name={labels[each]} disabled={disabled}>
               {fits.map((row) => (
                 <Menu.Item key={row.key} onClick={() => onChange(equip(equipment, items, row.item ?? '', slot))}>
                   {name(row.item ?? '')}
                 </Menu.Item>
               ))}
+              <Menu.Item component={Link} to={`custom-item?tab=equipment&slot=${slot}`}>{t('customItem.add')}</Menu.Item>
             </ItemMenu>}
           </Group>
           <Group justify="center" mih={{ base: 0, sm: ITEM_ICON_SIZE }}>
@@ -122,7 +136,7 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
         <Text size="xs" c="dimmed">{t('equipment.group.wearable')}</Text>
         <InventoryRows cards rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup}
           empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
-        {onChange && <AddItems label={t('equipment.addEquipment')} wearable owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} />}
+        {onChange && <AddItems label={t('equipment.addEquipment')} wearable owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} beside={<AddCustomItem tab="equipment" />} />}
       </Stack>
     </Panel>
   </Stack>
@@ -157,7 +171,7 @@ export function SheetItems({ equipment, items, name, lookup, disabled = false, o
     {section('consumable', t('equipment.group.consumable'))}
     {section('gear', t('equipment.group.gear'))}
     {onChange && <Panel>
-      <AddItems label={t('equipment.addItem')} wearable={false} owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} />
+      <AddItems label={t('equipment.addItem')} wearable={false} owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} beside={<AddCustomItem tab="items" />} />
     </Panel>}
   </Stack>
 }

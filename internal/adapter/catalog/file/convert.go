@@ -580,19 +580,7 @@ func (c *conv) item(w Item, b Bundle) catalog.Item {
 			Capacity:        p.Field(ProseCapacity),
 		}
 	}
-	it.Slot = c.slot(w.Slot, func() catalog.Slot {
-		switch {
-		case it.Armor != nil && it.Armor.Category == catalog.Shield:
-			return catalog.SlotOffHand
-		case it.Armor != nil:
-			return catalog.SlotBody
-		case it.Weapon != nil:
-			return catalog.SlotMainHand
-		case it.Gear != nil && (it.Gear.GearCategory == "arcane-foci" || it.Gear.GearCategory == "druidic-foci"):
-			return catalog.SlotMainHand
-		}
-		return catalog.SlotNone
-	})
+	it.Slot = c.slot(w.Slot, it.DefaultSlot)
 	return it
 }
 

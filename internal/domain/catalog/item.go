@@ -41,11 +41,30 @@ type Item struct {
 	Vehicle *Vehicle
 }
 
+// DefaultSlot is where the item's shape says it goes when nothing names a
+// slot: armor on the body, a shield in the off hand, a weapon or a focus in
+// the main hand. A pack row and a character's custom item both ask it.
+func (i Item) DefaultSlot() Slot {
+	switch {
+	case i.Armor != nil && i.Armor.Category == Shield:
+		return SlotOffHand
+	case i.Armor != nil:
+		return SlotBody
+	case i.Weapon != nil:
+		return SlotMainHand
+	case i.Gear != nil && (i.Gear.GearCategory == "arcane-foci" || i.Gear.GearCategory == "druidic-foci"):
+		return SlotMainHand
+	}
+	return SlotNone
+}
+
 // WeaponCategory distinguishes simple from martial weapons, which decides who
 // is proficient with it.
 type WeaponCategory uint8
 
-// The weapon categories.
+// The weapon categories. A character's custom item stores these numbers in
+// its event log, as it does ArmorCategory, WeaponRange and Slot: append to
+// these lists, never reorder them.
 const (
 	WeaponCategoryNone WeaponCategory = iota
 	SimpleWeapon

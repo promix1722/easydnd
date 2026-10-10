@@ -74,13 +74,14 @@ func (s *Service) SetSuperadmin(is func(context.Context, user.ID) bool) { s.supe
 // they refer to.
 //
 // It takes the group store rather than the group service because the only
-// thing it needs is a rank, which is one query -- and because a usecase
-// reaching into another usecase is a dependency this architecture does not
-// have anywhere else. It takes the character store and the catalogue for the
-// same reason: character.Summarize and character.Project are pure functions of
-// a log and a compendium, so rendering a shared sheet needs neither the
-// character service nor its ownership rule, which is exactly the rule that
-// must not apply here.
+// thing it needs is a rank, which is one query, and a service would bring its
+// own authorization with it. It takes the character store and the catalogue
+// for the same reason: character.Summarize and character.Project are pure
+// functions of a log and a compendium, so rendering a shared sheet needs
+// neither the character service nor its ownership rule, which is exactly the
+// rule that must not apply here. GrantCustomItem borrows two pure functions
+// from the character usecase package -- UpsertCustom and CheckSheet -- and
+// still not its Service.
 func NewService(
 	games domain.Repository,
 	shared domain.SharedRepository,
@@ -210,6 +211,8 @@ func (s *Service) SheetWithCatalog(
 	if err != nil {
 		return character.State{}, nil, err
 	}
+	// The sheet's own items are part of what a reader is shown.
+	cat = character.WithCustomCatalog(c.Log, cat)
 	state, err := character.Project(c.Log, cat)
 	return state, cat, err
 }
@@ -251,5 +254,9 @@ func (s *Service) CharacterCatalog(ctx context.Context, actor user.ID, id charac
 	if err != nil {
 		return nil, err
 	}
-	return catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
+	cat, err := catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
+	if err != nil {
+		return nil, err
+	}
+	return character.WithCustomCatalog(c.Log, cat), nil
 }

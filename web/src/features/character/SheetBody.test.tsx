@@ -254,6 +254,12 @@ describe('the panels that were sentences', () => {
     expect(screen.getByText('You see in the dark.')).toBeInTheDocument()
   })
 
+  // The tab is in the URL, so a page opened from one comes back to it.
+  it('opens on the tab the URL names', () => {
+    renderBare('desktop', <MemoryRouter initialEntries={['/?tab=items']}><SheetBody sheet={ITEMS} /></MemoryRouter>)
+    expect(screen.getByRole('tab', { name: 'Items' })).toHaveAttribute('aria-selected', 'true')
+  })
+
   it('draws what is worn in its slot, and what is owned by group', () => {
     renderAt('mobile', <SheetBody sheet={ITEMS} />)
 
@@ -437,24 +443,28 @@ describe('the panels that were sentences', () => {
   })
 
   // A card is not a button: what is pressed on the doll is a menu, a worn
-  // item's or an empty slot's. An empty slot's is live only where something
-  // carried fits it -- here the spare armor, which the taken body slot cannot
-  // have and Custom can. What is worn is on its card only, so it has no row
-  // below. No row has a stepper.
+  // item's or an empty slot's. An empty slot's names what is carried that
+  // fits it -- here the spare armor, which the taken body slot cannot have and
+  // Custom can -- and always ends with the way to write a custom item into
+  // it. What is worn is on its card only, so it has no row below. No row has
+  // a stepper.
   it('presses nothing on the doll but menus, and lists only what is carried', async () => {
     const onEquipment = vi.fn()
     const user = setupUser()
     renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={onEquipment} />)
 
     const slots = within(screen.getByRole('region', { name: 'Worn and wielded' }))
-    const live = slots.getAllByRole('button').filter((each) => !(each as HTMLButtonElement).disabled)
-    expect.soft(live.map((each) => each.getAttribute('aria-label'))).toEqual(['Actions for Custom', 'Actions for Leather Armor'])
-    expect.soft(slots.getByRole('button', { name: 'Actions for Head' })).toBeDisabled()
+    // Nothing carried fits the head, and its menu still opens: onto the one entry.
+    await user.click(slots.getByRole('button', { name: 'Actions for Head' }))
+    const bare = within(await screen.findByRole('menu')).getAllByRole('menuitem')
+    expect.soft(bare.map((each) => each.textContent)).toEqual(['Add custom item'])
+    expect.soft(bare[0]).toHaveAttribute('href', '/custom-item?tab=equipment&slot=head')
+    await user.keyboard('{Escape}')
 
-    // Names only, and pressing one puts it on.
+    // Names, and pressing one puts it on.
     await user.click(slots.getByRole('button', { name: 'Actions for Custom' }))
     const offered = within(await screen.findByRole('menu')).getAllByRole('menuitem')
-    expect.soft(offered.map((each) => each.textContent)).toEqual(['Chain Mail'])
+    expect.soft(offered.map((each) => each.textContent)).toEqual(['Chain Mail', 'Add custom item'])
     await user.click(offered[0] as HTMLElement)
     expect.soft(onEquipment).toHaveBeenCalledWith(expect.arrayContaining([
       { path: 'equipment.backpack.chain-mail', op: 'set', value: { kind: 'int', int: 0 } },

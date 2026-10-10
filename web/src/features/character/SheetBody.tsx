@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
+import { useSearchParams } from 'react-router'
 
 import { bySlug } from '@/lib/api'
 import type { Change, Item, Sheet } from '@/lib/api'
@@ -108,7 +109,11 @@ export function SheetBody({
     }))
 
   const t = useT()
-  const [tab, setTab] = useState('overview')
+  // The tab is in the URL, so the way back from an item's page or from
+  // writing a custom one lands on the tab it was opened from.
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') ?? 'overview'
+  const setTab = (next: string) => setParams((was) => { was.set('tab', next); return was }, { replace: true })
   const who = <IdentityTable identity={identity} names={names} />
   const abilities = <AbilityCards sheet={s} />
   const named = (collection: string, slug: string) =>

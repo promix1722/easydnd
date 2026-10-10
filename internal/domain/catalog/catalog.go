@@ -123,6 +123,10 @@ type Catalog struct {
 	MagicItems Collection[MagicItem]
 	Spells     Collection[Spell]
 
+	// ItemIcons is every item icon the packs carry, label to WebP data URL:
+	// the palette a character's custom item picks its icon from.
+	ItemIcons map[string]string
+
 	// Terms is prose the choice grammar points at by key. It is the only
 	// collection with no mechanics file behind it; see Term.
 	Terms Collection[Term]

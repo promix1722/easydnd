@@ -10,11 +10,12 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
 // This file is the one place in the codebase where somebody other than its
-// owner writes to a character, and it writes exactly two things: a count in
-// the backpack and a coin in the purse. A table hands things over -- the DM
+// owner writes to a character, and it writes exactly three things: a count in
+// the backpack, a coin in the purse, and one new custom item. A table hands things over -- the DM
 // gives out treasure, one player passes another a potion -- and a rule that
 // made the recipient type it in themselves would be a rule nobody follows.
 //
@@ -43,6 +44,8 @@ func (s *Service) changeCharacter(
 	if err != nil {
 		return err
 	}
+	// A character's own items are part of its rules: one it was given can be given on.
+	cat = character.WithCustomCatalog(c.Log, cat)
 	state, err := character.Project(c.Log, cat)
 	if err != nil {
 		return err
@@ -211,4 +214,39 @@ func (s *Service) GiveItem(ctx context.Context, actor user.ID, id domain.ID, fro
 		return err
 	}
 	return nil
+}
+
+// GrantCustomItem is the DM handing a seated character something no catalogue
+// holds: GrantItem for an item written on the spot. It appends one new
+// definition, in the backpack, and takes no id -- so it can replace, move or
+// remove nothing the owner has -- through the same UpsertCustom and the same
+// limits the owner's own route is held to.
+func (s *Service) GrantCustomItem(ctx context.Context, actor user.ID, id domain.ID, entryID string, locale rules.Locale, name, description string, item *character.CustomItem) error {
+	if _, err := s.dm(ctx, actor, id, "give out items"); err != nil {
+		return err
+	}
+	entry, err := s.seat(ctx, id, entryID)
+	if err != nil {
+		return err
+	}
+	c, err := s.characters.Get(ctx, entry.Character)
+	if err != nil {
+		return err
+	}
+	cat, err := catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
+	if err != nil {
+		return err
+	}
+	cat = character.WithCustomCatalog(c.Log, cat)
+	if item == nil {
+		item = &character.CustomItem{}
+	}
+	log, err := charuc.UpsertCustom(c.Log, cat, character.CustomOption{Kind: "item", Name: name, Description: description, Placement: "backpack", Count: 1, Selected: true, Item: item})
+	if err != nil {
+		return err
+	}
+	if err = charuc.CheckSheet(c.Log, log, cat, s.limits); err != nil {
+		return err
+	}
+	return s.characters.Commit(ctx, c.ID, c.Revision, log, "", nil)
 }

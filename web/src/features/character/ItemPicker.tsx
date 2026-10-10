@@ -28,8 +28,10 @@ const FILTER_WIDTH = { w: { base: '100%', sm: 220 }, miw: 0, maw: '100%' } as co
  * description; each Add is one more in the backpack and one write, and the
  * search stays open for the next.
  */
-export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabled = false, onAdd, detailsTo, children }: {
+export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabled = false, onAdd, detailsTo, beside, children }: {
   label: string
+  /** Drawn on the button's line while the search is closed: the other way to add something. */
+  beside?: ReactNode
   /** Absent searches both halves: a DM hands out anything. */
   wearable?: boolean | null
   /** How many of each the receiver already has, printed beside a hit. */
@@ -67,7 +69,7 @@ export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabl
   }
 
   if (!opened) {
-    return <Group><Button variant="light" disabled={disabled} onClick={() => setOpened(true)}>{label}</Button></Group>
+    return <Group gap="sm"><Button variant="light" disabled={disabled} onClick={() => setOpened(true)}>{label}</Button>{beside}</Group>
   }
   return (
     <Stack component="section" aria-label={label} gap="md">

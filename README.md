@@ -12,7 +12,10 @@ the rules math and the browser client are built and tested. Levelling up is decl
 character is built towards -- at creation, or later from the sheet's Level up
 button -- and answering the choices each level opens; see
 [docs/web.md](docs/web.md#level-up-is-the-desired-level). The battle tracker
-is not built.
+is not built. A character can also carry **custom items** -- its owner writes
+one with any icon the packs have and the full numbers of a weapon or a suit of
+armor, and it is worn and swung like a catalogue item; see
+[Custom items](docs/dnd.md#a-custom-item-is-an-item).
 
 An account is reached by **a passkey or a Google account**, either or both --
 there is no password, no reset link and nothing to fill in: one button either
@@ -39,7 +42,7 @@ A group is no longer only people. Any member may **share** a character with it,
 and that grants a read to whoever runs the table: its DMs and its owner can
 open the sheet, a player only once the character's owner opens it, and only
 its owner can change it -- except for what a table hands over: at a game, a DM
-gives a seated character an item or coins, and a player passes one of their
+gives a seated character an item -- the catalogue's or a custom one -- or coins, and a player passes one of their
 own items to another. See
 [What a table hands over](docs/backend.md#what-a-table-hands-over).
 

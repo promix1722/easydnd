@@ -393,6 +393,7 @@ func (l Log) Clone() Log {
 				n := *c.Speed
 				c.Speed = &n
 			}
+			c.Item = c.Item.clone()
 			e.Custom = &c
 		}
 		e.RulesLock = e.RulesLock.Clone()

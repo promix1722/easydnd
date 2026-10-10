@@ -127,6 +127,9 @@ func UpsertCustom(log domain.Log, cat *catalog.Catalog, option domain.CustomOpti
 	if option.Placement != "" && option.Placement != "backpack" && option.Placement != "equipped" && option.Placement != "loot" {
 		return log, types.NewValidationError("invalid inventory location")
 	}
+	if err := checkCustomItem(cat, option); err != nil {
+		return log, err
+	}
 	// Older agent updates sometimes matched a custom option to itself.
 	// It remains a definition, rather than a reference to a missing pack entry.
 	if ref, ok := rules.ParseRef(option.Reference); ok && ref.Slug.String() == "custom-"+option.ID {
@@ -186,6 +189,11 @@ func UpsertCustom(log domain.Log, cat *catalog.Catalog, option domain.CustomOpti
 		if existing.ID == option.ID && existing.Kind != option.Kind {
 			return log, types.NewValidationError("custom kind cannot change")
 		}
+		// A writer that knows nothing of item mechanics -- the AI Wizard
+		// renaming what it imported -- does not erase what a person filled in.
+		if existing.ID == option.ID && option.Item == nil {
+			option.Item = existing.Item
+		}
 	}
 	updated := log.Clone()
 	note := fmt.Sprintf("import.manual:%s\n%s: %s\n%s\n%s", option.ID, option.Kind, option.Name, option.Description, option.Source)
@@ -205,6 +213,92 @@ func UpsertCustom(log domain.Log, cat *catalog.Catalog, option domain.CustomOpti
 		return log, err
 	}
 	return updated, nil
+}
+
+// checkCustomItem bounds a custom item's mechanics and checks every word in
+// them against the character's own rules. The owner's route, the DM's and the
+// AI Wizard all write through UpsertCustom, so this is the one place it is
+// decided.
+func checkCustomItem(cat *catalog.Catalog, option domain.CustomOption) error {
+	it := option.Item
+	if it == nil {
+		return nil
+	}
+	bad := func(field string) error {
+		return types.NewFieldValidationError("invalid custom item", types.FieldError{Field: "item." + field, Rule: "invalid", Reason: "custom.item.invalid"})
+	}
+	within := func(n, most int) bool { return n >= 0 && n <= most }
+	if option.Kind != "item" {
+		return bad("kind")
+	}
+	if it.Weapon != nil && it.Armor != nil {
+		return bad("armor")
+	}
+	if _, ok := cat.ItemIcons[it.Icon]; it.Icon != "" && !ok {
+		return bad("icon")
+	}
+	if it.Category != "" && !cat.EquipmentCategories.Has(it.Category) {
+		return bad("category")
+	}
+	if it.Slot > catalog.SlotOffHand {
+		return bad("slot")
+	}
+	if it.Weight < 0 || it.Weight > 100000 {
+		return bad("weight")
+	}
+	if !within(it.Cost.Amount, 1e9) || it.Cost.Unit > rules.Platinum || (it.Cost.Amount > 0 && it.Cost.Unit == rules.CoinNone) {
+		return bad("cost")
+	}
+	if a := it.Armor; a != nil {
+		if a.Category == catalog.ArmorCategoryNone || a.Category > catalog.Shield {
+			return bad("armor.category")
+		}
+		if !within(a.BaseAC, 30) {
+			return bad("armor.baseAC")
+		}
+		if a.MaxDexBonus != nil && (!a.AddsDexBonus || !within(*a.MaxDexBonus, 10)) {
+			return bad("armor.maxDexBonus")
+		}
+		if !within(a.StrengthMinimum, 30) {
+			return bad("armor.strengthMinimum")
+		}
+	}
+	if w := it.Weapon; w != nil {
+		if w.Category == catalog.WeaponCategoryNone || w.Category > catalog.MartialWeapon {
+			return bad("weapon.category")
+		}
+		if w.Range == catalog.WeaponRangeNone || w.Range > catalog.RangedWeapon {
+			return bad("weapon.range")
+		}
+		for field, damage := range map[string]*rules.Damage{"weapon.damage": w.Damage, "weapon.twoHandedDamage": w.TwoHandedDamage} {
+			if damage == nil {
+				continue
+			}
+			d := damage.Dice
+			if len(d.Terms) > 4 || d.Bonus < -100 || d.Bonus > 100 || d.PlusAbility || (damage.Type != "" && !cat.DamageTypes.Has(damage.Type)) {
+				return bad(field)
+			}
+			for _, term := range d.Terms {
+				if term.Count < 1 || term.Count > 100 || term.Faces < 1 || term.Faces > 100 {
+					return bad(field)
+				}
+			}
+		}
+		for _, feet := range []rules.Feet{w.NormalRange, w.LongRange, w.ThrowNormal, w.ThrowLong} {
+			if !within(int(feet), 10000) {
+				return bad("weapon.normalRange")
+			}
+		}
+		if len(w.Properties) > 20 {
+			return bad("weapon.properties")
+		}
+		for _, property := range w.Properties {
+			if !cat.WeaponProperties.Has(property) {
+				return bad("weapon.properties")
+			}
+		}
+	}
+	return nil
 }
 
 // Candidates describe identity only. A separate choice validation determines

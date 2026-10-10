@@ -1147,13 +1147,14 @@ the API's shape rather than a rule somebody has to remember.
 
 #### What a table hands over
 
-There is one exception, and it is not a widening of either function: three
+There is one exception, and it is not a widening of either function: four
 routes under a game write to a seated character its actor does not own, and
-they write a backpack count or a coin and nothing else.
+they write a backpack count, a coin or one new custom item and nothing else.
 
 | Route | Who | Does |
 | --- | --- | --- |
 | `POST /v1/games/{id}/entries/{entry}/items` `{item, count}` | DM or group owner | `count` more of `item` in the character's backpack |
+| `POST /v1/games/{id}/entries/{entry}/custom-items` `{name, description, item}` | DM or group owner | one new custom item in the character's backpack; see "A custom item" below |
 | `POST /v1/games/{id}/entries/{entry}/coins` `{unit, amount}` | DM or group owner | adds a signed `amount` to the purse; below zero is a 400 `coins.notEnough` |
 | `POST /v1/games/{id}/entries/{entry}/give` `{item, count, to}` | the owner of `entry`'s character | moves `count` of `item` to the player entry `to` |
 
@@ -1293,6 +1294,38 @@ that pinned a version would silently end at the next copy. The usecase accepts
 only an installed restricted pack and only a stored account -- a guest who
 never joined a group has no row to hang it on. What a grant does and does not
 give is in [packs.md](packs.md#common-and-private-disk-packs).
+
+### A custom item
+
+`POST /v1/characters/{id}/custom-options` takes an `item` on a custom entry of
+kind `item`, in the catalogue's own item shape -- `category`, `slot`, `cost`,
+`weight`, `weapon`, `armor` -- with `icon` being a pack icon's label. The
+handler parses the words (`CustomItemOf`); `UpsertCustom` bounds the numbers
+and checks every slug against the character's rules (`checkCustomItem`), and
+answers a field error with reason `custom.item.invalid`. A write that carries
+no `item` for an entry that has one keeps it, so the AI Wizard renaming what
+it imported does not erase what a person filled in. What the model does with
+it is in docs/dnd.md, "A custom item is an item".
+
+The icons to choose from are the collection `item-icons`: label and data URL
+for every item icon the character's packs carry, on the same
+`.../catalog/{collection}` routes as the rest. It is not in the manifest, and
+it is the one collection with artwork served whole -- about 1.7 MB -- because
+a picker shows all of it; the client asks only when the picker is opened.
+
+**A DM gives one at a game** through
+`POST /v1/games/{id}/entries/{entry}/custom-items`, one of the hand-overs in
+"What a table hands over" and held to the same rule as `GrantItem`: the caller
+runs the table and the entry is a player's. `GrantCustomItem` appends exactly
+one new definition, in the backpack, through the same `UpsertCustom` and the
+same `CheckSheet` limits as the owner's route, and answers 204. It takes no
+id, placement or count, so it cannot replace, move or remove anything.
+`changeCharacter` projects against the character's custom overlay, so an item
+that was given can be given on like any other.
+
+A shared sheet and its catalogue (`/v1/shared/{id}/...`) are projected against
+the character's custom overlay, as the owner's are, so a DM sees the item they
+gave with its icon and numbers.
 
 ### A note is the one custom entry that can be deleted
 

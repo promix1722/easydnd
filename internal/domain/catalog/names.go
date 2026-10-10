@@ -191,6 +191,29 @@ var proficiencyTypeNames = map[ProficiencyType]string{
 // String returns the type's wire name, or "unknown" outside the enumeration.
 func (t ProficiencyType) String() string { return name(proficiencyTypeNames, t) }
 
+// ParseSlot reads a slot's wire name. The empty string is SlotNone.
+func ParseSlot(s string) (Slot, bool) { return parse(slotNames, s) }
+
+// ParseWeaponCategory reads a weapon category's wire name.
+func ParseWeaponCategory(s string) (WeaponCategory, bool) { return parse(weaponCategoryNames, s) }
+
+// ParseWeaponRange reads a weapon range's wire name.
+func ParseWeaponRange(s string) (WeaponRange, bool) { return parse(weaponRangeNames, s) }
+
+// ParseArmorCategory reads an armor category's wire name.
+func ParseArmorCategory(s string) (ArmorCategory, bool) { return parse(armorCategoryNames, s) }
+
+// parse is name backwards: the value a wire name stands for.
+func parse[T comparable](names map[T]string, wire string) (T, bool) {
+	for value, got := range names {
+		if got == wire {
+			return value, true
+		}
+	}
+	var zero T
+	return zero, false
+}
+
 // name looks up an enum's wire name, reporting anything outside the
 // enumeration rather than returning an empty string that would serialize as a
 // missing field.

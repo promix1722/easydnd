@@ -100,7 +100,7 @@ func (s *Service) project(ctx context.Context, id character.ID, locale rules.Loc
 	if err != nil {
 		return c, character.State{}, err
 	}
-	state, err := character.Project(c.Log, cat)
+	state, err := character.Project(c.Log, character.WithCustomCatalog(c.Log, cat))
 	return c, state, err
 }
 

@@ -244,18 +244,10 @@ type Status struct {
 	Spellcasting      []Spellcasting `json:"spellcasting,omitempty"`
 }
 
-// CustomItem is a homebrew or DM-granted item with no catalogue entry.
-type CustomItem struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description,omitempty"`
-	Weight      float64 `json:"weight,omitempty"`
-}
-
 // ItemStack is a quantity of one item.
 type ItemStack struct {
-	Item   string      `json:"item,omitempty"`
-	Count  int         `json:"count"`
-	Custom *CustomItem `json:"custom,omitempty"`
+	Item  string `json:"item,omitempty"`
+	Count int    `json:"count"`
 }
 
 // Equipment is everything the character carries.

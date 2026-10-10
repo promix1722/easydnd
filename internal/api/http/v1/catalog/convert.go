@@ -458,6 +458,10 @@ func (c converter) feat(f domain.Feat) Feat {
 	return Feat{Entry: entryOf(f.Entry), Prerequisites: prerequisites(f.Prerequisites)}
 }
 
+// ItemOf is an item's response shape for a caller outside the catalogue
+// routes: a character's custom item is described in the same words.
+func ItemOf(i domain.Item) Item { return converter{}.item(i) }
+
 func (c converter) item(i domain.Item) Item {
 	out := Item{
 		Entry:    entryOf(i.Entry),

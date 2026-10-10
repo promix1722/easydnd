@@ -4,10 +4,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/group"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
+	"github.com/promix1722/easydnd/internal/types"
 )
 
 // The table hands things over: the DM gives out items and coins, a player
@@ -97,4 +99,58 @@ func TestTheTableHandsOverItemsAndCoins(t *testing.T) {
 	if b, c := carrying("bob", bobs, "dagger"), carrying("carol", carols, "dagger"); b != 1 || c != 2 {
 		t.Fatalf("after the gift bob has %d and carol %d, want 1 and 2", b, c)
 	}
+}
+
+// A custom item is handed over by the same rule as a catalogue one: whoever
+// runs the game, to a character seated at it, as one new entry in the backpack.
+func TestOnlyTheTableGrantsACustomItem(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer})
+	seated := f.character(t, "bob")
+	if err := f.characters.Append(ctx, seated, 0, character.Event{Type: character.EventInit},
+		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "fighter"), Level: 1}); err != nil {
+		t.Fatal(err)
+	}
+	g, err := f.svc.Create(ctx, "alice", "table", "Game")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.Share(ctx, "bob", "table", seated); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.AddCharacters(ctx, "alice", g.ID, []character.ID{seated}); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := f.svc.Participants(ctx, "alice", g.ID, rules.DefaultLocale)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("entries: %+v, %v", entries, err)
+	}
+	entry := entries[0].Entry.ID
+	grant := func(actor user.ID, entry string) error {
+		return f.svc.GrantCustomItem(ctx, actor, g.ID, entry, rules.DefaultLocale, "Moon Shield", "", &character.CustomItem{Armor: &catalog.Armor{Category: catalog.Shield, BaseAC: 2}})
+	}
+	before, _ := f.characters.Get(ctx, seated)
+	if err := grant("alice", entry); err != nil {
+		t.Fatalf("the DM grants: %v", err)
+	}
+	after, _ := f.characters.Get(ctx, seated)
+	if after.Log.Len() != before.Log.Len()+1 || after.Revision != before.Revision+1 {
+		t.Errorf("granting wrote %d events over %d revisions, want one of each", after.Log.Len()-before.Log.Len(), after.Revision-before.Revision)
+	}
+	assertDenied(t, grant("bob", entry), "a player")
+	assertNotFound(t, grant("alice", "no-such-entry"), "an entry not at the game")
+
+	// The DM reads what was given, and can hand its owner another catalogue item beside it.
+	if err := f.svc.GrantItem(ctx, "alice", g.ID, entry, "torch", 1); err != nil {
+		t.Fatalf("a catalogue item beside a custom one: %v", err)
+	}
+	state, err := f.svc.Sheet(ctx, "alice", seated, rules.DefaultLocale)
+	if err != nil || len(state.CustomOptions) != 1 || len(state.Equipment.Backpack) != 2 {
+		t.Fatalf("the DM's read of what was given: %+v, %v", state.Equipment, err)
+	}
+	l := types.DefaultLimits
+	l.CharacterCustomOptions = 1
+	f.svc.SetLimits(l)
+	wantLimit(t, grant("alice", entry), "characterCustomOptions")
 }

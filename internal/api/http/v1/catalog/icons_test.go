@@ -23,3 +23,11 @@ func TestItemArtworkInDetail(t *testing.T) {
 		}
 	}
 }
+
+func TestItemIconPaletteIsACollectionOfLabels(t *testing.T) {
+	got, ok := entries(converter{cat: &domain.Catalog{ItemIcons: map[string]string{"sword": "b", "axe": "a"}}}, CollectionItemIcons)
+	icons, _ := got.([]Item)
+	if !ok || len(icons) != 2 || icons[0].Slug != "axe" || icons[0].Icon != "a" || icons[1].Slug != "sword" {
+		t.Fatalf("item-icons = %+v", got)
+	}
+}

@@ -2068,7 +2068,32 @@ button back.
 - The buttons exist only with `onChange`, which is how a sheet says it is
   editable: the shared, read-only sheet has neither.
 
-A custom item -- one the catalogue does not hold -- still has no UI here.
+A custom item -- one the catalogue does not hold -- is written on a page of
+its own, `features/character/CustomItemScreen`, and both tabs lead to it: an
+**Add custom item** button beside each tab's Add, on its line and its equal
+(`AddItems` takes it as `beside`), and the last entry of every
+empty slot's menu, which is why that menu is never disabled now.
+
+**It is one screen for every way in, and a page rather than a dialog**, so its
+trail is the way back. `/characters/:id/custom-item` writes on the owner's
+sheet; `?slot=` (an empty slot's menu sets it) prefills the slot and, if the
+item still goes there when saved, puts it on with the same `equip` changes the
+slot's menu writes; `/characters/:id/custom-item/:option` changes an existing
+one, reached from **Edit** on a custom item's own page. A game opens the same
+screen at `/games/:id/characters/:character/custom-item` -- under `/games` so
+the trail reads Games / the game / the character -- from **Add custom item** in a player row's menu,
+shown to whoever runs the table, with the entry in `?entry=`; there it posts to
+`/games/{id}/entries/{entry}/custom-items` and returns to the game, which says
+what was given in the same corner notice the item search under the roster
+uses -- the page passes it through the navigation's `state`. The form is the
+name and description, an icon chosen from a grid of the packs' item icons
+(fetched when the grid is opened, never before), category, slot, weight and
+cost, and a kind -- neither, weapon, armor -- that reveals the weapon's or the
+armor's fields. There is no delete: dropping the item takes it off the sheet.
+
+**The sheet's tab is in the URL** (`?tab=`, `SheetBody`), which is what makes
+the crumb back from that page -- and from an item's own -- land on the tab it
+was opened from rather than on Overview.
 
 The slot is the catalogue's: each item carries `slot`, written on the pack's
 row or derived by the server from what the item is (see
@@ -2175,8 +2200,8 @@ three dots, so there is one way to act on an item wherever it is drawn. A
 card itself is never pressed: an empty one used to open a sheet listing what
 in the backpack fits, which made an empty rectangle a button. It has the three
 dots instead, opening the **names of what is carried that fits that slot** --
-nothing but names, since each has its card below -- and disabled when nothing
-does. That is the row menu's Equip reached from the other end, through the
+nothing but names, since each has its card below -- and, last, **Add custom
+item**, so the menu opens even when nothing carried fits. Naming an item is the row menu's Equip reached from the other end, through the
 same `slotsFor` and `equip`, so the two cannot disagree about what goes where. A wearable's row menu has
 **one Equip entry per slot it could go in** -- its own, Custom, and the off
 hand for a held thing once the main hand is taken (`slotsFor` in
@@ -4729,8 +4754,9 @@ coins) is shown by the sheet's Equipment and Items tabs.
 
 A picker used to end with **Custom…**, a way to write a race, class, background,
 item or spell the rules do not have. It is gone from every list: it was offered
-on every question, read as one more answer to it, and custom items are to get a
-flow of their own. Catalogue entries flagged `manual` are still offered in the
+on every question, read as one more answer to it. Custom items have a flow of
+their own, a page reached from the sheet and from a game ("Equipment is what is
+worn; Items is what is carried"). Catalogue entries flagged `manual` are still offered in the
 list with a Custom badge.
 
 `CustomOptionsPanel` remains for entries a character already has -- an AI Wizard

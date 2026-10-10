@@ -179,6 +179,7 @@ func (p *projector) run(log Log) (State, error) {
 			p.addHitPoints(class.HitDie, taken.Level, i == 0)
 		}
 	}
+	p.seedCustomItems(log)
 	if err := p.applyChanges(p.equipment); err != nil {
 		return State{}, err
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sync"
 
 	"golang.org/x/image/webp"
@@ -145,6 +146,7 @@ func (p *PackDocument) itemIconRows(collection string) ([]itemIconRow, error) {
 func applyIcons(c *catalog.Catalog, docs []*PackDocument) error {
 	icons := map[string]string{}
 	itemIcons := map[string]map[string]string{"equipment": {}, "magic-items": {}}
+	palette := map[string]string{}
 	for _, p := range docs {
 		if p.Icons == nil {
 			continue
@@ -154,6 +156,9 @@ func applyIcons(c *catalog.Catalog, docs []*PackDocument) error {
 			icons[normalizeID(p.Manifest.ID, id)] = url
 		}
 		assets := urls.items
+		// ponytail: labels are not namespaced, so two packs naming the same
+		// label leave the later one's picture; qualify them if packs collide.
+		maps.Copy(palette, assets)
 		for collection, resolved := range itemIcons {
 			rows, err := p.itemIconRows(collection)
 			if err != nil {
@@ -179,5 +184,6 @@ func applyIcons(c *catalog.Catalog, docs []*PackDocument) error {
 		magicItems[i].Icon = itemIcons["magic-items"][magicItems[i].Slug.String()]
 	}
 	c.MagicItems = catalog.NewCollection(magicItems)
+	c.ItemIcons = palette
 	return nil
 }
