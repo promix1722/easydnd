@@ -7,6 +7,7 @@ import { spellCatalog } from '@/test/spells'
 import { setupUser } from '@/test/user'
 
 import { SheetSpells } from './SheetSpells'
+import { jsonResponse } from '@/test/api'
 
 /**
  * The Spells tab, with the server behind `fetch`: the catalogue answers spell
@@ -38,7 +39,7 @@ const writes: { method: string; url: string; body: unknown }[] = []
 function serve(answered: string[] | null) {
   const events: CharacterEvent[] = [{ seq: 1, type: 'init' }, { seq: 2, type: 'class', ref: 'class:cleric' }, { seq: 3, type: 'level', ref: 'class:cleric', level: 3 }]
   if (answered !== null) events.push({ seq: 4, type: 'level', ref: 'class:cleric', level: 3, choices: [{ prompt: 'cleric/spell/prepared/3', picks: answered }] })
-  const json = (data: unknown) => new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  const json = (data: unknown) => jsonResponse(data)
   return async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'http://localhost')
     const method = init?.method ?? 'GET'

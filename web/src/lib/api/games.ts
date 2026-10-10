@@ -87,7 +87,7 @@ export function listTable(
 ): Promise<{ characters: TableCharacter[] }> {
   return request<{ characters: TableCharacter[] }>(
     `/groups/${encodeURIComponent(group)}/characters`,
-    signal ? { signal } : {},
+    { signal },
   )
 }
 
@@ -121,7 +121,7 @@ export function unshareCharacter(
 export function getSharedSheet(character: string, signal?: AbortSignal): Promise<Sheet> {
   return request<Sheet>(
     `/shared/${encodeURIComponent(character)}/sheet`,
-    signal ? { signal } : {},
+    { signal },
   )
 }
 
@@ -129,7 +129,7 @@ export function getSharedSheet(character: string, signal?: AbortSignal): Promise
 
 /** Every game at every table you sit at, newest first. */
 export function listGames(signal?: AbortSignal): Promise<{ games: GameSummary[] }> {
-  return request<{ games: GameSummary[] }>('/games', signal ? { signal } : {})
+  return request<{ games: GameSummary[] }>('/games', { signal })
 }
 
 export async function createGame(group: string, name: string): Promise<GameDetail> {
@@ -142,7 +142,7 @@ export async function createGame(group: string, name: string): Promise<GameDetai
 }
 
 export function getGame(id: string, signal?: AbortSignal): Promise<GameDetail> {
-  return request<GameDetail>(`/games/${encodeURIComponent(id)}`, signal ? { signal } : {})
+  return request<GameDetail>(`/games/${encodeURIComponent(id)}`, { signal })
 }
 
 export function renameGame(id: string, name: string): Promise<GameDetail> {

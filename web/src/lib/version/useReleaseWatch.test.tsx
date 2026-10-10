@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor } from '@testing-library/react'
 
 import { useReleaseWatch } from './useReleaseWatch'
+import { jsonResponse } from '@/test/api'
 
 /**
  * The signal this covers is the one the response header cannot carry: a tab
@@ -25,10 +26,7 @@ function serving(version: string): void {
       () =>
         new Promise<Response>((resolve) => {
           resolve(
-            new Response(JSON.stringify({ version }), {
-              status: 200,
-              headers: { 'Content-Type': 'application/json' },
-            }),
+            jsonResponse({ version }),
           )
         }),
     ),

@@ -6,6 +6,7 @@ import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 
 import { InviteSheet } from './InviteSheet'
+import { jsonResponse } from '@/test/api'
 
 // The component takes its clipboard as a prop, so this touches no global at
 // all: no vi.mock, and nothing for the next test file in this worker to trip
@@ -21,10 +22,7 @@ function stubFetch() {
     'fetch',
     vi.fn(
       async () =>
-        new Response(JSON.stringify({ token: TOKEN, role: 'player', expires_at: '' }), {
-          status: 201,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+        jsonResponse({ token: TOKEN, role: 'player', expires_at: '' }, 201),
     ),
   )
 }

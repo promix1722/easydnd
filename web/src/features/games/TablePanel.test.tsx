@@ -9,6 +9,7 @@ import { rowsOffering } from '@/test/rows'
 import type { Viewport } from '@/test/viewport'
 
 import { TablePanel } from './TablePanel'
+import { jsonResponse } from '@/test/api'
 
 const mine: TableCharacter = {
   id: 'chr_1',
@@ -31,10 +32,7 @@ function stubTable(characters: TableCharacter[]) {
     'fetch',
     vi.fn(
       async () =>
-        new Response(JSON.stringify({ characters }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+        jsonResponse({ characters }),
     ),
   )
 }

@@ -9,6 +9,7 @@ import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
 
 import { GamesScreen } from './GamesScreen'
+import { jsonResponse } from '@/test/api'
 
 const thursday: GameSummary = {
   id: 'gam_1',
@@ -27,10 +28,7 @@ function stub(games: GameSummary[], role: GroupRole) {
       const body = url.includes('/v1/games')
         ? { games }
         : { groups: [{ id: 'grp_1', name: 'Wednesday Night', created_at: '', role }] }
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return jsonResponse(body)
     }),
   )
 }
@@ -67,10 +65,7 @@ describe('GamesScreen, when the list will not load', () => {
       'fetch',
       vi.fn(
         async () =>
-          new Response(JSON.stringify({ error: { message: 'the server said no' } }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-          }),
+          jsonResponse({ error: { message: 'the server said no' } }, 500),
       ),
     )
     renderAt(

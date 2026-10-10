@@ -358,7 +358,7 @@ export function searchSpells(search: SpellSearch, signal?: AbortSignal, scope = 
   for (const [key, value] of Object.entries(search)) {
     if (value !== undefined && value !== '') params.set(key, String(value))
   }
-  return request<SpellPage>(queryURL(scope === 'browse' ? '/packs/spells' : catalogURL('spells', scope), params.toString()), signal ? { signal } : {})
+  return request<SpellPage>(queryURL(scope === 'browse' ? '/packs/spells' : catalogURL('spells', scope), params.toString()), { signal })
 }
 
 /** One row of an items search: what the picker's table shows. The sheet asks for the rest once it is owned. */
@@ -402,7 +402,7 @@ export function searchItems(filters: ItemFilters, limit: number, offset: number,
   if (filters.wearable != null) params.set('wearable', String(filters.wearable))
   if (filters.category) params.set('category', filters.category)
   if (filters.magic != null) params.set('magic', String(filters.magic))
-  return request<ItemPage>(queryURL(catalogURL('items', scope), params.toString()), signal ? { signal } : {})
+  return request<ItemPage>(queryURL(catalogURL('items', scope), params.toString()), { signal })
 }
 
 /**
@@ -433,7 +433,7 @@ export interface SpellOfferSearch extends Omit<SpellSearch, 'pack' | 'source' | 
  */
 export function searchSpellOffer(search: SpellOfferSearch, signal?: AbortSignal, scope = ''): Promise<SpellPage> {
   const [base, query] = catalogURL('spells', scope).split('?')
-  return request<SpellPage>(`${base}/search${query ? `?${query}` : ''}`, { method: 'POST', body: search, ...(signal ? { signal } : {}) })
+  return request<SpellPage>(`${base}/search${query ? `?${query}` : ''}`, { method: 'POST', body: search, signal })
 }
 
 export const getSpellBrowseOptions = (versions = '') => request<SpellBrowseOptions>(`/packs/spell-filters?versions=${encodeURIComponent(versions)}`)

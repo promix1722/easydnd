@@ -9,6 +9,7 @@ import type { Viewport } from '@/test/viewport'
 
 import { CharacterSheetScreen } from './CharacterSheetScreen'
 import { SkillsPanel } from './SkillsPanel'
+import { jsonResponse } from '@/test/api'
 
 /**
  * The sheet, wired to a projection whose ability keys arrive **alphabetically**
@@ -125,12 +126,6 @@ const SHEET: Sheet = {
 /** The canonical six plus the one slug this client does not know. */
 const ABILITY_TITLE = /^(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma|Luk)$/
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
 
 /**
  * The prompts a character still has outstanding.

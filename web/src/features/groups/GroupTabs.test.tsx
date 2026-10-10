@@ -7,6 +7,7 @@ import { withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
 
 import { GroupScreen } from './GroupScreen'
+import { jsonResponse } from '@/test/api'
 
 const group: GroupDetail = {
   id: 'grp_1',
@@ -34,10 +35,7 @@ describe('GroupScreen tabs', () => {
       'fetch',
       vi.fn(
         async () =>
-          new Response(JSON.stringify(group), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          }),
+          jsonResponse(group),
       ),
     )
     renderAt(
@@ -65,10 +63,7 @@ describe('GroupScreen tabs', () => {
       'fetch',
       vi.fn(
         async () =>
-          new Response(JSON.stringify(group), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          }),
+          jsonResponse(group),
       ),
     )
     renderAt(

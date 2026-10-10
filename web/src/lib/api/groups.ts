@@ -60,11 +60,11 @@ export interface InvitePreview {
 }
 
 export function listGroups(signal?: AbortSignal): Promise<{ groups: GroupSummary[] }> {
-  return request<{ groups: GroupSummary[] }>('/groups', signal ? { signal } : {})
+  return request<{ groups: GroupSummary[] }>('/groups', { signal })
 }
 
 export function getGroup(id: string, signal?: AbortSignal): Promise<GroupDetail> {
-  return request<GroupDetail>(`/groups/${encodeURIComponent(id)}`, signal ? { signal } : {})
+  return request<GroupDetail>(`/groups/${encodeURIComponent(id)}`, { signal })
 }
 
 export function createGroup(name: string): Promise<GroupDetail> {
@@ -119,7 +119,7 @@ export function previewInvite(token: string, signal?: AbortSignal): Promise<Invi
   return request<InvitePreview>('/invites/preview', {
     method: 'POST',
     body: { token },
-    ...(signal ? { signal } : {}),
+    signal,
   })
 }
 

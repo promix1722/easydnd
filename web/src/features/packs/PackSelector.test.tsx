@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { renderAt } from '@/test/render'
 import { PackSelector } from './PackSelector'
+import { jsonResponse } from '@/test/api'
 const base = { id: 'srd-2014', version: '1.0.0', digest: 'base' }
 const extra = { id: 'extra', version: '1.0.0', digest: 'extra' }
 
@@ -11,12 +12,12 @@ it('selects a pack release directly and replaces another version of the same pac
     if (url.includes('/resolve')) {
       const packs = JSON.parse(String(init?.body)).packs
       resolved.push(packs)
-      return new Response(JSON.stringify({ edition: '2014', semantics: '1', packs }), { headers: { 'Content-Type': 'application/json' } })
+      return jsonResponse({ edition: '2014', semantics: '1', packs })
     }
-    return new Response(JSON.stringify({
+    return jsonResponse({
       defaultRules: { edition: '2014', semantics: '1', packs: [base] },
       packs: [{ id: base.id, title: 'SRD 5.1', releases: [base, newer] }],
-    }), { headers: { 'Content-Type': 'application/json' } })
+    })
   }))
   renderAt('desktop', <PackSelector onChange={vi.fn()} />)
   const current = await screen.findByRole('button', { name: 'SRD 5.1 v1.0.0' })
@@ -33,16 +34,16 @@ it('selects a pack release directly and replaces another version of the same pac
 
 it('explains incompatible core packs and clears the error when the selection changes', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-    if (url.includes('/resolve')) return new Response(JSON.stringify({
+    if (url.includes('/resolve')) return jsonResponse({
       error: { code: 'validation_error', reason: 'pack.coreConflict' },
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } })
-    return new Response(JSON.stringify({
+    }, 400)
+    return jsonResponse({
       defaultRules: { edition: '2014', semantics: '1', packs: [base] },
       packs: [
         { id: base.id, title: 'SRD 5.1', releases: [base] },
         { id: extra.id, title: 'D&D 2014', releases: [extra] },
       ],
-    }), { headers: { 'Content-Type': 'application/json' } })
+    })
   }))
   const changed = vi.fn()
   renderAt('desktop', <PackSelector onChange={changed} />)
@@ -86,9 +87,7 @@ it('starts with SRD and resolves a selected addon before applying', async () => 
     vi.fn(async (url: string, init?: RequestInit) => {
       const resolving = url.includes('/resolve')
       if (resolving) resolutions.push(JSON.parse(String(init?.body)).packs)
-      return new Response(JSON.stringify(resolving ? lock : available), {
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return jsonResponse(resolving ? lock : available)
     }),
   )
   const changed = vi.fn()
@@ -106,10 +105,10 @@ it('starts with SRD and resolves a selected addon before applying', async () => 
 })
 
 it('clears a draft selection and prevents confirming an empty pack set', async () => {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+  vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({
     defaultRules: { edition: '2014', semantics: '1', packs: [base] },
     packs: [{ id: base.id, title: 'SRD 5.1', releases: [base] }],
-  }), { headers: { 'Content-Type': 'application/json' } })))
+  })))
   const changed = vi.fn()
   renderAt('desktop', <PackSelector onChange={changed} />)
   expect(await screen.findByRole('button', { name: /SRD 5.1/ })).toHaveAttribute('aria-pressed', 'true')
@@ -122,9 +121,9 @@ it('clears a draft selection and prevents confirming an empty pack set', async (
 })
 
 it('shows finalized packs without any editing controls or attention border', async () => {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+  vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({
     packs: [{ id: base.id, title: 'SRD 5.1', releases: [base] }],
-  }), { headers: { 'Content-Type': 'application/json' } })))
+  })))
   const changed = vi.fn()
   renderAt('desktop', <PackSelector finalized value={{ edition: '2014', semantics: '1', packs: [base] }} onChange={changed} disclosure={{ open: true, onOpen: vi.fn() }} />)
   expect(await screen.findByText('SRD 5.1 v1.0.0')).toBeInTheDocument()

@@ -10,6 +10,7 @@ import { setupUser } from '@/test/user'
 import type { Viewport } from '@/test/viewport'
 
 import { GameScreen } from './GameScreen'
+import { jsonResponse } from '@/test/api'
 
 function gameAs(role: GroupRole): GameDetail {
   return {
@@ -43,10 +44,7 @@ function renderGame(viewport: Viewport, game: GameDetail) {
     'fetch',
     vi.fn(
       async () =>
-        new Response(JSON.stringify(game), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+        jsonResponse(game),
     ),
   )
   return renderAt(
@@ -168,7 +166,7 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     const fetch = vi.fn(async (_url: unknown, options?: RequestInit) => {
       const body = options?.body ? JSON.parse(options.body as string) : {}
       for (const pool of game.entries[0]!.resources!) pool.used = options?.method === 'POST' ? 0 : body.used?.[pool.id] ?? pool.used
-      return new Response(JSON.stringify(game), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return jsonResponse(game)
     })
     vi.stubGlobal('fetch', fetch)
     const user = setupUser()
@@ -201,7 +199,7 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
         const patch = JSON.parse(options.body as string)
         Object.assign(game.entries[0]!, patch)
       }
-      return new Response(JSON.stringify(game), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return jsonResponse(game)
     })
     vi.stubGlobal('fetch', fetch)
     await pressRowAction(viewport, 'Ada', 'HP')
@@ -675,7 +673,7 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
       const body = path.includes('/shared/chr_1/sheet') ? { equipment: { equipped: [], backpack: [], loot: [], purse: { gp: 7 } } }
         : path.includes('/shared/chr_1/catalog/items') ? { items: [{ slug: 'dagger', name: 'Dagger' }], total: 1, categories: [] }
         : game
-      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return jsonResponse(body)
     })
     vi.stubGlobal('fetch', fetch)
     const user = setupUser()
@@ -722,7 +720,7 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
         equipment: { equipped: [], backpack: [{ item: 'potion-of-healing', count: 2 }, { item: 'rope', count: 1 }], loot: [], purse: { gp: 3 } },
         catalog: { magicItems: [{ slug: 'potion-of-healing', name: 'Healing potion', category: 'potion' }], equipment: [{ slug: 'rope', name: 'Rope' }] },
       } : path.includes('/characters/chr_1/events') ? { seq: 4, revision: 9, events: [] } : game
-      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return jsonResponse(body)
     })
     vi.stubGlobal('fetch', fetch)
     const user = setupUser()

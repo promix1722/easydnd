@@ -10,7 +10,7 @@ import { BuildScreen } from './BuildScreen'
 import type { Spell } from '@/lib/api'
 import type { Stage } from '@/domain'
 import { spellCatalog } from '@/test/spells'
-import { apiPath } from '@/test/api'
+import { apiPath, jsonResponse } from '@/test/api'
 import { testT } from '@/test/i18n'
 
 import { stageLabel } from './labels'
@@ -471,12 +471,6 @@ function mockApi({
   )
 }
 
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
 
 function renderBuild(viewport: 'mobile' | 'desktop') {
   return renderAt(

@@ -35,7 +35,7 @@ function list<T>(path: string, filters: AdminFilters, offset: number, signal?: A
   for (const [key, value] of Object.entries(filters)) {
     if (value) query.set(key, value)
   }
-  return request<T>(`${path}?${query.toString()}`, signal ? { signal } : {})
+  return request<T>(`${path}?${query.toString()}`, { signal })
 }
 
 /** Every stored account. Filters: `q`, `kind` (`account` | `guest`). 404 unless a superadmin asks. */
@@ -56,14 +56,14 @@ export interface AdminPack {
 
 /** The private packs installed here. Empty on a server that has none. */
 export function listAdminPacks(signal?: AbortSignal) {
-  return request<{ packs: AdminPack[] }>('/admin/packs', signal ? { signal } : {})
+  return request<{ packs: AdminPack[] }>('/admin/packs', { signal })
 }
 
 const playerPacks = (player: string) => `/admin/players/${encodeURIComponent(player)}/packs`
 
 /** The ids of the private packs one account has been handed. */
 export function getAdminPlayerPacks(player: string, signal?: AbortSignal) {
-  return request<{ packs: string[] }>(playerPacks(player), signal ? { signal } : {})
+  return request<{ packs: string[] }>(playerPacks(player), { signal })
 }
 
 /** Replaces that list whole: the one thing a superadmin writes. */

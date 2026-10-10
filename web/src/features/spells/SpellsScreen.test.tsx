@@ -5,6 +5,7 @@ import { expect, it, vi } from 'vitest'
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
 import { SpellsScreen } from './SpellsScreen'
+import { jsonResponse } from '@/test/api'
 
 function Location() {
   return <output data-testid="location">{useLocation().search}</output>
@@ -26,7 +27,7 @@ it('keeps shared filters in the browse URL and sends them to catalogue search', 
       searches.push(url.searchParams)
       data = { total: 1, spells: [{ slug: 'detect-magic', name: 'Detect Magic', level: 1, school: 'divination', ritual: true }] }
     }
-    return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } })
+    return jsonResponse(data)
   }))
   const user = setupUser()
   renderAt('desktop', <MemoryRouter initialEntries={['/spells?school=divination&level=1']}><SpellsScreen /><Location /></MemoryRouter>)

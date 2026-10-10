@@ -73,7 +73,7 @@ interface SessionResponse {
 /** Fetches the current account. Throws ApiError with status 401 when signed out. */
 export async function getSession(signal?: AbortSignal): Promise<SessionUser> {
   const response = await request<SessionResponse>('/auth/me', {
-    ...(signal ? { signal } : {}),
+    signal,
   })
   return response.user
 }
@@ -126,7 +126,7 @@ export async function startGuestSession(): Promise<SessionUser> {
  */
 export async function listProviders(signal?: AbortSignal): Promise<AuthProviderInfo[]> {
   const body = await request<{ providers: AuthProviderInfo[] }>('/auth/providers', {
-    ...(signal ? { signal } : {}),
+    signal,
   })
   return body.providers
 }

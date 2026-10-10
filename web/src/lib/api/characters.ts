@@ -442,7 +442,7 @@ export function listCharacters(
   signal?: AbortSignal,
 ): Promise<{ characters: Summary[] }> {
   const path = folder ? `/characters?folder=${encodeURIComponent(folder)}` : '/characters'
-  return request<{ characters: Summary[] }>(path, signal ? { signal } : {})
+  return request<{ characters: Summary[] }>(path, { signal })
 }
 
 export async function createCharacter(body: NewCharacter): Promise<CreateResponse> {
@@ -452,12 +452,12 @@ export async function createCharacter(body: NewCharacter): Promise<CreateRespons
 }
 
 export function getSheet(id: string, signal?: AbortSignal): Promise<Sheet> {
-  return request<Sheet>(`${characterPath(id)}/sheet`, signal ? { signal } : {})
+  return request<Sheet>(`${characterPath(id)}/sheet`, { signal })
 }
 
 export function getPrompts(id: string, signal?: AbortSignal, before?: number): Promise<PromptsResponse> {
   const query = before === undefined ? '' : `?before=${before}`
-  return request<PromptsResponse>(`${characterPath(id)}/prompts${query}`, signal ? { signal } : {})
+  return request<PromptsResponse>(`${characterPath(id)}/prompts${query}`, { signal })
 }
 
 export function getEvents(
@@ -466,7 +466,7 @@ export function getEvents(
 ): Promise<{ seq: number; revision?: number; rules?: RulesLock; events: CharacterEvent[] }> {
   return request<{ seq: number; revision?: number; rules?: RulesLock; events: CharacterEvent[] }>(
     `${characterPath(id)}/events`,
-    signal ? { signal } : {},
+    { signal },
   )
 }
 
@@ -631,7 +631,7 @@ export function previewCopyLink(token: string, signal?: AbortSignal): Promise<Co
   return request<CopyLinkPreview>('/copy-links/preview', {
     method: 'POST',
     body: { token },
-    ...(signal ? { signal } : {}),
+    signal,
   })
 }
 
@@ -670,7 +670,7 @@ export interface Visibility {
 }
 
 export function getVisibility(id: string, signal?: AbortSignal): Promise<Visibility> {
-  return request<Visibility>(`${characterPath(id)}/visibility`, signal ? { signal } : {})
+  return request<Visibility>(`${characterPath(id)}/visibility`, { signal })
 }
 
 export function setVisibility(id: string, visible: boolean): Promise<Visibility> {

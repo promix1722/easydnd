@@ -15,6 +15,6 @@ export interface VersionResponse {
 }
 
 export function getVersion(signal?: AbortSignal): Promise<VersionResponse> {
-  return request<VersionResponse>('/version', signal ? { signal } : {})
+  return request<VersionResponse>('/version', { signal })
 }
 

@@ -7,6 +7,7 @@ import { renderAt as renderBare } from '@/test/render'
 import { setupUser } from '@/test/user'
 
 import { SheetBody } from './SheetBody'
+import { jsonResponse } from '@/test/api'
 
 // A row's menu links to the item's page, so the sheet is always inside a router.
 const renderAt: typeof renderBare = (viewport, ui, ...rest) => renderBare(viewport, <MemoryRouter>{ui}</MemoryRouter>, ...rest)
@@ -279,9 +280,9 @@ describe('the panels that were sentences', () => {
     const writes: { method: string; path: string; search: string; body: unknown }[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input), 'http://test')
-      if ((init?.method ?? 'GET') === 'GET') return new Response(JSON.stringify({ seq: 9, revision: 12, events: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      if ((init?.method ?? 'GET') === 'GET') return jsonResponse({ seq: 9, revision: 12, events: [] })
       writes.push({ method: init?.method ?? '', path: url.pathname, search: url.searchParams.get('revision') ?? '', body: JSON.parse(String(init?.body ?? 'null')) })
-      return new Response(JSON.stringify({ seq: 10, sheet: NOTED }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return jsonResponse({ seq: 10, sheet: NOTED })
     }))
     const onChanged = vi.fn()
     const user = setupUser()
@@ -367,7 +368,7 @@ describe('the panels that were sentences', () => {
       } else if (collection === 'magic-items') {
         body = [{ slug: 'potion-of-healing', name: 'Potion of Healing', desc: ['You regain hit points when you drink this potion.'] }]
       }
-      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return jsonResponse(body)
     }))
     const onEquipment = vi.fn()
     const user = setupUser()

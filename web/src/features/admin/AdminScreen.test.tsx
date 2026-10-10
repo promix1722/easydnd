@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { AdminOnly } from '@/routes/AdminOnly'
-import { apiPath } from '@/test/api'
+import { apiPath, jsonResponse } from '@/test/api'
 import { testAccount, withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
 import { pressRowAction } from '@/test/rows'
@@ -21,7 +21,7 @@ const character = (n: number) => ({
 })
 
 /** Answers both listings two rows at a time out of five, and records every URL. */
-const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+const json = (body: unknown) => jsonResponse(body)
 let puts: string[] = []
 
 function stubFetch(installed: { id: string; title: string }[] = []): URL[] {
