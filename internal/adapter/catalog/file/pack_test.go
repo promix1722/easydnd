@@ -128,7 +128,7 @@ func TestAddonResourcesAndLocale(t *testing.T) {
 		t.Fatal("parent class did not discover addon subclass")
 	}
 }
-func TestResourceReplayAndSeparateCastingPools(t *testing.T) {
+func TestSeparateCastingPools(t *testing.T) {
 	t.Parallel()
 	r := registry(t)
 	cat, err := r.Load(context.Background(), rules.LocaleEN)
@@ -136,22 +136,15 @@ func TestResourceReplayAndSeparateCastingPools(t *testing.T) {
 		t.Fatal(err)
 	}
 	log := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "warlock"), Level: 5}, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "wizard"), Level: 3})
-	if err = log.Append(character.Event{Type: character.EventResourceSpent, Resource: "pact-magic", Amount: 1}, character.Event{Type: character.EventResourceSpent, Resource: "spell-slots/1", Amount: 1}, character.Event{Type: character.EventRest, Trigger: "short-rest"}); err != nil {
-		t.Fatal(err)
-	}
 	sheet, err := character.Project(log, cat)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p := sheet.Resources.Pools["pact-magic"]; p.Max != 2 || p.SlotLevel != 3 || p.Used != 0 {
+	if p := sheet.Resources.Pools["pact-magic"]; p.Max != 2 || p.SlotLevel != 3 {
 		t.Fatalf("pact pool: %+v", p)
 	}
-	if p := sheet.Resources.Pools["spell-slots/1"]; p.Max != 4 || p.Used != 1 {
+	if p := sheet.Resources.Pools["spell-slots/1"]; p.Max != 4 {
 		t.Fatalf("ordinary pool: %+v", p)
-	}
-	bad := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "warlock"), Level: 1}, character.Event{Type: character.EventResourceSpent, Resource: "pact-magic", Amount: 2}, character.Event{Type: character.EventLevel, Ref: ref(rules.RefClass, "warlock"), Level: 2})
-	if _, err = character.Project(bad, cat); err == nil {
-		t.Fatal("later level legalized earlier overspend")
 	}
 }
 func TestRejectDuplicateKeysMissingDependenciesAndChangedRelease(t *testing.T) {
@@ -195,7 +188,7 @@ func TestRejectDuplicateKeysMissingDependenciesAndChangedRelease(t *testing.T) {
 	}
 }
 
-func TestActionCostRecoveryBudgetAndReplay(t *testing.T) {
+func TestAddonActionIsOfferedWithItsGrants(t *testing.T) {
 	t.Parallel()
 	r := registry(t)
 	cat, err := r.Load(context.Background(), rules.LocaleEN)
@@ -203,50 +196,18 @@ func TestActionCostRecoveryBudgetAndReplay(t *testing.T) {
 		t.Fatal(err)
 	}
 	log := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 3}, character.Event{Type: character.EventSubclass, Ref: ref(rules.RefSubclass, "example/tactician")})
-	for range 4 {
-		if err := log.Append(character.Event{Type: character.EventAction, Ref: ref(rules.RefAction, "example/maneuver")}); err != nil {
-			t.Fatal(err)
-		}
-	}
 	sheet, err := character.Project(log, cat)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p := sheet.Resources.Pools["example/combat-dice"]; p.Used != 4 || p.Available() != 0 {
-		t.Fatalf("action cost: %+v", p)
+	if p := sheet.Resources.Pools["example/combat-dice"]; p.Used != 0 || p.Available() != 4 {
+		t.Fatalf("action pool: %+v", p)
 	}
-	if len(sheet.PackActions) != 1 || sheet.PackActions[0].Available {
-		t.Fatal("exhausted action still offered as affordable")
+	if len(sheet.PackActions) != 1 || !sheet.PackActions[0].Available {
+		t.Fatal("affordable action not offered")
 	}
 	if sheet.Status.Initiative != 1 || len(sheet.Spells.Known) != 1 || sheet.Spells.Known[0] != "example/guiding-mark" {
 		t.Fatal("addon grant/modifier not applied")
-	}
-	overspend := log.Clone()
-	_ = overspend.Append(character.Event{Type: character.EventAction, Ref: ref(rules.RefAction, "example/maneuver")})
-	if _, err := character.Project(overspend, cat); err == nil {
-		t.Fatal("action overspend accepted")
-	}
-	_ = log.Append(character.Event{Type: character.EventRest, Trigger: "short-rest"}, character.Event{Type: character.EventAction, Ref: ref(rules.RefAction, "example/maneuver")})
-	sheet, err = character.Project(log, cat)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sheet.Resources.Pools["example/combat-dice"].Used != 1 {
-		t.Fatal("rest/action replay wrong")
-	}
-	// Recovery budget is across classes, not independently per pool.
-	dice := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 3}, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "wizard"), Level: 3}, character.Event{Type: character.EventResourceSpent, Resource: "hit-dice/fighter", Amount: 3}, character.Event{Type: character.EventResourceSpent, Resource: "hit-dice/wizard", Amount: 3})
-	_ = dice.Append(character.Event{Type: character.EventRest, Trigger: "long-rest", Allocations: map[rules.Slug]int{"hit-dice/fighter": 2, "hit-dice/wizard": 1}})
-	sheet, err = character.Project(dice, cat)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sheet.Resources.Pools["hit-dice/fighter"].Used != 1 || sheet.Resources.Pools["hit-dice/wizard"].Used != 2 {
-		t.Fatal("incorrect allocated recovery")
-	}
-	dice.Events[len(dice.Events)-1].Allocations["hit-dice/wizard"] = 2
-	if _, err := character.Project(dice, cat); err == nil {
-		t.Fatal("shared recovery budget exceeded")
 	}
 }
 

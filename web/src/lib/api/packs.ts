@@ -1,4 +1,3 @@
-import type { Sheet } from './characters'
 import { request } from './client'
 
 export interface PackRelease {
@@ -97,20 +96,3 @@ export const exportPack = (id: string, version = '') =>
   request<PackDocument>(`/packs/${id}/export?version=${encodeURIComponent(version)}`)
 export const resolvePacks = (packs: PackRelease[]) =>
   request<RulesLock>('/packs/resolve', { method: 'POST', body: { packs } })
-export interface PackMigration {
-  revision: number
-  before: Sheet
-  after: Sheet
-  changed: string[]
-  issues?: { eventId: string; reason: string }[]
-}
-export const migratePackSelection = (
-  id: string,
-  expectedRevision: number,
-  rules: RulesLock,
-  dryRun: boolean,
-) =>
-  request<PackMigration>(`/characters/${id}/rules?dryRun=${String(dryRun)}`, {
-    method: 'POST',
-    body: { expectedRevision, rules },
-  })

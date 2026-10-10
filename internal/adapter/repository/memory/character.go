@@ -143,22 +143,18 @@ func (r *CharacterRepository) Delete(_ context.Context, id domain.ID) error {
 // mutate through a shared backing array.
 func clone(c domain.Character) domain.Character {
 	c.Log = c.Log.Clone()
-	c.Checkpoints = slices.Clone(c.Checkpoints)
-	for i := range c.Checkpoints {
-		c.Checkpoints[i].Log = c.Checkpoints[i].Log.Clone()
-	}
 	return c
 }
 
 // Commit is the atomic write boundary for all application log mutations.
-func (r *CharacterRepository) Commit(_ context.Context, id domain.ID, expectedRevision int, log domain.Log, checkpoint *domain.Checkpoint) error {
+func (r *CharacterRepository) Commit(_ context.Context, id domain.ID, expectedRevision int, log domain.Log) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	c, ok := r.items[id]
 	if !ok {
 		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
-	if err := c.Commit(expectedRevision, log, checkpoint); err != nil {
+	if err := c.Commit(expectedRevision, log); err != nil {
 		return err
 	}
 	r.items[id] = c

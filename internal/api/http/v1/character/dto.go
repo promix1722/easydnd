@@ -33,10 +33,9 @@ type ClassLevel struct {
 
 // Character is a character and its log.
 type Character struct {
-	Revision    int               `json:"revision"`
-	Rules       helpers.RulesLock `json:"rules"`
-	Checkpoints []Checkpoint      `json:"checkpoints,omitempty"`
-	ID          string            `json:"id"`
+	Revision int               `json:"revision"`
+	Rules    helpers.RulesLock `json:"rules"`
+	ID       string            `json:"id"`
 
 	// Seq is the sequence the log currently ends at. It is the token an
 	// append or a truncation must state, so it is returned everywhere a
@@ -55,10 +54,6 @@ type Event struct {
 	Selections    []catalogapi.Option `json:"selections,omitempty"`
 	ID            string              `json:"id,omitempty"`
 	SchemaVersion int                 `json:"schemaVersion,omitempty"`
-	Resource      string              `json:"resource,omitempty"`
-	Amount        int                 `json:"amount,omitempty"`
-	Trigger       string              `json:"trigger,omitempty"`
-	Allocations   map[string]int      `json:"allocations,omitempty"`
 	Seq           int                 `json:"seq,omitempty"`
 	Type          string              `json:"type"`
 
@@ -346,12 +341,6 @@ type ResourceParameter struct {
 	Number   int       `json:"number"`
 	Dice     string    `json:"dice,omitempty"`
 	Text     string    `json:"text,omitempty"`
-}
-type Checkpoint struct {
-	Index    int               `json:"index"`
-	Revision int               `json:"revision"`
-	Reason   string            `json:"reason"`
-	Rules    helpers.RulesLock `json:"rules"`
 }
 
 type Contribution struct {

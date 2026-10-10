@@ -44,9 +44,7 @@
   compares decoded pixels rather than bytes, because zlib output is not stable
   across Node versions.
 - Layer rules are enforced, not advisory: `make lint/layers` for Go,
-  `npm run lint:layers` for the web client. Inner layers import no framework. The standalone `internal/usecase/spellicon`
-  generator owns outbound HTTP; it is excluded only from the HTTP dependency
-  restriction and must not be imported by other usecases.
+  `npm run lint:layers` for the web client. Inner layers import no framework.
 - Configuration is a committed YAML per environment -- `config.dev.yaml`,
   `config.prod.yaml` -- and **no secret goes in either**. Secrets come from an
   env file the process never reads itself: `~/config/easydnd/dev.env` (loaded

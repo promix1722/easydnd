@@ -365,7 +365,7 @@ func (s *Service) ReviseBatch(ctx context.Context, owner domain.OwnerID, id doma
 		return Revision{}, err
 	}
 	if commit {
-		if err := s.repo.Commit(ctx, id, character.Revision, rebuilt, nil); err != nil {
+		if err := s.repo.Commit(ctx, id, character.Revision, rebuilt); err != nil {
 			return Revision{}, err
 		}
 	}

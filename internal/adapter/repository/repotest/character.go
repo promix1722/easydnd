@@ -238,7 +238,7 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 					t.Fatalf("Create() error = %v", err)
 				}
 				two := logOf(t, domain.EventInit, domain.EventRace)
-				if err := repo.Commit(ctx, c.ID, 0, two, nil); err != nil {
+				if err := repo.Commit(ctx, c.ID, 0, two); err != nil {
 					t.Fatalf("Commit() error = %v", err)
 				}
 				got, err := repo.Get(ctx, c.ID)
@@ -255,12 +255,12 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 				}
 				// Same length: still a change, still one revision.
 				same := logOf(t, domain.EventInit, domain.EventBackground)
-				if err := repo.Commit(ctx, c.ID, 2, same, nil); err != nil {
+				if err := repo.Commit(ctx, c.ID, 2, same); err != nil {
 					t.Fatalf("Commit() error = %v", err)
 				}
 				// Shorter: one revision, not a negative one.
 				one := logOf(t, domain.EventInit)
-				if err := repo.Commit(ctx, c.ID, 3, one, nil); err != nil {
+				if err := repo.Commit(ctx, c.ID, 3, one); err != nil {
 					t.Fatalf("Commit() error = %v", err)
 				}
 				got, err = repo.Get(ctx, c.ID)
@@ -281,18 +281,18 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 					t.Fatalf("Create() error = %v", err)
 				}
 				log := logOf(t, domain.EventInit)
-				if err := repo.Commit(ctx, c.ID, 0, log, nil); err != nil {
+				if err := repo.Commit(ctx, c.ID, 0, log); err != nil {
 					t.Fatalf("Commit() error = %v", err)
 				}
 				var invalid *types.ValidationError
-				if err := repo.Commit(ctx, c.ID, 0, log, nil); !errors.As(err, &invalid) {
+				if err := repo.Commit(ctx, c.ID, 0, log); !errors.As(err, &invalid) {
 					t.Errorf("Commit() at a stale revision error = %v, want a ValidationError", err)
 				}
 				bad := domain.Log{Events: []domain.Event{{Seq: 4, Type: domain.EventInit}}}
-				if err := repo.Commit(ctx, c.ID, 1, bad, nil); !errors.As(err, &invalid) {
+				if err := repo.Commit(ctx, c.ID, 1, bad); !errors.As(err, &invalid) {
 					t.Errorf("Commit() of a malformed log error = %v, want a ValidationError", err)
 				}
-				if err := repo.Commit(ctx, "chr_missing", 0, log, nil); !types.IsNotFound(err) {
+				if err := repo.Commit(ctx, "chr_missing", 0, log); !types.IsNotFound(err) {
 					t.Errorf("Commit() error = %v, want a NotFoundError", err)
 				}
 				got, err := repo.Get(ctx, c.ID)
@@ -301,35 +301,6 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 				}
 				if got.Revision != 1 {
 					t.Errorf("revision = %d, want 1 after three refusals", got.Revision)
-				}
-			},
-		},
-		{
-			name: "commit keeps a checkpoint beside the log",
-			run: func(t *testing.T, repo domain.Repository) {
-				ctx := context.Background()
-				c := seeded(t, repo, domain.EventInit, domain.EventRace)
-				before, err := repo.Get(ctx, c.ID)
-				if err != nil {
-					t.Fatalf("Get() error = %v", err)
-				}
-				cp := domain.Checkpoint{Revision: before.Revision, Log: before.Log, Reason: "rules-migration"}
-				if err := repo.Commit(ctx, c.ID, before.Revision, logOf(t, domain.EventInit), &cp); err != nil {
-					t.Fatalf("Commit() error = %v", err)
-				}
-				got, err := repo.Get(ctx, c.ID)
-				if err != nil {
-					t.Fatalf("Get() error = %v", err)
-				}
-				if len(got.Checkpoints) != 1 {
-					t.Fatalf("checkpoints = %d, want 1", len(got.Checkpoints))
-				}
-				kept := got.Checkpoints[0]
-				if kept.Reason != "rules-migration" || kept.Revision != before.Revision || kept.Log.Len() != 2 {
-					t.Errorf("checkpoint = %+v, want the two-event log at revision %d", kept, before.Revision)
-				}
-				if got.Log.Len() != 1 {
-					t.Errorf("log length = %d, want the committed single event", got.Log.Len())
 				}
 			},
 		},
@@ -388,7 +359,6 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 						Choices:  []domain.Answer{{Prompt: "rogue-skills", Picks: []rules.Slug{"stealth"}}},
 						Custom:   &domain.CustomOption{Name: "Knife Saint", Level: &level, HitDie: &hitDie},
 						Observed: true, Evidence: "page 3"},
-					{Type: domain.EventResourceSpent, Resource: "hit-dice", Amount: 1, Trigger: "short-rest", Allocations: map[rules.Slug]int{"spell-slot-1": 1}},
 					{Type: domain.EventNote, Note: "Has a \"tab\"\there and a é"},
 				}
 				c, err := repo.CreateWithLog(ctx, charOwner, charFolder, mustRebuild(t, events...))
@@ -402,7 +372,7 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 				if got.Log.Len() != len(events) {
 					t.Fatalf("log length = %d, want %d", got.Log.Len(), len(events))
 				}
-				init, class, spent, note := got.Log.Events[0], got.Log.Events[1], got.Log.Events[2], got.Log.Events[3]
+				init, class, note := got.Log.Events[0], got.Log.Events[1], got.Log.Events[2]
 				if !init.At.Equal(events[0].At) {
 					t.Errorf("init.At = %v, want %v", init.At, events[0].At)
 				}
@@ -433,10 +403,7 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 				if class.Custom == nil || class.Custom.Name != "Knife Saint" || class.Custom.Level == nil || *class.Custom.Level != 3 || *class.Custom.HitDie != 8 {
 					t.Errorf("class custom = %+v", class.Custom)
 				}
-				if spent.Resource != "hit-dice" || spent.Amount != 1 || spent.Trigger != "short-rest" || spent.Allocations["spell-slot-1"] != 1 {
-					t.Errorf("resource event = %+v", spent)
-				}
-				if note.Note != events[3].Note {
+				if note.Note != events[2].Note {
 					t.Errorf("note = %q, want %q", note.Note, events[3].Note)
 				}
 			},
@@ -509,7 +476,7 @@ func Append(ctx context.Context, repo domain.Repository, id domain.ID, events ..
 	if err := log.Append(events...); err != nil {
 		return err
 	}
-	return repo.Commit(ctx, id, c.Revision, log, nil)
+	return repo.Commit(ctx, id, c.Revision, log)
 }
 
 func seeded(t *testing.T, repo domain.Repository, types ...domain.EventType) domain.Character {

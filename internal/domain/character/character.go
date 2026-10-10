@@ -20,7 +20,6 @@ package character
 import (
 	"context"
 	"github.com/promix1722/easydnd/internal/domain/pack"
-	"maps"
 	"slices"
 	"strings"
 
@@ -55,8 +54,7 @@ func (o OwnerID) String() string { return string(o) }
 // that happened to the character in the fiction, and it has no business
 // appearing in their history.
 type Character struct {
-	Revision    int
-	Checkpoints []Checkpoint
+	Revision int
 
 	ID     ID
 	Owner  OwnerID
@@ -272,8 +270,7 @@ type Repository interface {
 	// Commit replaces a character's whole log under its revision, which is
 	// the write every application mutation goes through. See
 	// Character.Commit for what it checks and how the revision advances.
-	// checkpoint, when not nil, is kept alongside the log.
-	Commit(context.Context, ID, int, Log, *Checkpoint) error
+	Commit(ctx context.Context, id ID, expectedRevision int, log Log) error
 
 	// CreateWithLog stores a new character together with its first log in
 	// one write, so that a failure cannot leave an empty character behind
@@ -324,13 +321,6 @@ type Repository interface {
 	Delete(ctx context.Context, id ID) error
 }
 
-// Checkpoint retains the complete pre-migration build and its exact lock.
-type Checkpoint struct {
-	Revision int
-	Log      Log
-	Reason   string
-}
-
 func (l Log) RulesLock() pack.Lock {
 	if len(l.Events) == 0 {
 		return pack.Lock{}
@@ -359,7 +349,6 @@ func (l Log) Clone() Log {
 			e.Custom = &c
 		}
 		e.RulesLock = e.RulesLock.Clone()
-		e.Allocations = maps.Clone(e.Allocations)
 		e.Choices = slices.Clone(e.Choices)
 		for j := range e.Choices {
 			e.Choices[j].Picks = slices.Clone(e.Choices[j].Picks)

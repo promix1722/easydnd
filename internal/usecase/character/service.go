@@ -356,7 +356,7 @@ func (s *Service) Apply(
 	if err := CheckSheet(character.Log, working, cat, s.limits); err != nil {
 		return 0, err
 	}
-	if err := s.repo.Commit(ctx, id, character.Revision, working, nil); err != nil {
+	if err := s.repo.Commit(ctx, id, character.Revision, working); err != nil {
 		return 0, err
 	}
 	return expectedSeq + len(events), nil
@@ -381,7 +381,7 @@ func (s *Service) Truncate(
 	if err = log.Truncate(afterSeq); err != nil {
 		return err
 	}
-	return s.repo.Commit(ctx, id, character.Revision, log, nil)
+	return s.repo.Commit(ctx, id, character.Revision, log)
 }
 
 // Delete removes a character.

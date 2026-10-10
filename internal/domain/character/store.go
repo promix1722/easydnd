@@ -29,7 +29,7 @@ func (l *Log) Stamp() {
 // Repository.Commit once the record is in hand. A stale expectedRevision is a
 // *types.ValidationError, and so is a log that does not validate; on any error
 // c is unchanged.
-func (c *Character) Commit(expectedRevision int, log Log, checkpoint *Checkpoint) error {
+func (c *Character) Commit(expectedRevision int, log Log) error {
 	if c.Revision != expectedRevision {
 		return types.NewValidationError("stale character revision: got %d, expected %d", expectedRevision, c.Revision)
 	}
@@ -38,11 +38,6 @@ func (c *Character) Commit(expectedRevision int, log Log, checkpoint *Checkpoint
 	}
 	updated := log.Clone()
 	updated.Stamp()
-	if checkpoint != nil {
-		cp := *checkpoint
-		cp.Log = cp.Log.Clone()
-		c.Checkpoints = append(c.Checkpoints, cp)
-	}
 	c.Revision += max(1, updated.Len()-c.Log.Len())
 	c.Log = updated
 	return nil

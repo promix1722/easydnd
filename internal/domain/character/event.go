@@ -42,30 +42,25 @@ const (
 	EventFeat
 	// EventNote records a player's annotation and changes nothing.
 	EventNote
-	EventResourceSpent
-	EventResourceRecovered
-	EventRest
-	EventRule
-	EventAction
+	// The type is stored as its number, so the numbers are a format. 11 to 13
+	// and 15 were the usage events -- spending, recovering, resting, acting --
+	// which nothing ever wrote; they are retired and must not be reused.
+	EventRule EventType = 14
 )
 
 var eventTypeNames = map[EventType]string{
-	EventNone:              "none",
-	EventInit:              "init",
-	EventChange:            "change",
-	EventRace:              "race",
-	EventSubrace:           "subrace",
-	EventBackground:        "background",
-	EventClass:             "class",
-	EventSubclass:          "subclass",
-	EventLevel:             "level",
-	EventFeat:              "feat",
-	EventNote:              "note",
-	EventResourceSpent:     "resource.spent",
-	EventResourceRecovered: "resource.recovered",
-	EventRest:              "rest.completed",
-	EventRule:              "rule.applied",
-	EventAction:            "action.used",
+	EventNone:       "none",
+	EventInit:       "init",
+	EventChange:     "change",
+	EventRace:       "race",
+	EventSubrace:    "subrace",
+	EventBackground: "background",
+	EventClass:      "class",
+	EventSubclass:   "subclass",
+	EventLevel:      "level",
+	EventFeat:       "feat",
+	EventNote:       "note",
+	EventRule:       "rule.applied",
 }
 
 // String returns the type's wire name, or "unknown" outside the enumeration.
@@ -101,10 +96,6 @@ type Event struct {
 	ID            string
 	SchemaVersion int
 	RulesLock     pack.Lock
-	Resource      rules.Slug
-	Amount        int
-	Trigger       string
-	Allocations   map[rules.Slug]int
 
 	// Seq is the event's current 1-based position. Character.Revision is the
 	// concurrency token; same-length rewrites can leave every position intact.

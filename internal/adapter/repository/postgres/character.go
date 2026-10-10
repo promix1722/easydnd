@@ -35,7 +35,7 @@ func NewCharacterRepository(pool *pgxpool.Pool) *CharacterRepository {
 
 var _ domain.Repository = (*CharacterRepository)(nil)
 
-const characterColumns = `id, owner_id, folder_id, public, revision, log, checkpoints`
+const characterColumns = `id, owner_id, folder_id, public, revision, log`
 
 func characterNotFound(id domain.ID) error {
 	return types.NewNotFoundError("character %q", id).Because("character.notFound")
@@ -44,34 +44,23 @@ func characterNotFound(id domain.ID) error {
 // scanCharacter reads one row in characterColumns order.
 func scanCharacter(row pgx.Row) (domain.Character, error) {
 	var c domain.Character
-	var log, checkpoints []byte
-	if err := row.Scan(&c.ID, &c.Owner, &c.Folder, &c.Public, &c.Revision, &log, &checkpoints); err != nil {
+	var log []byte
+	if err := row.Scan(&c.ID, &c.Owner, &c.Folder, &c.Public, &c.Revision, &log); err != nil {
 		return domain.Character{}, err
 	}
 	if err := json.Unmarshal(log, &c.Log); err != nil {
 		return domain.Character{}, types.WrapServerError(err, "decode character log")
 	}
-	if checkpoints != nil {
-		if err := json.Unmarshal(checkpoints, &c.Checkpoints); err != nil {
-			return domain.Character{}, types.WrapServerError(err, "decode character checkpoints")
-		}
-	}
 	return c, nil
 }
 
-// encode renders the two JSON columns. Empty checkpoints are NULL rather than
-// "[]", so a character that never had any reads back with the nil the
-// in-memory store returns.
-func encode(c domain.Character) (log, checkpoints []byte, err error) {
-	if log, err = json.Marshal(c.Log); err != nil {
-		return nil, nil, types.WrapServerError(err, "encode character log")
+// encode renders the log column.
+func encode(c domain.Character) ([]byte, error) {
+	log, err := json.Marshal(c.Log)
+	if err != nil {
+		return nil, types.WrapServerError(err, "encode character log")
 	}
-	if len(c.Checkpoints) > 0 {
-		if checkpoints, err = json.Marshal(c.Checkpoints); err != nil {
-			return nil, nil, types.WrapServerError(err, "encode character checkpoints")
-		}
-	}
-	return log, checkpoints, nil
+	return log, nil
 }
 
 // Create stores a new empty character for owner, filed in folder.
@@ -90,14 +79,14 @@ func (r *CharacterRepository) CreateWithLog(ctx context.Context, owner domain.Ow
 }
 
 func (r *CharacterRepository) insert(ctx context.Context, c domain.Character) (domain.Character, error) {
-	log, checkpoints, err := encode(c)
+	log, err := encode(c)
 	if err != nil {
 		return domain.Character{}, err
 	}
 	err = r.pool.QueryRow(ctx,
-		`INSERT INTO characters (owner_id, folder_id, public, revision, log, checkpoints)
-		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-		string(c.Owner), string(c.Folder), c.Public, c.Revision, log, checkpoints,
+		`INSERT INTO characters (owner_id, folder_id, public, revision, log)
+		 VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		string(c.Owner), string(c.Folder), c.Public, c.Revision, log,
 	).Scan(&c.ID)
 	if err != nil {
 		return domain.Character{}, types.WrapServerError(err, "insert character")
@@ -164,13 +153,13 @@ func (r *CharacterRepository) update(ctx context.Context, id domain.ID, fn func(
 	if err := fn(&c); err != nil {
 		return err
 	}
-	log, checkpoints, err := encode(c)
+	log, err := encode(c)
 	if err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx,
-		`UPDATE characters SET folder_id = $2, public = $3, revision = $4, log = $5, checkpoints = $6 WHERE id = $1`,
-		string(id), string(c.Folder), c.Public, c.Revision, log, checkpoints)
+		`UPDATE characters SET folder_id = $2, public = $3, revision = $4, log = $5 WHERE id = $1`,
+		string(id), string(c.Folder), c.Public, c.Revision, log)
 	if err != nil {
 		return types.WrapServerError(err, "update character")
 	}
@@ -197,9 +186,9 @@ func (r *CharacterRepository) SetPublic(ctx context.Context, id domain.ID, publi
 }
 
 // Commit is the atomic write boundary for all application log mutations.
-func (r *CharacterRepository) Commit(ctx context.Context, id domain.ID, expectedRevision int, log domain.Log, checkpoint *domain.Checkpoint) error {
+func (r *CharacterRepository) Commit(ctx context.Context, id domain.ID, expectedRevision int, log domain.Log) error {
 	return r.update(ctx, id, func(c *domain.Character) error {
-		return c.Commit(expectedRevision, log, checkpoint)
+		return c.Commit(expectedRevision, log)
 	})
 }
 

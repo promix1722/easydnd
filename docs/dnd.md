@@ -13,12 +13,12 @@ run through the same projector as the generated base rules. See
 arrays described below remain compatibility paths; installed contexts use the
 base pack's explicit policy and `resources.pools`/`resources.parameters`.
 
-Usage events are temporal: spend/rest/action events validate against the build
-at their position, and later levels preserve spent uses. They are not how a
-sitting is tracked -- the game tracker counts spent uses per game entry and
-never writes the log; see [backend.md](backend.md#active-game-entries). Rules upgrades are
-explicit migrations with previews and rollback checkpoints. A new pack version
-never changes an existing build implicitly.
+The log holds build decisions only. What a character has spent -- slots, hit
+dice, uses of a feature -- is not an event: the game tracker counts spent uses
+per game entry and never writes the log; see
+[backend.md](backend.md#active-game-entries). A character's rules are fixed
+when it is created: a new pack version never changes an existing build, and
+there is no migration to move one onto it.
 
 Ability scores are fixed to STR, DEX, CON, INT, WIS and CHA. Addons may grant
 bonuses, features and actions, but cannot add custom characteristics.

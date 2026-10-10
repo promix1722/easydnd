@@ -4,8 +4,7 @@ The server runs characters against immutable, versioned packs. `pack` and
 `addon` mean the same artifact. The generated SRD is the base pack; configured
 addons pass through the same decoder, dependency resolver and compiler.
 
-This delivery covers files, the core evaluator, character locks, revisions,
-resource events and migration APIs. Pack editing, JSON uploads, publishing,
+This delivery covers files, the core evaluator, character locks and revisions. Pack editing, JSON uploads, publishing,
 private storage, and group sharing are available through the Homebrew section;
 see Homebrew authoring below. Character imports can also compile temporary,
 session-scoped private definitions; see [agent.md](agent.md#custom-content).
@@ -299,7 +298,7 @@ push restarts nothing and prints the line to add to `/etc/easydnd/prod.env`:
 a path that does not exist is a startup error, so the pack has to be there
 before the server is told about it.
 
-The archive preserves packs, **not characters**. Character logs, checkpoints,
+The archive preserves packs, **not characters**. Character logs,
 folders, shares and games are in PostgreSQL when `db.url` is set, and in
 memory otherwise.
 
@@ -472,7 +471,7 @@ entries that lack them and duplicates nothing; leaving it out leaves those
 entries with a name, their mechanics and an empty description. Whole-entity
 replacement is still not a thing a pack can do; an overlay only fills blanks.
 
-## Resources and temporal events
+## Resources
 
 A resource declares `id`, `owner`, `minimumLevel`, `kind` (`pool` or `parameter`),
 `input`, and `rows` or `capacity`. Threshold rows use `from`, `capacity`, optional
@@ -493,26 +492,19 @@ Ordinary spell slots and Hit Dice retain family instance IDs. `resources.pools`
 is authoritative for usage; `resources.parameters` separates damage/scaling
 values from consumables. The older slot/class arrays remain compatibility views.
 
-The usage events below are the character's own record. The browser's game
-tracker does not write them: it keeps a spent count per pool on the game entry,
-so a use spent at one table is not spent at another. See
-[backend.md](backend.md#active-game-entries).
+Spending is not recorded on the character. The browser's game tracker keeps a
+spent count per pool on the game entry, so a use spent at one table is not
+spent at another, and the sheet always shows full pools; see
+[backend.md](backend.md#active-game-entries). The log once had usage events of
+its own -- `resource.spent`, `resource.recovered`, `rest.completed`,
+`action.used` -- which nothing wrote; they are gone, and their type numbers
+are retired rather than reused.
 
-```json
-{"type":"resource.spent","resource":"example/combat-dice","amount":1}
-{"type":"rest.completed","trigger":"short-rest"}
-{"type":"action.used","ref":"example:action:maneuver"}
-{"type":"rest.completed","trigger":"long-rest","allocations":{"hit-dice/fighter":2,"hit-dice/wizard":1}}
-```
-
-Each event is validated at its position in the log. Later levels cannot legalize
-an earlier overspend. Capacity changes preserve spent uses; available uses are
-`max(0, maximum - used)`. Recovery operations are `all`, `amount` or `budget`;
-shared budgets require explicit recorded allocation. Conditional recovery uses
-`when`. An action verifies ownership and all costs before charging any pool.
-Its rolls and other outcomes remain manual. The sheet exposes localized
-`packActions`, affordability, `manualRules` and contributions with rule/owner
-and originating event identity where directly attributable.
+Recovery operations are `all`, `amount` or `budget`, and conditional recovery
+uses `when`; the tracker applies them on a rest. An action's rolls and other
+outcomes remain manual. The sheet exposes localized `packActions`,
+affordability, `manualRules` and contributions with rule/owner and originating
+event identity where directly attributable.
 
 ## Action tags
 
@@ -572,16 +564,9 @@ Missing releases or unsupported semantics fail closed. The catalogue manifest
 returns the default lock, and `GET /v1/characters/:id/catalog/:collection` serves
 an owned character's pinned content.
 
-`POST /v1/characters/:id/rules?dryRun=true` accepts `expectedRevision`, `rules`
-(the proposed lock), and optional `entities`, `prompts`, `options`, `paths` mappings. Resource references in usage
-and allocation events follow explicit entity mappings; path mappings handle
-renamed score/stat paths.
-It replays without writing and reports before/after sections and invalid event
-identities. Remove `dryRun=true` to revalidate and commit with revision CAS; a
-checkpoint retains the original log/lock. No invalid choices are silently dropped.
-`POST /v1/characters/:id/rules/restore?dryRun=true` takes `expectedRevision` and
-`checkpoint` index. Applying it saves the current build as another checkpoint.
-Later edits therefore remain recoverable.
+A lock is for the life of the character. There is no route that moves a
+character onto another lock: the migration and checkpoint-restore endpoints
+that once did had no client and were removed.
 
 The existing foreign-sheet importer imports a **snapshot** under the configured
 context and reports unresolved content. It does not claim to reconstruct a
@@ -692,7 +677,7 @@ same portable JSON as the CLI. Drafts may be incomplete; saving uses an expected
 revision, while publishing requires validation and compilation in every supplied
 locale. Published versions cannot be overwritten. To publish another version,
 edit the draft's manifest version. Archiving hides a pack from new selections;
-its release bytes are retained for existing characters and checkpoints.
+its release bytes are retained for existing characters.
 
 SRD 5.1 is the default selection, independently of additional operator-installed
 packs. The first character tab and the spell browser accept multiple compatible

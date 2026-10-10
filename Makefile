@@ -375,10 +375,6 @@ web/icons/check:
 web/release: web/build
 	tar -czf web.tar.gz -C web/dist .
 
-## image/generate: generate one 128px WebP (manual, costs OpenAI credit)
-image/generate:
-	go run ./cmd/spellicon $(IMAGE_FLAGS)
-
 ## spell-icons: generate the per-spell icons -- manual, costs OpenAI credit
 # Three steps: build the prompts from the SRD, generate 1024px PNGs into a
 # cache outside the repo (the expensive artifact, so it survives worktrees and
@@ -426,17 +422,11 @@ translate/ru:
 	  -reasoning $(TRANSLATE_REASONING) \
 	  -to ru $(TRANSLATE_FLAGS)
 
-# The standalone spellicon usecase owns its provider HTTP calls by design.
-# Excluding its root still catches any other usecase that imports it transitively.
 ## lint/layers: fail if the inner layers reach for transport or storage
 lint/layers:
-	@! go list -deps $$(go list ./internal/domain/... ./internal/usecase/... \
-	  | grep -v '^github.com/promix1722/easydnd/internal/usecase/spellicon$$') \
+	@! go list -deps ./internal/domain/... ./internal/usecase/... \
 	  | grep -E 'gin-gonic|^net/http$$|^database/sql$$|jackc/pgx|pressly/goose' \
 	  || { echo "LAYER VIOLATION: inner layers must not import transport or storage"; exit 1; }
-	@! go list -deps ./internal/usecase/spellicon \
-	  | grep -E 'gin-gonic|^database/sql$$|jackc/pgx|pressly/goose' \
-	  || { echo "LAYER VIOLATION: standalone icon generation must not import server frameworks or storage"; exit 1; }
 	@echo "layers clean"
 
 ## tidy: sync go.mod and go.sum
@@ -494,4 +484,4 @@ clean:
         pack/check data/lint data/lint/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \
         web/deps web/dev web/lint web/test web/check web/build web/release \
-        web/icons web/icons/check spell-icons image/generate
+        web/icons web/icons/check spell-icons

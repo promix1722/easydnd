@@ -9,32 +9,6 @@ SRD compendium, passkey and Google sign-in, and the rules math for creation and
 level-up are built and tested. A character can be created, built and levelled
 over HTTP.
 
-## Single-image generation
-
-`internal/usecase/spellicon` contains the synchronous OpenAI image request,
-bounded retries, cancellation, PNG decoding, resizing and WebP encoding.
-This standalone package is the explicit exception to the inner-layer HTTP
-dependency rule; the layer checks still prohibit importing it from other
-usecases and still reject server frameworks and persistence in the generator.
-It returns 128×128 WebP bytes and has no queue, catalog dependency, file store,
-server configuration or application startup integration.
-
-The standalone binary owns command-line input and atomic file output:
-
-```sh
-go build -o bin/spellicon ./cmd/spellicon
-OPENAI_API_KEY=... bin/spellicon -prompt 'A glowing arcane rune' -out /tmp/rune.webp
-```
-
-Its default model is `gpt-image-2.5-sunburst`, overridable with `-model`.
-Requests use transparent 1024×1024 artwork at low quality, then convert to
-128×128 lossless WebP. `-timeout` defaults to five minutes including retries;
-`-overwrite` permits replacing an existing regular file. Generation failure
-preserves existing output. The CLI handles interruption and never exposes the
-key through a web interface. `make image/generate IMAGE_FLAGS='-prompt ...
--out ...'` is an equivalent development command. The existing `llm` CLI remains
-compatible for offline translation and PNG batches.
-
 ## Rule pack runtime
 
 Startup registers the base pack plus `data.pack_files` and
@@ -85,8 +59,7 @@ imports and group sharing.
 All application character writes use repository revision CAS. `expectedSeq`
 identifies positions; `expectedRevision` detects concurrent same-length edits.
 Each init event pins a rules lock, and character/list/copy/shared-game reads use
-that lock. Migration/restore endpoints retain checkpoints atomically with the
-new log. Characters, their checkpoints, folders, shares and games are in
+that lock, which never changes afterwards. Characters, folders, shares and games are in
 PostgreSQL whenever accounts are; see
 [Where everything lives](#where-accounts-and-groups-live).
 
@@ -441,7 +414,6 @@ cmd/pack/             loads, validates and exports packs; `make pack/check` is t
 cmd/packlint/         reads the pack's prose the way a player would and reports what is off
 cmd/devslot/          hands each worktree its own development ports
 cmd/llm/              dev-machine OpenAI tool: batch image generation, JSON translation
-cmd/spellicon/        generates spell icons through internal/usecase/spellicon
 internal/
   app/                composition root -- the only package that knows every layer
   buildinfo/          Version, stamped by the linker
@@ -1399,9 +1371,8 @@ pool the character does not have is a 400. It is one of the entry's game
 values, so the same rule decides who may write it: the owner on their unlocked
 entry, a DM or the group owner on any.
 
-This deliberately does **not** use the character log's `resource.spent` and
-`rest.completed` events, which stay available to API clients and unused by the
-browser. A spent slot is a fact about one sitting, exactly as a hit point lost
+This is deliberately not an entry in the character's log, which holds build
+decisions and nothing spent. A spent slot is a fact about one sitting, exactly as a hit point lost
 is: the same character seated in two games has two independent counts, the
 sheet always shows full pools, and a DM can correct a player's count without a
 write path into somebody else's character. There are two recoveries, both `POST
@@ -1579,9 +1550,7 @@ Imports point inward, never outward:
 
 Two mechanical checks back this up: `make lint/layers` greps the dependency
 graph of the inner layers, and a `depguard` rule in `.golangci.yml` denies the
-same imports at lint time. The standalone `usecase/spellicon` generator is
-the outbound HTTP exception described above; other inner packages cannot
-import it, and its dependencies still exclude server frameworks and storage.
+same imports at lint time.
 
 The frontend has its own layer rule and its own checker; see
 [web.md](web.md#dependency-rule).
@@ -2032,7 +2001,7 @@ chats are kept there too, and are described with their own features:
 | `groups` | a group's id, name and who made it |
 | `group_members` | one row per seat: who, in which group, at which rank |
 | `folders` | one account's shelves; one is flagged the default |
-| `characters` | one row per character: owner, folder, revision, and the whole log and its checkpoints as `json`. A `commands` column is left over from an idempotency key nothing ever set; no code reads or writes it |
+| `characters` | one row per character: owner, folder, revision, and the whole log as `json`. Two columns are left over and no code reads or writes them: `commands`, from an idempotency key nothing ever set, and `checkpoints`, from a rules migration that had no client |
 | `shared_characters` | one row per character a member has put on a group's table |
 | `games` | a game and, as one `json` column, its whole roster |
 | `private_releases` | the rule packs an AI Wizard import compiled, pinned by a character's lock and never listed |
@@ -2775,7 +2744,7 @@ The adapter constructs immutable registry snapshots; character reads resolve exa
 locks against built-in and retained database releases. The compiled cache is not
 an authorization boundary. Catalogue selection, exports and new locks check access
 on each request; character-owned reads can retain already pinned releases after
-membership or sharing changes. Existing checkpoint restore stays character-scoped.
+membership or sharing changes.
 
 Migration 00004 adds `rule_packs` and `group_rule_packs`. Pack records store portable
 release bytes and draft metadata together, with revision compare-and-swap writes.
