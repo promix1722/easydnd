@@ -2,6 +2,7 @@ package repotest
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -78,6 +79,23 @@ func RunPackRepository(t *testing.T, factory func(*testing.T) pack.Repository) {
 	}
 	if err = r.DeleteShare(ctx, disk.Group, disk.Pack); err != nil {
 		t.Fatal(err)
+	}
+
+	// Grants are a set per account, replaced whole and read back sorted.
+	if err = r.SetGrants(ctx, original.Owner, []string{"disk-b", "disk-a", "disk-b"}); err != nil {
+		t.Fatal(err)
+	}
+	if granted, err := r.Grants(ctx, original.Owner); err != nil || !slices.Equal(granted, []string{"disk-a", "disk-b"}) {
+		t.Fatalf("Grants = %v, %v", granted, err)
+	}
+	if err = r.SetGrants(ctx, original.Owner, nil); err != nil {
+		t.Fatal(err)
+	}
+	if granted, err := r.Grants(ctx, original.Owner); err != nil || len(granted) != 0 {
+		t.Fatalf("Grants after clearing = %v, %v", granted, err)
+	}
+	if granted, err := r.Grants(ctx, "nobody"); err != nil || len(granted) != 0 {
+		t.Fatalf("Grants of a stranger = %v, %v", granted, err)
 	}
 
 	private := pack.Document{Release: pack.Release{ID: "import-s1", Version: "0.0.0-abc", Digest: "d1"}, Data: []byte(`{"private":true}`)}

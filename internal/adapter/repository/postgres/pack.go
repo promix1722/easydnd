@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/promix1722/easydnd/internal/domain/pack"
+	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
 )
 
@@ -98,6 +99,33 @@ func (r *PackRepository) PutShare(ctx context.Context, v pack.Share) error {
 func (r *PackRepository) DeleteShare(ctx context.Context, g, p string) error {
 	_, err := r.pool.Exec(ctx, "DELETE FROM group_rule_packs WHERE group_id=$1 AND pack_id=$2", g, p)
 	return err
+}
+
+func (r *PackRepository) Grants(ctx context.Context, u user.ID) ([]string, error) {
+	rows, err := r.pool.Query(ctx, "SELECT pack_id FROM user_rule_packs WHERE user_id=$1 ORDER BY pack_id", u)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
+}
+
+// SetGrants replaces an account's grants in one transaction, so a reader
+// never sees the list half written.
+func (r *PackRepository) SetGrants(ctx context.Context, u user.ID, packs []string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err = tx.Exec(ctx, "DELETE FROM user_rule_packs WHERE user_id=$1", u); err != nil {
+		return err
+	}
+	if len(packs) > 0 {
+		if _, err = tx.Exec(ctx, "INSERT INTO user_rule_packs(user_id,pack_id) SELECT $1, unnest($2::text[]) ON CONFLICT DO NOTHING", u, packs); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
 }
 
 // PutPrivate stores an import's compiled release. The same release stored

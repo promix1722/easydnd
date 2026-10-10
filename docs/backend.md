@@ -560,6 +560,9 @@ that.
 | `POST` | `/v1/games/{id}/rest` | a rest for the table; DM or owner. Long by default: every entry gets all of its spent uses back. `?kind=short`: only the pools a short rest refills |
 | `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only, resolved the same way |
 | `GET` | `/v1/admin/players` | every stored account, newest first; `?q=` (name, email or id), `?kind=account\|guest`, `?limit=&offset=`. **Superadmin only**, 404 otherwise |
+| `GET` | `/v1/admin/packs` | the private disk packs installed here. **Superadmin only** |
+| `GET` | `/v1/admin/players/{id}/packs` | the private packs that account has been handed: `{"packs":["id"]}`. **Superadmin only** |
+| `PUT` | `/v1/admin/players/{id}/packs` | replace that list whole. **Superadmin only** |
 | `GET` | `/v1/admin/characters` | every character, newest first; `?owner=` (name, email or id), `?id=`, `?public=true\|false`, `?limit=&offset=`. **Superadmin only**, 404 otherwise |
 
 Three of those need a word about their shape.
@@ -1200,10 +1203,10 @@ adapter cannot verify it either, so a key would make the two adapters answer
 the same call differently. The cascades above are what keep the rows honest,
 and every read already skips an id that is gone.
 
-### A superadmin reads everything and writes nothing
+### A superadmin reads everything and writes one thing
 
-An account named in `auth.superadmins` gets three things beyond the private
-packs, and all three are reads.
+An account named in `auth.superadmins` gets three reads beyond the private
+packs, and one write: which private packs an account has been handed.
 
 **Two listings**, `GET /v1/admin/players` and `GET /v1/admin/characters`,
 behind `middleware.RequireSuperadmin`. The middleware runs after
@@ -1236,6 +1239,19 @@ change nobody's character.
 **A flag on the session.** `GET /v1/auth/me` carries `admin: true` for a
 superadmin, so the client knows to draw the section. It grants nothing; the
 routes above ask again on every request.
+
+**The write: a private pack for one account.** `GET /v1/admin/packs` lists the
+restricted disk packs installed here, and `GET`/`PUT
+/v1/admin/players/{id}/packs` reads and replaces the ids one account has been
+handed; the players listing carries the same ids on each row as `packs`. They
+are rows in `user_rule_packs`, read by the same
+`pack.Service.available` that already decided who has a pack, so a grant shows
+up everywhere a pack does and nowhere new. It is by **pack id**, not by release
+as a group share is: a private pack is replaced on disk by hand, and a grant
+that pinned a version would silently end at the next copy. The usecase accepts
+only an installed restricted pack and only a stored account -- a guest who
+never joined a group has no row to hang it on. What a grant does and does not
+give is in [packs.md](packs.md#common-and-private-disk-packs).
 
 ### A note is the one custom entry that can be deleted
 
@@ -1583,7 +1599,7 @@ rather than quietly defaulted.
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
 | `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The template's placeholder is rejected by name |
-| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes nothing](#a-superadmin-reads-everything-and-writes-nothing)): a **verified** Google email, or an account id |
+| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups or to single accounts, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes nothing](#a-superadmin-reads-everything-and-writes-nothing)): a **verified** Google email, or an account id |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
 | `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. The first is where Google sign-in returns to. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |

@@ -35,6 +35,11 @@ type Repository interface {
 	PutShare(context.Context, Share) error
 	DeleteShare(context.Context, string, string) error
 
+	// Grants lists the ids of the restricted packs handed to one account,
+	// sorted. SetGrants replaces that list whole.
+	Grants(context.Context, user.ID) ([]string, error)
+	SetGrants(context.Context, user.ID, []string) error
+
 	// PutPrivate keeps a release an import compiled for one character, so
 	// that the character can be loaded after the process that compiled it
 	// is gone. It is never listed: a private release is reachable only

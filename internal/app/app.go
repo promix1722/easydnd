@@ -265,7 +265,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		System:        system.New(buildinfo.Version, system.AnalyticsConfigResponse{Environment: cfg.Env, Token: cfg.Analytics.Token, Host: cfg.Analytics.Host}),
 		Version:       buildinfo.Version,
 		WebDir:        opts.WebDir,
-		Admin:         adminapi.New(adminuc.NewService(userRepo, characterRepo)),
+		Admin:         adminapi.New(adminuc.NewService(userRepo, characterRepo)).WithPacks(packService),
 		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)).WithSuperadmins(cfg.Auth.Superadmins),
 		Appearance:    appearanceapi.New(appearanceuc.NewService(userRepo)),
 		Profile:       profileapi.New(profileuc.NewService(userRepo)),

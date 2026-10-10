@@ -59,13 +59,18 @@ func (s *Service) available(ctx context.Context, u user.ID) ([]domain.Record, ma
 		return nil, nil, err
 	}
 	records = append(records, s.engine.Builtins()...)
+	granted, err := s.repo.Grants(ctx, u)
+	if err != nil {
+		return nil, nil, err
+	}
 	allowed := map[domain.Release]bool{}
 	for _, r := range records {
 		// A restricted disk pack is unowned too, but only a superadmin has it
-		// outright; everybody else reaches it through a group share below.
+		// outright; everybody else reaches it by a superadmin's grant, or
+		// through a group share below.
 		// ponytail: one account lookup per restricted pack per call; cache
 		// per request if a deployment ever installs more than a handful.
-		if !r.Archived && (r.Owner == u || r.Owner == "" && (!r.Restricted || s.Superadmin(ctx, u))) {
+		if !r.Archived && (r.Owner == u || r.Owner == "" && (!r.Restricted || slices.Contains(granted, r.ID) || s.Superadmin(ctx, u))) {
 			for _, d := range r.Releases {
 				allowed[d.Release] = true
 			}
@@ -94,6 +99,45 @@ func (s *Service) available(ctx context.Context, u user.ID) ([]domain.Record, ma
 		}
 	}
 	return records, allowed, nil
+}
+
+// Restricted lists the private disk packs installed here: what a superadmin
+// has to hand out.
+func (s *Service) Restricted() []domain.Record {
+	out := []domain.Record{}
+	for _, r := range s.engine.Builtins() {
+		if r.Restricted {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// Granted lists the restricted packs handed to one account.
+func (s *Service) Granted(ctx context.Context, u user.ID) ([]string, error) {
+	return s.repo.Grants(ctx, u)
+}
+
+// Grant replaces the restricted packs one account has been handed. It does
+// not ask who is calling: the route is the superadmin's, as with every admin
+// listing. The account must be a stored one -- a guest who never joined a
+// group has no row to hang a grant on -- and every id an installed restricted
+// pack, so a grant can never open a homebrew pack or name one that is not
+// there.
+//
+// Taking a pack away stops new characters being built on it. One already
+// built keeps loading: a read follows the character's lock, not this list.
+func (s *Service) Grant(ctx context.Context, u user.ID, packs []string) error {
+	if _, err := s.users.ByID(ctx, u); err != nil {
+		return err
+	}
+	restricted := s.Restricted()
+	for _, id := range packs {
+		if !slices.ContainsFunc(restricted, func(r domain.Record) bool { return r.ID == id }) {
+			return denied()
+		}
+	}
+	return s.repo.SetGrants(ctx, u, packs)
 }
 func (s *Service) List(ctx context.Context, u user.ID) ([]domain.Record, error) {
 	records, allowed, err := s.available(ctx, u)

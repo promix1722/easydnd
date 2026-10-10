@@ -232,7 +232,7 @@ decided by the key that names it:
 | | Key | Who has it |
 |---|---|---|
 | **common** | `data.pack_files`, `data.autoload_packs` | every session, guests included |
-| **private** | `data.private_pack_files` | a **superadmin**, and the members of any group a superadmin has shared it with |
+| **private** | `data.private_pack_files` | a **superadmin**, any account a superadmin has handed it to, and the members of any group a superadmin has shared it with |
 
 A private pack is installed and compiled at startup like any other, and then
 kept out of everything that is the same for everybody: it is never a default
@@ -242,15 +242,15 @@ the pack does not exist -- not in `GET /v1/packs`, the pack selector, the spell
 browser or `export`, and naming it in a lock is refused exactly as a stranger's
 homebrew pack is. The choke point is the one that already existed,
 `Service.available` in `internal/usecase/pack`: an unowned record marked
-`Restricted` is allowed only for a superadmin, and the group-share loop below
-it grants it to a table.
+`Restricted` is allowed only for a superadmin or an account it was granted
+to, and the group-share loop below it grants it to a table.
 
 **A superadmin** is an account named in `auth.superadmins`, by the *verified*
 email of a linked Google account or by account id. An unverified email is
 anybody's to claim and never matches; a passkey-only account has no email and
 can only be named by id, which is how `config.dev.yaml` names `dev:master`.
 The same list opens the admin listings and every sheet for reading; see
-[backend.md](backend.md#a-superadmin-reads-everything-and-writes-nothing).
+[backend.md](backend.md#a-superadmin-reads-everything-and-writes-one-thing).
 
 **Granting** reuses pack sharing. On a group they belong to, a superadmin sees
 a *Private packs* tab and shares a release with the table through
@@ -266,6 +266,14 @@ from new characters. Two things follow from how sharing already worked:
 - A member who was granted the pack may publish homebrew that depends on it,
   but cannot share that homebrew with another table: a restricted dependency
   is passed on only by a superadmin (`pack.dependencyPrivate`).
+
+**Granting to one account** needs no table. On the admin Players tab a row's
+*Private packs* action ticks the packs that account has
+(`PUT /v1/admin/players/:id/packs`), and they appear in that player's pack
+selector. The same three rules hold -- a character built on it keeps it after
+the tick is removed, the player cannot export it, and cannot share it or
+homebrew built on it with a table -- and the grant follows the pack id, so it
+survives the pack being replaced on disk by a newer version.
 
 Privacy is by **pack ID**, taken from the folders configured at this startup.
 With `data.pack_archive` set, drop a path from `private_pack_files` and its

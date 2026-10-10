@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/promix1722/easydnd/internal/domain/pack"
+	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
+	"slices"
 	"sort"
 	"sync"
 )
@@ -14,10 +16,11 @@ type PackRepository struct {
 	records map[string]pack.Record
 	shares  map[string]map[string]pack.Share
 	private map[pack.Release]pack.Document
+	grants  map[user.ID][]string
 }
 
 func NewPackRepository() *PackRepository {
-	return &PackRepository{records: map[string]pack.Record{}, shares: map[string]map[string]pack.Share{}, private: map[pack.Release]pack.Document{}}
+	return &PackRepository{records: map[string]pack.Record{}, shares: map[string]map[string]pack.Share{}, private: map[pack.Release]pack.Document{}, grants: map[user.ID][]string{}}
 }
 func clonePack[T any](v T) T {
 	b, _ := json.Marshal(v)
@@ -78,6 +81,19 @@ func (r *PackRepository) DeleteShare(_ context.Context, g, p string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.shares[g], p)
+	return nil
+}
+func (r *PackRepository) Grants(_ context.Context, u user.ID) ([]string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string{}, r.grants[u]...), nil
+}
+func (r *PackRepository) SetGrants(_ context.Context, u user.ID, packs []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	packs = append([]string{}, packs...)
+	sort.Strings(packs)
+	r.grants[u] = slices.Compact(packs)
 	return nil
 }
 func (r *PackRepository) PutPrivate(_ context.Context, d pack.Document) error {

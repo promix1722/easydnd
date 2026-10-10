@@ -1293,5 +1293,8 @@
   "receive.yourCharacters": "Your characters",
   "receivePrompt.action": "Log in to get it",
   "receivePrompt.detail": "Sign in to add a copy to your characters. If you have never been here before, the same button makes you an account -- there is nothing to fill in.",
-  "receivePrompt.title": "You have been sent a character"
+  "receivePrompt.title": "You have been sent a character",
+  "admin.packs.action": "Private packs",
+  "admin.packs.title": "Private packs for {{name}}",
+  "admin.packs.detail": "A ticked pack can be chosen by this player for their own characters. They cannot export it or share it on. Unticking stops new characters; ones already built on it keep working."
 }

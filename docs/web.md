@@ -4726,7 +4726,13 @@ superadmin: two tabs in one `TabRow`, **Players** and **Characters**, each a
 - **Characters filter by owner, id and visibility only.** Name, level and class
   are shown but are folded from the log on the server for the rows on screen,
   so there is nothing to search them by; see
-  [backend.md](backend.md#a-superadmin-reads-everything-and-writes-nothing).
+  [backend.md](backend.md#a-superadmin-reads-everything-and-writes-one-thing).
+- **A player row has one action where a private pack is installed: Private
+  packs**, a sheet of one checkbox per installed pack, saved as the whole list.
+  The action is not drawn on a server with none, rather than opening onto
+  nothing to tick. With one, the table gains a **Private packs column** naming
+  what each player has, read from the listing itself (`packs` on a row) and
+  re-read after a save. It is the only thing on the screen that writes.
 - `usePaged` is the offset/limit paging `SpellsScreen` has, written once for
   both tables: a new filter set refetches from the top while the old rows stay
   dimmed, and a page that answers after the filters moved is dropped.

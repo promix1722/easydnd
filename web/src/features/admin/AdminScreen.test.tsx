@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -6,12 +6,14 @@ import { AdminOnly } from '@/routes/AdminOnly'
 import { apiPath } from '@/test/api'
 import { testAccount, withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
+import { pressRowAction } from '@/test/rows'
 import { setupUser } from '@/test/user'
 
 import { AdminScreen } from './AdminScreen'
 
 const player = (n: number) => ({
   id: `usr_${n}`, display_name: `Player ${n}`, created_at: '2026-01-01T00:00:00Z', passkeys: 1, anonymous: false,
+  ...(n === 1 ? { packs: ['dnd-2014'] } : {}),
 })
 const character = (n: number) => ({
   id: `chr_${n}`, name: `Hero ${n}`, level: 1, classes: [{ class: 'wizard', level: 1 }],
@@ -19,16 +21,27 @@ const character = (n: number) => ({
 })
 
 /** Answers both listings two rows at a time out of five, and records every URL. */
-function stubFetch(): URL[] {
+const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+let puts: string[] = []
+
+function stubFetch(installed: { id: string; title: string }[] = []): URL[] {
   const calls: URL[] = []
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+  puts = []
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'http://test')
     calls.push(url)
     const offset = Number(url.searchParams.get('offset'))
-    const body = apiPath(url.pathname) === '/v1/admin/players'
+    const path = apiPath(url.pathname)
+    if (init?.method === 'PUT') {
+      puts.push(String(init.body))
+      return new Response(null, { status: 204 })
+    }
+    if (path === '/v1/admin/packs') return json({ packs: installed })
+    if (path.endsWith('/packs')) return json({ packs: ['dnd-2014'] })
+    const body = path === '/v1/admin/players'
       ? { players: [player(offset + 1), player(offset + 2)], total: 5 }
       : { characters: [character(offset + 1), character(offset + 2)], total: 5 }
-    return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return json(body)
   }))
   return calls
 }
@@ -88,5 +101,26 @@ describe('AdminScreen', () => {
     expect(calls.at(-1)?.searchParams.get('owner')).toBe('usr_1')
     expect(screen.getByRole('textbox', { name: 'Owner: name, email or ID' })).toHaveValue('usr_1')
     expect(screen.getAllByText('Wizard 1')).toHaveLength(2)
+  })
+
+  // The one write a superadmin has. Offered only where a private pack is
+  // installed: the default stub has none, and the tests above see no menu.
+  it('hands a player a private pack, saving the whole list', async () => {
+    stubFetch([{ id: 'dnd-2014', title: 'D&D 2014' }, { id: 'extra', title: 'Extra' }])
+    const user = setupUser()
+    renderAdmin(true)
+
+    // The action arrives with the pack listing, after the rows.
+    await screen.findByRole('button', { name: /^(Private packs|Actions for) Player 1$/ })
+    // The table says who already has what, by the pack's title.
+    expect(screen.getByRole('cell', { name: 'D&D 2014' })).toBeInTheDocument()
+    await pressRowAction('desktop', 'Player 1', 'Private packs')
+    const dialog = await screen.findByRole('dialog')
+    await waitFor(() => expect(within(dialog).getByRole('checkbox', { name: 'D&D 2014' })).toBeChecked())
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Extra' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(puts).toEqual([JSON.stringify({ packs: ['dnd-2014', 'extra'] })]))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 })

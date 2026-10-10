@@ -3,6 +3,7 @@ package pack_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/promix1722/easydnd/internal/types"
 	"os"
 	"path/filepath"
 	"strings"
@@ -274,6 +275,47 @@ func TestRestrictedPackIsTheSuperadminsUntilGranted(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := s.Resolve(ctx, "player", roots); err == nil {
+		t.Fatal("the grant outlived its removal")
+	}
+}
+
+// A superadmin may hand the pack to one account, with no table between them.
+func TestRestrictedPackGrantedToOneAccount(t *testing.T) {
+	ctx, s, _, overlay := restrictedFixture(t)
+	roots := []pack.Release{overlay}
+
+	if err := s.Grant(ctx, "claimed", []string{"overlay"}); err != nil {
+		t.Fatalf("Grant: %v", err)
+	}
+	if _, err := s.Resolve(ctx, "claimed", roots); err != nil {
+		t.Fatalf("the granted account cannot select it: %v", err)
+	}
+	if granted, err := s.Granted(ctx, "claimed"); err != nil || len(granted) != 1 || granted[0] != "overlay" {
+		t.Fatalf("Granted = %v, %v", granted, err)
+	}
+	if _, err := s.Resolve(ctx, "player", roots); err == nil {
+		t.Fatal("a grant to one account reached another")
+	}
+	// To play with, not to take a copy of or pass on.
+	if _, err := s.Export(ctx, "claimed", "overlay", "1.0.0"); err == nil {
+		t.Fatal("a granted account exported the private pack")
+	}
+	if err := s.Share(ctx, "claimed", "table", "overlay", "1.0.0"); err == nil {
+		t.Fatal("a granted account shared the private pack")
+	}
+
+	// Only a restricted pack, and only to an account that is stored.
+	if err := s.Grant(ctx, "claimed", []string{"srd-2014"}); err == nil {
+		t.Fatal("a grant named a pack that is not private")
+	}
+	if err := s.Grant(ctx, "anon:guest", []string{"overlay"}); !types.IsNotFound(err) {
+		t.Fatalf("Grant to an unstored guest = %v, want not found", err)
+	}
+
+	if err := s.Grant(ctx, "claimed", nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Resolve(ctx, "claimed", roots); err == nil {
 		t.Fatal("the grant outlived its removal")
 	}
 }

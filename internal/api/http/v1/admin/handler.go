@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
 	adminuc "github.com/promix1722/easydnd/internal/usecase/admin"
@@ -25,9 +26,68 @@ type Service interface {
 	Characters(context.Context, adminuc.CharacterQuery) ([]adminuc.Character, int, error)
 }
 
-type Handler struct{ svc Service }
+// Packs is what granting a private pack needs of the pack service.
+type Packs interface {
+	Restricted() []pack.Record
+	Granted(context.Context, user.ID) ([]string, error)
+	Grant(context.Context, user.ID, []string) error
+}
+
+type Handler struct {
+	svc   Service
+	packs Packs
+}
 
 func New(svc Service) *Handler { return &Handler{svc: svc} }
+
+// WithPacks installs the pack service the grant routes are served from.
+func (h *Handler) WithPacks(p Packs) *Handler { h.packs = p; return h }
+
+// PrivatePack is one restricted disk pack, as a grant names it.
+type PrivatePack struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+// PlayerPacks is the body of both /v1/admin/players/{id}/packs routes: the
+// ids of the private packs that account has been handed.
+type PlayerPacks struct {
+	Packs []string `json:"packs"`
+}
+
+// Packs handles GET /v1/admin/packs: the private packs installed here.
+func (h *Handler) Packs(c *gin.Context) {
+	out := []PrivatePack{}
+	for _, r := range h.packs.Restricted() {
+		out = append(out, PrivatePack{ID: r.ID, Title: r.Title})
+	}
+	c.JSON(http.StatusOK, gin.H{"packs": out})
+}
+
+// PlayerPacks handles GET /v1/admin/players/{id}/packs.
+func (h *Handler) PlayerPacks(c *gin.Context) {
+	granted, err := h.packs.Granted(c.Request.Context(), user.ID(c.Param("id")))
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, PlayerPacks{Packs: append([]string{}, granted...)})
+}
+
+// SetPlayerPacks handles PUT /v1/admin/players/{id}/packs. The list replaces
+// what the account had: the one write a superadmin has.
+func (h *Handler) SetPlayerPacks(c *gin.Context) {
+	var params PlayerPacks
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	if err := h.packs.Grant(c.Request.Context(), user.ID(c.Param("id")), params.Packs); err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
 
 // Player is the wire form of one account row.
 type Player struct {
@@ -39,6 +99,8 @@ type Player struct {
 	LastUsedAt string `json:"last_used_at,omitempty"`
 	Passkeys   int    `json:"passkeys"`
 	Anonymous  bool   `json:"anonymous"`
+	// Packs are the ids of the private packs this account has been handed.
+	Packs []string `json:"packs,omitempty"`
 }
 
 // Character is the wire form of one character row.
@@ -91,6 +153,14 @@ func (h *Handler) Players(c *gin.Context) {
 		}
 		if !r.LastUsedAt.IsZero() {
 			p.LastUsedAt = r.LastUsedAt.UTC().Format(time.RFC3339)
+		}
+		// ponytail: one grants query per row of the page; one query for the
+		// whole page if the players table is ever slow to load.
+		if h.packs != nil {
+			if p.Packs, err = h.packs.Granted(c.Request.Context(), r.ID); err != nil {
+				helpers.FormatError(c, err)
+				return
+			}
 		}
 		players = append(players, p)
 	}

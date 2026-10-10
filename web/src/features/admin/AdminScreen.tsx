@@ -1,14 +1,18 @@
 import { Link, useSearchParams } from 'react-router'
 
 import { classLine } from '@/domain'
-import { listAdminCharacters, listAdminPlayers } from '@/lib/api'
+import { useState } from 'react'
+
+import { getAdminPlayerPacks, listAdminCharacters, listAdminPacks, listAdminPlayers, setAdminPlayerPacks } from '@/lib/api'
 import { formatDate, formatDateTime, useLocale, useT } from '@/lib/i18n'
-import { Anchor, Badge, Page, Panel, TabRow, Text } from '@/ui'
+import { useAction } from '@/lib/useAction'
+import { useResource } from '@/lib/useResource'
+import { Alert, Anchor, Badge, Button, Checkbox, Group, Loader, ModalSheet, Page, Panel, Stack, TabRow, Text } from '@/ui'
 
 import { AdminTable, FilterBox, FilterSelect } from './AdminTable'
 import { usePaged } from './usePaged'
 
-import type { AdminCharacter, AdminPlayer } from '@/lib/api'
+import type { AdminCharacter, AdminPack, AdminPlayer } from '@/lib/api'
 
 type SetFilter = (key: string, value: string | null) => void
 
@@ -65,9 +69,18 @@ function PlayersTab({ params, setFilter }: { params: URLSearchParams; setFilter:
     return { rows: page.players, total: page.total }
   })
   const charactersOf = (player: AdminPlayer) => `/admin?tab=characters&owner=${encodeURIComponent(player.id)}`
+  // The private packs installed here. A server with none offers no action: a
+  // row menu that opened onto nothing to tick would be a dead control.
+  const packs = useResource('admin:packs', async (signal) => (await listAdminPacks(signal)).packs).data ?? []
+  const [granting, setGranting] = useState<AdminPlayer | null>(null)
 
   return (
+    <>
+    {granting !== null && <PlayerPacksSheet player={granting} packs={packs} onClose={() => setGranting(null)} onSaved={paged.reload} />}
     <AdminTable
+      {...(packs.length > 0
+        ? { actions: (player: AdminPlayer) => [{ key: 'packs', label: t('admin.packs.action'), onClick: () => setGranting(player) }] }
+        : {})}
       paged={paged}
       loadFailed={t('admin.players.loadFailed')}
       count={(count) => t('admin.players.count', { count })}
@@ -111,8 +124,66 @@ function PlayersTab({ params, setFilter }: { params: URLSearchParams; setFilter:
           render: (player) => (player.last_used_at ? formatDateTime(player.last_used_at, locale) : ''),
         },
         { key: 'passkeys', header: t('account.passkeys'), render: (player) => player.passkeys },
+        // By title, and by id for a pack that was granted and is no longer
+        // installed -- the grant is still there, and still worth seeing.
+        ...(packs.length > 0 ? [{
+          key: 'packs',
+          header: t('admin.packs.action'),
+          render: (player: AdminPlayer) => (player.packs ?? []).map((id) => packs.find((pack) => pack.id === id)?.title ?? id).join(', '),
+        }] : []),
       ]}
     />
+    </>
+  )
+}
+
+/**
+ * Which private packs one account has been handed: a tick per installed pack,
+ * saved as the whole list. Mounted per player, so it opens on what that player
+ * has and keeps nothing of the last one.
+ */
+function PlayerPacksSheet({ player, packs, onClose, onSaved }: {
+  player: AdminPlayer
+  packs: AdminPack[]
+  onClose: () => void
+  /** The table shows who has what, so a save re-reads it. */
+  onSaved: () => void
+}) {
+  const t = useT()
+  const granted = useResource(`admin:playerPacks:${player.id}`, async (signal) => (await getAdminPlayerPacks(player.id, signal)).packs)
+  // Null until a box is touched, so the ticks follow the answer when it arrives.
+  const [draft, setDraft] = useState<string[] | null>(null)
+  const save = useAction(setAdminPlayerPacks)
+  const ticked = draft ?? granted.data ?? []
+
+  return (
+    <ModalSheet opened onClose={onClose} title={t('admin.packs.title', { name: player.display_name || t('common.unnamed') })}>
+      <Stack gap="md">
+        <Text size="sm" c="dimmed">{t('admin.packs.detail')}</Text>
+        {granted.error !== null && <Alert color="red">{granted.error}</Alert>}
+        {granted.loading
+          ? <Loader size="sm" />
+          : packs.map((pack) => (
+            <Checkbox
+              key={pack.id}
+              label={pack.title}
+              checked={ticked.includes(pack.id)}
+              onChange={(event) => setDraft(event.currentTarget.checked ? [...ticked, pack.id] : ticked.filter((id) => id !== pack.id))}
+            />
+          ))}
+        {save.error !== null && <Alert color="red">{save.error}</Alert>}
+        <Group justify="flex-end">
+          <Button variant="subtle" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button
+            loading={save.pending}
+            disabled={granted.data === null}
+            onClick={() => void save.run(player.id, ticked).then((ok) => { if (ok !== null) { onSaved(); onClose() } })}
+          >
+            {t('sheet.save')}
+          </Button>
+        </Group>
+      </Stack>
+    </ModalSheet>
   )
 }
 

@@ -26,8 +26,8 @@ export {
   unlinkProvider,
   setProfileImage,
 } from './auth'
-export { listAdminCharacters, listAdminPlayers } from './admin'
-export type { AdminCharacter, AdminFilters, AdminPlayer } from './admin'
+export { getAdminPlayerPacks, listAdminCharacters, listAdminPacks, listAdminPlayers, setAdminPlayerPacks } from './admin'
+export type { AdminCharacter, AdminFilters, AdminPack, AdminPlayer } from './admin'
 export type { AuthProviderInfo, SessionCredential, SessionIdentity, SessionUser } from './auth'
 
 // The compendium.
