@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"path/filepath"
 	"testing"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
+
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -23,7 +23,7 @@ const testOwner domain.OwnerID = "test-owner"
 // for the reason the cache is: a Catalog is immutable, and Load is
 // mutex-guarded. The repositories stay per-service -- those are the state a
 // test is entitled to have to itself.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
+var catalogSource = filetest.SRD()
 
 func newService(t *testing.T) *charuc.Service {
 	t.Helper()

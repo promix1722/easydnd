@@ -295,11 +295,9 @@ its six check, build and test jobs all start at once. See
 and the order they are named in does the scheduling.
 
 The other reason the suite is fast is that each test package shares **one**
-`catalogfile.Source` and **one** `catalogfile.Registry`. `Source.Load` caches a
-converted `*catalog.Catalog` per locale, and a `Catalog` is immutable, so one
-read of the compendium serves every test in the binary. Building a fresh
-`Source` per test threw that cache away, and the suite was doing it about 120
-times a run. A `Registry` is dearer still: `NewRegistry` decodes the pack with
+`catalogfile.Registry`. It caches a compiled `*catalog.Catalog` per lock and
+locale, and a `Catalog` is immutable, so one read of the compendium serves
+every test in the binary. A `Registry` is dear to build: `NewRegistry` decodes the pack with
 the strict two-pass decoder, re-marshals the whole document -- 13.5 MB of WebP
 icons in base64 included -- to digest and validate it, then compiles every
 locale, about eight CPU-seconds per build. The suite built one about 45 times
@@ -308,9 +306,13 @@ a `sync.OnceValues` helper per package (`sharedRegistry`, `spellCatalog`,
 `packBase`, `namespacedRegistry`), and reads of a registry are safe to share.
 A test that *writes* into one -- `CompilePrivate` installs a release -- takes
 a fresh one, and a test that changes a shared catalogue clones the map it
-touches first. If you add a helper that needs the compendium, reach for the
-package's existing `catalogSource` or shared registry rather than calling
-`NewSource` or `NewRegistry` again; the internal
+touches first. If you add a helper that needs the compendium, reach for
+`filetest.SRD()` -- the SRD pack loaded the way the server loads it, once per
+test binary -- or the package's shared registry rather than calling
+`NewRegistry` again. There used to be a second, directory-reading loader
+(`NewSource`) that most tests used; it built a catalogue with no lock, no
+mechanics and no artwork, which is not one the server ever serves, and it is
+gone. The internal
 and external test packages of one directory need one each, since a package-level
 var cannot cross that line.
 

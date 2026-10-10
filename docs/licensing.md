@@ -156,8 +156,9 @@ Recorded rather than quietly carried:
 - **No OGL 1.0a text is carried.** The dump the SRD rows were derived from is
   OGL-declared by upstream and its licence text was never vendored. If that
   material really is OGL, the license's own notice requirements are unmet.
-- **`data/pack/srd-5.1/manifest.json` records `source` but no license field**, so the
-  shipped data does not state its own terms in machine-readable form.
+- **`data/pack/srd-5.1/pack-manifest.json` records `source` and an `attribution`
+  text but no license field**, so the shipped data does not state its own terms
+  in machine-readable form.
 
 Homebrew JSON export retains the pack's `source` and `attribution`. Importing or
 duplicating a pack changes its identity and creates a private draft but preserves

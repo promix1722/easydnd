@@ -2,13 +2,14 @@ package character_test
 
 import (
 	"context"
-	"path/filepath"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
+
+	"testing"
+
 	api "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
-	"testing"
 )
 
 func TestImportedCoinsUseReadableDenominations(t *testing.T) {
@@ -30,7 +31,7 @@ func TestSheetIncludesPortrait(t *testing.T) {
 // it means. The client used to download whole collections -- every spell in
 // the rules among them -- to do this lookup itself.
 func TestResolvedSheetNamesWhatItCarries(t *testing.T) {
-	cat, err := catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "..", "data", "pack", "srd-5.1")).Load(context.Background(), rules.LocaleEN)
+	cat, err := filetest.SRD().Load(context.Background(), rules.LocaleEN)
 	if err != nil {
 		t.Fatal(err)
 	}

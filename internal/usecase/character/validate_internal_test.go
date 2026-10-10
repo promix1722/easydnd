@@ -2,10 +2,10 @@ package character
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
+
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -24,7 +24,7 @@ import (
 // service_test.go's is the external one -- same binary, different packages, so
 // the var cannot be shared. Two loads of the compendium rather than one is
 // still two rather than the fifty this package used to do.
-var internalCatalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
+var internalCatalogSource = filetest.SRD()
 
 func loadCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()

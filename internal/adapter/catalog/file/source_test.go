@@ -8,23 +8,21 @@ import (
 	"testing"
 
 	"github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
 // The assignment is the conformance proof: if the loader ever drifts from the
 // port, this fails to compile rather than failing at wiring time.
-var _ catalog.Source = (*file.Source)(nil)
+var _ catalog.Source = (*file.Registry)(nil)
 
 // dataDir is the committed compendium, four levels up from this package.
 func dataDir() string { return filepath.Join("..", "..", "..", "..", "data", "pack", "srd-5.1") }
 
-// loadSource is shared by every test in this package, because Source.Load
-// caches per locale and a fresh Source per call throws that cache away. One
-// load reads and converts 1.55 MB of JSON; this package alone asked for
-// thirteen of them. Sharing is safe for exactly the reason the cache is: a
-// Catalog is immutable, and Load is mutex-guarded (see source.go).
-var loadSource = file.NewSource(dataDir())
+// loadSource is shared by every test in this package: the registry compiles a
+// catalogue once per locale and keeps it, and a Catalog is immutable.
+var loadSource = filetest.SRD()
 
 func load(t *testing.T, locale rules.Locale) *catalog.Catalog {
 	t.Helper()
@@ -266,11 +264,15 @@ func TestLocaleFallsBackPerKey(t *testing.T) {
 		"dwarf": {"name": "ТЕСТ-ДВАРФ"}
 	}`)
 
-	ru, err := file.NewSource(dir).Load(context.Background(), rules.LocaleRU)
+	copied, err := file.NewRegistry([]string{dir}, nil, "")
+	if err != nil {
+		t.Fatalf("NewRegistry() error = %v", err)
+	}
+	ru, err := copied.Load(context.Background(), rules.LocaleRU)
 	if err != nil {
 		t.Fatalf("Load(ru) error = %v", err)
 	}
-	en, err := file.NewSource(dir).Load(context.Background(), rules.LocaleEN)
+	en, err := copied.Load(context.Background(), rules.LocaleEN)
 	if err != nil {
 		t.Fatalf("Load(en) error = %v", err)
 	}
@@ -364,20 +366,12 @@ func writeBundle(t *testing.T, path, body string) {
 
 func TestLocalesListsWhatIsPresent(t *testing.T) {
 	t.Parallel()
-	got, err := file.NewSource(dataDir()).Locales(context.Background())
+	got, err := loadSource.Locales(context.Background())
 	if err != nil {
 		t.Fatalf("Locales() error = %v", err)
 	}
 	if len(got) != 2 || got[0] != rules.LocaleEN || got[1] != rules.LocaleRU {
 		t.Errorf("Locales() = %v, want [en ru]", got)
-	}
-}
-
-func TestLoadRejectsUnsupportedLocale(t *testing.T) {
-	t.Parallel()
-	_, err := file.NewSource(dataDir()).Load(context.Background(), "xx")
-	if err == nil {
-		t.Fatal("Load() with an unsupported locale succeeded, want an error")
 	}
 }
 

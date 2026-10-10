@@ -8,13 +8,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
 
 	"github.com/gin-gonic/gin"
 
@@ -94,7 +95,7 @@ var packBase = sync.OnceValues(func() (*catalogfile.Registry, error) {
 	return catalogfile.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "")
 })
 
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
+var catalogSource = filetest.SRD()
 
 // newFullRouterInEnv is the same table built for a named environment.
 //

@@ -515,29 +515,7 @@ func compilePacks(docs []*PackDocument, locale rules.Locale, lock pack.Lock) (*c
 	}
 	slices.SortFunc(mechanics.Resources, func(a, b ResourceDefinition) int { return strings.Compare(a.ID, b.ID) })
 	slices.SortFunc(mechanics.Actions, func(a, b ActionDefinition) int { return strings.Compare(a.ID, b.ID) })
-	files := map[string][]byte{}
-	for _, filename := range MechanicsFiles() {
-		name := strings.TrimSuffix(filename, ".json")
-		values := entities[name]
-		if values == nil {
-			values = []any{}
-		}
-		b, err := json.Marshal(values)
-		if err != nil {
-			return nil, err
-		}
-		files[filename] = b
-	}
-	for _, filename := range ProseFiles() {
-		name := strings.TrimSuffix(filename, ".json")
-		b, err := json.Marshal(prose[name])
-		if err != nil {
-			return nil, err
-		}
-		files["i18n/en/"+filename] = b
-	}
-	files[FileManifest], _ = json.Marshal(Manifest{Ruleset: lock.Edition, Locales: []string{"en"}})
-	c, err := NewMemorySource(files).Load(context.Background(), locale)
+	c, err := buildCatalog(entities, prose, lock.Edition, locale)
 	if err != nil {
 		return nil, err
 	}
