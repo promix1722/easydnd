@@ -1097,8 +1097,32 @@ func (a *Agent) setInventory(ctx context.Context, s *AgentSession, cat *catalog.
 	// build can reproduce -- and everything after it for that slot, and every
 	// further copy of it, is carried.
 	seated, wornOf := map[catalog.Slot]int{}, map[string]int{}
+	// An equipment pack is carried as what is in it, as it is when a class
+	// grants one. A sheet that names the pack often lists what was in it as
+	// well, with the counts as they stand now, so a line of the sheet's own
+	// is never overwritten by a pack's.
+	listed, unpacked := map[rules.Slug]bool{}, map[rules.Slug]int{}
 	for _, item := range items {
 		fact, found, err := a.inventoryFact(ctx, s, cat, item)
+		packed := false
+		if err == nil {
+			slug := rules.Slug(fact.Path[strings.LastIndex(fact.Path, ".")+1:])
+			count, _ := strconv.Atoi(string(fact.Value))
+			contents := packContents(cat, slug, count)
+			if packed = len(contents) > 0; !packed {
+				listed[slug] = true
+			}
+			for _, inside := range contents {
+				if listed[inside.Item] || err != nil {
+					continue
+				}
+				unpacked[inside.Item] += inside.Count
+				_, err = a.importFact(ctx, s, cat, agentArgs{Path: "equipment.backpack." + inside.Item.String(), Value: json.RawMessage(strconv.Itoa(unpacked[inside.Item])), Source: item.Source})
+			}
+			if packed {
+				fact.Path = "equipment.backpack." + slug.String()
+			}
+		}
 		if slug, worn := strings.CutPrefix(fact.Path, "equipment.equipped."); err == nil && worn {
 			slot, capacity := catalog.SlotNone, 1
 			if it, ok := cat.Items.Get(rules.Slug(slug)); ok {
@@ -1127,7 +1151,7 @@ func (a *Agent) setInventory(ctx context.Context, s *AgentSession, cat *catalog.
 				_, err = a.importFact(ctx, s, cat, agentArgs{Path: "equipment.backpack." + slug, Value: json.RawMessage(strconv.Itoa(count - wear)), Source: item.Source})
 			}
 		}
-		if err == nil {
+		if err == nil && !packed {
 			_, err = a.importFact(ctx, s, cat, fact)
 		}
 		if err != nil {
@@ -1142,6 +1166,25 @@ func (a *Agent) setInventory(ctx context.Context, s *AgentSession, cat *catalog.
 		applied = append(applied, map[string]any{"name": item.Name, "ref": found.Ref, "count": json.RawMessage(fact.Value), "placement": strings.Split(fact.Path, ".")[1]})
 	}
 	return map[string]any{"applied": applied, "unmatched": unmatched, "next": "Resend an unmatched item by one of its candidate refs, or keep it with upsert_custom_option kind item, its count and placement."}
+}
+
+// packContents is what count of an equipment pack holds, packs inside it
+// opened too, and nothing for an item that is not a pack.
+func packContents(cat *catalog.Catalog, slug rules.Slug, count int) []catalog.ItemStack {
+	it, ok := cat.Items.Get(slug)
+	if !ok || it.Gear == nil {
+		return nil
+	}
+	var out []catalog.ItemStack
+	for _, inside := range it.Gear.Contents {
+		n := max(inside.Count, 1) * max(count, 1)
+		if nested := packContents(cat, inside.Item, n); len(nested) > 0 {
+			out = append(out, nested...)
+			continue
+		}
+		out = append(out, catalog.ItemStack{Item: inside.Item, Count: n})
+	}
+	return out
 }
 
 // inventoryFact turns one printed item into the stack it is: a catalogue item,

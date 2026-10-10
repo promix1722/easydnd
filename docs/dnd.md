@@ -658,8 +658,12 @@ equipment pack is granted as its contents**: a dungeoneer's pack is a backpack,
 a crowbar, ten torches and the rest in the backpack, never a row called
 "Dungeoneer's Pack", because the contents are what a player reaches for and the
 pack is only how the book sells them together. The wizard still names the
-pack, and a settled answer reads it back as one. A counted write from an
-import (`equipment.backpack.dungeoneers-pack` set 1) is not unpacked.
+pack, and a settled answer reads it back as one. The AI Wizard's
+`set_inventory` opens a pack a sheet names in the same way, and a line the
+sheet has of its own for something in it -- seven torches left of the ten --
+stands over the pack's count. A bare counted write
+(`equipment.backpack.dungeoneers-pack` set 1) is still not unpacked: a count
+is set, and contents can only be added.
 
 ### Items carry their slot
 

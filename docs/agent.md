@@ -480,7 +480,7 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 | `answer_choices` | Answer open prompts in one batch, by option key or printed name, through the existing character validator. Rejections name the pick and the rule |
 | `revise_choice` | Replace a prior choice and report invalidated dependent entries |
 | `list_choice_options` | Page through a prompt with more than 60 options |
-| `set_inventory` | Items by printed name, count and placement; unmatched names come back with candidates |
+| `set_inventory` | Items by printed name, count and placement; an equipment pack is carried as its contents; unmatched names come back with candidates |
 | `search_catalog` | Ranked identities across supported locales within the pinned rules lock |
 | `get_option_details` | Exact catalogue mechanics and, when available, a pack wire example |
 | `upsert_custom_option` | Keep content the rules lack as an editable typed definition. Refuses to copy what the pack or the build already has |
