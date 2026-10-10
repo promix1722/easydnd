@@ -202,6 +202,10 @@ export interface Sheet {
     magicItems?: Item[]
     /** The prose behind `actions`, each entry's `slug` being an action's `origin`. */
     actions?: Entry[]
+    /** The prose behind the "Traits and features" rows; only the entries that have any. */
+    traits?: Entry[]
+    features?: Entry[]
+    languages?: Entry[]
     spells?: Spell[]
   }
  importedNotes?: string[]

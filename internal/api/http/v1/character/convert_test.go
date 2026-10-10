@@ -39,7 +39,7 @@ func TestResolvedSheetNamesWhatItCarries(t *testing.T) {
 		Identity: domain.Identity{Race: "elf", Background: "acolyte",
 			Classes: []domain.ClassLevel{{Class: "wizard", Subclass: "evocation", Level: 2}}},
 		Base:          domain.Base{Languages: []rules.Slug{"common"}},
-		Traits:        []rules.Slug{"darkvision"},
+		Traits:        []rules.Slug{"darkvision", "fleet-of-foot"},
 		Proficiencies: []rules.Slug{"daggers", "not-in-the-catalogue"},
 		Equipment:     domain.Equipment{Backpack: []domain.ItemStack{{Item: "dagger", Count: 2}, {Item: "dagger", Count: 1}}, Custom: "dagger"},
 		Spells: domain.Spellbook{Cantrips: []rules.Slug{"fire-bolt"},
@@ -62,6 +62,10 @@ func TestResolvedSheetNamesWhatItCarries(t *testing.T) {
 	got := sheet.Catalog
 	if got == nil || len(got.Skills) != 18 || len(got.Proficiencies) != 1 || len(got.Equipment) != 1 || len(got.Spells) != 2 {
 		t.Fatalf("resolved entries: %+v", got)
+	}
+	// The prose behind a row comes with it; a trait the SRD has no text for does not.
+	if len(got.Traits) != 1 || got.Traits[0].Slug != "darkvision" || len(got.Traits[0].Desc) == 0 {
+		t.Errorf("described traits: %+v", got.Traits)
 	}
 	if got.Spells[0].Name != "Fire Bolt" || got.Spells[0].Level != 0 {
 		t.Errorf("a resolved spell: %+v", got.Spells[0])

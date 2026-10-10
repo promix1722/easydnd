@@ -233,6 +233,18 @@ describe('the panels that were sentences', () => {
     expect.soft(under('Languages')).toEqual(['Common'])
   })
 
+  it('opens a row onto its description, and leaves a row with none as a statement', async () => {
+    renderAt('desktop', <SheetBody sheet={{
+      ...SHEET,
+      catalog: { skills: [], traits: [{ slug: 'darkvision', name: 'Darkvision', desc: ['You see in the dark.'] }] },
+    }} />)
+
+    expect.soft(screen.queryByRole('button', { name: 'Fey Ancestry' })).not.toBeInTheDocument()
+    expect.soft(screen.queryByText('You see in the dark.')).not.toBeInTheDocument()
+    await setupUser().click(screen.getByRole('button', { name: 'Darkvision' }))
+    expect(screen.getByText('You see in the dark.')).toBeInTheDocument()
+  })
+
   it('draws what is worn in its slot, and what is owned by group', () => {
     renderAt('mobile', <SheetBody sheet={ITEMS} />)
 

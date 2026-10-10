@@ -4,10 +4,11 @@ import type { ReactNode } from 'react'
 import { bySlug } from '@/lib/api'
 import type { Change, Item, Sheet } from '@/lib/api'
 import {
-  Bullet,
+  BlockList,
   Card,
   Divider,
   Group,
+  Markdown,
   Panel,
   ProficiencyMark,
   SimpleGrid,
@@ -15,6 +16,7 @@ import {
   TabDeck,
   Text,
   Title,
+  joinProse,
 } from '@/ui'
 import type { DeckPanel } from '@/ui'
 
@@ -112,10 +114,16 @@ export function SheetBody({
     names.get(`${collection}:${slug}`) ?? items.get(slug)?.name ?? titleCase(slug)
   // A feature that has a value says it on its own line -- "Sneak Attack: 1d6"
   // in place of "Sneak Attack" -- and a value no feature is named for follows them.
-  const featureNames = (s.features ?? []).map((slug) => named('features', slug))
-  const featureLines = [
-    ...featureNames.map((name) => valued.get(name) ?? name),
-    ...[...valued].filter(([name]) => !featureNames.includes(name)).map(([, line]) => line).sort(),
+  const [opened, setOpened] = useState<string | null>(null)
+  const rows = (collection: 'traits' | 'features' | 'languages', slugs: readonly string[]): ListRow[] => {
+    const prose = bySlug(catalog?.[collection] ?? [])
+    return slugs.map((slug) => ({ key: `${collection}:${slug}`, label: named(collection, slug), desc: prose.get(slug)?.desc }))
+  }
+  const features = rows('features', s.features ?? [])
+  const featureLines: ListRow[] = [
+    ...features.map((row) => ({ ...row, label: valued.get(row.label) ?? row.label })),
+    ...[...valued].filter(([name]) => !features.some((row) => row.label === name)).map(([, line]) => line).sort()
+      .map((line) => ({ key: `value:${line}`, label: line })),
   ]
   const headed = (title: string, content: ReactNode) => (
     <Panel>
@@ -149,18 +157,24 @@ export function SheetBody({
               <Stack gap="sm">
                 <ItemList
                   label={t('sheet.traits')}
-                  items={(s.traits ?? []).map((slug) => named('traits', slug))}
+                  items={rows('traits', s.traits ?? [])}
                   empty={t('sheet.noTraits')}
+                  open={opened}
+                  onOpen={setOpened}
                 />
                 <ItemList
                   label={t('sheet.features')}
                   items={featureLines}
                   empty={t('sheet.noFeatures')}
+                  open={opened}
+                  onOpen={setOpened}
                 />
                 <ItemList
                   label={t('sheet.languages')}
-                  items={(s.base.languages ?? []).map((slug) => named('languages', slug))}
+                  items={rows('languages', s.base.languages ?? [])}
                   empty={t('sheet.none')}
+                  open={opened}
+                  onOpen={setOpened}
                 />
               </Stack>
             ))}
@@ -330,38 +344,44 @@ function abilitiesOnSheet(sheet: Sheet): Record<string, true> {
   return present
 }
 
+interface ListRow {
+  key: string
+  label: string
+  /** The entry's prose, where the catalogue has any. */
+  desc?: string[] | undefined
+}
+
 /**
  * One labelled group of a panel: a heading, then a row per entry.
  *
  * These used to be comma-joined sentences -- "Darkvision, Fey Ancestry, Skill
  * Versatility" on one line under a label -- which is a thing to read rather
  * than a thing to search, and which put the twelfth item and the first in the
- * same visual object. It is the same argument that took the proficiencies out
- * of the foot of this panel and gave them one of their own, so it is drawn the
- * same way: `ProficienciesPanel`'s grid, one column on a phone and two from
- * `lg`, where a panel is half the page and a name is short.
+ * same visual object.
  *
- * `empty` is optional because the two absences are different. A backpack with
- * nothing in it is worth a row saying so -- "Empty." is the answer to the
- * question. A group that does not apply to this character at all is not asked
- * about, and its caller leaves it out rather than passing a message here.
+ * One column at every width. It was two from `lg`, and a grid row is as tall
+ * as its tallest cell: one name long enough to wrap pushed its short neighbour
+ * apart from the rows around it. And a row now opens where it stands onto what
+ * the entry says, which needs the width of the panel to be read in.
  *
- * Every row is marked by a `Bullet`, which is the empty ring `ProficiencyMark`
- * draws for an untrained skill. That is what makes the four lists on this sheet
- * one thing seen four times: the same glyph, the same gap, the same indent, and
- * the mark carrying a training level where there is one to carry.
+ * A row the catalogue has no prose for is a statement, as `BlockList` draws
+ * one: a name with nothing to open is not a control.
+ *
+ * `open` is the caller's, so the three groups of a panel share it and one
+ * description is open in the panel rather than one in each group.
  */
 function ItemList({
   label,
   items,
   empty,
-  mark,
+  open,
+  onOpen,
 }: {
   label: string
-  items: string[]
-  empty?: string
-  /** Drawn in place of the bullet when it yields something: a spell's artwork. */
-  mark?: (at: number) => ReactNode
+  items: ListRow[]
+  empty: string
+  open: string | null
+  onOpen: (key: string | null) => void
 }) {
   return (
     <Stack gap={4}>
@@ -373,14 +393,16 @@ function ItemList({
           {empty}
         </Text>
       ) : (
-        <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md" verticalSpacing={4}>
-          {items.map((item, at) => (
-            <Group key={`${item}-${at}`} gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
-              {mark?.(at) ?? <Bullet />}
-              <Text size="sm">{item}</Text>
-            </Group>
-          ))}
-        </SimpleGrid>
+        <BlockList
+          outlined
+          open={open}
+          onOpen={onOpen}
+          items={items.map((item) => ({
+            key: item.key,
+            header: <Text size="sm">{item.label}</Text>,
+            body: item.desc?.length ? <Markdown size="sm">{joinProse(item.desc)}</Markdown> : undefined,
+          }))}
+        />
       )}
     </Stack>
   )

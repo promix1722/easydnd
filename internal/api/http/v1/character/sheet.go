@@ -88,6 +88,7 @@ func ResolvedSheetOf(s domain.State, cat *catalog.Catalog) Sheet {
 	}
 
 	resolved := conv.Resolve(out.Proficiencies, items, spells)
+	conv.Described(&resolved, out.Traits, out.Features, out.Base.Languages)
 	for _, a := range s.Actions {
 		if desc := conv.Describe(a.Origin); len(desc) > 0 {
 			resolved.Actions = append(resolved.Actions, catalogapi.Entry{Slug: a.Origin.String(), Name: a.Name, Desc: desc})

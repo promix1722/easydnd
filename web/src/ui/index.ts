@@ -112,8 +112,6 @@ export {
 // Composed, responsive-by-construction components.
 export { BlockList } from './BlockList'
 export type { BlockListItem, BlockListProps } from './BlockList'
-export { Bullet } from './Bullet'
-export type { BulletProps } from './Bullet'
 export { Columns } from './Columns'
 export type { ColumnsProps, ColumnsSection } from './Columns'
 export { D20Roll } from './D20'

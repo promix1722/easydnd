@@ -20,6 +20,34 @@ type Resolved struct {
 	// Actions is the prose behind the sheet's action list, keyed by each
 	// action's origin, so opening a row costs no second request.
 	Actions []Entry `json:"actions,omitempty"`
+
+	// Traits, Features and Languages are the prose behind the rows of the
+	// sheet's "Traits and features" panel, for the same reason. Only the
+	// entries that have any: a row with nothing to open is drawn from its name.
+	Traits    []Entry `json:"traits,omitempty"`
+	Features  []Entry `json:"features,omitempty"`
+	Languages []Entry `json:"languages,omitempty"`
+}
+
+// Described fills in the prose of the traits, features and languages a sheet
+// lists, skipping whichever the catalogue has no text for.
+func (c Converter) Described(out *Resolved, traits, features, languages []string) {
+	cat := c.inner.cat
+	for _, slug := range distinct(traits) {
+		if v, ok := cat.Traits.Get(slug); ok && len(v.Desc) > 0 {
+			out.Traits = append(out.Traits, Entry{Slug: string(slug), Name: v.Name, Desc: v.Desc})
+		}
+	}
+	for _, slug := range distinct(features) {
+		if v, ok := cat.Features.Get(slug); ok && len(v.Desc) > 0 {
+			out.Features = append(out.Features, Entry{Slug: string(slug), Name: v.Name, Desc: v.Desc})
+		}
+	}
+	for _, slug := range distinct(languages) {
+		if v, ok := cat.Languages.Get(slug); ok && len(v.Desc) > 0 {
+			out.Languages = append(out.Languages, Entry{Slug: string(slug), Name: v.Name, Desc: v.Desc})
+		}
+	}
 }
 
 // Describe is the prose of whatever an action came from: the tagged entry, the

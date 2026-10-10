@@ -683,6 +683,10 @@ through one function, `character.ResolvedSheetOf`:
   holds (asked of both item collections, because a stack does not say which it
   came from), **its own spells with their artwork**, and all eighteen skills,
   which every sheet draws.
+  Beside them, prose only: `actions`, keyed by each action's origin, and
+  `traits`, `features` and `languages` -- the description of each one the
+  character has, where the catalogue holds a description. The sheet opens a
+  row onto it without asking again.
 
 A slug the catalogue does not define is skipped, not an error: the client
 title-cases it, as it always has.

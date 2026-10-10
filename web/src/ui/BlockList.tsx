@@ -79,7 +79,8 @@ export function BlockList({ items, open, onOpen, outlined = false }: BlockListPr
           }
         >
           {item.body === undefined ? (
-            <div style={{ padding: 'var(--mantine-spacing-md)' }}>{item.header}</div>
+            // The control's own padding, so a statement is as tall as the row that opens beside it.
+            <div style={{ padding: 'var(--mantine-spacing-sm) var(--mantine-spacing-md)' }}>{item.header}</div>
           ) : (
             <>
               <Accordion.Control>{item.header}</Accordion.Control>

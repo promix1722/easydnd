@@ -2466,32 +2466,28 @@ a fact about one game. Hit Dice are left out because they are already a vital.
 from `resources.parameters` (a Sneak Attack die, an aura's range), beside the
 kit.
 
-**"Traits and features" and "Resources and gear" are lists for the same
-reason.** Both were the arrangement that argument was made against and kept it
-one panel longer: a dimmed label with everything under it comma-joined onto one
-line, so the twelfth trait and the first were the same visual object and finding
-one meant reading the sentence. They are rows now -- one item to a line, in
-`ProficienciesPanel`'s own grid, one column on a phone and two from `lg` where a
-panel is half the page. There is no third spelling of this on the sheet.
+**"Traits and features" is a list of rows that open.** It was a dimmed label
+with everything under it comma-joined onto one line, so the twelfth trait and
+the first were the same visual object and finding one meant reading the
+sentence; then rows in a grid, two columns from `lg`. The grid went because a
+grid row is as tall as its tallest cell: one name long enough to wrap -- "Wild
+Shape (CR 1/4 or below, no flying or swim speed)" -- pushed its short neighbour
+away from the rows around it, and the list read as uneven. It is one column at
+every width now, drawn by `ui/BlockList` as the Actions tab is.
 
-**Every list on the sheet is marked the same way.** Skills and proficiencies are
-marked by `ui/ProficiencyMark`, whose lowest level is an empty ring; the four
-lists that have no training level to report are marked by `ui/Bullet`, which is
-that same ring at the same diameter, weight and indent, and nothing else. Two
-lists side by side whose items began at different indents would read as two
-kinds of thing, when what they are is one kind of thing with and without a
-number attached.
+**A row opens where it stands onto what the entry says.** A player who reads
+"Fey Ancestry" on their sheet should not have to leave it to learn what that
+is. The prose arrives in the sheet response as `catalog.traits`,
+`catalog.features` and `catalog.languages` -- only the entries that have any --
+so opening a row is not a request. A row with no prose is a statement, not a
+control: a 2014 entry outside the SRD on a server without the private overlay
+pack, or a scaling value no feature is named for. One description is open in
+the panel at a time, not one per group. A statement and a closed row are the
+same height, which is `BlockList`'s doing and holds on the Actions tab too.
 
-`Bullet` is a separate component rather than `ProficiencyMark level="none"`, and
-the reason is what that component *says*: it names itself "Not proficient" and
-carries a tooltip explaining proficiency bonuses. Drawn beside "Darkvision" that
-is a false statement about a racial trait rather than a decoration, so `Bullet`
-is `aria-hidden` and says nothing at all -- the same convention every other
-inline glyph here follows when it sits beside a label that already names the
-row. What that split costs is two copies of one ring, and `Bullet.test.tsx`
-pays it: it renders both and compares the circle attribute for attribute, so
-the day one of them changes diameter the other fails rather than quietly
-drifting.
+There is no `ui/Bullet` any more. It was the empty ring these rows were marked
+with, a copy of `ProficiencyMark`'s lowest level kept so that every list on the
+sheet began at one indent. These rows are boxes now, and nothing else drew it.
 
 The resources panel gained its labels in the same change. A class pool and a
 spell slot used to be loose lines with nothing over them, sitting above two
