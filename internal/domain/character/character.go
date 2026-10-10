@@ -252,6 +252,17 @@ func (l Log) Validate() error {
 	return nil
 }
 
+// Query narrows and pages a listing of every stored character, whoever owns
+// it. The zero value of each filter means "do not filter on this".
+type Query struct {
+	Owners []OwnerID
+	// ID matches anywhere in the character id.
+	ID     string
+	Public *bool
+	Limit  int
+	Offset int
+}
+
 // Repository is the persistence port for characters. Implementations live
 // under internal/adapter/repository; internal/app picks the concrete one, and
 // that assignment is what proves conformance at compile time.
@@ -290,6 +301,11 @@ type Repository interface {
 	// which a repository has neither access to nor any business holding.
 	// The application layer summarises; see Summarize.
 	List(ctx context.Context, owner OwnerID) ([]Character, error)
+
+	// Search lists characters matching q across every owner, newest first,
+	// and reports how many match in all. Nothing here asks who is calling:
+	// the one caller is the superadmin listing.
+	Search(ctx context.Context, q Query) ([]Character, int, error)
 
 	// SetFolder files a character in another folder. Implementations report
 	// a *types.NotFoundError when the character does not exist.

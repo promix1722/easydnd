@@ -533,3 +533,22 @@ func TestAnOpenedCharacterIsReadableByLinkUntilHidden(t *testing.T) {
 		t.Fatalf("a hidden character was still read: %v", err)
 	}
 }
+
+// A superadmin reads a sheet nobody shared and nobody opened; everybody else
+// is still refused it.
+func TestASuperadminReadsAPrivateSheet(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	bobs := f.character(t, "bob")
+	if err := f.characters.Append(ctx, bobs, 0, character.Event{Type: character.EventInit}); err != nil {
+		t.Fatal(err)
+	}
+	f.svc.SetSuperadmin(func(_ context.Context, id user.ID) bool { return id == "alice" })
+
+	if _, err := f.svc.Sheet(ctx, "alice", bobs, rules.DefaultLocale); err != nil {
+		t.Fatalf("a superadmin was refused a private sheet: %v", err)
+	}
+	if _, err := f.svc.Sheet(ctx, "carol", bobs, rules.DefaultLocale); !types.IsNotFound(err) {
+		t.Fatalf("a private character was read by a stranger: %v", err)
+	}
+}

@@ -255,5 +255,5 @@ func (h *Handler) SSOUnlink(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SessionResponse{User: toWire(updated)})
+	c.JSON(http.StatusOK, SessionResponse{User: h.toWire(updated)})
 }

@@ -129,7 +129,8 @@ Hidden, which is the default, the character is its owner's and its groups'.
 
 It is one line in one place: `readable` in `usecase/game/service.go`, the gate
 every shared read already passes, answers yes for a public character before it
-asks about groups. Nothing about writing changes -- every write goes through
+asks about groups -- and, last of all, yes for a superadmin, whatever the
+switch says. Nothing about writing changes -- every write goes through
 the character service, which asks who owns the character and nothing else. A
 hidden character and a missing one both answer 404, so a link says nothing
 about a character it does not open. Like the folder, the switch lives with the
@@ -551,6 +552,8 @@ that.
 | `POST` | `/v1/games/{id}/order` | stable sort: `{"by_initiative":true}`; move: `{"entry_id":"...","direction":-1}` (or `1`); DM or owner |
 | `POST` | `/v1/games/{id}/rest` | a rest for the table; DM or owner. Long by default: every entry gets all of its spent uses back. `?kind=short`: only the pools a short rest refills |
 | `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only, resolved the same way |
+| `GET` | `/v1/admin/players` | every stored account, newest first; `?q=` (name, email or id), `?kind=account\|guest`, `?limit=&offset=`. **Superadmin only**, 404 otherwise |
+| `GET` | `/v1/admin/characters` | every character, newest first; `?owner=` (name, email or id), `?id=`, `?public=true\|false`, `?limit=&offset=`. **Superadmin only**, 404 otherwise |
 
 Three of those need a word about their shape.
 
@@ -1161,6 +1164,43 @@ adapter cannot verify it either, so a key would make the two adapters answer
 the same call differently. The cascades above are what keep the rows honest,
 and every read already skips an id that is gone.
 
+### A superadmin reads everything and writes nothing
+
+An account named in `auth.superadmins` gets three things beyond the private
+packs, and all three are reads.
+
+**Two listings**, `GET /v1/admin/players` and `GET /v1/admin/characters`,
+behind `middleware.RequireSuperadmin`. The middleware runs after
+`RequireSession`, whose account already carries its identities, so the check
+costs no query; everybody else gets the **404** an unrouted path would, because
+a 403 would tell any signed-in account that the surface exists. Both page with
+`limit`/`offset` (default 50, at most 200) and answer `{players|characters,
+total}`, the spell search's contract.
+
+The listings are `Search` on the two repository ports, in both adapters. A
+character's **name, level and class are not stored** -- they are folded from
+its log -- so `usecase/admin` pages in SQL and runs `character.Summarize` on
+the page it is about to return, and none of the three is a filter. What is
+stored is filterable: the owner, the id, the public switch. The owner filter
+is text a person types; the usecase resolves it to account ids through the
+account `Search` (the first 200 matches) and adds the text itself as a literal
+id, because a guest who never joined a group owns characters with no `users`
+row to match by name. For the same reason **the players listing is the stored
+accounts, not everybody who has played**: such a guest appears only as the
+owner of their characters. "Last sign-in" is the newest `last_used_at` over an
+account's passkeys and identities; nothing records later activity.
+
+**Every sheet.** `game.Service.readable` asks a third question last, after
+"is it yours" and "is it public or on a table you sit at": is the actor a
+superadmin. So the client links an admin row to the existing
+`/v1/shared/{id}/...` routes and there is no admin sheet endpoint. It is still
+only `readable` -- `character.owned` was not touched, so a superadmin can
+change nobody's character.
+
+**A flag on the session.** `GET /v1/auth/me` carries `admin: true` for a
+superadmin, so the client knows to draw the section. It grants nothing; the
+routes above ask again on every request.
+
 ### Active game entries
 
 Game detail responses include ordered `entries`, separate from the legacy player
@@ -1389,7 +1429,7 @@ rather than quietly defaulted.
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
 | `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The template's placeholder is rejected by name |
-| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups: a **verified** Google email, or an account id |
+| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes nothing](#a-superadmin-reads-everything-and-writes-nothing)): a **verified** Google email, or an account id |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
 | `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. The first is where Google sign-in returns to. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |

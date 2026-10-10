@@ -3,6 +3,7 @@ package repotest
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -622,6 +623,52 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 				}
 				if note.Note != events[3].Note {
 					t.Errorf("note = %q, want %q", note.Note, events[3].Note)
+				}
+			},
+		},
+		{
+			name: "search filters across owners, pages newest first and counts every match",
+			run: func(t *testing.T, repo domain.Repository) {
+				ctx := context.Background()
+				var ids []domain.ID
+				for _, owner := range []domain.OwnerID{charOwner, "usr_2", charOwner} {
+					c, err := repo.Create(ctx, owner, charFolder)
+					if err != nil {
+						t.Fatalf("Create() error = %v", err)
+					}
+					ids = append(ids, c.ID)
+				}
+				if err := repo.SetPublic(ctx, ids[1], true); err != nil {
+					t.Fatalf("SetPublic() error = %v", err)
+				}
+				public := true
+
+				tests := []struct {
+					name  string
+					query domain.Query
+					want  []domain.ID
+					total int
+				}{
+					{"everything", domain.Query{Limit: 10}, []domain.ID{ids[2], ids[1], ids[0]}, 3},
+					{"second page", domain.Query{Limit: 2, Offset: 2}, []domain.ID{ids[0]}, 3},
+					{"past the end", domain.Query{Limit: 2, Offset: 5}, nil, 3},
+					{"one owner", domain.Query{Owners: []domain.OwnerID{charOwner}, Limit: 10}, []domain.ID{ids[2], ids[0]}, 2},
+					{"public only", domain.Query{Public: &public, Limit: 10}, []domain.ID{ids[1]}, 1},
+					{"by id", domain.Query{ID: ids[0].String(), Limit: 10}, []domain.ID{ids[0]}, 1},
+					{"nobody's", domain.Query{Owners: []domain.OwnerID{"usr_9"}, Limit: 10}, nil, 0},
+				}
+				for _, tc := range tests {
+					found, total, err := repo.Search(ctx, tc.query)
+					if err != nil {
+						t.Fatalf("%s: Search() error = %v", tc.name, err)
+					}
+					var got []domain.ID
+					for _, c := range found {
+						got = append(got, c.ID)
+					}
+					if !slices.Equal(got, tc.want) || total != tc.total {
+						t.Errorf("%s: Search() = %v of %d, want %v of %d", tc.name, got, total, tc.want, tc.total)
+					}
 				}
 			},
 		},

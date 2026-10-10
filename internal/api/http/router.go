@@ -19,6 +19,7 @@ import (
 
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"github.com/promix1722/easydnd/internal/api/http/middleware"
+	adminapi "github.com/promix1722/easydnd/internal/api/http/v1/admin"
 	appearanceapi "github.com/promix1722/easydnd/internal/api/http/v1/appearance"
 	"github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
@@ -39,6 +40,7 @@ import (
 type Handlers struct {
 	Development *development.Handler
 	System      *system.Handler
+	Admin       *adminapi.Handler
 	Auth        *auth.Handler
 	Appearance  *appearanceapi.Handler
 	Profile     *profileapi.Handler
@@ -207,6 +209,14 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// in a comment that it is deliberate.
 		authed := v1.Group("", middleware.RequireSession(h.Authenticator, cookies))
 		{
+			if h.Admin != nil {
+				// Every account and every character, for the accounts
+				// auth.superadmins names and a 404 for everybody else.
+				admin := authed.Group("/admin", middleware.NoStore(),
+					middleware.RequireSuperadmin(cfg.Auth.Superadmins))
+				admin.GET("/players", h.Admin.Players)
+				admin.GET("/characters", h.Admin.Characters)
+			}
 			if h.Profile != nil {
 				authed.PUT("/profile/image", middleware.NoStore(), h.Profile.PutImage)
 			}

@@ -84,3 +84,20 @@ func UserFrom(c *gin.Context) (user.User, bool) {
 	account, ok := value.(user.User)
 	return account, ok
 }
+
+// RequireSuperadmin lets through only the accounts auth.superadmins names. It
+// runs after RequireSession, whose account already carries its identities, so
+// the check costs no query.
+//
+// Everybody else gets the 404 an unrouted path would: a 403 here would tell
+// any signed-in account that an admin surface exists.
+func RequireSuperadmin(list []string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if account, ok := UserFrom(c); !ok || account.Anonymous || !account.Superadmin(list) {
+			helpers.FormatError(c, types.NewNotFoundError("not found"))
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

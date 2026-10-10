@@ -31,6 +31,7 @@ import (
 	webauthnadapter "github.com/promix1722/easydnd/internal/adapter/webauthn"
 	httpapi "github.com/promix1722/easydnd/internal/api/http"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	adminapi "github.com/promix1722/easydnd/internal/api/http/v1/admin"
 	appearanceapi "github.com/promix1722/easydnd/internal/api/http/v1/appearance"
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
@@ -51,6 +52,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
+	adminuc "github.com/promix1722/easydnd/internal/usecase/admin"
 	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 	appearanceuc "github.com/promix1722/easydnd/internal/usecase/appearance"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
@@ -205,6 +207,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	gameService := gameuc.NewService(
 		gameRepo, sharedRepo, groupRepo, characterRepo, packSource,
 		log.With("usecase", "game"))
+	gameService.SetSuperadmin(packService.Superadmin)
 	characterService := charuc.NewService(
 		characterRepo, folderRepo, packSource, gameService,
 		log.With("usecase", "character"))
@@ -261,7 +264,8 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		System:        system.New(buildinfo.Version),
 		Version:       buildinfo.Version,
 		WebDir:        opts.WebDir,
-		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)),
+		Admin:         adminapi.New(adminuc.NewService(userRepo, characterRepo)),
+		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)).WithSuperadmins(cfg.Auth.Superadmins),
 		Appearance:    appearanceapi.New(appearanceuc.NewService(userRepo)),
 		Profile:       profileapi.New(profileuc.NewService(userRepo)),
 		Authenticator: authService,

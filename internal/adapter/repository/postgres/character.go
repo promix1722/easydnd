@@ -267,3 +267,42 @@ func (r *CharacterRepository) Delete(ctx context.Context, id domain.ID) error {
 	}
 	return nil
 }
+
+// Search lists characters matching q across every owner, newest first.
+//
+// ORDER BY id rather than created_at: ids come from a sequence, so the two
+// agree, and this one is the primary key.
+func (r *CharacterRepository) Search(ctx context.Context, q domain.Query) ([]domain.Character, int, error) {
+	const where = ` FROM characters
+		WHERE ($1::text[] IS NULL OR owner_id = ANY($1))
+		  AND ($2 = '' OR strpos(id, $2) > 0)
+		  AND ($3::boolean IS NULL OR public = $3)`
+	var owners []string
+	for _, o := range q.Owners {
+		owners = append(owners, string(o))
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT count(*)`+where, owners, q.ID, q.Public).Scan(&total); err != nil {
+		return nil, 0, types.WrapServerError(err, "count characters")
+	}
+	rows, err := r.pool.Query(ctx,
+		`SELECT `+characterColumns+where+` ORDER BY id DESC LIMIT $4 OFFSET $5`,
+		owners, q.ID, q.Public, max(q.Limit, 0), max(q.Offset, 0))
+	if err != nil {
+		return nil, 0, types.WrapServerError(err, "search characters")
+	}
+	defer rows.Close()
+
+	out := make([]domain.Character, 0)
+	for rows.Next() {
+		c, err := scanCharacter(rows)
+		if err != nil {
+			return nil, 0, types.WrapServerError(err, "scan character")
+		}
+		out = append(out, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, types.WrapServerError(err, "search characters")
+	}
+	return out, total, nil
+}

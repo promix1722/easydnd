@@ -22,7 +22,7 @@ func (h *Handler) Me(c *gin.Context) {
 		helpers.FormatError(c, types.NewUnauthenticatedError("no session").Because("auth.noSession"))
 		return
 	}
-	c.JSON(http.StatusOK, SessionResponse{User: toWire(account)})
+	c.JSON(http.StatusOK, SessionResponse{User: h.toWire(account)})
 }
 
 // LogoutResponse is the body of POST /v1/auth/logout.

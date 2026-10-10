@@ -52,6 +52,11 @@ export interface SessionUser {
    * management has to check it.
    */
   anonymous: boolean
+  /**
+   * True for a superadmin: show the admin section. It decides nothing -- the
+   * admin routes check again -- so it is safe to be wrong about.
+   */
+  admin?: boolean
 }
 
 /** One external sign-in method this deployment offers. */

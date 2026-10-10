@@ -249,6 +249,8 @@ it grants it to a table.
 email of a linked Google account or by account id. An unverified email is
 anybody's to claim and never matches; a passkey-only account has no email and
 can only be named by id, which is how `config.dev.yaml` names `dev:master`.
+The same list opens the admin listings and every sheet for reading; see
+[backend.md](backend.md#a-superadmin-reads-everything-and-writes-nothing).
 
 **Granting** reuses pack sharing. On a group they belong to, a superadmin sees
 a *Private packs* tab and shares a release with the table through

@@ -263,3 +263,24 @@ func (r *CharacterRepository) CreateWithLog(_ context.Context, owner domain.Owne
 	r.items[c.ID] = c
 	return clone(c), nil
 }
+
+// Search lists characters matching q across every owner, newest first.
+func (r *CharacterRepository) Search(_ context.Context, q domain.Query) ([]domain.Character, int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	out := make([]domain.Character, 0)
+	for _, c := range r.items {
+		if len(q.Owners) > 0 && !slices.Contains(q.Owners, c.Owner) ||
+			!strings.Contains(c.ID.String(), q.ID) ||
+			q.Public != nil && *q.Public != c.Public {
+			continue
+		}
+		out = append(out, clone(c))
+	}
+	slices.SortFunc(out, func(a, b domain.Character) int {
+		return strings.Compare(b.ID.String(), a.ID.String())
+	})
+	total := len(out)
+	return out[min(max(q.Offset, 0), total):min(max(q.Offset, 0)+max(q.Limit, 0), total)], total, nil
+}

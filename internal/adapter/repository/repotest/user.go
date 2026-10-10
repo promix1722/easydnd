@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"slices"
 	"testing"
 	"time"
 
@@ -78,6 +79,8 @@ func RunUserRepository(t *testing.T, newRepo NewUserRepository) {
 		{"RemoveIdentity", testRemoveIdentity},
 		{"RemoveIdentityOfAnotherAccount", testRemoveIdentityOfAnotherAccount},
 		{"IdentityFieldsRoundTrip", testIdentityFieldsRoundTrip},
+
+		{"Search", testSearch},
 	}
 
 	for _, tc := range tests {
@@ -766,5 +769,69 @@ func testAvatar(t *testing.T, r domain.Repository) {
 	var missing *types.NotFoundError
 	if err := r.SetImage(ctx, "missing", ""); !errors.As(err, &missing) {
 		t.Fatalf("missing account: %v", err)
+	}
+}
+
+func testSearch(t *testing.T, r domain.Repository) {
+	ctx := context.Background()
+	alice := Account("alice", "cred-a")
+	alice.CreatedAt = time.Unix(100, 0).UTC()
+	alice.Credentials[0].LastUsedAt = time.Unix(500, 0).UTC()
+	link := Identity("sub-b")
+	link.Email = "Robert@example.com"
+	bob := withIdentities(Account("bob"), link)
+	bob.CreatedAt = time.Unix(200, 0).UTC()
+	for _, u := range []domain.User{alice, bob} {
+		if err := r.Create(ctx, u); err != nil {
+			t.Fatalf("Create: %v", err)
+		}
+	}
+	guest := domain.User{ID: domain.AnonymousIDPrefix + "g1", DisplayName: "Guest", CreatedAt: time.Unix(300, 0).UTC()}
+	if err := r.EnsureGuest(ctx, guest); err != nil {
+		t.Fatalf("EnsureGuest: %v", err)
+	}
+	yes, no := true, false
+
+	tests := []struct {
+		name  string
+		query domain.Query
+		want  []domain.ID
+		total int
+	}{
+		{"newest first", domain.Query{Limit: 10}, []domain.ID{guest.ID, "bob", "alice"}, 3},
+		{"second page", domain.Query{Limit: 2, Offset: 2}, []domain.ID{"alice"}, 3},
+		{"past the end", domain.Query{Limit: 2, Offset: 5}, nil, 3},
+		{"by name, any case", domain.Query{Text: "ALI", Limit: 10}, []domain.ID{"alice"}, 1},
+		{"by email", domain.Query{Text: "robert@", Limit: 10}, []domain.ID{"bob"}, 1},
+		{"guests only", domain.Query{Guests: &yes, Limit: 10}, []domain.ID{guest.ID}, 1},
+		{"accounts only", domain.Query{Guests: &no, Limit: 10}, []domain.ID{"bob", "alice"}, 2},
+		{"by ids", domain.Query{IDs: []domain.ID{"alice", "nobody"}, Limit: 10}, []domain.ID{"alice"}, 1},
+	}
+	for _, tc := range tests {
+		found, total, err := r.Search(ctx, tc.query)
+		if err != nil {
+			t.Fatalf("%s: Search: %v", tc.name, err)
+		}
+		var got []domain.ID
+		for _, row := range found {
+			got = append(got, row.ID)
+		}
+		if !slices.Equal(got, tc.want) || total != tc.total {
+			t.Errorf("%s: Search = %v of %d, want %v of %d", tc.name, got, total, tc.want, tc.total)
+		}
+	}
+
+	found, _, err := r.Search(ctx, domain.Query{Limit: 10})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if b := found[1]; b.Email != "Robert@example.com" || b.Passkeys != 0 || !b.LastUsedAt.IsZero() || b.Anonymous {
+		t.Errorf("bob = %+v", b)
+	}
+	if a := found[2]; a.Passkeys != 1 || !a.LastUsedAt.Equal(time.Unix(500, 0)) || !a.CreatedAt.Equal(alice.CreatedAt) {
+		t.Errorf("alice = %+v", a)
+	}
+	if !found[0].Anonymous {
+		t.Errorf("guest row not marked anonymous: %+v", found[0])
 	}
 }

@@ -53,6 +53,11 @@ sitting at that group's table, with the characters a DM seats at it -- never
 called a *session*, which here means being signed in. A folder is one account's
 private shelf for its own characters, shared with nobody.
 
+An account named in `auth.superadmins` also gets an **Admin** section on
+desktop: every player and every character in two filterable tables, and any
+sheet opened read-only. See
+[A superadmin reads everything](docs/backend.md#a-superadmin-reads-everything-and-writes-nothing).
+
 For development, `make dev` seeds **master**, **player1**, and **player2**,
 a shared group, two games, first-level characters and two fifth-level casters. Open `/login` and choose
 an account; use the account icon in the header to switch roles. See

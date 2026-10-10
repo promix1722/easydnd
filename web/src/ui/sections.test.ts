@@ -4,7 +4,7 @@ import { SECTIONS, sectionFor } from './sections'
 
 describe('the section table', () => {
   it('has Characters, AI Wizard, Groups, Games and Spells', () => {
-    expect(SECTIONS.map((section) => section.to)).toEqual(['/', '/ai-wizard', '/groups', '/games', '/spells'])
+    expect(SECTIONS.map((section) => section.to)).toEqual(['/', '/ai-wizard', '/groups', '/games', '/spells', '/admin'])
   })
 
   // Labels are message keys, not words -- the navbar, the tab bar and the

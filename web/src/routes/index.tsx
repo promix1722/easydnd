@@ -7,6 +7,7 @@ import { LoginScreen } from '@/features/auth'
 import { BuildScreen, CharacterLogScreen, CharacterSheetScreen, ItemScreen } from '@/features/character'
 import { ImportCharacterScreen } from '@/features/characters'
 import { DiceScreen } from '@/features/dice'
+import { AdminScreen } from '@/features/admin'
 import { GameScreen, GamesScreen, SharedSheetScreen } from '@/features/games'
 import { GroupListScreen, GroupScreen } from '@/features/groups'
 import { LegalScreen } from '@/features/legal'
@@ -17,6 +18,7 @@ import { RootGate } from '@/shell/RootGate'
 
 import { HomeRoute } from './HomeRoute'
 import { JoinRoute } from './JoinRoute'
+import { AdminOnly } from './AdminOnly'
 import { NotFoundPage } from './NotFoundPage'
 import { Private } from './Private'
 import { LegacyImportRedirect } from './LegacyImportRedirect'
@@ -169,6 +171,16 @@ export const router = createBrowserRouter([
       // Games are their own section, so they sit at the top level rather than
       // under the group they are played at -- which is also what keeps
       // activeNavPath lighting Games instead of Groups when one is open.
+      // Not behind Private: AdminOnly answers a signed-out visitor with the
+      // same not-found page as everybody else who is not a superadmin.
+      {
+        path: 'admin',
+        element: (
+          <AdminOnly>
+            <AdminScreen />
+          </AdminOnly>
+        ),
+      },
       {
         path: 'games',
         element: (

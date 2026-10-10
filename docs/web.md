@@ -2513,6 +2513,12 @@ of navigating away, which is the same rule `HomeRoute` follows: the URL never
 changes on account of who is looking, so a shared deep link to a character
 survives being opened by someone who has not signed in yet.
 
+`routes/AdminOnly.tsx` is the same shape with a different question and a
+different answer: a superadmin gets the screen, everybody else -- signed out
+included -- gets the not-found page, which is what the server says to their
+requests too. It reads `user.admin` from the session and is a courtesy, not
+the guard.
+
 ### An invitation link is the deep link that arrives at a stranger
 
 Every other private route is followed by somebody who already has an account.
@@ -4567,6 +4573,31 @@ list with a Custom badge.
 import writes them for anything it could not match -- and draws them as
 `BlockList` blocks inside the tab's panel, above Next, with the form to edit
 one. It has no add button, and nothing else opens it.
+
+## Admin is two tables, for one kind of account
+
+`/admin` (`features/admin/`) lists every account and every character for a
+superadmin: two tabs in one `TabRow`, **Players** and **Characters**, each a
+`DataList` under its filters with a count and **Load more**.
+
+- **It is drawn for whoever `GET /v1/auth/me` marks `admin`**, and only in the
+  desktop navbar. It is the first `SECTIONS` entry with `desktopOnly` and the
+  only one with `adminOnly`; `DesktopShell` filters on the second, `MobileShell`
+  already dropped the first. "Desktop only" means *not linked on a phone*: the
+  URL still answers there, and `DataList` falls back to its cards.
+- **The tab and every filter are the URL** (`?tab=characters&owner=...`), so a
+  filtered table is a link. Switching tabs drops the other tab's filters. Text
+  filters commit after a 300 ms pause.
+- **A player row opens that player's characters** -- the Characters tab with
+  `owner` set to their id. **A character row opens `/shared/:id`**, the
+  read-only sheet a group member gets; the server lets a superadmin read any.
+- **Characters filter by owner, id and visibility only.** Name, level and class
+  are shown but are folded from the log on the server for the rows on screen,
+  so there is nothing to search them by; see
+  [backend.md](backend.md#a-superadmin-reads-everything-and-writes-nothing).
+- `usePaged` is the offset/limit paging `SpellsScreen` has, written once for
+  both tables: a new filter set refetches from the top while the old rows stay
+  dimmed, and a page that answers after the filters moved is dropped.
 
 ## Homebrew
 

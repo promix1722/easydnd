@@ -24,7 +24,7 @@ import { RootShell } from './RootShell'
 const named = (section: (typeof SECTIONS)[number]) =>
   (en as Record<string, string>)[section.label] ?? section.label
 
-function shellAt(viewport: 'mobile' | 'desktop', at = '/') {
+function shellAt(viewport: 'mobile' | 'desktop', at = '/', admin = false) {
   const router = createMemoryRouter(
     [
       {
@@ -46,7 +46,7 @@ function shellAt(viewport: 'mobile' | 'desktop', at = '/') {
     ],
     { initialEntries: [at] },
   )
-  return renderAt(viewport, withAuth({}, <RouterProvider router={router} />))
+  return renderAt(viewport, withAuth({ user: { ...testAccount, admin } }, <RouterProvider router={router} />))
 }
 
 describe('RootShell', () => {
@@ -54,7 +54,7 @@ describe('RootShell', () => {
     shellAt('desktop')
 
     expect(screen.getByRole('navigation')).toBeInTheDocument()
-    for (const section of SECTIONS) {
+    for (const section of SECTIONS.filter((item) => !item.adminOnly)) {
       expect(screen.getByRole('link', { name: named(section) })).toBeInTheDocument()
     }
   })
@@ -105,7 +105,7 @@ describe('RootShell', () => {
 
     await user.click(screen.getByRole('button', { name: 'Collapse navigation' }))
 
-    for (const section of SECTIONS) {
+    for (const section of SECTIONS.filter((item) => !item.adminOnly)) {
       expect(screen.getByRole('link', { name: named(section) })).toHaveAttribute('href', section.to)
     }
   })
@@ -127,6 +127,21 @@ describe('RootShell', () => {
 
     shellAt('desktop')
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+  })
+
+  // Admin is the one section drawn for some accounts and not others, and the
+  // one a phone never links to.
+  it('offers Admin to a superadmin on desktop, and to nobody else', async () => {
+    const user = setupUser()
+    shellAt('desktop')
+    expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument()
+
+    shellAt('desktop', '/', true)
+    expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin')
+
+    shellAt('mobile', '/', true)
+    await user.click(screen.getAllByRole('button', { name: 'Characters' }).at(-1)!)
+    expect(screen.queryByRole('menuitem', { name: 'Admin' })).not.toBeInTheDocument()
   })
 
   it('omits Homebrew from the mobile header dropdown', async () => {

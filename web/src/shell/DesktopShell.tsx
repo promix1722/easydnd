@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router'
 
+import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 
 import {
@@ -108,6 +109,7 @@ export function DesktopShell() {
   const [opened, { toggle }] = useDisclosure(true)
 
   const t = useT()
+  const { user } = useAuth()
   const active = sectionFor(pathname)
   const label = opened ? t('nav.collapse') : t('nav.expand')
 
@@ -129,7 +131,7 @@ export function DesktopShell() {
       </AppShell.Header>
 
       <AppShell.Navbar id={NAVBAR_ID} p={CHROME_INSET}>
-        {SECTIONS.map((section) => {
+        {SECTIONS.filter((section) => !section.adminOnly || user?.admin).map((section) => {
           const link = (
             <NavLink
               key={section.to}

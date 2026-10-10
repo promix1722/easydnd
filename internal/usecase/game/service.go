@@ -51,7 +51,14 @@ type Service struct {
 	// clock is injected so a test can predict the timestamps a share and a
 	// roster entry are stamped with. Nil means the real clock; see now.
 	clock func() time.Time
+
+	// superadmin reports whether an account may read every sheet. Nil means
+	// nobody may.
+	superadmin func(context.Context, user.ID) bool
 }
+
+// SetSuperadmin installs the predicate readable consults last.
+func (s *Service) SetSuperadmin(is func(context.Context, user.ID) bool) { s.superadmin = is }
 
 // NewService wires a Service over the two new stores and the three aggregates
 // they refer to.
@@ -115,7 +122,8 @@ func (s *Service) member(
 // readable fetches a character the actor is allowed to see, and is the only
 // function in the codebase that lets anybody but an owner see one.
 //
-// Two ways in: you own it, or it is shared into a group you belong to. The
+// Three ways in: you own it, it is shared into a group you belong to, or you
+// are a superadmin, who may read every sheet and still change none. The
 // refusal is a NotFoundError in both cases, matching character.owned exactly
 // -- a character id is a short counter, and a 403 on one that is not yours
 // would say it exists.
@@ -151,6 +159,10 @@ func (s *Service) readable(
 		} else if !types.IsNotFound(err) {
 			return character.Character{}, err
 		}
+	}
+	// Asked last, so the common reads above never pay for the account lookup.
+	if s.superadmin != nil && s.superadmin(ctx, actor) {
+		return c, nil
 	}
 	return character.Character{}, types.NewNotFoundError("character %q", id).Because("character.notFound")
 }
