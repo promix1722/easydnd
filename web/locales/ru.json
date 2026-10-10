@@ -658,6 +658,7 @@
   "equipment.dex": "Добавьте модификатор Ловкости",
   "equipment.dexCap": "Добавьте модификатор Ловкости (максимум +{{count}})",
   "equipment.strength": "Требуемая Сила: {{value}}",
+  "equipment.stat.strength": "Сила",
   "equipment.stealth": "Помеха к проверкам Скрытности",
   "equipment.damage": "Урон: {{dice}} {{type}}",
   "equipment.twoHands": "Урон двумя руками: {{dice}}",

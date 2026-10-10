@@ -2,12 +2,12 @@ import { CUSTOM, ELSEWHERE, discard, groupOf, mergeStacks, setCoin, slotted, une
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
 import type { Change, Equipment, Item, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Box, Grid, Group, ITEM_ICON_SIZE, ItemIcon, Markdown, Menu, Panel, Paper, Stack, Text } from '@/ui'
+import { Badge, Box, Grid, Group, ITEM_ICON_SIZE, ItemIcon, Markdown, Menu, Panel, Paper, Stack, Text } from '@/ui'
 
 import { InventoryRows, ItemDetails, ItemMenu, Purse } from './Inventory'
-import { itemFacts, weaponNumbers } from './options'
+import { armorStats, itemFacts, weaponNumbers } from './options'
 import { useSlotLabels } from './slotLabels'
-import { WeaponStats } from './WeaponStats'
+import { StatColumns, WeaponStats } from './WeaponStats'
 import type { Card } from './slotLabels'
 
 /** Three columns: what is held, what is worn down the middle, what hangs or is slipped on. */
@@ -16,6 +16,9 @@ const COLUMNS: readonly (readonly Card[])[] = [
   ['head', 'body', 'waist', 'feet'],
   ['back', 'neck', 'ring:0', 'ring:1'],
 ]
+
+/** The line a card gives an item's name, the slot it is in and its menu, and the gap under it. */
+const NAME_LINE = 34
 
 const slotOfCard = (card: Card): Slot | typeof ELSEWHERE => card === 'ring:0' || card === 'ring:1' ? 'ring' : card
 
@@ -55,31 +58,35 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
   const rows = mergeStacks(equipment).filter((row) => groupOf(items.get(row.item ?? '')) === 'wearable')
   const card = (each: Card) => {
     const worn = occupants(each)
-    // Every card reserves one icon's height, and an item's text is cut to it,
-    // so wearing something never moves the cards below.
-    const body = <Stack gap={2}>
-      <Text size="xs" c="dimmed" tt="uppercase">{labels[each]}</Text>
-      <Stack gap={6} mih={ITEM_ICON_SIZE}>
-        {worn.length === 0
-          ? <Text size="sm" c="dimmed">{t('equipment.slotEmpty')}</Text>
-          : worn.map((slug, at) => {
-            const item = items.get(slug)
-            const word = (ref: string) => lookup(item?.weapon?.properties?.includes(ref) ? 'weapon-properties' : 'damage-types', ref)
-            const numbers = weaponNumbers(t, item, actions, word)
-            // A card is one icon tall. A weapon's three numbers take what is left
-            // beside its name, so its other facts are on its page, not here; and
-            // nothing worn says what it weighs.
-            const facts = item === undefined || numbers !== undefined ? undefined : itemFacts(t, item, word, false, false)
-            const from = slotOfCard(each)
-            const slot = from === ELSEWHERE ? undefined : from
-            return <Group key={`${slug}:${at}`} gap={6} wrap="nowrap" align="flex-start">
-              <ItemIcon icon={item?.icon} />
-              <Stack gap={2} mah={ITEM_ICON_SIZE} style={{ minWidth: 0, flex: 1, overflow: 'hidden', overflowWrap: 'anywhere' }}>
-                <Text size="sm" fw={500} truncate style={{ flexShrink: 0 }}>{name(slug)}</Text>
-                {numbers !== undefined && <WeaponStats inline {...numbers} />}
-                {facts !== undefined && <Text size="xs" c="dimmed" lineClamp={2} style={{ flexShrink: 0 }}>{facts}</Text>}
-                {!!item?.desc?.length && <Text component="div" size="xs" lineClamp={1} style={{ flexShrink: 0 }}><Markdown size="xs" inline>{item.desc[0] ?? ''}</Markdown></Text>}
-              </Stack>
+    const slotName = <Badge variant="default" size="sm" tt="none" fw={400} c="dimmed" style={{ flexShrink: 0 }}>{labels[each]}</Badge>
+    // A card is a name line over one icon's height whether or not anything
+    // is in it, so wearing something never moves the cards below -- where
+    // there are cards beside it to move; on a phone they are one column, and
+    // an empty one is as short as its two words. It is an outline, so that
+    // what is worn is what the eye lands on.
+    if (worn.length === 0) return <Paper key={each} withBorder p="xs" radius="md" style={{ borderStyle: 'dashed' }}>
+      <Stack gap={4} align="center" justify="center" mih={{ base: 0, sm: NAME_LINE + ITEM_ICON_SIZE }}>
+        <Text size="sm" c="dimmed">{t('equipment.slotEmpty')}</Text>
+        {slotName}
+      </Stack>
+    </Paper>
+    return <Paper key={each} withBorder p="xs" radius="md">
+      <Stack gap="xs">
+        {worn.map((slug, at) => {
+          const item = items.get(slug)
+          const word = (ref: string) => lookup(item?.weapon?.properties?.includes(ref) ? 'weapon-properties' : 'damage-types', ref)
+          const numbers = weaponNumbers(t, item, actions, word)
+          const armor = numbers === undefined ? armorStats(t, item) : undefined
+          // What a weapon or armor does is its columns, and its other facts
+          // are on its page; anything else says what it is in a line. Nothing
+          // worn says what it weighs.
+          const facts = item === undefined || numbers !== undefined || armor !== undefined ? undefined : itemFacts(t, item, word, false, false)
+          const from = slotOfCard(each)
+          const slot = from === ELSEWHERE ? undefined : from
+          return <Stack key={`${slug}:${at}`} gap={6}>
+            <Group gap={6} wrap="nowrap" mih={NAME_LINE - 6}>
+              <Text size="sm" fw={600} truncate style={{ minWidth: 0, flex: 1 }}>{name(slug)}</Text>
+              {slotName}
               {/* Every worn item opens its page; taking it off or dropping it is the owner's. */}
               <ItemMenu name={name(slug)}>
                 <ItemDetails slug={slug} />
@@ -89,10 +96,20 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
                 </>}
               </ItemMenu>
             </Group>
-          })}
+            <Group gap="sm" wrap="nowrap" mih={ITEM_ICON_SIZE}>
+              <ItemIcon icon={item?.icon} />
+              <Stack gap={2} style={{ minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
+                {numbers !== undefined && <WeaponStats wrap {...numbers} />}
+                {armor !== undefined && <StatColumns wrap stats={armor} />}
+                {item?.armor?.stealthDisadvantage && <Text size="xs" c="orange.8">{t('equipment.stealth')}</Text>}
+                {facts !== undefined && <Text size="xs" c="dimmed" lineClamp={2}>{facts}</Text>}
+                {!!item?.desc?.length && <Text component="div" size="xs" lineClamp={1}><Markdown size="xs" inline>{item.desc[0] ?? ''}</Markdown></Text>}
+              </Stack>
+            </Group>
+          </Stack>
+        })}
       </Stack>
-    </Stack>
-    return <Paper key={each} withBorder p="xs" radius="md">{body}</Paper>
+    </Paper>
   }
   const elsewhere = bySlot.get(ELSEWHERE) ?? []
 
@@ -106,7 +123,7 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
 
     <Panel>
       <Stack gap="sm">
-        <Text size="xs" c="dimmed" tt="uppercase">{t('equipment.group.wearable')}</Text>
+        <Text size="xs" c="dimmed">{t('equipment.group.wearable')}</Text>
         <InventoryRows rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup} actions={actions}
           empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
       </Stack>
@@ -124,7 +141,7 @@ export function SheetItems({ equipment, items, name, lookup, disabled = false, o
   const rows = mergeStacks(equipment)
   const section = (group: ItemGroup, label: string) => <Panel>
     <Stack gap="sm">
-      <Text size="xs" c="dimmed" tt="uppercase">{label}</Text>
+      <Text size="xs" c="dimmed">{label}</Text>
       <InventoryRows rows={rows.filter((row) => groupOf(items.get(row.item ?? '')) === group)}
         equipment={equipment} items={items} name={rowName(name)} lookup={lookup}
         empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
@@ -134,7 +151,7 @@ export function SheetItems({ equipment, items, name, lookup, disabled = false, o
   return <Stack gap="md">
     <Panel>
       <Stack gap="sm">
-        <Text size="xs" c="dimmed" tt="uppercase">{t('equipment.purse')}</Text>
+        <Text size="xs" c="dimmed">{t('equipment.purse')}</Text>
         <Purse purse={equipment.purse} disabled={disabled}
           {...(onChange ? { onChange: (unit: string, amount: number) => onChange([setCoin(unit, amount)]) } : {})} />
       </Stack>

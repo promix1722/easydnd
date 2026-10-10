@@ -348,7 +348,11 @@ describe('the panels that were sentences', () => {
   it('prints an item\'s numbers on its row, with the catalogue\'s words', () => {
     renderAt('mobile', <SheetBody sheet={PACKED} />)
 
-    expect(screen.getByText('Armor class: 16 · Strength required: 13 · Disadvantage on Stealth checks')).toBeInTheDocument()
+    // Each under its own caption, not one sentence of them.
+    const row = within(screen.getByRole('button', { name: 'Actions for Chain Mail' }).closest('.mantine-Paper-root') as HTMLElement)
+    for (const [caption, value] of [['Armor class', '16'], ['Strength required', '13'], ['Stealth', 'Disadvantage']] as const) {
+      expect.soft(row.getByText(caption).nextElementSibling).toHaveTextContent(value)
+    }
     // The row is not itself a control: the only button on it is its menu.
     expect(screen.queryAllByRole('button', { name: /Chain Mail/ }).map((each) => each.getAttribute('aria-label'))).toEqual(['Actions for Chain Mail'])
   })
@@ -414,9 +418,9 @@ describe('the panels that were sentences', () => {
     // A weapon's numbers are captioned columns in one order -- damage, hit,
     // range -- not a sentence.
     const rapier = (await screen.findByText('Rapier')).closest('.mantine-Accordion-item') as HTMLElement
-    expect.soft(within(rapier).getByText('Damage').nextElementSibling).toHaveTextContent('1d8+3')
-    expect.soft(within(rapier).getByText('Hit').nextElementSibling).toHaveTextContent('+5')
-    expect.soft(within(rapier).getByText('Range').nextElementSibling).toHaveTextContent('5 ft.')
+    expect.soft(within(rapier).getByText('Damage').previousElementSibling).toHaveTextContent('1d8+3')
+    expect.soft(within(rapier).getByText('Hit').previousElementSibling).toHaveTextContent('+5')
+    expect.soft(within(rapier).getByText('Range').previousElementSibling).toHaveTextContent('5 ft.')
     expect.soft(within(rapier).getAllByText(/^(Damage|Hit|Range)$/).map((each) => each.textContent)).toEqual(['Damage', 'Hit', 'Range'])
     expect.soft(screen.getByText('Second Wind Uses: 1')).toBeInTheDocument()
     // A weapon with no prose is a fact, not a control that opens onto nothing.

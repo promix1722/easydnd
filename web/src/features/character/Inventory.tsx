@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
@@ -5,9 +6,10 @@ import { COINS, equip, groupOf, setTotal, slotsFor, slotted } from '@/domain'
 import type { InventoryRow, Slot } from '@/domain'
 import type { Change, Equipment, Item, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { ACTION_ICON_SIZE, ActionIcon, Group, IconDotsVertical, ItemIcon, Menu, NumberInput, Paper, SourceTags, Stack, Text, useIsDesktop } from '@/ui'
+import { ACTION_ICON_SIZE, ActionIcon, Box, Group, IconDotsVertical, ITEM_ICON_SIZE, ItemIcon, Menu, NumberInput, Paper, SourceTags, Stack, Text, useIsDesktop } from '@/ui'
 
-import { itemFacts, weaponNumbers } from './options'
+import { itemFactList, weaponNumbers } from './options'
+import type { Stat } from './options'
 import { WeaponStats } from './WeaponStats'
 import { useSlotLabels } from './slotLabels'
 
@@ -82,11 +84,28 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, act
       const group = groupOf(item)
       const word = (slug: string) => lookup(item?.weapon?.properties?.includes(slug) ? 'weapon-properties' : 'damage-types', slug)
       const numbers = weaponNumbers(t, item, actions, word)
-      const line = item === undefined ? undefined : itemFacts(t, item, word, numbers !== undefined)
+      // A fact under its own caption, not a sentence of them: "Thrown range:
+      // 20/60 ft. · Finesse, Light · Weight: 1 lb." was three kinds of thing
+      // in one grey line. What the row draws as columns is not said twice,
+      // and nothing carried says what it cost.
+      const facts = item === undefined ? [] : itemFactList(t, item, word)
+        .filter((fact) => fact.key !== 'cost' && !(numbers !== undefined && (fact.key === 'damage' || fact.key === 'range')))
+      const properties = facts.find((fact) => fact.key === 'properties')
+      const pairs = facts.filter((fact) => fact !== properties)
+      // On a phone there is no room for columns, so the weapon's numbers lead
+      // one list with everything else: captions down the left, values in line.
+      const listed: Stat[] = [
+        ...(numbers?.damage ? [{ key: 'damage', label: t('weapon.damage'), value: numbers.damage, color: 'red' }] : []),
+        ...(numbers?.hit ? [{ key: 'hit', label: t('weapon.hit'), value: numbers.hit, color: 'violet' }] : []),
+        ...(numbers?.range ? [{ key: 'range', label: t('weapon.range'), value: numbers.range }] : []),
+        ...facts,
+      ]
       // Totals count the worn units too, and `setTotal` takes from the backpack first.
       const total = (all: number) => onChange?.(setTotal(equipment, row.item ?? '', all))
-      // In the top right corner where there is room; on a phone that corner is
-      // the name's, so the badges go under the text.
+      // In the bottom right corner where there is room, under the numbers and
+      // the menu: beside them, numbers of different widths left the badges
+      // at a different place on every row. A phone's row does not say which
+      // book a dagger is from; its page does.
       const tags = <SourceTags provenance={item?.provenance} oneLine />
       return <Paper key={row.key} withBorder radius="md" p="xs">
         <Group justify="space-between" wrap="nowrap" gap="sm" align="flex-start">
@@ -96,14 +115,21 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, act
               <Text size="sm" fw={500}>{label}</Text>
               {count > 1 && <Text size="sm" c="dimmed">×{count}</Text>}
             </Group>
-            {!isDesktop && numbers !== undefined && <WeaponStats inline {...numbers} />}
-            {line !== undefined && <Text size="xs" c="dimmed">{line}</Text>}
-            {!isDesktop && tags}
+            {isDesktop && properties !== undefined && <Text size="xs">{properties.value}</Text>}
+            {isDesktop && pairs.length > 0 && <Group gap="md" style={{ rowGap: 0 }}>
+              {pairs.map((fact) => <Text key={fact.key} size="xs" c="dimmed">{fact.label} <Text span fw={600} c="var(--mantine-color-text)">{fact.value}</Text></Text>)}
+            </Group>}
+            {!isDesktop && listed.length > 0 && <Box style={{ display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr)', columnGap: 8, rowGap: 2 }}>
+              {listed.map((fact) => <Fragment key={fact.key}>
+                <Text size="xs" c="dimmed">{fact.label}</Text>
+                <Text size="xs" {...(fact.color ? { c: fact.color, fw: 700 } : {})}>{fact.value}</Text>
+              </Fragment>)}
+            </Box>}
           </Stack>
-          {/* Columns where there is room for them; on a phone they are a line under the name, like the badges. */}
-          {isDesktop && numbers !== undefined && <WeaponStats {...numbers} />}
-          <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
-            {isDesktop && tags}
+          <Stack gap={4} align="flex-end" justify="space-between" mih={ITEM_ICON_SIZE} style={{ flexShrink: 0 }}>
+          <Group gap="sm" wrap="nowrap" align="flex-start">
+            {/* Columns where there is room for them; on a phone they lead the list under the name. */}
+            {isDesktop && numbers !== undefined && <WeaponStats {...numbers} />}
             {row.item !== undefined && (
             <ItemMenu name={label}>
               <ItemDetails slug={row.item} />
@@ -124,6 +150,8 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, act
             </ItemMenu>
           )}
           </Group>
+          {isDesktop && tags}
+          </Stack>
         </Group>
       </Paper>
     })}

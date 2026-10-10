@@ -5,6 +5,7 @@ import { bySlug, getCollection, getEntries, getSharedOwner, getSharedSheet, getS
 import { characterPath } from '@/lib/api/characters'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
+import { itemFactList } from './options'
 import { ItemIcon, joinProse, Markdown, Page, Panel, SimpleGrid, SourceTags, Stack, Text, pageState } from '@/ui'
 
 /**
@@ -60,23 +61,7 @@ export function ItemScreen() {
   if (item === null) return <Page trail={[...above, { label: slug }]} state={{ kind: 'failed', title: t('item.loadFailed'), detail: t('item.notFound') }} />
 
   const word = (ref: string) => words.get(ref)?.name ?? ref
-  const feet = (near?: number, far?: number) => near ? t('vitals.feet', { distance: `${near}/${far ?? near}` }) : ''
-  const damage = (dice?: { dice: string; type?: string }) => dice === undefined ? '' : [dice.dice, dice.type === undefined ? '' : word(dice.type)].filter(Boolean).join(' ')
-  const armor = item.armor
-  const weapon = item.weapon
-  const facts = [
-    { key: 'ac', label: t('item.armorClass'), value: armor === undefined ? '' : String(armor.baseAC) },
-    { key: 'dex', label: t('item.dexterity'), value: armor?.addsDexBonus ? (armor.maxDexBonus === undefined ? t('equipment.dex') : t('equipment.dexCap', { count: armor.maxDexBonus })) : '' },
-    { key: 'strength', label: t('item.strength'), value: armor?.strengthMinimum ? String(armor.strengthMinimum) : '' },
-    { key: 'stealth', label: t('item.stealth'), value: armor?.stealthDisadvantage ? t('item.disadvantage') : '' },
-    { key: 'damage', label: t('weapon.damage'), value: damage(weapon?.damage) },
-    { key: 'twoHands', label: t('item.twoHanded'), value: damage(weapon?.twoHandedDamage) },
-    { key: 'range', label: t('weapon.range'), value: feet(weapon?.normalRange, weapon?.longRange) },
-    { key: 'thrown', label: t('item.thrown'), value: feet(weapon?.throwNormalRange, weapon?.throwLongRange) },
-    { key: 'properties', label: t('item.properties'), value: (weapon?.properties ?? []).map(word).join(', ') },
-    { key: 'weight', label: t('item.weight'), value: item.weight === undefined ? '' : t('item.pounds', { value: item.weight }) },
-    { key: 'cost', label: t('item.cost'), value: item.cost === undefined ? '' : `${item.cost.amount} ${item.cost.unit}` },
-  ].filter((fact) => fact.value !== '')
+  const facts = itemFactList(t, item, word)
 
   return (
     <Page trail={[...above, { label: item.name }]} mark={<ItemIcon icon={item.icon} />}>
@@ -84,11 +69,11 @@ export function ItemScreen() {
         <Stack gap="md">
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
             {facts.map((fact) => <div key={fact.key}>
-              <Text size="xs" c="dimmed" tt="uppercase">{fact.label}</Text>
+              <Text size="xs" c="dimmed">{fact.label}</Text>
               <Text size="sm">{fact.value}</Text>
             </div>)}
             {item.provenance !== undefined && <div>
-              <Text size="xs" c="dimmed" tt="uppercase">{t('spells.filter.source')}</Text>
+              <Text size="xs" c="dimmed">{t('spells.filter.source')}</Text>
               <SourceTags provenance={item.provenance} />
             </div>}
           </SimpleGrid>

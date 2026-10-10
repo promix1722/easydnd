@@ -2006,19 +2006,22 @@ body part but "everything we could not place".
 
 **A weapon's numbers are captioned, not written out**, on the Actions tab and
 the Equipment tab alike: `features/character/WeaponStats` draws **Damage**,
-**Hit** and **Range**, in that order everywhere, each under its own caption and
-the two that are rolled in colour. They used to be a dimmed sentence -- "+5 to
+**Hit** and **Range**, in that order everywhere, each over its own caption and
+the two that are rolled in colour. They are `StatColumns`, a stat block's
+shape: the value large, because it is what is read, what it is small beneath,
+a rule between one and the next -- and nothing in capitals, on any item
+caption or badge. They used to be a dimmed sentence -- "+5 to
 hit · 1d8+3 · 5 ft." on Actions, "Damage: 1d8 Piercing · Range: 5/5 ft." on
 Equipment -- which is three things read off mid-turn written as prose, in two
-different orders. Where a row is wide they are columns at its right; on a slot
-card and on a phone's inventory row, which are too narrow for three columns
-beside a name, they are one compact line under it (`inline`) that wraps rather
-than clips. The numbers come from the sheet's action for the weapon when it is
+different orders. Where a row is wide they are columns at its right, and on a
+slot card they are columns beside the icon that wrap rather than clip; on a
+phone's inventory row, which is too narrow for three columns beside a name,
+they lead the row's list of captioned facts. The numbers come from the sheet's action for the weapon when it is
 wielded (`weaponNumbers` in `options.ts`), so both tabs print the server's own
 sum -- die plus modifier, and the bonus to hit; a weapon that is only carried
 has no action, and shows the catalogue's die, type and range with no Hit.
-What is left of the old line -- properties, weight, thrown range -- stays a
-dimmed line beneath.
+What is left of the old line -- properties, weight, thrown range -- is under
+the name, each under its own caption; see the bubble below.
 
 **Every item has a page of its own**, `features/character/ItemScreen`, opened
 by **Details** in its menu -- on an inventory row and on a slot card alike, and
@@ -2031,17 +2034,34 @@ two routes say whose -- `/characters/:id/items/:slug`, and the same under
 `/groups/:id/characters/:character` for a shared sheet -- and the menu links
 relatively, so it lands under whichever is showing.
 
-That page is also why a **slot card says less than it did**. A card is one
-icon tall: a weapon's shows its name and its three numbers and none of its
-other facts, and nothing worn says what it weighs -- weight is a fact about
-carrying a thing. Properties, weight and the rest are one press away.
+That page is also why a **slot card says less than it did**. A card is a name
+line -- the item, the slot it is in as a small badge, its menu -- over one
+icon's height of columns: a weapon's three numbers, or armor's class and the
+Strength it asks (`armorStats`; a shield's class is written as the `+2` it
+adds), with a disadvantage on Stealth as one line beneath. None of the other
+facts are there, and nothing worn says what it weighs -- weight is a fact about
+carrying a thing. Properties, weight and the rest are one press away. An empty
+slot is a dashed outline holding the word and the slot's badge, so what is
+worn is what the eye lands on; it keeps a full card's height where cards sit
+side by side and is as short as its two lines on a phone, where they do not.
 
 Every inventory row, on both tabs, is a **bubble** (`features/character/
-Inventory`): the name, the item's numbers on one line -- armor class, damage
-and its type, range, properties, weight, built by `itemFacts`, the same line
-the builder prints under a picked kit option -- and the pack and book badges on
-one line: in the top right corner beside the menu on a wide screen, under the
-text on a phone, where that corner is the name's. Nothing opens: everything a row has to say is on the
+Inventory`): the name, then the item's facts, **each under its own caption**
+(`itemFactList` in `options.ts`, the list the item's page prints, less what
+the row draws as columns and what the thing cost). It used to be one grey
+sentence -- "Thrown range: 20/60 ft. · Finesse, Light, Thrown · Weight: 1 lb."
+-- three kinds of thing run together, which on a phone wrapped to three lines.
+On a wide screen the properties are a line of their own and the rest are
+caption-and-value pairs on the next; on a phone everything, the weapon's
+numbers first, is one two-column list, captions down the left. The pack and
+book badges are on one line in the bottom right corner on a wide screen, under
+the numbers and the menu -- beside them they sat at a different place on every
+row -- and **a phone's row has no badges**: which book a dagger is from is on
+its page, and two pills wrapped under every row said it louder than the
+dagger's damage. The columns of one row sit over the next row's:
+in a list each is at least a fixed width (`Stat.width`), so "1d4 Piercing" and
+"1d6 Bludgeoning" start at the same place; a slot card stands alone and takes
+only what it needs. Nothing opens: everything a row has to say is on the
 row. The words the line needs -- damage types, weapon properties -- arrive in
 the sheet's `catalogNames`, resolved by the server like everything else on the
 sheet (docs/backend.md#the-sheet-arrives-resolved).

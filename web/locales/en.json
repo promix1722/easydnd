@@ -606,6 +606,7 @@
   "equipment.dex": "Add your Dexterity modifier",
   "equipment.dexCap": "Add your Dexterity modifier (maximum +{{count}})",
   "equipment.strength": "Strength required: {{value}}",
+  "equipment.stat.strength": "Strength",
   "equipment.stealth": "Disadvantage on Stealth checks",
   "equipment.damage": "Damage: {{dice}} {{type}}",
   "equipment.twoHands": "Two-handed damage: {{dice}}",

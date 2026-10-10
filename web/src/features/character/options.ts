@@ -237,6 +237,57 @@ export function itemFacts(t: Translate, item: Item, name: (slug: string) => stri
   return facts.length === 0 ? undefined : facts.join(' · ')
 }
 
+/** One captioned value, as `StatColumns` draws it. */
+export interface Stat {
+  key: string
+  label: string
+  value: string
+  color?: string
+  /** The least a column is wide, in pixels, where rows of them line up. */
+  width?: number
+}
+
+/**
+ * Everything the catalogue says of an item, one captioned value each, in the
+ * order it is read: what armor does, what a weapon does, then what the thing
+ * is. The item's page prints all of it; an inventory row leaves out what it
+ * draws as columns, and what it cost.
+ */
+export function itemFactList(t: Translate, item: Item, word: (slug: string) => string): Stat[] {
+  const feet = (near?: number, far?: number) => near ? t('vitals.feet', { distance: `${near}/${far ?? near}` }) : ''
+  const damage = (dice?: { dice: string; type?: string }) => dice === undefined ? '' : [dice.dice, dice.type === undefined ? '' : word(dice.type)].filter(Boolean).join(' ')
+  const armor = item.armor
+  const weapon = item.weapon
+  return [
+    { key: 'ac', label: t('item.armorClass'), value: armor === undefined ? '' : String(armor.baseAC) },
+    { key: 'dex', label: t('item.dexterity'), value: armor?.addsDexBonus ? (armor.maxDexBonus === undefined ? t('equipment.dex') : t('equipment.dexCap', { count: armor.maxDexBonus })) : '' },
+    { key: 'strength', label: t('item.strength'), value: armor?.strengthMinimum ? String(armor.strengthMinimum) : '' },
+    { key: 'stealth', label: t('item.stealth'), value: armor?.stealthDisadvantage ? t('item.disadvantage') : '' },
+    { key: 'damage', label: t('weapon.damage'), value: damage(weapon?.damage) },
+    { key: 'twoHands', label: t('item.twoHanded'), value: damage(weapon?.twoHandedDamage) },
+    { key: 'range', label: t('weapon.range'), value: feet(weapon?.normalRange, weapon?.longRange) },
+    { key: 'thrown', label: t('item.thrown'), value: feet(weapon?.throwNormalRange, weapon?.throwLongRange) },
+    { key: 'properties', label: t('item.properties'), value: (weapon?.properties ?? []).map(word).join(', ') },
+    { key: 'weight', label: t('item.weight'), value: item.weight === undefined ? '' : t('item.pounds', { value: item.weight }) },
+    { key: 'cost', label: t('item.cost'), value: item.cost === undefined ? '' : `${item.cost.amount} ${item.cost.unit}` },
+  ].filter((fact) => fact.value !== '')
+}
+
+/**
+ * What armor does, as columns for the card of the slot it is worn in. A
+ * shield adds to the armor class where body armor sets it. Only the numbers:
+ * what it does to Stealth is a line under them, and how Dexterity joins in is
+ * a sentence on the item's page.
+ */
+export function armorStats(t: Translate, item: Item | undefined): Stat[] | undefined {
+  const armor = item?.armor
+  if (armor === undefined) return undefined
+  return [
+    { key: 'ac', label: t('item.armorClass'), value: item?.slot === 'off-hand' ? signed(armor.baseAC) : String(armor.baseAC), color: 'blue' },
+    ...(armor.strengthMinimum ? [{ key: 'strength', label: t('equipment.stat.strength'), value: String(armor.strengthMinimum) }] : []),
+  ]
+}
+
 /** A weapon's three numbers, as `WeaponStats` draws them. Absent for anything that is not a weapon. */
 export interface WeaponNumbers {
   damage?: string
