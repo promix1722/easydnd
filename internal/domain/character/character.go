@@ -235,7 +235,18 @@ func (l Log) Validate() error {
 // under internal/adapter/repository; internal/app picks the concrete one, and
 // that assignment is what proves conformance at compile time.
 type Repository interface {
+	// Commit replaces a character's whole log under its revision, which is
+	// the write every application mutation goes through. See
+	// Character.Commit for what it checks and how the revision advances.
+	// command, when not empty, is an idempotency key: a second Commit
+	// carrying the same one is a *types.ValidationError. checkpoint, when
+	// not nil, is kept alongside the log.
 	Commit(context.Context, ID, int, Log, string, *Checkpoint) error
+
+	// CreateWithLog stores a new character together with its first log in
+	// one write, so that a failure cannot leave an empty character behind
+	// the way Create followed by Commit can. See NewWithLog.
+	CreateWithLog(ctx context.Context, owner OwnerID, folder FolderID, log Log) (Character, error)
 
 	// Create stores a new character owned by owner, filed in folder, and
 	// returns it with its assigned ID and an empty log.

@@ -566,15 +566,9 @@ func (a *Agent) start(ctx context.Context, s *AgentSession, locale rules.Locale,
 	_ = log.Append(e,
 		domain.Event{Type: domain.EventChange, Source: domain.GroupIdentity, Changes: []domain.Change{{Path: "identity.ruleset", Op: domain.OpSet, Value: domain.SlugValue(rules.Slug(cat.Ruleset))}}},
 		domain.Event{Type: domain.EventNote, Note: "import.session:" + s.ID})
-	// The repository can commit the initial log atomically. Do not fall back to
-	// Create + Commit, which leaves an empty character after a failed write.
-	repo, ok := a.service.Repository().(interface {
-		CreateWithLog(context.Context, domain.OwnerID, domain.FolderID, domain.Log) (domain.Character, error)
-	})
-	if !ok {
-		return types.NewNotImplementedError("atomic character creation unavailable")
-	}
-	created, err := repo.CreateWithLog(ctx, s.Owner, s.Folder, log)
+	// One write, not Create + Commit, which leaves an empty character after
+	// a failed second half.
+	created, err := a.service.Repository().CreateWithLog(ctx, s.Owner, s.Folder, log)
 	if err != nil {
 		return err
 	}

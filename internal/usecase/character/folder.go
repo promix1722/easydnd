@@ -131,7 +131,9 @@ func (s *Service) DeleteFolder(ctx context.Context, owner domain.OwnerID, id dom
 		if c.Folder != id {
 			continue
 		}
-		if err := s.repo.Delete(ctx, c.ID); err != nil {
+		// Through Delete rather than the store, so a character that was
+		// shared with a group or seated at a game comes off those too.
+		if err := s.Delete(ctx, owner, c.ID); err != nil {
 			return err
 		}
 	}

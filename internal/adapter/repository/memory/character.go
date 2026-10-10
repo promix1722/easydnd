@@ -3,17 +3,15 @@
 // It exists so the service compiles, runs and deploys with zero
 // infrastructure. State is per-process and lost on restart.
 //
-// For accounts that is now only the development fallback: production stores
-// them in internal/adapter/repository/postgres, and the two adapters are held
-// to one contract by internal/adapter/repository/repotest. For characters and
-// the folders they are filed in it is still the whole story: both are reachable
-// over the API and both are lost on restart. A SQL sibling replaces either one
-// without any change above this layer, exactly as the account store did.
+// It is the development fallback: with no db.url the server runs on these,
+// and in production every store here has a sibling in
+// internal/adapter/repository/postgres. The two are held to one contract by
+// internal/adapter/repository/repotest, and the rules a write applies live in
+// the domain so that neither adapter can carry its own version of them.
 package memory
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"maps"
 	"slices"
@@ -125,8 +123,8 @@ func (r *CharacterRepository) Append(_ context.Context, id domain.ID, expectedSe
 	if !ok {
 		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
-	if got := c.Log.LastSeq(); got != expectedSeq {
-		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
+	if err := c.ExpectSeq(expectedSeq); err != nil {
+		return err
 	}
 	// Append to a copy, so a rejected batch cannot leave the stored log
 	// half-written.
@@ -154,8 +152,8 @@ func (r *CharacterRepository) Truncate(_ context.Context, id domain.ID, expected
 	if !ok {
 		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
-	if got := c.Log.LastSeq(); got != expectedSeq {
-		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
+	if err := c.ExpectSeq(expectedSeq); err != nil {
+		return err
 	}
 	// Truncate a copy, so a rejected request cannot leave the stored log
 	// half-trimmed.
@@ -185,8 +183,8 @@ func (r *CharacterRepository) Rewrite(_ context.Context, id domain.ID, expectedS
 	if !ok {
 		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
-	if got := c.Log.LastSeq(); got != expectedSeq {
-		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
+	if err := c.ExpectSeq(expectedSeq); err != nil {
+		return err
 	}
 	if err := log.Validate(); err != nil {
 		return err
@@ -231,39 +229,8 @@ func (r *CharacterRepository) Commit(_ context.Context, id domain.ID, expectedRe
 	if !ok {
 		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
-	if command != "" {
-		if _, ok := c.Commands[command]; ok {
-			return types.NewValidationError("command already committed; reload character revision")
-		}
-	}
-	if c.Revision != expectedRevision {
-		return types.NewValidationError("stale character revision: got %d, expected %d", expectedRevision, c.Revision)
-	}
-	if err := log.Validate(); err != nil {
+	if err := c.Commit(expectedRevision, log, command, checkpoint); err != nil {
 		return err
-	}
-	updated := log.Clone()
-	for i := range updated.Events {
-		e := &updated.Events[i]
-		if e.ID == "" {
-			e.ID = "evt_" + rand.Text()
-		}
-		if e.SchemaVersion == 0 {
-			e.SchemaVersion = 1
-		}
-	}
-	if checkpoint != nil {
-		cp := *checkpoint
-		cp.Log = cp.Log.Clone()
-		c.Checkpoints = append(c.Checkpoints, cp)
-	}
-	c.Revision += max(1, updated.Len()-c.Log.Len())
-	c.Log = updated
-	if command != "" {
-		if c.Commands == nil {
-			c.Commands = map[string]int{}
-		}
-		c.Commands[command] = c.Revision
 	}
 	r.items[id] = c
 	return nil
@@ -271,22 +238,14 @@ func (r *CharacterRepository) Commit(_ context.Context, id domain.ID, expectedRe
 
 // CreateWithLog publishes an imported draft in one critical section.
 func (r *CharacterRepository) CreateWithLog(_ context.Context, owner domain.OwnerID, folder domain.FolderID, log domain.Log) (domain.Character, error) {
-	if err := log.Validate(); err != nil {
+	c, err := domain.NewWithLog(owner, folder, log)
+	if err != nil {
 		return domain.Character{}, err
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.nextID++
-	c := domain.Character{ID: domain.ID(fmt.Sprintf("chr_%06d", r.nextID)), Owner: owner, Folder: folder, Log: log.Clone(), Revision: max(1, log.Len())}
-	for i := range c.Log.Events {
-		e := &c.Log.Events[i]
-		if e.ID == "" {
-			e.ID = "evt_" + rand.Text()
-		}
-		if e.SchemaVersion == 0 {
-			e.SchemaVersion = 1
-		}
-	}
+	c.ID = domain.ID(fmt.Sprintf("chr_%06d", r.nextID))
 	r.items[c.ID] = c
 	return clone(c), nil
 }

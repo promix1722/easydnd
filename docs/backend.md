@@ -927,9 +927,11 @@ characters live in memory, so there is not even a backup behind it. A client
 that offers the button owes the player a confirmation that says how many
 characters are about to go; the web client's does. The cascade runs in the
 usecase, not the store -- two aggregates, two stores, and a repository that
-wrote to both would be two repositories sharing a name. Characters go first and
-the folder last: there is no transaction across the two, so the order is chosen
-for what a crash half way leaves behind. This one leaves a folder holding fewer
+wrote to both would be two repositories sharing a name. Characters go first,
+each through the same `Delete` a single character gets -- so one that was shared
+with a group or seated at a game comes off those too -- and the folder last:
+there is no transaction across the two, so the order is chosen for what a crash
+half way leaves behind. This one leaves a folder holding fewer
 characters, which the application already understands. The other would leave
 characters filed in a folder that no longer exists, which nothing can list.
 

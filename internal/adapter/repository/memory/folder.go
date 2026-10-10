@@ -123,26 +123,14 @@ func (r *FolderRepository) Reorder(
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	movable := make(map[domain.FolderID]struct{})
-	for id, f := range r.items {
-		if f.Owner == owner && !f.Default {
-			movable[id] = struct{}{}
+	var have []domain.Folder
+	for _, f := range r.items {
+		if f.Owner == owner {
+			have = append(have, f)
 		}
 	}
-	if len(ids) != len(movable) {
-		return types.NewValidationError(
-			"the order must name all %d of your folders, and it names %d",
-			len(movable), len(ids))
-	}
-	for _, id := range ids {
-		if _, ok := movable[id]; !ok {
-			return types.NewValidationError(
-				"folder %q is not one of yours to order, or is named twice", id)
-		}
-		// Removed as it is seen, so a repeat fails the check above on its
-		// second appearance rather than silently displacing a folder that
-		// the caller left out.
-		delete(movable, id)
+	if err := domain.CheckReorder(have, ids); err != nil {
+		return err
 	}
 
 	// Numbered from one, leaving zero to the default folder -- which is
