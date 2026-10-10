@@ -216,7 +216,7 @@ func (l Log) Validate() error {
 		// point at or change apart from the first. The service refuses such
 		// an entry with a field error (see oneSelection there); this is the
 		// same rule for every writer that does not go through it -- an
-		// import, a migration, a repository handed a whole log -- so that no
+		// import, a repository handed a whole log -- so that no
 		// stored log can hold one.
 		for at := 1; at < len(e.Choices); at++ {
 			if !strings.HasPrefix(string(e.Choices[at].Prompt), string(e.Choices[0].Prompt)+"/") {

@@ -1,7 +1,7 @@
 # JSON rule packs
 
 The server runs characters against immutable, versioned packs. `pack` and
-`addon` mean the same artifact. The generated SRD is the base pack; configured
+`addon` mean the same artifact. The SRD is the base pack; configured
 addons pass through the same decoder, dependency resolver and compiler.
 
 This delivery covers files, the core evaluator, character locks and revisions. Pack editing, JSON uploads, publishing,
@@ -71,11 +71,11 @@ The SRD pack's version is the `version` field of
 content it describes. 2.1.0 changes what 2.0.0 asks -- a Totem Warrior chooses
 an animal where 2.0.0 granted all five -- and **nothing carries a 2.0.0
 character across**: production runs without `data.pack_archive`, so a
-character pinned to 2.0.0 fails closed once 2.1.0 replaces it, and is deleted
-or moved by hand with the rules migration API. That is deliberate; the
-project keeps no backward compatibility for characters or packs yet. Preserve
-`data.pack_archive` when deploying so characters pinned to an earlier release
-continue to use the archived bytes; startup refuses an archived release whose
+character pinned to 2.0.0 fails closed once 2.1.0 replaces it, and has to be
+deleted. That is deliberate; the project keeps no backward compatibility for
+characters or packs yet. Where `data.pack_archive` is set, preserve it when
+deploying so characters pinned to an earlier release continue to use the
+archived bytes; startup refuses an archived release whose
 bytes have changed under the same version. An explicit
 `data.default_packs.srd-2014` pin must be updated to select the new version.
 
@@ -173,7 +173,7 @@ data:
     - path: /path/to/another-pack-repository
       id: another-core # optional namespace override
   default_packs:
-    srd-2014: "2.0.0"
+    srd-2014: "2.1.0"
     easydnd-2014-personal: "1.0.0"
   pack_archive: .pack-archive
 ```
@@ -320,7 +320,7 @@ shipped content.
     "edition": "2014",
     "semantics": "1",
     "requires": ["resources.v1"],
-    "dependencies": [{"id": "srd-2014", "version": "^1.0.0"}],
+    "dependencies": [{"id": "srd-2014", "version": ">=2.0.0 <3.0.0"}],
     "defaultLocale": "en"
   },
   "entities": {},
@@ -329,8 +329,8 @@ shipped content.
 }
 ```
 
-A directory contains `manifest.json` (the SRD uses `pack-manifest.json` to
-coexist with its old catalogue index) and either a `files` map or a layout.
+A directory contains `manifest.json` or `pack-manifest.json` (the SRD's name,
+and the one read when both are present) and either a `files` map or a layout.
 The map names each logical key's file:
 
 ```json
@@ -408,7 +408,7 @@ at load. The base data's Unarmored Defense is the example:
 
 Characters retain exactly STR, DEX, CON, INT, WIS and CHA. Packs may modify
 these scores, but cannot introduce additional characteristics. The example pack
-uses a Wisdom bonus; version 2.0.0 removes its former demonstration Luck score.
+uses a Wisdom bonus.
 
 Numeric effects support `add`, `max`, `set` on ability scores, AC, initiative,
 passive Perception, HP maximum and movement speeds. Grants support features,
@@ -422,10 +422,8 @@ an option is blocked while the character does not meet that feature's own
 `prerequisites`, read at the character's current level in the feature's
 `class`; see [Picks a feature owns](dnd.md#picks-a-feature-owns).
 
-A feature row has no `invocations` list any more. It named options nothing
-ever asked about; those picks are `subfeatureOptions` on the feature and on
-one feature per later tier, and a pack that still carries the field is
-refused at load. A class's
+A feature's picks are `subfeatureOptions` on the feature and on one feature
+per later tier. A class's
 `startingEquipmentOptions` carry a `slot` apiece -- `body`, `main-hand`,
 `off-hand`, `backup`, `pack`, `focus` or `instrument` -- which titles the
 builder's card and equips nothing: every kit item is carried until the
@@ -495,10 +493,7 @@ values from consumables. The older slot/class arrays remain compatibility views.
 Spending is not recorded on the character. The browser's game tracker keeps a
 spent count per pool on the game entry, so a use spent at one table is not
 spent at another, and the sheet always shows full pools; see
-[backend.md](backend.md#active-game-entries). The log once had usage events of
-its own -- `resource.spent`, `resource.recovered`, `rest.completed`,
-`action.used` -- which nothing wrote; they are gone, and their type numbers
-are retired rather than reused.
+[backend.md](backend.md#active-game-entries). The log has no usage events.
 
 Recovery operations are `all`, `amount` or `budget`, and conditional recovery
 uses `when`; the tracker applies them on a rest. An action's rolls and other
@@ -548,7 +543,7 @@ only the first is tagged, or a tenth-level bard would list it three times.
 Equipped weapons need no tag; their attack is derived from `weapon`. Unowned
 actions are not in `packActions` -- that list is what can be *spent*.
 
-## Revisions and migrations
+## Revisions and locks
 
 Characters keep editable ordered build choices. Events have stable IDs and a
 schema version; sequence is their current position. The record's `revision`
@@ -565,12 +560,9 @@ returns the default lock, and `GET /v1/characters/:id/catalog/:collection` serve
 an owned character's pinned content.
 
 A lock is for the life of the character. There is no route that moves a
-character onto another lock: the migration and checkpoint-restore endpoints
-that once did had no client and were removed.
+character onto another lock.
 
-The existing foreign-sheet importer imports a **snapshot** under the configured
-context and reports unresolved content. It does not claim to reconstruct a
-historical event log. Unsupported event/pack schema versions fail rather than
+Unsupported event/pack schema versions fail rather than
 being guessed. Version 0 events in existing memory fixtures are upgraded to 1 at
 the repository boundary.
 
@@ -684,10 +676,10 @@ packs. The first character tab and the spell browser accept multiple compatible
 roots. Dependencies are resolved automatically; one core provider is required.
 An independent core can define the same six standard scores, whose identities
 remain global; additional ability scores are still rejected. The character's
-exact lock governs choices, spells, names and shared-sheet catalogues. Changing
-packs on an existing character previews and commits through the rules migration
-API. Copies require current access to their releases; existing characters retain
-access for progression and restoration after a share is removed.
+exact lock governs choices, spells, names and shared-sheet catalogues, and is
+fixed when the character is created. Copies require current access to their
+releases; existing characters retain access for progression after a share is
+removed.
 
 Any group member may share a release they own. A share records its exact
 transitive closure and does not advance when another version is published. The

@@ -171,12 +171,12 @@ func (s *Service) MoveCharacter(
 // A zero target folder means "beside the original", which is what a Copy button
 // on a row is asking for.
 //
-// The copy is built the way an import is -- create, then append the whole log
-// at sequence zero -- and its new name arrives as one more appended event
-// rather than as an edit of the init event it came with. That is not
-// fastidiousness: the log's invariant is append, or drop a suffix, never edit
-// the middle, and a copy that rewrote its own history would be the one record
-// in the system that broke it.
+// The copy is built the way an import is -- stored with its whole log in one
+// write -- and its new name arrives as one more appended event rather than as
+// an edit of the init event it came with. That is not fastidiousness: the
+// log's invariant is append, or replace an entry and revalidate what follows,
+// never edit the middle, and a copy that rewrote its own history would be the
+// one record in the system that broke it.
 func (s *Service) CopyCharacter(
 	ctx context.Context,
 	owner domain.OwnerID,

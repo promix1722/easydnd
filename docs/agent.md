@@ -313,7 +313,7 @@ relevant. The sheet links back to the chat. An edit made in the builder is an
 ordinary edit of an ordinary character; the assistant notices it on its next
 tool call (see [Session lifetime](#session-lifetime)).
 
-Unresolved choices belong in chat. `ask_user` records a question and up to six
+Unresolved choices belong in chat. `ask_user` records a question and up to ten
 suggested text answers. The latest unanswered question shows clickable replies;
 the composer always permits a different free-text answer. A reply is an ordinary
 user message, and the assistant applies it using validated choice tools. The
@@ -465,7 +465,7 @@ described in [polling.md](polling.md).
 
 ## Tools and rules
 
-The OpenAI adapter supplies function schemas; the character usecase implements
+The OpenAI adapter supplies function schemas; the agent use case implements
 the tools. The vendor boundary is the small `AgentModel` port, not an agent SDK
 woven into the rules engine. The initial adapter uses the official Go Responses
 SDK, native PDF/image input, streamed output, `store: false`, and encrypted
@@ -760,8 +760,8 @@ and projection must succeed before a complete definition changes the lock.
 
 Private releases never enter the default catalogue. Older versions remain
 available for older locks; copied/shared characters retain the attached lock
-and receive localized private names/descriptions in their projection. Migration
-cannot attach another character's private release. The releases are stored in
+and receive localized private names/descriptions in their projection. The
+releases are stored in
 `private_releases` and cached per process; this is not a general pack editor,
 upload library or publisher.
 
@@ -789,10 +789,6 @@ only a `note`: see docs/backend.md.
 
 The character itself is read and edited through the ordinary
 `/v1/characters/:id` routes. There is no draft surface.
-
-The HexSheet JSON importer that used to sit beside this at `POST
-/v1/characters/import` is gone: the AI Wizard is the only way a foreign sheet
-comes in.
 
 ### An import wears one item to a slot
 

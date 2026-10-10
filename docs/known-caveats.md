@@ -28,7 +28,7 @@ Three things they do not stop:
 **A guest starts again at zero.** Limits are per owner, a guest session is one
 click, and a new one is a new owner. That includes `WizardRunsPerDay`, the one
 limit that costs money to get around. *What would lift it:* a rate limit by
-address on `POST /auth/anonymous`, which this service does not have, or an
+address on `POST /v1/auth/anonymous`, which this service does not have, or an
 account requirement for the wizard.
 
 **Discarding a wizard chat gives its run back.** The 24-hour count is read
@@ -88,14 +88,3 @@ and every earlier answer can be edited, so the replacement is an edit.
 A question a rule poses for a *picked* feature -- Superior Technique's
 maneuver, a favored enemy's language -- is drawn above first level on the
 class tab, because the option's row carries no level of its own.
-
-## The AI Wizard scales horizontally now
-
-This used to be the first caveat: the character an import built and the packs
-it compiled lived in one process's memory, so a second API process could read
-the chat and claim its turn but not find its character. Both are in PostgreSQL
-now (`characters`, `private_releases`), and nothing in the wizard needed to
-change. It is kept here so that the reasoning is not lost: a turn claimed by
-any process finds the character by id, loads the private release by its lock
-from the store on a cache miss, and writes back under the character's
-revision.
