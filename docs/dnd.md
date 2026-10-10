@@ -666,6 +666,65 @@ stands over the pack's count. A bare counted write
 (`equipment.backpack.dungeoneers-pack` set 1) is still not unpacked: a count
 is set, and contents can only be added.
 
+### Picks a feature owns
+
+Everything a class, a subclass, a background, a race or a feat leaves to the
+player is a question in the one prompt grammar, and which of two places
+declares it depends only on how the character came by the thing that asks.
+
+**A feature a level row grants asks through `subfeatureOptions`** on its own
+row: Fighting Style, Metamagic, Pact Boon, a Totem Warrior's animal, a Storm
+Herald's environment, a Zealot's damage type. The picked options are features
+the character then holds, which is all that stops one being chosen twice --
+there is no "already picked" list beside `state.Features`. Favored Enemy and
+Natural Explorer use their older field names (`enemyTypeOptions`,
+`terrainTypeOptions`) and are otherwise the same thing: each enemy type and
+terrain is a feature row, so the second tier cannot repeat the first.
+
+**A pick that grows with level is one feature per tier**, each with its own
+prompt over the same list: `maneuvers` chooses three at third level and
+`additional-maneuvers` two more at seventh, exactly as `metamagic-1/2/3`
+always have. Battle Master maneuvers, Arcane Shots, runes, Elemental
+Disciplines, Eldritch Invocations (`eldritch-invocations`, then
+`eldritch-invocations-5` … `-18`) and infusions are all written this way. The
+count is the row's own `choose`; the `maneuvers-known` and `invocations-known`
+parameters are what the sheet prints and are not read to pose anything. The
+list is therefore written out once per tier, and
+`TestTieredPicksOfferTheSameList` is what keeps the copies equal and every
+option row in them.
+
+**Anything else asks through a rule's `choices`** in `mechanics.json`: a feat
+(Skilled's three proficiencies, Martial Adept's two maneuvers), a feature that
+was itself picked (Superior Technique's maneuver, a favored enemy's
+language), a background (the criminal's gaming set), a race (the variant
+human's feat) and a subclass feature's proficiency (Student of War's tool).
+A rule's question is filed with what owns the rule -- a background's with the
+background, a race's with the race -- and at the level that brought it: the
+level a feat was taken at, or the level on a feature's own row. A rule choice
+of kind `expertise` doubles a proficiency the character already holds
+(Skill Expert, Blessings of Knowledge) and grants nothing itself. An option
+may be a bundle: Resilient is one pick whose two halves are the score and its
+saving throw.
+
+**An option's prerequisites are read against the character as they stand.**
+`prerequisites` on a feature row -- a level, another feature, a spell -- block
+the option in every prompt that offers it (`Prompt.Blocked`, the same list the
+cleric's kit uses, greyed by the client and refused by the validator). The
+level is the character's level in the option's own `class`, *now*, not the
+level of the prompt offering it. That is deliberate and it is why there is no
+"replace an invocation when you gain a level" step: every earlier answer is
+editable, and a twelfth-level warlock may put Lifedrinker into the pick second
+level opened -- the same policy [the spell prompts](#current-level-spell-selection-and-custom-choices)
+follow. A character with no level in the option's class meets no prerequisite,
+which is Eldritch Adept's rule for a non-warlock. Feat prerequisites are
+**not** enforced: a feat is offered to everybody, see
+[known caveats](known-caveats.md#choices-the-builder-does-not-ask).
+
+A subclass feature that grants a *fixed* proficiency -- a Life cleric's heavy
+armor -- is prose on its row and is not granted; only the part the player
+chooses is modelled. That, and the picks still missing, are listed in the same
+caveat.
+
 ### Items carry their slot
 
 The catalogue says what an item *is* -- armor, weapon, a gear category -- and
@@ -765,6 +824,19 @@ that asks how a class casts -- slots, the multiclass caster level, the
 spellcasting summary, the spell prompts -- asks one function, `castingFor`,
 which answers with the subclass's profile when it has one and the class's
 otherwise. A rogue with any other archetype is exactly the non-caster it was.
+
+A **feat or a trait that teaches spells** is a spell source of its own,
+outside every class, declared as `spellBenefits` owned by it. The picks are
+drawn from a class list the benefit names (`list`: Wood Elf Magic's druid
+cantrip, and a Nature cleric's, which the class loop poses and counts as a
+cleric's), from a class the player chose in a rule choice the benefit points at
+(`listFrom`: Magic Initiate, Ritual Caster, Spell Sniper -- nothing is offered
+until that is answered), or from every list narrowed by `schools` (Fey Touched,
+Shadow Touched) or to `ritual` spells. Its casting ability is the benefit's
+own, or else the list class's. A feat's spell answers are posted as the feat's
+own event, which replays as "has this feat"; a level event would have been the
+natural home and would hand a fighter with Magic Initiate a wizard level. The
+spell a feat names outright -- Misty Step -- is a plain grant rule.
 
 The school limits are **not enforced**: an Arcane Trickster is offered the
 whole wizard list rather than enchantment and illusion plus the free picks at

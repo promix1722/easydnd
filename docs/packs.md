@@ -73,8 +73,13 @@ summary/detail routes expose an optional `icon` data URL; no image routes or
 separate image storage are used.
 
 The SRD pack's version is the `version` field of
-`data/pack/srd-5.1/pack-manifest.json` (now `2.0.0`), bumped by hand with the
-content it describes. Preserve
+`data/pack/srd-5.1/pack-manifest.json` (now `2.1.0`), bumped by hand with the
+content it describes. 2.1.0 changes what 2.0.0 asks -- a Totem Warrior chooses
+an animal where 2.0.0 granted all five -- and **nothing carries a 2.0.0
+character across**: production runs without `data.pack_archive`, so a
+character pinned to 2.0.0 fails closed once 2.1.0 replaces it, and is deleted
+or moved by hand with the rules migration API. That is deliberate; the
+project keeps no backward compatibility for characters or packs yet. Preserve
 `data.pack_archive` when deploying so characters pinned to an earlier release
 continue to use the archived bytes; startup refuses an archived release whose
 bytes have changed under the same version. An explicit
@@ -414,7 +419,19 @@ uses a Wisdom bonus; version 2.0.0 removes its former demonstration Luck score.
 Numeric effects support `add`, `max`, `set` on ability scores, AC, initiative,
 passive Perception, HP maximum and movement speeds. Grants support features,
 traits, feats, spells, proficiencies, languages and equipment. Rules can expose
-choices through the existing prompt/answer grammar. A class's
+choices through the existing prompt/answer grammar. A rule's prompt is filed
+with its owner -- race, subrace and trait owners under the race, a background's
+under the background, everything else with the class levels, at the level a
+feat was taken or a feature's row names. A choice of kind `expertise` doubles
+a proficiency already held instead of granting its refs. A feature offered as
+an option is blocked while the character does not meet that feature's own
+`prerequisites`, read at the character's current level in the feature's
+`class`; see [Picks a feature owns](dnd.md#picks-a-feature-owns).
+
+A feature row has no `invocations` list any more. It named options nothing
+ever asked about; those picks are `subfeatureOptions` on the feature and on
+one feature per later tier, and a pack that still carries the field is
+refused at load. A class's
 `startingEquipmentOptions` carry a `slot` apiece -- `body`, `main-hand`,
 `off-hand`, `backup`, `pack`, `focus` or `instrument` -- which titles the
 builder's card and equips nothing: every kit item is carried until the
@@ -637,6 +654,26 @@ archetype cannot reuse its previous spell choices.
 Expressions can read `equipped:armor` and `equipped:shield` as 0/1 flags for
 catalog body armor and shields currently equipped. Backpack items do not set
 these flags.
+
+A benefit normally draws on its `class`'s list, or on every list with
+`from: "any"`. Four optional fields change that: `list` names another class's
+list (a Nature cleric's druid cantrip -- `class` stays "whose level-up poses
+it"); `listFrom` names a prompt whose answer is the class, for a feat that lets
+the player choose it, and offers nothing until it is answered; `schools` and
+`ritual` narrow the picks. A rule choice may list `class:` refs for exactly
+that purpose: a class is the one ref kind a rule choice can offer that grants
+nothing by being chosen. A benefit owned by a feat is a spell source outside
+every class, and its answers are posted as the feat's event.
+
+```json
+{"id": "magic-initiate-class", "owner": "feat:magic-initiate", "minimumLevel": 1, "choices": [
+  {"prompt": "magic-initiate/class/0", "choose": 1, "kind": "feature", "from": {"kind": "explicit",
+   "options": [{"kind": "ref", "ref": "class:wizard", "count": 1}]}}]}
+{"id": "magic-initiate-cantrips", "owner": "feat:magic-initiate", "listFrom": "magic-initiate/class/0",
+ "level": 1, "count": 2, "spellLevel": 0, "mode": "cantrip", "from": "class"}
+{"id": "fey-touched-spell", "owner": "feat:fey-touched", "level": 1, "count": 1, "spellLevel": 1,
+ "mode": "known", "from": "any", "schools": ["divination", "enchantment"]}
+```
 
 `choiceRequirements` gate conditional equipment offers
 on any of a list of proficiencies. Referenced owners, classes, spells and

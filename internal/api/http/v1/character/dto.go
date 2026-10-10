@@ -119,6 +119,11 @@ type Sheet struct {
 	CustomOptions []CustomOption    `json:"customOptions,omitempty"`
 	ImportSession string            `json:"importSession,omitempty"`
 	CatalogNames  map[string]string `json:"catalogNames,omitempty"`
+	// Origins says what gave the character each trait and feature, both
+	// sides spelled as CatalogNames keys: "features:maneuver-parry" to
+	// "features:maneuvers", "features:second-wind" to "classes:fighter".
+	// Filled where Catalog is.
+	Origins map[string]string `json:"origins,omitempty"`
 	// Catalog is what the sheet's slugs mean, sent with them. Only the two
 	// sheet reads fill it; a write's echo of the sheet does not.
 	Catalog       *catalogapi.Resolved   `json:"catalog,omitempty"`

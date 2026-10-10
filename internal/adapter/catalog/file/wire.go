@@ -269,11 +269,10 @@ type Feature struct {
 	Parent        string         `json:"parent,omitempty"`
 	Prerequisites []Prerequisite `json:"prerequisites,omitempty"`
 
-	ExpertiseOptions   *Choice  `json:"expertiseOptions,omitempty"`
-	SubfeatureOptions  *Choice  `json:"subfeatureOptions,omitempty"`
-	EnemyTypeOptions   *Choice  `json:"enemyTypeOptions,omitempty"`
-	TerrainTypeOptions *Choice  `json:"terrainTypeOptions,omitempty"`
-	Invocations        []string `json:"invocations,omitempty"`
+	ExpertiseOptions   *Choice `json:"expertiseOptions,omitempty"`
+	SubfeatureOptions  *Choice `json:"subfeatureOptions,omitempty"`
+	EnemyTypeOptions   *Choice `json:"enemyTypeOptions,omitempty"`
+	TerrainTypeOptions *Choice `json:"terrainTypeOptions,omitempty"`
 	// Action tags the entry into the character's action list.
 	Action *ActionTag `json:"action,omitempty"`
 }

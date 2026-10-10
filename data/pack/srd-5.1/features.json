@@ -1506,62 +1506,1996 @@
     "slug": "eldritch-invocations",
     "class": "warlock",
     "level": 2,
-    "invocations": [
-      "eldritch-invocation-agonizing-blast",
-      "eldritch-invocation-armor-of-shadows",
-      "eldritch-invocation-beast-speech",
-      "eldritch-invocation-beguiling-influence",
-      "eldritch-invocation-book-of-ancient-secrets",
-      "eldritch-invocation-devils-sight",
-      "eldritch-invocation-eldritch-sight",
-      "eldritch-invocation-eldritch-spear",
-      "eldritch-invocation-eyes-of-the-rune-keeper",
-      "eldritch-invocation-fiendish-vigor",
-      "eldritch-invocation-gaze-of-two-minds",
-      "eldritch-invocation-mask-of-many-faces",
-      "eldritch-invocation-misty-visions",
-      "eldritch-invocation-repelling-blast",
-      "eldritch-invocation-thief-of-five-fates",
-      "eldritch-invocation-voice-of-the-chain-master",
-      "eldritch-invocation-mire-the-mind",
-      "eldritch-invocation-one-with-shadows",
-      "eldritch-invocation-sign-of-ill-omen",
-      "eldritch-invocation-thirsting-blade",
-      "eldritch-invocation-bewitching-whispers",
-      "eldritch-invocation-dreadful-word",
-      "eldritch-invocation-sculptor-of-flesh",
-      "eldritch-invocation-ascendant-step",
-      "eldritch-invocation-minions-of-chaos",
-      "eldritch-invocation-otherworldly-leap",
-      "eldritch-invocation-whispers-of-the-grave",
-      "eldritch-invocation-lifedrinker",
-      "eldritch-invocation-chains-of-carceri",
-      "eldritch-invocation-master-of-myriad-forms",
-      "eldritch-invocation-visions-of-distant-realms",
-      "eldritch-invocation-witch-sight",
-      "eldritch-invocation-aspect-of-the-moon",
-      "eldritch-invocation-bond-of-the-talisman",
-      "eldritch-invocation-cloak-of-flies",
-      "eldritch-invocation-eldritch-mind",
-      "eldritch-invocation-eldritch-smite",
-      "eldritch-invocation-far-scribe",
-      "eldritch-invocation-ghostly-gaze",
-      "eldritch-invocation-gift-of-the-depths",
-      "eldritch-invocation-gift-of-the-ever-living-ones",
-      "eldritch-invocation-gift-of-the-protectors",
-      "eldritch-invocation-grasp-of-hadar",
-      "eldritch-invocation-improved-pact-weapon",
-      "eldritch-invocation-investment-of-the-chain-master",
-      "eldritch-invocation-lance-of-lethargy",
-      "eldritch-invocation-maddening-hex",
-      "eldritch-invocation-protection-of-the-talisman",
-      "eldritch-invocation-rebuke-of-the-talisman",
-      "eldritch-invocation-relentless-hex",
-      "eldritch-invocation-shroud-of-shadow",
-      "eldritch-invocation-tomb-of-levistus",
-      "eldritch-invocation-tricksters-escape",
-      "eldritch-invocation-undying-servitude"
-    ]
+    "subfeatureOptions": {
+      "prompt": "eldritch-invocations/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-agonizing-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-armor-of-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ascendant-step",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-aspect-of-the-moon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beast-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beguiling-influence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bewitching-whispers",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bond-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-book-of-ancient-secrets",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-chains-of-carceri",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-cloak-of-flies",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-devils-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-dreadful-word",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-smite",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-spear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eyes-of-the-rune-keeper",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-far-scribe",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-fiendish-vigor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gaze-of-two-minds",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ghostly-gaze",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-depths",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-ever-living-ones",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-protectors",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-grasp-of-hadar",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-improved-pact-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-investment-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lance-of-lethargy",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lifedrinker",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-maddening-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mask-of-many-faces",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-master-of-myriad-forms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-minions-of-chaos",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mire-the-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-misty-visions",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-one-with-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-otherworldly-leap",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-protection-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-rebuke-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-relentless-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-repelling-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sculptor-of-flesh",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-shroud-of-shadow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sign-of-ill-omen",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thief-of-five-fates",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thirsting-blade",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tomb-of-levistus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tricksters-escape",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-undying-servitude",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-visions-of-distant-realms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-voice-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-whispers-of-the-grave",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-witch-sight",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "eldritch-invocations-5",
+    "class": "warlock",
+    "level": 5,
+    "subfeatureOptions": {
+      "prompt": "eldritch-invocations-5/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-agonizing-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-armor-of-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ascendant-step",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-aspect-of-the-moon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beast-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beguiling-influence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bewitching-whispers",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bond-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-book-of-ancient-secrets",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-chains-of-carceri",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-cloak-of-flies",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-devils-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-dreadful-word",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-smite",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-spear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eyes-of-the-rune-keeper",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-far-scribe",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-fiendish-vigor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gaze-of-two-minds",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ghostly-gaze",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-depths",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-ever-living-ones",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-protectors",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-grasp-of-hadar",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-improved-pact-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-investment-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lance-of-lethargy",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lifedrinker",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-maddening-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mask-of-many-faces",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-master-of-myriad-forms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-minions-of-chaos",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mire-the-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-misty-visions",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-one-with-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-otherworldly-leap",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-protection-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-rebuke-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-relentless-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-repelling-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sculptor-of-flesh",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-shroud-of-shadow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sign-of-ill-omen",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thief-of-five-fates",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thirsting-blade",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tomb-of-levistus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tricksters-escape",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-undying-servitude",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-visions-of-distant-realms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-voice-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-whispers-of-the-grave",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-witch-sight",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "eldritch-invocations-7",
+    "class": "warlock",
+    "level": 7,
+    "subfeatureOptions": {
+      "prompt": "eldritch-invocations-7/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-agonizing-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-armor-of-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ascendant-step",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-aspect-of-the-moon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beast-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beguiling-influence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bewitching-whispers",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bond-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-book-of-ancient-secrets",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-chains-of-carceri",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-cloak-of-flies",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-devils-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-dreadful-word",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-smite",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-spear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eyes-of-the-rune-keeper",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-far-scribe",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-fiendish-vigor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gaze-of-two-minds",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ghostly-gaze",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-depths",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-ever-living-ones",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-protectors",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-grasp-of-hadar",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-improved-pact-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-investment-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lance-of-lethargy",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lifedrinker",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-maddening-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mask-of-many-faces",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-master-of-myriad-forms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-minions-of-chaos",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mire-the-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-misty-visions",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-one-with-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-otherworldly-leap",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-protection-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-rebuke-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-relentless-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-repelling-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sculptor-of-flesh",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-shroud-of-shadow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sign-of-ill-omen",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thief-of-five-fates",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thirsting-blade",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tomb-of-levistus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tricksters-escape",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-undying-servitude",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-visions-of-distant-realms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-voice-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-whispers-of-the-grave",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-witch-sight",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "eldritch-invocations-9",
+    "class": "warlock",
+    "level": 9,
+    "subfeatureOptions": {
+      "prompt": "eldritch-invocations-9/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-agonizing-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-armor-of-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ascendant-step",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-aspect-of-the-moon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beast-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beguiling-influence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bewitching-whispers",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bond-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-book-of-ancient-secrets",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-chains-of-carceri",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-cloak-of-flies",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-devils-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-dreadful-word",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-smite",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-spear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eyes-of-the-rune-keeper",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-far-scribe",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-fiendish-vigor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gaze-of-two-minds",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ghostly-gaze",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-depths",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-ever-living-ones",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-protectors",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-grasp-of-hadar",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-improved-pact-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-investment-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lance-of-lethargy",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lifedrinker",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-maddening-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mask-of-many-faces",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-master-of-myriad-forms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-minions-of-chaos",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mire-the-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-misty-visions",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-one-with-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-otherworldly-leap",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-protection-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-rebuke-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-relentless-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-repelling-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sculptor-of-flesh",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-shroud-of-shadow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sign-of-ill-omen",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thief-of-five-fates",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thirsting-blade",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tomb-of-levistus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tricksters-escape",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-undying-servitude",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-visions-of-distant-realms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-voice-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-whispers-of-the-grave",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-witch-sight",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "eldritch-invocations-12",
+    "class": "warlock",
+    "level": 12,
+    "subfeatureOptions": {
+      "prompt": "eldritch-invocations-12/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-agonizing-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-armor-of-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ascendant-step",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-aspect-of-the-moon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beast-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beguiling-influence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bewitching-whispers",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bond-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-book-of-ancient-secrets",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-chains-of-carceri",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-cloak-of-flies",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-devils-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-dreadful-word",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-smite",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-spear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eyes-of-the-rune-keeper",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-far-scribe",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-fiendish-vigor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gaze-of-two-minds",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ghostly-gaze",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-depths",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-ever-living-ones",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-protectors",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-grasp-of-hadar",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-improved-pact-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-investment-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lance-of-lethargy",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lifedrinker",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-maddening-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mask-of-many-faces",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-master-of-myriad-forms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-minions-of-chaos",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mire-the-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-misty-visions",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-one-with-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-otherworldly-leap",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-protection-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-rebuke-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-relentless-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-repelling-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sculptor-of-flesh",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-shroud-of-shadow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sign-of-ill-omen",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thief-of-five-fates",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thirsting-blade",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tomb-of-levistus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tricksters-escape",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-undying-servitude",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-visions-of-distant-realms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-voice-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-whispers-of-the-grave",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-witch-sight",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "eldritch-invocations-15",
+    "class": "warlock",
+    "level": 15,
+    "subfeatureOptions": {
+      "prompt": "eldritch-invocations-15/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-agonizing-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-armor-of-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ascendant-step",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-aspect-of-the-moon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beast-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beguiling-influence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bewitching-whispers",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bond-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-book-of-ancient-secrets",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-chains-of-carceri",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-cloak-of-flies",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-devils-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-dreadful-word",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-smite",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-spear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eyes-of-the-rune-keeper",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-far-scribe",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-fiendish-vigor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gaze-of-two-minds",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ghostly-gaze",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-depths",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-ever-living-ones",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-protectors",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-grasp-of-hadar",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-improved-pact-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-investment-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lance-of-lethargy",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lifedrinker",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-maddening-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mask-of-many-faces",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-master-of-myriad-forms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-minions-of-chaos",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mire-the-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-misty-visions",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-one-with-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-otherworldly-leap",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-protection-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-rebuke-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-relentless-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-repelling-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sculptor-of-flesh",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-shroud-of-shadow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sign-of-ill-omen",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thief-of-five-fates",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thirsting-blade",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tomb-of-levistus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tricksters-escape",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-undying-servitude",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-visions-of-distant-realms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-voice-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-whispers-of-the-grave",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-witch-sight",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "eldritch-invocations-18",
+    "class": "warlock",
+    "level": 18,
+    "subfeatureOptions": {
+      "prompt": "eldritch-invocations-18/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-agonizing-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-armor-of-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ascendant-step",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-aspect-of-the-moon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beast-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-beguiling-influence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bewitching-whispers",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-bond-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-book-of-ancient-secrets",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-chains-of-carceri",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-cloak-of-flies",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-devils-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-dreadful-word",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-sight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-smite",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eldritch-spear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-eyes-of-the-rune-keeper",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-far-scribe",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-fiendish-vigor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gaze-of-two-minds",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-ghostly-gaze",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-depths",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-ever-living-ones",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-gift-of-the-protectors",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-grasp-of-hadar",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-improved-pact-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-investment-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lance-of-lethargy",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-lifedrinker",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-maddening-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mask-of-many-faces",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-master-of-myriad-forms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-minions-of-chaos",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-mire-the-mind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-misty-visions",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-one-with-shadows",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-otherworldly-leap",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-protection-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-rebuke-of-the-talisman",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-relentless-hex",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-repelling-blast",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sculptor-of-flesh",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-shroud-of-shadow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-sign-of-ill-omen",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thief-of-five-fates",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-thirsting-blade",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tomb-of-levistus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-tricksters-escape",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-undying-servitude",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-visions-of-distant-realms",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-voice-of-the-chain-master",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-whispers-of-the-grave",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eldritch-invocation-witch-sight",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "eldritch-master",
@@ -1636,65 +3570,79 @@
     "enemyTypeOptions": {
       "prompt": "favored-enemy-1-type/enemy-type/0",
       "choose": 1,
-      "kind": "text",
+      "kind": "feature",
       "from": {
         "kind": "explicit",
         "options": [
           {
-            "kind": "text",
-            "key": "aberrations"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-aberrations",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "beasts"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-beasts",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "celestials"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-celestials",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "constructs"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-constructs",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "dragons"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-dragons",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "elementals"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-elementals",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "fey"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-fey",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "fiends"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-fiends",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "giants"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-giants",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "monstrosities"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-monstrosities",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "oozes"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-oozes",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "plants"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-plants",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "undead"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-undead",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "humanoids"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-humanoids",
+            "count": 1
           }
         ]
       }
@@ -1707,65 +3655,79 @@
     "enemyTypeOptions": {
       "prompt": "favored-enemy-2-types/enemy-type/0",
       "choose": 1,
-      "kind": "text",
+      "kind": "feature",
       "from": {
         "kind": "explicit",
         "options": [
           {
-            "kind": "text",
-            "key": "aberrations"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-aberrations",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "beasts"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-beasts",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "celestials"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-celestials",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "constructs"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-constructs",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "dragons"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-dragons",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "elementals"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-elementals",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "fey"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-fey",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "fiends"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-fiends",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "giants"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-giants",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "monstrosities"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-monstrosities",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "oozes"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-oozes",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "plants"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-plants",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "undead"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-undead",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "humanoids"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-humanoids",
+            "count": 1
           }
         ]
       }
@@ -1778,69 +3740,139 @@
     "enemyTypeOptions": {
       "prompt": "favored-enemy-3-enemies/enemy-type/0",
       "choose": 1,
-      "kind": "text",
+      "kind": "feature",
       "from": {
         "kind": "explicit",
         "options": [
           {
-            "kind": "text",
-            "key": "aberrations"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-aberrations",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "beasts"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-beasts",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "celestials"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-celestials",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "constructs"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-constructs",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "dragons"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-dragons",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "elementals"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-elementals",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "fey"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-fey",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "fiends"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-fiends",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "giants"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-giants",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "monstrosities"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-monstrosities",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "oozes"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-oozes",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "plants"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-plants",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "undead"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-undead",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "humanoids"
+            "kind": "ref",
+            "ref": "feature:favored-enemy-humanoids",
+            "count": 1
           }
         ]
       }
     }
+  },
+  {
+    "slug": "favored-enemy-aberrations",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-beasts",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-celestials",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-constructs",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-dragons",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-elementals",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-fey",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-fiends",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-giants",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-monstrosities",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-oozes",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-plants",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-undead",
+    "class": "ranger"
+  },
+  {
+    "slug": "favored-enemy-humanoids",
+    "class": "ranger"
   },
   {
     "slug": "feral-instinct",
@@ -2309,7 +4341,17 @@
           },
           {
             "kind": "ref",
+            "ref": "feature:metamagic-seeking-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
             "ref": "feature:metamagic-subtle-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-transmuted-spell",
             "count": 1
           },
           {
@@ -2364,7 +4406,17 @@
           },
           {
             "kind": "ref",
+            "ref": "feature:metamagic-seeking-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
             "ref": "feature:metamagic-subtle-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-transmuted-spell",
             "count": 1
           },
           {
@@ -2419,7 +4471,17 @@
           },
           {
             "kind": "ref",
+            "ref": "feature:metamagic-seeking-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
             "ref": "feature:metamagic-subtle-spell",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:metamagic-transmuted-spell",
             "count": 1
           },
           {
@@ -2622,37 +4684,44 @@
     "terrainTypeOptions": {
       "prompt": "natural-explorer-1-terrain-type/terrain-type/0",
       "choose": 1,
-      "kind": "text",
+      "kind": "feature",
       "from": {
         "kind": "explicit",
         "options": [
           {
-            "kind": "text",
-            "key": "arctic"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-arctic",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "coast"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-coast",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "desert"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-desert",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "forest"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-forest",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "grassland"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-grassland",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "mountain"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-mountain",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "swamp"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-swamp",
+            "count": 1
           }
         ]
       }
@@ -2665,37 +4734,44 @@
     "terrainTypeOptions": {
       "prompt": "natural-explorer-2-terrain-types/terrain-type/0",
       "choose": 1,
-      "kind": "text",
+      "kind": "feature",
       "from": {
         "kind": "explicit",
         "options": [
           {
-            "kind": "text",
-            "key": "arctic"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-arctic",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "coast"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-coast",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "desert"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-desert",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "forest"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-forest",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "grassland"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-grassland",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "mountain"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-mountain",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "swamp"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-swamp",
+            "count": 1
           }
         ]
       }
@@ -2708,41 +4784,76 @@
     "terrainTypeOptions": {
       "prompt": "natural-explorer-3-terrain-types/terrain-type/0",
       "choose": 1,
-      "kind": "text",
+      "kind": "feature",
       "from": {
         "kind": "explicit",
         "options": [
           {
-            "kind": "text",
-            "key": "arctic"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-arctic",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "coast"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-coast",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "desert"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-desert",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "forest"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-forest",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "grassland"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-grassland",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "mountain"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-mountain",
+            "count": 1
           },
           {
-            "kind": "text",
-            "key": "swamp"
+            "kind": "ref",
+            "ref": "feature:natural-explorer-swamp",
+            "count": 1
           }
         ]
       }
     }
+  },
+  {
+    "slug": "natural-explorer-arctic",
+    "class": "ranger"
+  },
+  {
+    "slug": "natural-explorer-coast",
+    "class": "ranger"
+  },
+  {
+    "slug": "natural-explorer-desert",
+    "class": "ranger"
+  },
+  {
+    "slug": "natural-explorer-forest",
+    "class": "ranger"
+  },
+  {
+    "slug": "natural-explorer-grassland",
+    "class": "ranger"
+  },
+  {
+    "slug": "natural-explorer-mountain",
+    "class": "ranger"
+  },
+  {
+    "slug": "natural-explorer-swamp",
+    "class": "ranger"
   },
   {
     "slug": "natural-recovery",
@@ -2812,12 +4923,17 @@
         "options": [
           {
             "kind": "ref",
+            "ref": "feature:pact-of-the-blade",
+            "count": 1
+          },
+          {
+            "kind": "ref",
             "ref": "feature:pact-of-the-chain",
             "count": 1
           },
           {
             "kind": "ref",
-            "ref": "feature:pact-of-the-blade",
+            "ref": "feature:pact-of-the-talisman",
             "count": 1
           },
           {
@@ -4051,19 +6167,234 @@
     "slug": "additional-arcane-shot-option",
     "class": "fighter",
     "subclass": "arcane-archer",
-    "level": 7
+    "level": 7,
+    "subfeatureOptions": {
+      "prompt": "additional-arcane-shot-option/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-banishing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-beguiling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-bursting-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-enfeebling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-grasping-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-piercing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-seeking-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-shadow-arrow",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "additional-maneuvers",
     "class": "fighter",
     "subclass": "battle-master",
-    "level": 7
+    "level": 7,
+    "subfeatureOptions": {
+      "prompt": "additional-maneuvers/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-ambush",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-bait-and-switch",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-brace",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-commanders-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-commanding-presence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-disarming-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-distracting-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-evasive-footwork",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-feinting-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-goading-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-grappling-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-lunging-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-maneuvering-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-menacing-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-parry",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-precision-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-pushing-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-quick-toss",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-rally",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-riposte",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-sweeping-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-tactical-assessment",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-trip-attack",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "additional-rune-known",
     "class": "fighter",
     "subclass": "rune-knight",
-    "level": 7
+    "level": 7,
+    "subfeatureOptions": {
+      "prompt": "additional-rune-known/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:rune-cloud-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-fire-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-frost-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-hill-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-stone-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-storm-rune",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "additional-superiority-die",
@@ -4132,13 +6463,113 @@
     "slug": "arcane-archer-additional-arcane-shot-option",
     "class": "fighter",
     "subclass": "arcane-archer",
-    "level": 10
+    "level": 10,
+    "subfeatureOptions": {
+      "prompt": "arcane-archer-additional-arcane-shot-option/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-banishing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-beguiling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-bursting-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-enfeebling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-grasping-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-piercing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-seeking-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-shadow-arrow",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "arcane-archer-additional-arcane-shot-option-2",
     "class": "fighter",
     "subclass": "arcane-archer",
-    "level": 18
+    "level": 18,
+    "subfeatureOptions": {
+      "prompt": "arcane-archer-additional-arcane-shot-option-2/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-banishing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-beguiling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-bursting-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-enfeebling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-grasping-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-piercing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-seeking-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-shadow-arrow",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "arcane-archer-lore",
@@ -4201,7 +6632,57 @@
     "slug": "arcane-shot-options",
     "class": "fighter",
     "subclass": "arcane-archer",
-    "level": 3
+    "level": 3,
+    "subfeatureOptions": {
+      "prompt": "arcane-shot-options/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-banishing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-beguiling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-bursting-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-enfeebling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-grasping-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-piercing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-seeking-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-shadow-arrow",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "arcane-shot-piercing-arrow"
@@ -4316,7 +6797,42 @@
     "slug": "aspect-of-the-beast",
     "class": "barbarian",
     "subclass": "totem-warrior",
-    "level": 6
+    "level": 6,
+    "subfeatureOptions": {
+      "prompt": "aspect-of-the-beast/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:totem-warrior-bear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:totem-warrior-eagle",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:totem-warrior-elk",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:totem-warrior-tiger",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:totem-warrior-wolf",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "assassin-bonus-proficiencies",
@@ -4466,7 +6982,132 @@
     "slug": "battle-master-additional-maneuvers",
     "class": "fighter",
     "subclass": "battle-master",
-    "level": 10
+    "level": 10,
+    "subfeatureOptions": {
+      "prompt": "battle-master-additional-maneuvers/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-ambush",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-bait-and-switch",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-brace",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-commanders-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-commanding-presence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-disarming-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-distracting-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-evasive-footwork",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-feinting-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-goading-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-grappling-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-lunging-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-maneuvering-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-menacing-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-parry",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-precision-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-pushing-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-quick-toss",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-rally",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-riposte",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-sweeping-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-tactical-assessment",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-trip-attack",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "battle-master-additional-superiority-die",
@@ -5036,7 +7677,41 @@
     "slug": "divine-fury",
     "class": "barbarian",
     "subclass": "zealot",
-    "level": 3
+    "level": 3,
+    "subfeatureOptions": {
+      "prompt": "divine-fury/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:divine-fury-necrotic",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:divine-fury-radiant",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "divine-fury-necrotic",
+    "class": "barbarian",
+    "subclass": "zealot",
+    "level": 3,
+    "parent": "divine-fury"
+  },
+  {
+    "slug": "divine-fury-radiant",
+    "class": "barbarian",
+    "subclass": "zealot",
+    "level": 3,
+    "parent": "divine-fury"
   },
   {
     "slug": "divine-magic",
@@ -5124,6 +7799,7 @@
   },
   {
     "slug": "eldritch-invocation-aspect-of-the-moon",
+    "class": "warlock",
     "prerequisites": [
       {
         "kind": "entry",
@@ -5133,6 +7809,7 @@
   },
   {
     "slug": "eldritch-invocation-bond-of-the-talisman",
+    "class": "warlock",
     "level": 12,
     "prerequisites": [
       {
@@ -5147,6 +7824,7 @@
   },
   {
     "slug": "eldritch-invocation-cloak-of-flies",
+    "class": "warlock",
     "level": 5,
     "prerequisites": [
       {
@@ -5156,10 +7834,12 @@
     ]
   },
   {
-    "slug": "eldritch-invocation-eldritch-mind"
+    "slug": "eldritch-invocation-eldritch-mind",
+    "class": "warlock"
   },
   {
     "slug": "eldritch-invocation-eldritch-smite",
+    "class": "warlock",
     "level": 5,
     "prerequisites": [
       {
@@ -5174,6 +7854,7 @@
   },
   {
     "slug": "eldritch-invocation-far-scribe",
+    "class": "warlock",
     "level": 5,
     "prerequisites": [
       {
@@ -5188,6 +7869,7 @@
   },
   {
     "slug": "eldritch-invocation-ghostly-gaze",
+    "class": "warlock",
     "level": 7,
     "prerequisites": [
       {
@@ -5198,6 +7880,7 @@
   },
   {
     "slug": "eldritch-invocation-gift-of-the-depths",
+    "class": "warlock",
     "level": 5,
     "prerequisites": [
       {
@@ -5208,6 +7891,7 @@
   },
   {
     "slug": "eldritch-invocation-gift-of-the-ever-living-ones",
+    "class": "warlock",
     "prerequisites": [
       {
         "kind": "entry",
@@ -5217,6 +7901,7 @@
   },
   {
     "slug": "eldritch-invocation-gift-of-the-protectors",
+    "class": "warlock",
     "level": 9,
     "prerequisites": [
       {
@@ -5231,6 +7916,7 @@
   },
   {
     "slug": "eldritch-invocation-grasp-of-hadar",
+    "class": "warlock",
     "prerequisites": [
       {
         "kind": "entry",
@@ -5240,6 +7926,7 @@
   },
   {
     "slug": "eldritch-invocation-improved-pact-weapon",
+    "class": "warlock",
     "prerequisites": [
       {
         "kind": "entry",
@@ -5249,6 +7936,7 @@
   },
   {
     "slug": "eldritch-invocation-investment-of-the-chain-master",
+    "class": "warlock",
     "prerequisites": [
       {
         "kind": "entry",
@@ -5258,6 +7946,7 @@
   },
   {
     "slug": "eldritch-invocation-lance-of-lethargy",
+    "class": "warlock",
     "prerequisites": [
       {
         "kind": "entry",
@@ -5267,6 +7956,7 @@
   },
   {
     "slug": "eldritch-invocation-maddening-hex",
+    "class": "warlock",
     "level": 5,
     "prerequisites": [
       {
@@ -5281,6 +7971,7 @@
   },
   {
     "slug": "eldritch-invocation-protection-of-the-talisman",
+    "class": "warlock",
     "level": 7,
     "prerequisites": [
       {
@@ -5295,6 +7986,7 @@
   },
   {
     "slug": "eldritch-invocation-rebuke-of-the-talisman",
+    "class": "warlock",
     "prerequisites": [
       {
         "kind": "entry",
@@ -5304,6 +7996,7 @@
   },
   {
     "slug": "eldritch-invocation-relentless-hex",
+    "class": "warlock",
     "level": 7,
     "prerequisites": [
       {
@@ -5318,6 +8011,7 @@
   },
   {
     "slug": "eldritch-invocation-shroud-of-shadow",
+    "class": "warlock",
     "level": 15,
     "prerequisites": [
       {
@@ -5328,6 +8022,7 @@
   },
   {
     "slug": "eldritch-invocation-tomb-of-levistus",
+    "class": "warlock",
     "level": 5,
     "prerequisites": [
       {
@@ -5338,6 +8033,7 @@
   },
   {
     "slug": "eldritch-invocation-tricksters-escape",
+    "class": "warlock",
     "level": 7,
     "prerequisites": [
       {
@@ -5348,6 +8044,7 @@
   },
   {
     "slug": "eldritch-invocation-undying-servitude",
+    "class": "warlock",
     "level": 5,
     "prerequisites": [
       {
@@ -5382,6 +8079,8 @@
   },
   {
     "slug": "elemental-discipline-breath-of-winter",
+    "class": "monk",
+    "subclass": "four-elements",
     "level": 17,
     "prerequisites": [
       {
@@ -5392,6 +8091,8 @@
   },
   {
     "slug": "elemental-discipline-clench-of-the-north-wind",
+    "class": "monk",
+    "subclass": "four-elements",
     "level": 6,
     "prerequisites": [
       {
@@ -5402,12 +8103,16 @@
   },
   {
     "slug": "elemental-discipline-elemental-attunement",
+    "class": "monk",
+    "subclass": "four-elements",
     "action": {
       "kind": "action"
     }
   },
   {
     "slug": "elemental-discipline-eternal-mountain-defense",
+    "class": "monk",
+    "subclass": "four-elements",
     "level": 17,
     "prerequisites": [
       {
@@ -5417,13 +8122,19 @@
     ]
   },
   {
-    "slug": "elemental-discipline-fangs-of-the-fire-snake"
+    "slug": "elemental-discipline-fangs-of-the-fire-snake",
+    "class": "monk",
+    "subclass": "four-elements"
   },
   {
-    "slug": "elemental-discipline-fist-of-four-thunders"
+    "slug": "elemental-discipline-fist-of-four-thunders",
+    "class": "monk",
+    "subclass": "four-elements"
   },
   {
     "slug": "elemental-discipline-flames-of-the-phoenix",
+    "class": "monk",
+    "subclass": "four-elements",
     "level": 11,
     "prerequisites": [
       {
@@ -5434,6 +8145,8 @@
   },
   {
     "slug": "elemental-discipline-gong-of-the-summit",
+    "class": "monk",
+    "subclass": "four-elements",
     "level": 6,
     "prerequisites": [
       {
@@ -5444,6 +8157,8 @@
   },
   {
     "slug": "elemental-discipline-mist-stance",
+    "class": "monk",
+    "subclass": "four-elements",
     "level": 11,
     "prerequisites": [
       {
@@ -5454,6 +8169,8 @@
   },
   {
     "slug": "elemental-discipline-ride-the-wind",
+    "class": "monk",
+    "subclass": "four-elements",
     "level": 11,
     "prerequisites": [
       {
@@ -5464,6 +8181,8 @@
   },
   {
     "slug": "elemental-discipline-river-of-hungry-flame",
+    "class": "monk",
+    "subclass": "four-elements",
     "level": 17,
     "prerequisites": [
       {
@@ -5473,20 +8192,28 @@
     ]
   },
   {
-    "slug": "elemental-discipline-rush-of-the-gale-spirits"
+    "slug": "elemental-discipline-rush-of-the-gale-spirits",
+    "class": "monk",
+    "subclass": "four-elements"
   },
   {
     "slug": "elemental-discipline-shape-the-flowing-river",
+    "class": "monk",
+    "subclass": "four-elements",
     "action": {
       "kind": "action",
       "uses": "ki-points"
     }
   },
   {
-    "slug": "elemental-discipline-sweeping-cinder-strike"
+    "slug": "elemental-discipline-sweeping-cinder-strike",
+    "class": "monk",
+    "subclass": "four-elements"
   },
   {
     "slug": "elemental-discipline-unbroken-air",
+    "class": "monk",
+    "subclass": "four-elements",
     "action": {
       "kind": "action",
       "uses": "ki-points"
@@ -5494,6 +8221,8 @@
   },
   {
     "slug": "elemental-discipline-water-whip",
+    "class": "monk",
+    "subclass": "four-elements",
     "action": {
       "kind": "action",
       "uses": "ki-points"
@@ -5501,6 +8230,8 @@
   },
   {
     "slug": "elemental-discipline-wave-of-rolling-earth",
+    "class": "monk",
+    "subclass": "four-elements",
     "level": 17,
     "prerequisites": [
       {
@@ -5513,7 +8244,97 @@
     "slug": "elemental-disciplines",
     "class": "monk",
     "subclass": "four-elements",
-    "level": 3
+    "level": 3,
+    "subfeatureOptions": {
+      "prompt": "elemental-disciplines/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-breath-of-winter",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-clench-of-the-north-wind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-eternal-mountain-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-fangs-of-the-fire-snake",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-fist-of-four-thunders",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-flames-of-the-phoenix",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-gong-of-the-summit",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-mist-stance",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-ride-the-wind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-river-of-hungry-flame",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-rush-of-the-gale-spirits",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-shape-the-flowing-river",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-sweeping-cinder-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-unbroken-air",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-water-whip",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-wave-of-rolling-earth",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "elemental-gift",
@@ -5648,7 +8469,97 @@
     "slug": "extra-elemental-discipline",
     "class": "monk",
     "subclass": "four-elements",
-    "level": 6
+    "level": 6,
+    "subfeatureOptions": {
+      "prompt": "extra-elemental-discipline/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-breath-of-winter",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-clench-of-the-north-wind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-eternal-mountain-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-fangs-of-the-fire-snake",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-fist-of-four-thunders",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-flames-of-the-phoenix",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-gong-of-the-summit",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-mist-stance",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-ride-the-wind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-river-of-hungry-flame",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-rush-of-the-gale-spirits",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-shape-the-flowing-river",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-sweeping-cinder-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-unbroken-air",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-water-whip",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-wave-of-rolling-earth",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "eye-for-detail",
@@ -5741,19 +8652,234 @@
     "slug": "fighter-additional-arcane-shot-option",
     "class": "fighter",
     "subclass": "arcane-archer",
-    "level": 15
+    "level": 15,
+    "subfeatureOptions": {
+      "prompt": "fighter-additional-arcane-shot-option/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-banishing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-beguiling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-bursting-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-enfeebling-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-grasping-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-piercing-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-seeking-arrow",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:arcane-shot-shadow-arrow",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "fighter-additional-maneuvers",
     "class": "fighter",
     "subclass": "battle-master",
-    "level": 15
+    "level": 15,
+    "subfeatureOptions": {
+      "prompt": "fighter-additional-maneuvers/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-ambush",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-bait-and-switch",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-brace",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-commanders-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-commanding-presence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-disarming-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-distracting-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-evasive-footwork",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-feinting-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-goading-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-grappling-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-lunging-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-maneuvering-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-menacing-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-parry",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-precision-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-pushing-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-quick-toss",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-rally",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-riposte",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-sweeping-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-tactical-assessment",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-trip-attack",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "fighter-additional-rune-known",
     "class": "fighter",
     "subclass": "rune-knight",
-    "level": 15
+    "level": 15,
+    "subfeatureOptions": {
+      "prompt": "fighter-additional-rune-known/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:rune-cloud-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-fire-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-frost-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-hill-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-stone-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-storm-rune",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "fighting-spirit",
@@ -5871,7 +8997,97 @@
     "slug": "four-elements-extra-elemental-discipline",
     "class": "monk",
     "subclass": "four-elements",
-    "level": 11
+    "level": 11,
+    "subfeatureOptions": {
+      "prompt": "four-elements-extra-elemental-discipline/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-breath-of-winter",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-clench-of-the-north-wind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-eternal-mountain-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-fangs-of-the-fire-snake",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-fist-of-four-thunders",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-flames-of-the-phoenix",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-gong-of-the-summit",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-mist-stance",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-ride-the-wind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-river-of-hungry-flame",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-rush-of-the-gale-spirits",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-shape-the-flowing-river",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-sweeping-cinder-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-unbroken-air",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-water-whip",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-wave-of-rolling-earth",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "full-of-stars",
@@ -5901,7 +9117,65 @@
     "slug": "genies-vessel",
     "class": "warlock",
     "subclass": "genie",
-    "level": 1
+    "level": 1,
+    "subfeatureOptions": {
+      "prompt": "genies-vessel/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:genies-vessel-dao",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:genies-vessel-djinni",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:genies-vessel-efreeti",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:genies-vessel-marid",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "genies-vessel-dao",
+    "class": "warlock",
+    "subclass": "genie",
+    "level": 1,
+    "parent": "genies-vessel"
+  },
+  {
+    "slug": "genies-vessel-djinni",
+    "class": "warlock",
+    "subclass": "genie",
+    "level": 1,
+    "parent": "genies-vessel"
+  },
+  {
+    "slug": "genies-vessel-efreeti",
+    "class": "warlock",
+    "subclass": "genie",
+    "level": 1,
+    "parent": "genies-vessel"
+  },
+  {
+    "slug": "genies-vessel-marid",
+    "class": "warlock",
+    "subclass": "genie",
+    "level": 1,
+    "parent": "genies-vessel"
   },
   {
     "slug": "genies-wrath",
@@ -6249,6 +9523,7 @@
   },
   {
     "slug": "infusion-arcane-propulsion-armor",
+    "class": "artificer",
     "level": 14,
     "prerequisites": [
       {
@@ -6258,10 +9533,12 @@
     ]
   },
   {
-    "slug": "infusion-armor-of-magical-strength"
+    "slug": "infusion-armor-of-magical-strength",
+    "class": "artificer"
   },
   {
     "slug": "infusion-boots-of-the-winding-path",
+    "class": "artificer",
     "level": 6,
     "prerequisites": [
       {
@@ -6271,16 +9548,20 @@
     ]
   },
   {
-    "slug": "infusion-enhanced-arcane-focus"
+    "slug": "infusion-enhanced-arcane-focus",
+    "class": "artificer"
   },
   {
-    "slug": "infusion-enhanced-defense"
+    "slug": "infusion-enhanced-defense",
+    "class": "artificer"
   },
   {
-    "slug": "infusion-enhanced-weapon"
+    "slug": "infusion-enhanced-weapon",
+    "class": "artificer"
   },
   {
     "slug": "infusion-helm-of-awareness",
+    "class": "artificer",
     "level": 10,
     "prerequisites": [
       {
@@ -6290,13 +9571,16 @@
     ]
   },
   {
-    "slug": "infusion-homunculus-servant"
+    "slug": "infusion-homunculus-servant",
+    "class": "artificer"
   },
   {
-    "slug": "infusion-mind-sharpener"
+    "slug": "infusion-mind-sharpener",
+    "class": "artificer"
   },
   {
     "slug": "infusion-radiant-weapon",
+    "class": "artificer",
     "level": 6,
     "prerequisites": [
       {
@@ -6306,13 +9590,16 @@
     ]
   },
   {
-    "slug": "infusion-repeating-shot"
+    "slug": "infusion-repeating-shot",
+    "class": "artificer"
   },
   {
-    "slug": "infusion-replicate-magic-item"
+    "slug": "infusion-replicate-magic-item",
+    "class": "artificer"
   },
   {
     "slug": "infusion-repulsion-shield",
+    "class": "artificer",
     "level": 6,
     "prerequisites": [
       {
@@ -6323,6 +9610,7 @@
   },
   {
     "slug": "infusion-resistant-armor",
+    "class": "artificer",
     "level": 6,
     "prerequisites": [
       {
@@ -6332,10 +9620,12 @@
     ]
   },
   {
-    "slug": "infusion-returning-weapon"
+    "slug": "infusion-returning-weapon",
+    "class": "artificer"
   },
   {
     "slug": "infusion-spell-refueling-ring",
+    "class": "artificer",
     "level": 6,
     "prerequisites": [
       {
@@ -6347,7 +9637,477 @@
   {
     "slug": "infusions-known",
     "class": "artificer",
-    "level": 2
+    "level": 2,
+    "subfeatureOptions": {
+      "prompt": "infusions-known/subfeature/0",
+      "choose": 4,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-arcane-propulsion-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-armor-of-magical-strength",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-boots-of-the-winding-path",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-arcane-focus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-helm-of-awareness",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-homunculus-servant",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-mind-sharpener",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-radiant-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repeating-shot",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-replicate-magic-item",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repulsion-shield",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-resistant-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-returning-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-spell-refueling-ring",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "infusions-known-6",
+    "class": "artificer",
+    "level": 6,
+    "subfeatureOptions": {
+      "prompt": "infusions-known-6/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-arcane-propulsion-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-armor-of-magical-strength",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-boots-of-the-winding-path",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-arcane-focus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-helm-of-awareness",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-homunculus-servant",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-mind-sharpener",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-radiant-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repeating-shot",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-replicate-magic-item",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repulsion-shield",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-resistant-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-returning-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-spell-refueling-ring",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "infusions-known-10",
+    "class": "artificer",
+    "level": 10,
+    "subfeatureOptions": {
+      "prompt": "infusions-known-10/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-arcane-propulsion-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-armor-of-magical-strength",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-boots-of-the-winding-path",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-arcane-focus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-helm-of-awareness",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-homunculus-servant",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-mind-sharpener",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-radiant-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repeating-shot",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-replicate-magic-item",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repulsion-shield",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-resistant-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-returning-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-spell-refueling-ring",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "infusions-known-14",
+    "class": "artificer",
+    "level": 14,
+    "subfeatureOptions": {
+      "prompt": "infusions-known-14/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-arcane-propulsion-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-armor-of-magical-strength",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-boots-of-the-winding-path",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-arcane-focus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-helm-of-awareness",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-homunculus-servant",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-mind-sharpener",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-radiant-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repeating-shot",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-replicate-magic-item",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repulsion-shield",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-resistant-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-returning-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-spell-refueling-ring",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "infusions-known-18",
+    "class": "artificer",
+    "level": 18,
+    "subfeatureOptions": {
+      "prompt": "infusions-known-18/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-arcane-propulsion-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-armor-of-magical-strength",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-boots-of-the-winding-path",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-arcane-focus",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-enhanced-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-helm-of-awareness",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-homunculus-servant",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-mind-sharpener",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-radiant-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repeating-shot",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-replicate-magic-item",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-repulsion-shield",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-resistant-armor",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-returning-weapon",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:infusion-spell-refueling-ring",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "insightful-fighting",
@@ -6669,31 +10429,131 @@
     "class": "fighter",
     "subclass": "battle-master",
     "level": 3,
-    "invocations": [
-      "maneuver-ambush",
-      "maneuver-bait-and-switch",
-      "maneuver-brace",
-      "maneuver-commanders-strike",
-      "maneuver-commanding-presence",
-      "maneuver-disarming-attack",
-      "maneuver-distracting-strike",
-      "maneuver-evasive-footwork",
-      "maneuver-feinting-attack",
-      "maneuver-goading-attack",
-      "maneuver-grappling-strike",
-      "maneuver-lunging-attack",
-      "maneuver-maneuvering-attack",
-      "maneuver-menacing-attack",
-      "maneuver-parry",
-      "maneuver-precision-attack",
-      "maneuver-pushing-attack",
-      "maneuver-quick-toss",
-      "maneuver-rally",
-      "maneuver-riposte",
-      "maneuver-sweeping-attack",
-      "maneuver-tactical-assessment",
-      "maneuver-trip-attack"
-    ]
+    "subfeatureOptions": {
+      "prompt": "maneuvers/subfeature/0",
+      "choose": 3,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-ambush",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-bait-and-switch",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-brace",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-commanders-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-commanding-presence",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-disarming-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-distracting-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-evasive-footwork",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-feinting-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-goading-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-grappling-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-lunging-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-maneuvering-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-menacing-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-parry",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-precision-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-pushing-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-quick-toss",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-rally",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-riposte",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-sweeping-attack",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-tactical-assessment",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:maneuver-trip-attack",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "manifest-mind",
@@ -6843,7 +10703,97 @@
     "slug": "monk-extra-elemental-discipline",
     "class": "monk",
     "subclass": "four-elements",
-    "level": 17
+    "level": 17,
+    "subfeatureOptions": {
+      "prompt": "monk-extra-elemental-discipline/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-breath-of-winter",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-clench-of-the-north-wind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-eternal-mountain-defense",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-fangs-of-the-fire-snake",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-fist-of-four-thunders",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-flames-of-the-phoenix",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-gong-of-the-summit",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-mist-stance",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-ride-the-wind",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-river-of-hungry-flame",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-rush-of-the-gale-spirits",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-shape-the-flowing-river",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-sweeping-cinder-strike",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-unbroken-air",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-water-whip",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elemental-discipline-wave-of-rolling-earth",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "monster-slayer-magic",
@@ -7269,19 +11219,67 @@
     "slug": "rune-carver",
     "class": "fighter",
     "subclass": "rune-knight",
-    "level": 3
+    "level": 3,
+    "subfeatureOptions": {
+      "prompt": "rune-carver/subfeature/0",
+      "choose": 2,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:rune-cloud-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-fire-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-frost-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-hill-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-stone-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-storm-rune",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
-    "slug": "rune-cloud-rune"
+    "slug": "rune-cloud-rune",
+    "class": "fighter",
+    "subclass": "rune-knight"
   },
   {
-    "slug": "rune-fire-rune"
+    "slug": "rune-fire-rune",
+    "class": "fighter",
+    "subclass": "rune-knight"
   },
   {
-    "slug": "rune-frost-rune"
+    "slug": "rune-frost-rune",
+    "class": "fighter",
+    "subclass": "rune-knight"
   },
   {
     "slug": "rune-hill-rune",
+    "class": "fighter",
+    "subclass": "rune-knight",
     "level": 7,
     "prerequisites": [
       {
@@ -7294,7 +11292,47 @@
     "slug": "rune-knight-additional-rune-known",
     "class": "fighter",
     "subclass": "rune-knight",
-    "level": 10
+    "level": 10,
+    "subfeatureOptions": {
+      "prompt": "rune-knight-additional-rune-known/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:rune-cloud-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-fire-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-frost-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-hill-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-stone-rune",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:rune-storm-rune",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "rune-knight-bonus-proficiencies",
@@ -7303,10 +11341,14 @@
     "level": 3
   },
   {
-    "slug": "rune-stone-rune"
+    "slug": "rune-stone-rune",
+    "class": "fighter",
+    "subclass": "rune-knight"
   },
   {
     "slug": "rune-storm-rune",
+    "class": "fighter",
+    "subclass": "rune-knight",
     "level": 7,
     "prerequisites": [
       {
@@ -7659,7 +11701,32 @@
     "slug": "storm-aura",
     "class": "barbarian",
     "subclass": "storm-herald",
-    "level": 3
+    "level": 3,
+    "subfeatureOptions": {
+      "prompt": "storm-aura/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:desert",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:sea",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:tundra",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "storm-guide",
@@ -7978,7 +12045,42 @@
     "slug": "totem-spirit",
     "class": "barbarian",
     "subclass": "totem-warrior",
-    "level": 3
+    "level": 3,
+    "subfeatureOptions": {
+      "prompt": "totem-spirit/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:bear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:eagle",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:elk",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:tiger",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:wolf",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "totem-warrior-bear",
@@ -8014,7 +12116,42 @@
     "slug": "totemic-attunement",
     "class": "barbarian",
     "subclass": "totem-warrior",
-    "level": 14
+    "level": 14,
+    "subfeatureOptions": {
+      "prompt": "totemic-attunement/subfeature/0",
+      "choose": 1,
+      "kind": "feature",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "feature:barbarian-bear",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:barbarian-eagle",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:barbarian-elk",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:barbarian-tiger",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "feature:barbarian-wolf",
+            "count": 1
+          }
+        ]
+      }
+    }
   },
   {
     "slug": "training-in-war-and-song-bladesinging",
@@ -8440,5 +12577,20 @@
     "class": "barbarian",
     "subclass": "zealot",
     "level": 10
+  },
+  {
+    "slug": "elemental-adept-acid"
+  },
+  {
+    "slug": "elemental-adept-cold"
+  },
+  {
+    "slug": "elemental-adept-fire"
+  },
+  {
+    "slug": "elemental-adept-lightning"
+  },
+  {
+    "slug": "elemental-adept-thunder"
   }
 ]

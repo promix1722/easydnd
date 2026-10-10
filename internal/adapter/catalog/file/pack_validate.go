@@ -291,7 +291,7 @@ func normalizeRef(packID, value string) string {
 	return value
 }
 
-var slugFields = map[string]bool{"alignments": true, "list": true, "slug": true, "class": true, "classes": true, "subclass": true, "subclasses": true, "race": true, "races": true, "subrace": true, "subraces": true, "traits": true, "features": true, "feature": true, "parent": true, "spell": true, "spells": true, "skills": true, "languages": true, "ability": true, "savingThrows": true, "abilityPriority": true, "spellcastingAbility": true, "proficiencies": true, "startingProficiencies": true, "multiclassProficiencies": true, "invocations": true, "variants": true, "item": true, "school": true, "damageType": true, "twoHandedDamageType": true, "damageResistance": true, "properties": true, "uses": true}
+var slugFields = map[string]bool{"alignments": true, "list": true, "slug": true, "class": true, "classes": true, "subclass": true, "subclasses": true, "race": true, "races": true, "subrace": true, "subraces": true, "traits": true, "features": true, "feature": true, "parent": true, "spell": true, "spells": true, "skills": true, "languages": true, "ability": true, "savingThrows": true, "abilityPriority": true, "spellcastingAbility": true, "proficiencies": true, "startingProficiencies": true, "multiclassProficiencies": true, "variants": true, "item": true, "school": true, "schools": true, "damageType": true, "twoHandedDamageType": true, "damageResistance": true, "properties": true, "uses": true}
 
 func normalizeValue(packID, key string, v any) any {
 	switch x := v.(type) {
@@ -413,7 +413,7 @@ func validateReferences(docs []*PackDocument, entities map[string][]any, m PackM
 		}
 		return check(r.Kind.String(), r.Slug.String())
 	}
-	fields := map[string]string{"alignments": "alignment", "class": "class", "classes": "class", "subclass": "subclass", "subclasses": "subclass", "race": "race", "races": "race", "subrace": "subrace", "subraces": "subrace", "traits": "trait", "features": "feature", "feature": "feature", "spell": "spell", "spells": "spell", "skills": "skill", "languages": "language", "ability": "ability", "savingThrows": "ability", "abilityPriority": "ability", "spellcastingAbility": "ability", "proficiencies": "proficiency", "startingProficiencies": "proficiency", "multiclassProficiencies": "proficiency", "invocations": "feature", "variants": "magic-item", "item": "item", "school": "magic-school", "damageType": "damage-type", "twoHandedDamageType": "damage-type", "damageResistance": "damage-type", "properties": "weapon-property", "uses": "resource"}
+	fields := map[string]string{"alignments": "alignment", "class": "class", "classes": "class", "subclass": "subclass", "subclasses": "subclass", "race": "race", "races": "race", "subrace": "subrace", "subraces": "subrace", "traits": "trait", "features": "feature", "feature": "feature", "spell": "spell", "spells": "spell", "skills": "skill", "languages": "language", "ability": "ability", "savingThrows": "ability", "abilityPriority": "ability", "spellcastingAbility": "ability", "proficiencies": "proficiency", "startingProficiencies": "proficiency", "multiclassProficiencies": "proficiency", "variants": "magic-item", "item": "item", "school": "magic-school", "schools": "magic-school", "damageType": "damage-type", "twoHandedDamageType": "damage-type", "damageResistance": "damage-type", "properties": "weapon-property", "uses": "resource"}
 	var walk func(string, any) error
 	walk = func(key string, value any) error {
 		switch x := value.(type) {
@@ -534,8 +534,15 @@ func validateReferences(docs []*PackDocument, entities map[string][]any, m PackM
 		if err := ref(string(benefit.Owner)); err != nil {
 			return err
 		}
-		if benefit.Class != "" {
-			if err := check("class", benefit.Class); err != nil {
+		for _, class := range []string{benefit.Class, benefit.List} {
+			if class != "" {
+				if err := check("class", class); err != nil {
+					return err
+				}
+			}
+		}
+		for _, school := range benefit.Schools {
+			if err := check("magic-school", school); err != nil {
 				return err
 			}
 		}

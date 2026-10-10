@@ -123,7 +123,10 @@ export function SheetBody({
   const [opened, setOpened] = useState<string | null>(null)
   const rows = (collection: 'traits' | 'features' | 'languages', slugs: readonly string[]): ListRow[] => {
     const prose = bySlug(catalog?.[collection] ?? [])
-    return slugs.map((slug) => ({ key: `${collection}:${slug}`, label: named(collection, slug), desc: prose.get(slug)?.desc }))
+    return slugs.map((slug) => {
+      const origin = s.origins?.[`${collection}:${slug}`]
+      return { key: `${collection}:${slug}`, label: named(collection, slug), desc: prose.get(slug)?.desc, origin: origin && names.get(origin) }
+    })
   }
   const features = rows('features', s.features ?? [])
   const featureLines: ListRow[] = [
@@ -367,6 +370,8 @@ interface ListRow {
   label: string
   /** The entry's prose, where the catalogue has any. */
   desc?: string[] | undefined
+  /** What gave the character this entry: its class, the feature it was picked under. */
+  origin?: string | undefined
 }
 
 /**
@@ -417,7 +422,12 @@ function ItemList({
           onOpen={onOpen}
           items={items.map((item) => ({
             key: item.key,
-            header: <Text size="sm">{item.label}</Text>,
+            header: (
+              <Text size="sm">
+                {item.label}
+                {item.origin && <Text span size="xs" c="dimmed"> · {item.origin}</Text>}
+              </Text>
+            ),
             body: item.desc?.length ? <Markdown size="sm">{joinProse(item.desc)}</Markdown> : undefined,
           }))}
         />

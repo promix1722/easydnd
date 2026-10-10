@@ -12,6 +12,7 @@ import (
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
 // Sheet handles GET /v1/characters/{id}/sheet.
@@ -72,6 +73,20 @@ func ResolvedSheetOf(s domain.State, cat *catalog.Catalog) Sheet {
 		for _, slug := range slugs {
 			name(collection, slug)
 		}
+	}
+
+	for entry, origin := range domain.Origins(s, cat) {
+		held := entry.Kind == rules.RefFeature && slices.Contains(s.Features, entry.Slug) ||
+			entry.Kind == rules.RefTrait && slices.Contains(s.Traits, entry.Slug)
+		collection := nameKinds[origin.Kind.String()]
+		if !held || collection == "" {
+			continue
+		}
+		if out.Origins == nil {
+			out.Origins = map[string]string{}
+		}
+		name(collection, origin.Slug.String())
+		out.Origins[nameKinds[entry.Kind.String()]+":"+entry.Slug.String()] = collection + ":" + origin.Slug.String()
 	}
 
 	spells := slices.Concat(out.Spells.Cantrips, out.Spells.Known, out.Spells.Prepared)

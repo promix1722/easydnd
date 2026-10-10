@@ -688,6 +688,14 @@ through one function, `character.ResolvedSheetOf`:
   sheet only names: race, subrace, classes, subclasses, background, traits,
   features, feats, languages, and the source of each spell list. The projection
   already wrote the names of imported and custom entries there; those are kept.
+- **`origins`**, what gave the character each trait and feature, both sides
+  spelled as `catalogNames` keys: `features:maneuver-parry` to
+  `features:maneuvers`, `features:second-wind` to `classes:fighter`. Worked out
+  by `character.Origins` from the same catalogue, nearest source first -- the
+  feature a pick was made under, then the owner of the rule that granted it,
+  then the background or race, then the class or subclass on the entry's own
+  row -- and the sheet draws it beside the name. An entry nothing accounts
+  for, an imported one, has none.
 - **`catalog`**, the entries a panel reads more than a name from, in the shapes
   the collection routes serve: the character's proficiencies, the items it
   holds (asked of both item collections, because a stack does not say which it

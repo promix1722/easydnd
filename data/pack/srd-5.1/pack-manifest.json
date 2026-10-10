@@ -8,7 +8,7 @@
   },
   "schemaVersion": 1,
   "id": "srd-2014",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "edition": "2014",
   "semantics": "1",
   "requires": [

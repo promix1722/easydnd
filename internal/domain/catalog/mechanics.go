@@ -133,6 +133,19 @@ type SpellBenefit struct {
 	From                     string // class, any, or book
 	Spells                   []rules.Slug
 	CountsKnown              bool
+
+	// List is the class whose spell list the picks are drawn from when it is
+	// not Class: a Nature cleric's cantrip is a druid's. Class stays "whose
+	// level-up poses this".
+	List rules.Slug
+	// ListFrom names a prompt whose answer is that class instead, for a feat
+	// that lets the player choose it: Magic Initiate. Nothing is offered
+	// until it is answered.
+	ListFrom rules.Slug
+	// Schools and Ritual narrow the picks: Fey Touched's divination or
+	// enchantment, Ritual Caster's rituals.
+	Schools []rules.Slug
+	Ritual  bool
 }
 
 // ChoiceRequirement keeps conditional starting-equipment offers in pack policy.

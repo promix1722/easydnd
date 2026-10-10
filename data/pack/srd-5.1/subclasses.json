@@ -547,17 +547,7 @@
   },
   {
     "slug": "arcane-archer",
-    "class": "fighter",
-    "spells": [
-      {
-        "spell": "prestidigitation",
-        "level": 3
-      },
-      {
-        "spell": "druidcraft",
-        "level": 3
-      }
-    ]
+    "class": "fighter"
   },
   {
     "slug": "arcane-trickster",
@@ -859,29 +849,7 @@
   },
   {
     "slug": "divine-soul",
-    "class": "sorcerer",
-    "spells": [
-      {
-        "spell": "cure-wounds",
-        "level": 1
-      },
-      {
-        "spell": "inflict-wounds",
-        "level": 1
-      },
-      {
-        "spell": "bless",
-        "level": 1
-      },
-      {
-        "spell": "bane",
-        "level": 1
-      },
-      {
-        "spell": "protection-from-evil-and-good",
-        "level": 1
-      }
-    ]
+    "class": "sorcerer"
   },
   {
     "slug": "dreams",

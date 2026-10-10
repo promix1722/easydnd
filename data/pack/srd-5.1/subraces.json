@@ -12,7 +12,16 @@
       "elf-weapon-training",
       "high-elf-cantrip",
       "extra-language"
-    ]
+    ],
+    "languageOptions": {
+      "prompt": "high-elf/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "collection",
+        "collection": "language"
+      }
+    }
   },
   {
     "slug": "hill-dwarf",

@@ -197,6 +197,8 @@ export interface Sheet {
  customOptions?: CustomOption[]
  importSession?: string
  catalogNames?: Record<string,string>
+  /** What gave the character each trait and feature; both sides are `catalogNames` keys. */
+  origins?: Record<string, string>
   /**
    * What the sheet's slugs mean, resolved by the server in the same response:
    * the entries a panel reads more than a name from. Present on a sheet that

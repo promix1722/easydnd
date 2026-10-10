@@ -875,10 +875,24 @@ func (b *promptBuilder) packRules() {
 			continue
 		}
 		for _, ch := range r.Choices {
-			p := Prompt{Group: GroupClass, Source: r.Owner, Level: b.featLevel(r.Owner), Event: PromptEvent{Type: EventRule, Ref: rules.NewRef(rules.RefRule, r.ID)}}
+			p := Prompt{Group: ruleGroup(r.Owner), Source: r.Owner, Level: b.featLevel(r.Owner), Event: PromptEvent{Type: EventRule, Ref: rules.NewRef(rules.RefRule, r.ID)}}
+			// Expertise doubles a proficiency already held, whoever asks.
+			p.HeldOnly = ch.Kind == rules.ChooseExpertise
 			b.addChoice(&ch, p)
 		}
 	}
+}
+
+// ruleGroup files a rule's question with what owns the rule: a background's
+// gaming set is asked with the background, not among the class levels.
+func ruleGroup(owner rules.Ref) PromptGroup {
+	switch owner.Kind {
+	case rules.RefRace, rules.RefSubrace, rules.RefTrait:
+		return GroupRace
+	case rules.RefBackground:
+		return GroupBackground
+	}
+	return GroupClass
 }
 
 // featLevel is the class level a feat was taken at, or zero when it was not
@@ -888,7 +902,14 @@ func (b *promptBuilder) packRules() {
 // "+1 to Strength or Dexterity" is part of what fourth level asked. Without a
 // level it reads as belonging to no level at all, and a build screen draws it
 // above first level, ahead of the improvement that opened it.
+//
+// A feature's question belongs to the level the feature is gained at, which
+// its own row says: Student of War's tool is asked with third level.
 func (b *promptBuilder) featLevel(owner rules.Ref) int {
+	if owner.Kind == rules.RefFeature {
+		feature, _ := b.cat.Features.Get(owner.Slug)
+		return feature.Level
+	}
 	if owner.Kind != rules.RefFeat {
 		return 0
 	}
@@ -946,6 +967,10 @@ func (b *promptBuilder) blockedIn(choice rules.Choice) []rules.Slug {
 	var walk func(rules.Option)
 	walk = func(option rules.Option) {
 		switch opt := option.(type) {
+		case rules.RefOption:
+			if opt.Ref.Kind == rules.RefFeature && !b.meets(opt.Ref.Slug) {
+				blocked = append(blocked, rules.OptionKey(option))
+			}
 		case rules.NestedOption:
 			blocked = append(blocked, b.blockedIn(opt.Choice)...)
 		case rules.BundleOption:
@@ -958,6 +983,56 @@ func (b *promptBuilder) blockedIn(choice rules.Choice) []rules.Slug {
 		walk(option)
 	}
 	return blocked
+}
+
+// meets reports whether the character satisfies an offered feature's own
+// prerequisites: Thirsting Blade's fifth level and Pact of the Blade.
+//
+// A level is read against the character as they stand now, not against the
+// level whose prompt is offering the feature. That is what lets a twelfth-level
+// warlock put Lifedrinker into the pick second level opened, and it is why
+// there is no "replace an invocation" step: every earlier answer is editable,
+// and what is legal in it is what is legal for the character today -- the same
+// policy the spell prompts follow.
+//
+// The level is the one in the feature's own class when it names one, and a
+// character with no level in that class meets nothing: Eldritch Adept gives a
+// fighter an invocation, but only one without a prerequisite.
+func (b *promptBuilder) meets(slug rules.Slug) bool {
+	feature, ok := b.cat.Features.Get(slug)
+	if !ok || len(feature.Prerequisites) == 0 {
+		return true
+	}
+	level := b.state.Identity.Level()
+	if !feature.Class.IsZero() {
+		if level = ownerLevel(b.state, b.cat, rules.NewRef(rules.RefClass, feature.Class)); level == 0 {
+			return false
+		}
+	}
+	spells := b.state.Spells
+	for _, p := range feature.Prerequisites {
+		switch p.Kind {
+		case catalog.PrerequisiteLevel:
+			if level < p.Level {
+				return false
+			}
+		case catalog.PrerequisiteAbility:
+			if b.state.Abilities.Scores[p.Ability] < p.MinimumScore {
+				return false
+			}
+		case catalog.PrerequisiteEntry:
+			// Not through holds: that answers "would a second one be a
+			// duplicate", and a spell held twice is not one.
+			if p.Ref.Kind == rules.RefSpell {
+				if !slices.Contains(spells.Cantrips, p.Ref.Slug) && !slices.Contains(spells.Known, p.Ref.Slug) && !slices.Contains(spells.Prepared, p.Ref.Slug) {
+					return false
+				}
+			} else if !b.holds(p.Ref) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // ResolvedChoice carries the semantics of a now-closed question alongside its picks.

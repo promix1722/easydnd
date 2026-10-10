@@ -341,7 +341,10 @@ func validateChoices(entities map[string][]any, m PackMechanics) error {
 			switch o.Kind {
 			case OptionRef:
 				ref, ok := rules.ParseRef(string(o.Ref))
-				if !ok || !grantKind(ref.Kind) {
+				// A class grants nothing by being chosen: it is the answer a
+				// spell benefit's listFrom reads, Magic Initiate's "choose a
+				// class".
+				if !ok || !grantKind(ref.Kind) && ref.Kind != rules.RefClass {
 					return fmt.Errorf("unsupported rule choice grant")
 				}
 			case OptionAbilityBonus:

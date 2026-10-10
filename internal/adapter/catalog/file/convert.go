@@ -505,13 +505,12 @@ func (c *conv) feature(w Feature, b Bundle) catalog.Feature {
 		Prerequisites: c.prerequisites(w.Prerequisites),
 	}
 	if w.ExpertiseOptions != nil || w.SubfeatureOptions != nil ||
-		w.EnemyTypeOptions != nil || w.TerrainTypeOptions != nil || len(w.Invocations) > 0 {
+		w.EnemyTypeOptions != nil || w.TerrainTypeOptions != nil {
 		f.Specific = &catalog.FeatureSpecific{
 			ExpertiseOptions:   c.choice(w.ExpertiseOptions),
 			SubfeatureOptions:  c.choice(w.SubfeatureOptions),
 			EnemyTypeOptions:   c.choice(w.EnemyTypeOptions),
 			TerrainTypeOptions: c.choice(w.TerrainTypeOptions),
-			Invocations:        slugs(w.Invocations),
 		}
 	}
 	return f

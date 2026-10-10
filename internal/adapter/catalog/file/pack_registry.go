@@ -673,7 +673,12 @@ func normalizeMechanics(p *PackDocument) (PackMechanics, error) {
 		b.ID = normalizeID(p.Manifest.ID, b.ID)
 		b.Owner = Ref(normalizeRef(p.Manifest.ID, string(b.Owner)))
 		b.Class = normalizeID(p.Manifest.ID, b.Class)
+		b.List = normalizeID(p.Manifest.ID, b.List)
+		b.ListFrom = normalizeID(p.Manifest.ID, b.ListFrom)
 		b.Ability = normalizeAbility(b.Ability)
+		for j := range b.Schools {
+			b.Schools[j] = normalizeID(p.Manifest.ID, b.Schools[j])
+		}
 		for j := range b.Spells {
 			b.Spells[j] = normalizeID(p.Manifest.ID, b.Spells[j])
 		}

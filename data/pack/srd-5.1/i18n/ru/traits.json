@@ -257,6 +257,9 @@
   "stout-resilience": {
     "name": "Стойкость коренастых"
   },
+  "variant-human-skills": {
+    "name": "Навыки"
+  },
   "sunlight-sensitivity": {
     "name": "Чувствительность к солнечному свету"
   },

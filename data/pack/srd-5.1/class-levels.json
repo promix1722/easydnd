@@ -3079,6 +3079,7 @@
     "proficiencyBonus": 0,
     "features": [
       "bonus-cantrip",
+      "circle-of-the-land",
       "natural-recovery"
     ]
   },
@@ -5593,7 +5594,7 @@
     "resources": [
       {
         "key": "invocations-known",
-        "number": 3
+        "number": 2
       },
       {
         "key": "mystic-arcanum-level-6"
@@ -5636,6 +5637,9 @@
       {
         "key": "mystic-arcanum-level-9"
       }
+    ],
+    "features": [
+      "eldritch-invocations-5"
     ]
   },
   {
@@ -5654,7 +5658,7 @@
     "resources": [
       {
         "key": "invocations-known",
-        "number": 4
+        "number": 3
       },
       {
         "key": "mystic-arcanum-level-6"
@@ -5697,6 +5701,9 @@
       {
         "key": "mystic-arcanum-level-9"
       }
+    ],
+    "features": [
+      "eldritch-invocations-7"
     ]
   },
   {
@@ -5758,6 +5765,9 @@
       {
         "key": "mystic-arcanum-level-9"
       }
+    ],
+    "features": [
+      "eldritch-invocations-9"
     ]
   },
   {
@@ -5831,6 +5841,7 @@
     "proficiencyBonus": 4,
     "abilityScoreBonuses": 3,
     "features": [
+      "eldritch-invocations-12",
       "warlock-ability-score-improvement-3"
     ],
     "spellSlots": {
@@ -5932,6 +5943,7 @@
     "proficiencyBonus": 5,
     "abilityScoreBonuses": 3,
     "features": [
+      "eldritch-invocations-15",
       "mystic-arcanum-8th-level"
     ],
     "spellSlots": {
@@ -6063,6 +6075,9 @@
         "key": "mystic-arcanum-level-9",
         "number": 1
       }
+    ],
+    "features": [
+      "eldritch-invocations-18"
     ]
   },
   {
@@ -6649,6 +6664,7 @@
     "level": 6,
     "proficiencyBonus": 3,
     "features": [
+      "infusions-known-6",
       "tool-expertise"
     ],
     "spellSlots": {
@@ -6702,6 +6718,7 @@
     "level": 10,
     "proficiencyBonus": 4,
     "features": [
+      "infusions-known-10",
       "magic-item-adept"
     ],
     "spellSlots": {
@@ -6756,6 +6773,7 @@
     "level": 14,
     "proficiencyBonus": 5,
     "features": [
+      "infusions-known-14",
       "magic-item-savant"
     ],
     "spellSlots": {
@@ -6814,6 +6832,7 @@
     "level": 18,
     "proficiencyBonus": 6,
     "features": [
+      "infusions-known-18",
       "magic-item-master"
     ],
     "spellSlots": {
@@ -7096,10 +7115,7 @@
     "level": 3,
     "proficiencyBonus": 0,
     "features": [
-      "desert",
-      "sea",
-      "storm-aura",
-      "tundra"
+      "storm-aura"
     ]
   },
   {
@@ -7108,9 +7124,6 @@
     "level": 6,
     "proficiencyBonus": 0,
     "features": [
-      "storm-herald-desert",
-      "storm-herald-sea",
-      "storm-herald-tundra",
       "storm-soul"
     ]
   },
@@ -7129,9 +7142,6 @@
     "level": 14,
     "proficiencyBonus": 0,
     "features": [
-      "barbarian-desert",
-      "barbarian-sea",
-      "barbarian-tundra",
       "raging-storm"
     ]
   },
@@ -7141,13 +7151,8 @@
     "level": 3,
     "proficiencyBonus": 0,
     "features": [
-      "bear",
-      "eagle",
-      "elk",
       "spirit-seeker",
-      "tiger",
-      "totem-spirit",
-      "wolf"
+      "totem-spirit"
     ]
   },
   {
@@ -7156,12 +7161,7 @@
     "level": 6,
     "proficiencyBonus": 0,
     "features": [
-      "aspect-of-the-beast",
-      "totem-warrior-bear",
-      "totem-warrior-eagle",
-      "totem-warrior-elk",
-      "totem-warrior-tiger",
-      "totem-warrior-wolf"
+      "aspect-of-the-beast"
     ]
   },
   {
@@ -7179,11 +7179,6 @@
     "level": 14,
     "proficiencyBonus": 0,
     "features": [
-      "barbarian-bear",
-      "barbarian-eagle",
-      "barbarian-elk",
-      "barbarian-tiger",
-      "barbarian-wolf",
       "totemic-attunement"
     ]
   },
@@ -8792,6 +8787,7 @@
     "proficiencyBonus": 0,
     "features": [
       "disciple-of-the-elements",
+      "elemental-discipline-elemental-attunement",
       "elemental-disciplines"
     ]
   },

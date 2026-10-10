@@ -487,8 +487,11 @@ func (p *projector) applyFeaturePrompts(features []rules.Slug) {
 			// Through oneList, because that is how Prompts asked it.
 			p.expertise = append(p.expertise, p.answers.slugs(oneList(feature.Specific.ExpertiseOptions))...)
 		}
-		if feature.Specific.SubfeatureOptions != nil {
-			p.state.Features = append(p.state.Features, p.answers.slugs(feature.Specific.SubfeatureOptions)...)
+		// A favored enemy and a favored terrain are sub-features under their
+		// own field names: held like any other, so a second tier cannot
+		// choose the first one's again.
+		for _, picked := range []*rules.Choice{feature.Specific.SubfeatureOptions, feature.Specific.EnemyTypeOptions, feature.Specific.TerrainTypeOptions} {
+			p.state.Features = append(p.state.Features, p.answers.slugs(picked)...)
 		}
 	}
 }
