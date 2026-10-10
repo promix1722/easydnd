@@ -91,12 +91,22 @@ type Summary struct {
 // Log is the ordered history of a character: one entry per selection, in the
 // order the selections were made.
 //
-// "Append-only" is not the invariant, and never quite was. It is *append, drop
-// a suffix, or replace one entry and revalidate what follows* -- see Truncate
-// and Rebuild for the two shrinking halves. What holds throughout is that a
-// stored answer's meaning depends only on the entries *before* it, which is
-// why replacing one entry is safe to reason about and editing one in the
-// middle without revalidating what follows is not.
+// "Append-only" is not the invariant, and never quite was. It is *append, or
+// replace or remove one entry and revalidate what follows* -- see Rebuild.
+// That is what docs/dnd.md means when it says event sourcing makes level-up
+// reversible: reversible means the log can shrink.
+//
+// What holds throughout is that a stored answer's meaning depends only on the
+// entries *before* it. A replace leaves that prefix untouched, so every
+// earlier entry means exactly what it did; what it can invalidate is the
+// suffix, and the suffix is therefore re-checked entry by entry against the
+// log rebuilt so far. Rewriting an entry in place *without* that replay is
+// what stays forbidden: it would leave answers standing that the new prefix
+// never offered.
+//
+// The init event can never be dropped. A character with no opening state is
+// not an earlier version of itself, it is an unreadable record; removing a
+// character is Repository.Delete.
 //
 // DND.md fixes the storage shape: a character's log is small, so it is stored
 // as a single database record holding a JSON array. That is what makes the
@@ -136,39 +146,6 @@ func (l *Log) Append(events ...Event) error {
 		next++
 	}
 	l.Events = append(l.Events, staged...)
-	return nil
-}
-
-// Truncate drops every event after afterSeq.
-//
-// The log's invariant is not "append-only", which would make going back a
-// step impossible; it is *append, drop a suffix, or replace one entry and
-// revalidate what follows*. That is what docs/dnd.md means when it says event
-// sourcing is what makes level-up reversible: reversible means the log can
-// shrink.
-//
-// The reason the third of those is safe is the same reason an earlier draft
-// of this comment gave for forbidding it: a stored answer's meaning depends
-// on the entries *before* it. A replace leaves that prefix untouched, so
-// every earlier entry means exactly what it did; what it can invalidate is
-// the suffix, and the suffix is therefore re-checked entry by entry against
-// the log rebuilt so far. Rewriting an entry in place *without* that replay
-// is what stays forbidden, and it is forbidden for the original reason --
-// it would leave answers standing that the new prefix never offered.
-//
-// The init event can never be dropped. A character with no opening state is
-// not an earlier version of itself, it is an unreadable record; removing a
-// character is Repository.Delete.
-func (l *Log) Truncate(afterSeq int) error {
-	if afterSeq < 1 {
-		return types.NewValidationError(
-			"cannot truncate to sequence %d: the init event must remain", afterSeq)
-	}
-	if afterSeq > l.LastSeq() {
-		return types.NewValidationError(
-			"cannot truncate to sequence %d: the log ends at %d", afterSeq, l.LastSeq())
-	}
-	l.Events = l.Events[:afterSeq]
 	return nil
 }
 

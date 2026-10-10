@@ -407,48 +407,6 @@ func TestApplyRejectsAnUnknownReference(t *testing.T) {
 	}
 }
 
-// Truncate is the Back button. It must undo, must not drop the init event,
-// and must respect the same concurrency check as Append.
-func TestTruncateUndoesAStep(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	s := newService(t)
-	c := mustCreateScored(t, s)
-
-	if _, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, 2,
-		domain.Event{Type: domain.EventRace, Ref: rules.NewRef(rules.RefRace, "half-elf")}); err != nil {
-		t.Fatalf("Apply() error = %v", err)
-	}
-
-	if err := s.Truncate(ctx, testOwner, c.ID, 3, 2); err != nil {
-		t.Fatalf("Truncate() error = %v", err)
-	}
-	after, err := s.Get(ctx, testOwner, c.ID)
-	if err != nil {
-		t.Fatalf("Get() error = %v", err)
-	}
-	if after.Log.Len() != 2 {
-		t.Errorf("log length = %d, want 2", after.Log.Len())
-	}
-
-	sheet, err := s.Sheet(ctx, testOwner, c.ID, rules.DefaultLocale)
-	if err != nil {
-		t.Fatalf("Sheet() error = %v", err)
-	}
-	if !sheet.Identity.Race.IsZero() {
-		t.Errorf("race = %q, want it undone", sheet.Identity.Race)
-	}
-
-	// The init event is not a step you can go back past.
-	if err := s.Truncate(ctx, testOwner, c.ID, 2, 0); err == nil {
-		t.Error("Truncate() dropped the init event")
-	}
-	// And a stale sequence is rejected exactly as it is for an append.
-	if err := s.Truncate(ctx, testOwner, c.ID, 99, 1); err == nil {
-		t.Error("Truncate() accepted a stale sequence")
-	}
-}
-
 func TestListSummarisesWithoutProjecting(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -529,9 +487,6 @@ func TestAnotherOwnerCannotReachTheCharacter(t *testing.T) {
 		domain.Event{Type: domain.EventNote, Note: "mine now"})
 	if !types.IsNotFound(err) {
 		t.Errorf("Apply() error = %v, want a NotFoundError", err)
-	}
-	if err := s.Truncate(ctx, intruder, c.ID, 1, 1); !types.IsNotFound(err) {
-		t.Errorf("Truncate() error = %v, want a NotFoundError", err)
 	}
 	if err := s.Delete(ctx, intruder, c.ID); !types.IsNotFound(err) {
 		t.Errorf("Delete() error = %v, want a NotFoundError", err)

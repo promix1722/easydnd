@@ -362,28 +362,6 @@ func (s *Service) Apply(
 	return expectedSeq + len(events), nil
 }
 
-// Truncate drops every event after afterSeq: the build flow's Back button,
-// and un-taking a level.
-func (s *Service) Truncate(
-	ctx context.Context, owner domain.OwnerID, id domain.ID, expectedSeq, afterSeq int,
-) error {
-	character, err := s.owned(ctx, owner, id)
-	if err != nil {
-		return err
-	}
-	if err = checkRevision(ctx, character); err != nil {
-		return err
-	}
-	if character.Log.LastSeq() != expectedSeq {
-		return types.NewValidationError("stale sequence")
-	}
-	log := character.Log.Clone()
-	if err = log.Truncate(afterSeq); err != nil {
-		return err
-	}
-	return s.repo.Commit(ctx, id, character.Revision, log)
-}
-
 // Delete removes a character.
 //
 // It comes off every table it was shared with first, then out of the store.

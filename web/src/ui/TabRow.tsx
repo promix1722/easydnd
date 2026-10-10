@@ -35,11 +35,11 @@ export interface TabRowProps {
  * the character rather than on the tabs, so it belongs in `ui/Page`'s `actions`
  * -- where the sheet's own button already was -- and a button competing with
  * the strip for a 390px line is a strip that cannot do the one thing it is for.
- * The slot went with the caller rather than being kept as a hole nothing fills,
- * the way `ColumnsSection`'s `aside` did; see docs/web.md.
+ * The slot went with the caller rather than being kept as a hole nothing
+ * fills; see docs/web.md.
  *
  * It is a responsive primitive whose **two renderings are the same markup**.
- * `ModalSheet`, `Columns` and `TabDeck` genuinely swap components at the
+ * `ModalSheet` and `TabDeck` genuinely swap components at the
  * breakpoint; this one does not need to. A `ScrollArea type="never"` is inert
  * at a width the content fits in, so the desktop rendering is the mobile one
  * with nothing to scroll -- which means there is no second tree to keep

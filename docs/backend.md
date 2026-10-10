@@ -494,7 +494,6 @@ that.
 | `GET` | `/v1/characters/{id}/prompts` | what must be decided next |
 | `GET` | `/v1/characters/{id}/events` | the log |
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
-| `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
 | `GET` | `/v1/characters/{id}/custom-options` | the character's custom entries, `{revision, options}` |
 | `POST` | `/v1/characters/{id}/custom-options` | add or rewrite one, `{revision, option}`; an option without an `id` is new. Answers the new revision and sheet |
 | `DELETE` | `/v1/characters/{id}/custom-options/{option}?revision=` | erase a custom entry of kind `note`; any other kind is a 400 -- see [below](#a-note-is-the-one-custom-entry-that-can-be-deleted) |
@@ -580,9 +579,8 @@ is what `Seq` means. That is not a third level: `events` is the sub-resource,
 `{seq}` names one of them, and there is no route below it.
 
 A group's members are addressed the other way, by `?user=`. Either would have
-been consistent with the rule above; the query parameter is what
-`DELETE /v1/characters/{id}/events?after=N` already does, and a member is named
-by an opaque account id rather than by position.
+been consistent with the rule above; a member is named by an opaque account
+id rather than by position, so it travels as a query parameter.
 
 `PATCH` arrives with groups, as `PUT` does with the log entry routes above:
 everything older than both is `GET`, `POST` or `DELETE`.
@@ -832,12 +830,6 @@ and a client-supplied source would be a second vocabulary for the same fact,
 free to disagree with the one the rules produce. Entries the server cannot
 attribute -- an imported log, a DM's `change` -- carry no source. `GET
 /characters/{id}/events` remains the unabridged record either way.
-
-`DELETE /events?after=N&expectedSeq=M` is the undo primitive: dropping a suffix,
-which is what un-taking a level is. Nothing in the web client calls it any
-more -- changing a pick goes through the replace route below -- but it is
-working, tested API, and removing it would be a breaking change made as a side
-effect of a UI decision.
 
 An earlier version of this page said that changing a pick needs no undo,
 because answers fold last-write-wins and re-answering a prompt is a plain

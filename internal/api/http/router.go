@@ -278,7 +278,6 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.GET("/characters/:id/catalog/:collection", h.Character.Catalog)
 			authed.POST("/characters/:id/catalog/spells/search", h.Character.SpellSearch)
 			authed.POST("/characters/:id/events", h.Character.AppendEvents)
-			authed.DELETE("/characters/:id/events", h.Character.TruncateEvents)
 			authed.POST("/characters/:id/auto-equip", h.Character.AutoEquip)
 			// One entry of that log, addressed by position -- which is what
 			// Seq means. Addressing a member of a sub-resource collection is
@@ -333,8 +332,8 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// One member is addressed by ?user= rather than by a second path
 			// segment. Either would be consistent with the routes above --
 			// events/:seq addresses a member of a collection the same way --
-			// but this is the shape TruncateEvents already uses, and a member
-			// is named by an opaque account id rather than by position.
+			// but a member is named by an opaque account id rather than by
+			// position.
 			authed.PATCH("/groups/:id/members", h.Group.SetMemberRole)
 			authed.DELETE("/groups/:id/members", h.Group.RemoveMember)
 

@@ -91,7 +91,6 @@ export {
   moveCharacter,
   replaceEvent,
   reviseEvents,
-  truncateEvents,
 } from './characters'
 export type {
   Abilities,

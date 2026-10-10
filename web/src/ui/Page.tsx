@@ -117,7 +117,7 @@ export interface PageProps {
  * **It does not branch on viewport, and must not.** The actions wrap under the
  * heading on a narrow screen because the row is allowed to wrap, and the cap
  * is simply inert below 1024px. The list of components that genuinely swap
- * markup at the breakpoint stays at five -- `Columns`, `DataList`,
+ * markup at the breakpoint stays at four -- `DataList`,
  * `ModalSheet`, `TabDeck` and `RootShell` -- and `Page.test.tsx` pins that by comparing
  * the two renderings byte for byte, the way `TabRow.test.tsx` does.
  */

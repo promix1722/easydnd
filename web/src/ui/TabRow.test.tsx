@@ -36,7 +36,7 @@ function structure(html: string): string {
 
 /**
  * One viewport, because this file proves it is enough: the last test in it
- * compares the two renderings byte for byte. `ModalSheet`, `Columns` and
+ * compares the two renderings byte for byte. `ModalSheet` and
  * `TabDeck` swap components at the breakpoint and so need testing twice
  * over; this is one
  * rendering with a ScrollArea that is inert at a width the tabs fit in.

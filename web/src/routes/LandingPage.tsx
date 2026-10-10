@@ -44,10 +44,9 @@ import volcano from '@/assets/landing-volcano.webp'
  * the words differ on purpose. Nothing inside the app follows it -- the
  * navigation, the routes and every string behind sign-in still say Games.
  *
- * The hero mark that used to be this page is gone. `ui/DragonMark.tsx` still
- * exists and is still the app's hero art, but the header wordmark already names
- * the app in the corner a visitor looks at to know where they are, and a mark
- * above a carousel is two heroes competing for the same glance.
+ * The hero mark that used to be this page is gone: the header wordmark already
+ * names the app in the corner a visitor looks at to know where they are, and a
+ * mark above a carousel is two heroes competing for the same glance.
  *
  * One panel at a time, filling the width. An earlier draft let the neighbours
  * peek, because three *empty* bordered rectangles at full width are

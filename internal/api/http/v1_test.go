@@ -881,45 +881,6 @@ func TestBadAnswerIsAFieldError(t *testing.T) {
 	}
 }
 
-// Undo, and the one thing undo may never do.
-func TestTruncateUndoesAndProtectsInit(t *testing.T) {
-	t.Parallel()
-	r, session := newFullRouter(t)
-	id := createCharacter(t, r, session)
-
-	send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
-		"expectedSeq": 1,
-		"events":      []map[string]any{{"type": "race", "ref": "race:half-elf"}},
-	})
-
-	rec := send(t, r, session, http.MethodDelete,
-		"/v1/characters/"+id+"/events?after=1&expectedSeq=2", nil)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("truncate = %d, want 200: %s", rec.Code, rec.Body)
-	}
-	written := decode[characterapi.WriteResponse](t, rec)
-	if written.Seq != 1 {
-		t.Errorf("seq = %d, want 1", written.Seq)
-	}
-	if written.Sheet.Identity.Race != "" {
-		t.Errorf("race = %q, want it undone", written.Sheet.Identity.Race)
-	}
-
-	rec = send(t, r, session, http.MethodDelete, "/v1/characters/"+id+"/events?after=0&expectedSeq=1", nil)
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("dropping the init event = %d, want 400", rec.Code)
-	}
-
-	// Both parameters are required: a truncation with no expected sequence
-	// is a deletion with no concurrency check.
-	rec = send(t, r, session, http.MethodDelete, "/v1/characters/"+id+"/events?after=1", nil)
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("truncate without expectedSeq = %d, want 400", rec.Code)
-	}
-}
-
-// The route pair that makes a choice changeable, over HTTP: replace one entry
-// by position, see what it cost, and see it not cost anything until asked.
 func TestReplaceAndDeleteAnEntry(t *testing.T) {
 	t.Parallel()
 	r, session := newFullRouter(t)
@@ -1170,7 +1131,6 @@ func TestCharacterRoutesRequireASession(t *testing.T) {
 		{http.MethodGet, "/v1/characters/" + id + "/prompts"},
 		{http.MethodGet, "/v1/characters/" + id + "/events"},
 		{http.MethodPost, "/v1/characters/" + id + "/events"},
-		{http.MethodDelete, "/v1/characters/" + id + "/events?after=1&expectedSeq=1"},
 		{http.MethodPut, "/v1/characters/" + id + "/events/1"},
 		{http.MethodDelete, "/v1/characters/" + id + "/events/1?expectedSeq=1"},
 		{http.MethodGet, "/v1/catalog"},
@@ -1222,7 +1182,6 @@ func TestAnotherAccountCannotReachTheCharacter(t *testing.T) {
 			http.MethodPost, "/v1/characters/" + id + "/events",
 			map[string]any{"expectedSeq": 1, "events": []map[string]any{{"type": "note", "note": "mine"}}},
 		},
-		{http.MethodDelete, "/v1/characters/" + id + "/events?after=1&expectedSeq=1", nil},
 		{
 			http.MethodPut, "/v1/characters/" + id + "/events/1",
 			map[string]any{"expectedSeq": 1, "event": map[string]any{"type": "init"}},

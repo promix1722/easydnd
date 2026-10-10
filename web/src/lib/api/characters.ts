@@ -553,26 +553,6 @@ export function deleteEvent(
   )
 }
 
-/**
- * Drops every event after `after`.
- *
- * Nothing in this client calls it any more -- changing an answer is
- * `replaceEvent`, and un-taking a level is `deleteEvent` -- but it is working,
- * tested API, and withdrawing it would be a breaking change made as a side
- * effect of a decision about a screen.
- */
-export function truncateEvents(
-  id: string,
-  expectedSeq: number,
-  after: number,
-  expectedRevision = expectedSeq,
-): Promise<WriteResponse> {
-  return request<WriteResponse>(
-    `${characterPath(id)}/events?after=${after}&expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}`,
-    { method: 'DELETE' },
-  )
-}
-
 export function deleteCharacter(id: string): Promise<void> {
   return request<void>(`${characterPath(id)}`, { method: 'DELETE' })
 }
