@@ -1322,6 +1322,10 @@ same `CheckSheet` limits as the owner's route, and answers 204. It takes no
 id, placement or count, so it cannot replace, move or remove anything.
 `changeCharacter` projects against the character's custom overlay, so an item
 that was given can be given on like any other.
+The item search on the shared route, `/v1/shared/{id}/catalog/items`, leaves a
+character's custom items out: it is what a DM hands out from, and those are
+already that character's. Named outright they still answer, which is how a
+shared sheet draws them.
 
 A shared sheet and its catalogue (`/v1/shared/{id}/...`) are projected against
 the character's custom overlay, as the owner's are, so a DM sees the item they

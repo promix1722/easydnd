@@ -595,4 +595,19 @@ func TestItemsAndCoinsChangeHandsOverHTTP(t *testing.T) {
 			t.Fatalf("sheet of %s = %d, no dagger in it (%s)", id, rec.Code, body)
 		}
 	}
+
+	// A custom item is given the same way, is on the sheet the DM reads, and
+	// is not among what the DM's search offers to give: it is already theirs.
+	if rec := send(t, r, owner, http.MethodPost, root+"/entries/pc_"+theirs+"/custom-items", map[string]any{"name": "Moonblade"}); rec.Code != http.StatusNoContent {
+		t.Fatalf("POST custom-items = %d (%s)", rec.Code, rec.Body.String())
+	}
+	if rec := send(t, r, owner, http.MethodGet, "/v1/shared/"+theirs+"/sheet", nil); !strings.Contains(rec.Body.String(), "Moonblade") {
+		t.Fatalf("shared sheet has no Moonblade (%s)", rec.Body.String())
+	}
+	if rec := send(t, r, owner, http.MethodGet, "/v1/shared/"+theirs+"/catalog/items?q=moonblade", nil); rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), "Moonblade") {
+		t.Fatalf("the give-item search offers a custom item: %d (%s)", rec.Code, rec.Body.String())
+	}
+	if rec := send(t, r, player, http.MethodGet, "/v1/characters/"+theirs+"/catalog/items?q=moonblade", nil); !strings.Contains(rec.Body.String(), "Moonblade") {
+		t.Fatalf("its owner's own search lost the custom item (%s)", rec.Body.String())
+	}
 }
