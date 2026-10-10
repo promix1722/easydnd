@@ -632,7 +632,7 @@
   "visibility.button": "Access",
   "visibility.title": "Who can see this character",
   "visibility.open": "Open to anyone with the link",
-  "visibility.hint": "Anyone signed in who has the link can read this sheet. Only you can change it. Groups you shared it with can read it either way.",
+  "visibility.hint": "Anyone signed in who has the link can read this sheet. Only you can change it. In a group you shared it with, the DM and the owner can read it either way; players only while it is open.",
   "visibility.link": "Link to this character",
   "equipment.contents": "Contents:",
   "equipment.coin.cp": "Copper",

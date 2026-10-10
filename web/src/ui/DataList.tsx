@@ -67,7 +67,7 @@ export type DataListColumn<T> =
       /** The name as a string: the card's heading, and every action's suffix. */
       text: (item: T) => string
       /** Where the name goes. The desktop cell keeps its own `render`. */
-      to?: (item: T) => string
+      to?: (item: T) => string | undefined
     })
   | (ColumnBase<T> & { primary?: false; slot?: ColumnSlot })
 

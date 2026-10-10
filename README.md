@@ -36,8 +36,9 @@ owner, DM, player -- who invite each other with a link that works for 24 hours.
 They live in PostgreSQL and survive a restart.
 
 A group is no longer only people. Any member may **share** a character with it,
-and that grants a read: everybody at the table can open the sheet, and only its
-owner can ever change it.
+and that grants a read to whoever runs the table: its DMs and its owner can
+open the sheet, a player only once the character's owner opens it, and only
+its owner can ever change it.
 
 **Games** are the third main section, beside Characters and Groups. A game is
 one sitting run by a DM, played at one group's table, with a roster of the

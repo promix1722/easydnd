@@ -134,6 +134,10 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
           const name = entry.name || t('common.unnamed')
           const classes = entry.class ? [{ class: entry.class }] : game.characters.find((character) => character.id === entry.character_id)?.classes
           const fallback = characterAvatar(classes) ?? (entry.kind === 'monster' ? playerAvatar(entry.id) : undefined)
+          // A closed character is a name and no link to a player who does not own it.
+          const sheet = entry.character_id
+            ? sheetPath(game.group_id, game.characters.find((each) => each.id === entry.character_id) ?? { id: entry.character_id }, me, master)
+            : undefined
           const actions = [
             ...(entry.can_edit ? [{ label: t('common.edit'), icon: IconPencil,
               run: () => { patch.reset(); setEditing(entry.id) } }] : []),
@@ -169,10 +173,10 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
                     <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
                       <Group gap="xs">
                         <Avatar image={entry.image} fallback={fallback} />
-                        {entry.character_id ? (
+                        {sheet !== undefined ? (
                           <Anchor component={Link} draggable={false} size="sm" fw={500}
                             style={{ overflowWrap: 'anywhere' }}
-                            to={sheetPath(game.group_id, game.characters.find((each) => each.id === entry.character_id) ?? { id: entry.character_id }, me)}>{name}</Anchor>
+                            to={sheet}>{name}</Anchor>
                         ) : <Text size="sm" fw={500} style={{ overflowWrap: 'anywhere' }}>{name}</Text>}
                         {entry.kind === 'monster' && <Badge size="xs" variant="light">{t('game.monster')}</Badge>}
                         {entry.locked && <Badge size="xs" color="gray" variant="light">{t('game.locked')}</Badge>}

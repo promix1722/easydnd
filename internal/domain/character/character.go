@@ -82,6 +82,10 @@ type Summary struct {
 	Name   string
 	Level  int
 
+	// Public is whether its owner opened it. Only a table's roster fills it:
+	// that is the one listing with readers who are not the owner.
+	Public bool
+
 	// Classes is the class line, e.g. "Rogue 3" or "Cleric 2 / Wizard 1".
 	Classes []ClassLevel
 }

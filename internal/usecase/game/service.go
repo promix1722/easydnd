@@ -122,9 +122,11 @@ func (s *Service) member(
 // readable fetches a character the actor is allowed to see, and is the only
 // function in the codebase that lets anybody but an owner see one.
 //
-// Three ways in: you own it, it is shared into a group you belong to, or you
-// are a superadmin, who may read every sheet and still change none. The
-// refusal is a NotFoundError in both cases, matching character.owned exactly
+// Four ways in: you own it, its owner opened it, it is shared into a group
+// you run -- as its DM or its owner -- or you are a superadmin, who may read
+// every sheet and still change none. A player at that table reads it only
+// once it is opened. The
+// refusal is a NotFoundError in every case, matching character.owned exactly
 // -- a character id is a short counter, and a 403 on one that is not yours
 // would say it exists.
 //
@@ -154,8 +156,12 @@ func (s *Service) readable(
 		return character.Character{}, err
 	}
 	for _, g := range groups {
-		if _, err := s.groups.MemberRole(ctx, g, actor); err == nil {
-			return c, nil
+		// Sharing seats a character at a table; it does not open the sheet
+		// to the table. Only whoever runs it reads a closed one.
+		if role, err := s.groups.MemberRole(ctx, g, actor); err == nil {
+			if role.AtLeast(group.RoleDM) {
+				return c, nil
+			}
 		} else if !types.IsNotFound(err) {
 			return character.Character{}, err
 		}
@@ -222,7 +228,9 @@ func (s *Service) summarize(
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, character.Summarize(c.ID, c.Owner, c.Folder, c.Log, cat))
+		sum := character.Summarize(c.ID, c.Owner, c.Folder, c.Log, cat)
+		sum.Public = c.Public
+		out = append(out, sum)
 	}
 	return out, nil
 }

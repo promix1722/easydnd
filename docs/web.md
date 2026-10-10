@@ -1075,7 +1075,8 @@ group's screens already make, since a sheet does not say who owns it.
 **Your own character opens as your own sheet.** `features/games/sheetPath`
 is the one place the group's table and a game's roster decide where a
 character links to: yours to `/characters/:id`, anybody else's to the group's
-read. A stale or hand-typed shared URL for your own character redirects the
+read -- and to nothing, a plain name, for a player looking at a character its
+owner has not opened. A stale or hand-typed shared URL for your own character redirects the
 same way, so there is one view of a character you can change.
 
 **The owner opens or hides a character from its sheet.** The header's
@@ -1083,7 +1084,8 @@ same way, so there is one view of a character you can change.
 one switch -- open to anyone with the link -- and, once it is on, the link
 itself as a field and a Copy button. The sheet says what "open" means before
 the switch is thrown: anybody *signed in* who has the link reads it, only the
-owner changes it, and the groups it is shared with read it either way. The
+owner changes it, and in the groups it is shared with the DMs and the group's
+owner read it either way while players read it only once it is open. The
 link is `/shared/:character`, a route with no group in it because no group
 grants that read; it draws the same read-only sheet, without a player crumb,
 since with no group there is nobody to ask whose it is. Its items are at

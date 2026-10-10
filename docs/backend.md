@@ -125,7 +125,8 @@ folder rather than in its log -- who may look at a character is not a fact
 about the character. Open, **anybody signed in who has the link** may read the
 sheet through the same `/v1/shared/{id}/...` routes a group's read uses,
 whatever table they do or do not sit at; a guest session counts as signed in.
-Hidden, which is the default, the character is its owner's and its groups'.
+Hidden, which is the default, the character is its owner's and, in the groups
+it is shared with, the DMs' and the group owner's -- not the other players'.
 
 It is one line in one place: `readable` in `usecase/game/service.go`, the gate
 every shared read already passes, answers yes for a public character before it
@@ -1105,7 +1106,8 @@ one account read another's character, and it needed a third chokepoint rather
 than a loosening of either existing one.
 
 `character.Service.owned` asks **"is this yours"** and grants a read *and* a
-write. `game.Service.readable` asks **"is it on a table you sit at"** and grants
+write. `game.Service.readable` asks **"is it on a table you run, or opened by
+its owner"** and grants
 a read and nothing else. Neither was widened to accommodate the other: they are
 different functions, in different packages, over different stores, and the write
 paths still go only through the first. There is no route anywhere that writes to
@@ -1120,7 +1122,8 @@ indistinguishable from outside.
 | | its owner | group owner | dm | player | not a member |
 |---|---|---|---|---|---|
 | see the group's table | — | yes | yes | yes | **404** |
-| read a shared sheet | yes | yes | yes | yes | **404** |
+| read a shared sheet, closed | yes | yes | yes | **404** | **404** |
+| read a shared sheet, opened | yes | yes | yes | yes | yes |
 | read a character *not* shared here | yes | **404** | **404** | **404** | **404** |
 | share your own character | yes | yes | yes | yes | **404** |
 | share somebody else's | **404** | **404** | **404** | **404** | **404** |
@@ -1134,6 +1137,11 @@ indistinguishable from outside.
 | edit unlocked game values | yes | yes | yes | own character only | **404** |
 | edit locked game values | **403** | yes | yes | **403** | **404** |
 | lock/unlock, reorder, manage monsters, call a long rest | **403** | yes | yes | **403** | **404** |
+
+A player still sees a closed character's row on the table -- name, class,
+level -- because that is who is sitting there, not the sheet. The row carries
+`public`, so the client draws the name as a link only for a reader the read
+would admit.
 
 Two rows are worth saying in prose. **A player may share** — that is the whole
 of what a player does at a table, and it is the half of a group that was missing

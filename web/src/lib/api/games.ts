@@ -26,6 +26,8 @@ export interface TableCharacter {
   image?: string
   id: string
   owner_id: string
+  /** Its owner opened the sheet; a player reads it only then. */
+  public?: boolean
   name: string
   level: number
   classes?: ClassLevel[]
