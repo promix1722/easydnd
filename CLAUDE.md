@@ -10,7 +10,7 @@
   a refactor that keeps behaviour, but whenever a change moves a rule, a route,
   a config key, a layer boundary or a deploy step, the matching page in `docs/`
   is part of that change and not a follow-up: `docs/dnd.md` for the game model,
-  `docs/backend.md` for the service, `docs/web.md` for the client,
+  `docs/backend.md` for the service, `docs/web.md` and the files under `docs/web/` for the client,
   `docs/licensing.md` for anything about the SRD data's terms. These documents
   explain *why*, so a stale one is worse than a missing one -- it argues for a
   design the code no longer has.

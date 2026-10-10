@@ -742,7 +742,7 @@ the last entry of the spell tabs' list. Each opens the entry's form with its
 kind already said. No tab has a "Custom…" button under it. Notes are the one
 exception to all of this: they answer no question, so they have a tab of their
 own, Custom, where the player adds, rewrites and deletes them
-(docs/web.md#custom-is-what-the-player-writes-unasked). The assistant still
+(docs/web/characters.md#custom-is-what-the-player-writes-unasked). The assistant still
 may not write one. Entries written earlier are offered in
 their list beside the catalogue's, marked Custom.
 

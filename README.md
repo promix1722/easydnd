@@ -46,7 +46,7 @@ Deploying is a tag: `git tag -a vX.Y.Z && git push origin vX.Y.Z`.
 | Doc | Covers |
 | --- | --- |
 | [docs/backend.md](docs/backend.md) | The Go service: layout, layer rules, API, configuration, deployment |
-| [docs/web.md](docs/web.md) | The browser client: layout, layer rules, design decisions, how it ships |
+| [docs/web.md](docs/web.md) | The browser client: layout and layer rules, with one file per part under [docs/web/](docs/web/) |
 | [docs/dnd.md](docs/dnd.md) | The game model: catalogue, the event-sourced character, SRD terminology |
 | [docs/packs.md](docs/packs.md) | Rule packs: format, versions and locks, resources, homebrew authoring |
 | [docs/agent.md](docs/agent.md) | The AI Wizard: tools, chat workspace, private content, resumability |

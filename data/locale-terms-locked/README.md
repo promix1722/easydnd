@@ -168,7 +168,7 @@ clauses naming other spells. Read the diff.
   rendered per locale by the client, so a Russian sheet never reads "90 feet".
 - **The interface.** Buttons, headings and error messages are in
   `web/locales/*.json`. Different file, same idea. See
-  [docs/web.md](../../docs/web.md#localization).
+  [docs/web.md](../../docs/web/localization.md#localization).
 - **The licence notice.** `data/pack/srd-5.1/ATTRIBUTION.md` is the canonical
   SRD 5.1 attribution, and a translated attribution is a different attribution.
   See [docs/licensing.md](../../docs/licensing.md).

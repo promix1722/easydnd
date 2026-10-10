@@ -373,7 +373,7 @@ PUBLIC_PORT_BASE := 8880
 That is the whole configuration. `make dev` then passes
 `http://dev.example.org:{8880 + slot}` to the API as the first of its
 `auth.rp_origins` and hands it to Vite, which needs it for two things of its
-own -- see [web.md](web.md#one-dev-server-per-worktree).
+own -- see [web.md](web/shipping.md#one-dev-server-per-worktree).
 
 Three consequences of reaching the app over plain HTTP on a name that is not
 `localhost`, all by design rather than breakage:
@@ -382,7 +382,7 @@ Three consequences of reaching the app over plain HTTP on a name that is not
   context, so `window.PublicKeyCredential` is undefined and the sign-in page
   draws no passkey card at all. The guest session is the way in. They do work at
   `http://localhost:{port}`, which browsers treat as secure, and they work in
-  `make preview` -- see [web.md](web.md#make-preview-is-the-only-secure-origin),
+  `make preview` -- see [web.md](web/shipping.md#make-preview-is-the-only-secure-origin),
   which exists because service workers and the install prompt are blocked by
   this same rule.
 - **`env: development` is doing real work.** It is what clears the cookie
@@ -391,7 +391,7 @@ Three consequences of reaching the app over plain HTTP on a name that is not
 - **`navigator.clipboard` is undefined**, for exactly the same reason as
   `PublicKeyCredential`. The invite sheet falls back to a selection copy and,
   if even that is refused, says so and selects the link -- see
-  [web.md](web.md#copying-the-invite-link).
+  [web.md](web/shell.md#copying-the-invite-link).
 
 ## Layout
 
@@ -762,7 +762,7 @@ Four fields make the client mechanical rather than knowledgeable:
 An answer to a branch and the answer it opens arrive in **one event**, in that
 order. `surviving` re-projects the prompts between each answer in a batch, so
 the second is legal because the first landed — see
-[web.md](web.md#a-choice-inside-a-choice-is-answered-where-it-was-asked) for
+[web.md](web/builder.md#a-choice-inside-a-choice-is-answered-where-it-was-asked) for
 why the client sends them together.
 
 A prompt whose option set is **explicit and empty** is a question the player
@@ -1550,7 +1550,7 @@ configs leave analytics disabled. Use the browser project token (`phc_`), not
 a personal or secret API key. The public, uncached `GET /v1/analytics-config`
 exposes only `environment`, `token`, and `host`, with environment taken from
 the running server's `env`. It never serializes the full server config. See
-[browser analytics](web.md#analytics) for setup and tracking behavior.
+[browser analytics](web/shipping.md#analytics) for setup and tracking behavior.
 
 The app finds the YAML via the `EASYDND_CONFIG` environment variable, or a
 `-config <path>` flag which takes precedence; there is no default location and
@@ -1704,7 +1704,7 @@ merge them. What makes this cheap rather than alarming is that
 **`register/begin` stores nothing**: the candidate rides inside the sealed
 ceremony cookie and reaches `repo.Create` only once an attestation verifies, so
 an abandoned fallback leaves no record at all. The browser half of this bargain
-is in [web.md](web.md#one-button-means-both-halves).
+is in [web.md](web/auth.md#one-button-means-both-halves).
 
 | Route | Guard | Does |
 |---|---|---|
