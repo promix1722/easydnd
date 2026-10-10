@@ -173,6 +173,11 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	for _, folder := range cfg.Data.AutoloadPacks {
 		folders = append(folders, catalogfile.PackFolder{Path: folder.Path, ID: folder.ID})
 	}
+	// Folders rather than paths: a folder is installed and compiled but never
+	// becomes a default root, which is half of what makes a pack private.
+	for _, path := range cfg.Data.PrivatePackFiles {
+		folders = append(folders, catalogfile.PackFolder{Path: path, Restricted: true})
+	}
 	catalogSource, err := catalogfile.NewRegistry(packPaths, roots, cfg.Data.PackArchive, folders...)
 	if err != nil {
 		return fail(fmt.Errorf("load rule packs: %w", err))
@@ -183,6 +188,7 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 
 	packSource := catalogfile.NewAuthoring(catalogSource, repos.packs)
 	packService := packuc.NewService(repos.packs, packSource, groupRepo, userRepo)
+	packService.SetSuperadmins(cfg.Auth.Superadmins)
 
 	// Application layer. The game service is built first because the two
 	// services either side of it have to tell it when the things it refers to

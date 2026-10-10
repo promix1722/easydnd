@@ -13,6 +13,8 @@ import (
 type PackFolder struct {
 	Path string
 	ID   string
+	// Restricted folders hold private packs: see Registry.restricted.
+	Restricted bool
 }
 
 func loadPackFolder(folder PackFolder) (*PackDocument, error) {

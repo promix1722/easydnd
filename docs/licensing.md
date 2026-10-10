@@ -40,9 +40,19 @@ is the exposure, and it is not in this repository.
 
 That text exists in the private `easydnd-2014` repository, as a
 descriptions-only overlay pack (see [packs.md](packs.md#prose-overlays)),
-which `NOTICE.md` there says is not to be pointed at a public deployment.
-Production gets the base pack alone, so a visitor to easydnd.org sees those
-entries with a blank description -- by design, not by accident.
+and it is never part of a release. A visitor to easydnd.org sees those entries
+with a blank description -- by design, not by accident.
+
+It can be installed on the server by hand as a **private** pack
+(`deploy/push-private-pack.sh`, see
+[packs.md](packs.md#common-and-private-disk-packs)), and is then served only
+to the accounts named in `auth.superadmins` and to the groups one of them
+shares it with -- never in the default catalogue, never to a guest or an
+ordinary account. That is a narrower thing than a public deployment and a
+wider one than a private checkout, and whether it is acceptable is the pack
+owner's decision, not the code's: `NOTICE.md` in that repository still says
+the pack is not to be pointed at a public deployment, and should be brought in
+line with whatever is decided.
 
 The one borderline case is named rather than hidden: the 309 ideals, bonds,
 flaws and personality traits of the non-SRD backgrounds are stored as `terms`,

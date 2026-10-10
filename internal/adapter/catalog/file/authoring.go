@@ -65,7 +65,7 @@ func (a *Authoring) Builtins() []pack.Record {
 func (a *Authoring) buildBuiltinRecords() []pack.Record {
 	out := []pack.Record{}
 	for id, versions := range a.base.releases {
-		r := pack.Record{ID: id, Title: id}
+		r := pack.Record{ID: id, Title: id, Restricted: a.base.restricted[id]}
 		if id == pack.BaseID {
 			r.Title = "SRD 5.1"
 		}

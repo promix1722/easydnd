@@ -201,7 +201,7 @@ an alignment that does not exist fails the load. Left bare, "any arcane focus"
 asked a namespaced pack for `arcane-foci`, found only `pack/arcane-foci`, and
 offered the player nothing to choose.
 
-`autoload_packs` installs additional public packs at startup without adding them
+`autoload_packs` installs additional common packs at startup without adding them
 to the default roots. Each entry's `path` names a pack directory, or a repository
 whose `pack/` child is the pack directory. A manifest at the configured root
 takes precedence; the loader does not recursively scan vendor or source folders.
@@ -224,9 +224,70 @@ already declare its installed ID. Independent cores are selected separately;
 combining two core providers still fails validation. Autoloaded releases use the
 same immutable archive policy as `pack_files`.
 
-Neither committed config lists an extra pack: `config.dev.yaml` and
-`config.prod.yaml` both install the base alone, and every worktree runs on the
-same `config.dev.yaml`.
+### Common and private disk packs
+
+A pack installed from disk belongs to one of two groups, and which one is
+decided by the key that names it:
+
+| | Key | Who has it |
+|---|---|---|
+| **common** | `data.pack_files`, `data.autoload_packs` | every session, guests included |
+| **private** | `data.private_pack_files` | a **superadmin**, and the members of any group a superadmin has shared it with |
+
+A private pack is installed and compiled at startup like any other, and then
+kept out of everything that is the same for everybody: it is never a default
+root, so it is not in the default lock, the global `/v1/catalog` or a
+character created without choosing rules. For an account that does not have it
+the pack does not exist -- not in `GET /v1/packs`, the pack selector, the spell
+browser or `export`, and naming it in a lock is refused exactly as a stranger's
+homebrew pack is. The choke point is the one that already existed,
+`Service.available` in `internal/usecase/pack`: an unowned record marked
+`Restricted` is allowed only for a superadmin, and the group-share loop below
+it grants it to a table.
+
+**A superadmin** is an account named in `auth.superadmins`, by the *verified*
+email of a linked Google account or by account id. An unverified email is
+anybody's to claim and never matches; a passkey-only account has no email and
+can only be named by id, which is how `config.dev.yaml` names `dev:master`.
+
+**Granting** reuses pack sharing. On a group they belong to, a superadmin sees
+a *Private packs* tab and shares a release with the table through
+`POST /v1/groups/:id/packs`; its members then find the pack in their own pack
+selector. Removing the share (`DELETE`, the contributor or a DM) takes it away
+from new characters. Two things follow from how sharing already worked:
+
+- A character already built on the pack keeps it -- its lock is retained, as
+  for any unshared homebrew pack -- and anybody who may read that character's
+  sheet, through a group or a public link, reads it whole.
+- A granted member selects and reads the pack but cannot `export` it; only a
+  superadmin takes a copy.
+- A member who was granted the pack may publish homebrew that depends on it,
+  but cannot share that homebrew with another table: a restricted dependency
+  is passed on only by a superadmin (`pack.dependencyPrivate`).
+
+Privacy is by **pack ID**, taken from the folders configured at this startup.
+With `data.pack_archive` set, drop a path from `private_pack_files` and its
+archived releases load as ordinary installed packs -- remove them from the
+archive too.
+
+Neither committed config names a private pack, because the path is a directory
+on one machine: it is `EASYDND_PRIVATE_PACK_FILES` in the env file. In
+development that is `~/config/easydnd/dev.env`, pointing at the
+`easydnd-2014` checkout -- the descriptions-only overlay
+(`easydnd-2014-personal`, see [Prose overlays](#prose-overlays)). In production
+the pack is copied by hand, from a machine that has it:
+
+```sh
+deploy/push-private-pack.sh ~/projects/easydnd-2014/pack   # [ssh-host], default `easydnd`
+```
+
+It compiles the pack against this checkout's SRD, copies it to
+`/opt/easydnd/private-packs/<pack id>/` (`root:easydnd`, outside `releases/`,
+so no deploy replaces it and no prune removes it) and restarts the service,
+putting the previous copy back if the service does not answer. The **first**
+push restarts nothing and prints the line to add to `/etc/easydnd/prod.env`:
+a path that does not exist is a startup error, so the pack has to be there
+before the server is told about it.
 
 The archive preserves packs, **not characters**. Character logs, checkpoints,
 folders, shares and games are in PostgreSQL when `db.url` is set, and in

@@ -58,7 +58,7 @@ export function PacksScreen() {
                 {p.title}
               </Anchor>
               <Badge>
-                {p.builtin ? t('packs.builtin') : p.owned ? t('packs.personal') : t('packs.shared')}
+                {p.restricted ? t('packs.restricted') : p.builtin ? t('packs.builtin') : p.owned ? t('packs.personal') : t('packs.shared')}
               </Badge>
               {p.archived && <Badge>{t('packs.archived')}</Badge>}
             </Group>

@@ -47,6 +47,10 @@ data:
   # health gate timed out, and the release rolled back.
   srd_dir: /opt/easydnd/current/data/pack/srd-5.1
   pack_files: []
+  # NO private_pack_files here: a private pack is copied to the server by hand
+  # (deploy/push-private-pack.sh), outside every release, and a path that does
+  # not exist is a startup error -- so it is EASYDND_PRIVATE_PACK_FILES in
+  # prod.env, added once the pack is there.
   autoload_packs: []
   default_packs: {}
   # Optional persistent archive, outside current/; make writable by the service.
@@ -66,6 +70,11 @@ auth:
   # auth.google.redirect_url defaults to its /v1/auth/sso/google/callback.
   rp_origins:
     - https://easydnd.org
+
+  # Who reads the private packs outright and may grant them to a group. Matched
+  # against the VERIFIED email of a linked Google account, never a claimed one.
+  superadmins:
+    - promix1722@gmail.com
 
   # NO session_secret here: EASYDND_SESSION_SECRET in prod.env. The process
   # refuses to start without it, exactly as it refuses to start without its

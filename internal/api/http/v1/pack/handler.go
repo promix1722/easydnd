@@ -35,14 +35,18 @@ type Release struct {
 func releaseOf(r domain.Release) Release { return Release{r.ID, r.Version, r.Digest} }
 
 type Record struct {
-	ID       string          `json:"id"`
-	Title    string          `json:"title"`
-	Owned    bool            `json:"owned"`
-	Builtin  bool            `json:"builtin"`
-	Archived bool            `json:"archived"`
-	Revision int             `json:"revision"`
-	Draft    json.RawMessage `json:"draft,omitempty"`
-	Releases []Release       `json:"releases"`
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Owned   bool   `json:"owned"`
+	Builtin bool   `json:"builtin"`
+	// Restricted is a private disk pack; Shareable says this caller may grant
+	// it to a group, which is what the client offers the control on.
+	Restricted bool            `json:"restricted,omitempty"`
+	Shareable  bool            `json:"shareable,omitempty"`
+	Archived   bool            `json:"archived"`
+	Revision   int             `json:"revision"`
+	Draft      json.RawMessage `json:"draft,omitempty"`
+	Releases   []Release       `json:"releases"`
 }
 
 func recordOf(r domain.Record, u user.ID, detail bool) Record {
@@ -65,8 +69,14 @@ func respond(c *gin.Context, v any, err error) {
 func (h *Handler) List(c *gin.Context) {
 	rows, err := h.service.List(c.Request.Context(), actor(c).ID)
 	out := []Record{}
+	super := false
 	for _, r := range rows {
-		out = append(out, recordOf(r, actor(c).ID, false))
+		row := recordOf(r, actor(c).ID, false)
+		if r.Restricted {
+			super = super || h.service.Superadmin(c.Request.Context(), actor(c).ID)
+			row.Restricted, row.Shareable = true, super
+		}
+		out = append(out, row)
 	}
 	respond(c, gin.H{"packs": out, "defaultRules": helpers.RulesLockOf(h.service.Default())}, err)
 }

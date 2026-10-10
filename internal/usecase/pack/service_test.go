@@ -3,6 +3,9 @@ package pack_test
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -155,5 +158,146 @@ func TestInvalidDraftCanSaveButNotPublish(t *testing.T) {
 	}
 	if _, err = s.Create(ctx, user.User{ID: r.Owner}, "Bad", []byte(`{"manifest":{},"manifest":{}}`), nil); err == nil {
 		t.Fatal("duplicate key accepted")
+	}
+}
+
+// restrictedFixture installs a descriptions-only overlay as a private pack and
+// names root as the superadmin, by verified email.
+func restrictedFixture(t *testing.T) (context.Context, *uc.Service, *memory.GroupRepository, pack.Release) {
+	t.Helper()
+	ctx := context.Background()
+	doc, err := file.EncodePack(&file.PackDocument{
+		Manifest: file.PackManifest{SchemaVersion: 1, ID: "overlay", Version: "1.0.0", Edition: "2014", Semantics: "1", DefaultLocale: "en",
+			Dependencies: []file.Dependency{{ID: "srd-2014", Version: ">=1.0.0"}}},
+		Entities: map[string]json.RawMessage{},
+		Locales:  map[string]map[string]file.Bundle{"en": {"classes": {"srd-2014:class:wizard": {Desc: []string{"A scholar."}}}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err = os.WriteFile(filepath.Join(dir, "pack"), doc, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	base, err := file.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "", file.PackFolder{Path: dir, Restricted: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := memory.NewPackRepository()
+	users := memory.NewUserRepository()
+	groups := memory.NewGroupRepository(users)
+	engine := file.NewAuthoring(base, repo)
+	if len(engine.Default().Packs) != 1 {
+		t.Fatalf("Default() = %v, want the base alone: a private pack is never a default root", engine.Default().Packs)
+	}
+	for id, identities := range map[user.ID][]user.Identity{
+		"root":    {{Provider: user.ProviderGoogle, Subject: "1", Email: "Root@example.com", EmailVerified: true}},
+		"claimed": {{Provider: user.ProviderGoogle, Subject: "2", Email: "root@example.com"}},
+		"player":  nil,
+	} {
+		if err = users.Create(ctx, user.User{ID: id, DisplayName: string(id), Identities: identities}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = groups.Create(ctx, group.Group{ID: "table", Name: "Table", CreatedAt: time.Now()}, "root"); err != nil {
+		t.Fatal(err)
+	}
+	if err = groups.AddMember(ctx, "table", "player", group.RolePlayer, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	s := uc.NewService(repo, engine, groups, users)
+	s.SetSuperadmins([]string{"root@example.com"})
+	for _, r := range engine.Builtins() {
+		if r.ID == "overlay" {
+			return ctx, s, groups, r.Releases[0].Release
+		}
+	}
+	t.Fatal("private pack not installed")
+	return nil, nil, nil, pack.Release{}
+}
+
+func TestRestrictedPackIsTheSuperadminsUntilGranted(t *testing.T) {
+	ctx, s, _, overlay := restrictedFixture(t)
+	roots := []pack.Release{overlay}
+
+	if _, err := s.Resolve(ctx, "root", roots); err != nil {
+		t.Fatalf("superadmin cannot select the private pack: %v", err)
+	}
+	// An unverified email is anybody's to type; a guest has no account at all.
+	for _, who := range []user.ID{"player", "claimed", "anon:guest"} {
+		if _, err := s.Resolve(ctx, who, roots); err == nil {
+			t.Errorf("%s selected the private pack", who)
+		}
+		if _, err := s.Export(ctx, who, "overlay", "1.0.0"); err == nil {
+			t.Errorf("%s exported the private pack", who)
+		}
+		rows, err := s.List(ctx, who)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, r := range rows {
+			if r.ID == "overlay" {
+				t.Errorf("%s is shown the private pack", who)
+			}
+		}
+	}
+
+	// Only a superadmin grants it, and a grant reaches the table's members.
+	if err := s.Share(ctx, "player", "table", "overlay", "1.0.0"); err == nil {
+		t.Fatal("a player shared the private pack")
+	}
+	if err := s.Share(ctx, "root", "table", "overlay", "1.0.0"); err != nil {
+		t.Fatalf("superadmin cannot grant the private pack: %v", err)
+	}
+	if _, err := s.Resolve(ctx, "player", roots); err != nil {
+		t.Fatalf("a member of the granted group cannot select it: %v", err)
+	}
+	if _, err := s.Resolve(ctx, "claimed", roots); err == nil {
+		t.Fatal("an account outside the group selected it")
+	}
+	// A grant is to play with the pack, not to take a copy of it.
+	if _, err := s.Export(ctx, "player", "overlay", "1.0.0"); err == nil {
+		t.Fatal("a granted member exported the private pack")
+	}
+	if _, err := s.Export(ctx, "root", "overlay", "1.0.0"); err != nil {
+		t.Fatalf("superadmin cannot export it: %v", err)
+	}
+	if err := s.Unshare(ctx, "root", "table", "overlay"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Resolve(ctx, "player", roots); err == nil {
+		t.Fatal("the grant outlived its removal")
+	}
+}
+
+// A member who was granted the pack may build on it, but may not carry it to
+// another table inside a pack of their own.
+func TestGrantedRestrictedPackCannotBeResharedThroughAHomebrewPack(t *testing.T) {
+	ctx, s, groups, overlay := restrictedFixture(t)
+	if err := s.Share(ctx, "root", "table", "overlay", "1.0.0"); err != nil {
+		t.Fatal(err)
+	}
+	if err := groups.Create(ctx, group.Group{ID: "elsewhere", Name: "Elsewhere", CreatedAt: time.Now()}, "player"); err != nil {
+		t.Fatal(err)
+	}
+	draft, err := json.Marshal(file.PackDocument{
+		Manifest: file.PackManifest{SchemaVersion: 1, ID: "mine", Version: "1.0.0", Edition: "2014", Semantics: "1", DefaultLocale: "en",
+			Dependencies: []file.Dependency{{ID: "srd-2014", Version: ">=1.0.0"}, {ID: overlay.ID, Version: overlay.Version}}},
+		Entities: map[string]json.RawMessage{},
+		Locales:  map[string]map[string]file.Bundle{"en": {}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := s.Create(ctx, user.User{ID: "player", DisplayName: "player"}, "Mine", draft, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, err = s.Publish(ctx, "player", r.ID, r.Revision); err != nil {
+		t.Fatal(err)
+	}
+	err = s.Share(ctx, "player", "elsewhere", r.ID, "1.0.0")
+	if err == nil || !strings.Contains(err.Error(), "dependency cannot be shared") {
+		t.Fatalf("a granted private pack left its table inside a homebrew pack: %v", err)
 	}
 }

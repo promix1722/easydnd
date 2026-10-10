@@ -17,8 +17,10 @@ log:
 data:
   # Relative to the repo root, which is where `make run/server` runs.
   srd_dir: data/pack/srd-5.1
-  # Optional file-defined packs; see docs/packs.md.
+  # Optional file-defined packs, for everybody; see docs/packs.md.
   pack_files: []
+  # NO private_pack_files here: a private pack is a directory on one machine,
+  # so its path is EASYDND_PRIVATE_PACK_FILES in ~/config/easydnd/dev.env.
   autoload_packs: []
   default_packs: {}
   # Set to .pack-archive when retaining released packs between runs.
@@ -30,6 +32,13 @@ auth:
   rp_id: localhost
   rp_origins:
     - http://localhost:5173
+
+  # Who reads the private packs outright and may grant them to a group: a
+  # verified Google email, or an account id. dev:master is here because a
+  # seeded development account has no email to match.
+  superadmins:
+    - promix1722@gmail.com
+    - "dev:master"
 
   # NO session_secret here, deliberately. Development generates a random key per
   # process and logs a warning: every restart signs everyone out, which matches

@@ -46,6 +46,9 @@ and contextual catalogue routes. Autoloaded folders are additional public
 catalogue choices, excluded from implicit default roots so replacement cores
 can coexist. Each path accepts a pack directory or a repository with a `pack/`
 child; an optional ID override gives replacement datasets their own namespace.
+`data.private_pack_files` are installed the same way and then restricted to
+`auth.superadmins` and the groups one of them grants a pack to; see
+[packs.md](packs.md#common-and-private-disk-packs).
 Missing or invalid configured packs fail startup. Changes require a restart.
 The authoring service separately manages private drafts, published releases,
 imports and group sharing.
@@ -1268,6 +1271,7 @@ naming rule, so a stray export cannot reach a key nobody meant to open:
 | `EASYDND_SESSION_SECRET` | `auth.session_secret` | `prod.env` |
 | `EASYDND_DB_URL` | `db.url` | `prod.env`; in development, `make` from the slot |
 | `EASYDND_GOOGLE_CLIENT_ID`, `EASYDND_GOOGLE_CLIENT_SECRET` | `auth.google.*` | the env file, optional |
+| `EASYDND_PRIVATE_PACK_FILES` (comma-separated) | `data.private_pack_files` | the env file -- a directory on that host, not a secret |
 | `EASYDND_HTTP_PORT`, `EASYDND_RP_ID`, `EASYDND_RP_ORIGINS` (comma-separated) | `http.port`, `auth.rp_id`, `auth.rp_origins` | `make`, from the worktree's slot |
 
 A set variable wins over the file; an unset or empty one leaves it alone. Two
@@ -1319,7 +1323,8 @@ rather than quietly defaulted.
 | `http.trusted_proxies` | `[127.0.0.1, "::1"]` | gin trusts `0.0.0.0/0` by default; narrowed here |
 | `log.level` | `info` | `debug`, `info`, `warn`, `error` |
 | `log.format` | `json` | `json` or `text` |
-| `data.pack_files` | `[]` | additional installed pack files/directories |
+| `data.pack_files` | `[]` | additional installed pack files/directories, common to everybody |
+| `data.private_pack_files` | `[]` | pack directories only superadmins and granted groups can see; never a default root. Set from `EASYDND_PRIVATE_PACK_FILES` |
 | `data.autoload_packs` | `[]` | additional public packs, each with a folder `path` and optional `id` override; root manifest or `pack/` child; does not add default roots |
 | `data.default_packs` | `{}` | selected root IDs and version constraints; omitted means configured inputs |
 | `data.pack_archive` | empty | optional persistent digest-addressed release directory |
@@ -1329,6 +1334,7 @@ rather than quietly defaulted.
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
 | `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The template's placeholder is rejected by name |
+| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups: a **verified** Google email, or an account id |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
 | `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. The first is where Google sign-in returns to. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
@@ -2003,6 +2009,7 @@ Everything below is set up once, by hand, and no tag changes it:
 | `/var/log/easydnd/` | exists; supervisor writes `out.log` and `err.log` there |
 | nginx and certbot | `deploy/nginx/easydnd.conf`, the `$connection_upgrade` map, the certificate |
 | Postgres | the steps above |
+| `/opt/easydnd/private-packs/` | optional: private rule packs, pushed by hand with `deploy/push-private-pack.sh` and named in `prod.env` |
 
 `deploy.sh` checks before the swap that the release has its `config.yaml` and
 that `prod.env` exists; it cannot read the latter, so a *missing variable* still

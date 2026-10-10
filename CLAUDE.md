@@ -21,8 +21,9 @@
   runs at startup -- and `make data/lint/check` for the prose. Every row is
   edited here; `provenance.json` is attribution, and the rows it tags `phb`,
   `xge` or `tce` carry no description by design -- their text is a private
-  overlay pack that is never deployed. The manifest names no files: the loader
-  reads the layout.
+  overlay pack that no release carries; it reaches a server only by hand, as a
+  restricted pack (`docs/packs.md#common-and-private-disk-packs`). The manifest
+  names no files: the loader reads the layout.
 - **Pack translations live in the pack, UI captions do not.** A locale is
   `data/pack/srd-5.1/i18n/<tag>/`, one file per collection; adding a language
   is `mkdir` plus files, and a slug the English bundle does not define fails

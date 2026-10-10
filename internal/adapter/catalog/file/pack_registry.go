@@ -24,12 +24,15 @@ type Registry struct {
 	releases    map[string]map[string]*PackDocument
 	identities  map[*PackDocument]pack.Release
 	defaultLock pack.Lock
-	mu          sync.Mutex
-	contexts    map[string]*catalog.Catalog
+	// restricted names the packs installed from private folders. By pack ID,
+	// so every version of one is covered, an archived one included.
+	restricted map[string]bool
+	mu         sync.Mutex
+	contexts   map[string]*catalog.Catalog
 }
 
 func NewRegistry(paths []string, roots []Dependency, archive string, folders ...PackFolder) (*Registry, error) {
-	r := &Registry{releases: map[string]map[string]*PackDocument{}, contexts: map[string]*catalog.Catalog{}, identities: map[*PackDocument]pack.Release{}}
+	r := &Registry{releases: map[string]map[string]*PackDocument{}, contexts: map[string]*catalog.Catalog{}, identities: map[*PackDocument]pack.Release{}, restricted: map[string]bool{}}
 	// A digest validates, encodes and canonicalises the whole pack, and loading
 	// one asks for it up to three times and then for the encoding again to
 	// archive it. Nothing here changes a document once it is read, so each is
@@ -166,6 +169,9 @@ func NewRegistry(paths []string, roots []Dependency, archive string, folders ...
 			return nil, fmt.Errorf("autoload pack %s: %w", folder.Path, err)
 		}
 		configuredReleases = append(configuredReleases, Dependency{ID: p.Manifest.ID, Version: p.Manifest.Version})
+		if folder.Restricted {
+			r.restricted[p.Manifest.ID] = true
+		}
 	}
 	lock, err := r.Resolve(roots)
 	if err != nil {

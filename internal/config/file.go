@@ -40,6 +40,11 @@ func applyEnv(f *fileConfig) {
 	if v := os.Getenv("EASYDND_RP_ORIGINS"); v != "" {
 		f.Auth.RPOrigins = strings.Split(v, ",")
 	}
+	// A path on this machine, not a secret -- but it is true of one host only,
+	// and a missing directory is a startup error, so it cannot be committed.
+	if v := os.Getenv("EASYDND_PRIVATE_PACK_FILES"); v != "" {
+		f.Data.PrivatePackFiles = strings.Split(v, ",")
+	}
 }
 
 // fileConfig mirrors Config with YAML tags. It exists as a separate type so
@@ -89,11 +94,14 @@ type fileLog struct {
 }
 
 type fileData struct {
-	SRDDir        string            `yaml:"srd_dir"`
-	PackFiles     []string          `yaml:"pack_files"`
-	AutoloadPacks []PackFolder      `yaml:"autoload_packs"`
-	DefaultPacks  map[string]string `yaml:"default_packs"`
-	PackArchive   string            `yaml:"pack_archive"`
+	SRDDir    string   `yaml:"srd_dir"`
+	PackFiles []string `yaml:"pack_files"`
+	// PrivatePackFiles are installed like pack_files but never join the
+	// default lock and are listed only for the accounts allowed to read them.
+	PrivatePackFiles []string          `yaml:"private_pack_files"`
+	AutoloadPacks    []PackFolder      `yaml:"autoload_packs"`
+	DefaultPacks     map[string]string `yaml:"default_packs"`
+	PackArchive      string            `yaml:"pack_archive"`
 }
 
 type fileDB struct {
@@ -114,7 +122,9 @@ type fileAuth struct {
 	RPName        string   `yaml:"rp_name"`
 	RPOrigins     []string `yaml:"rp_origins"`
 	SessionSecret string   `yaml:"session_secret"`
-	SessionTTL    string   `yaml:"session_ttl"`
+	// Superadmins names accounts by verified Google email or by account id.
+	Superadmins []string `yaml:"superadmins"`
+	SessionTTL  string   `yaml:"session_ttl"`
 	// GuestSessionTTL is the anonymous-session lifetime. It is a separate key
 	// from session_ttl because a guest token names nothing recoverable and
 	// cannot be revoked, so it wants a shorter life than an account's.

@@ -94,11 +94,14 @@ type DataConfig struct {
 	// directory rather than an embedded blob so the data can be corrected
 	// without rebuilding the binary -- which also means deploy.sh must ship
 	// it alongside the binary.
-	SRDDir        string
-	PackFiles     []string
-	AutoloadPacks []PackFolder
-	DefaultPacks  map[string]string
-	PackArchive   string
+	SRDDir    string
+	PackFiles []string
+	// PrivatePackFiles are restricted packs: installed, never a default root,
+	// and readable only by a superadmin and the groups one shares them with.
+	PrivatePackFiles []string
+	AutoloadPacks    []PackFolder
+	DefaultPacks     map[string]string
+	PackArchive      string
 }
 
 // PackFolder installs a public pack from a directory, optionally under a new ID.
@@ -122,6 +125,11 @@ type AuthConfig struct {
 	// SessionSecret signs the session and ceremony tokens. Rotating it is the
 	// only way to invalidate every outstanding session at once, because
 	// nothing server-side records that a session exists.
+	// Superadmins may read the restricted packs and grant them to a group.
+	// An entry is a verified Google email or an account id -- the second so a
+	// development account, which has no email, can be named too.
+	Superadmins []string
+
 	SessionSecret []byte
 	SessionTTL    time.Duration
 	// GuestSessionTTL bounds an anonymous session. Shorter than SessionTTL on
@@ -259,7 +267,8 @@ func Load(path string) (*Config, error) {
 			// root; the deploy sets it to the release directory.
 			SRDDir:    p.str(f.Data.SRDDir, "data/pack/srd-5.1"),
 			PackFiles: f.Data.PackFiles, DefaultPacks: f.Data.DefaultPacks, PackArchive: f.Data.PackArchive,
-			AutoloadPacks: f.Data.AutoloadPacks,
+			PrivatePackFiles: p.slice(f.Data.PrivatePackFiles, nil),
+			AutoloadPacks:    f.Data.AutoloadPacks,
 		},
 		DB: DBConfig{
 			URL:      p.str(f.DB.URL, ""),
@@ -369,6 +378,7 @@ func loadAuth(p *parser, f fileAuth, production bool) (AuthConfig, error) {
 		GuestSessionTTL: p.duration("auth.guest_session_ttl", f.GuestSessionTTL, 24*time.Hour),
 		CeremonyTTL:     p.duration("auth.ceremony_ttl", f.CeremonyTTL, 5*time.Minute),
 		SecureCookies:   production,
+		Superadmins:     p.slice(f.Superadmins, nil),
 	}
 
 	secret, err := sessionSecret(f.SessionSecret, production)

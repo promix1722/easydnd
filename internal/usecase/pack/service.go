@@ -18,10 +18,27 @@ type Service struct {
 	engine domain.Engine
 	groups group.Repository
 	users  user.Repository
+	// superadmins is auth.superadmins: who reads restricted packs outright.
+	superadmins []string
+}
+
+func (s *Service) SetSuperadmins(list []string) { s.superadmins = list }
+
+// Superadmin reports whether u is one. A guest has no account row and so no
+// verified email; it can only match by id, which nobody would configure.
+func (s *Service) Superadmin(ctx context.Context, u user.ID) bool {
+	if len(s.superadmins) == 0 {
+		return false
+	}
+	account, err := s.users.ByID(ctx, u)
+	if err != nil {
+		account = user.User{ID: u}
+	}
+	return account.Superadmin(s.superadmins)
 }
 
 func NewService(r domain.Repository, e domain.Engine, g group.Repository, u user.Repository) *Service {
-	return &Service{r, e, g, u}
+	return &Service{repo: r, engine: e, groups: g, users: u}
 }
 func (s *Service) Schema() []byte       { return s.engine.Schema() }
 func (s *Service) Default() domain.Lock { return s.engine.Default() }
@@ -38,7 +55,11 @@ func (s *Service) available(ctx context.Context, u user.ID) ([]domain.Record, ma
 	records = append(records, s.engine.Builtins()...)
 	allowed := map[domain.Release]bool{}
 	for _, r := range records {
-		if !r.Archived && (r.Owner == "" || r.Owner == u) {
+		// A restricted disk pack is unowned too, but only a superadmin has it
+		// outright; everybody else reaches it through a group share below.
+		// ponytail: one account lookup per restricted pack per call; cache
+		// per request if a deployment ever installs more than a handful.
+		if !r.Archived && (r.Owner == u || r.Owner == "" && (!r.Restricted || s.Superadmin(ctx, u))) {
 			for _, d := range r.Releases {
 				allowed[d.Release] = true
 			}
@@ -280,6 +301,10 @@ func (s *Service) Export(ctx context.Context, u user.ID, id, version string) ([]
 	if err != nil {
 		return nil, err
 	}
+	// A grant is to play with the pack at one table, not to carry it away.
+	if r.Restricted && !s.Superadmin(ctx, u) {
+		return nil, denied()
+	}
 	if version == "" {
 		doc, _, err := s.Validate(ctx, u, id)
 		if err != nil {
@@ -304,9 +329,13 @@ func (s *Service) Share(ctx context.Context, u user.ID, g, id, version string) e
 	if _, err := s.groups.MemberRole(ctx, group.ID(g), u); err != nil {
 		return denied()
 	}
+	super := s.Superadmin(ctx, u)
 	r, err := s.owned(ctx, u, id)
 	if err != nil {
-		return err
+		// A restricted disk pack has no owner to share it; a superadmin does.
+		if r, err = s.Get(ctx, u, id); err != nil || !r.Restricted || !super {
+			return denied()
+		}
 	}
 	if r.Archived {
 		return denied()
@@ -330,7 +359,9 @@ func (s *Service) Share(ctx context.Context, u user.ID, g, id, version string) e
 		if err != nil {
 			return err
 		}
-		if dep.Owner != "" && dep.Owner != u && !groupAllowed[p] {
+		// Somebody else's pack, or a restricted one the caller was only
+		// granted: neither is theirs to pass on to another table.
+		if (dep.Owner != "" && dep.Owner != u || dep.Restricted && !super) && !groupAllowed[p] {
 			return types.NewAccessDeniedError("dependency cannot be shared").Because("pack.dependencyPrivate")
 		}
 	}

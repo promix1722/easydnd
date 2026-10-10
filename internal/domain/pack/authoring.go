@@ -16,8 +16,11 @@ type Record struct {
 	Owner     user.ID
 	Revision  int
 	Archived  bool
-	Draft     []byte
-	Releases  []Document
+	// Restricted marks a disk pack from data.private_pack_files: unowned like
+	// every installed pack, but not everybody's.
+	Restricted bool
+	Draft      []byte
+	Releases   []Document
 }
 type Share struct {
 	Group, Pack string
