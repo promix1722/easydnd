@@ -1145,6 +1145,47 @@ paths still go only through the first. There is no route anywhere that writes to
 a character through the second, which is why "read-only" here is a property of
 the API's shape rather than a rule somebody has to remember.
 
+#### What a table hands over
+
+There is one exception, and it is not a widening of either function: three
+routes under a game write to a seated character its actor does not own, and
+they write a backpack count or a coin and nothing else.
+
+| Route | Who | Does |
+| --- | --- | --- |
+| `POST /v1/games/{id}/entries/{entry}/items` `{item, count}` | DM or group owner | `count` more of `item` in the character's backpack |
+| `POST /v1/games/{id}/entries/{entry}/coins` `{unit, amount}` | DM or group owner | adds a signed `amount` to the purse; below zero is a 400 `coins.notEnough` |
+| `POST /v1/games/{id}/entries/{entry}/give` `{item, count, to}` | the owner of `entry`'s character | moves `count` of `item` to the player entry `to` |
+
+A table hands things over -- the DM gives out treasure, one player passes
+another a potion -- and a rule that made the recipient type it into their own
+sheet would be a rule nobody follows. What grants the write is the **game**:
+the recipient is seated in it, and the actor either runs its table or is giving
+up something of their own. So the routes hang off a game entry and not off
+`/v1/characters`, whose every route is still the owner's alone, and
+`character.Service.owned` is still untouched.
+
+The write (`usecase/game/items.go`, `changeCharacter`) is an ordinary `change`
+event with absolute `set` values on `equipment.backpack.<slug>` and
+`equipment.purse.<unit>`, computed from the sheet as it stands and committed
+against the character's revision -- the same event the owner's sheet sends, so
+the log has one vocabulary and the owner can revise it like any other entry.
+An owner's write landing between the read and the commit is a stale-revision
+400, not a silent overwrite.
+
+A give takes from the backpack, then from the loot, and never what is worn
+(`item.worn`); more than is carried is `item.notCarried`. The item must exist
+in the **recipient's** locked catalogue (`item.unknownToRecipient`): a custom
+item, or one from a pack the recipient does not play with, has no slug there to
+be counted under, and that is checked before anything leaves the giver. A grant
+takes any slug the recipient's catalogue has, up to 100 at a time.
+
+A give is **two commits, not one transaction** -- giver first, then recipient,
+and the giver's is put back if the second fails. No repository method commits
+two characters at once, so a crash between the two loses the item; it can never
+duplicate it, and the DM can hand it back. Nothing records who gave what beyond
+the two log entries.
+
 Both refuse with **404**, and for the reason `owned` does: a character id is a
 short sequence number, so a 403 on one that is not yours confirms it exists. A character
 that was never shared, one unshared a moment ago and one that never existed are
@@ -1293,7 +1334,10 @@ copy under the game repository mutex. Rejected changes leave storage untouched,
 and independent field edits survive concurrent writes. The latest accepted
 write wins when two requests change the same field.
 
-**Consumables are game values too.** A player entry carries `resources`: the
+**Consumables are game values too**, and they are sent only to the
+character's owner and to whoever runs the table: another player's entry
+arrives without `resources`, because what somebody has left to spend is theirs
+to tell. A player entry carries `resources`: the
 character's spendable pools -- spell slots by level, Pact Magic, every
 pack-declared pool such as Channel Divinity or ki, and Hit Dice last -- each
 `{id, name, group, max, used, dice?, slot_level?}`. Capacity is projected live

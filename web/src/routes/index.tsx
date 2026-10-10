@@ -164,6 +164,11 @@ export const router = createBrowserRouter([
         element: <Private><ItemScreen /></Private>,
       },
       {
+        // An item read from a game: the trail leads back to the game, not to a sheet.
+        path: 'games/:game/characters/:character/items/:slug',
+        element: <Private><ItemScreen /></Private>,
+      },
+      {
         path: 'groups/:id/characters/:character',
         element: (
           <Private>

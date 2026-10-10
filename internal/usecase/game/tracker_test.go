@@ -249,6 +249,19 @@ func TestAShortRestReturnsOnlyShortRestPools(t *testing.T) {
 	if err := f.svc.AddCharacters(ctx, "alice", g.ID, []character.ID{cid}); err != nil {
 		t.Fatal(err)
 	}
+	// Another player at the table sees the card and none of what it has left to spend.
+	if err := f.groups.AddMember(ctx, "table", "carol", group.RolePlayer, at(3)); err != nil {
+		t.Fatal(err)
+	}
+	for who, want := range map[user.ID]bool{"alice": true, "bob": true, "carol": false} {
+		seen, err := f.svc.Participants(ctx, who, g.ID, rules.DefaultLocale)
+		if err != nil || len(seen) != 1 {
+			t.Fatalf("%s: entries %+v, %v", who, seen, err)
+		}
+		if got := len(seen[0].Pools) > 0; got != want {
+			t.Fatalf("%s sees pools = %v, want %v", who, got, want)
+		}
+	}
 	used := func() map[string]int {
 		t.Helper()
 		entries, err := f.svc.Participants(ctx, "alice", g.ID, rules.DefaultLocale)
@@ -319,7 +332,7 @@ func TestSpentUsesBelongToTheGameAndALongRestReturnsThem(t *testing.T) {
 	original, _ := f.characters.Get(ctx, cid)
 	pools := func() map[string][2]int {
 		t.Helper()
-		entries, err := f.svc.Participants(ctx, "carol", g.ID, rules.DefaultLocale)
+		entries, err := f.svc.Participants(ctx, "bob", g.ID, rules.DefaultLocale)
 		if err != nil || len(entries) != 1 {
 			t.Fatalf("entries: %+v, %v", entries, err)
 		}

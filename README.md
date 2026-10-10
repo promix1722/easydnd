@@ -38,7 +38,10 @@ They live in PostgreSQL and survive a restart.
 A group is no longer only people. Any member may **share** a character with it,
 and that grants a read to whoever runs the table: its DMs and its owner can
 open the sheet, a player only once the character's owner opens it, and only
-its owner can ever change it.
+its owner can change it -- except for what a table hands over: at a game, a DM
+gives a seated character an item or coins, and a player passes one of their
+own items to another. See
+[What a table hands over](docs/backend.md#what-a-table-hands-over).
 
 **Games** are the third main section, beside Characters and Groups. A game is
 one sitting run by a DM, played at one group's table, with a roster of the

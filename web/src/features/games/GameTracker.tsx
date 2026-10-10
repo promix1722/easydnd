@@ -1,19 +1,25 @@
-import { useId, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useId, useRef, useState, type PointerEvent } from 'react'
 import { Link } from 'react-router'
 
-import type { EntryPatch, EntryStats, GameDetail, GameEntry } from '@/lib/api'
-import { addGameMonster, deleteGameEntry, orderGameEntries, patchGameEntry, restGame } from '@/lib/api'
+import type { Change, EntryPatch, EntryStats, GameDetail, GameEntry, Item, ItemHit } from '@/lib/api'
+import {
+  addGameMonster, adjustCoins, bySlug, deleteGameEntry, getSharedSheet, getSheet, giveItem, grantItem,
+  orderGameEntries, patchGameEntry, restGame, writeChanges,
+} from '@/lib/api'
+import { CatalogScope } from '@/lib/api/catalogScope'
+import { useResource } from '@/lib/useResource'
 import { useAction } from '@/lib/useAction'
 import { useAuth } from '@/lib/auth'
-import { useT } from '@/lib/i18n'
+import { useLocale, useT } from '@/lib/i18n'
 import {
   Avatar, characterAvatar, playerAvatar,
-  ACTION_ICON_SIZE, ActionIcon, Alert, Anchor, Badge, Box, Button, Card, Divider,
-  Group, IconArrowDown, IconArrowUp, IconDice5, IconDotsVertical, IconGripVertical, IconPencil,
-  IconShield, IconTrash, IconPlus, IconChevronDown, Menu, ModalSheet, NumberInput, SimpleGrid, Stack, Text, TextInput, useIsDesktop,
+  ACTION_ICON_SIZE, ActionIcon, Affix, Alert, Anchor, Badge, Box, Button, Card, Divider,
+  Group, IconArrowDown, IconArrowsExchange, IconArrowUp, IconBackpack, IconCoins, IconDice5, IconDotsVertical, IconGripVertical, IconPencil,
+  IconShield, IconTrash, IconPlus, IconChevronDown, ItemIcon, Menu, ModalSheet, Notification, NumberInput, Select, SHEET_COMBOBOX, SimpleGrid, Stack, Text, TextInput, useIsDesktop,
 } from '@/ui'
-import { ABILITY_ORDER, signed, titleCase } from '@/domain'
+import { ABILITY_ORDER, COINS, groupOf, mergeStacks, setCoin, setTotal, signed, titleCase } from '@/domain'
 import { abilityAbbr, senseName, speedName } from '../character/labels'
+import { AddItems } from '../character/ItemPicker'
 import { ResourcePools } from '../character/ResourcePools'
 import { FolderTreeSheet } from './FolderTreeSheet'
 import { sheetPath } from './sheetPath'
@@ -37,6 +43,15 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
   const [over, setOver] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [consuming, setConsuming] = useState<string | null>(null)
+  const [carrying, setCarrying] = useState<{ id: string; mode: 'use' | 'give' } | null>(null)
+  const [paying, setPaying] = useState<string | null>(null)
+  // What changed hands, said in a corner and gone by itself: nothing on the roster shows an inventory.
+  const [notice, setNotice] = useState<{ title: string; text: string } | null>(null)
+  useEffect(() => {
+    if (notice === null) return
+    const timer = setTimeout(() => setNotice(null), 4000)
+    return () => clearTimeout(timer)
+  }, [notice])
   const [pickingMonster, setPickingMonster] = useState(false)
   const patch = useAction(patchGameEntry)
   const remove = useAction(deleteGameEntry)
@@ -47,6 +62,11 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
   const entries = game.entries
   const selected = entries.find((entry) => entry.id === editing)
   const consumer = entries.find((entry) => entry.id === consuming)
+  const carrier = entries.find((entry) => entry.id === carrying?.id)
+  const payee = entries.find((entry) => entry.id === paying)
+  const players = entries.filter((entry) => entry.kind === 'player' && entry.character_id !== undefined)
+  const owned = (entry: GameEntry) => game.characters.find((each) => each.id === entry.character_id)?.owner_id === me
+  const myPlayers = players.filter(owned)
   const error = patch.error ?? remove.error ?? order.error ?? monster.error ?? rest.error
   const pending = patch.pending || remove.pending || order.pending || monster.pending || rest.pending
 
@@ -138,12 +158,21 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
           const sheet = entry.character_id
             ? sheetPath(game.group_id, game.characters.find((each) => each.id === entry.character_id) ?? { id: entry.character_id }, me, master)
             : undefined
+          const mine = entry.kind === 'player' && owned(entry)
           const actions = [
-            ...(entry.can_edit ? [{ label: t('common.edit'), icon: IconPencil,
+            // A player's card edits what a fight changes, and says so; an NPC's also edits who it is.
+            ...(entry.can_edit ? [{ label: entry.kind === 'player' ? t('game.hp') : t('common.edit'), icon: IconPencil,
               run: () => { patch.reset(); setEditing(entry.id) } }] : []),
-            // Offered to everyone who can see the entry: without edit rights the dialog is read-only.
+            // The server sends pools to the character's owner and to a DM only; a locked owner reads them and cannot spend.
             ...((entry.resources ?? []).length > 0 ? [{ label: t('sheet.consumables'), icon: IconDice5,
               run: () => setConsuming(entry.id) }] : []),
+            // Coins, using and handing over are three entries and three dialogs: each does one thing.
+            // A DM pays or charges anybody; an owner counts their own coins.
+            ...(entry.kind === 'player' && (master || mine) ? [{ label: t('game.coins'), icon: IconCoins, run: () => setPaying(entry.id) }] : []),
+            ...(mine ? [{ label: t('game.useItem'), icon: IconBackpack, run: () => setCarrying({ id: entry.id, mode: 'use' }) }] : []),
+            // Handing over starts at whoever receives: on their card, to anybody with a character of their own to give from.
+            ...(entry.kind === 'player' && myPlayers.some((each) => each.id !== entry.id)
+              ? [{ label: t('game.transferItem'), icon: IconArrowsExchange, run: () => setCarrying({ id: entry.id, mode: 'give' }) }] : []),
             ...(master ? [
               ...(entry.kind === 'player' ? [{ label: entry.locked ? t('game.unlock') : t('game.lock'), icon: IconShield,
                 run: () => void act(patch.run(game.id, entry.id, { locked: !entry.locked })) }] : []),
@@ -221,6 +250,18 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
           </Box>
         )}
       </Stack>
+      {master && players.length > 0 && <GrantItems gameId={game.id} players={players}
+        onGiven={(text) => setNotice({ title: t('game.added'), text })} />}
+      {carrier !== undefined && carrying?.mode === 'use' && <ItemsSheet gameId={game.id} from={[carrier]} onClose={() => setCarrying(null)}
+        onDone={(text) => { setCarrying(null); setNotice({ title: t('game.used'), text }) }} />}
+      {carrier !== undefined && carrying?.mode === 'give' && <ItemsSheet gameId={game.id} to={carrier}
+        from={myPlayers.filter((entry) => entry.id !== carrier.id)} onClose={() => setCarrying(null)}
+        onDone={(text) => { setCarrying(null); setNotice({ title: t('game.transferred'), text }) }} />}
+      {notice !== null && <Affix position={{ bottom: 16, right: 16 }}>
+        <Notification withBorder role="status" color="green" title={notice.title} onClose={() => setNotice(null)}>{notice.text}</Notification>
+      </Affix>}
+      {payee?.character_id !== undefined && <CoinsSheet gameId={game.id} entry={payee} characterId={payee.character_id} master={master}
+        onClose={() => setPaying(null)} />}
       {consumer && <ConsumablesSheet gameId={game.id} entry={consumer} onClose={() => setConsuming(null)} onChange={onChange} />}
       {selected && <EntryEditor key={selected.id} entry={selected} pending={patch.pending} error={patch.error}
         onClose={() => setEditing(null)} onSave={async (changes) => {
@@ -251,6 +292,147 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
         }} />}
     </Stack>
   )
+}
+
+/**
+ * What a DM hands out, at the foot of the page: who gets it, then the sheet's
+ * own item search over that character's catalogue. An Add closes the search:
+ * a DM hands out one thing and goes back to the table. Nothing on the roster
+ * shows an inventory, so the gift is said in the tracker's notice.
+ */
+function GrantItems({ gameId, players, onGiven }: { gameId: string; players: readonly GameEntry[]; onGiven: (text: string) => void }) {
+  const t = useT()
+  const [chosen, setChosen] = useState<string | null>(null)
+  const to = players.find((entry) => entry.id === chosen) ?? players[0]
+  const grant = useAction(grantItem)
+  // Remounting the search is what closes it.
+  const [round, setRound] = useState(0)
+  if (to?.character_id === undefined) return null
+  const name = (entry: GameEntry) => entry.name || t('common.unnamed')
+  async function give(hit: ItemHit) {
+    if (to === undefined) return
+    if (await grant.run(gameId, to.id, hit.slug) === null) return
+    onGiven(t('game.gave', { item: hit.name, name: name(to) }))
+    setRound((previous) => previous + 1)
+  }
+  // The search is over the receiver's own catalogue: their rule packs decide what exists for them.
+  return <CatalogScope.Provider value={`/shared/${encodeURIComponent(to.character_id)}/catalog`}>
+    <AddItems key={round} label={t('game.giveItem')} disabled={grant.pending} onAdd={(hit) => void give(hit)}
+      detailsTo={(hit) => `/games/${encodeURIComponent(gameId)}/characters/${encodeURIComponent(to.character_id ?? '')}/items/${encodeURIComponent(hit.slug)}`}>
+      <Select label={t('game.giveItemTo')} allowDeselect={false} value={to.id} onChange={setChosen}
+        data={players.map((entry) => ({ value: entry.id, label: name(entry) }))} />
+      {grant.error !== null && <Alert color="red" title={t('group.actionFailed')}>{grant.error}</Alert>}
+    </AddItems>
+  </CatalogScope.Provider>
+}
+
+/**
+ * A seated character's coins, and nothing else of theirs: the same dialog for
+ * the DM and for its owner. Five rows, one coin under another, edited freely
+ * and written once by Save -- a purse is counted, then agreed, and a write per
+ * keystroke would be an entry in the character's log for every digit.
+ *
+ * The two write differently behind the one button. An owner sets their own
+ * totals; a DM sends the difference, so coins the player spent in the same
+ * moment are not put back.
+ */
+function CoinsSheet({ gameId, entry, characterId, master, onClose }: {
+  gameId: string; entry: GameEntry; characterId: string; master: boolean; onClose: () => void
+}) {
+  const t = useT()
+  const sheet = useResource(`purse:${master}:${characterId}`, (signal) => master ? getSharedSheet(characterId, signal) : getSheet(characterId, signal))
+  const [draft, setDraft] = useState<Record<string, number>>({})
+  const purse = sheet.data?.equipment.purse ?? {}
+  const changed = COINS.filter((coin) => draft[coin] !== undefined && draft[coin] !== (purse[coin] ?? 0))
+  const save = useAction(async () => {
+    if (!master) return writeChanges(characterId, changed.map((coin) => setCoin(coin, draft[coin] ?? 0)))
+    for (const coin of changed) await adjustCoins(gameId, entry.id, coin, (draft[coin] ?? 0) - (purse[coin] ?? 0))
+  })
+  const error = save.error ?? sheet.error
+  return <ModalSheet opened onClose={onClose} size="sm" title={t('game.coinsOf', { name: entry.name || t('common.unnamed') })}
+    onSubmit={() => void save.run().then((result) => { if (result !== null) onClose(); else sheet.refresh() })}>
+    <Stack gap="sm">
+      {error !== null && <Alert color="red" title={t('group.actionFailed')}>{error}</Alert>}
+      {COINS.map((coin) => (
+        <Group key={coin} justify="space-between" wrap="nowrap">
+          <Text size="sm">{t(`equipment.coin.${coin}`)}</Text>
+          <NumberInput aria-label={t(`equipment.coin.${coin}`)} w={140} min={0} allowDecimal={false}
+            disabled={sheet.data === null || save.pending} value={draft[coin] ?? purse[coin] ?? 0}
+            onChange={(value) => setDraft((previous) => ({ ...previous, [coin]: Math.max(0, Math.trunc(Number(value)) || 0) }))} />
+        </Group>
+      ))}
+      <Group justify="flex-end">
+        <Button variant="default" onClick={onClose}>{t('common.cancel')}</Button>
+        <Button type="submit" disabled={changed.length === 0} loading={save.pending}>{t('common.save')}</Button>
+      </Group>
+    </Stack>
+  </ModalSheet>
+}
+
+/**
+ * A player's own items over the game, as one of two lists that do one thing
+ * each. Without `to` it is what is used up, with Use on every row. With `to`
+ * it is everything carried that the catalogue knows, with Transfer on every
+ * row -- opened from the *receiver's* card, so who it goes to was already said
+ * by where it was pressed. Either way one press is the whole errand: it
+ * closes the dialog and the tracker says what happened. `from` is the player's own seated
+ * characters to take from, never the receiver itself; a transfer always names
+ * its source in a "From" field, a choice when there is more than one.
+ * Neither shows coins: those are their own dialog.
+ */
+function ItemsSheet({ gameId, from, to, onClose, onDone }: {
+  gameId: string; from: readonly GameEntry[]; to?: GameEntry; onClose: () => void; onDone: (text: string) => void
+}) {
+  const t = useT()
+  const locale = useLocale()
+  const [chosen, setChosen] = useState<string | null>(null)
+  const giver = from.find((each) => each.id === chosen) ?? from[0]
+  const characterId = giver?.character_id ?? ''
+  const sheet = useResource(`items:${locale}:${characterId}`, (signal) => getSheet(characterId, signal))
+  const use = useAction((changes: Change[]) => writeChanges(characterId, changes))
+  const give = useAction(giveItem)
+  const s = sheet.data
+  const items = bySlug<Item>([...(s?.catalog?.magicItems ?? []), ...(s?.catalog?.equipment ?? [])])
+  const named = (slug: string) => s?.catalogNames?.[`equipment:${slug}`] ?? items.get(slug)?.name ?? titleCase(slug)
+  const who = (each: GameEntry | undefined) => each?.name || t('common.unnamed')
+  // Only what is carried and not worn, and only what the catalogue knows: a custom item has no slug to move by.
+  const rows = (s ? mergeStacks(s.equipment) : []).filter((row) => row.item !== undefined && row.count > row.equipped
+    && (to !== undefined || groupOf(items.get(row.item)) === 'consumable'))
+  const pending = use.pending || give.pending
+  const error = use.error ?? give.error ?? sheet.error
+  const label = to === undefined ? t('equipment.use') : t('game.transfer')
+  async function act(slug: string, name: string, total: number) {
+    if (s === null || giver === undefined) return
+    if (to === undefined) {
+      if (await use.run(setTotal(s.equipment, slug, total - 1)) !== null) onDone(t('game.usedItem', { item: name }))
+    } else if (await give.run(gameId, giver.id, to.id, slug) !== null) onDone(t('game.gave', { item: name, name: who(to) }))
+  }
+  return <ModalSheet opened onClose={onClose} size="lg"
+    title={to === undefined ? t('game.useItemOf', { name: who(giver) }) : t('game.transferItemOf', { name: who(to) })}>
+    <Stack gap="sm">
+      {error !== null && <Alert color="red" title={t('group.actionFailed')}>{error}</Alert>}
+      {to !== undefined && giver !== undefined && <Select label={t('game.transferFrom')} comboboxProps={SHEET_COMBOBOX} allowDeselect={false}
+        value={giver.id} onChange={setChosen} data={from.map((each) => ({ value: each.id, label: who(each) }))} />}
+      {s && rows.length === 0 && <Text size="sm" c="dimmed">{t('sheet.empty')}</Text>}
+      {s && rows.map((row) => {
+        const slug = row.item ?? ''
+        const name = named(slug)
+        const carried = row.count - row.equipped
+        return <Card key={row.key} withBorder radius="md" padding="xs">
+          <Group gap="sm" wrap="nowrap">
+            <ItemIcon icon={items.get(slug)?.icon} />
+            <Group gap={8} style={{ flex: 1, minWidth: 0 }}>
+              <Anchor component={Link} size="sm" fw={600} style={{ overflowWrap: 'anywhere' }}
+                to={`/games/${encodeURIComponent(gameId)}/characters/${encodeURIComponent(characterId)}/items/${encodeURIComponent(slug)}`}>{name}</Anchor>
+              {carried > 1 && <Text size="sm" c="dimmed">×{carried}</Text>}
+            </Group>
+            <Button variant="light" disabled={pending} style={{ flexShrink: 0 }}
+              aria-label={t('list.rowAction', { label, name })} onClick={() => void act(slug, name, row.count)}>{label}</Button>
+          </Group>
+        </Card>
+      })}
+    </Stack>
+  </ModalSheet>
 }
 
 function CompactStats({ entry, expanded, detailsId }: { entry: GameEntry; expanded: boolean; detailsId: string }) {

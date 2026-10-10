@@ -1,7 +1,7 @@
 import { useParams } from 'react-router'
 
 import type { Entry, Item } from '@/lib/api'
-import { bySlug, getCollection, getEntries, getSharedOwner, getSharedSheet, getSheet } from '@/lib/api'
+import { bySlug, getCollection, getEntries, getGame, getSharedOwner, getSharedSheet, getSheet } from '@/lib/api'
 import { characterPath } from '@/lib/api/characters'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
@@ -17,7 +17,9 @@ import { ItemIcon, joinProse, Markdown, Page, Panel, SimpleGrid, SourceTags, Sta
  * the compendium's: an item on a sheet is that sheet's pack's item, homebrew
  * included, and the two routes that reach this say whose sheet it is --
  * `/characters/:id/items/:slug` for the owner, and the same under a group's
- * path for a sheet shared with a table.
+ * path for a sheet shared with a table. A third is under a game,
+ * `/games/:game/characters/:character/items/:slug`: opened from the game page,
+ * it is still that character's catalogue, and its trail is the game's.
  *
  * Captioned facts rather than the sheet's one dimmed line: there is room for a
  * caption here, and "Range" over "80/320 ft." is read faster than the same
@@ -25,7 +27,7 @@ import { ItemIcon, joinProse, Markdown, Page, Panel, SimpleGrid, SourceTags, Sta
  */
 export function ItemScreen() {
   const t = useT()
-  const { id = '', character, slug = '' } = useParams()
+  const { id = '', game, character, slug = '' } = useParams()
   // A shared sheet is `/groups/:id/characters/:character/...`; the owner's is
   // `/characters/:id/...`.
   const scope = character !== undefined ? `/shared/${encodeURIComponent(character)}/catalog` : `${characterPath(id)}/catalog`
@@ -43,14 +45,15 @@ export function ItemScreen() {
       getEntries<Item>('magic-items', [slug], scope),
       getCollection<Entry>('weapon-properties', scope),
       getCollection<Entry>('damage-types', scope),
-      (shared ? getSharedSheet(character, signal) : getSheet(id, signal)).then((sheet) => sheet.identity.name, () => null),
+      game !== undefined ? getGame(game, signal).then((found) => found.name, () => null)
+        : (shared ? getSharedSheet(character, signal) : getSheet(id, signal)).then((sheet) => sheet.identity.name, () => null),
       shared && id ? getSharedOwner(id, character, signal) : Promise.resolve(null),
     ])
     return { item: equipment[0] ?? magic[0] ?? null, words: bySlug([...properties, ...damageTypes]), sheetName, owner }
   })
   const above = [
     ...(shared && id ? [{ label: loaded.data === null ? null : (loaded.data.owner?.name || t('common.unnamed')) }] : []),
-    { label: loaded.data === null ? null : (loaded.data.sheetName || t('common.unnamed')), to: sheetAt },
+    { label: loaded.data === null ? null : (loaded.data.sheetName || t('common.unnamed')), to: game !== undefined ? `/games/${game}` : sheetAt },
   ]
 
   const state = pageState(loaded, { title: t('item.loadFailed'), fallback: t('error.unknown'), onRetry: loaded.reload })

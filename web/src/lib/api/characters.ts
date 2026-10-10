@@ -485,6 +485,17 @@ export function appendEvents(
 }
 
 /**
+ * Appends one `change` entry, reading the log's head at the moment of writing:
+ * a sheet does not carry a sequence, and an edit made in another tab should
+ * conflict rather than vanish.
+ */
+export async function writeChanges(id: string, changes: Change[]): Promise<void> {
+  if (changes.length === 0) return
+  const log = await getEvents(id)
+  await appendEvents(id, log.seq, [{ type: 'change', changes }], log.revision ?? log.seq)
+}
+
+/**
  * Replaces one entry in place, revalidating everything after it.
  *
  * This is the whole of changing your mind: there is no append-a-correction

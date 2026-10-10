@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 
-import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent } from '@/lib/api'
+import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent, writeChanges } from '@/lib/api'
 import { CatalogScope } from '@/lib/api/catalogScope'
 import { characterPath } from '@/lib/api/characters'
 import type { Change, Sheet } from '@/lib/api'
@@ -77,12 +77,8 @@ export function CharacterSheetScreen() {
     return { sheet: projected, complete: prompts?.complete ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL }
   })
 
-  // Read the log's head at the moment of writing: the sheet does not carry a
-  // sequence, and an edit made in another tab should conflict rather than vanish.
   const editEquipment = useAction(async (changes: Change[]) => {
-    if (changes.length === 0) return
-    const log = await getEvents(id)
-    await appendEvents(id, log.seq, [{ type: 'change', changes }], log.revision ?? log.seq)
+    await writeChanges(id, changes)
     sheet.refresh()
   })
 

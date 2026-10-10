@@ -3,6 +3,7 @@ package httpapi_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -558,5 +559,40 @@ func TestSpentUsesOverHTTP(t *testing.T) {
 	}
 	if got = used(send(t, r, owner, http.MethodPost, root+"/rest", nil)); got["second-wind"] != 0 {
 		t.Fatalf("after rest: %+v", got)
+	}
+}
+
+// The three hand-overs over HTTP: the DM gives an item and coins, the player
+// passes the item on, and the recipient's own sheet shows what arrived.
+func TestItemsAndCoinsChangeHandsOverHTTP(t *testing.T) {
+	t.Parallel()
+	r, owner, ceremony := newFullRouterWithCeremony(t)
+	group := createGroup(t, r, owner, "Table")
+	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
+	mine, theirs := makeCharacter(t, r, owner, "Ada"), makeCharacter(t, r, player, "Hero")
+	shareCharacter(t, r, owner, group.ID, mine)
+	shareCharacter(t, r, player, group.ID, theirs)
+	rec := send(t, r, owner, http.MethodPost, "/v1/games", map[string]any{"group_id": group.ID, "name": "Fight"})
+	root := "/v1/games/" + decode[gameapi.Game](t, rec).ID
+	send(t, r, owner, http.MethodPost, root+"/characters", map[string]any{"character_ids": []string{mine, theirs}})
+	post := func(who *http.Cookie, path string, body map[string]any, want int) {
+		t.Helper()
+		if rec := send(t, r, who, http.MethodPost, root+"/entries/"+path, body); rec.Code != want {
+			t.Fatalf("POST %s = %d, want %d (%s)", path, rec.Code, want, rec.Body.String())
+		}
+	}
+	post(player, "pc_"+theirs+"/items", map[string]any{"item": "dagger", "count": 1}, http.StatusForbidden)
+	post(owner, "pc_"+theirs+"/items", map[string]any{"item": "dagger", "count": 2}, http.StatusOK)
+	post(owner, "pc_"+theirs+"/coins", map[string]any{"unit": "gp", "amount": 5}, http.StatusOK)
+	post(owner, "pc_"+theirs+"/coins", map[string]any{"unit": "gp", "amount": -9}, http.StatusBadRequest)
+	post(owner, "pc_"+theirs+"/give", map[string]any{"item": "dagger", "count": 1, "to": "pc_" + mine}, http.StatusForbidden)
+	post(player, "pc_"+theirs+"/give", map[string]any{"item": "dagger", "count": 1, "to": "pc_" + mine}, http.StatusOK)
+
+	for id, session := range map[string]*http.Cookie{mine: owner, theirs: player} {
+		rec := send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/sheet", nil)
+		body := rec.Body.String()
+		if rec.Code != http.StatusOK || !strings.Contains(body, `"dagger"`) {
+			t.Fatalf("sheet of %s = %d, no dagger in it (%s)", id, rec.Code, body)
+		}
 	}
 }

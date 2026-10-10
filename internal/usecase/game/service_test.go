@@ -186,9 +186,9 @@ func TestWhoeverRunsTheTableReadsASharedSheetAndNoneCanEditIt(t *testing.T) {
 	_, err = f.svc.Sheet(ctx, "carol", bobs, rules.DefaultLocale)
 	assertNotFound(t, err, "a stranger reading a shared sheet")
 
-	// There is no write path here at all. That is the invariant this feature
-	// rests on, and it is proved by the character service being untouched --
-	// this package exposes nothing that appends to a log.
+	// Reading grants no write. That is the invariant this feature rests on, and
+	// it is proved by the character service being untouched; what a game lets
+	// its table hand over is items.go's, and is tested beside it.
 }
 
 func TestAnUnsharedCharacterIsInvisibleToTheTable(t *testing.T) {

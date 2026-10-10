@@ -237,6 +237,23 @@ export function restGame(id: string, kind: 'short' | 'long'): Promise<GameDetail
   return request<GameDetail>(`/games/${encodeURIComponent(id)}/rest?kind=${kind}`, { method: 'POST' })
 }
 
+const entryURL = (id: string, entry: string) => `/games/${encodeURIComponent(id)}/entries/${encodeURIComponent(entry)}`
+
+/** The DM gives a seated character an item: the one write of somebody else's character a table makes. */
+export function grantItem(id: string, entry: string, item: string, count = 1): Promise<GameDetail> {
+  return request<GameDetail>(`${entryURL(id, entry)}/items`, { method: 'POST', body: { item, count } })
+}
+
+/** The DM adds to a seated character's purse, or with a negative amount takes from it. */
+export function adjustCoins(id: string, entry: string, unit: string, amount: number): Promise<GameDetail> {
+  return request<GameDetail>(`${entryURL(id, entry)}/coins`, { method: 'POST', body: { unit, amount } })
+}
+
+/** A player passes an item of their own character's to another one seated at the game. */
+export function giveItem(id: string, entry: string, to: string, item: string, count = 1): Promise<GameDetail> {
+  return request<GameDetail>(`${entryURL(id, entry)}/give`, { method: 'POST', body: { item, count, to } })
+}
+
 export function deleteGameEntry(id: string, entry: string): Promise<GameDetail> {
   return request<GameDetail>(`/games/${encodeURIComponent(id)}/entries/${encodeURIComponent(entry)}`, { method: 'DELETE' })
 }

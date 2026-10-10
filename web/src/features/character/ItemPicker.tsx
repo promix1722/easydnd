@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
+import type { ReactNode } from 'react'
 
-import { mergeStacks, setTotal } from '@/domain'
 import { bySlug, getCollection, getEntries, searchItems } from '@/lib/api'
-import type { Change, Entry, Equipment, Item, ItemFilters, ItemHit, ItemPage } from '@/lib/api'
+import type { Entry, Item, ItemFilters, ItemHit, ItemPage } from '@/lib/api'
 import { useCatalogScope } from '@/lib/api/catalogScope'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
@@ -11,6 +12,7 @@ import { Badge, Box, Button, ChoiceDetails, Group, ItemIcon, PageBody, Paper, Se
 import { ItemBody } from './ItemScreen'
 
 const PAGE = 20
+const NOTHING_OWNED: ReadonlyMap<string, number> = new Map()
 
 /** One width for both selects, so the row does not re-wrap as a value is picked. */
 const FILTER_WIDTH = { w: { base: '100%', sm: 220 }, miw: 0, maw: '100%' } as const
@@ -26,12 +28,18 @@ const FILTER_WIDTH = { w: { base: '100%', sm: 220 }, miw: 0, maw: '100%' } as co
  * description; each Add is one more in the backpack and one write, and the
  * search stays open for the next.
  */
-export function AddItems({ label, wearable, equipment, disabled = false, onChange }: {
+export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabled = false, onAdd, detailsTo, children }: {
   label: string
-  wearable: boolean
-  equipment: Equipment
+  /** Absent searches both halves: a DM hands out anything. */
+  wearable?: boolean | null
+  /** How many of each the receiver already has, printed beside a hit. */
+  owned?: ReadonlyMap<string, number>
   disabled?: boolean
-  onChange: (changes: Change[]) => void
+  onAdd: (hit: ItemHit) => void
+  /** Where a hit's own page is. With it a row is a link there and nothing opens in place. */
+  detailsTo?: (hit: ItemHit) => string
+  /** Drawn above the search once it is open: a game asks who the item is for. */
+  children?: ReactNode
 }) {
   const t = useT()
   const scope = useCatalogScope()
@@ -58,9 +66,6 @@ export function AddItems({ label, wearable, equipment, disabled = false, onChang
     try { settle((await searchItems(filters, PAGE, loaded.length, undefined, scope)).items) } catch { settle([]) }
   }
 
-  const owned = new Map(mergeStacks(equipment).map((row) => [row.item, row.count]))
-  const add = (hit: ItemHit) => onChange(setTotal(equipment, hit.slug, (owned.get(hit.slug) ?? 0) + 1))
-
   if (!opened) {
     return <Group><Button variant="light" disabled={disabled} onClick={() => setOpened(true)}>{label}</Button></Group>
   }
@@ -70,6 +75,7 @@ export function AddItems({ label, wearable, equipment, disabled = false, onChang
         <Text size="xs" c="dimmed">{label}</Text>
         <Button variant="default" onClick={() => setOpened(false)}>{t('common.close')}</Button>
       </Group>
+      {children}
       <TextInput value={q} onChange={(event) => setQ(event.currentTarget.value)}
         placeholder={t('equipment.searchItems')} aria-label={t('equipment.searchItems')} />
       <Group gap="sm">
@@ -88,7 +94,8 @@ export function AddItems({ label, wearable, equipment, disabled = false, onChang
             {loaded.length === 0 && <Text size="sm" c="dimmed">{t('equipment.noItemsFound')}</Text>}
             {loaded.map((hit) => (
               <ItemRow key={hit.slug} hit={hit} owned={owned.get(hit.slug) ?? 0} disabled={disabled}
-                opened={reading === hit.slug} onOpen={(open) => setReading(open ? hit.slug : null)} onAdd={() => add(hit)} />
+                opened={reading === hit.slug} onOpen={(open) => setReading(open ? hit.slug : null)} onAdd={() => onAdd(hit)}
+                {...(detailsTo ? { to: detailsTo(hit) } : {})} />
             ))}
             {loaded.length < page.total && (
               <Group justify="center">
@@ -107,7 +114,8 @@ export function AddItems({ label, wearable, equipment, disabled = false, onChang
  * needs no opening. The shape of `SpellChoiceRow`, down to the description
  * being inline on desktop and a full screen on a phone.
  */
-function ItemRow({ hit, owned, disabled, opened, onOpen, onAdd }: {
+function ItemRow({ hit, owned, disabled, opened, onOpen, onAdd, to }: {
+  to?: string
   hit: ItemHit
   owned: number
   disabled: boolean
@@ -123,24 +131,29 @@ function ItemRow({ hit, owned, disabled, opened, onOpen, onAdd }: {
     hit.weight ? t('item.pounds', { value: hit.weight }) : undefined,
   ].filter(Boolean)
   const addButton = <Button variant="light" aria-label={addLabel} disabled={disabled} onClick={onAdd} style={{ flexShrink: 0 }}>{t('common.add')}</Button>
+  const face = {
+    'aria-label': hit.name, variant: 'transparent', color: 'var(--mantine-color-text)', h: 'auto', py: 4, px: 'xs', justify: 'flex-start',
+    style: { flex: 1, minWidth: 0 }, styles: { label: { width: '100%', whiteSpace: 'normal' } },
+  } as const
+  const body = (
+    <Group gap="xs" wrap="nowrap" align="flex-start" w="100%">
+      <ItemIcon icon={hit.icon} />
+      <Stack gap={2} style={{ textAlign: 'left', minWidth: 0, flex: 1 }}>
+        <Group gap="xs">
+          <Text size="sm" fw={600}>{hit.name}</Text>
+          {owned > 0 && <Text size="sm" c="dimmed">×{owned}</Text>}
+          {hit.magic && <Badge size="sm" variant="default">{t('equipment.magic')}</Badge>}
+        </Group>
+        {facts.length > 0 && <Text size="xs" c="dimmed">{facts.join(' · ')}</Text>}
+      </Stack>
+    </Group>
+  )
   return (
     <Paper component="article" aria-label={hit.name} withBorder radius="sm" px="xs" py={4}>
       <Group gap="xs" wrap="nowrap" align="center">
-        <Button aria-label={hit.name} aria-expanded={opened} variant="transparent" color="var(--mantine-color-text)"
-          h="auto" py={4} px="xs" justify="flex-start" onClick={() => onOpen(!opened)}
-          style={{ flex: 1, minWidth: 0 }} styles={{ label: { width: '100%', whiteSpace: 'normal' } }}>
-          <Group gap="xs" wrap="nowrap" align="flex-start" w="100%">
-            <ItemIcon icon={hit.icon} />
-            <Stack gap={2} style={{ textAlign: 'left', minWidth: 0, flex: 1 }}>
-              <Group gap="xs">
-                <Text size="sm" fw={600}>{hit.name}</Text>
-                {owned > 0 && <Text size="sm" c="dimmed">×{owned}</Text>}
-                {hit.magic && <Badge size="sm" variant="default">{t('equipment.magic')}</Badge>}
-              </Group>
-              {facts.length > 0 && <Text size="xs" c="dimmed">{facts.join(' · ')}</Text>}
-            </Stack>
-          </Group>
-        </Button>
+        {to !== undefined
+          ? <Button component={Link} to={to} {...face}>{body}</Button>
+          : <Button aria-expanded={opened} onClick={() => onOpen(!opened)} {...face}>{body}</Button>}
         {addButton}
       </Group>
       {opened && (

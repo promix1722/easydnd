@@ -381,6 +381,11 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.DELETE("/games/:id/characters", h.Game.RemoveCharacter)
 			authed.PATCH("/games/:id/entries/:entry", h.Game.PatchEntry)
 			authed.DELETE("/games/:id/entries/:entry", h.Game.DeleteEntry)
+			// The three writes that reach a character its actor does not own:
+			// see internal/usecase/game/items.go.
+			authed.POST("/games/:id/entries/:entry/items", h.Game.GrantItem)
+			authed.POST("/games/:id/entries/:entry/coins", h.Game.AdjustCoins)
+			authed.POST("/games/:id/entries/:entry/give", h.Game.GiveItem)
 			authed.POST("/games/:id/monsters", h.Game.AddMonster)
 			authed.POST("/games/:id/order", h.Game.OrderEntries)
 			authed.POST("/games/:id/rest", h.Game.Rest)

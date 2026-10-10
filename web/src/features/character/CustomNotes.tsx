@@ -119,7 +119,7 @@ function NoteForm({ note, pending, onSave, onCancel }: {
         <Textarea label={t('customNotes.text')} value={description} maxLength={16000} rows={6}
           onChange={(event) => setDescription(event.currentTarget.value)} />
         <Group>
-          <Button type="submit" loading={pending} disabled={name.trim() === ''}>{t('sheet.save')}</Button>
+          <Button type="submit" loading={pending} disabled={name.trim() === ''}>{t('common.save')}</Button>
           <Button variant="default" onClick={onCancel}>{t('common.cancel')}</Button>
         </Group>
       </Stack>

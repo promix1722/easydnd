@@ -1160,7 +1160,48 @@ roster captions use «Вр. ОЗ» and «СЗ» to fit the compact grid. Initiat
 to sit in parentheses before the name in the mobile header; it moved onto the
 line so the header is the name alone. Unset initiative reads "—", and private NPC values are omitted. A
 chevron in the header expands movement, vision and abilities independently
-for that entry. An entry's **consumables** are a dialog, opened from "Consumable slots" in the row's
+for that entry. **Items and coins** reach the page through the same "…" menu
+and never through the roster payload, which carries no inventory. They are
+three entries and three dialogs, because each does one thing and a player in a
+fight wants the one they pressed. **Coins** (`CoinsSheet`) is the purse and
+nothing else, and is the same dialog for its owner and for a DM: five rows, one
+coin under another, edited freely and written once by Save. A write per field
+would be a log entry per digit, and two experiences of one purse were one too
+many. Behind the one button the two differ: an owner sets their own totals
+(`writeChanges`), a DM sends each coin's difference (`POST
+.../entries/{entry}/coins`), so coins the player spent in the same moment are
+not put back. **Use item** is on a player's own card and lists what is used up,
+with a Use button on each row, written as the owner. **Transfer item** is on
+the card of whoever *receives* -- any other seated character, offered to
+anybody with a character of their own at the game to give from -- so who it
+goes to is said by where it was pressed and the dialog needs no recipient
+field. It always names its source in a "From" select -- never the receiver
+itself, and a real choice with two characters of your own seated. It lists everything carried that the catalogue knows, with a Transfer
+button on each row (`POST .../entries/{entry}/give`). Both are one component
+(`ItemsSheet`), and in both one press is the whole errand: the dialog closes
+and the tracker's notice says what happened ("Used", "Transferred"). Neither
+draws the sheet's Items tab: that tab is the purse, wearing, dropping and
+adding too, which is the sheet's job. A `Select` in any of these passes
+`SHEET_COMBOBOX` like every select in a `ModalSheet`: without it the dropdown
+is portalled outside the phone's drawer, whose focus trap takes the focus back,
+and the two reopen each other for ever. At the
+foot of the roster a DM has "Give an item": the sheet's own `AddItems` search,
+which now takes `onAdd(hit)` instead of writing the backpack itself, with a
+"Give to" select above it and the search scoped to the receiver's catalogue
+(`/shared/{character}/catalog`), because their rule packs decide what exists
+for them. An Add closes the search -- a DM hands out one thing and goes back to
+the table -- and, because nothing on the roster shows an inventory, says so in
+the same notice ("Added"), which sits in the corner and leaves after four
+seconds. An item's
+description is not opened in place here, as it is on a sheet: a found row, and
+an item's name in either list, are links to
+`/games/{game}/characters/{character}/items/{slug}`, the same `ItemScreen`
+read from that character's catalogue with a trail that leads back to the game.
+In place it was a layer over the game page with no address, and the browser's
+Back left the game altogether. See
+[What a table hands over](backend.md#what-a-table-hands-over). An entry's **consumables** are a dialog -- for its owner and a DM only; the
+server sends nobody else the pools, so another player's card has no such entry
+-- opened from "Consumable slots" in the row's
 "…" menu and drawn by `features/character/ResourcePools`: one
 row per pool -- spell slots by level, then named pools, then Hit Dice -- with
 `ui/Pips` marking a disc for a use still available and a ring for one spent.

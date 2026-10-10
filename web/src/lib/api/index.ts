@@ -73,6 +73,7 @@ export type { Folder } from './folders'
 // Characters.
 export {
   appendEvents,
+  writeChanges,
   autoEquip,
   getVisibility,
   setVisibility,
@@ -148,6 +149,9 @@ export {
   addToGame,
   patchGameEntry,
   restGame,
+  grantItem,
+  adjustCoins,
+  giveItem,
   deleteGameEntry,
   addGameMonster,
   orderGameEntries,

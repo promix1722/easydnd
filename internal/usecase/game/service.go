@@ -10,10 +10,14 @@
 // the codebase that widens a character's visibility beyond its owner.
 //
 // It is deliberately the only thing. character.Service.owned is untouched, so
-// every path that writes to a log is still owner-only by construction rather
-// than by anybody remembering to check -- and the new rule is a separate
-// function returning a separate answer, which is what stops the two from being
-// confused later.
+// every path of the character service that writes to a log is still owner-only
+// by construction rather than by anybody remembering to check -- and the new
+// rule is a separate function returning a separate answer, which is what stops
+// the two from being confused later.
+//
+// One file here does write to a character its actor does not own: items.go,
+// what a table hands over. It is granted by a seat at a game, not by
+// `readable`, and it writes a backpack count or a coin and nothing else.
 //
 // The service owns both aggregates for the reason character.Service owns
 // folders as well as characters: a game's roster may only contain characters
@@ -184,9 +188,8 @@ func (s *Service) readable(
 //
 // This is the whole point of sharing: a DM opens it to run the character, and
 // a player opens a friend's to see what they are playing beside. It is read
-// only, and there is no writing counterpart anywhere in this package -- every
-// write still goes through the character service, which still refuses anybody
-// but the owner.
+// only: being able to read a sheet never grants a write to it. The writes
+// this package does make are items.go's, and a seat at a game grants those.
 func (s *Service) Sheet(
 	ctx context.Context, actor user.ID, id character.ID, locale rules.Locale,
 ) (character.State, error) {

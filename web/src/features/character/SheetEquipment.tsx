@@ -1,6 +1,6 @@
-import { CUSTOM, ELSEWHERE, discard, equip, groupOf, mergeStacks, setCoin, slotsFor, slotted, unequip } from '@/domain'
+import { CUSTOM, ELSEWHERE, discard, equip, groupOf, mergeStacks, setCoin, setTotal, slotsFor, slotted, unequip } from '@/domain'
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
-import type { Change, Equipment, Item, SheetAction } from '@/lib/api'
+import type { Change, Equipment, Item, ItemHit, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import { Badge, Box, Grid, Group, ITEM_ICON_SIZE, Menu, Panel, Paper, Stack, Text } from '@/ui'
 
@@ -29,6 +29,11 @@ interface InventoryProps {
   disabled?: boolean
   onChange?: (changes: Change[]) => void
 }
+
+const ownedOf = (equipment: Equipment) => new Map(mergeStacks(equipment).map((row) => [row.item ?? '', row.count]))
+/** Each Add is one more in the backpack. */
+const addOne = (equipment: Equipment, onChange: (changes: Change[]) => void) => (hit: ItemHit) =>
+  onChange(setTotal(equipment, hit.slug, (ownedOf(equipment).get(hit.slug) ?? 0) + 1))
 
 const rowName = (name: (slug: string) => string) => (row: InventoryRow) => row.customName ?? name(row.item ?? '')
 
@@ -117,7 +122,7 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
         <Text size="xs" c="dimmed">{t('equipment.group.wearable')}</Text>
         <InventoryRows cards rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup}
           empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
-        {onChange && <AddItems label={t('equipment.addEquipment')} wearable equipment={equipment} disabled={disabled} onChange={onChange} />}
+        {onChange && <AddItems label={t('equipment.addEquipment')} wearable owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} />}
       </Stack>
     </Panel>
   </Stack>
@@ -152,7 +157,7 @@ export function SheetItems({ equipment, items, name, lookup, disabled = false, o
     {section('consumable', t('equipment.group.consumable'))}
     {section('gear', t('equipment.group.gear'))}
     {onChange && <Panel>
-      <AddItems label={t('equipment.addItem')} wearable={false} equipment={equipment} disabled={disabled} onChange={onChange} />
+      <AddItems label={t('equipment.addItem')} wearable={false} owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} />
     </Panel>}
   </Stack>
 }

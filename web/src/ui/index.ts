@@ -31,7 +31,10 @@ export { useDisclosure } from '@mantine/hooks'
 // also what keeps the production bundle to those instead of six thousand.
 export {
   IconArrowDown,
+  IconArrowsExchange,
   IconArrowUp,
+  IconBackpack,
+  IconCoins,
   IconCheck,
   IconChevronDown,
   IconChevronLeft,
@@ -59,6 +62,8 @@ export {
 // Layout and typography primitives, re-exported unchanged.
 export {
   Alert,
+  Affix,
+  Notification,
   Anchor,
   Badge,
   Box,

@@ -156,7 +156,15 @@ func (s *Service) Participants(ctx context.Context, actor user.ID, id domain.ID,
 			if err != nil {
 				return nil, err
 			}
-			stats, pools = statsOf(state), poolsOf(state, e.Used)
+			stats = statsOf(state)
+			// What a character has left to spend is its owner's to know and
+			// the DM's: another player sees the card and not the slots, and
+			// the stored counts leave with them.
+			if role.AtLeast(group.RoleDM) || e.Owner == actor {
+				pools = poolsOf(state, e.Used)
+			} else {
+				e.Used = nil
+			}
 		}
 		out = append(out, Participant{Entry: e, Stats: &stats, Pools: pools, CanEdit: role.AtLeast(group.RoleDM) || (e.Kind == "player" && e.Owner == actor && !e.Locked)})
 	}
