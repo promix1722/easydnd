@@ -45,6 +45,14 @@ func (s *Service) CreateFolder(
 	if err != nil {
 		return domain.Folder{}, err
 	}
+	// ponytail: count, then insert; see CheckCharacterLimit.
+	held, err := s.folders.List(ctx, owner)
+	if err != nil {
+		return domain.Folder{}, err
+	}
+	if len(held) >= s.limits.Folders {
+		return domain.Folder{}, types.LimitReached("folders", s.limits.Folders)
+	}
 	return s.folders.Create(ctx, owner, name)
 }
 
@@ -201,6 +209,11 @@ func (s *Service) copyTo(
 	target domain.FolderID,
 	suffix string,
 ) (domain.Character, error) {
+	// The limit is to's, like the pack check: a copy link fills the
+	// recipient's shelf, not the sender's.
+	if err := s.CheckCharacterLimit(ctx, to); err != nil {
+		return domain.Character{}, err
+	}
 	if s.packAccess != nil {
 		retained := pack.Lock{}
 		if private, ok := s.catalog.(interface {

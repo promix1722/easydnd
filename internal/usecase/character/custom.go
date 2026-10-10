@@ -73,6 +73,9 @@ func (s *Service) UpsertCustomOption(ctx context.Context, owner domain.OwnerID, 
 	if err != nil {
 		return Revision{}, err
 	}
+	if err = CheckSheet(character.Log, log, cat, s.limits); err != nil {
+		return Revision{}, err
+	}
 	sheet, err := domain.Project(log, cat)
 	if err != nil {
 		return Revision{}, err

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"slices"
 	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/group"
@@ -20,7 +21,12 @@ type Service struct {
 	users  user.Repository
 	// superadmins is auth.superadmins: who reads restricted packs outright.
 	superadmins []string
+	limits      types.Limits
 }
+
+// SetLimits replaces the limits this service enforces; it starts with
+// types.DefaultLimits.
+func (s *Service) SetLimits(l types.Limits) { s.limits = l }
 
 func (s *Service) SetSuperadmins(list []string) { s.superadmins = list }
 
@@ -38,7 +44,7 @@ func (s *Service) Superadmin(ctx context.Context, u user.ID) bool {
 }
 
 func NewService(r domain.Repository, e domain.Engine, g group.Repository, u user.Repository) *Service {
-	return &Service{repo: r, engine: e, groups: g, users: u}
+	return &Service{repo: r, engine: e, groups: g, users: u, limits: types.DefaultLimits}
 }
 func (s *Service) Schema() []byte       { return s.engine.Schema() }
 func (s *Service) Default() domain.Lock { return s.engine.Default() }
@@ -140,6 +146,24 @@ func (s *Service) Create(ctx context.Context, u user.User, title string, data []
 	}
 	if u.ID == "" {
 		return domain.Record{}, denied()
+	}
+	// Archived packs do not count: a pack cannot be deleted, so counting them
+	// would leave an owner at the limit with no way back under it.
+	// ponytail: reads every pack to count one owner's, and counts before it
+	// inserts. A CountByOwner port over rule_packs_owner fixes the first, a
+	// guarded INSERT the second.
+	all, err := s.repo.List(ctx)
+	if err != nil {
+		return domain.Record{}, err
+	}
+	held := 0
+	for _, r := range all {
+		if r.Owner == u.ID && !r.Archived {
+			held++
+		}
+	}
+	if held >= s.limits.Packs {
+		return domain.Record{}, types.LimitReached("packs", s.limits.Packs)
 	}
 	if u.Anonymous {
 		if err := s.users.EnsureGuest(ctx, u); err != nil {
@@ -278,6 +302,9 @@ func (s *Service) Publish(ctx context.Context, u user.ID, id string, revision in
 			return r, types.NewValidationError("version already published").Because("pack.versionExists")
 		}
 	}
+	if len(r.Releases) >= s.limits.PackReleases {
+		return r, types.LimitReached("packReleases", s.limits.PackReleases)
+	}
 	r.Releases = append(r.Releases, doc)
 	r.Archived = false
 	if err = s.repo.Save(ctx, r, revision); err != nil {
@@ -349,6 +376,11 @@ func (s *Service) Share(ctx context.Context, u user.ID, g, id, version string) e
 		return err
 	}
 	groupAllowed := map[domain.Release]bool{}
+	// Sharing another version of a pack the group has replaces it.
+	// ponytail: count, then insert -- racing shares can overshoot by a few.
+	if len(shared) >= s.limits.GroupPacks && !slices.ContainsFunc(shared, func(sh domain.Share) bool { return sh.Pack == id }) {
+		return types.LimitReached("groupPacks", s.limits.GroupPacks)
+	}
 	for _, sh := range shared {
 		for _, p := range sh.Lock.Packs {
 			groupAllowed[p] = true

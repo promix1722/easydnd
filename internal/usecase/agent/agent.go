@@ -524,6 +524,34 @@ func lockedPacks(lock pack.Lock) []map[string]string {
 // character's is: the deployment's own packs. The `rules` event then says so,
 // after the message, as something the assistant decided rather than something
 // the owner picked.
+// room refuses a chat's first message once its owner has started as many
+// chats in the last day as they may, or holds as many characters: a started
+// chat is a character.
+//
+// ponytail: counted from the chats still stored, so discarding one gives its
+// run back, and a chat opened more than a day before it was started is not
+// counted. A table of (owner, started_at) closes both.
+//
+// It reads the store, so it runs before start and never inside it: begin
+// calls start under the chat's own lock.
+func (a *Agent) room(ctx context.Context, owner domain.OwnerID, id string) error {
+	limits := a.service.Limits()
+	records, err := a.store.List(ctx, owner)
+	if err != nil {
+		return err
+	}
+	since, runs := a.service.Now().Add(-24*time.Hour), 0
+	for _, rec := range records {
+		if rec.ID != id && rec.Status != "opening" && rec.Created.After(since) {
+			runs++
+		}
+	}
+	if runs >= limits.WizardRunsPerDay {
+		return types.LimitReached("wizardRuns", limits.WizardRunsPerDay)
+	}
+	return a.service.CheckCharacterLimit(ctx, owner)
+}
+
 func (a *Agent) start(ctx context.Context, s *AgentSession, locale rules.Locale, files []AgentFile, instructions string) error {
 	if s.Status != "opening" {
 		return types.NewValidationError("session changed").Because("agent.changed")
@@ -596,7 +624,10 @@ func (a *Agent) create(ctx context.Context, owner domain.OwnerID, folder domain.
 	if len(selected) > 0 {
 		lock = selected[0]
 	}
-	if err = a.choose(ctx, s, lock); err == nil {
+	if err = a.room(ctx, owner, s.ID); err == nil {
+		err = a.choose(ctx, s, lock)
+	}
+	if err == nil {
 		err = a.start(ctx, s, locale, files, instructions)
 	}
 	if err == nil {
@@ -624,6 +655,9 @@ func (a *Agent) Rules(owner domain.OwnerID, id string, revision int, selected pa
 
 // begin sends an opened chat its first message, in the language it is sent in.
 func (a *Agent) begin(owner domain.OwnerID, id string, revision int, locale rules.Locale, files []AgentFile, text string) (AgentSession, error) {
+	if err := a.room(a.ctx, owner, id); err != nil {
+		return AgentSession{}, err
+	}
 	var made domain.ID
 	out, err := a.change(owner, id, func(s *AgentSession) ([]AgentFile, error) {
 		if s.Revision != revision {
@@ -703,10 +737,19 @@ func (a *Agent) call(ctx context.Context, s *AgentSession, name string, argument
 	}
 	before := s.Log.Clone()
 	result, err := a.tool(ctx, s, name, arguments)
-	if cat, catErr := a.Catalog(ctx, *s); catErr == nil {
+	cat, catErr := a.Catalog(ctx, *s)
+	if catErr == nil {
 		a.settleScores(s, cat)
 	}
 	if !reflect.DeepEqual(before, s.Log) {
+		// The limits Service.Apply holds a log to, which these tools write
+		// around. The refusal goes to the model like any other tool error.
+		if catErr == nil {
+			if limitErr := charuc.CheckSheet(before, s.Log, cat, a.service.Limits()); limitErr != nil {
+				s.Log = before
+				return nil, limitErr
+			}
+		}
 		if pushErr := a.push(ctx, s); pushErr != nil {
 			s.Log = before
 			return nil, pushErr

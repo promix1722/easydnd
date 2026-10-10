@@ -1373,6 +1373,71 @@ check runs against the **recipient**: a character built on a pack they cannot
 use is refused with `pack.unavailable` rather than handed over. A guest may
 accept, as a guest may own a character.
 
+### Limits
+
+Everything a person can make more of has a number on it, and making one past
+the number is refused. The numbers are one struct, `types.Limits` in
+`internal/types/limits.go`, and `types.DefaultLimits` is its only value:
+
+| Limit | Default | Counted | `reason` |
+| --- | --- | --- | --- |
+| `Characters` | 100 | per owner | `limit.characters` |
+| `Folders` | 50 | per owner, the default folder included | `limit.folders` |
+| `Groups` | 20 | groups an account owns now | `limit.groups` |
+| `GroupMembers` | 50 | per group | `limit.groupMembers` |
+| `GroupCharacters` | 200 | characters on one group's table | `limit.groupCharacters` |
+| `GroupGames` | 50 | per group | `limit.groupGames` |
+| `GroupPacks` | 20 | packs shared with one group | `limit.groupPacks` |
+| `GameEntries` | 100 | one game's roster, characters and monsters | `limit.gameEntries` |
+| `Packs` | 30 | an owner's unarchived packs | `limit.packs` |
+| `PackReleases` | 100 | published versions of one pack | `limit.packReleases` |
+| `CharacterItems` | 500 | item stacks on one character | `limit.characterItems` |
+| `CharacterNotes` | 100 | Custom-tab texts on one character | `limit.characterNotes` |
+| `CharacterCustomOptions` | 300 | custom entries of every kind on one character | `limit.characterCustomOptions` |
+| `CharacterEvents` | 20000 | entries in one character's log | `limit.characterEvents` |
+| `WizardRunsPerDay` | 20 | AI Wizard chats an owner started in 24 hours | `limit.wizardRuns` |
+
+A refusal is `types.LimitReached`: a 400 `validation_error` whose reason is in
+the table and whose `args.max` is the number, so the caption never repeats it.
+It is a 400 and not a 429 because nothing about it is a rate -- waiting does
+not help, deleting something does -- and it is the class `agent.capacity`
+already used.
+
+**It is a struct and not a block of YAML** for the reason `InviteTTL` is a
+constant: an unknown config key stops the process at startup, so a key costs
+two releases, and none of these numbers has needed to differ between
+environments. Each service copies `DefaultLimits` when it is built and has a
+`SetLimits` that the tests use; the AI Wizard reads the character service's.
+The day a number has to vary, that setter is where the configuration lands.
+
+Limits belong to whatever holds the list, which is not always a person. A game,
+a shared character and a shared pack are a group's, so those are counted per
+group and whoever adds the one too many is refused. `Groups` counts ownership
+as it stands, so handing a group on frees a place.
+
+**The per-character limits refuse growth, not size.** `character.CheckSheet`
+compares the log before a write with the log after it and refuses only a count
+that is over its limit *and* larger than it was. A character already past a
+number -- the number was lowered, or an older import left it there -- can still
+be edited, trimmed and levelled; it just cannot get bigger. It is called at
+every place a log is written: `Apply`, `ReviseBatch`, `UpsertCustomOption`, and
+the AI Wizard's tool calls, which write around all three and hand the refusal
+to the model like any other tool error.
+
+`CharacterEvents` is the catch-all. Personality traits, proficiencies,
+conditions, spent resources and rests are all entries in the same log, so one
+number bounds every list on a character that the struct does not name. It is
+high because play adds to the log for as long as a campaign runs.
+
+A character may be created four ways -- `Create`, a same-owner copy, a
+redeemed copy link and the AI Wizard's import, which writes to the repository
+directly -- and all four go through `Service.CheckCharacterLimit`. Both copies
+share `copyTo`, which checks the limit of whoever receives the character, so a
+copy link is refused when the *recipient* is full. A fifth must too.
+
+Three things these limits do not do are in
+[known-caveats.md](known-caveats.md#limits-are-counted-not-reserved).
+
 ### Dependency rule
 
 ```
@@ -2403,6 +2468,9 @@ types.FieldError{Field: "name", Rule: "max"}.
 That keeps the vocabulary a translator has to cover down to the set somebody
 actually reads -- about fifty -- and adding to it later is one call at the raise
 site rather than a schema change.
+
+Every limit in [Limits](#limits) shares one family, `limit.<what>`, raised by
+`types.LimitReached` with the number as `args.max`.
 
 **Never put an opaque id in `Args`.** "character %q not found" with `chr_9f2a`
 spliced in reads worse in every language than "that character is not there", and

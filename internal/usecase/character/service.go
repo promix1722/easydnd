@@ -57,6 +57,7 @@ type Service struct {
 	sharing    domain.Sharing
 	copyLinks  domain.CopyLinks
 	log        *slog.Logger
+	limits     types.Limits
 
 	// clock is injected so that an import stamps a time a test can predict.
 	// Nil means the real clock; see the Now method.
@@ -86,6 +87,7 @@ func NewService(
 		catalog: source,
 		sharing: sharing,
 		log:     log,
+		limits:  types.DefaultLimits,
 	}
 }
 
@@ -122,6 +124,9 @@ func (s *Service) Create(
 	ctx context.Context, owner domain.OwnerID, folder domain.FolderID, opening NewCharacter,
 ) (domain.Character, error) {
 	if err := validateOpening(opening); err != nil {
+		return domain.Character{}, err
+	}
+	if err := s.CheckCharacterLimit(ctx, owner); err != nil {
 		return domain.Character{}, err
 	}
 	folder, err := s.ResolveFolder(ctx, owner, folder)
@@ -352,6 +357,9 @@ func (s *Service) Apply(
 	}
 	working := character.Log.Clone()
 	if err := working.Append(events...); err != nil {
+		return 0, err
+	}
+	if err := CheckSheet(character.Log, working, cat, s.limits); err != nil {
 		return 0, err
 	}
 	if err := s.repo.Commit(ctx, id, character.Revision, working, commandID(ctx), nil); err != nil {

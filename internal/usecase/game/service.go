@@ -55,7 +55,13 @@ type Service struct {
 	// superadmin reports whether an account may read every sheet. Nil means
 	// nobody may.
 	superadmin func(context.Context, user.ID) bool
+
+	limits types.Limits
 }
+
+// SetLimits replaces the limits this service enforces; it starts with
+// types.DefaultLimits.
+func (s *Service) SetLimits(l types.Limits) { s.limits = l }
 
 // SetSuperadmin installs the predicate readable consults last.
 func (s *Service) SetSuperadmin(is func(context.Context, user.ID) bool) { s.superadmin = is }
@@ -80,6 +86,7 @@ func NewService(
 	log *slog.Logger,
 ) *Service {
 	return &Service{
+		limits:     types.DefaultLimits,
 		games:      games,
 		shared:     shared,
 		groups:     groups,

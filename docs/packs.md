@@ -705,6 +705,13 @@ Drafts and all private authoring/catalogue responses use `Cache-Control: no-stor
 Validation has localized reason codes, document locations, and expandable compiler
 details for diagnosing unsupported mechanics.
 
+Three counts are limited (see [Limits](backend.md#limits)): an owner holds at
+most 30 unarchived packs, a pack at most 100 published versions, and a group at
+most 20 shared packs. Archived packs are not counted, because a pack cannot be
+deleted and counting them would leave an owner at the limit with no way back
+under it. Sharing another version of a pack the group already has replaces it
+and is never refused.
+
 ## Class ability priority
 
 A class may carry `abilityPriority`: all six abilities, most important first --

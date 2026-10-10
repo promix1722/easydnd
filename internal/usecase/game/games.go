@@ -32,6 +32,14 @@ func (s *Service) Create(
 	if err != nil {
 		return domain.Game{}, err
 	}
+	// ponytail: count, then insert -- racing creates can overshoot by a few.
+	held, err := s.games.ListFor(ctx, id)
+	if err != nil {
+		return domain.Game{}, err
+	}
+	if len(held) >= s.limits.GroupGames {
+		return domain.Game{}, types.LimitReached("groupGames", s.limits.GroupGames)
+	}
 	gameID, err := newGameID()
 	if err != nil {
 		return domain.Game{}, err
@@ -234,6 +242,9 @@ func (s *Service) AddCharacters(
 		}
 		if _, err := s.owned(ctx, actor, c); err != nil {
 			return types.NewValidationError("character %q is not on this group's table", c)
+		}
+		if err := s.tableRoom(ctx, g.Group); err != nil {
+			return err
 		}
 		err = s.shared.Share(ctx, domain.Shared{
 			Group:     g.Group,

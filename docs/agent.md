@@ -870,6 +870,16 @@ by item/event counts and a 2 MiB transcript threshold. Turns pause at the run
 limit; manual Resume starts another bounded run. These are request/run limits,
 not a billed-token accounting system.
 
+One limit is per person: an owner may start 20 chats in 24 hours
+(`WizardRunsPerDay`, see [Limits](backend.md#limits)). It is checked at a
+chat's first message, which is also where its character is made and so where
+the owner's character limit is checked; an opened chat nobody has written in
+costs nothing and is not counted. The refusal is 400 `limit.wizardRuns`. The
+count is read from the chats still stored, so discarding one gives its run
+back -- see [known-caveats.md](known-caveats.md#limits-are-counted-not-reserved).
+A tool call that would take a character past a per-character limit is refused
+to the model as a tool error and the log is left as it was.
+
 The checked-in nginx configuration raises `/v1/`'s body limit to 21 MiB. **Deploying
 a release does not install nginx configuration**: apply that file separately.
 A poll is an ordinary request answered at once, so it needs nothing from

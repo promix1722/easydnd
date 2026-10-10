@@ -38,6 +38,8 @@ type Service struct {
 	// clock is injected so a test can predict the timestamps an invite and a
 	// membership are stamped with. Nil means the real clock; see now.
 	clock func() time.Time
+
+	limits types.Limits
 }
 
 // NewService wires a Service over the group store, the account store and the
@@ -54,8 +56,15 @@ func NewService(
 	repo domain.Repository, users user.Repository, invites domain.Inviter,
 	tables domain.Tables, log *slog.Logger,
 ) *Service {
-	return &Service{repo: repo, users: users, invites: invites, tables: tables, log: log}
+	return &Service{
+		repo: repo, users: users, invites: invites, tables: tables, log: log,
+		limits: types.DefaultLimits,
+	}
 }
+
+// SetLimits replaces the limits this service enforces; it starts with
+// types.DefaultLimits.
+func (s *Service) SetLimits(l types.Limits) { s.limits = l }
 
 // now reads the clock, defaulting to the real one.
 func (s *Service) now() time.Time {
@@ -116,6 +125,21 @@ func (s *Service) Create(ctx context.Context, actor user.User, name string) (dom
 	clean, err := validateName(name)
 	if err != nil {
 		return domain.Group{}, err
+	}
+	// Groups owned now, not groups ever made: handing one on frees the place.
+	// ponytail: count, then insert -- racing creates can overshoot by a few.
+	held, err := s.repo.ListFor(ctx, actor.ID)
+	if err != nil {
+		return domain.Group{}, err
+	}
+	owned := 0
+	for _, m := range held {
+		if m.Role == domain.RoleOwner {
+			owned++
+		}
+	}
+	if owned >= s.limits.Groups {
+		return domain.Group{}, types.LimitReached("groups", s.limits.Groups)
 	}
 	if err := s.ensureStored(ctx, actor); err != nil {
 		return domain.Group{}, err

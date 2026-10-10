@@ -115,10 +115,14 @@ func (s *Service) seatEntries(ctx context.Context, id domain.ID, ids []character
 			Owner: user.ID(c.Owner), AddedAt: s.now(), HP: state.Base.HitPoints.Current, TempHP: state.Base.HitPoints.Temporary})
 	}
 	return s.games.MutateEntries(ctx, id, func(roster []domain.Entry) ([]domain.Entry, error) {
+		was := len(roster)
 		for _, entry := range entries {
 			if !slices.ContainsFunc(roster, func(e domain.Entry) bool { return e.Kind == "player" && e.Character == entry.Character }) {
 				roster = append(roster, entry)
 			}
+		}
+		if len(roster) > was && len(roster) > s.limits.GameEntries {
+			return nil, types.LimitReached("gameEntries", s.limits.GameEntries)
 		}
 		return roster, nil
 	})
@@ -363,7 +367,12 @@ func (s *Service) AddMonster(ctx context.Context, actor user.ID, id domain.ID, s
 		return err
 	}
 	entry := domain.Entry{ID: "mon_" + strings.TrimPrefix(string(eid), gameIDPrefix), Kind: "monster", AddedAt: s.now(), HP: hp, TempHP: tempHP, Monster: &stats}
-	return s.games.MutateEntries(ctx, id, func(entries []domain.Entry) ([]domain.Entry, error) { return append(entries, entry), nil })
+	return s.games.MutateEntries(ctx, id, func(entries []domain.Entry) ([]domain.Entry, error) {
+		if len(entries) >= s.limits.GameEntries {
+			return nil, types.LimitReached("gameEntries", s.limits.GameEntries)
+		}
+		return append(entries, entry), nil
+	})
 }
 
 // Rest gives participants their spent uses back. A long rest returns
