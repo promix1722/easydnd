@@ -592,10 +592,23 @@ the card's title, and for the three worn slots a rule. **A kit card is one
 list and never a sub-choice**: "a shield or any martial weapon" is written
 with the category and generated as the shield followed by every martial
 weapon, less any item the slot already names on its own (five javelins beside
-"any simple melee weapon" is one javelin option, the five). The rule: **the item chosen for
-a worn slot is equipped**, a second weapon in the off hand included, where
-everything else granted lands in the backpack. Fixed items (the cleric's
-shield, the rogue's leather armor) are still worn by an explicit change.
+"any simple melee weapon" is one javelin option, the five). The rule: **nothing
+a kit grants is equipped** -- chosen or fixed, whatever slot the card was for,
+it lands in the backpack. The slot titles the question; it no longer wears the
+answer. It used to: the item chosen for a worn slot was equipped, which read
+well for one sword and compounded badly -- a second weapon in the off hand was
+a fighting style nobody had chosen, and fixed items still needed an explicit
+change to be worn, so a kit was half dressed either way.
+
+A character is dressed **once, at the end**, by `AutoEquip`
+(`domain/character/autoequip.go`): one suitable thing from the backpack for
+each slot, written as an ordinary change entry. The main hand takes the weapon
+with the biggest damage die, the body the armor with the best base AC, every
+other slot the first thing made for it; the off hand takes only something made
+for the off hand -- a shield -- and nothing beside a two-handed weapon. It does
+nothing for a character with anything already on, so it is a start and never a
+correction. Proficiency is not consulted: a wizard carrying chain mail gets it
+put on, and can take it off.
 The fighter's and paladin's weapons are *main hand: any martial weapon* and
 *off hand: a shield or any martial weapon*. Some choices deliberately depart
 from the SRD to keep each card about one equipment type: the
@@ -603,7 +616,7 @@ ranger's "two shortswords or two simple melee weapons" is two independent
 picks, which allows a shortsword beside a handaxe the book does not. The
 fighter chooses chain mail or leather armor for Body and can choose a longbow
 with arrows as its backup weapon, independently of armor. The barbarian's
-off-hand handaxe option grants one handaxe, so one worn slot never equips two.
+off-hand handaxe option grants one handaxe.
 Ammunition and its quiver may accompany one weapon; carried stacks such as
 the fighter's two backup handaxes and the paladin's five javelins remain.
 Catalogue tests enforce one equipment type per class-kit option and one

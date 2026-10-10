@@ -435,6 +435,7 @@ that.
 | `GET` | `/v1/characters/{id}/events` | the log |
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
 | `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
+| `POST` | `/v1/characters/{id}/auto-equip` | dress a character who has nothing on: one suitable backpack item per slot; 204, and a no-op once anything is equipped |
 | `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
 | `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
 | `PUT` | `/v1/characters/{id}/folder` | file it elsewhere |

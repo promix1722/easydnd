@@ -4574,6 +4574,14 @@ out of the list rather than one more entry in it -- and the server is what
 orders it so (`customLast` in the catalogue handler; collections are otherwise
 in slug order, so a pack file's own order decides nothing). Builder options
 for equipment carry no artwork: a list of thirty weapons was thirty 66px tiles.
+The builder's **Finish** asks the server to dress the character
+(`POST /v1/characters/{id}/auto-equip`) before it opens the sheet: a build
+equips nothing on its way, so that is the one moment a new character gets
+anything on, and a failure there costs an empty paperdoll rather than the way
+out of the builder. The group screen has no Homebrew tab: sharing a pack with
+a table is gone from the client, though the routes behind it remain. On the
+sheet's Actions tab every row is a box of its own (`BlockList`'s `outlined`),
+since inside a folding group an unoutlined row was a line of text adrift.
 A pick keeps the picked option in view and does not jump to Confirm, which in
 a long list threw the page to its foot on every click. The spell filters share
 one fixed width, so the row does not re-wrap when a value is chosen or the

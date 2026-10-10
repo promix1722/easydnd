@@ -16,6 +16,14 @@ export interface BlockListProps {
   /** The key of the one block that is open, or null for none. */
   open: string | null
   onOpen: (key: string | null) => void
+  /**
+   * Draw every block as a box of its own, with a border.
+   *
+   * For a list that sits inside something already drawn as a surface -- the
+   * sheet's actions, inside a folding group -- where a row with no outline is
+   * a line of text adrift in its parent rather than a thing of its own.
+   */
+  outlined?: boolean
 }
 
 /**
@@ -48,7 +56,7 @@ export interface BlockListProps {
  * Headers must contain nothing interactive. The control is a `<button>`, and a
  * button inside a button is neither clickable nor legal.
  */
-export function BlockList({ items, open, onOpen }: BlockListProps) {
+export function BlockList({ items, open, onOpen, outlined = false }: BlockListProps) {
   return (
     <Accordion
       variant="separated"
@@ -65,7 +73,9 @@ export function BlockList({ items, open, onOpen }: BlockListProps) {
           style={
             item.highlighted === true
               ? { borderColor: 'var(--mantine-primary-color-filled)' }
-              : undefined
+              : outlined
+                ? { borderColor: 'var(--mantine-color-default-border)' }
+                : undefined
           }
         >
           {item.body === undefined ? (

@@ -775,6 +775,21 @@ The HexSheet JSON importer that used to sit beside this at `POST
 /v1/characters/import` is gone: the AI Wizard is the only way a foreign sheet
 comes in.
 
+### An import wears one item to a slot
+
+A sheet lists every weapon it has as wielded, and taking that at its word
+seated a barbarian's net, longsword, four javelins and handaxe in one hand.
+`set_inventory` now gives a slot to the **first** thing the sheet calls worn
+and carries everything after it for that slot, and every further copy of it:
+"Dagger x2, equipped" is one in hand and one in the pack. The same item on a
+second page keeps the seat it has. It still equips, rather than carrying
+everything, for one reason: the armor class a sheet prints is only something
+the build can reproduce while the armor is on, and a number it cannot reproduce
+is pinned as a fixed value that then ignores what the character later takes
+off. Finishing the chat calls the character service's `AutoEquip`, which
+dresses a character the import left with nothing on and otherwise does
+nothing.
+
 ## Configuration and deployment
 
 Add this to the YAML file selected by `EASYDND_CONFIG`. Keep the actual API key

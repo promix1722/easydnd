@@ -72,6 +72,7 @@ export function SheetActions({ actions, entries, pools }: {
           {/* Mounted only while unfolded, as a BlockList body is: a folded group is not on the page. */}
           <Accordion.Panel>{unfolded.includes(category) && (
       <BlockList
+        outlined
         open={opened}
         onOpen={setOpened}
         items={rows.map((action, at) => {

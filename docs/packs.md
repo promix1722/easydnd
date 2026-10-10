@@ -353,8 +353,8 @@ traits, feats, spells, proficiencies, languages and equipment. Rules can expose
 choices through the existing prompt/answer grammar. A class's
 `startingEquipmentOptions` carry a `slot` apiece -- `body`, `main-hand`,
 `off-hand`, `backup`, `pack`, `focus` or `instrument` -- which titles the
-builder's card and, for the three worn slots, equips what was chosen (see
-docs/dnd.md); a choice without one is titled by its options. Ability dependencies are
+builder's card and equips nothing: every kit item is carried until the
+character is dressed at the end (see docs/dnd.md); a choice without one is titled by its options. Ability dependencies are
 ordered and cyclic reads rejected. Mixed combination operations or multiple
 `set` effects on one target are rejected. DM change events remain final overrides.
 Rules with no automated effect must explicitly declare `manual: true`.
@@ -666,8 +666,7 @@ or one with a repeat, is not an order six scores can be dealt by and is
 ignored. The base pack's thirteen classes each have one. They follow the
 usual advice for each class -- the casting or attacking ability first,
 Constitution high, the dump stat last -- and are a starting point to edit, not
-a ruling. The artificer's row is owned by the `easydnd-2014` export, like every
-`tce` row; its priority has to be carried there too or a re-export drops it.
+a ruling.
 
 ## Pack and book provenance
 

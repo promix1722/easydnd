@@ -48,11 +48,6 @@ export interface PackValidation {
   rules?: RulesLock
   diagnostics: { reason: string; detail: string; path?: string; args?: Record<string, unknown> }[]
 }
-export interface PackShare {
-  pack: string
-  contributor: string
-  rules: RulesLock
-}
 export const listPacks = () => request<{ packs: PackRecord[]; defaultRules: RulesLock }>('/packs')
 export const getPack = (id: string) => request<PackRecord>(`/packs/${encodeURIComponent(id)}`)
 export const getPackSchema = () => request<PackSchema>('/packs/schema')
@@ -88,11 +83,6 @@ export const exportPack = (id: string, version = '') =>
   request<PackDocument>(`/packs/${id}/export?version=${encodeURIComponent(version)}`)
 export const resolvePacks = (packs: PackRelease[]) =>
   request<RulesLock>('/packs/resolve', { method: 'POST', body: { packs } })
-export const getGroupPacks = (id: string) => request<PackShare[]>(`/groups/${id}/packs`)
-export const sharePack = (group: string, pack: string, version: string) =>
-  request(`/groups/${group}/packs`, { method: 'POST', body: { pack, version } })
-export const unsharePack = (group: string, pack: string) =>
-  request(`/groups/${group}/packs?pack=${encodeURIComponent(pack)}`, { method: 'DELETE' })
 export interface PackMigration {
   revision: number
   before: Sheet
