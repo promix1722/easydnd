@@ -127,7 +127,7 @@ func (r *UserRepository) ByCredentialID(ctx context.Context, credentialID []byte
 
 // load runs a header query and then the account's credentials and identities.
 //
-// Both run inside one read-only transaction so that a concurrent AddCredential
+// Both run inside one read-only transaction so that a concurrent write
 // cannot produce an account whose credential list is from a different instant
 // than its header.
 func (r *UserRepository) load(ctx context.Context, headerSQL, missMessage string, args ...any) (domain.User, error) {

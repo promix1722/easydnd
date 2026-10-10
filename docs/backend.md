@@ -15,8 +15,8 @@ Startup registers the base pack plus `data.pack_files` and
 `data.autoload_packs`, resolves
 `data.default_packs`, and compiles the selected contexts before readiness.
 `data.pack_archive` retains immutable releases by digest outside deployment
-folders. [packs.md](packs.md) documents the file format, CLI and new migration
-and contextual catalogue routes. Autoloaded folders are additional public
+folders. [packs.md](packs.md) documents the file format, CLI and
+contextual catalogue routes. Autoloaded folders are additional public
 catalogue choices, excluded from implicit default roots so replacement cores
 can coexist. Each path accepts a pack directory or a repository with a `pack/`
 child; an optional ID override gives replacement datasets their own namespace.
@@ -24,6 +24,7 @@ child; an optional ID override gives replacement datasets their own namespace.
 `auth.superadmins` and the groups one of them grants a pack to; see
 [packs.md](packs.md#common-and-private-disk-packs).
 Missing or invalid configured packs fail startup. Changes require a restart.
+
 ### What the process holds
 
 A release is read from disk once, and three things are kept for the life of
@@ -61,18 +62,20 @@ identifies positions; `expectedRevision` detects concurrent same-length edits.
 Each init event pins a rules lock, and character/list/copy/shared-game reads use
 that lock, which never changes afterwards. Characters, folders, shares and games are in
 PostgreSQL whenever accounts are; see
-[Where everything lives](#where-accounts-and-groups-live).
+[Where accounts and groups live](#where-accounts-and-groups-live).
 
 ## Quick start
 
 ```sh
 make run/server                     # dev mode: text logs, debug level
 curl localhost:8080/v1/health       # {"status":"ok"}
-curl localhost:8080/v1/catalog      # the compendium's index
-curl localhost:8080/v1/characters   # {"characters":[]}
 
 make verify                         # everything CI checks, back and front, two jobs at once
 ```
+
+Everything past `health` and `version` needs a session; in development
+`POST /v1/dev/login` gives one, see
+[Seeded development party](#seeded-development-party).
 
 `make run/server` needs no database: `config.dev.yaml` sets no `db.url`, so it
 runs on the in-memory account store and says so. For durable accounts locally:
@@ -135,11 +138,9 @@ skills, a subclass, a fourth-level improvement, cantrips and prepared spells.
 Every seed is a list of selections in `internal/app/dev_builds.go`, applied
 entry by entry through the same validation an append from the build screen
 takes, and `seedCharacter` refuses to return a character with a required
-prompt still open. So a compendium regeneration that renames a prompt fails
+prompt still open. So a compendium edit that renames a prompt fails
 start-up, naming the entry, rather than quietly seeding a sheet that opens as
-"Unfinished" with no race and six tens -- which is what the two casters were
-while they were seeded with a class event and nothing else. There is no
-"stub" route or button any more: the seeds are the ready-made characters.
+"Unfinished" with no race and six tens.
 
 `POST /v1/dev/login` with `{"account":"master"}` (or `player1`, `player2`)
 issues the normal HttpOnly session cookie and returns the seeded `game_ids`.
@@ -157,11 +158,9 @@ with no database it builds them every start. Signing in again within the same
 run does not reseed or reset game changes. Open separate tabs and choose master, player1 and player2
 in each: development shortcuts keep a random cookie selector in tab-local
 `sessionStorage` and send it as `X-EasyDnD-Dev-Session`. It selects a signed
-HttpOnly cookie and is ignored in production.
-Each successful switch
+HttpOnly cookie and is ignored in production. Each successful switch
 uses a new selector, including in duplicated tabs; a failed switch keeps the
-previous identity. The signed token stays in an HttpOnly cookie. This header
-is ignored in production.
+previous identity.
 
 All development auth cookie names also include a namespace derived from the
 API listen address. Different worktree ports on the same browser hostname
@@ -216,18 +215,16 @@ make test/db                        # including the Postgres adapter (needs make
 ```
 
 **Where a database is involved, `test/db` is the only correct target**, and CI
-runs it for that reason. Three packages reach the one database and each opens by
-wiping it -- `internal/adapter/repository/postgres` for users and for groups, and
+runs it for that reason. Two packages reach the one database and each
+wipes it -- `internal/adapter/repository/postgres` between subtests, and
 `internal/api/http`'s durability test. `go test ./...` runs packages in parallel,
 so without `test/db`'s `-p 1` one truncates a table another has just written,
 and the failure surfaces in whichever package lost the race rather than in
 whichever caused it. Both go red at once, which is the signature to recognise.
 
-CI used to run `make test/unit` with `TEST_DATABASE_URL` set -- the one place
-that combination arose, because on a machine without the variable those tests
-skip and the race cannot happen. It failed the v1.0.1 release and cost a manual
-re-run of the whole job. The rule is in `CLAUDE.md` because it is easy to
-reintroduce: set `TEST_DATABASE_URL`, run `test/db`.
+The rule is in `CLAUDE.md` because it is easy to reintroduce -- `make test/unit`
+with `TEST_DATABASE_URL` set failed the v1.0.1 release in CI, the one place the
+combination arose: set `TEST_DATABASE_URL`, run `test/db`.
 
 `make verify` runs `test/unit`. It does **not** run `test/race`, and that is a
 deliberate trade rather than an oversight.
@@ -264,9 +261,9 @@ unless it writes a package variable; `make test/race` is the check.
 
 ### verify runs two jobs, longest first
 
-`verify` used to be a serial chain, which meant the Go side's time was added to
-the frontend's rather than spent inside it. It is now a `make -j2` over the
-leaf targets other than `test/unit`, and **the order they are named in is the
+`verify` is a `make -j2` over the leaf targets other than `test/unit`, so the
+Go side's small checks are spent inside the frontend's time rather than added
+to it, and **the order they are named in is the
 schedule**: `make -j` starts goals left to right as slots come free, so
 `web/test` -- about forty seconds -- goes first, and the frontend's typecheck,
 the production build and the small Go checks all happen inside its shadow.
@@ -274,7 +271,7 @@ Left at the end of the list it would land in the last slot and the run would
 cost its length plus everything before it.
 
 `test/unit` then runs **after** that group, alone. That is a measurement, not
-tidiness: the heavy Go packages run their tests in parallel now, so the Go
+tidiness: the heavy Go packages run their tests in parallel, so the Go
 suite and vitest each want every core, and side by side they thrash -- a cold
 Go suite that takes 60s alone took 100s beside vitest, vitest's 40s became
 167s, and `verify` took 184s. One after the other it is 40s + 60s with a cold
@@ -288,8 +285,7 @@ a four-core machine; `VERIFY_JOBS` is the knob for a worktree sharing the box.
 failure arrives as one block rather than interleaved with whatever else was
 mid-run -- at the cost of nothing printing until a target finishes.
 
-CI has the same two lanes, and since the pipeline was unchained it goes further:
-its six check, build and test jobs all start at once. See
+CI has the same two lanes and goes further: its six check, build and test jobs all start at once. See
 [The three checks run at once](#the-three-checks-run-at-once-and-nothing-is-cached).
 `verify` cannot copy that -- one machine, not six -- so here the lanes are two
 and the order they are named in does the scheduling.
@@ -300,8 +296,7 @@ locale, and a `Catalog` is immutable, so one read of the compendium serves
 every test in the binary. A `Registry` is dear to build: `NewRegistry` decodes the pack with
 the strict two-pass decoder, re-marshals the whole document -- 13.5 MB of WebP
 icons in base64 included -- to digest and validate it, then compiles every
-locale, about eight CPU-seconds per build. The suite built one about 45 times
-a run, which was most of its three minutes; those sites now share one through
+locale, about eight CPU-seconds per build. So the tests share one through
 a `sync.OnceValues` helper per package (`sharedRegistry`, `spellCatalog`,
 `packBase`, `namespacedRegistry`), and reads of a registry are safe to share.
 A test that *writes* into one -- `CompilePrivate` installs a release -- takes
@@ -309,19 +304,14 @@ a fresh one, and a test that changes a shared catalogue clones the map it
 touches first. If you add a helper that needs the compendium, reach for
 `filetest.SRD()` -- the SRD pack loaded the way the server loads it, once per
 test binary -- or the package's shared registry rather than calling
-`NewRegistry` again. There used to be a second, directory-reading loader
-(`NewSource`) that most tests used; it built a catalogue with no lock, no
-mechanics and no artwork, which is not one the server ever serves, and it is
-gone. The internal
-and external test packages of one directory need one each, since a package-level
+`NewRegistry` again. The internal and external test packages of one directory need one each, since a package-level
 var cannot cross that line.
 
 ## Running more than one worktree
 
-Every port the local stack binds used to be a constant, so exactly one checkout
-could run at a time -- and worse, a second `make db/up` adopted the first one's
-container and its database. Ports are now derived from a **slot**, one number
-per worktree:
+Every port the local stack binds is derived from a **slot**, one number per
+worktree, so more than one checkout can run at a time and a second
+`make db/up` cannot adopt the first one's container and its database:
 
 | | port | reached at |
 | --- | --- | --- |
@@ -385,8 +375,8 @@ That is the whole configuration. `make dev` then passes
 `auth.rp_origins` and hands it to Vite, which needs it for two things of its
 own -- see [web.md](web.md#one-dev-server-per-worktree).
 
-Two consequences of reaching the app over plain HTTP on a name that is not
-`localhost`, both by design rather than breakage:
+Three consequences of reaching the app over plain HTTP on a name that is not
+`localhost`, all by design rather than breakage:
 
 - **Passkeys are unavailable on the `888x` ports.** WebAuthn requires a secure
   context, so `window.PublicKeyCredential` is undefined and the sign-in page
@@ -401,9 +391,7 @@ Two consequences of reaching the app over plain HTTP on a name that is not
 - **`navigator.clipboard` is undefined**, for exactly the same reason as
   `PublicKeyCredential`. The invite sheet falls back to a selection copy and,
   if even that is refused, says so and selects the link -- see
-  [web.md](web.md#copying-the-invite-link). Worth knowing because the first
-  version used Mantine's `CopyButton`, which drops the error its own hook
-  reports, so the button silently did nothing here and worked on production.
+  [web.md](web.md#copying-the-invite-link).
 
 ## Layout
 
@@ -582,9 +570,6 @@ A group's members are addressed the other way, by `?user=`. Either would have
 been consistent with the rule above; a member is named by an opaque account
 id rather than by position, so it travels as a query parameter.
 
-`PATCH` arrives with groups, as `PUT` does with the log entry routes above:
-everything older than both is `GET`, `POST` or `DELETE`.
-
 The invite routes are a separate tree rather than sitting under `/v1/groups`
 because somebody redeeming a link is **not in the group yet and cannot name
 it** -- the token carries the id, so there is no addressed parent to hang them
@@ -600,10 +585,9 @@ same shape for the same two reasons.
 ### Spells are never served whole
 
 Every spell carries its artwork inline, about 30 KB of it, so the spells
-collection is 11 MB. Nothing a screen does needs all of it, and for a long time
-three screens downloaded it anyway -- to name a dozen spells, to list the books
-a filter offers, to page through a class's list in the browser. So the route
-does not offer it: `GET …/catalog/spells` with neither `?slugs=` nor a search
+collection is 11 MB. Nothing a screen does needs all of it -- naming a dozen
+spells, listing the books a filter offers, paging through a class's list --
+so the route does not offer it: `GET …/catalog/spells` with neither `?slugs=` nor a search
 parameter is a 400 (`field.limit.required`), on every scope the catalogue is
 read through. A client that drifts back into fetching the list finds out on
 the first request, not from a slow page.
@@ -688,9 +672,9 @@ title-cases it, as it always has.
 
 The reason is the cost of the alternative. The server holds the character's
 catalogue when it projects, so the lookup is a few map reads. Left to the
-client it was fourteen whole collections per sheet, the spell list with its
+client it would be fourteen whole collections per sheet, the spell list with its
 inlined artwork among them -- about 11 MB to print a dozen names. A sheet read
-is now one response, sized by the character rather than by the rules.
+is one response, sized by the character rather than by the rules.
 
 A write's echo of the sheet (`WriteResponse.sheet`) carries no `catalog`. It is
 there to confirm the write; a screen that draws a sheet reads the sheet.
@@ -698,10 +682,8 @@ there to confirm the write; a screen that draws a sheet reads the sheet.
 ### Creating a character takes a name
 
 `POST /v1/characters` takes a name, and an alignment if the player already has
-one in mind. It used to take the generation method and the six base scores as
-well, and the init event it seeded carried all eight -- which is precisely why
-the name and the scores were the two things a build screen could not offer to
-revisit. The log is **one entry per selection**; a selection with no entry of
+one in mind. It takes neither the generation method nor the six base scores,
+because the log is **one entry per selection**; a selection with no entry of
 its own is a selection nobody can point at. See
 [dnd.md](dnd.md#log-and-events).
 
@@ -712,12 +694,12 @@ and the log's own validation refuses the second case for every other writer.
 See [dnd.md](dnd.md#log-and-events). A batch may still carry several entries
 -- a race, then what the race asked -- in one request.
 
-So the scores are an ordinary open choice now. A freshly created character has
+So the scores are an ordinary open choice. A freshly created character has
 `character/abilities` outstanding, answered with a `change` event carrying the
 six `abilities.<ability>` paths, and the generation method travels with that
 answer rather than with creation. The bound on a score -- 1 to 30, wide enough
-for a DM's ruling and narrow enough to reject a typo -- moved with them, and is
-checked where they now arrive.
+for a DM's ruling and narrow enough to reject a typo -- travels with them, and is
+checked where they arrive.
 
 ### Creation and level-up are one flow
 
@@ -737,16 +719,13 @@ separate question: levelling up is raising the declaration, from the sheet's
 Level up button or the identity tab, and creation is the first pass through
 the same loop.
 
-Nothing takes a level as an entry of its own. `character/level` is gone, and a
-bare `level` event -- one naming a class and carrying no answers -- is refused
+Nothing takes a level as an entry of its own: a bare `level` event -- one naming a class and carrying no answers -- is refused
 on append, because no prompt offers it. The `level` event type is still in use
 for what a level *grants*: an improvement, an Expertise, a feature's pick all
 arrive as level events carrying answers.
 
 **Multiclassing is not offered.** Nothing poses a question that would give a
-character a second class, so `canMulticlassInto` and the `multiclassing`
-constant that gated it are gone -- git has them, and
-[dnd.md](dnd.md#log-and-events) says what the rule was. What
+character a second class; [dnd.md](dnd.md#log-and-events) says what the rule was. What
 stays is everything that *reads* a multiclassed character: `Identity.Classes`
 is a slice, `applyClasses` walks it, `classGrant` still knows a later class
 grants no starting equipment, and the spellcasting summary is still one block
@@ -754,13 +733,9 @@ per casting class. Turning multiclassing back on is posing the question again
 and stopping `advanceToDesiredLevel` from applying; the two go together, since
 a declaration cannot say which class a level went into.
 
-Two consequences worth knowing. An **imported** multiclassed character loses
+One consequence worth knowing: an **imported** multiclassed character loses
 its later classes -- reported as unresolved rather than folded into the first,
-which would give it levels in a class it never took. And a character built
-before this change, whose log takes levels as entries, still *projects*
-correctly (levels are max-by-number, so the entries still count) but would
-lose them to a `Revise`, since nothing poses the prompt they answered. No such
-character was ever written to a durable store, so the window is closed.
+which would give it levels in a class it never took.
 
 Four fields make the client mechanical rather than knowledgeable:
 
@@ -780,7 +755,7 @@ Four fields make the client mechanical rather than knowledgeable:
 - **`repeatable`**, on the choice rather than the prompt, says one option may
   be picked more than once — the picks are points to spend. Only a level's
   Ability Score Improvement says so: "+2 to one ability, or +1 to two". It is
-  not the choice's *kind*, which is what this used to be read off, because a
+  not read off the choice's *kind*, because a
   half-elf's two bonuses are the same kind over the same options and must go to
   two different scores.
 
@@ -794,20 +769,19 @@ A prompt whose option set is **explicit and empty** is a question the player
 answers in their own words. Three exist: a name, and the four roleplaying lines
 in the `personality` group -- a personality trait, an ideal, a bond and a flaw.
 SRD 5.1 prints eight of each and the compendium still carries them, but they
-are offered as prompts no longer: a trait is the one line on a sheet that is
+are not offered as prompts: a trait is the one line on a sheet that is
 nobody's but the player's, and a menu of eight makes it the compendium's. The
-state behind all four was always free text (`State.Identity.PersonalityTraits`
-is a `[]string`), so what changed is that the prompt stopped pretending
-otherwise.
+state behind all four is free text (`State.Identity.PersonalityTraits` is a
+`[]string`), and the prompt does not pretend otherwise.
 
 Those four are posed the way `character/alignment` is, and for the same reason:
 there is no option set to compare an answer against, so "answered" is a
 question about the sheet rather than about the log. `promptBuilder.personality`
 emits each only while its value is unset, and the change that sets it is what
 closes it -- which is also what attributes the entry, through the same
-`closedGroup` path the six ability scores go down. The projector no longer
-seeds any of them from a picked suggestion; it used to, which meant choosing a
-background *after* writing a trait silently overwrote it.
+`closedGroup` path the six ability scores go down. The projector seeds none
+of them from a picked suggestion, so choosing a background *after* writing a
+trait cannot overwrite it.
 
 ### Writing to a character
 
@@ -831,13 +805,12 @@ free to disagree with the one the rules produce. Entries the server cannot
 attribute -- an imported log, a DM's `change` -- carry no source. `GET
 /characters/{id}/events` remains the unabridged record either way.
 
-An earlier version of this page said that changing a pick needs no undo,
-because answers fold last-write-wins and re-answering a prompt is a plain
-append. **That was false.** `promptBuilder.add` stops emitting a prompt the
+**Changing a pick is not a plain append**, even though answers fold
+last-write-wins. `promptBuilder.add` stops emitting a prompt the
 moment it is fully answered, so posting the same prompt again is rejected as a
 prompt the character does not have open. Last-write-wins is what lets a *later*
 entry answer an *earlier* entry's question -- a trait's prompt does not exist
-until the race is chosen -- and it was never a way to change an answer. The
+until the race is chosen -- and it is not a way to change an answer. The
 route below is what changing an answer needs.
 
 #### Replacing an entry
@@ -875,8 +848,7 @@ Two invariants make this something a player can trust.
 **Revalidation is never stricter than the predicate that accepted the entry,
 except where that predicate was wrong.** The replay checks each entry against
 exactly the prefix it will sit on, which is the same thing the append checked
-against. The exception is deliberate and is the whole reason the bug below had
-to be closed first: an entry that only ever got in because nothing checked it
+against. The exception is deliberate: an entry that only ever got in because nothing checked it
 does not survive a replay.
 
 **An entry carrying a `Ref` is never dropped merely because its answers died.**
@@ -885,7 +857,7 @@ rogue: the class entry stands, keeps every other answer it carries -- the
 Expertise, the starting weapon -- and the invalidated question comes back
 outstanding under its own group. Deleting the entry would take the class, the
 answers that were still fine and every level built on it, and a revalidation
-that silently eats a player's choices is worse than the truncation it replaces.
+that silently eats a player's choices is worse than none.
 
 The granularity is one **answer**, not one pick. An answer is what a prompt was
 asked for, so half of one answers nothing: four skills picked together stand or
@@ -908,10 +880,11 @@ stale preview cannot be committed silently either, and that costs nothing
 extra: the commit re-runs the replay, and if the log moved in between,
 `expectedSeq` makes it the ordinary sequence conflict.
 
-`Repository.Commit` is the port method behind it -- neither an append nor a
-truncation, because replacing one entry can drop entries after it and the
-stored log comes back a different length. It is the only write the port has
-for a log: the in-memory and Postgres adapters both implement it, and `source`
+`Repository.Commit` is the port method behind it -- a whole-log write
+rather than an append, because replacing one entry can drop entries after it
+and the stored log comes back a different length. It is the only write the
+port has for an existing log (`CreateWithLog` stores a new character with
+one): the in-memory and Postgres adapters both implement it, and `source`
 needed no migration or backfill because the log is one `json` column.
 
 #### Saving several spell edits together
@@ -934,14 +907,12 @@ spells while adding new ones without partial writes or losing another draft.
 #### Two questions about a reference
 
 `validateRef` asks **does this entry exist in the compendium?**
-`answersAnOpenPrompt` asks **was the character offered it?** Only the first
-used to be asked, and that is a bug this change closes on the way: `POST
-.../events {"type":"subrace","ref":"subrace:hill-dwarf"}` was accepted for a
-half-elf, because `subrace:hill-dwarf` resolves perfectly well and nothing
-looked at whether anything had asked for a subrace at all. The projector then
-applied it. Revalidation cannot work until that is closed -- a replay with no
+`answersAnOpenPrompt` asks **was the character offered it?** The first alone is not enough: `POST
+.../events {"type":"subrace","ref":"subrace:hill-dwarf"}` would be accepted for
+a half-elf, because `subrace:hill-dwarf` resolves perfectly well, and the
+projector would apply it. Revalidation needs the second too -- a replay with no
 notion of "was this offered?" has no way to notice an entry the new prefix
-orphaned -- so the two are now asked together, in that order, on every
+orphaned -- so the two are asked together, in that order, on every
 structural event.
 
 `answersAnOpenPrompt` matches on the prompt's own `event` block -- the same
@@ -953,11 +924,11 @@ keeps a race's own follow-up entries alive. It is also the function that yields
 the entry's `source`, so an entry's group and its legality are decided by one
 match rather than two that can disagree.
 
-One consequence worth stating: a `feat` event is no longer acceptable, because
+One consequence worth stating: a `feat` event is not acceptable, because
 no prompt offers one. The Ability Score Improvement's feat branch is answered
 as a `level` event -- that is what the prompt says to post -- and no other
 prompt asks for a feat at all. The projector still knows the type; "nothing can
-be answered before it is asked" simply now applies to it like everything else,
+be answered before it is asked" simply applies to it like everything else,
 and a prompt that wants one has to say so.
 
 ### Folders
@@ -965,8 +936,7 @@ and a prompt that wants one has to say so.
 A folder is a named place one account files its characters. That is the whole
 of it: one owner, nothing shared, no rule in the game reads it. It is **not** a
 group of players -- that word is reserved, and kept out of this feature's
-types, routes and screens on purpose, so the two cannot be confused when the
-other one arrives.
+types, routes and screens on purpose, so the two cannot be confused.
 
 **Every account always has one.** The default folder is created by the first
 read that needs it -- `GET /v1/folders`, or creating a character with no folder
@@ -1196,8 +1166,7 @@ level -- because that is who is sitting there, not the sheet. The row carries
 would admit.
 
 Two rows are worth saying in prose. **A player may share** — that is the whole
-of what a player does at a table, and it is the half of a group that was missing
-until now. **A DM may unshare somebody else's character**, which looks like a
+of what a player does at a table. **A DM may unshare somebody else's character**, which looks like a
 reach into another account and is not: a guest's session expires and cannot be
 recovered, so without it their character would sit on the table forever with
 nobody able to take it down.
@@ -1215,10 +1184,9 @@ thing being deleted, so a character still knows nothing about groups and a group
 still knows nothing about games.
 
 **Both stores are in Postgres, and neither has a foreign key to a character.**
-`shared_characters` and `games.roster` name character ids, and those are now
-drawn from a sequence that never hands an id out twice, so the argument
-`00003_groups.sql` once made against naming one no longer applies. The keys are
-still left out on purpose: the ports say the store does not verify the
+`shared_characters` and `games.roster` name character ids, which are
+drawn from a sequence that never hands an id out twice. The keys are left out
+on purpose: the ports say the store does not verify the
 character -- that is the usecase's authorization question -- and the in-memory
 adapter cannot verify it either, so a key would make the two adapters answer
 the same call differently. The cascades above are what keep the rows honest,
@@ -1499,8 +1467,8 @@ every place a log is written: `Apply`, `ReviseBatch`, `UpsertCustomOption`, and
 the AI Wizard's tool calls, which write around all three and hand the refusal
 to the model like any other tool error.
 
-`CharacterEvents` is the catch-all. Personality traits, proficiencies,
-conditions, spent resources and rests are all entries in the same log, so one
+`CharacterEvents` is the catch-all. Personality traits, proficiencies and
+conditions are all entries in the same log, so one
 number bounds every list on a character that the struct does not name. It is
 high because play adds to the log for as long as a campaign runs.
 
@@ -1662,7 +1630,7 @@ rather than quietly defaulted.
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
 | `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The template's placeholder is rejected by name |
-| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups or to single accounts, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes nothing](#a-superadmin-reads-everything-and-writes-one-thing)): a **verified** Google email, or an account id |
+| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups or to single accounts, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes one thing](#a-superadmin-reads-everything-and-writes-one-thing)): a **verified** Google email, or an account id |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
 | `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. The first is where Google sign-in returns to. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
@@ -1844,16 +1812,14 @@ A guest session is the same signed token in the same `HttpOnly` cookie as any
 other, carrying one extra private claim, `anon`. It rides in the token because
 there is nothing to look it up in.
 
-A guest used to have no row anywhere at all. **Groups ended that, but only
-just**: a guest who joins somebody else's table has to be nameable in a roster
+A guest has no row anywhere at all -- **until they touch a group**: a guest who joins somebody else's table has to be nameable in a roster
 other people read, and `group_members.user_id` is a real foreign key. So the
 group usecase writes a `users` row for a guest the first time they create or
-join a group -- `EnsureGuest`, idempotent, and called on those two paths and
-nowhere else. A guest who never touches a group is still stored nowhere.
+join a group -- `EnsureGuest`, idempotent, and called on those two paths and on a
+guest's first pack. A guest who does none of the three is stored nowhere.
 
-Which raised the question of what to call them. "Guest" was legible while a
-guest could only see their own things and useless the moment three shared a
-roster: nobody could tell which one to remove. A guest is now "Guest" plus four
+A bare "Guest" is useless the moment three share a roster: nobody can tell
+which one to remove. So a guest is "Guest" plus four
 characters of the id they already carry -- `guestName`, a pure function of the
 session's subject.
 
@@ -1968,8 +1934,8 @@ every call, and which an HTML form cannot set at all.
 That `Origin` check is why `auth.rp_origins` is not only a passkey setting. It
 is the list of addresses this instance will accept a write from, so a
 development instance reached on some other host has to have that host in it or
-every POST comes back "request origin is not allowed" -- which is what
-`make dev` generates it for.
+every POST comes back "request origin is not allowed" -- which is why
+`make dev` passes it.
 
 ### `auth.rp_id` is permanent
 
@@ -2010,7 +1976,7 @@ Character and folder ids come from two sequences, `characters_id_seq` and
 `folders_id_seq`, rendered in the same `chr_000001` / `fld_000001` shape the
 in-memory store mints -- so nothing downstream can tell the adapters apart,
 and, the point of it, an id never names a different character after a restart.
-That is what `00003_groups.sql` was waiting for. The rows that name a
+The rows that name a
 character still carry **no foreign key** to it; the reason is under
 [Ownership, and membership](#ownership-and-membership). `owner_id` on
 `folders` and `characters` has none either, for the reason `agent_sessions`
@@ -2076,12 +2042,6 @@ not tidiness. `internal/api/http/helpers` maps a `*types.ValidationError` to 400
 and a `*types.NotFoundError` to 404 exactly once, so two implementations that
 disagree about which error a bad call produces are two different ports wearing
 one name -- and only one of them can be right.
-
-The sharpest instance: Postgres evaluates a unique constraint **before** it
-fires a foreign key trigger. `AddCredential` against a missing account whose
-credential id is already claimed therefore reports the duplicate, where the
-in-memory adapter reports the missing account -- so the SQL adapter probes for
-the account explicitly first. `repotest` has a case for it.
 
 ### Migrations
 
@@ -2151,7 +2111,7 @@ One pipeline ships the API, the SRD data and the frontend together, and it is
 | Event | Runs |
 |---|---|
 | push to `main` | *nothing* -- no build, no tests |
-| push a `v*` tag | gofmt, vet, tests, build, version-injection check, then deploy |
+| push a `v*` tag | gofmt, vet, lint, tests, build, version-injection check, then deploy |
 | push a `v*-notest` tag | the same minus the two suites; the version assertions still run |
 | push a `ci/*` tag | everything except Deploy and Restart -- a dry run that cannot ship |
 | manual run on a `v*` tag | the same -- how you re-run a tag that failed halfway |
@@ -2165,10 +2125,9 @@ checks twice buys nothing, so a tag named for the exemption skips both test
 jobs. Naming the tag is the whole mechanism: the workflow reads it off the ref,
 and `git tag` therefore shows for ever which releases went out untested.
 
-What it gives up is the two suites, and now nothing else. The pair of version
+What it gives up is the two suites and nothing else. The pair of version
 assertions -- that `./easydnd -version` and the bundle's `version.json` both
-report this release -- used to live in the Test stage and go with it. They are
-in Build now, beside the artifact each is about, so a `-notest` release still
+report this release -- is in Build, beside the artifact each is about, so a `-notest` release still
 proves the identifier landed. That matters more than it sounds: an unfound `-X`
 symbol is a *silent* no-op, and without the assertion the same mistake still
 gets caught, but by `deploy.sh`'s health gate -- a rollback and a red `restart`
@@ -2217,10 +2176,8 @@ reverts the UI, the API and its data as a unit.
 
 The path of the data inside a release is part of the contract between the
 tarball, `deploy.sh`'s existence check and the server's `data.srd_dir`. All
-three now travel with the tag -- `srd_dir` is in `config.prod.yaml`, inside the
-release -- so moving the directory is one change and one deploy. It used to
-take a hand edit on the server *before* tagging, and forgetting it cost a
-rollback with nothing on the run page saying why.
+three travel with the tag -- `srd_dir` is in `config.prod.yaml`, inside the
+release -- so moving the directory is one change and one deploy.
 
 The database is the exception, and the only piece of state that does **not**
 swap with a release. That is what makes the expand-only rule above binding: a
@@ -2238,11 +2195,8 @@ Nothing in the workflow was taught about it: Deploy and Restart already ask
 `startsWith(github.ref, 'refs/tags/v')`, and a `ci/` ref fails that, so they skip
 on their own.
 
-It works only because the trigger and the deploy gate stopped being the same
-condition. They both used to say "starts with `v`" -- the trigger as the glob
-`v*`, the gate as `startsWith(…, 'refs/tags/v')` -- so every tag that could
-start the pipeline could also ship from it, and there was no way to run CI on a
-tag without a release at the end of it.
+It works because the trigger and the deploy gate are different conditions: the
+trigger also matches `ci/*`, the gate does not.
 
 **A dry-run tag must not begin with `v`.** `v*` is a glob and not a version
 pattern: `vtest` and `verify` both match the trigger *and* pass the deploy gate,
@@ -2261,18 +2215,17 @@ testing.
 ### The three checks run at once, and nothing is cached
 
 Check, Build and Test are six jobs with no dependencies between them -- three
-per lane, all starting together. They used to be a chain per lane, and the chain
-cost more than its contents: the Go module graph was compiled from scratch in
-each of the three backend jobs, one after another, 31s then 38s then 39s of a
-202s release. Nothing in Check produces anything Build or Test reads. The only
-real tie was the version assertions, which needed a built artifact -- so they
-moved into the job that builds it.
+per lane, all starting together. A chain per lane cost
+more than its contents: the Go module graph was compiled from scratch in each
+of the three backend jobs, one after another. Nothing in Check produces
+anything Build or Test reads; the only real tie is the version assertions,
+which need a built artifact -- so they live in the job that builds it.
 
-The one thing that arrangement costs is that **Check no longer gates anything by
+The one thing that arrangement costs is that **Check does not gate anything by
 being upstream of it.** The two Deploy jobs name `check-*` in `needs` and test
 its result explicitly. They have to: their `if` already lifts the implicit
 `success()` gate so that `-notest` can work, so a missing clause there would not
-fail loudly -- it would ship a release whose gofmt, vet, layer and drift checks
+fail loudly -- it would ship a release whose gofmt, vet, lint, layer and drift checks
 were red.
 
 **Nothing is cached, and that is not an oversight.** A GitHub Actions cache is
@@ -2356,10 +2309,8 @@ say:
   `/opt/easydnd/current/config.yaml`, so the config follows the symlink swap.
 - `deploy/nginx/easydnd.conf` -- the routing: `/v1/` to the Go process,
   everything else to the bundle with an SPA fallback, plus the whole of the
-  HTTP caching policy. Its cache rules changed with the release-identifier
-  work -- `/icons/`, `/manifest.webmanifest`, `/favicon.svg`, the Workbox
-  runtime chunk and the source maps -- and **a tag deploy does not carry any of
-  that**. The live copy has to be replaced by hand or the new rules are simply
+  HTTP caching policy. **A tag deploy does not carry any of that**: after a
+  change here the live copy has to be replaced by hand or the new rules are simply
   not in effect, silently, with nothing failing to say so.
 
 > **Apply the nginx config before the first tagged deploy carrying a
@@ -2401,12 +2352,10 @@ A `v*-notest` tag reports itself in full, `-notest` and all. That is deliberate:
 a release that skipped its suites should say so wherever anyone reads its
 version.
 
-**A release lives in a directory named by commit SHA.** `releases/<sha>/`, as it
-always has. A tag can be moved; a commit cannot, so the SHA is what guarantees
-two builds never land on top of each other. On a tag push `GITHUB_SHA` is the
-commit the tag points at, so nothing about the directory layout changed.
+**A release lives in a directory named by commit SHA.** `releases/<sha>/`. A tag can be moved; a commit cannot, so the SHA is what guarantees
+two builds never land on top of each other. On a tag push `GITHUB_SHA` is the commit the tag points at.
 
-Because those two are no longer the same string, `deploy.sh` cannot derive the
+Because those two are not the same string, `deploy.sh` cannot derive the
 one from the other, and it needs the identifier twice -- once for the release it
 is activating and once for whatever it rolls back to. So the deploy job writes
 `releases/<sha>/VERSION` beside the binary, and `deploy.sh` reads it. Releases
@@ -2459,8 +2408,7 @@ through, so any request it was going to make anyway is the check. See
 `/v1/version` itself is `no-store`. It answers "which release is live", an
 answer that can be held is not an answer to that question, and it has two
 readers -- the deploy gate and the browser -- who would both be misled by a
-stale one. It carried no cache header at any layer until that was noticed, and
-was safe only because nginx happens to have no `proxy_cache`.
+stale one.
 
 ## Adding a feature
 
@@ -2517,10 +2465,10 @@ holds one, for every other caption in the app.
 ### The English is not lost
 
 It moved to the log. `types.NewValidationError("character %q is at sequence %d,
-not %d", …)` still says exactly that, and `helpers.FormatError` now logs **every**
+not %d", …)` still says exactly that, and `helpers.FormatError` logs **every**
 refusal rather than only the 5xx, tagged with the request id the browser is
 holding. So "why did that fail" is still one `grep` away, and the person who hit
-it is no longer shown a sequence number.
+it is not shown a sequence number.
 
 ### Most errors do not need a slug
 
@@ -2565,13 +2513,11 @@ before using it, so that fallback is a real branch rather than a hope.
 
 ## Changing the SRD data
 
-Edit `data/pack/srd-5.1/` in place. It used to be generated from a vendored
-dump by `cmd/srdgen`, with a drift check that reverted hand edits; the
-generator earned its keep while the format was being found and has been
-retired now that the pack is the thing being maintained. There is nothing to
-regenerate and no second copy to keep in step.
+Edit `data/pack/srd-5.1/` in place. The generator that first produced it from a
+vendored dump is retired: there is nothing to regenerate and no second copy to
+keep in step.
 
-What stands in for the drift check is the loader itself: `make pack/check`
+What gates an edit is the loader itself: `make pack/check`
 runs `cmd/pack` over the directory, which is the validation the server does at
 startup -- schema, every cross-reference, every choice, every icon label --
 and `make data/lint/check` holds the prose to the lint checks that are at zero.
@@ -2652,8 +2598,8 @@ Source-specific spell benefits and conditional equipment requirements are valida
 Append and revision use the same offered options and held/blocked checks. Replay
 removes invalid dependent answers through the existing preview mechanism; it does
 not silently grant unavailable equipment or spells. Catalogue option expansion
-is shared with equipment projection. The generated-data drift check therefore
-protects the same definitions used by both validation and sheet reads.
+is shared with equipment projection, so validation and sheet reads use the
+same definitions.
 
 
 ### Reading the original spell question
@@ -2756,12 +2702,11 @@ share concurrency and round-trip contract tests. A pack read never loads the
 table: `ListFor` returns one owner's records plus the ones named by id -- the
 packs the caller's groups share, or the ones a lock pins -- because the
 availability check runs on every pack request and a document with artwork runs
-to megabytes. It used to read every author's packs each time. Guest rows are materialized on
+to megabytes. Guest rows are materialized on
 first pack creation using the same account repository operation as groups.
 
-`POST /v1/characters` now accepts an optional `rules` lock. Omitting it selects SRD
-5.1. Rules migration checks current access for newly introduced releases and
-permits retained releases already in the character lock. Event responses include
+`POST /v1/characters` accepts an optional `rules` lock. Omitting it selects SRD
+5.1. Event responses include
 `rules`. Shared-sheet catalogue reads use `/v1/shared/:id/catalog/:collection` and
 the same authorization as the shared sheet. Pack import is bounded to 64 MiB and
 uses the existing strict JSON parser. `/v1/packs/schema` describes every editor
