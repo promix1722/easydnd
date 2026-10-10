@@ -44,5 +44,29 @@
     "dice": "Latin notation: 8d6, not 8к6.",
     "measurements": "Imperial, with Russian unit words -- футов, фунтов, миль. Never metres or kilograms: the client renders the structured range as футов, so converted prose contradicted the facts panel of the same spell.",
     "numbers": "Every number and die in the English survives translation. Enforced by valuesMatch in cmd/llm/translate.go and by TestRussianProseKeepsEveryNumber. Compared as a set, not a tally, because 'N feet square' is idiomatically 'N на N футов' in Russian."
+  },
+  "proofreading": {
+    "date": "2026-10-10",
+    "scope": "Russian pack content in srd-2014 and the current easydnd-2014 description overlay; excludes application UI. English sources, entity identifiers, structured mechanics and manifests are unchanged.",
+    "terminology": "The repository glossary remains the baseline, with corrected equipment distinctions, spellcasting terminology and провоцированная атака. DnD.su 2014 informs terminology only; no descriptions or user comments copied.",
+    "references": [
+      "https://5e14.dnd.su/articles/mechanics/27-conditions/",
+      "https://5e14.dnd.su/articles/mechanics/318-sage-advice-compendium/",
+      "https://5e14.dnd.su/articles/inventory/147-armor-arms-equipment-tools/",
+      "https://5e14.dnd.su/articles/inventory/98-equipment/",
+      "https://5e14.dnd.su/class/99-rogue/",
+      "https://5e14.dnd.su/feats/"
+    ],
+    "draftReview": {
+      "model": "gpt-5.4-2026-03-05",
+      "reasoning": "medium"
+    },
+    "completion": "Draft batches were followed by direct in-session proofreading, source comparison, shared terminology corrections, and structural/value audits. No further API requests were used after the batch budget was exhausted.",
+    "checks": [
+      "Public pack/check and data/lint/check",
+      "Current easydnd-2014 README prose gates",
+      "Combined public/private pack loader",
+      "cmd/packlint and internal/adapter/catalog/file tests"
+    ]
   }
 }
