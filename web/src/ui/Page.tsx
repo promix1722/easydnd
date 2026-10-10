@@ -326,8 +326,10 @@ export function Page({
               {badge}
               {lead}
             </Group>
+            {/* Wraps: a row of buttons wider than a phone would widen the page
+                itself, and a page that scrolls sideways takes every swipe. */}
             {actions !== undefined && (
-              <Group gap="xs" wrap="nowrap">
+              <Group gap="xs">
                 {actions}
               </Group>
             )}

@@ -142,7 +142,7 @@ export function CharacterSheetScreen() {
        * that answers it rather than to the one that reads the character.
        */
       actions={
-        <Group gap="xs" wrap="nowrap">
+        <Group gap="xs">
           {/* The chat this character was made in, while the server still has it. */}
           {s.importSession && (
             <Button component={Link} variant="light" to={`/ai-wizard/${encodeURIComponent(s.importSession)}`}>

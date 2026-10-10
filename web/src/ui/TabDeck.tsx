@@ -164,7 +164,12 @@ export function TabDeck({
         }}
         // Slides are stretched to the tallest one by default, which would undo
         // the zero height the hidden ones are given below.
-        styles={{ container: { alignItems: 'flex-start' } }}
+        //
+        // And a slide is never wider than the deck. A flex item will not
+        // shrink below its content, so one wide row -- a weapon with three
+        // figures beside its name -- widened its slide past the viewport, and
+        // embla centred it with both edges cut off.
+        styles={{ container: { alignItems: 'flex-start' }, slide: { minWidth: 0 } }}
         // Not looped. These are ordered -- a sheet and a build both decide what
         // order things come in -- so wrapping from the last back to the first
         // is a jump rather than a continuation.

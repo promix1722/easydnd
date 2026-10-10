@@ -86,7 +86,9 @@ export function SheetActions({ actions, entries, pools }: {
           return {
             key,
             header: (
-              <Group gap="md" justify="space-between" wrap="nowrap">
+              // Wraps: on a phone a name and three figures do not share a line,
+              // and squeezed on to one they are drawn over each other.
+              <Group gap="xs" justify="space-between">
                 <Stack gap={2} style={{ minWidth: 0 }}>
                   <Group gap="xs">
                     <Text fw={600}>{action.name}</Text>

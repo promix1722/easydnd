@@ -2141,6 +2141,13 @@ it breaking. It used to be the tallest slide's height, and a swipe from the foot
 of Overview landed a long way down a mostly empty Actions with the tabs
 off-screen above.
 
+**And exactly as wide as the deck.** Each slide carries `min-width: 0`. A flex
+item does not shrink below its content, so a single row too wide for a phone
+-- a weapon's name beside its three figures -- widened its whole slide, and
+embla, which centres a slide, rested with both of the panel's edges cut off.
+A row that does not fit is now that row's problem: it wraps, as the weapon
+row and a page's header actions do.
+
 The first tab is **`Main`**, and it is the one label here that names a place
 rather than its contents. The section holds two things -- the identity table and
 the ability cards, merged because they were the two thinnest slides on the sheet
