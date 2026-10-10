@@ -1,9 +1,10 @@
 package character
 
 import (
-	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"strconv"
 	"time"
+
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
 
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"

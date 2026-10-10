@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"github.com/promix1722/easydnd/internal/types"
 	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
@@ -128,7 +129,7 @@ func readAgentFiles(c *gin.Context) ([]agentuc.AgentFile, bool) {
 		helpers.FormatError(c, types.NewValidationError("invalid attachments").Because("agent.files"))
 		return nil, false
 	}
-	defer c.Request.MultipartForm.RemoveAll()
+	defer func() { _ = c.Request.MultipartForm.RemoveAll() }()
 	files := []agentuc.AgentFile{}
 	for _, part := range c.Request.MultipartForm.File["files"] {
 		f, err := part.Open()

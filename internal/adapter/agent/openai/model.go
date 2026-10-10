@@ -11,6 +11,7 @@ import (
 	sdk "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
+
 	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 )
 
@@ -144,7 +145,7 @@ func (m *Model) Respond(ctx context.Context, r agentuc.AgentRequest, delta func(
 		options = append(options, option.WithJSONSet("prompt_cache_key", r.Session))
 	}
 	stream := m.client.Responses.NewStreaming(ctx, responses.ResponseNewParams{Model: m.model, Instructions: sdk.String(prompt + "\nUser locale: " + r.Locale + ". Everything you say to the user is in " + language + ", even when every source is in another language."), Store: sdk.Bool(false), MaxOutputTokens: sdk.Int(12000), ParallelToolCalls: sdk.Bool(true)}, options...)
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 	var result agentuc.AgentResponse
 	completed := false
 	for stream.Next() {

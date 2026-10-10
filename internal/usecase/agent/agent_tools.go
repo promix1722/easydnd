@@ -1200,7 +1200,7 @@ func (a *Agent) setInventory(ctx context.Context, s *AgentSession, cat *catalog.
 			continue
 		}
 		a.recordProgress(ctx, s, "set_inventory", agentArgs{Ref: found.Ref, Name: found.Name, Value: fact.Value}, nil)
-		applied = append(applied, map[string]any{"name": item.Name, "ref": found.Ref, "count": json.RawMessage(fact.Value), "placement": strings.Split(fact.Path, ".")[1]})
+		applied = append(applied, map[string]any{"name": item.Name, "ref": found.Ref, "count": fact.Value, "placement": strings.Split(fact.Path, ".")[1]})
 	}
 	return map[string]any{"applied": applied, "unmatched": unmatched, "next": "Resend an unmatched item by one of its candidate refs, or keep it with upsert_custom_option kind item, its count and placement."}
 }

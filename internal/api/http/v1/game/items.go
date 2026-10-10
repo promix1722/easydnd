@@ -38,7 +38,7 @@ func (h *Handler) GrantItem(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, ctx, h.actor(c), gameOf(c), http.StatusOK)
+	h.detail(ctx, c, h.actor(c), gameOf(c), http.StatusOK)
 }
 
 // AdjustCoins is the DM adding to a seated character's purse, or taking from it.
@@ -58,7 +58,7 @@ func (h *Handler) AdjustCoins(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, ctx, h.actor(c), gameOf(c), http.StatusOK)
+	h.detail(ctx, c, h.actor(c), gameOf(c), http.StatusOK)
 }
 
 // GiveItem is a player passing one of their own items across the table.
@@ -73,7 +73,7 @@ func (h *Handler) GiveItem(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, ctx, h.actor(c), gameOf(c), http.StatusOK)
+	h.detail(ctx, c, h.actor(c), gameOf(c), http.StatusOK)
 }
 
 // GrantCustomItem is the DM giving a seated character an item written on the

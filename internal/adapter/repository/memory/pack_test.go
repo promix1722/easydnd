@@ -1,10 +1,11 @@
 package memory_test
 
 import (
+	"testing"
+
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	"github.com/promix1722/easydnd/internal/adapter/repository/repotest"
 	"github.com/promix1722/easydnd/internal/domain/pack"
-	"testing"
 )
 
 func TestPackRepository(t *testing.T) {

@@ -40,12 +40,8 @@ func validatePackNamespaces(p *PackDocument) error {
 		if value == "" {
 			return nil
 		}
-		if strings.HasPrefix(value, "abilities.") {
-			value = strings.TrimPrefix(value, "abilities.")
-		}
-		if strings.HasPrefix(value, "modifier:") {
-			value = strings.TrimPrefix(value, "modifier:")
-		}
+		value = strings.TrimPrefix(value, "abilities.")
+		value = strings.TrimPrefix(value, "modifier:")
 		parts := strings.Split(value, ":")
 		owner := ""
 		if len(parts) == 3 {

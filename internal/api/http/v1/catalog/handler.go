@@ -3,13 +3,15 @@ package catalog
 import (
 	"context"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"log/slog"
 	"maps"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
 
 	domain "github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"

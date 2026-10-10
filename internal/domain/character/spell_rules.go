@@ -1,8 +1,9 @@
 package character
 
 import (
-	"github.com/promix1722/easydnd/internal/types"
 	"slices"
+
+	"github.com/promix1722/easydnd/internal/types"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"

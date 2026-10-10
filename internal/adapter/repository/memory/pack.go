@@ -3,12 +3,13 @@ package memory
 import (
 	"context"
 	"encoding/json"
-	"github.com/promix1722/easydnd/internal/domain/pack"
-	"github.com/promix1722/easydnd/internal/domain/user"
-	"github.com/promix1722/easydnd/internal/types"
 	"slices"
 	"sort"
 	"sync"
+
+	"github.com/promix1722/easydnd/internal/domain/pack"
+	"github.com/promix1722/easydnd/internal/domain/user"
+	"github.com/promix1722/easydnd/internal/types"
 )
 
 type PackRepository struct {

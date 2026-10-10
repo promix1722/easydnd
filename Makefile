@@ -316,7 +316,7 @@ fmt/check:
 vet:
 	go vet ./...
 
-## lint: run golangci-lint without adding it to go.mod
+## lint: run golangci-lint without adding it to go.mod (mirrors CI)
 lint:
 	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...
 
@@ -468,7 +468,7 @@ VERIFY_JOBS ?= 2
 verify:
 	@$(MAKE) --no-print-directory -j$(VERIFY_JOBS) --output-sync=target \
 	  web/test web/build web/lint vet build/release pack/check data/lint/check \
-	  web/icons/check fmt/check lint/layers
+	  web/icons/check fmt/check lint/layers lint
 	@$(MAKE) --no-print-directory test/unit
 
 ## clean: remove build artefacts

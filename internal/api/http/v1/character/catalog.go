@@ -2,6 +2,7 @@ package character
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 )

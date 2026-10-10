@@ -1550,9 +1550,15 @@ Imports point inward, never outward:
   makes `types` safe for the domain to import.
 - **`internal/app`** is the only package importing across all layers.
 
-Two mechanical checks back this up: `make lint/layers` greps the dependency
-graph of the inner layers, and a `depguard` rule in `.golangci.yml` denies the
-same imports at lint time.
+Two mechanical checks back this up, and both are gates -- `make verify` and
+the CI check job run each. `make lint/layers` greps the dependency graph of the
+inner layers, transitively. `make lint` runs golangci-lint, whose `depguard`
+rules deny the same imports one file at a time and add two things the grep
+does not cover: no authentication library in the inner layers, and no adapter
+importing another. The rest of what it enforces is in `.golangci.yml`:
+unchecked errors, error wrapping, requests without a context, import grouping.
+One rule is deliberately off -- a comment on every exported name -- for the
+reason given beside it.
 
 The frontend has its own layer rule and its own checker; see
 [web.md](web.md#dependency-rule).

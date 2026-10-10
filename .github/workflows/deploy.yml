@@ -117,10 +117,10 @@ jobs:
       # are worth spelling out:
       #
       # lint/layers -- the inner layers must not import the HTTP framework,
-      # net/http, database/sql, pgx or goose. depguard says the same thing at
-      # lint time, but golangci is not run here; this grep over the real module
-      # graph is, and it is transitive, which is what catches a library that
-      # pulls net/http in three hops down.
+      # net/http, database/sql, pgx or goose. golangci's depguard says the same
+      # thing per import, below; this grep over the real module graph is
+      # transitive, which is what catches a library that pulls net/http in
+      # three hops down.
       #
       # pack/check -- the committed compendium is hand-maintained, so the real
       # pack loader is the gate: schema, references and choices, the same
@@ -128,6 +128,10 @@ jobs:
       # to the checks that are at zero.
       - name: gofmt, vet, layers, pack, prose
         run: make fmt/check vet lint/layers pack/check data/lint/check
+      # golangci-lint, built from source at the version the Makefile pins: no
+      # cache to read it from here, so this is a minute or two of the job.
+      - name: lint
+        run: make lint
 
   check-frontend:
     runs-on: ubuntu-latest

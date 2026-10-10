@@ -1,9 +1,10 @@
 package character
 
 import (
-	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	"net/http"
 	"time"
+
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 
 	"github.com/gin-gonic/gin"
 

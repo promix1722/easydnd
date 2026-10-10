@@ -1,8 +1,9 @@
 package catalog
 
 import (
-	domain "github.com/promix1722/easydnd/internal/domain/catalog"
 	"testing"
+
+	domain "github.com/promix1722/easydnd/internal/domain/catalog"
 )
 
 func TestSpellArtworkInSummaryAndDetail(t *testing.T) {

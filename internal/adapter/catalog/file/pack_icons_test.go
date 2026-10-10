@@ -5,14 +5,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/HugoSmits86/nativewebp"
-	"github.com/promix1722/easydnd/internal/domain/pack"
 	"image"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/HugoSmits86/nativewebp"
+
+	"github.com/promix1722/easydnd/internal/domain/pack"
 
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )

@@ -1,7 +1,10 @@
-package agent
-
+// Package agent runs the AI Wizard: a model-driven import of a character
+// sheet, with the server supplying the tools the model builds the draft with.
+//
 // The import coordinator owns one isolated draft per session. External model
 // calls never hold its mutex; a generation check fences their late results.
+package agent
+
 import (
 	"context"
 	"crypto/rand"

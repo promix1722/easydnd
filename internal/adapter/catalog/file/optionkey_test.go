@@ -156,7 +156,7 @@ func TestStartingEquipmentOptionsContainOneEquipmentType(t *testing.T) {
 				default:
 					continue
 				}
-				if ref.Count != 1 || item.Slot != want && !(want == catalog.SlotOffHand && item.Slot == catalog.SlotMainHand) {
+				if ref.Count != 1 || item.Slot != want && (want != catalog.SlotOffHand || item.Slot != catalog.SlotMainHand) {
 					t.Errorf("%s: %s ×%d does not fill exactly one %s slot", choice.Prompt, item.Slug, ref.Count, choice.Slot)
 				}
 			}

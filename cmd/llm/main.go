@@ -28,6 +28,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -90,7 +91,7 @@ func post(key, path string, in, out any) error {
 		return err
 	}
 	for attempt := 1; ; attempt++ {
-		req, err := http.NewRequest(http.MethodPost, apiBase+path, bytes.NewReader(body))
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, apiBase+path, bytes.NewReader(body))
 		if err != nil {
 			return err
 		}
@@ -102,7 +103,7 @@ func post(key, path string, in, out any) error {
 			return err
 		}
 		data, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			return err
 		}

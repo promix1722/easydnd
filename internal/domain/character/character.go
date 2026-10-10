@@ -19,9 +19,10 @@ package character
 
 import (
 	"context"
-	"github.com/promix1722/easydnd/internal/domain/pack"
 	"slices"
 	"strings"
+
+	"github.com/promix1722/easydnd/internal/domain/pack"
 
 	"github.com/promix1722/easydnd/internal/types"
 )

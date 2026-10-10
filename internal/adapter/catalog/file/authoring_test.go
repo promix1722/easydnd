@@ -3,11 +3,12 @@ package file
 import (
 	"context"
 	"encoding/json"
-	"github.com/promix1722/easydnd/internal/domain/pack"
 	"os"
 	"reflect"
 	"sync"
 	"testing"
+
+	"github.com/promix1722/easydnd/internal/domain/pack"
 )
 
 // testBase is the SRD registry the authoring tests build on, loaded once:

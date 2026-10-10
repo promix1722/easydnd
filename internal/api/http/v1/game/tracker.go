@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	"github.com/promix1722/easydnd/internal/domain/character"
@@ -200,7 +201,7 @@ func (h *Handler) PatchEntry(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, c.Request.Context(), h.actor(c), gameOf(c), http.StatusOK)
+	h.detail(c.Request.Context(), c, h.actor(c), gameOf(c), http.StatusOK)
 }
 
 // Rest calls a rest for the table: a long one, or with ?kind=short a short one.
@@ -214,7 +215,7 @@ func (h *Handler) Rest(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, c.Request.Context(), h.actor(c), gameOf(c), http.StatusOK)
+	h.detail(c.Request.Context(), c, h.actor(c), gameOf(c), http.StatusOK)
 }
 
 func (h *Handler) DeleteEntry(c *gin.Context) {
@@ -222,7 +223,7 @@ func (h *Handler) DeleteEntry(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, c.Request.Context(), h.actor(c), gameOf(c), http.StatusOK)
+	h.detail(c.Request.Context(), c, h.actor(c), gameOf(c), http.StatusOK)
 }
 
 func (h *Handler) AddMonster(c *gin.Context) {
@@ -237,7 +238,7 @@ func (h *Handler) AddMonster(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, c.Request.Context(), h.actor(c), gameOf(c), http.StatusCreated)
+	h.detail(c.Request.Context(), c, h.actor(c), gameOf(c), http.StatusCreated)
 }
 
 func (h *Handler) OrderEntries(c *gin.Context) {
@@ -265,5 +266,5 @@ func (h *Handler) OrderEntries(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, c.Request.Context(), h.actor(c), gameOf(c), http.StatusOK)
+	h.detail(c.Request.Context(), c, h.actor(c), gameOf(c), http.StatusOK)
 }

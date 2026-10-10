@@ -1,3 +1,4 @@
+// Package profile serves the signed-in account's own portrait.
 package profile
 
 import (
@@ -5,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"github.com/promix1722/easydnd/internal/api/http/middleware"
 	"github.com/promix1722/easydnd/internal/domain/user"

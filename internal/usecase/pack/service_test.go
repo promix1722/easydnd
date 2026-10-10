@@ -3,12 +3,13 @@ package pack_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/promix1722/easydnd/internal/types"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/promix1722/easydnd/internal/types"
 
 	file "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"

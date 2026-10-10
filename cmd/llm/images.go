@@ -25,7 +25,8 @@ func imagesCmd(args []string) error {
 	background := fs.String("background", "", "image background (transparent, opaque); empty leaves it to the API")
 	workers := fs.Int("workers", 1, "images generated concurrently; raise on a paid tier, 429s self-throttle via Retry-After")
 	dryRun := fs.Bool("dry-run", false, "print the generate/skip decision per name; no network, no key")
-	fs.Parse(args)
+	// ExitOnError: Parse exits on a bad flag and has no error to return.
+	_ = fs.Parse(args)
 
 	if (*prompt == "") == (*in == "") {
 		return fmt.Errorf("images: exactly one of -prompt and -in is required")

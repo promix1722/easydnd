@@ -65,11 +65,17 @@ linters:
       comparison: true
 
     revive:
+      # `exported` is off on purpose. It asks for a comment on every exported
+      # name -- 270 of them when this linter was first gated -- and a comment
+      # written to satisfy it says what the name already says. Comments here
+      # explain why; a package still has to say what it is for.
       rules:
-        - name: exported
         - name: package-comments
         - name: error-strings
         - name: context-as-argument
+          # A test helper takes t first; that is the convention there.
+          arguments:
+            - allowTypesBefore: "*testing.T"
         - name: indent-error-flow
 
   exclusions:
@@ -78,6 +84,12 @@ linters:
       # Tests may be looser about context plumbing and unchecked errors.
       - path: _test\.go$
         linters: [errcheck, noctx]
+
+# No cap on what is reported. The defaults show 50 findings per linter and 3
+# of a kind, which is how 322 findings once read as 69.
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
 
 formatters:
   enable:

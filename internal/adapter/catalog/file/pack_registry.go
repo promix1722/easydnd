@@ -3,6 +3,7 @@ package file
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -129,7 +130,7 @@ func NewRegistry(paths []string, roots []Dependency, archive string, folders ...
 				closeErr := temp.Close()
 				if writeErr != nil || syncErr != nil || closeErr != nil {
 					_ = os.Remove(tmpName)
-					return fmt.Errorf("archiving pack: write=%v sync=%v close=%v", writeErr, syncErr, closeErr)
+					return fmt.Errorf("archiving pack: %w", errors.Join(writeErr, syncErr, closeErr))
 				}
 				if err = os.Rename(tmpName, name); err != nil {
 					_ = os.Remove(tmpName)
@@ -255,11 +256,11 @@ func (r *Registry) Resolve(roots []Dependency) (pack.Lock, error) {
 			}
 			next[dep.ID] = p
 			todo := append(slices.Clone(pending[1:]), p.Manifest.Dependencies...)
-			if found, err := solve(next, todo); err == nil {
+			found, err := solve(next, todo)
+			if err == nil {
 				return found, nil
-			} else {
-				dependencyError = err
 			}
+			dependencyError = err
 		}
 		if dependencyError != nil {
 			return nil, dependencyError
