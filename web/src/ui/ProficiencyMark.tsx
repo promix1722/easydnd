@@ -43,9 +43,8 @@ export interface ProficiencyMarkProps {
 }
 
 /**
- * Drawn in `currentColor`, which is the opposite of what `DragonMark` does and
- * for the opposite reason. That is a two-tone badge carrying its own field so
- * it survives either colour scheme; this sits inline in a row of text under
+ * Drawn in `currentColor` rather than in colours of its own: a two-tone badge
+ * carries its own field so it survives either colour scheme; this sits inline in a row of text under
  * `defaultColorScheme="auto"` and has to take the row's colour with it --
  * dimmed when the row is dimmed, inked when it is not. A literal here would
  * be the one thing on the row that ignored the theme.
@@ -57,8 +56,7 @@ export function ProficiencyMark({ level, size = 12 }: ProficiencyMarkProps) {
   return (
     <Tooltip label={description} withArrow>
       {/*
-        Named with `aria-label` rather than a <title> child, which is the one
-        place this departs from DragonMark. A <title> is a text node, and
+        Named with `aria-label` rather than a <title> child. A <title> is a text node, and
         eighteen of these share a panel where each row's text is read as a
         unit -- "Stealth DEX +7" would come back with a sentence about
         proficiency bonuses wedged into the middle of it. The accessible name

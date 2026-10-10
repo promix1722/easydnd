@@ -7,6 +7,7 @@ import { renderAt as renderBare } from '@/test/render'
 import { setupUser } from '@/test/user'
 
 import { SheetBody } from './SheetBody'
+import { jsonResponse } from '@/test/api'
 
 // A row's menu links to the item's page, so the sheet is always inside a router.
 const renderAt: typeof renderBare = (viewport, ui, ...rest) => renderBare(viewport, <MemoryRouter>{ui}</MemoryRouter>, ...rest)
@@ -113,6 +114,15 @@ const ITEMS: Sheet = {
       { slug: 'crossbow-bolt', name: 'Crossbow Bolt', category: 'adventuring-gear', gear: { gearCategory: 'ammunition' } },
     ],
   },
+}
+
+/** A note the player wrote, beside a custom background that is not one. */
+const NOTED: Sheet = {
+  ...SHEET,
+  customOptions: [
+    { id: 'n1', kind: 'note', name: 'Backstory', description: 'Born at sea.\nRaised by gulls.', source: '', selected: true },
+    { id: 'criminal', kind: 'background', name: 'Criminal', description: '', source: '', selected: true },
+  ],
 }
 
 /** A spare armor in the backpack, so that a row has something to wear. */
@@ -233,6 +243,24 @@ describe('the panels that were sentences', () => {
     expect.soft(under('Languages')).toEqual(['Common'])
   })
 
+  it('opens a row onto its description, and leaves a row with none as a statement', async () => {
+    renderAt('desktop', <SheetBody sheet={{
+      ...SHEET,
+      catalog: { skills: [], traits: [{ slug: 'darkvision', name: 'Darkvision', desc: ['You see in the dark.'] }] },
+    }} />)
+
+    expect.soft(screen.queryByRole('button', { name: 'Fey Ancestry' })).not.toBeInTheDocument()
+    expect.soft(screen.queryByText('You see in the dark.')).not.toBeInTheDocument()
+    await setupUser().click(screen.getByRole('button', { name: 'Darkvision' }))
+    expect(screen.getByText('You see in the dark.')).toBeInTheDocument()
+  })
+
+  // The tab is in the URL, so a page opened from one comes back to it.
+  it('opens on the tab the URL names', () => {
+    renderBare('desktop', <MemoryRouter initialEntries={['/?tab=items']}><SheetBody sheet={ITEMS} /></MemoryRouter>)
+    expect(screen.getByRole('tab', { name: 'Items' })).toHaveAttribute('aria-selected', 'true')
+  })
+
   it('draws what is worn in its slot, and what is owned by group', () => {
     renderAt('mobile', <SheetBody sheet={ITEMS} />)
 
@@ -244,6 +272,171 @@ describe('the panels that were sentences', () => {
     expect.soft(screen.getByText("Thieves' Tools")).toBeInTheDocument()
     // One of a thing is the thing: no "×1".
     expect.soft(screen.queryByText('×1')).not.toBeInTheDocument()
+  })
+
+  // Custom is the player's own text: any number of titled items, written on
+  // the sheet by its owner and only read by anybody else.
+  it('adds, rewrites and deletes a custom item in place, each at the log\'s current revision', async () => {
+    const writes: { method: string; path: string; search: string; body: unknown }[] = []
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), 'http://test')
+      if ((init?.method ?? 'GET') === 'GET') return jsonResponse({ seq: 9, revision: 12, events: [] })
+      writes.push({ method: init?.method ?? '', path: url.pathname, search: url.searchParams.get('revision') ?? '', body: JSON.parse(String(init?.body ?? 'null')) })
+      return jsonResponse({ seq: 10, sheet: NOTED })
+    }))
+    const onChanged = vi.fn()
+    const user = setupUser()
+    renderAt('desktop', <SheetBody sheet={NOTED} characterId="chr_1" onChanged={onChanged} />)
+    await user.click(screen.getByRole('tab', { name: 'Custom' }))
+    const tab = within(screen.getByRole('tabpanel', { name: 'Custom' }))
+
+    // What is there is read as it was typed, line breaks and all.
+    expect(tab.getByRole('article', { name: 'Backstory' })).toHaveTextContent('Born at sea. Raised by gulls.')
+    // A background the import kept is a custom entry too, and is not a note.
+    expect(tab.queryByText('Criminal')).not.toBeInTheDocument()
+
+    // Add turns into the form where it stood; no dialog opens.
+    await user.click(tab.getByRole('button', { name: 'Add' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.type(tab.getByRole('textbox', { name: 'Title' }), 'Debts')
+    await user.type(tab.getByRole('textbox', { name: 'Text' }), '30 gp to the harbourmaster')
+    await user.click(tab.getByRole('button', { name: 'Save' }))
+    await vi.waitFor(() => expect(writes).toHaveLength(1))
+    expect(writes[0]).toMatchObject({
+      method: 'POST', path: '/v1/characters/chr_1/custom-options',
+      body: { revision: 12, option: { kind: 'note', name: 'Debts', description: '30 gp to the harbourmaster', selected: true } },
+    })
+    await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1))
+
+    // Edit replaces the item with its form, and the write names the item.
+    await user.click(tab.getByRole('button', { name: 'Edit Backstory' }))
+    const title = tab.getByRole('textbox', { name: 'Title' })
+    await user.clear(title)
+    await user.type(title, 'Origins')
+    await user.click(tab.getByRole('button', { name: 'Save' }))
+    await vi.waitFor(() => expect(writes).toHaveLength(2))
+    expect(writes[1]?.body).toMatchObject({ option: { id: 'n1', kind: 'note', name: 'Origins', description: 'Born at sea.\nRaised by gulls.' } })
+
+    // Delete asks first, then names the item and the revision in the URL.
+    await user.click(tab.getByRole('button', { name: 'Delete Backstory' }))
+    const confirm = within(await screen.findByRole('dialog', { name: 'Delete Backstory?' }))
+    expect(writes).toHaveLength(2)
+    await user.click(confirm.getByRole('button', { name: 'Delete' }))
+    await vi.waitFor(() => expect(writes).toHaveLength(3))
+    expect(writes[2]).toMatchObject({ method: 'DELETE', path: '/v1/characters/chr_1/custom-options/n1', search: '12' })
+
+    vi.unstubAllGlobals()
+  })
+
+  it('shows a reader the custom items and nothing to change them with, and no Custom tab when there are none', async () => {
+    const user = setupUser()
+    const { unmount } = renderAt('desktop', <SheetBody sheet={NOTED} />)
+    await user.click(screen.getByRole('tab', { name: 'Custom' }))
+    const tab = within(screen.getByRole('tabpanel', { name: 'Custom' }))
+    expect(tab.getByText('Backstory')).toBeInTheDocument()
+    expect(tab.queryAllByRole('button')).toHaveLength(0)
+    unmount()
+
+    renderAt('desktop', <SheetBody sheet={SHEET} />)
+    expect(screen.queryByRole('tab', { name: 'Custom' })).not.toBeInTheDocument()
+    // The owner has the tab even when it is empty: it is where the first one is written.
+    renderAt('desktop', <SheetBody sheet={SHEET} characterId="chr_1" />)
+    expect(screen.getByRole('tab', { name: 'Custom' })).toBeInTheDocument()
+  })
+
+  // Each tab adds from its own half of the catalogue: the search opens in
+  // place under the list, and the server filters and pages it.
+  it('adds from the catalogue: each tab asks for its half in place, a row opens to its description, and Add is one more in the backpack', async () => {
+    const searches: URLSearchParams[] = []
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://test')
+      const collection = url.pathname.split('/').at(-1)
+      const offset = Number(url.searchParams.get('offset'))
+      let body: unknown = []
+      if (collection === 'items') {
+        searches.push(url.searchParams)
+        body = offset === 0
+          ? {
+              items: [
+                { slug: 'crossbow-bolt', name: 'Crossbow Bolt', category: 'adventuring-gear', categoryName: 'Adventuring Gear', cost: { amount: 1, unit: 'gp' }, weight: 1.5 },
+                { slug: 'potion-of-healing', name: 'Potion of Healing', category: 'potion', categoryName: 'Potion', magic: true },
+              ],
+              total: 3,
+              categories: [{ slug: 'adventuring-gear', name: 'Adventuring Gear' }, { slug: 'potion', name: 'Potion' }],
+            }
+          : { items: [{ slug: 'rope', name: 'Rope' }], total: 3, categories: [] }
+      } else if (collection === 'magic-items') {
+        body = [{ slug: 'potion-of-healing', name: 'Potion of Healing', desc: ['You regain hit points when you drink this potion.'] }]
+      }
+      return jsonResponse(body)
+    }))
+    const onEquipment = vi.fn()
+    const user = setupUser()
+    const { rerender } = renderAt('desktop', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
+    const last = () => searches.at(-1)
+
+    // Nothing is fetched until a search is opened, and nothing opens a dialog.
+    expect(searches).toHaveLength(0)
+    await user.click(screen.getByRole('tab', { name: 'Equipment' }))
+    await user.click(screen.getByRole('button', { name: 'Add equipment' }))
+    await within(screen.getByRole('region', { name: 'Add equipment' })).findByText('3 items')
+    expect(last()?.get('wearable')).toBe('true')
+    expect(last()?.get('limit')).toBe('20')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Items' }))
+    await user.click(screen.getByRole('button', { name: 'Add item' }))
+    let search = within(screen.getByRole('region', { name: 'Add item' }))
+    await search.findByText('Potion of Healing')
+    expect(last()?.get('wearable')).toBe('false')
+    // What a row shows came resolved: the category's name, a price, a weight,
+    // and how many the character already has.
+    expect.soft(search.getByText('Adventuring Gear · 1 gp · 1.5 lb.')).toBeInTheDocument()
+    expect.soft(search.getByText('×20')).toBeInTheDocument()
+
+    // Pressing a row opens the item's own description, asked for then.
+    await user.click(search.getByRole('button', { name: 'Potion of Healing' }))
+    expect(await search.findByText('You regain hit points when you drink this potion.')).toBeInTheDocument()
+
+    // Owned twenty already, so one more is twenty-one; a new thing is one.
+    await user.click(search.getByRole('button', { name: 'Add Crossbow Bolt' }))
+    expect(onEquipment).toHaveBeenLastCalledWith([
+      { path: 'equipment.backpack.crossbow-bolt', op: 'set', value: { kind: 'int', int: 21 } },
+    ])
+    // An Add closes the search, as giving an item at a game does, and says
+    // nothing until the sheet shows the item: a write that failed added nothing.
+    expect(screen.queryByRole('region', { name: 'Add item' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    const arrived = ITEMS.equipment.backpack.map((stack) => stack.item === 'crossbow-bolt' ? { ...stack, count: 21 } : stack)
+    rerender(<MemoryRouter><SheetBody sheet={{ ...ITEMS, equipment: { ...ITEMS.equipment, backpack: arrived } }} onEquipment={onEquipment} /></MemoryRouter>)
+    expect(await screen.findByRole('status')).toHaveTextContent('Crossbow Bolt is in the inventory.')
+    rerender(<MemoryRouter><SheetBody sheet={ITEMS} onEquipment={onEquipment} /></MemoryRouter>)
+
+    await user.click(screen.getByRole('button', { name: 'Add item' }))
+    search = within(screen.getByRole('region', { name: 'Add item' }))
+    await user.click(await search.findByRole('button', { name: 'Add Potion of Healing' }))
+    expect(onEquipment).toHaveBeenLastCalledWith([
+      { path: 'equipment.backpack.potion-of-healing', op: 'set', value: { kind: 'int', int: 1 } },
+    ])
+
+    await user.click(screen.getByRole('button', { name: 'Add item' }))
+    search = within(screen.getByRole('region', { name: 'Add item' }))
+    await search.findByText('Potion of Healing')
+    await user.click(search.getByRole('button', { name: 'Load more' }))
+    await search.findByText('Rope')
+    expect(last()?.get('offset')).toBe('2')
+    expect(search.getByText('Crossbow Bolt')).toBeInTheDocument()
+
+    await user.click(search.getByRole('combobox', { name: 'Mundane or magic' }))
+    await user.click(await screen.findByRole('option', { name: 'Magic' }))
+    await vi.waitFor(() => expect(last()?.get('magic')).toBe('true'))
+    expect(last()?.get('offset')).toBe('0')
+
+    // Close puts the button back where the search was.
+    await user.click(search.getByRole('button', { name: 'Close' }))
+    expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument()
+
+    vi.unstubAllGlobals()
   })
 
   // Only the owner's screen passes `onEquipment`; without it the test above
@@ -264,14 +457,34 @@ describe('the panels that were sentences', () => {
     ])
   })
 
-  // A card is not a button and an empty one offers nothing: the only thing
-  // to press on the doll is the menu of an item that is worn. What is worn is
-  // on its card only, so it has no row below. No row has a stepper.
-  it('presses nothing on the doll but a worn item\'s menu, and lists only what is carried', () => {
-    renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={vi.fn()} />)
+  // A card is not a button: what is pressed on the doll is a menu, a worn
+  // item's or an empty slot's. An empty slot's names what is carried that
+  // fits it -- here the spare armor, which the taken body slot cannot have and
+  // Custom can -- and always ends with the way to write a custom item into
+  // it. What is worn is on its card only, so it has no row below. No row has
+  // a stepper.
+  it('presses nothing on the doll but menus, and lists only what is carried', async () => {
+    const onEquipment = vi.fn()
+    const user = setupUser()
+    renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={onEquipment} />)
 
     const slots = within(screen.getByRole('region', { name: 'Worn and wielded' }))
-    expect.soft(slots.getAllByRole('button').map((each) => each.getAttribute('aria-label'))).toEqual(['Actions for Leather Armor'])
+    // Nothing carried fits the head, and its menu still opens: onto the one entry.
+    await user.click(slots.getByRole('button', { name: 'Actions for Head' }))
+    const bare = within(await screen.findByRole('menu')).getAllByRole('menuitem')
+    expect.soft(bare.map((each) => each.textContent)).toEqual(['Add custom item'])
+    expect.soft(bare[0]).toHaveAttribute('href', '/custom-item?tab=equipment&slot=head')
+    await user.keyboard('{Escape}')
+
+    // Names, and pressing one puts it on.
+    await user.click(slots.getByRole('button', { name: 'Actions for Custom' }))
+    const offered = within(await screen.findByRole('menu')).getAllByRole('menuitem')
+    expect.soft(offered.map((each) => each.textContent)).toEqual(['Chain Mail', 'Add custom item'])
+    await user.click(offered[0] as HTMLElement)
+    expect.soft(onEquipment).toHaveBeenCalledWith(expect.arrayContaining([
+      { path: 'equipment.backpack.chain-mail', op: 'set', value: { kind: 'int', int: 0 } },
+    ]))
+
     expect.soft(slots.getAllByText('Empty')).toHaveLength(11)
     expect.soft(screen.getAllByRole('button', { name: 'Actions for Leather Armor' })).toHaveLength(1)
     expect.soft(screen.getByRole('button', { name: 'Actions for Chain Mail' })).toBeInTheDocument()
@@ -348,7 +561,11 @@ describe('the panels that were sentences', () => {
   it('prints an item\'s numbers on its row, with the catalogue\'s words', () => {
     renderAt('mobile', <SheetBody sheet={PACKED} />)
 
-    expect(screen.getByText('Armor class: 16 · Strength required: 13 · Disadvantage on Stealth checks')).toBeInTheDocument()
+    // What could be worn is the card a worn thing is: each number over its caption.
+    const row = within(screen.getByRole('button', { name: 'Actions for Chain Mail' }).closest('.mantine-Paper-root') as HTMLElement)
+    expect.soft(row.getByText('Armor class').previousElementSibling).toHaveTextContent('16')
+    expect.soft(row.getByText('Strength').previousElementSibling).toHaveTextContent('13')
+    expect.soft(row.getByText('Disadvantage on Stealth checks')).toBeInTheDocument()
     // The row is not itself a control: the only button on it is its menu.
     expect(screen.queryAllByRole('button', { name: /Chain Mail/ }).map((each) => each.getAttribute('aria-label'))).toEqual(['Actions for Chain Mail'])
   })
@@ -414,9 +631,9 @@ describe('the panels that were sentences', () => {
     // A weapon's numbers are captioned columns in one order -- damage, hit,
     // range -- not a sentence.
     const rapier = (await screen.findByText('Rapier')).closest('.mantine-Accordion-item') as HTMLElement
-    expect.soft(within(rapier).getByText('Damage').nextElementSibling).toHaveTextContent('1d8+3')
-    expect.soft(within(rapier).getByText('Hit').nextElementSibling).toHaveTextContent('+5')
-    expect.soft(within(rapier).getByText('Range').nextElementSibling).toHaveTextContent('5 ft.')
+    expect.soft(within(rapier).getByText('Damage').previousElementSibling).toHaveTextContent('1d8+3')
+    expect.soft(within(rapier).getByText('Hit').previousElementSibling).toHaveTextContent('+5')
+    expect.soft(within(rapier).getByText('Range').previousElementSibling).toHaveTextContent('5 ft.')
     expect.soft(within(rapier).getAllByText(/^(Damage|Hit|Range)$/).map((each) => each.textContent)).toEqual(['Damage', 'Hit', 'Range'])
     expect.soft(screen.getByText('Second Wind Uses: 1')).toBeInTheDocument()
     // A weapon with no prose is a fact, not a control that opens onto nothing.

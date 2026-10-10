@@ -144,7 +144,6 @@ func newTestRouterOver(
 	federation *stubFederation,
 ) (*gin.Engine, *authuc.Service, helpers.CookieOptions, *stubFederation) {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
 
 	cfg := &config.Config{
 		Env:  config.EnvDevelopment,
@@ -179,7 +178,7 @@ func newTestRouterOver(
 	cookies := helpers.NewCookieOptions(cfg)
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
-		System:        system.New(testVersion),
+		System:        system.New(testVersion, system.AnalyticsConfigResponse{Environment: "development"}),
 		Version:       testVersion,
 		Auth:          authapi.New(svc, cookies),
 		Appearance:    appearanceapi.New(appearanceuc.NewService(repo)),
@@ -268,6 +267,7 @@ func guest(t *testing.T, r *gin.Engine, cookies helpers.CookieOptions) *http.Coo
 }
 
 func TestMeIsUnauthenticatedWithoutACookie(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 	rec := do(t, r, http.MethodGet, "/v1/auth/me", nil)
 
@@ -292,6 +292,7 @@ func TestMeIsUnauthenticatedWithoutACookie(t *testing.T) {
 }
 
 func TestRegisterThenMe(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 	session := register(t, r, cookies)
 
@@ -327,6 +328,7 @@ func TestRegisterThenMe(t *testing.T) {
 // The session cookie's attributes are the whole of its security. A regression
 // here is silent -- everything still works, it is just no longer protected.
 func TestSessionCookieAttributes(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 	session := register(t, r, cookies)
 
@@ -350,6 +352,7 @@ func TestSessionCookieAttributes(t *testing.T) {
 // In production the prefixes are browser-enforced, so the names must switch
 // with the environment rather than being hard-coded.
 func TestSecureCookieNamesUsePrefixes(t *testing.T) {
+	t.Parallel()
 	secure := helpers.CookieOptions{Secure: true}
 	if got := secure.SessionCookieName(); got != "__Host-easydnd_session" {
 		t.Errorf("session name = %q", got)
@@ -365,6 +368,7 @@ func TestSecureCookieNamesUsePrefixes(t *testing.T) {
 }
 
 func TestCeremonyCookieIsScopedAndStrict(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 
 	begin := post(t, r, "/v1/auth/login/begin", "")
@@ -391,6 +395,7 @@ func TestCeremonyCookieIsScopedAndStrict(t *testing.T) {
 // only runs for people who do not have an account yet, and who therefore
 // cannot tell us it is broken.
 func TestRegisterBeginNeedsNoBody(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register/begin", nil)
@@ -410,6 +415,7 @@ func TestRegisterBeginNeedsNoBody(t *testing.T) {
 // A resolved ceremony must be spent, or the same sealed challenge could be
 // presented twice.
 func TestFinishClearsTheCeremonyCookie(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 
 	begin := post(t, r, "/v1/auth/register/begin", "")
@@ -426,6 +432,7 @@ func TestFinishClearsTheCeremonyCookie(t *testing.T) {
 }
 
 func TestLoginRoundTrip(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 	register(t, r, cookies)
 
@@ -445,6 +452,7 @@ func TestLoginRoundTrip(t *testing.T) {
 }
 
 func TestFinishWithoutACeremonyCookieFails(t *testing.T) {
+	t.Parallel()
 	r, _, _ := newTestRouterWith(t, &stubCeremony{})
 
 	for _, path := range []string{"/v1/auth/register/finish", "/v1/auth/login/finish"} {
@@ -458,6 +466,7 @@ func TestFinishWithoutACeremonyCookieFails(t *testing.T) {
 // Logout must answer with a body: web/src/lib/api/client.ts treats an empty
 // successful response as a transport fault.
 func TestLogoutClearsTheCookieAndReturnsABody(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 	session := register(t, r, cookies)
 
@@ -478,6 +487,7 @@ func TestLogoutClearsTheCookieAndReturnsABody(t *testing.T) {
 // Signing out has to work when the session is already unusable -- that is
 // exactly when the browser most needs the cookie cleared.
 func TestLogoutWorksWithoutASession(t *testing.T) {
+	t.Parallel()
 	r, _, _ := newTestRouterWith(t, &stubCeremony{})
 	if rec := post(t, r, "/v1/auth/logout", ""); rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -485,6 +495,7 @@ func TestLogoutWorksWithoutASession(t *testing.T) {
 }
 
 func TestCrossSiteOriginIsRejected(t *testing.T) {
+	t.Parallel()
 	r, _, _ := newTestRouterWith(t, &stubCeremony{})
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login/begin", nil)
@@ -502,6 +513,7 @@ func TestCrossSiteOriginIsRejected(t *testing.T) {
 // preflight -- cannot set a custom header, so requiring one is a CSRF defence
 // that costs the real client nothing: it already sends this header.
 func TestPostWithoutTheRequestIDHeaderIsRejected(t *testing.T) {
+	t.Parallel()
 	r, _, _ := newTestRouterWith(t, &stubCeremony{})
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login/begin", nil)
@@ -515,6 +527,7 @@ func TestPostWithoutTheRequestIDHeaderIsRejected(t *testing.T) {
 }
 
 func TestCrossSiteFetchMetadataIsRejected(t *testing.T) {
+	t.Parallel()
 	r, _, _ := newTestRouterWith(t, &stubCeremony{})
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login/begin", nil)
@@ -531,6 +544,7 @@ func TestCrossSiteFetchMetadataIsRejected(t *testing.T) {
 // Safe methods must not be caught by the guard: a GET changes nothing, and a
 // blocked /v1/version would break the deploy gate.
 func TestGuardDoesNotBlockSafeMethods(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 	if rec := do(t, r, http.MethodGet, "/v1/version", nil); rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -538,6 +552,7 @@ func TestGuardDoesNotBlockSafeMethods(t *testing.T) {
 }
 
 func TestAuthResponsesAreNotCacheable(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 	rec := do(t, r, http.MethodGet, "/v1/auth/me", nil)
 
@@ -550,6 +565,7 @@ func TestAuthResponsesAreNotCacheable(t *testing.T) {
 // a dead token on every request. This is the ordinary path after a restart,
 // since the account store lives in the process.
 func TestStaleSessionCookieIsCleared(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 	session := register(t, r, cookies)
 
@@ -573,6 +589,7 @@ func TestStaleSessionCookieIsCleared(t *testing.T) {
 // An unbounded read on an unauthenticated endpoint is an invitation; gin
 // imposes no limit of its own.
 func TestOversizedCeremonyBodyIsRejected(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 
 	begin := post(t, r, "/v1/auth/login/begin", "")
@@ -588,6 +605,7 @@ func TestOversizedCeremonyBodyIsRejected(t *testing.T) {
 // The anonymous endpoint is the one way in that establishes a session without
 // a ceremony, so what it sets is worth pinning as tightly as registration's.
 func TestAnonymousEstablishesASession(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 
 	rec := post(t, r, "/v1/auth/anonymous", `{}`)
@@ -640,6 +658,7 @@ func TestAnonymousEstablishesASession(t *testing.T) {
 // A guest session has to work everywhere an account's does, which for the auth
 // tree means /me -- the call the SPA makes on every load.
 func TestAnonymousThenMe(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 	session := guest(t, r, cookies)
 
@@ -667,6 +686,7 @@ func TestAnonymousThenMe(t *testing.T) {
 // Registration still works after a guest session exists, and the account it
 // creates is not anonymous -- the flag must not leak across the two paths.
 func TestRegisteringIsNotAnonymous(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 	session := register(t, r, cookies)
 
@@ -688,6 +708,7 @@ func TestRegisteringIsNotAnonymous(t *testing.T) {
 }
 
 func TestAppearanceEndpoint(t *testing.T) {
+	t.Parallel()
 	r, _, cookies := newTestRouterWith(t, &stubCeremony{})
 	session := register(t, r, cookies)
 	write := func(body string, cookie *http.Cookie) *httptest.ResponseRecorder {

@@ -42,8 +42,6 @@ export interface AgentSession {
 export interface AgentView {
   session: AgentSession
 }
-export const agentCapabilities = () =>
-  request<{ enabled: boolean }>('/agent-capabilities')
 export const listAgentSessions = () =>
   request<AgentSession[]>('/agent-sessions')
 export const getAgentSession = (id: string) =>

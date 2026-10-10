@@ -57,7 +57,7 @@ func TestCharactersSurviveTheProcess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
-	if err := chars.Append(ctx, c.ID, 0, domain.Event{Type: domain.EventInit, Note: "kept"}); err != nil {
+	if err := repotest.Append(ctx, chars, c.ID, domain.Event{Type: domain.EventInit, Note: "kept"}); err != nil {
 		t.Fatalf("Append: %v", err)
 	}
 	before.Close()

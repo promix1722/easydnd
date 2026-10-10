@@ -9,6 +9,7 @@ import (
 // A pack row may say where an item goes; when it does not, the item's shape
 // decides, and a namespaced category still counts as its bare word.
 func TestSlotIsExplicitOrDerivedFromTheItem(t *testing.T) {
+	t.Parallel()
 	c := &conv{where: "test"}
 	items := []struct {
 		name string

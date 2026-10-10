@@ -9,7 +9,8 @@ import (
 )
 
 func TestAuthoringCacheRetainsAccessAndContentChecks(t *testing.T) {
-	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
+	t.Parallel()
+	base, err := testBase()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,17 +45,21 @@ func TestAuthoringCacheRetainsAccessAndContentChecks(t *testing.T) {
 	if _, err := a.Resolve(context.Background(), []pack.Document{forged}, roots); err == nil {
 		t.Fatal("cache trusted a forged digest")
 	}
-	// Callers can sort or edit returned records without changing installed releases.
-	docs[0].Data[0] = '!'
+	// Callers can sort or edit returned records without changing installed
+	// releases. The encoded bytes are the exception: they are shared, never
+	// copied -- a copy per request is 22 MB -- and nothing may write into them.
 	docs[0].Release.Version = "99.0.0"
 	clean := a.Builtins()[0].Releases
-	if clean[0].Data[0] != '{' || clean[0].Release.Version == "99.0.0" {
+	if clean[0].Release.Version == "99.0.0" {
 		t.Fatal("caller mutated builtins")
+	}
+	if &clean[0].Data[0] != &a.Builtins()[0].Releases[0].Data[0] {
+		t.Fatal("Builtins copied a release's bytes")
 	}
 }
 
 func BenchmarkAuthoringResolveInstalled(b *testing.B) {
-	base, err := NewRegistry([]string{"../../../../data/pack/srd-5.1"}, nil, "")
+	base, err := testBase()
 	if err != nil {
 		b.Fatal(err)
 	}

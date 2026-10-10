@@ -1,9 +1,10 @@
 package character
 
 import (
-	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	"net/http"
 	"time"
+
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 
 	"github.com/gin-gonic/gin"
 
@@ -103,17 +104,16 @@ func (h *Handler) AppendEvents(c *gin.Context) {
 	id := idOf(c)
 	locale := helpers.Locale(c)
 
-	seq, err := h.service.Apply(ctx, h.owner(c), id, locale, params.ExpectedSeq, events...)
-	if err != nil {
+	if _, err := h.service.Apply(ctx, h.owner(c), id, locale, params.ExpectedSeq, events...); err != nil {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.writeResponse(c, id, locale, seq)
+	h.writeResponse(c, id, locale)
 }
 
 // writeResponse returns the sequence and the freshly projected sheet.
 func (h *Handler) writeResponse(
-	c *gin.Context, id domain.ID, locale rules.Locale, seq int,
+	c *gin.Context, id domain.ID, locale rules.Locale,
 ) {
 	record, sheet, err := h.service.View(c.Request.Context(), h.owner(c), id, locale)
 	if err != nil {

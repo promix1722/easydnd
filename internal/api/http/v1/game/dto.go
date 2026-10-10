@@ -46,9 +46,12 @@ type Summary struct {
 type Character struct {
 	ID      string `json:"id"`
 	OwnerID string `json:"owner_id"`
-	Image   string `json:"image,omitempty"`
-	Name    string `json:"name"`
-	Level   int    `json:"level"`
+	// Public says the owner opened the sheet, so a player's roster knows
+	// whether the name is a link. The read itself is decided by `readable`.
+	Public bool   `json:"public"`
+	Image  string `json:"image,omitempty"`
+	Name   string `json:"name"`
+	Level  int    `json:"level"`
 
 	// Classes uses the character resource's own ClassLevel rather than a
 	// second shape saying the same thing, so a client already rendering a

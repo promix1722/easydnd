@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/agnivade/levenshtein"
+
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"

@@ -5,14 +5,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/HugoSmits86/nativewebp"
-	"github.com/promix1722/easydnd/internal/domain/pack"
 	"image"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/HugoSmits86/nativewebp"
+
+	"github.com/promix1722/easydnd/internal/domain/pack"
 
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
@@ -32,6 +34,7 @@ func iconPack(t *testing.T) *PackDocument {
 }
 
 func TestRepositoryArtworkJoinsPackAndSurvivesIdentityOverride(t *testing.T) {
+	t.Parallel()
 	p := iconPack(t)
 	art := p.Icons.Spells["guiding-mark"]
 	p.Icons = nil
@@ -86,6 +89,7 @@ func TestRepositoryArtworkJoinsPackAndSurvivesIdentityOverride(t *testing.T) {
 }
 
 func TestIconPackRoundTrips(t *testing.T) {
+	t.Parallel()
 	p := itemIconPack(t)
 	before, err := PackDigest(p)
 	if err != nil {
@@ -174,6 +178,7 @@ func TestIconPackRoundTrips(t *testing.T) {
 }
 
 func TestInvalidPackArtwork(t *testing.T) {
+	t.Parallel()
 	for _, mode := range []string{"unknown spell", "qualified ID", "truncated WebP", "wrong size", "bad base64"} {
 		t.Run(mode, func(t *testing.T) {
 			p := iconPack(t)
@@ -209,6 +214,7 @@ func TestInvalidPackArtwork(t *testing.T) {
 }
 
 func TestIconNamespacesAndArchivedRelease(t *testing.T) {
+	t.Parallel()
 	base, err := LoadPack("../../../../data/pack/srd-5.1")
 	if err != nil {
 		t.Fatal(err)

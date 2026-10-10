@@ -13,7 +13,8 @@ import (
 	"testing"
 	"time"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
+
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
@@ -29,7 +30,7 @@ func (f cliTestModel) Respond(ctx context.Context, r agentuc.AgentRequest, delta
 func TestAgentCLIConversationAndDeadline(t *testing.T) {
 	for _, deadline := range []bool{false, true} {
 		t.Run(fmt.Sprint(deadline), func(t *testing.T) {
-			service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), catalogfile.NewSource("../../data/pack/srd-5.1"), nil, slog.New(slog.DiscardHandler))
+			service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), filetest.SRD(), nil, slog.New(slog.DiscardHandler))
 			turn := 0
 			model := cliTestModel(func(ctx context.Context, r agentuc.AgentRequest, _ func(string)) (agentuc.AgentResponse, error) {
 				if deadline {

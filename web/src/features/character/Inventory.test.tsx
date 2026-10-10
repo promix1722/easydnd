@@ -12,11 +12,12 @@ const renderAt: typeof renderBare = (viewport, ui, ...rest) => renderBare(viewpo
 const icon = 'data:image/webp;base64,YXJ0'
 const items = new Map<string, Item>([
   ['sword', { slug: 'sword', name: 'Sword', icon, slot: 'main-hand', desc: ['A **well-balanced** blade.'], weapon: { damage: { dice: '1d8', type: 'slashing' } } }],
+  ['custom-keepsake', { slug: 'custom-keepsake', name: 'Keepsake' }],
   ['potion-of-healing', { slug: 'potion-of-healing', name: 'Healing potion', icon, category: 'potion' }],
 ])
 const equipment: Equipment = {
   equipped: [{ item: 'sword', count: 1 }],
-  backpack: [{ item: 'potion-of-healing', count: 2 }, { count: 1, custom: { name: 'Keepsake' } }],
+  backpack: [{ item: 'potion-of-healing', count: 2 }, { item: 'custom-keepsake', count: 1 }],
   loot: [],
 }
 const name = (slug: string) => items.get(slug)?.name ?? slug

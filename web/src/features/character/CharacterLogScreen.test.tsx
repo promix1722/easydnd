@@ -7,6 +7,7 @@ import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
 
 import { CharacterLogScreen } from './CharacterLogScreen'
+import { jsonResponse } from '@/test/api'
 
 /**
  * The log screen, wired to a log captured from the real router rather than
@@ -65,12 +66,6 @@ const RACES = [{ slug: 'half-elf', name: 'Half-Elf' }]
 const CLASSES = [{ slug: 'rogue', name: 'Rogue' }]
 const BACKGROUNDS = [{ slug: 'acolyte', name: 'Acolyte' }]
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
 
 function mockApi() {
   vi.stubGlobal(

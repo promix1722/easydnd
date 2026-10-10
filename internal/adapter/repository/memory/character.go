@@ -3,8 +3,8 @@
 // It exists so the service compiles, runs and deploys with zero
 // infrastructure. State is per-process and lost on restart.
 //
-// It is the development fallback: with no db.url the server runs on these,
-// and in production every store here has a sibling in
+// It is what the tests run on. The server runs on Postgres, where every
+// store here has a sibling in
 // internal/adapter/repository/postgres. The two are held to one contract by
 // internal/adapter/repository/repotest, and the rules a write applies live in
 // the domain so that neither adapter can carry its own version of them.
@@ -13,7 +13,6 @@ package memory
 import (
 	"context"
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -128,89 +127,6 @@ func (r *CharacterRepository) SetPublic(_ context.Context, id domain.ID, public 
 	return nil
 }
 
-// Append adds events to a character's log, rejecting a stale expectedSeq.
-func (r *CharacterRepository) Append(_ context.Context, id domain.ID, expectedSeq int, events ...domain.Event) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	c, ok := r.items[id]
-	if !ok {
-		return types.NewNotFoundError("character %q", id).Because("character.notFound")
-	}
-	if err := c.ExpectSeq(expectedSeq); err != nil {
-		return err
-	}
-	// Append to a copy, so a rejected batch cannot leave the stored log
-	// half-written.
-	updated := domain.Log{Events: slices.Clone(c.Log.Events)}
-	if err := updated.Append(events...); err != nil {
-		return err
-	}
-	c.Log = updated.Clone()
-	c.Revision += max(1, len(events))
-	r.items[id] = c
-	return nil
-}
-
-// Truncate drops every event after afterSeq, rejecting a stale expectedSeq.
-//
-// The concurrency check is the same one Append makes and for the same reason:
-// the whole log is one record, so two clients that read, modify and write it
-// would otherwise have the later write discard the earlier silently. It
-// matters more here, not less -- the write being discarded is a deletion.
-func (r *CharacterRepository) Truncate(_ context.Context, id domain.ID, expectedSeq, afterSeq int) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	c, ok := r.items[id]
-	if !ok {
-		return types.NewNotFoundError("character %q", id).Because("character.notFound")
-	}
-	if err := c.ExpectSeq(expectedSeq); err != nil {
-		return err
-	}
-	// Truncate a copy, so a rejected request cannot leave the stored log
-	// half-trimmed.
-	updated := domain.Log{Events: slices.Clone(c.Log.Events)}
-	if err := updated.Truncate(afterSeq); err != nil {
-		return err
-	}
-	c.Log = updated.Clone()
-	c.Revision++
-	r.items[id] = c
-	return nil
-}
-
-// Rewrite replaces a character's whole log, rejecting a stale expectedSeq.
-//
-// It is neither an append nor a truncation: replacing one entry can drop
-// entries after it, so the sequence numbers close up and the stored slice is
-// a different length in either direction. The caller hands over a log it has
-// already rebuilt and revalidated; what is left here is the concurrency check
-// and one last Validate, because a store that will accept a malformed log is
-// a store that will hand one back.
-func (r *CharacterRepository) Rewrite(_ context.Context, id domain.ID, expectedSeq int, log domain.Log) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	c, ok := r.items[id]
-	if !ok {
-		return types.NewNotFoundError("character %q", id).Because("character.notFound")
-	}
-	if err := c.ExpectSeq(expectedSeq); err != nil {
-		return err
-	}
-	if err := log.Validate(); err != nil {
-		return err
-	}
-	// Cloned on the way in for the same reason it is cloned on the way out:
-	// the caller must not keep a handle on our backing array.
-	c.Log = log.Clone()
-	c.Revision++
-	r.items[id] = c
-	return nil
-}
-
 // Delete removes a character.
 func (r *CharacterRepository) Delete(_ context.Context, id domain.ID) error {
 	r.mu.Lock()
@@ -227,23 +143,18 @@ func (r *CharacterRepository) Delete(_ context.Context, id domain.ID) error {
 // mutate through a shared backing array.
 func clone(c domain.Character) domain.Character {
 	c.Log = c.Log.Clone()
-	c.Commands = maps.Clone(c.Commands)
-	c.Checkpoints = slices.Clone(c.Checkpoints)
-	for i := range c.Checkpoints {
-		c.Checkpoints[i].Log = c.Checkpoints[i].Log.Clone()
-	}
 	return c
 }
 
 // Commit is the atomic write boundary for all application log mutations.
-func (r *CharacterRepository) Commit(_ context.Context, id domain.ID, expectedRevision int, log domain.Log, command string, checkpoint *domain.Checkpoint) error {
+func (r *CharacterRepository) Commit(_ context.Context, id domain.ID, expectedRevision int, log domain.Log) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	c, ok := r.items[id]
 	if !ok {
 		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
-	if err := c.Commit(expectedRevision, log, command, checkpoint); err != nil {
+	if err := c.Commit(expectedRevision, log); err != nil {
 		return err
 	}
 	r.items[id] = c
@@ -262,4 +173,25 @@ func (r *CharacterRepository) CreateWithLog(_ context.Context, owner domain.Owne
 	c.ID = domain.ID(fmt.Sprintf("chr_%06d", r.nextID))
 	r.items[c.ID] = c
 	return clone(c), nil
+}
+
+// Search lists characters matching q across every owner, newest first.
+func (r *CharacterRepository) Search(_ context.Context, q domain.Query) ([]domain.Character, int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	out := make([]domain.Character, 0)
+	for _, c := range r.items {
+		if len(q.Owners) > 0 && !slices.Contains(q.Owners, c.Owner) ||
+			!strings.Contains(c.ID.String(), q.ID) ||
+			q.Public != nil && *q.Public != c.Public {
+			continue
+		}
+		out = append(out, clone(c))
+	}
+	slices.SortFunc(out, func(a, b domain.Character) int {
+		return strings.Compare(b.ID.String(), a.ID.String())
+	})
+	total := len(out)
+	return out[min(max(q.Offset, 0), total):min(max(q.Offset, 0)+max(q.Limit, 0), total)], total, nil
 }

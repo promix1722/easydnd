@@ -31,7 +31,8 @@ import { sheetPath } from './sheetPath'
 /**
  * The characters a group's members have put on its table.
  *
- * Sharing is a read and nothing more: every member can open any sheet here,
+ * Sharing is a read and nothing more: whoever runs the table can open any
+ * sheet here, a player the ones their owners opened,
  * and only the owner of a character can ever change it. The controls below say
  * so by what they do not offer -- there is no edit anywhere on this panel,
  * because there is no route behind one.
@@ -123,12 +124,14 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
             text: (character: TableCharacter) => character.name || t('common.unnamed'),
             // The sheet, and only the sheet. The event log is the record of its
             // owner's decisions and is not the table's business.
-            to: (character: TableCharacter) => sheetPath(groupId, character, me),
-            render: (character: TableCharacter) => (
-              <Anchor component={Link} to={sheetPath(groupId, character, me)}>
-                <Text size="sm">{character.name || t('common.unnamed')}</Text>
-              </Anchor>
-            ),
+            // A closed one is a name and no link to anybody but its owner and
+            // whoever runs the table.
+            to: (character: TableCharacter) => sheetPath(groupId, character, me, canManage),
+            render: (character: TableCharacter) => {
+              const to = sheetPath(groupId, character, me, canManage)
+              const name = <Text size="sm">{character.name || t('common.unnamed')}</Text>
+              return to === undefined ? name : <Anchor component={Link} to={to}>{name}</Anchor>
+            },
           },
           {
             key: 'classes',

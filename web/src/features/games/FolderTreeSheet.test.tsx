@@ -8,6 +8,7 @@ import { renderAt } from '@/test/render'
 import type { Viewport } from '@/test/viewport'
 
 import { FolderTreeSheet } from './FolderTreeSheet'
+import { jsonResponse } from '@/test/api'
 
 function stub() {
   vi.stubGlobal(
@@ -28,10 +29,7 @@ function stub() {
               { id: 'chr_2', folder: 'fld_2', name: 'Bram', level: 2, classes: [] },
             ],
           }
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return jsonResponse(body)
     }),
   )
 }

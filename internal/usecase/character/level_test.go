@@ -11,6 +11,7 @@ import (
 // Declaring a level is taking it: no entry names a class level, and the
 // character comes out of the projection at the level they asked for.
 func TestDeclaringALevelIsTakingIt(t *testing.T) {
+	t.Parallel()
 	b := build(t).
 		add("class", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1}).
 		add("desired level", domain.Event{Type: domain.EventChange, Changes: []domain.Change{
@@ -45,6 +46,7 @@ func TestDeclaringALevelIsTakingIt(t *testing.T) {
 
 // The desired level is bounded by where the 2014 rules stop.
 func TestDesiredLevelIsBounded(t *testing.T) {
+	t.Parallel()
 	for _, level := range []int{0, 21} {
 		b := build(t)
 		_, err := b.s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq,
@@ -60,6 +62,7 @@ func TestDesiredLevelIsBounded(t *testing.T) {
 // The only ruleset a change can set is the compendium's own, which is what
 // makes the rules selection final.
 func TestRulesetMustBeTheCompendiums(t *testing.T) {
+	t.Parallel()
 	b := build(t)
 	_, err := b.s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq,
 		domain.Event{Type: domain.EventChange, Changes: []domain.Change{
@@ -81,6 +84,7 @@ func TestRulesetMustBeTheCompendiums(t *testing.T) {
 // still land: the prompt that asks for them belongs to the level that granted
 // them, not to the level the character has reached.
 func TestClassGrantIsAnswerableAfterTheLevelsAreTaken(t *testing.T) {
+	t.Parallel()
 	b := build(t).
 		add("class", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1}).
 		add("desired level", domain.Event{Type: domain.EventChange, Changes: []domain.Change{

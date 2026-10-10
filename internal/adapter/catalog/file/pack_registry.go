@@ -3,6 +3,7 @@ package file
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -129,7 +130,7 @@ func NewRegistry(paths []string, roots []Dependency, archive string, folders ...
 				closeErr := temp.Close()
 				if writeErr != nil || syncErr != nil || closeErr != nil {
 					_ = os.Remove(tmpName)
-					return fmt.Errorf("archiving pack: write=%v sync=%v close=%v", writeErr, syncErr, closeErr)
+					return fmt.Errorf("archiving pack: %w", errors.Join(writeErr, syncErr, closeErr))
 				}
 				if err = os.Rename(tmpName, name); err != nil {
 					_ = os.Remove(tmpName)
@@ -255,11 +256,11 @@ func (r *Registry) Resolve(roots []Dependency) (pack.Lock, error) {
 			}
 			next[dep.ID] = p
 			todo := append(slices.Clone(pending[1:]), p.Manifest.Dependencies...)
-			if found, err := solve(next, todo); err == nil {
+			found, err := solve(next, todo)
+			if err == nil {
 				return found, nil
-			} else {
-				dependencyError = err
 			}
+			dependencyError = err
 		}
 		if dependencyError != nil {
 			return nil, dependencyError
@@ -369,6 +370,19 @@ func (r *Registry) Locales(context.Context) ([]rules.Locale, error) {
 func (r *Registry) Load(ctx context.Context, locale rules.Locale) (*catalog.Catalog, error) {
 	return r.LoadLocked(ctx, locale, r.defaultLock)
 }
+
+// installed reports whether every release in the lock is one this registry
+// holds. Read-only after NewRegistry, so it needs no lock.
+func (r *Registry) installed(lock pack.Lock) bool {
+	for _, p := range lock.Packs {
+		doc := r.releases[p.ID][p.Version]
+		if doc == nil || r.identities[doc] != p {
+			return false
+		}
+	}
+	return len(lock.Packs) > 0
+}
+
 func (r *Registry) LoadLocked(_ context.Context, locale rules.Locale, lock pack.Lock) (*catalog.Catalog, error) {
 	if _, err := language.Parse(locale.String()); err != nil {
 		return nil, fmt.Errorf("invalid locale")
@@ -502,29 +516,7 @@ func compilePacks(docs []*PackDocument, locale rules.Locale, lock pack.Lock) (*c
 	}
 	slices.SortFunc(mechanics.Resources, func(a, b ResourceDefinition) int { return strings.Compare(a.ID, b.ID) })
 	slices.SortFunc(mechanics.Actions, func(a, b ActionDefinition) int { return strings.Compare(a.ID, b.ID) })
-	files := map[string][]byte{}
-	for _, filename := range MechanicsFiles() {
-		name := strings.TrimSuffix(filename, ".json")
-		values := entities[name]
-		if values == nil {
-			values = []any{}
-		}
-		b, err := json.Marshal(values)
-		if err != nil {
-			return nil, err
-		}
-		files[filename] = b
-	}
-	for _, filename := range ProseFiles() {
-		name := strings.TrimSuffix(filename, ".json")
-		b, err := json.Marshal(prose[name])
-		if err != nil {
-			return nil, err
-		}
-		files["i18n/en/"+filename] = b
-	}
-	files[FileManifest], _ = json.Marshal(Manifest{Ruleset: lock.Edition, Locales: []string{"en"}})
-	c, err := NewMemorySource(files).Load(context.Background(), locale)
+	c, err := buildCatalog(entities, prose, lock.Edition, locale)
 	if err != nil {
 		return nil, err
 	}
@@ -660,7 +652,12 @@ func normalizeMechanics(p *PackDocument) (PackMechanics, error) {
 		b.ID = normalizeID(p.Manifest.ID, b.ID)
 		b.Owner = Ref(normalizeRef(p.Manifest.ID, string(b.Owner)))
 		b.Class = normalizeID(p.Manifest.ID, b.Class)
+		b.List = normalizeID(p.Manifest.ID, b.List)
+		b.ListFrom = normalizeID(p.Manifest.ID, b.ListFrom)
 		b.Ability = normalizeAbility(b.Ability)
+		for j := range b.Schools {
+			b.Schools[j] = normalizeID(p.Manifest.ID, b.Schools[j])
+		}
 		for j := range b.Spells {
 			b.Spells[j] = normalizeID(p.Manifest.ID, b.Spells[j])
 		}

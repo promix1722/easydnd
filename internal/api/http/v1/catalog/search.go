@@ -28,6 +28,11 @@ const (
 	ParamMaterial      = "material"
 	ParamLimit         = "limit"
 	ParamOffset        = "offset"
+
+	// The item search's own filters; see searchItems.
+	ParamWearable = "wearable"
+	ParamCategory = "category"
+	ParamMagic    = "magic"
 )
 
 // maxPageSize bounds one page. Same reasoning as maxSlugFilter: the point is
@@ -37,6 +42,7 @@ const maxPageSize = 200
 var searchParams = []string{
 	"pack", "source", ParamQuery, ParamLevel, ParamSchool, ParamClass, ParamCastingTime,
 	ParamConcentration, ParamRitual, ParamMaterial, ParamLimit, ParamOffset,
+	ParamWearable, ParamCategory, ParamMagic,
 }
 
 // spellSearch is a parsed search request: what to match, and which page.
@@ -161,10 +167,34 @@ func (h *Handler) searchSpells(c *gin.Context, search spellSearch) {
 	c.JSON(http.StatusOK, out)
 }
 
-// searchItems answers CollectionItems: equipment and magic items whose name
-// contains ?q=, sorted by name and paged like spells. Only q, limit and offset
-// are read; the spell filters a shared parser also accepts are ignored.
+// searchItems answers CollectionItems: equipment and magic items together,
+// sorted by name and paged like spells. Of the shared parser's fields it reads
+// q, limit and offset, and it has three filters of its own:
+//
+//   - wearable: whether the item has a slot. The sheet's Equipment tab is the
+//     items that have one and its Items tab the ones that do not, so each
+//     tab's picker asks for its own half.
+//   - category: one equipment category, by slug.
+//   - magic: which of the two collections.
+//
+// The answer carries the categories present under the wearable scope alone --
+// the options for the category filter, which would otherwise empty themselves
+// as soon as one was picked, and which the client must not derive from data
+// it is never sent whole.
 func (h *Handler) searchItems(c *gin.Context, search spellSearch) {
+	var wearable, magic *bool
+	for param, target := range map[string]**bool{ParamWearable: &wearable, ParamMagic: &magic} {
+		if raw, ok := c.GetQuery(param); ok {
+			value, err := strconv.ParseBool(raw)
+			if err != nil {
+				helpers.FormatError(c, invalidParam(param))
+				return
+			}
+			*target = &value
+		}
+	}
+	category := c.Query(ParamCategory)
+
 	cat, err := h.source.Load(c.Request.Context(), helpers.Locale(c))
 	if err != nil {
 		helpers.FormatError(c, err)
@@ -172,17 +202,50 @@ func (h *Handler) searchItems(c *gin.Context, search spellSearch) {
 	}
 	q := strings.ToLower(search.filter.Name)
 	matches := make([]ItemHit, 0)
+	present := map[rules.Slug]bool{}
+	// keep applies every filter to one item, noting its category on the way
+	// past the wearable scope.
+	keep := func(name string, itemCategory rules.Slug, slot domain.Slot, isMagic bool) bool {
+		if wearable != nil && *wearable != (slot != domain.SlotNone) {
+			return false
+		}
+		present[itemCategory] = true
+		return strings.Contains(strings.ToLower(name), q) &&
+			(category == "" || category == itemCategory.String()) &&
+			(magic == nil || *magic == isMagic)
+	}
+	categoryName := func(slug rules.Slug) string {
+		entry, _ := cat.EquipmentCategories.Get(slug)
+		return entry.Name
+	}
 	for _, item := range cat.Items.All() {
-		if strings.Contains(strings.ToLower(item.Name), q) {
-			matches = append(matches, ItemHit{Slug: item.Slug.String(), Icon: item.Icon, Name: item.Name, Category: item.Category.String()})
+		if keep(item.Name, item.Category, item.Slot, false) {
+			matches = append(matches, ItemHit{
+				Slug: item.Slug.String(), Icon: item.Icon, Name: item.Name,
+				Category: item.Category.String(), CategoryName: categoryName(item.Category),
+				Cost: costOf(item.Cost), Weight: item.Weight,
+			})
 		}
 	}
 	for _, item := range cat.MagicItems.All() {
-		if strings.Contains(strings.ToLower(item.Name), q) {
-			matches = append(matches, ItemHit{Slug: item.Slug.String(), Icon: item.Icon, Name: item.Name, Category: item.Category.String(), Magic: true})
+		if keep(item.Name, item.Category, item.Slot, true) {
+			matches = append(matches, ItemHit{
+				Slug: item.Slug.String(), Icon: item.Icon, Name: item.Name,
+				Category: item.Category.String(), CategoryName: categoryName(item.Category),
+				Magic: true,
+			})
 		}
 	}
 	slices.SortFunc(matches, func(a, b ItemHit) int {
+		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+	})
+	categories := make([]ItemCategory, 0, len(present))
+	for slug := range present {
+		if slug != "" {
+			categories = append(categories, ItemCategory{Slug: slug.String(), Name: categoryName(slug)})
+		}
+	}
+	slices.SortFunc(categories, func(a, b ItemCategory) int {
 		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
 	})
 
@@ -195,7 +258,7 @@ func (h *Handler) searchItems(c *gin.Context, search spellSearch) {
 	if search.limit > 0 && search.limit < len(matches) {
 		matches = matches[:search.limit]
 	}
-	c.JSON(http.StatusOK, ItemSearchResult{Items: append([]ItemHit{}, matches...), Total: total})
+	c.JSON(http.StatusOK, ItemSearchResult{Items: append([]ItemHit{}, matches...), Total: total, Categories: categories})
 }
 
 // ParseSpellSearch shares validation between scoped and aggregate catalogue searches.

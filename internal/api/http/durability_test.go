@@ -25,6 +25,7 @@ import (
 // answered 401, and the visible symptom was a silent drop to the landing page
 // with a passkey in their password manager that the server no longer knew.
 func TestSessionSurvivesARestart(t *testing.T) {
+	t.Parallel()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
 		t.Skip("TEST_DATABASE_URL is unset; skipping the durability test")

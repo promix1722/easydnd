@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"sync"
 	"testing"
 
 	file "github.com/promix1722/easydnd/internal/adapter/catalog/file"
@@ -17,6 +18,7 @@ import (
 )
 
 func TestEquipmentCategoriesValidateAndProject(t *testing.T) {
+	t.Parallel()
 	b := build(t).add("fighter", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 1})
 	kit := func(slot, item rules.Slug) domain.Event {
 		return domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Choices: []domain.Answer{answer("fighter/starting-equipment/"+slot, item)}}
@@ -78,6 +80,7 @@ func TestEquipmentCategoriesValidateAndProject(t *testing.T) {
 }
 
 func TestFighterArmorAndBowAreSeparateChoices(t *testing.T) {
+	t.Parallel()
 	b := build(t).add("fighter", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 1})
 	event := domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Choices: []domain.Answer{
 		answer("fighter/starting-equipment/body", "leather-armor+longbow+arrow"),
@@ -112,6 +115,7 @@ func TestFighterArmorAndBowAreSeparateChoices(t *testing.T) {
 }
 
 func TestFightingStyleCannotBeChosenAgain(t *testing.T) {
+	t.Parallel()
 	b := build(t).add("fighter", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 1}).
 		add("style", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "fighter"), Level: 1, Choices: []domain.Answer{answer("fighter-fighting-style/subfeature/0", "fighter-fighting-style-defense")}}).
 		add("desired level", domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(10)}}}).
@@ -125,6 +129,7 @@ func TestFightingStyleCannotBeChosenAgain(t *testing.T) {
 }
 
 func TestDragonbornAncestryGrantsBreathWithoutAnotherChoice(t *testing.T) {
+	t.Parallel()
 	for color, damageType := range map[string]rules.Slug{
 		"black": "acid", "blue": "lightning", "brass": "fire", "bronze": "lightning",
 		"copper": "acid", "gold": "fire", "green": "poison", "red": "fire",
@@ -183,15 +188,12 @@ func TestDragonbornAncestryGrantsBreathWithoutAnotherChoice(t *testing.T) {
 }
 
 func TestSpellChoicesThroughCharacterService(t *testing.T) {
-	r, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), r, nil, slog.New(slog.DiscardHandler))
+	t.Parallel()
+	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), srdRegistry(t), nil, slog.New(slog.DiscardHandler))
 	c := mustCreateScored(t, s)
 	b := (&builder{t: t, s: s, id: c.ID, seq: c.Log.LastSeq()}).add("wizard", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "wizard"), Level: 1})
 	bad := domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "wizard"), Level: 1, Choices: []domain.Answer{answer("wizard/spell/cantrip/1", "fire-bolt", "fire-bolt", "cure-wounds")}}
-	if _, err = s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq, bad); err == nil {
+	if _, err := s.Apply(context.Background(), testOwner, b.id, rules.DefaultLocale, b.seq, bad); err == nil {
 		t.Fatal("accepted duplicate/off-list spells")
 	}
 	b.add("cantrips", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "wizard"), Level: 1, Choices: []domain.Answer{answer("wizard/spell/cantrip/1", "fire-bolt", "mage-hand", "light")}})
@@ -247,12 +249,9 @@ func TestSpellChoicesThroughCharacterService(t *testing.T) {
 }
 
 func TestSpellDraftRevisesSeveralAnswersAtomically(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	r, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), r, nil, slog.New(slog.DiscardHandler))
+	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), srdRegistry(t), nil, slog.New(slog.DiscardHandler))
 	c := mustCreateScored(t, s)
 	b := (&builder{t: t, s: s, id: c.ID, seq: c.Log.LastSeq()}).add("warlock", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "warlock"), Level: 1}).
 		add("cantrips", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "warlock"), Level: 1, Choices: []domain.Answer{answer("warlock/spell/cantrip/1", "eldritch-blast", "chill-touch")}}).
@@ -311,6 +310,7 @@ func TestSpellDraftRevisesSeveralAnswersAtomically(t *testing.T) {
 }
 
 func TestCustomSpellsPersistWithoutConsumingNormalAllowances(t *testing.T) {
+	t.Parallel()
 	b := spellBuilderForTest(t).add("sorcerer", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "sorcerer"), Level: 1})
 	// A level-one sorcerer cannot normally learn Wish or a cleric spell.
 	invalid := domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "sorcerer"), Level: 1, Choices: []domain.Answer{answer("sorcerer/spell/known/1", "wish", "cure-wounds")}}
@@ -366,6 +366,7 @@ func TestCustomSpellsPersistWithoutConsumingNormalAllowances(t *testing.T) {
 }
 
 func TestSorcererUsesCurrentLevelTotalWithoutReplacementSteps(t *testing.T) {
+	t.Parallel()
 	b := spellBuilderForTest(t).add("sorcerer", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "sorcerer"), Level: 1}).
 		add("level five", domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(5)}}})
 	for index, picks := range [][]rules.Slug{{"fireball", "lightning-bolt"}, {"burning-hands"}, {"invisibility"}, {"mirror-image"}, {"shield"}} {
@@ -408,6 +409,7 @@ func TestSorcererUsesCurrentLevelTotalWithoutReplacementSteps(t *testing.T) {
 }
 
 func TestEarlierSpellAnswersEditAtCurrentClassLevel(t *testing.T) {
+	t.Parallel()
 	b := spellBuilderForTest(t).add("sorcerer", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "sorcerer"), Level: 1}).
 		add("known", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "sorcerer"), Level: 1, Choices: []domain.Answer{answer("sorcerer/spell/known/1", "shield", "magic-missile")}})
 	seq := b.seq
@@ -447,18 +449,30 @@ func TestEarlierSpellAnswersEditAtCurrentClassLevel(t *testing.T) {
 	}
 }
 
-func spellBuilderForTest(t *testing.T) *builder {
+// srdRegistry is the installed SRD, built once for the binary: the build is
+// most of what a test using it costs, and the service only reads it.
+func srdRegistry(t *testing.T) *file.Registry {
 	t.Helper()
-	registry, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
+	r, err := sharedRegistry()
 	if err != nil {
 		t.Fatal(err)
 	}
-	service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), registry, nil, slog.New(slog.DiscardHandler))
+	return r
+}
+
+var sharedRegistry = sync.OnceValues(func() (*file.Registry, error) {
+	return file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
+})
+
+func spellBuilderForTest(t *testing.T) *builder {
+	t.Helper()
+	service := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), srdRegistry(t), nil, slog.New(slog.DiscardHandler))
 	character := mustCreateScored(t, service)
 	return &builder{t: t, s: service, id: character.ID, seq: character.Log.LastSeq()}
 }
 
 func TestEarlierSpellEditIncludesCurrentSubclassList(t *testing.T) {
+	t.Parallel()
 	b := spellBuilderForTest(t).add("warlock", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "warlock"), Level: 1}).
 		add("known", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "warlock"), Level: 1, Choices: []domain.Answer{answer("warlock/spell/known/1", "charm-person", "hellish-rebuke")}})
 	seq := b.seq
@@ -493,6 +507,7 @@ func TestEarlierSpellEditIncludesCurrentSubclassList(t *testing.T) {
 }
 
 func TestHighestSpellLevelLimitAndCustomOverride(t *testing.T) {
+	t.Parallel()
 	b := spellBuilderForTest(t).add("sorcerer", domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "sorcerer"), Level: 1}).
 		add("level five", domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "identity.desiredLevel", Op: domain.OpSet, Value: domain.IntValue(5)}}}).
 		add("two third level", domain.Event{Type: domain.EventLevel, Ref: ref(rules.RefClass, "sorcerer"), Level: 1, Choices: []domain.Answer{answer("sorcerer/spell/known/1", "fireball", "lightning-bolt")}})
@@ -553,11 +568,8 @@ func TestHighestSpellLevelLimitAndCustomOverride(t *testing.T) {
 // fourth level asked, not as a question belonging to no level -- which a build
 // screen drew above first level, ahead of the improvement that opened it.
 func TestAFeatsPromptCarriesTheLevelItWasTakenAt(t *testing.T) {
-	r, err := file.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, []file.Dependency{{ID: "srd-2014", Version: "^2.0.0"}}, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), r, nil, slog.New(slog.DiscardHandler))
+	t.Parallel()
+	s := charuc.NewService(memory.NewCharacterRepository(), memory.NewFolderRepository(), srdRegistry(t), nil, slog.New(slog.DiscardHandler))
 	c := mustCreateScored(t, s)
 	fighter := ref(rules.RefClass, "fighter")
 	improvement := rules.Slug("fighter/ability-score-improvement/4")

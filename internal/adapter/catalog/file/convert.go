@@ -505,13 +505,12 @@ func (c *conv) feature(w Feature, b Bundle) catalog.Feature {
 		Prerequisites: c.prerequisites(w.Prerequisites),
 	}
 	if w.ExpertiseOptions != nil || w.SubfeatureOptions != nil ||
-		w.EnemyTypeOptions != nil || w.TerrainTypeOptions != nil || len(w.Invocations) > 0 {
+		w.EnemyTypeOptions != nil || w.TerrainTypeOptions != nil {
 		f.Specific = &catalog.FeatureSpecific{
 			ExpertiseOptions:   c.choice(w.ExpertiseOptions),
 			SubfeatureOptions:  c.choice(w.SubfeatureOptions),
 			EnemyTypeOptions:   c.choice(w.EnemyTypeOptions),
 			TerrainTypeOptions: c.choice(w.TerrainTypeOptions),
-			Invocations:        slugs(w.Invocations),
 		}
 	}
 	return f
@@ -580,19 +579,7 @@ func (c *conv) item(w Item, b Bundle) catalog.Item {
 			Capacity:        p.Field(ProseCapacity),
 		}
 	}
-	it.Slot = c.slot(w.Slot, func() catalog.Slot {
-		switch {
-		case it.Armor != nil && it.Armor.Category == catalog.Shield:
-			return catalog.SlotOffHand
-		case it.Armor != nil:
-			return catalog.SlotBody
-		case it.Weapon != nil:
-			return catalog.SlotMainHand
-		case it.Gear != nil && (it.Gear.GearCategory == "arcane-foci" || it.Gear.GearCategory == "druidic-foci"):
-			return catalog.SlotMainHand
-		}
-		return catalog.SlotNone
-	})
+	it.Slot = c.slot(w.Slot, it.DefaultSlot)
 	return it
 }
 

@@ -120,3 +120,9 @@ agent:
   max_turns: 40
   max_sessions: 100
   request_timeout: 2m
+
+# The token is EASYDND_POSTHOG_TOKEN in the env file, entered by the operator.
+# Without it analytics is disabled; the public ingestion host stays here.
+analytics:
+  token: ""
+  host: "https://eu.i.posthog.com"

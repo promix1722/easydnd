@@ -135,6 +135,9 @@
       ]
     }
   },
+  "variant-human": {
+    "name": "Human (Variant)"
+  },
   "tiefling": {
     "name": "Tiefling",
     "blocks": {

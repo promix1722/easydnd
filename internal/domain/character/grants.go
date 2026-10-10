@@ -18,12 +18,6 @@ type grant struct {
 	Purse         rules.Coins
 }
 
-func (g *grant) add(other grant) {
-	g.Proficiencies = append(g.Proficiencies, other.Proficiencies...)
-	g.Choices = append(g.Choices, other.Choices...)
-	g.Equipment = append(g.Equipment, other.Equipment...)
-}
-
 // classGrant returns what a level in a class hands the character.
 //
 // The three cases are genuinely different, and conflating them is the

@@ -1,8 +1,0 @@
-{
-  "ruleset": "2014",
-  "source": "hand-maintained; first derived from 5e-bits/5e-database src/2014/en",
-  "locales": [
-    "en",
-    "ru"
-  ]
-}

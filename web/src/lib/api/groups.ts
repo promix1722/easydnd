@@ -1,3 +1,4 @@
+import { track } from '@/lib/analytics'
 import { request } from './client'
 
 /**
@@ -59,11 +60,11 @@ export interface InvitePreview {
 }
 
 export function listGroups(signal?: AbortSignal): Promise<{ groups: GroupSummary[] }> {
-  return request<{ groups: GroupSummary[] }>('/groups', signal ? { signal } : {})
+  return request<{ groups: GroupSummary[] }>('/groups', { signal })
 }
 
 export function getGroup(id: string, signal?: AbortSignal): Promise<GroupDetail> {
-  return request<GroupDetail>(`/groups/${encodeURIComponent(id)}`, signal ? { signal } : {})
+  return request<GroupDetail>(`/groups/${encodeURIComponent(id)}`, { signal })
 }
 
 export function createGroup(name: string): Promise<GroupDetail> {
@@ -118,10 +119,12 @@ export function previewInvite(token: string, signal?: AbortSignal): Promise<Invi
   return request<InvitePreview>('/invites/preview', {
     method: 'POST',
     body: { token },
-    ...(signal ? { signal } : {}),
+    signal,
   })
 }
 
-export function acceptInvite(token: string): Promise<GroupDetail> {
-  return request<GroupDetail>('/invites/accept', { method: 'POST', body: { token } })
+export async function acceptInvite(token: string): Promise<GroupDetail> {
+  const result = await request<GroupDetail>('/invites/accept', { method: 'POST', body: { token } })
+  track('group_joined')
+  return result
 }

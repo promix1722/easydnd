@@ -31,8 +31,19 @@ func (s *Service) Share(
 	if _, err := s.owned(ctx, actor, c); err != nil {
 		return err
 	}
+	// A character already there is refused by the store as already shared,
+	// which is the truer answer than a full table.
+	onTable, err := s.shared.IsShared(ctx, id, c)
+	if err != nil {
+		return err
+	}
+	if !onTable {
+		if err := s.tableRoom(ctx, id); err != nil {
+			return err
+		}
+	}
 
-	err := s.shared.Share(ctx, domain.Shared{
+	err = s.shared.Share(ctx, domain.Shared{
 		Group:     id,
 		Character: c,
 		Owner:     actor,
@@ -43,6 +54,20 @@ func (s *Service) Share(
 	}
 	s.log.Info("character shared with group",
 		"group_id", string(id), "character_id", string(c), "actor_id", string(actor))
+	return nil
+}
+
+// tableRoom refuses once a group's table holds as many characters as it may.
+//
+// ponytail: count, then insert -- racing shares can overshoot by a few.
+func (s *Service) tableRoom(ctx context.Context, id group.ID) error {
+	held, err := s.shared.List(ctx, id)
+	if err != nil {
+		return err
+	}
+	if len(held) >= s.limits.GroupCharacters {
+		return types.LimitReached("groupCharacters", s.limits.GroupCharacters)
+	}
 	return nil
 }
 

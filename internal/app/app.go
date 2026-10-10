@@ -31,6 +31,7 @@ import (
 	webauthnadapter "github.com/promix1722/easydnd/internal/adapter/webauthn"
 	httpapi "github.com/promix1722/easydnd/internal/api/http"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	adminapi "github.com/promix1722/easydnd/internal/api/http/v1/admin"
 	appearanceapi "github.com/promix1722/easydnd/internal/api/http/v1/appearance"
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
@@ -51,6 +52,7 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
+	adminuc "github.com/promix1722/easydnd/internal/usecase/admin"
 	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 	appearanceuc "github.com/promix1722/easydnd/internal/usecase/appearance"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
@@ -82,6 +84,12 @@ type Options struct {
 	// WebDir serves a built frontend bundle alongside the API. Development
 	// only; see internal/api/http/static.go.
 	WebDir string
+
+	// InMemory runs on the in-memory stores instead of Postgres. It exists
+	// for this package's tests, which build the whole application on a
+	// machine with no database; the binary never sets it, so a server
+	// without db.url does not start.
+	InMemory bool
 }
 
 // New builds the application graph.
@@ -107,14 +115,14 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	}
 
 	// Outbound adapters. The assignments in newRepositories are what
-	// type-check the adapters against the domain's ports: every store has an
-	// in-memory and a Postgres implementation, and which one runs is decided
-	// there, by db.url, in one place.
+	// type-check the adapters against the domain's ports: every store has a
+	// Postgres implementation, which the server runs on, and an in-memory
+	// one, which the tests do.
 	// ponytail: a guest's characters are rows nothing deletes once the guest
 	// session expires; see docs/known-caveats.md. Add a sweep beside the
 	// wizard's, keyed on the guest id prefix and the guest session TTL, when
 	// the table's size says so.
-	repos, err := newRepositories(ctx, cfg, log)
+	repos, err := newRepositories(ctx, cfg, log, opts.InMemory)
 	if err != nil {
 		return nil, err
 	}
@@ -205,10 +213,12 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	gameService := gameuc.NewService(
 		gameRepo, sharedRepo, groupRepo, characterRepo, packSource,
 		log.With("usecase", "game"))
+	gameService.SetSuperadmin(packService.Superadmin)
 	characterService := charuc.NewService(
 		characterRepo, folderRepo, packSource, gameService,
 		log.With("usecase", "character"))
 	characterService.SetPackAccess(packService)
+	characterService.SetCopyLinks(signer)
 	authService := authuc.NewService(userRepo, ceremony, signer, federations, authuc.Config{
 		SessionTTL:      cfg.Auth.SessionTTL,
 		GuestSessionTTL: cfg.Auth.GuestSessionTTL,
@@ -258,10 +268,11 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	// stood here was waiting for.
 	router, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		Development:   devHandler,
-		System:        system.New(buildinfo.Version),
+		System:        system.New(buildinfo.Version, system.AnalyticsConfigResponse{Environment: cfg.Env, Token: cfg.Analytics.Token, Host: cfg.Analytics.Host}),
 		Version:       buildinfo.Version,
 		WebDir:        opts.WebDir,
-		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)),
+		Admin:         adminapi.New(adminuc.NewService(userRepo, characterRepo)).WithPacks(packService),
+		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)).WithSuperadmins(cfg.Auth.Superadmins),
 		Appearance:    appearanceapi.New(appearanceuc.NewService(userRepo)),
 		Profile:       profileapi.New(profileuc.NewService(userRepo)),
 		Authenticator: authService,
@@ -312,13 +323,12 @@ type repositories struct {
 // runs against the schema that was just applied, so the PREVIOUS binary has to
 // work on it. Migrations must be expand-only.
 func newRepositories(
-	ctx context.Context, cfg *config.Config, log *slog.Logger,
+	ctx context.Context, cfg *config.Config, log *slog.Logger, inMemory bool,
 ) (repositories, error) {
 	if !cfg.DB.Enabled() {
-		// config.validate refuses this in production, so it can only be a
-		// developer with no Postgres running.
-		log.Warn("db.url is unset; accounts, groups, characters, folders and games live in this process only -- every restart destroys all of them, every registered passkey included",
-			"config", cfg.Source)
+		if !inMemory {
+			return repositories{}, fmt.Errorf("db.url is unset in %s: the server needs a database -- `make dev` or `make run/db` starts one and passes it", cfg.Source)
+		}
 		// One user store, shared. The in-memory group store reads display
 		// names out of it, exactly as the Postgres one reads them with a
 		// join -- give it a second instance and every roster comes back

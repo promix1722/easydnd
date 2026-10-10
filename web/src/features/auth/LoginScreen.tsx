@@ -60,7 +60,12 @@ export function LoginScreen() {
 
   // Already signed in: this page has nothing to offer, and leaving it reachable
   // would mean a "Log in" screen rendered inside the signed-in shell.
-  if (status === 'authenticated') return <Navigate to="/" replace />
+  //
+  // To `from`, not to the root. This render and `attempt`'s navigate below
+  // both fire when a sign-in succeeds, and when this one said "/" it won:
+  // somebody who signed in from an invitation link landed on their empty
+  // character list with the invitation left behind.
+  if (status === 'authenticated') return <Navigate to={from} replace />
 
   const attempt = (which: 'passkey' | 'guest', run: () => Promise<boolean>) => {
     setPressed(which)

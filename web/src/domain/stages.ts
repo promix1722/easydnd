@@ -1,6 +1,6 @@
 /** Builder tabs are presentation; class/race/background remain the rule owners. */
 
-export type Stage = 'personal' | 'rules' | 'class' | 'race' | 'background' | 'abilities' | 'personality' | 'cantrips' | 'spells' | 'equipment'
+export type Stage = 'personal' | 'rules' | 'class' | 'race' | 'background' | 'abilities' | 'personality' | 'cantrips' | 'spells' | 'equipment' | 'custom'
 
 /** Where advancement stops in the 2014 rules; the server enforces the same. */
 export const MAX_LEVEL = 20
@@ -37,6 +37,8 @@ export const STAGES = [
   'spells',
   'equipment',
   'personality',
+  // No question is ever posed here: it holds what the player writes unasked.
+  'custom',
 ] as const satisfies readonly Stage[]
 
 const STAGE_OF_GROUP: Record<string, Stage> = {

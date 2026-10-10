@@ -44,6 +44,36 @@ function themeColour(): Plugin {
  * "dev", the pipeline's public check would never match the SHA, and the deploy
  * would fail minutes later with no obvious cause. Fail at build time instead.
  */
+/**
+ * Fails the build if the 3D die stops being something only its thrower pays for.
+ *
+ * `ui/D20Scene.tsx` is behind a dynamic `import()`, so the bundler gives it,
+ * three.js and cannon-es a chunk of their own, named after the module. Two
+ * things have to stay true of that chunk and nothing else notices when they
+ * do not: the page must not load it up front, and the service worker's
+ * `globIgnores` must still match its name. Both broke silently once -- a
+ * `manualChunks` rule that named the chunk also moved React into it, so every
+ * visitor downloaded three.js to read the landing page, and the die kept
+ * working. Hence a check rather than a comment.
+ */
+function lazyScene(): Plugin {
+  return {
+    name: 'easydnd:lazy-scene',
+    apply: 'build',
+    generateBundle(_, bundle) {
+      const chunks = Object.values(bundle).filter((file) => file.type === 'chunk')
+      const scene = chunks.filter((chunk) => /\/D20Scene-[^/]*\.js$/.test(chunk.fileName))
+      if (scene.length !== 1) this.error(`expected one D20Scene chunk, found ${scene.length}`)
+      const eager = new Set(chunks.filter((chunk) => chunk.isEntry).map((chunk) => chunk.fileName))
+      for (const name of eager) {
+        const chunk = bundle[name]
+        if (chunk?.type === 'chunk') chunk.imports.forEach((imported) => eager.add(imported))
+      }
+      if (eager.has(scene[0]!.fileName)) this.error('the D20Scene chunk is loaded with the entry chunk')
+    },
+  }
+}
+
 function versionManifest(): Plugin {
   let version = ''
   return {
@@ -101,6 +131,7 @@ export default defineConfig({
     react(),
     themeColour(),
     versionManifest(),
+    lazyScene(),
     VitePWA({
       /**
        * 'prompt', not 'autoUpdate', and the difference is not a preference.
@@ -137,13 +168,14 @@ export default defineConfig({
          * is to download everything up front, so on a first visit it would
          * have pulled the whole 180 kB in the background regardless and made
          * that trouble pointless. The pattern matches Rollup's hashed name for
-         * the chunk; `manualChunks` below names it, so the two move together.
+         * the chunk, which is named after `ui/D20Scene.tsx`; `lazyScene` above fails
+         * the build if the two stop agreeing.
          *
          * The cost is that a die thrown for the first time offline does not
          * work. That is the correct trade: an offline visitor who never opens
          * the die should not have paid for it.
          */
-        globIgnores: ['**/d20-scene-*.js'],
+        globIgnores: ['**/D20Scene-*.js'],
         // Navigations to /v1/ are the API's, not the router's. This is load
         // bearing rather than tidy: the Google sign-in return is a top-level
         // navigation to /v1/auth/sso/:provider/callback, and without this the
@@ -236,39 +268,30 @@ export default defineConfig({
     // minified chunk offsets, and the release that produced them is pruned
     // after five deploys.
     sourcemap: true,
-    rollupOptions: {
-      output: {
-        /*
-         * One named chunk, so the service worker can be told to skip it.
-         *
-         * Rollup would split `ui/D20Scene.tsx` out on its own anyway -- it is
-         * behind a dynamic `import()` -- but it would name it after the module
-         * and the name would drift with a rename. `globIgnores` above matches
-         * on this name, and a precache pattern that silently stops matching is
-         * exactly the kind of regression nothing fails on: the die would keep
-         * working, and every visitor would quietly download three.js again.
-         */
-        manualChunks(id) {
-          if (id.includes('/three/') || id.includes('/cannon-es/') || id.includes('D20Scene')) {
-            return 'd20-scene'
-          }
-          return undefined
-        },
-      },
-    },
   },
   /**
    * The test suite, in one project that isolates nothing.
    *
    * `isolate: false` is what makes it fast, and it is worth a lot. With
    * isolation on, vitest forks a process per test file and each one rebuilds
-   * the whole Mantine + embla + React module graph and its own jsdom -- across
-   * 48 files that was 36s spent on imports and 78s on constructing jsdoms, out
+   * the whole Mantine + embla + React module graph and its own DOM -- across
+   * 48 files that was 36s spent on imports and 78s on constructing them, out
    * of 229s total. Sharing both took the run to 64s without changing a single
    * assertion. The pool is left at the default `forks` deliberately: `threads`
    * measured no better, and the worker count is left alone too -- vitest takes
    * `availableParallelism - 1`, which is the right answer on every machine this
    * runs on.
+   *
+   * `happy-dom` rather than jsdom, for the same reason: at 100 files the
+   * suite was CPU-bound at 186s of test time across three workers, 66s of
+   * wall, and nearly all of it was React rendering into the DOM. happy-dom
+   * renders the same trees in half the time -- 92s of test time, 40s of wall
+   * -- and cost one test-side change: a storage spy that targets the instance
+   * rather than `Storage.prototype` (happy-dom's storage is a proxy). A test
+   * that needs a DOM behaviour happy-dom lacks pins its own environment with
+   * `@vitest-environment`: one comment on the file, not a flag on the suite.
+   * The `environment` summary line vitest prints overstates DOM setup
+   * by a hundred times -- it counts one per-worker setup once per file.
    *
    * What it costs is the guarantee that a file starts from nothing, and two
    * things follow from that. Both are load-bearing:
@@ -290,7 +313,7 @@ export default defineConfig({
    * 53 took 16.3s. One optional prop bought that 2.4s back.
    */
   test: {
-    environment: 'jsdom',
+    environment: 'happy-dom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     isolate: false,
@@ -306,6 +329,6 @@ export default defineConfig({
     // style assertions are on inline `element.style` -- DragonMark's width and
     // the carousel's custom properties, both written by JS -- and Mantine emits
     // its class names whether or not a stylesheet was ever parsed. Running
-    // @mantine/core's CSS through PostCSS and into every jsdom bought nothing.
+    // @mantine/core's CSS through PostCSS and into every DOM bought nothing.
   },
 })

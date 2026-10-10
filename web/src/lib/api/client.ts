@@ -35,7 +35,7 @@ export interface RequestOptions {
   formData?: FormData
   method?: string
   body?: unknown
-  signal?: AbortSignal
+  signal?: AbortSignal | undefined
   /** Override the generated correlation id. Mostly useful in tests. */
   requestId?: string
   /** Development cookie selector; never a credential. */

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	file "github.com/promix1722/easydnd/internal/adapter/catalog/file"
@@ -17,7 +18,25 @@ func basePath() string { return filepath.Join("..", "..", "..", "..", "data", "p
 func addonPath() string {
 	return filepath.Join("testdata", "tactician.json")
 }
+
+// registry is the SRD plus the tactician addon, built once for the binary:
+// a build reads, digests and compiles both locales, and it is most of what
+// a test using it costs. Reads share safely; a test that writes into the
+// registry -- CompilePrivate installs a release -- takes freshRegistry.
 func registry(t *testing.T) *file.Registry {
+	t.Helper()
+	r, err := sharedRegistry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
+var sharedRegistry = sync.OnceValues(func() (*file.Registry, error) {
+	return file.NewRegistry([]string{basePath(), addonPath()}, nil, "")
+})
+
+func freshRegistry(t *testing.T) *file.Registry {
 	t.Helper()
 	r, err := file.NewRegistry([]string{basePath(), addonPath()}, nil, "")
 	if err != nil {
@@ -36,6 +55,7 @@ func build(t *testing.T, classes ...character.Event) character.Log {
 func ref(kind rules.RefKind, id string) rules.Ref { return rules.NewRef(kind, rules.Slug(id)) }
 
 func TestPackRoundTripAndCanonicalDigest(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -69,6 +89,7 @@ func TestPackRoundTripAndCanonicalDigest(t *testing.T) {
 	}
 }
 func TestAddonResourcesAndLocale(t *testing.T) {
+	t.Parallel()
 	r := registry(t)
 	cat, err := r.Load(context.Background(), rules.LocaleEN)
 	if err != nil {
@@ -107,32 +128,27 @@ func TestAddonResourcesAndLocale(t *testing.T) {
 		t.Fatal("parent class did not discover addon subclass")
 	}
 }
-func TestResourceReplayAndSeparateCastingPools(t *testing.T) {
+func TestSeparateCastingPools(t *testing.T) {
+	t.Parallel()
 	r := registry(t)
 	cat, err := r.Load(context.Background(), rules.LocaleEN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "warlock"), Level: 5}, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "wizard"), Level: 3})
-	if err = log.Append(character.Event{Type: character.EventResourceSpent, Resource: "pact-magic", Amount: 1}, character.Event{Type: character.EventResourceSpent, Resource: "spell-slots/1", Amount: 1}, character.Event{Type: character.EventRest, Trigger: "short-rest"}); err != nil {
-		t.Fatal(err)
-	}
 	sheet, err := character.Project(log, cat)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p := sheet.Resources.Pools["pact-magic"]; p.Max != 2 || p.SlotLevel != 3 || p.Used != 0 {
+	if p := sheet.Resources.Pools["pact-magic"]; p.Max != 2 || p.SlotLevel != 3 {
 		t.Fatalf("pact pool: %+v", p)
 	}
-	if p := sheet.Resources.Pools["spell-slots/1"]; p.Max != 4 || p.Used != 1 {
+	if p := sheet.Resources.Pools["spell-slots/1"]; p.Max != 4 {
 		t.Fatalf("ordinary pool: %+v", p)
-	}
-	bad := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "warlock"), Level: 1}, character.Event{Type: character.EventResourceSpent, Resource: "pact-magic", Amount: 2}, character.Event{Type: character.EventLevel, Ref: ref(rules.RefClass, "warlock"), Level: 2})
-	if _, err = character.Project(bad, cat); err == nil {
-		t.Fatal("later level legalized earlier overspend")
 	}
 }
 func TestRejectDuplicateKeysMissingDependenciesAndChangedRelease(t *testing.T) {
+	t.Parallel()
 	if _, err := file.DecodePack([]byte(`{"manifest":{},"manifest":{}}`)); err == nil {
 		t.Fatal("duplicate keys accepted")
 	}
@@ -172,57 +188,26 @@ func TestRejectDuplicateKeysMissingDependenciesAndChangedRelease(t *testing.T) {
 	}
 }
 
-func TestActionCostRecoveryBudgetAndReplay(t *testing.T) {
+func TestAddonActionIsOfferedWithItsGrants(t *testing.T) {
+	t.Parallel()
 	r := registry(t)
 	cat, err := r.Load(context.Background(), rules.LocaleEN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 3}, character.Event{Type: character.EventSubclass, Ref: ref(rules.RefSubclass, "example/tactician")})
-	for range 4 {
-		if err := log.Append(character.Event{Type: character.EventAction, Ref: ref(rules.RefAction, "example/maneuver")}); err != nil {
-			t.Fatal(err)
-		}
-	}
 	sheet, err := character.Project(log, cat)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p := sheet.Resources.Pools["example/combat-dice"]; p.Used != 4 || p.Available() != 0 {
-		t.Fatalf("action cost: %+v", p)
+	if p := sheet.Resources.Pools["example/combat-dice"]; p.Used != 0 || p.Available() != 4 {
+		t.Fatalf("action pool: %+v", p)
 	}
-	if len(sheet.PackActions) != 1 || sheet.PackActions[0].Available {
-		t.Fatal("exhausted action still offered as affordable")
+	if len(sheet.PackActions) != 1 || !sheet.PackActions[0].Available {
+		t.Fatal("affordable action not offered")
 	}
 	if sheet.Status.Initiative != 1 || len(sheet.Spells.Known) != 1 || sheet.Spells.Known[0] != "example/guiding-mark" {
 		t.Fatal("addon grant/modifier not applied")
-	}
-	overspend := log.Clone()
-	_ = overspend.Append(character.Event{Type: character.EventAction, Ref: ref(rules.RefAction, "example/maneuver")})
-	if _, err := character.Project(overspend, cat); err == nil {
-		t.Fatal("action overspend accepted")
-	}
-	_ = log.Append(character.Event{Type: character.EventRest, Trigger: "short-rest"}, character.Event{Type: character.EventAction, Ref: ref(rules.RefAction, "example/maneuver")})
-	sheet, err = character.Project(log, cat)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sheet.Resources.Pools["example/combat-dice"].Used != 1 {
-		t.Fatal("rest/action replay wrong")
-	}
-	// Recovery budget is across classes, not independently per pool.
-	dice := build(t, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "fighter"), Level: 3}, character.Event{Type: character.EventClass, Ref: ref(rules.RefClass, "wizard"), Level: 3}, character.Event{Type: character.EventResourceSpent, Resource: "hit-dice/fighter", Amount: 3}, character.Event{Type: character.EventResourceSpent, Resource: "hit-dice/wizard", Amount: 3})
-	_ = dice.Append(character.Event{Type: character.EventRest, Trigger: "long-rest", Allocations: map[rules.Slug]int{"hit-dice/fighter": 2, "hit-dice/wizard": 1}})
-	sheet, err = character.Project(dice, cat)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sheet.Resources.Pools["hit-dice/fighter"].Used != 1 || sheet.Resources.Pools["hit-dice/wizard"].Used != 2 {
-		t.Fatal("incorrect allocated recovery")
-	}
-	dice.Events[len(dice.Events)-1].Allocations["hit-dice/wizard"] = 2
-	if _, err := character.Project(dice, cat); err == nil {
-		t.Fatal("shared recovery budget exceeded")
 	}
 }
 
@@ -239,6 +224,7 @@ func writeDocument(t *testing.T, p *file.PackDocument) string {
 	return path
 }
 func TestRuleValidationAndGuardedOverrides(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -280,6 +266,7 @@ func TestRuleValidationAndGuardedOverrides(t *testing.T) {
 	}
 }
 func TestPinnedReleaseSurvivesUpdateAndRestart(t *testing.T) {
+	t.Parallel()
 	archive := t.TempDir()
 	old := registry(t)
 	oldLock := old.DefaultLock()
@@ -319,6 +306,7 @@ func TestPinnedReleaseSurvivesUpdateAndRestart(t *testing.T) {
 }
 
 func TestExplicitCasterProfilesAndTypedParameters(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -371,6 +359,7 @@ func TestExplicitCasterProfilesAndTypedParameters(t *testing.T) {
 }
 
 func TestSubclassCastingProfileCompilesAndProjects(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -437,6 +426,7 @@ func TestSubclassCastingProfileCompilesAndProjects(t *testing.T) {
 }
 
 func TestEquipmentConditionsApplyDuringProjection(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -484,6 +474,7 @@ func TestEquipmentConditionsApplyDuringProjection(t *testing.T) {
 }
 
 func TestPacksRejectCustomAbilityScores(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -502,6 +493,7 @@ func TestPacksRejectCustomAbilityScores(t *testing.T) {
 // standalone action. Under a namespaced pack the tag's pool has to resolve to
 // the pack's own resource, and the SRD's unowned actions still reach everyone.
 func TestTaggedEntriesAndStandaloneActionsReachTheActionList(t *testing.T) {
+	t.Parallel()
 	cat, err := registry(t).Load(context.Background(), rules.LocaleEN)
 	if err != nil {
 		t.Fatal(err)

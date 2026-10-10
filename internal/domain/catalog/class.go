@@ -202,14 +202,13 @@ type FeatureSpecific struct {
 	ExpertiseOptions *rules.Choice
 
 	// SubfeatureOptions is a prompt to pick from a list of sub-features:
-	// Metamagic, Fighting Style, Eldritch Invocations.
+	// Metamagic, Fighting Style, Eldritch Invocations, a Battle Master's
+	// maneuvers. A pick that grows with level is one feature per tier, each
+	// with its own prompt over the same list.
 	SubfeatureOptions *rules.Choice
 
 	// EnemyTypeOptions and TerrainTypeOptions are the ranger's Favored Enemy
 	// and Natural Explorer prompts.
 	EnemyTypeOptions   *rules.Choice
 	TerrainTypeOptions *rules.Choice
-
-	// Invocations lists the warlock invocations this feature makes available.
-	Invocations []rules.Slug
 }

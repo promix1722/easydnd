@@ -9,6 +9,7 @@ import { rowActionLabels } from '@/test/rows'
 import type { Viewport } from '@/test/viewport'
 
 import { GroupScreen } from './GroupScreen'
+import { jsonResponse } from '@/test/api'
 
 /** A table with one of everything, seen through `role`'s eyes. */
 function groupAs(role: GroupRole): GroupDetail {
@@ -48,10 +49,7 @@ function stubFetch(group: GroupDetail) {
     'fetch',
     vi.fn(
       async () =>
-        new Response(JSON.stringify(group), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+        jsonResponse(group),
     ),
   )
 }

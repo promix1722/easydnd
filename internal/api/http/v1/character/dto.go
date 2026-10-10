@@ -33,10 +33,9 @@ type ClassLevel struct {
 
 // Character is a character and its log.
 type Character struct {
-	Revision    int               `json:"revision"`
-	Rules       helpers.RulesLock `json:"rules"`
-	Checkpoints []Checkpoint      `json:"checkpoints,omitempty"`
-	ID          string            `json:"id"`
+	Revision int               `json:"revision"`
+	Rules    helpers.RulesLock `json:"rules"`
+	ID       string            `json:"id"`
 
 	// Seq is the sequence the log currently ends at. It is the token an
 	// append or a truncation must state, so it is returned everywhere a
@@ -55,10 +54,6 @@ type Event struct {
 	Selections    []catalogapi.Option `json:"selections,omitempty"`
 	ID            string              `json:"id,omitempty"`
 	SchemaVersion int                 `json:"schemaVersion,omitempty"`
-	Resource      string              `json:"resource,omitempty"`
-	Amount        int                 `json:"amount,omitempty"`
-	Trigger       string              `json:"trigger,omitempty"`
-	Allocations   map[string]int      `json:"allocations,omitempty"`
 	Seq           int                 `json:"seq,omitempty"`
 	Type          string              `json:"type"`
 
@@ -119,6 +114,11 @@ type Sheet struct {
 	CustomOptions []CustomOption    `json:"customOptions,omitempty"`
 	ImportSession string            `json:"importSession,omitempty"`
 	CatalogNames  map[string]string `json:"catalogNames,omitempty"`
+	// Origins says what gave the character each trait and feature, both
+	// sides spelled as CatalogNames keys: "features:maneuver-parry" to
+	// "features:maneuvers", "features:second-wind" to "classes:fighter".
+	// Filled where Catalog is.
+	Origins map[string]string `json:"origins,omitempty"`
 	// Catalog is what the sheet's slugs mean, sent with them. Only the two
 	// sheet reads fill it; a write's echo of the sheet does not.
 	Catalog       *catalogapi.Resolved   `json:"catalog,omitempty"`
@@ -244,18 +244,10 @@ type Status struct {
 	Spellcasting      []Spellcasting `json:"spellcasting,omitempty"`
 }
 
-// CustomItem is a homebrew or DM-granted item with no catalogue entry.
-type CustomItem struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description,omitempty"`
-	Weight      float64 `json:"weight,omitempty"`
-}
-
 // ItemStack is a quantity of one item.
 type ItemStack struct {
-	Item   string      `json:"item,omitempty"`
-	Count  int         `json:"count"`
-	Custom *CustomItem `json:"custom,omitempty"`
+	Item  string `json:"item,omitempty"`
+	Count int    `json:"count"`
 }
 
 // Equipment is everything the character carries.
@@ -349,12 +341,6 @@ type ResourceParameter struct {
 	Number   int       `json:"number"`
 	Dice     string    `json:"dice,omitempty"`
 	Text     string    `json:"text,omitempty"`
-}
-type Checkpoint struct {
-	Index    int               `json:"index"`
-	Revision int               `json:"revision"`
-	Reason   string            `json:"reason"`
-	Rules    helpers.RulesLock `json:"rules"`
 }
 
 type Contribution struct {

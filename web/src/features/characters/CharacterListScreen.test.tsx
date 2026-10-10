@@ -56,6 +56,7 @@ function mockApi() {
         // PUT /v1/folders/order and DELETE /v1/folders/{id}.
         return json(null, 204)
       }
+      if (url.includes('/copy-links')) return json({ token: 'a-token', expires_at: '2026-01-02T00:00:00Z' }, 201)
       if (url.includes('/copy')) return json({ id: 'chr_000003', seq: 2, sheet: {} }, 201)
       if (method !== 'GET') return json(null, 204)
       return json({ characters: [ADA, BRAM] })
@@ -188,6 +189,21 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     await waitFor(() => {
       expect(requestsTo('/v1/characters').length).toBeGreaterThan(1)
     })
+  })
+
+  it('mints a link that hands out copies, with the token in the fragment', async () => {
+    renderList(viewport)
+    await screen.findByText('Ada')
+
+    await pressRowAction(viewport, 'Ada', 'Send a copy')
+
+    const dialog = await screen.findByRole('dialog')
+    await waitFor(() => {
+      expect(within(dialog).getByRole('textbox', { name: 'Link to a copy' })).toHaveValue(
+        `${window.location.origin}/characters/receive#a-token`,
+      )
+    })
+    onlyRequestTo(`/v1/characters/${ADA.id}/copy-links`, 'POST')
   })
 
   it('confirms before deleting a character', async () => {

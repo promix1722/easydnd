@@ -60,8 +60,8 @@ func (a *authenticator) coseKey(t *testing.T) []byte {
 	t.Helper()
 	x := make([]byte, 32)
 	y := make([]byte, 32)
-	a.key.PublicKey.X.FillBytes(x)
-	a.key.PublicKey.Y.FillBytes(y)
+	a.key.X.FillBytes(x)
+	a.key.Y.FillBytes(y)
 
 	encoded, err := cbor.Marshal(map[int]any{
 		1:  2,  // kty: EC2

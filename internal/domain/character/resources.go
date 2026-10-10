@@ -238,7 +238,11 @@ func (p *projector) applyPackRules() error {
 				p.answers.chosen(choice, func(o rules.Option) {
 					switch v := o.(type) {
 					case rules.RefOption:
-						p.grantPackRef(v.Ref)
+						if choice.Kind == rules.ChooseExpertise {
+							p.expertise = append(p.expertise, v.Ref.Slug)
+						} else {
+							p.grantPackRef(v.Ref)
+						}
 					case rules.AbilityBonusOption:
 						if _, pinned := p.finalAbilities[v.Ability]; !pinned {
 							p.state.Abilities.Scores[v.Ability] += v.Bonus

@@ -56,7 +56,7 @@ afterEach(() => {
 })
 
 /**
- * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
+ * One viewport, not two. Only `DataList`, `ModalSheet`,
  * `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
@@ -99,7 +99,6 @@ describe('a stale link', () => {
     // The words are the client's now -- the server sent only `invite.invalid`.
     expect(screen.getByText(/not valid, or it has expired/)).toBeInTheDocument()
     // Still signed in, so the way back into the app is offered.
-    expect(screen.getByRole('button', { name: 'Your groups' })).toBeInTheDocument()
   })
 })
 

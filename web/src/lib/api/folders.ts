@@ -35,7 +35,7 @@ export interface Folder {
  * first read, so a brand-new account already has one by the time this resolves.
  */
 export function listFolders(signal?: AbortSignal): Promise<{ folders: Folder[] }> {
-  return request<{ folders: Folder[] }>('/folders', signal ? { signal } : {})
+  return request<{ folders: Folder[] }>('/folders', { signal })
 }
 
 export function createFolder(name: string): Promise<Folder> {

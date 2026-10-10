@@ -17,6 +17,7 @@ import (
 )
 
 func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
+	t.Parallel()
 	r, owner, _, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
 	outsider := guest(t, r, helpers.CookieOptions{Secure: false})
 	raw, err := os.ReadFile("../../../internal/adapter/catalog/file/testdata/tactician.json")
@@ -135,6 +136,7 @@ func TestPackHTTPPrivateSelectionAndRetainedCharacter(t *testing.T) {
 }
 
 func TestAggregateSpellBrowsePrivateSourcesAndVersions(t *testing.T) {
+	t.Parallel()
 	r, owner, _, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
 	outsider := guest(t, r, helpers.CookieOptions{Secure: false})
 	raw, err := os.ReadFile("../../../internal/adapter/catalog/file/testdata/tactician.json")
@@ -205,6 +207,7 @@ func TestAggregateSpellBrowsePrivateSourcesAndVersions(t *testing.T) {
 }
 
 func TestZIPHTTPImportIsAtomicAndPreservesSources(t *testing.T) {
+	t.Parallel()
 	r, owner, _, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
 	before := send(t, r, owner, "GET", "/v1/packs", nil)
 	var initial struct {

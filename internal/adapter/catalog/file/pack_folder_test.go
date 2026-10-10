@@ -12,6 +12,7 @@ import (
 )
 
 func TestIndependentCoresReportSelectionConflict(t *testing.T) {
+	t.Parallel()
 	r, err := file.NewRegistry([]string{basePath()}, nil, "", file.PackFolder{Path: basePath(), ID: "another-core"})
 	if err != nil {
 		t.Fatal(err)
@@ -41,6 +42,7 @@ func TestIndependentCoresReportSelectionConflict(t *testing.T) {
 }
 
 func TestAutoloadIndependentCoreAndArchive(t *testing.T) {
+	t.Parallel()
 	archive := t.TempDir()
 	r, err := file.NewRegistry([]string{basePath()}, nil, archive, file.PackFolder{Path: basePath(), ID: "another-core"})
 	if err != nil {
@@ -79,6 +81,7 @@ func TestAutoloadIndependentCoreAndArchive(t *testing.T) {
 }
 
 func TestAutoloadRepositoryFolder(t *testing.T) {
+	t.Parallel()
 	p, err := file.LoadPack(addonPath())
 	if err != nil {
 		t.Fatal(err)
@@ -107,6 +110,7 @@ func TestAutoloadRepositoryFolder(t *testing.T) {
 }
 
 func TestAutoloadRejectsInvalidFolders(t *testing.T) {
+	t.Parallel()
 	for _, folder := range []file.PackFolder{
 		{Path: filepath.Join(t.TempDir(), "missing")},
 		{Path: t.TempDir()},

@@ -105,9 +105,10 @@ func TestAgentCancelFencesLateResponseAndOwner(t *testing.T) {
 		t.Fatal("session leaked across owners")
 	}
 	s, _ = a.Get(testOwner, s.ID)
-	s, err = a.Control(testOwner, s.ID, "stop", "", s.Revision)
-	if err != nil {
-		t.Fatal(err)
+	// From a view one step stale, as the page's usually is mid-turn.
+	s, err = a.Control(testOwner, s.ID, "stop", "", s.Revision-1)
+	if err != nil || s.Status != "paused" {
+		t.Fatal("stop from a stale view: ", s.Status, err)
 	}
 	close(release)
 	time.Sleep(20 * time.Millisecond)

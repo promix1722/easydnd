@@ -14,6 +14,13 @@
  */
 const STASH_KEY = 'easydnd.invite'
 
+/**
+ * Where a copy link's token is kept. A second key rather than a second module:
+ * the trip it has to survive is the same one, and a key of its own is all that
+ * stops it and a group invitation overwriting each other.
+ */
+export const COPY_LINK_STASH_KEY = 'easydnd.copyLink'
+
 /** The fragment, minus its '#'. */
 function fromHash(): string {
   return window.location.hash.replace(/^#/, '')
@@ -26,11 +33,11 @@ function fromHash(): string {
  * never reaches the screen -- the route renders the invitation prompt instead,
  * and by then the fragment has to be saved already.
  */
-export function captureInviteToken(): string {
+export function captureInviteToken(key = STASH_KEY): string {
   const token = fromHash()
-  if (token === '') return readInviteToken()
+  if (token === '') return readInviteToken(key)
   try {
-    window.sessionStorage.setItem(STASH_KEY, token)
+    window.sessionStorage.setItem(key, token)
   } catch {
     // A private-mode browser can refuse storage outright. The token is still
     // in the fragment, so everything works until they leave the page -- which
@@ -40,21 +47,50 @@ export function captureInviteToken(): string {
 }
 
 /** The token for this visit: whatever is in the URL, else what was saved. */
-export function readInviteToken(): string {
+export function readInviteToken(key = STASH_KEY): string {
   const token = fromHash()
   if (token !== '') return token
   try {
-    return window.sessionStorage.getItem(STASH_KEY) ?? ''
+    return window.sessionStorage.getItem(key) ?? ''
   } catch {
     return ''
   }
 }
 
 /** Forgets the invitation, once it has been accepted or declined. */
-export function clearInviteToken(): void {
+export function clearInviteToken(key = STASH_KEY): void {
   try {
-    window.sessionStorage.removeItem(STASH_KEY)
+    window.sessionStorage.removeItem(key)
   } catch {
     // Nothing was stored, so there is nothing to forget.
+  }
+}
+
+/** The token in a pasted invitation: what follows the link's '#', or the text itself when only the token was copied. */
+export function tokenOfLink(pasted: string): string {
+  const text = pasted.trim()
+  return text.slice(text.lastIndexOf('#') + 1).trim()
+}
+
+/** What a link offers: a seat in a group, or a copy of a character. */
+export type InvitationKind = 'group' | 'character'
+
+/**
+ * Which of the two a link is, from the link and then from the token.
+ *
+ * The path says it when there is one: the two kinds are sent as two addresses.
+ * A bare token says it itself -- it is a signed token whose `knd` claim the
+ * server checks, read here only to choose which preview to ask for. Reading it
+ * wrong costs a refused preview, never a wrong grant.
+ */
+export function kindOfLink(link: string): InvitationKind {
+  if (link.includes('/characters/receive')) return 'character'
+  if (link.includes('/groups/join')) return 'group'
+  try {
+    const payload = tokenOfLink(link).split('.')[1] ?? ''
+    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { knd?: string }
+    return claims.knd === 'copylink' ? 'character' : 'group'
+  } catch {
+    return 'group'
   }
 }

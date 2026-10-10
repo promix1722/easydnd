@@ -76,12 +76,12 @@ func (h *Handler) Create(c *gin.Context) {
 	// Read it back rather than assembling an empty roster here, so the
 	// response shape is produced by exactly one code path and cannot drift
 	// between "just created" and "opened a moment later".
-	h.detail(c, ctx, actor, created.ID, http.StatusCreated)
+	h.detail(ctx, c, actor, created.ID, http.StatusCreated)
 }
 
 // Get handles GET /v1/games/:id. Any member of the group it sits at.
 func (h *Handler) Get(c *gin.Context) {
-	h.detail(c, c.Request.Context(), h.actor(c), gameOf(c), http.StatusOK)
+	h.detail(c.Request.Context(), c, h.actor(c), gameOf(c), http.StatusOK)
 }
 
 // Rename handles PATCH /v1/games/:id. Owner or DM.
@@ -99,7 +99,7 @@ func (h *Handler) Rename(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, ctx, actor, id, http.StatusOK)
+	h.detail(ctx, c, actor, id, http.StatusOK)
 }
 
 // Delete handles DELETE /v1/games/:id. Owner or DM.
@@ -135,7 +135,7 @@ func (h *Handler) AddCharacters(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, ctx, actor, id, http.StatusOK)
+	h.detail(ctx, c, actor, id, http.StatusOK)
 }
 
 // RemoveCharacter handles DELETE /v1/games/:id/characters?character=.
@@ -150,7 +150,7 @@ func (h *Handler) RemoveCharacter(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.detail(c, ctx, actor, id, http.StatusOK)
+	h.detail(ctx, c, actor, id, http.StatusOK)
 }
 
 // detail writes a game and its roster, and is how every write here answers.
@@ -159,7 +159,7 @@ func (h *Handler) RemoveCharacter(c *gin.Context) {
 // shape a client gets back from creating, renaming and seating a character is
 // then produced by one code path, which is what stops the three from drifting.
 func (h *Handler) detail(
-	c *gin.Context, ctx context.Context, actor user.ID, id domain.ID, status int,
+	ctx context.Context, c *gin.Context, actor user.ID, id domain.ID, status int,
 ) {
 	g, role, roster, err := h.service.Get(ctx, actor, id, helpers.Locale(c))
 	if err != nil {

@@ -773,5 +773,111 @@
     "subraces": [
       "drow"
     ]
+  },
+  {
+    "slug": "variant-human-skills",
+    "races": [
+      "variant-human"
+    ],
+    "proficiencyOptions": {
+      "prompt": "variant-human-skills/proficiency/0",
+      "choose": 1,
+      "kind": "proficiency",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-acrobatics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-animal-handling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-arcana",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-athletics",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-deception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-history",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-insight",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-intimidation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-investigation",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-medicine",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-nature",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-perception",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-performance",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-persuasion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-religion",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-sleight-of-hand",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-stealth",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "proficiency:skill-survival",
+            "count": 1
+          }
+        ]
+      }
+    }
   }
 ]

@@ -49,6 +49,7 @@ func itemIconPack(t *testing.T) *PackDocument {
 }
 
 func TestSharedItemIconsArePackLocal(t *testing.T) {
+	t.Parallel()
 	base, err := LoadPack("../../../../data/pack/srd-5.1")
 	if err != nil {
 		t.Fatal(err)
@@ -70,6 +71,10 @@ func TestSharedItemIconsArePackLocal(t *testing.T) {
 	if !strings.HasPrefix(first.Icon, "data:image/webp;base64,") || first.Icon != shared.Icon || first.Icon != magic.Icon || first.Icon == other.Icon {
 		t.Fatal("shared artwork lost or mixed between packs")
 	}
+	// The palette a custom item picks from holds every label, sword included.
+	if c.ItemIcons["blade"] == "" || c.ItemIcons["sword"] == "" {
+		t.Fatalf("item icon palette = %d labels, want the packs' own", len(c.ItemIcons))
+	}
 	before, err := PackDigest(a)
 	if err != nil {
 		t.Fatal(err)
@@ -82,6 +87,7 @@ func TestSharedItemIconsArePackLocal(t *testing.T) {
 }
 
 func TestInvalidItemIcons(t *testing.T) {
+	t.Parallel()
 	for _, mode := range []string{"missing assets", "missing label", "qualified label", "bad label", "invalid image", "wrong size", "bad base64"} {
 		t.Run(mode, func(t *testing.T) {
 			p := itemIconPack(t)

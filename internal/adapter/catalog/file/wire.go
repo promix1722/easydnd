@@ -1,4 +1,5 @@
-// Package file loads the SRD compendium from a directory of JSON files.
+// Package file loads rule packs -- the SRD compendium first among them -- and
+// compiles them into catalogues.
 //
 // It is the only place in the project where catalogue JSON struct tags exist.
 // The domain forbids them, so the shapes below mirror the domain types with
@@ -17,22 +18,10 @@
 // touches a mechanics file and a partial locale falls back per key.
 //
 //	data/pack/srd-5.1/
-//	  manifest.json
+//	  pack-manifest.json
 //	  spells.json  races.json  classes.json  ...
 //	  i18n/en/spells.json  i18n/ru/spells.json  ...
 package file
-
-// Manifest describes a data directory: what produced it, and what it holds.
-type Manifest struct {
-	// Ruleset is the rules edition, e.g. "2014".
-	Ruleset string `json:"ruleset"`
-
-	// Source names where the data was derived from.
-	Source string `json:"source"`
-
-	// Locales lists the locale directories present under i18n/.
-	Locales []string `json:"locales"`
-}
 
 // Ref is a typed reference to another entry, written as "kind:slug".
 type Ref string
@@ -269,11 +258,10 @@ type Feature struct {
 	Parent        string         `json:"parent,omitempty"`
 	Prerequisites []Prerequisite `json:"prerequisites,omitempty"`
 
-	ExpertiseOptions   *Choice  `json:"expertiseOptions,omitempty"`
-	SubfeatureOptions  *Choice  `json:"subfeatureOptions,omitempty"`
-	EnemyTypeOptions   *Choice  `json:"enemyTypeOptions,omitempty"`
-	TerrainTypeOptions *Choice  `json:"terrainTypeOptions,omitempty"`
-	Invocations        []string `json:"invocations,omitempty"`
+	ExpertiseOptions   *Choice `json:"expertiseOptions,omitempty"`
+	SubfeatureOptions  *Choice `json:"subfeatureOptions,omitempty"`
+	EnemyTypeOptions   *Choice `json:"enemyTypeOptions,omitempty"`
+	TerrainTypeOptions *Choice `json:"terrainTypeOptions,omitempty"`
 	// Action tags the entry into the character's action list.
 	Action *ActionTag `json:"action,omitempty"`
 }

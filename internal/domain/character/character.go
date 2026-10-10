@@ -19,10 +19,10 @@ package character
 
 import (
 	"context"
-	"github.com/promix1722/easydnd/internal/domain/pack"
-	"maps"
 	"slices"
 	"strings"
+
+	"github.com/promix1722/easydnd/internal/domain/pack"
 
 	"github.com/promix1722/easydnd/internal/types"
 )
@@ -55,9 +55,7 @@ func (o OwnerID) String() string { return string(o) }
 // that happened to the character in the fiction, and it has no business
 // appearing in their history.
 type Character struct {
-	Revision    int
-	Checkpoints []Checkpoint
-	Commands    map[string]int
+	Revision int
 
 	ID     ID
 	Owner  OwnerID
@@ -82,6 +80,10 @@ type Summary struct {
 	Name   string
 	Level  int
 
+	// Public is whether its owner opened it. Only a table's roster fills it:
+	// that is the one listing with readers who are not the owner.
+	Public bool
+
 	// Classes is the class line, e.g. "Rogue 3" or "Cleric 2 / Wizard 1".
 	Classes []ClassLevel
 }
@@ -89,16 +91,26 @@ type Summary struct {
 // Log is the ordered history of a character: one entry per selection, in the
 // order the selections were made.
 //
-// "Append-only" is not the invariant, and never quite was. It is *append, drop
-// a suffix, or replace one entry and revalidate what follows* -- see Truncate
-// and Rebuild for the two shrinking halves. What holds throughout is that a
-// stored answer's meaning depends only on the entries *before* it, which is
-// why replacing one entry is safe to reason about and editing one in the
-// middle without revalidating what follows is not.
+// "Append-only" is not the invariant, and never quite was. It is *append, or
+// replace or remove one entry and revalidate what follows* -- see Rebuild.
+// That is what docs/dnd.md means when it says event sourcing makes level-up
+// reversible: reversible means the log can shrink.
+//
+// What holds throughout is that a stored answer's meaning depends only on the
+// entries *before* it. A replace leaves that prefix untouched, so every
+// earlier entry means exactly what it did; what it can invalidate is the
+// suffix, and the suffix is therefore re-checked entry by entry against the
+// log rebuilt so far. Rewriting an entry in place *without* that replay is
+// what stays forbidden: it would leave answers standing that the new prefix
+// never offered.
+//
+// The init event can never be dropped. A character with no opening state is
+// not an earlier version of itself, it is an unreadable record; removing a
+// character is Repository.Delete.
 //
 // DND.md fixes the storage shape: a character's log is small, so it is stored
 // as a single database record holding a JSON array. That is what makes the
-// optimistic-concurrency check in Repository.Append both necessary and cheap.
+// optimistic-concurrency check in Repository.Commit both necessary and cheap.
 type Log struct {
 	Events []Event
 }
@@ -107,8 +119,7 @@ type Log struct {
 func (l Log) Len() int { return len(l.Events) }
 
 // LastSeq returns the sequence number of the final event, or 0 for an empty
-// log. It is the value a caller passes to Repository.Append as the expected
-// sequence.
+// log.
 func (l Log) LastSeq() int {
 	if len(l.Events) == 0 {
 		return 0
@@ -135,39 +146,6 @@ func (l *Log) Append(events ...Event) error {
 		next++
 	}
 	l.Events = append(l.Events, staged...)
-	return nil
-}
-
-// Truncate drops every event after afterSeq.
-//
-// The log's invariant is not "append-only", which would make going back a
-// step impossible; it is *append, drop a suffix, or replace one entry and
-// revalidate what follows*. That is what docs/dnd.md means when it says event
-// sourcing is what makes level-up reversible: reversible means the log can
-// shrink.
-//
-// The reason the third of those is safe is the same reason an earlier draft
-// of this comment gave for forbidding it: a stored answer's meaning depends
-// on the entries *before* it. A replace leaves that prefix untouched, so
-// every earlier entry means exactly what it did; what it can invalidate is
-// the suffix, and the suffix is therefore re-checked entry by entry against
-// the log rebuilt so far. Rewriting an entry in place *without* that replay
-// is what stays forbidden, and it is forbidden for the original reason --
-// it would leave answers standing that the new prefix never offered.
-//
-// The init event can never be dropped. A character with no opening state is
-// not an earlier version of itself, it is an unreadable record; removing a
-// character is Repository.Delete.
-func (l *Log) Truncate(afterSeq int) error {
-	if afterSeq < 1 {
-		return types.NewValidationError(
-			"cannot truncate to sequence %d: the init event must remain", afterSeq)
-	}
-	if afterSeq > l.LastSeq() {
-		return types.NewValidationError(
-			"cannot truncate to sequence %d: the log ends at %d", afterSeq, l.LastSeq())
-	}
-	l.Events = l.Events[:afterSeq]
 	return nil
 }
 
@@ -238,7 +216,7 @@ func (l Log) Validate() error {
 		// point at or change apart from the first. The service refuses such
 		// an entry with a field error (see oneSelection there); this is the
 		// same rule for every writer that does not go through it -- an
-		// import, a migration, a repository handed a whole log -- so that no
+		// import, a repository handed a whole log -- so that no
 		// stored log can hold one.
 		for at := 1; at < len(e.Choices); at++ {
 			if !strings.HasPrefix(string(e.Choices[at].Prompt), string(e.Choices[0].Prompt)+"/") {
@@ -252,6 +230,17 @@ func (l Log) Validate() error {
 	return nil
 }
 
+// Query narrows and pages a listing of every stored character, whoever owns
+// it. The zero value of each filter means "do not filter on this".
+type Query struct {
+	Owners []OwnerID
+	// ID matches anywhere in the character id.
+	ID     string
+	Public *bool
+	Limit  int
+	Offset int
+}
+
 // Repository is the persistence port for characters. Implementations live
 // under internal/adapter/repository; internal/app picks the concrete one, and
 // that assignment is what proves conformance at compile time.
@@ -259,10 +248,7 @@ type Repository interface {
 	// Commit replaces a character's whole log under its revision, which is
 	// the write every application mutation goes through. See
 	// Character.Commit for what it checks and how the revision advances.
-	// command, when not empty, is an idempotency key: a second Commit
-	// carrying the same one is a *types.ValidationError. checkpoint, when
-	// not nil, is kept alongside the log.
-	Commit(context.Context, ID, int, Log, string, *Checkpoint) error
+	Commit(ctx context.Context, id ID, expectedRevision int, log Log) error
 
 	// CreateWithLog stores a new character together with its first log in
 	// one write, so that a failure cannot leave an empty character behind
@@ -291,6 +277,11 @@ type Repository interface {
 	// The application layer summarises; see Summarize.
 	List(ctx context.Context, owner OwnerID) ([]Character, error)
 
+	// Search lists characters matching q across every owner, newest first,
+	// and reports how many match in all. Nothing here asks who is calling:
+	// the one caller is the superadmin listing.
+	Search(ctx context.Context, q Query) ([]Character, int, error)
+
 	// SetFolder files a character in another folder. Implementations report
 	// a *types.NotFoundError when the character does not exist.
 	//
@@ -303,50 +294,9 @@ type Repository interface {
 	// nothing in the log and verifies nothing about the caller.
 	SetPublic(ctx context.Context, id ID, public bool) error
 
-	// Append adds events to a character's log, but only if the stored log
-	// still ends at expectedSeq. Implementations report a
-	// *types.ValidationError when it does not.
-	//
-	// The check is what makes a whole-log-in-one-record store safe: two
-	// clients editing the same character would otherwise read, modify and
-	// write the same blob, and the later write would silently discard the
-	// earlier one.
-	Append(ctx context.Context, id ID, expectedSeq int, events ...Event) error
-
-	// Truncate drops every event after afterSeq, but only if the stored log
-	// still ends at expectedSeq. It is the undo primitive: a build flow's
-	// Back button, and un-taking a level.
-	//
-	// Implementations report a *types.ValidationError for a stale
-	// expectedSeq, exactly as Append does, and for an afterSeq that would
-	// drop the init event or that is not actually in the past.
-	Truncate(ctx context.Context, id ID, expectedSeq, afterSeq int) error
-
-	// Rewrite replaces a character's whole log, but only if the stored log
-	// still ends at expectedSeq.
-	//
-	// It exists because replacing one entry can change every entry after it
-	// -- an answer the new prefix no longer offers is dropped, and the
-	// sequence numbers close up behind it -- so the write is not an append
-	// and not a truncation. The caller has already rebuilt and validated the
-	// log; implementations check the sequence, check Validate, and store.
-	//
-	// The concurrency check matters more here than anywhere else, because
-	// the write being discarded by a stale one is the entire history.
-	// Implementations report a *types.ValidationError for a stale
-	// expectedSeq or a log that does not validate.
-	Rewrite(ctx context.Context, id ID, expectedSeq int, log Log) error
-
 	// Delete removes a character. Implementations report a
 	// *types.NotFoundError when it does not exist.
 	Delete(ctx context.Context, id ID) error
-}
-
-// Checkpoint retains the complete pre-migration build and its exact lock.
-type Checkpoint struct {
-	Revision int
-	Log      Log
-	Reason   string
 }
 
 func (l Log) RulesLock() pack.Lock {
@@ -373,10 +323,10 @@ func (l Log) Clone() Log {
 				n := *c.Speed
 				c.Speed = &n
 			}
+			c.Item = c.Item.clone()
 			e.Custom = &c
 		}
 		e.RulesLock = e.RulesLock.Clone()
-		e.Allocations = maps.Clone(e.Allocations)
 		e.Choices = slices.Clone(e.Choices)
 		for j := range e.Choices {
 			e.Choices[j].Picks = slices.Clone(e.Choices[j].Picks)

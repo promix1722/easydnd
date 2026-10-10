@@ -15,7 +15,7 @@ log:
   level: debug
 
 data:
-  # Relative to the repo root, which is where `make run/server` runs.
+  # Relative to the repo root, which is where `make run/db` runs.
   srd_dir: data/pack/srd-5.1
   # Optional file-defined packs, for everybody; see docs/packs.md.
   pack_files: []
@@ -41,8 +41,7 @@ auth:
     - "dev:master"
 
   # NO session_secret here, deliberately. Development generates a random key per
-  # process and logs a warning: every restart signs everyone out, which matches
-  # the in-memory account store losing every account on the same restart.
+  # process and logs a warning: every restart signs everyone out.
   # Production refuses to start this way.
 
   # NO google block here either: the client id and secret do not belong in a
@@ -52,17 +51,20 @@ auth:
   # defaults to /v1/auth/sso/google/callback on this worktree's first origin --
   # `make ports` says which that is -- so register that exact URI on the client.
 
-# NO db section here, deliberately. With db.url unset the server runs on the
-# in-memory account store and logs a warning -- which is what lets `make
-# run/server`, `go test ./...` and `make verify` work on a machine with no
-# Postgres at all. Production refuses to start this way.
-#
-# For durable accounts locally, `make dev` -- it claims this worktree's ports,
-# starts a Postgres of its own, and hands the API that slot's port, origins and
-# database URL through the environment. Nothing per-worktree is written to a
+# NO db section here, deliberately: the database is this worktree's, and its
+# URL depends on the slot. `make dev` claims the worktree's ports, starts a
+# Postgres of its own, and hands the API that slot's port, origins and
+# database URL through the environment. The server does not start without
+# one. Nothing per-worktree is written to a
 # file; see docs/backend.md#running-more-than-one-worktree.
 
 # The AI Wizard. The key is EASYDND_AGENT_API_KEY in ~/config/easydnd/dev.env;
 # without it the feature is off. See docs/agent.md#which-model for the choice.
 agent:
   model: gpt-6-luna
+
+# The token is EASYDND_POSTHOG_TOKEN in the env file, entered by the operator.
+# Without it analytics is disabled; the public ingestion host stays here.
+analytics:
+  token: ""
+  host: "https://eu.i.posthog.com"

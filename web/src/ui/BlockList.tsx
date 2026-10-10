@@ -48,7 +48,7 @@ export interface BlockListProps {
  * button says "not just now"; some rows are facts, and a fact should not look
  * like a thing that failed to be pressable.
  *
- * Like `TabRow`, and unlike `ModalSheet`, `Columns` and `TabDeck`, its two
+ * Like `TabRow`, and unlike `ModalSheet` and `TabDeck`, its two
  * renderings are the same markup: a stack of bordered disclosures is right at 390px and at
  * 1440px, so there is no second tree to keep working and a test at one width
  * is a real test of the other.
@@ -79,7 +79,8 @@ export function BlockList({ items, open, onOpen, outlined = false }: BlockListPr
           }
         >
           {item.body === undefined ? (
-            <div style={{ padding: 'var(--mantine-spacing-md)' }}>{item.header}</div>
+            // The control's own padding, so a statement is as tall as the row that opens beside it.
+            <div style={{ padding: 'var(--mantine-spacing-sm) var(--mantine-spacing-md)' }}>{item.header}</div>
           ) : (
             <>
               <Accordion.Control>{item.header}</Accordion.Control>

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -126,7 +127,7 @@ func (r *UserRepository) ByCredentialID(ctx context.Context, credentialID []byte
 
 // load runs a header query and then the account's credentials and identities.
 //
-// Both run inside one read-only transaction so that a concurrent AddCredential
+// Both run inside one read-only transaction so that a concurrent write
 // cannot produce an account whose credential list is from a different instant
 // than its header.
 func (r *UserRepository) load(ctx context.Context, headerSQL, missMessage string, args ...any) (domain.User, error) {
@@ -510,4 +511,59 @@ func (r *UserRepository) SetImage(ctx context.Context, id domain.ID, image strin
 		return types.NewNotFoundError("account not found").Because("account.notFound")
 	}
 	return nil
+}
+
+// Search lists accounts matching q, newest first.
+//
+// It never selects users.image -- a portrait is up to 256 KB inline, and a
+// page of fifty would be most of the response.
+func (r *UserRepository) Search(ctx context.Context, q domain.Query) ([]domain.Listed, int, error) {
+	const where = ` FROM users u
+		WHERE (strpos(lower(u.id), $1) > 0 OR strpos(lower(u.display_name), $1) > 0 OR $1 = ''
+		       OR EXISTS (SELECT 1 FROM user_identities i
+		                   WHERE i.user_id = u.id AND strpos(lower(i.email), $1) > 0))
+		  AND ($2::text[] IS NULL OR u.id = ANY($2))
+		  AND ($3::boolean IS NULL OR (u.id LIKE '` + domain.AnonymousIDPrefix + `%') = $3)`
+	var ids []string
+	for _, id := range q.IDs {
+		ids = append(ids, string(id))
+	}
+	text := strings.ToLower(q.Text)
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT count(*)`+where, text, ids, q.Guests).Scan(&total); err != nil {
+		return nil, 0, types.WrapServerError(err, "count accounts")
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT u.id, u.display_name, u.created_at,
+		       COALESCE((SELECT i.email FROM user_identities i WHERE i.user_id = u.id
+		                  ORDER BY i.created_at, i.provider, i.subject LIMIT 1), ''),
+		       (SELECT count(*) FROM user_credentials c WHERE c.user_id = u.id),
+		       GREATEST((SELECT max(c.last_used_at) FROM user_credentials c WHERE c.user_id = u.id),
+		                (SELECT max(i.last_used_at) FROM user_identities i WHERE i.user_id = u.id))`+
+		where+` ORDER BY u.created_at DESC, u.id LIMIT $4 OFFSET $5`,
+		text, ids, q.Guests, max(q.Limit, 0), max(q.Offset, 0))
+	if err != nil {
+		return nil, 0, types.WrapServerError(err, "search accounts")
+	}
+	defer rows.Close()
+
+	out := make([]domain.Listed, 0)
+	for rows.Next() {
+		var row domain.Listed
+		var id string
+		var lastUsed *time.Time
+		if err := rows.Scan(&id, &row.DisplayName, &row.CreatedAt, &row.Email, &row.Passkeys, &lastUsed); err != nil {
+			return nil, 0, types.WrapServerError(err, "scan account")
+		}
+		row.ID = domain.ID(id)
+		row.Anonymous = strings.HasPrefix(id, domain.AnonymousIDPrefix)
+		if lastUsed != nil {
+			row.LastUsedAt = *lastUsed
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, types.WrapServerError(err, "search accounts")
+	}
+	return out, total, nil
 }

@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
 import { useT } from '@/lib/i18n'
 
@@ -19,6 +19,7 @@ import type { Section } from '@/ui'
 
 import { AccountActions } from './AccountActions'
 import { HEADER_BOX, SAFE_BOTTOM, SAFE_TOP } from './chrome'
+import { RouteOutlet } from './RouteOutlet'
 import { Wordmark } from './Wordmark'
 
 
@@ -104,52 +105,7 @@ export function MobileShell() {
    */
   const label = current ? t(current.label) : t('nav.menu')
 
-  return (
-    <AppShell
-      header={{ height: HEADER_BOX }}
-      padding="sm"
-      // The phone is the viewport this matters on: launched from a home
-      // screen there is no browser chrome over the notch, and none under the
-      // home indicator either. See ./chrome.ts.
-      styles={{ header: { paddingTop: SAFE_TOP }, main: { paddingBottom: SAFE_BOTTOM } }}
-    >
-      <AppShell.Header>
-        <Group h="100%" px="md" gap={4} wrap="nowrap">
-          <Wordmark caption={false} />
-
-          <Menu position="bottom-start" withinPortal>
-            <Menu.Target>
-              {/* This used to pass `size="sm"`, and the comment here explained
-                  that it was the one deliberate override of the theme's `xs`
-                  Button because 30px is under every guideline there is for the
-                  whole of a phone's navigation. The override is gone and the
-                  argument won: `ui/app.css` makes every control 44px below the
-                  breakpoint, so this one is thumb-sized by being ordinary.
-
-                  No aria-label -- the visible text is the name, and Menu.Target
-                  supplies aria-haspopup and aria-expanded on its own. */}
-              <Button
-                variant="subtle"
-                px="xs"
-                // The section's own glyph, which is also what the desktop
-                // navbar draws beside this label. It carries more weight here
-                // than it does there: this control is the only thing on a
-                // phone naming where you are, and `ui/Page` now drops the
-                // section crumb below `md` precisely because this says it --
-                // so the glyph is the section's mark on the page, not
-                // decoration. Absent on a path in no section, where the label
-                // falls back to "Menu" and there is no glyph to draw.
-                {...(current ? { leftSection: <current.icon size={16} /> } : {})}
-                rightSection={<IconChevronDown size={16} />}
-              >
-                {label}
-              </Button>
-            </Menu.Target>
-            {/* Real links rather than an onChange that navigates: the desktop
-                navbar's entries are links, and a section should be the same
-                kind of thing to a browser on both. */}
-            <Menu.Dropdown>
-              {SECTIONS.filter((section) => !section.desktopOnly).map((section) => (
+  const item = (section: Section) => (
                 <Menu.Item
                   key={section.to}
                   component={Link}
@@ -172,7 +128,47 @@ export function MobileShell() {
                 >
                   {t(section.label)}
                 </Menu.Item>
-              ))}
+  )
+
+  return (
+    <AppShell
+      header={{ height: HEADER_BOX }}
+      padding="sm"
+      // The phone is the viewport this matters on: launched from a home
+      // screen there is no browser chrome over the notch, and none under the
+      // home indicator either. See ./chrome.ts.
+      styles={{ header: { paddingTop: SAFE_TOP }, main: { paddingBottom: SAFE_BOTTOM } }}
+    >
+      <AppShell.Header>
+        <Group h="100%" px="md" gap={4} wrap="nowrap">
+          <Wordmark caption={false} />
+
+          <Menu position="bottom-start" withinPortal>
+            <Menu.Target>
+              {/* No aria-label -- the visible text is the name, and Menu.Target
+                  supplies aria-haspopup and aria-expanded on its own. */}
+              <Button
+                variant="subtle"
+                px="xs"
+                // The section's own glyph, which is also what the desktop
+                // navbar draws beside this label. It carries more weight here
+                // than it does there: this control is the only thing on a
+                // phone naming where you are, and `ui/Page` now drops the
+                // section crumb below `md` precisely because this says it --
+                // so the glyph is the section's mark on the page, not
+                // decoration. Absent on a path in no section, where the label
+                // falls back to "Menu" and there is no glyph to draw.
+                {...(current ? { leftSection: <current.icon size={16} /> } : {})}
+                rightSection={<IconChevronDown size={16} />}
+              >
+                {label}
+              </Button>
+            </Menu.Target>
+            {/* Real links rather than an onChange that navigates: the desktop
+                navbar's entries are links, and a section should be the same
+                kind of thing to a browser on both. */}
+            <Menu.Dropdown>
+              {SECTIONS.filter((section) => !section.desktopOnly && !section.belowRule).map(item)}
 
               {/* Below the divider because it is not a section. It has a page
                   of its own -- `/roll` -- but it owns no other paths, lights
@@ -199,6 +195,7 @@ export function MobileShell() {
                   account is who is looking rather than a part of the app, so it
                   is in this menu but not in the list above it. Ticked like its
                   neighbour, since being on it is the same kind of fact. */}
+              {SECTIONS.filter((section) => section.belowRule).map(item)}
               <Menu.Item
                 component={Link}
                 to={ACCOUNT.to}
@@ -221,7 +218,7 @@ export function MobileShell() {
           ui/backdrop.ts. Not behind this header: chrome keeps its own flat
           ground. */}
       <AppShell.Main style={PAGE_BACKDROP}>
-        <Outlet />
+        <RouteOutlet />
       </AppShell.Main>
 
     </AppShell>

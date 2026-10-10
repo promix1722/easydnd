@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 
 import { getCollection, getEntries } from './catalog'
+import { jsonResponse } from '@/test/api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -18,9 +19,9 @@ it('loads a whole spell-choice pool within the API slug limit', async () => {
 })
 
 it('keeps private selections separate and rechecks access for every collection read', async () => {
-  const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { headers: { 'Content-Type': 'application/json' } }))
+  const fetcher = vi.fn().mockResolvedValue(jsonResponse([]))
   // Each response body is consumed once, including consecutive reads of one scope.
-  fetcher.mockImplementation(async () => new Response(JSON.stringify([]), { headers: { 'Content-Type': 'application/json' } }))
+  fetcher.mockImplementation(async () => jsonResponse([]))
   vi.stubGlobal('fetch', fetcher)
   await getCollection('feats', '/packs/catalog?packs=private%401.0.0')
   await getCollection('feats', '/packs/catalog?packs=private%401.0.0')

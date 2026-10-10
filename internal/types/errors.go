@@ -209,9 +209,3 @@ func IsNotFound(err error) bool {
 	var target *NotFoundError
 	return errors.As(err, &target)
 }
-
-// IsNotImplemented reports whether err is, or wraps, a *NotImplementedError.
-func IsNotImplemented(err error) bool {
-	var target *NotImplementedError
-	return errors.As(err, &target)
-}

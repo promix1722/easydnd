@@ -1,4 +1,5 @@
 import { loginDevelopmentAccount, type DevelopmentAccount } from '@/lib/api'
+import { beginAnalyticsRedirectSignIn } from '@/lib/analytics'
 import { useAction } from '@/lib/useAction'
 import { useT } from '@/lib/i18n'
 
@@ -23,6 +24,7 @@ export function DevAccounts({ compact = false, currentName }: { compact?: boolea
     // A full navigation rebuilds auth and all resource/draft state for the new
     // session. The development cookie selector stays in this tab, so other
     // tabs keep their master/player identity.
+    beginAnalyticsRedirectSignIn()
     window.location.assign(destination ? `/games/${destination}` : '/games')
   }
 

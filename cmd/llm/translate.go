@@ -53,7 +53,8 @@ func translateCmd(args []string) error {
 	preserve := fs.String("preserve", "", "comma-separated leaf names to keep from -existing; blank keeps every populated leaf")
 	glossaryPath := fs.String("glossary", "", "flat JSON object of source terms to preferred translations")
 	dryRun := fs.Bool("dry-run", false, "print leaf and request counts; no network, no key")
-	fs.Parse(args)
+	// ExitOnError: Parse exits on a bad flag and has no error to return.
+	_ = fs.Parse(args)
 
 	if *in == "" || *out == "" || *to == "" {
 		return fmt.Errorf("translate: -in, -out and -to are all required")
@@ -300,9 +301,9 @@ func writeJSONAtomic(path string, value any) error {
 	tmpPath := tmp.Name()
 	ok := false
 	defer func() {
-		tmp.Close()
+		_ = tmp.Close()
 		if !ok {
-			os.Remove(tmpPath)
+			_ = os.Remove(tmpPath)
 		}
 	}()
 	if err := tmp.Chmod(0o644); err != nil {

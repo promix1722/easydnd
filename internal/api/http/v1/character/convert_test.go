@@ -2,13 +2,14 @@ package character_test
 
 import (
 	"context"
-	"path/filepath"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
+
+	"testing"
+
 	api "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
-	"testing"
 )
 
 func TestImportedCoinsUseReadableDenominations(t *testing.T) {
@@ -30,7 +31,7 @@ func TestSheetIncludesPortrait(t *testing.T) {
 // it means. The client used to download whole collections -- every spell in
 // the rules among them -- to do this lookup itself.
 func TestResolvedSheetNamesWhatItCarries(t *testing.T) {
-	cat, err := catalogfile.NewSource(filepath.Join("..", "..", "..", "..", "..", "data", "pack", "srd-5.1")).Load(context.Background(), rules.LocaleEN)
+	cat, err := filetest.SRD().Load(context.Background(), rules.LocaleEN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +40,7 @@ func TestResolvedSheetNamesWhatItCarries(t *testing.T) {
 		Identity: domain.Identity{Race: "elf", Background: "acolyte",
 			Classes: []domain.ClassLevel{{Class: "wizard", Subclass: "evocation", Level: 2}}},
 		Base:          domain.Base{Languages: []rules.Slug{"common"}},
-		Traits:        []rules.Slug{"darkvision"},
+		Traits:        []rules.Slug{"darkvision", "fleet-of-foot"},
 		Proficiencies: []rules.Slug{"daggers", "not-in-the-catalogue"},
 		Equipment:     domain.Equipment{Backpack: []domain.ItemStack{{Item: "dagger", Count: 2}, {Item: "dagger", Count: 1}}, Custom: "dagger"},
 		Spells: domain.Spellbook{Cantrips: []rules.Slug{"fire-bolt"},
@@ -62,6 +63,10 @@ func TestResolvedSheetNamesWhatItCarries(t *testing.T) {
 	got := sheet.Catalog
 	if got == nil || len(got.Skills) != 18 || len(got.Proficiencies) != 1 || len(got.Equipment) != 1 || len(got.Spells) != 2 {
 		t.Fatalf("resolved entries: %+v", got)
+	}
+	// The prose behind a row comes with it; a trait the SRD has no text for does not.
+	if len(got.Traits) != 1 || got.Traits[0].Slug != "darkvision" || len(got.Traits[0].Desc) == 0 {
+		t.Errorf("described traits: %+v", got.Traits)
 	}
 	if got.Spells[0].Name != "Fire Bolt" || got.Spells[0].Level != 0 {
 		t.Errorf("a resolved spell: %+v", got.Spells[0])

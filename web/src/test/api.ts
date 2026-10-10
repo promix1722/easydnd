@@ -10,3 +10,11 @@
 export function apiPath(url: string): string {
   return url.split('?')[0] ?? url
 }
+
+/** A JSON answer from the API, as a stubbed `fetch` hands it back. */
+export function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}

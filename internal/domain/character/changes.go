@@ -14,7 +14,7 @@ import (
 // doc comment promises, and the reasoning is worth stating: a change is the
 // escape hatch for a DM ruling or a homebrew adjustment, so a change that
 // does nothing is a ruling the table believes is in effect and is not. An
-// unreadable sheet is recoverable -- the client can truncate the log -- and a
+// unreadable sheet is recoverable -- the client can remove the entry -- and a
 // silently wrong one is not.
 func (p *projector) applyChanges(changes []seqChange) error {
 	for _, sc := range changes {

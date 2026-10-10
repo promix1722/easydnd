@@ -100,5 +100,5 @@ The loop stops, or holds off:
 `TestImportHTTPUploadResumeOwnershipAndPoll` drives every row of the table
 above over real HTTP, including an idle poll answered at once and one that
 follows a discard. `RunAgentStore` checks `Tail` on both stores.
-`ImportCharacterScreen.test.tsx` answers the poll from its `fetch` stub, and
+`AgentImportScreen.test.tsx` answers the poll from its `fetch` stub, and
 sets `polling.every` to zero so that no test waits for it.

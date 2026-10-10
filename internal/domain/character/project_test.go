@@ -37,6 +37,7 @@ func rogueSheet(t *testing.T) State {
 }
 
 func TestProjectRogueIdentityAndAbilities(t *testing.T) {
+	t.Parallel()
 	s := rogueSheet(t)
 
 	if s.Identity.Name != "Сахарок" {
@@ -75,6 +76,7 @@ func TestProjectRogueIdentityAndAbilities(t *testing.T) {
 }
 
 func TestProjectRogueStatusBlock(t *testing.T) {
+	t.Parallel()
 	s := rogueSheet(t)
 
 	if s.Status.ProficiencyBonus != 2 {
@@ -109,6 +111,7 @@ func TestProjectRogueStatusBlock(t *testing.T) {
 // ever names something worn: take the item off, by count or by list, and the
 // slot forgets it.
 func TestProjectCustomSlotFollowsWhatIsEquipped(t *testing.T) {
+	t.Parallel()
 	log := RogueLog(t)
 	cat := LoadCatalog(t)
 	custom := func(slugs ...rules.Slug) Event {
@@ -157,6 +160,7 @@ func TestProjectCustomSlotFollowsWhatIsEquipped(t *testing.T) {
 // Armor worn as a counted stack protects exactly as armor worn as a list
 // entry does. The import writes stacks, because a sheet prints quantities.
 func TestProjectArmorEquippedByCountSetsArmorClass(t *testing.T) {
+	t.Parallel()
 	log := RogueLog(t)
 	if err := log.Append(
 		Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue(nil)}}},
@@ -188,6 +192,7 @@ func TestProjectArmorEquippedByCountSetsArmorClass(t *testing.T) {
 // in list order, so "one fewer" that deleted and re-appended sent the row to
 // the bottom on every use.
 func TestProjectCountedWriteKeepsTheStackInPlace(t *testing.T) {
+	t.Parallel()
 	log := RogueLog(t)
 	if err := log.Append(
 		Event{Type: EventChange, Changes: []Change{
@@ -213,6 +218,7 @@ func TestProjectCountedWriteKeepsTheStackInPlace(t *testing.T) {
 // a barbarian adds Constitution while wearing no armor and keeps a shield, a
 // monk adds Wisdom and loses it to either. Nobody else gets anything.
 func TestProjectUnarmoredDefense(t *testing.T) {
+	t.Parallel()
 	// The installed pack, not the bare compendium: a rule is pack policy, and
 	// the plain source carries none.
 	cat := spellCatalog(t)
@@ -253,6 +259,7 @@ func TestProjectUnarmoredDefense(t *testing.T) {
 }
 
 func TestProjectRogueSkillsAndSaves(t *testing.T) {
+	t.Parallel()
 	s := rogueSheet(t)
 
 	// Ability modifier plus the proficiency contribution the export records.
@@ -314,6 +321,7 @@ func TestProjectRogueSkillsAndSaves(t *testing.T) {
 // what proves the seeding runs before the bonuses are derived rather than
 // leaving a row of zeroes.
 func TestProjectPutsEveryUntrainedSkillOnTheSheet(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 	s := rogueSheet(t)
 
@@ -358,6 +366,7 @@ func TestProjectPutsEveryUntrainedSkillOnTheSheet(t *testing.T) {
 // skills; now that every skill is in the map, that question answers yes for
 // all eighteen and the guard has to ask about the training level instead.
 func TestProjectGivesExpertiseOnlyToTrainedSkills(t *testing.T) {
+	t.Parallel()
 	var log Log
 	err := log.Append(oneQuestionEach(
 		Event{Type: EventInit, Changes: []Change{
@@ -417,6 +426,7 @@ func TestProjectGivesExpertiseOnlyToTrainedSkills(t *testing.T) {
 // score. The golden rogue never caught it because the acolyte background makes
 // them Perception-proficient.
 func TestProjectPassivePerceptionWithoutTheProficiency(t *testing.T) {
+	t.Parallel()
 	// A rogue who answered no proficiency prompts, with Wisdom 12 for +1.
 	s := skillLog(t)
 
@@ -432,6 +442,7 @@ func TestProjectPassivePerceptionWithoutTheProficiency(t *testing.T) {
 }
 
 func TestProjectRogueTraitsFeaturesAndSenses(t *testing.T) {
+	t.Parallel()
 	s := rogueSheet(t)
 
 	for _, trait := range []rules.Slug{"darkvision", "fey-ancestry", "skill-versatility"} {
@@ -472,6 +483,7 @@ func TestProjectRogueTraitsFeaturesAndSenses(t *testing.T) {
 }
 
 func TestProjectRogueResourcesAndEquipment(t *testing.T) {
+	t.Parallel()
 	s := rogueSheet(t)
 
 	if len(s.Resources.HitDice) != 1 {
@@ -549,6 +561,7 @@ func TestProjectRogueResourcesAndEquipment(t *testing.T) {
 // gone wrong, since the SRD offers a roll -- the fixed average is used
 // precisely so that reading a sheet twice cannot change it.
 func TestProjectIsDeterministic(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 	log := RogueLog(t)
 
@@ -573,6 +586,7 @@ func TestProjectIsDeterministic(t *testing.T) {
 // the rules derive -- otherwise the projection would recompute the ruling
 // away.
 func TestChangeOverridesDerivedHitPoints(t *testing.T) {
+	t.Parallel()
 	log := RogueLog(t)
 	if err := log.Append(Event{
 		Type: EventChange,
@@ -597,6 +611,7 @@ func TestChangeOverridesDerivedHitPoints(t *testing.T) {
 // a ruling the table believes is in effect and is not is worse than a sheet
 // that refuses to render.
 func TestProjectRejectsAnUnresolvablePath(t *testing.T) {
+	t.Parallel()
 	log := RogueLog(t)
 	if err := log.Append(Event{
 		Type:    EventChange,
@@ -611,29 +626,11 @@ func TestProjectRejectsAnUnresolvablePath(t *testing.T) {
 	}
 }
 
-// The formula and the compendium must agree wherever the compendium has an
-// opinion, which is every single-class case.
-func TestProficiencyBonusMatchesTheData(t *testing.T) {
-	cat := LoadCatalog(t)
-
-	for _, class := range cat.Classes.All() {
-		for level := 1; level <= 20; level++ {
-			row, ok := cat.ClassLevel(class.Slug, level)
-			if !ok {
-				continue
-			}
-			if got := proficiencyBonus(level); got != row.ProficiencyBonus {
-				t.Errorf("%s level %d: formula = %d, compendium = %d",
-					class.Slug, level, got, row.ProficiencyBonus)
-			}
-		}
-	}
-}
-
 // The action list is derived from what is wielded and what the pack tagged.
 // The actions a pack gives everybody live in its mechanics, which this
 // package's bare Source does not read; the file adapter's tests cover them.
 func TestProjectActionsComeFromWeaponsAndTags(t *testing.T) {
+	t.Parallel()
 	log := RogueLog(t)
 	if err := log.Append(Event{Type: EventChange, Changes: []Change{
 		{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue([]rules.Slug{"rapier", "shortbow", "greataxe"})},
@@ -683,6 +680,7 @@ func TestProjectActionsComeFromWeaponsAndTags(t *testing.T) {
 // re-applied on top of it: before this, every rewrite of the equipped list
 // gained one more copy of the kit's weapon.
 func TestKitWornItemsAreReplacedByAnEquippedWrite(t *testing.T) {
+	t.Parallel()
 	log := RogueLog(t)
 	for range 3 {
 		if err := log.Append(Event{Type: EventChange, Changes: []Change{

@@ -27,6 +27,7 @@ func portraitPNG(t *testing.T, width, height int) string {
 }
 
 func TestPortraitLifecycle(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 	portrait := portraitPNG(t, 256, 256)
@@ -88,6 +89,7 @@ func TestPortraitLifecycle(t *testing.T) {
 }
 
 func TestRejectInvalidPortraitsWithoutChangingCharacter(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 	c := mustCreate(t, s)
@@ -116,6 +118,7 @@ func TestRejectInvalidPortraitsWithoutChangingCharacter(t *testing.T) {
 }
 
 func TestPortraitJPEGAndWebP(t *testing.T) {
+	t.Parallel()
 	var jpegBytes bytes.Buffer
 	if err := jpeg.Encode(&jpegBytes, image.NewRGBA(image.Rect(0, 0, 16, 16)), nil); err != nil {
 		t.Fatal(err)

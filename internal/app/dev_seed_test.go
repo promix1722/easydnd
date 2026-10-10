@@ -42,9 +42,11 @@ func developmentAppAtPort(t *testing.T, env, port string) *App {
 	cfg.Env = env
 	cfg.HTTP.Port = port
 	cfg.Data.SRDDir = filepath.Join("..", "..", "data", "pack", "srd-5.1")
-	// Development's optional local dataset is not a dependency of these tests.
+	// Development's optional local datasets are not a dependency of these
+	// tests, and each one a boot carries is two more locales to compile.
 	cfg.Data.AutoloadPacks = nil
-	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
+	cfg.Data.PackFiles = nil
+	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{InMemory: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,6 +98,7 @@ func devSignIn(t *testing.T, a *App, account string) (*http.Cookie, []string) {
 }
 
 func TestDevelopmentSeedsAndRoleSwitching(t *testing.T) {
+	t.Parallel()
 	a := developmentApp(t, config.EnvDevelopment)
 	master, games := devSignIn(t, a, "master")
 	if len(games) != 2 {
@@ -158,6 +161,7 @@ func TestDevelopmentSeedsAndRoleSwitching(t *testing.T) {
 }
 
 func TestDevelopmentLoginAbsentInProduction(t *testing.T) {
+	t.Parallel()
 	a := developmentApp(t, config.EnvProduction)
 	rec := devRequest(t, a, "POST", "/v1/dev/login", map[string]any{"account": "master"}, nil)
 	if rec.Code != http.StatusNotFound || len(rec.Result().Cookies()) != 0 {
@@ -166,6 +170,7 @@ func TestDevelopmentLoginAbsentInProduction(t *testing.T) {
 }
 
 func TestDevelopmentLoginKeepsSameOriginGuard(t *testing.T) {
+	t.Parallel()
 	a := developmentApp(t, config.EnvDevelopment)
 	for _, origin := range []string{"https://elsewhere.example", "http://localhost:5173"} {
 		r := httptest.NewRequest("POST", "/v1/dev/login", bytes.NewBufferString(`{"account":"master"}`))
@@ -184,6 +189,7 @@ func TestDevelopmentLoginKeepsSameOriginGuard(t *testing.T) {
 // One browser cookie jar, two ports and three tabs. This catches both the
 // cross-port overwrite and the stale UI silently acting as another player.
 func TestDevelopmentBrowserSessionIsolation(t *testing.T) {
+	t.Parallel()
 	first := developmentAppAtPort(t, config.EnvDevelopment, "18082")
 	second := developmentAppAtPort(t, config.EnvDevelopment, "18083")
 	jar, err := cookiejar.New(nil)
@@ -255,6 +261,7 @@ func TestDevelopmentBrowserSessionIsolation(t *testing.T) {
 
 // A default core with another namespace must not invalidate the SRD demo log.
 func TestDevelopmentSeedWithAnotherDefaultPack(t *testing.T) {
+	t.Parallel()
 	cfg, err := config.Load(filepath.Join("..", "..", "config.dev.yaml"))
 	if err != nil {
 		t.Fatal(err)
@@ -266,7 +273,8 @@ func TestDevelopmentSeedWithAnotherDefaultPack(t *testing.T) {
 	}
 	cfg.Data.AutoloadPacks = []config.PackFolder{{Path: cfg.Data.SRDDir, ID: "another-core"}}
 	cfg.Data.DefaultPacks = map[string]string{"another-core": base.Manifest.Version}
-	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
+	cfg.Data.PackFiles = nil
+	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{InMemory: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,6 +291,7 @@ func TestDevelopmentSeedWithAnotherDefaultPack(t *testing.T) {
 // linked them to a context the overlay was not in. Default packs are browsed
 // together, under the default rules.
 func TestCompendiumBrowsesDefaultPacksTogether(t *testing.T) {
+	t.Parallel()
 	cfg, err := config.Load(filepath.Join("..", "..", "config.dev.yaml"))
 	if err != nil {
 		t.Fatal(err)
@@ -312,7 +321,7 @@ func TestCompendiumBrowsesDefaultPacksTogether(t *testing.T) {
 	}
 	cfg.Data.PackFiles = []string{overlay}
 	cfg.Data.AutoloadPacks = nil
-	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
+	a, err := New(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{InMemory: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,6 +342,7 @@ func TestCompendiumBrowsesDefaultPacksTogether(t *testing.T) {
 // seed. It must find the characters and games already there rather than add a
 // second party beside them.
 func TestDevelopmentSeedIsIdempotent(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	srdDir := filepath.Join("..", "..", "data", "pack", "srd-5.1")
 	base, err := catalogfile.LoadPack(srdDir)

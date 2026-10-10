@@ -13,6 +13,7 @@ import (
 // The promise the whole feature rests on: an account that has never touched a
 // folder still has one, and asking is what makes it.
 func TestFoldersMaterialisesTheDefault(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -38,6 +39,7 @@ func TestFoldersMaterialisesTheDefault(t *testing.T) {
 }
 
 func TestCreateFilesIntoTheDefaultWhenNoFolderIsNamed(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -56,6 +58,7 @@ func TestCreateFilesIntoTheDefaultWhenNoFolderIsNamed(t *testing.T) {
 }
 
 func TestCreateRefusesAFolderTheOwnerDoesNotHave(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -72,6 +75,7 @@ func TestCreateRefusesAFolderTheOwnerDoesNotHave(t *testing.T) {
 }
 
 func TestCreateFolderRejectsAnEmptyName(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 
 	_, err := s.CreateFolder(context.Background(), testOwner, "   ")
@@ -85,6 +89,7 @@ func TestCreateFolderRejectsAnEmptyName(t *testing.T) {
 }
 
 func TestCreateFolderTrimsTheName(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 
 	created, err := s.CreateFolder(context.Background(), testOwner, "  Campaign  ")
@@ -97,6 +102,7 @@ func TestCreateFolderTrimsTheName(t *testing.T) {
 }
 
 func TestRenameFolderIsRefusedToAnotherOwner(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -111,6 +117,7 @@ func TestRenameFolderIsRefusedToAnotherOwner(t *testing.T) {
 }
 
 func TestMoveCharacterFilesItElsewhere(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -152,6 +159,7 @@ func TestMoveCharacterFilesItElsewhere(t *testing.T) {
 // The check that matters: without it a player could file their own character
 // into somebody else's folder, where it would vanish from their own listing.
 func TestMoveCharacterRefusesAnotherOwnersFolder(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -175,6 +183,7 @@ func TestMoveCharacterRefusesAnotherOwnersFolder(t *testing.T) {
 }
 
 func TestMoveCharacterIsRefusedToAnotherOwner(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -185,6 +194,7 @@ func TestMoveCharacterIsRefusedToAnotherOwner(t *testing.T) {
 }
 
 func TestCopyDuplicatesTheLogAndSuffixesTheName(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -231,6 +241,7 @@ func TestCopyDuplicatesTheLogAndSuffixesTheName(t *testing.T) {
 }
 
 func TestCopyCanLandInAnotherFolder(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -250,6 +261,7 @@ func TestCopyCanLandInAnotherFolder(t *testing.T) {
 }
 
 func TestCopyIsRefusedToAnotherOwner(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -263,6 +275,7 @@ func TestCopyIsRefusedToAnotherOwner(t *testing.T) {
 // The destructive one. Deleting a folder takes the characters filed in it, and
 // this is the test that says so out loud.
 func TestDeleteFolderTakesItsCharactersWithIt(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -299,6 +312,7 @@ func TestDeleteFolderTakesItsCharactersWithIt(t *testing.T) {
 }
 
 func TestDeleteFolderRefusesTheDefault(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -321,6 +335,7 @@ func TestDeleteFolderRefusesTheDefault(t *testing.T) {
 }
 
 func TestDeleteFolderIsRefusedToAnotherOwner(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -334,6 +349,7 @@ func TestDeleteFolderIsRefusedToAnotherOwner(t *testing.T) {
 }
 
 func TestListRefusesAFolderTheCallerDoesNotOwn(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -350,6 +366,7 @@ func TestListRefusesAFolderTheCallerDoesNotOwn(t *testing.T) {
 }
 
 func TestReorderFoldersSetsTheListing(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -386,6 +403,7 @@ func TestReorderFoldersSetsTheListing(t *testing.T) {
 // take. Naming it is a 400 rather than a 404 for the same reason deleting it
 // is: it exists, the caller owns it, and this particular folder does not move.
 func TestReorderFoldersRefusesTheDefault(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -409,6 +427,7 @@ func TestReorderFoldersRefusesTheDefault(t *testing.T) {
 // folder id the caller does not own is one that, as far as they can tell,
 // does not exist.
 func TestReorderFoldersIsRefusedAnotherOwnersFolder(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 
@@ -430,6 +449,7 @@ func TestReorderFoldersIsRefusedAnotherOwnersFolder(t *testing.T) {
 // An account whose only folder is the default has nothing to order, and an
 // empty body is the honest way to say so rather than an error.
 func TestReorderFoldersAcceptsNothingToOrder(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	ctx := context.Background()
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { listPacks, resolvePacks, type RulesLock, type PackRelease } from '@/lib/api/packs'
-import { describeError } from '@/lib/api'
+import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import { useT } from '@/lib/i18n'
 import { Alert, BlockList, Button, Group, Stack, Text } from '@/ui'
@@ -9,7 +9,6 @@ import { Alert, BlockList, Button, Group, Stack, Text } from '@/ui'
 export function PackSelector({
   value,
   onChange,
-  disabled = false,
   finalized = false,
   onDirtyChange,
   disclosure,
@@ -17,7 +16,6 @@ export function PackSelector({
 }: {
   value?: RulesLock | undefined
   onChange: (lock: RulesLock) => void
-  disabled?: boolean
   finalized?: boolean
   onDirtyChange?: (dirty: boolean) => void
   disclosure?: { open: boolean; onOpen: (open: boolean) => void }
@@ -32,8 +30,6 @@ export function PackSelector({
     setShown(signature)
     setRoots(null)
   }
-  const [failure, setFailure] = useState('')
-  const [pending, setPending] = useState(false)
   const surfaceRef = useRef<HTMLDivElement>(null)
   const open = disclosure?.open ?? true
   const focusOnOpen = disclosure?.open ?? false
@@ -46,30 +42,26 @@ export function PackSelector({
     return () => cancelAnimationFrame(frame)
   }, [focusOnOpen, list.data])
   const selected = roots ?? value?.packs ?? list.data?.defaultRules?.packs ?? []
+  const applying = useAction(async () => {
+    onChange(await resolvePacks(selected))
+    onDirtyChange?.(false)
+  })
+  const { pending, error: failure } = applying
   function select(next: PackRelease[]) {
     if (finalized) return
     setRoots(next)
-    setFailure('')
+    applying.reset()
     onDirtyChange?.(true)
   }
   async function apply() {
     if (finalized) return
-    setPending(true)
-    setFailure('')
-    try {
-      onChange(await resolvePacks(selected))
-      onDirtyChange?.(false)
-    } catch (e) {
-      setFailure(describeError(t, e))
-    } finally {
-      setPending(false)
-    }
+    await applying.run()
   }
   // Finalized is the same list with everything locked, so editing a
   // character shows the form it was created on.
   const form = (
     <Stack gap="md" ref={surfaceRef}>
-      {list.error && <Alert>{describeError(t, list.error)}</Alert>}
+      {list.error && <Alert>{list.error}</Alert>}
       <Stack gap="xs">
         {(list.data?.packs ?? [])
           .filter((p) => (!p.archived || selected.some((r) => r.id === p.id)) && p.releases.length > 0)
@@ -83,7 +75,7 @@ export function PackSelector({
                 justify="flex-start"
                 h="auto"
                 py="xs"
-                disabled={disabled || pending || finalized}
+                disabled={pending || finalized}
                 onClick={() => {
                   const remaining = selected.filter((r) => r.id !== p.id)
                   select(chosen ? remaining : [...remaining, release])
@@ -96,13 +88,13 @@ export function PackSelector({
       </Stack>
       {!finalized && <Group>
         <Button
-          disabled={disabled || selected.length === 0 || list.data === null}
+          disabled={selected.length === 0 || list.data === null}
           loading={pending}
           onClick={() => void apply()}
         >
           {selected.length > 0 ? t('answer.confirm') : t('prompt.chooseMore', { count: 1 })}
         </Button>
-        {selected.length > 0 && <Button variant="subtle" disabled={disabled || pending} onClick={() => select([])}>
+        {selected.length > 0 && <Button variant="subtle" disabled={pending} onClick={() => select([])}>
           {t('prompt.clear')}
         </Button>}
       </Group>}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 
-import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent } from '@/lib/api'
+import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent, writeChanges } from '@/lib/api'
 import { CatalogScope } from '@/lib/api/catalogScope'
 import { characterPath } from '@/lib/api/characters'
 import type { Change, Sheet } from '@/lib/api'
@@ -77,12 +77,8 @@ export function CharacterSheetScreen() {
     return { sheet: projected, complete: prompts?.complete ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL }
   })
 
-  // Read the log's head at the moment of writing: the sheet does not carry a
-  // sequence, and an edit made in another tab should conflict rather than vanish.
   const editEquipment = useAction(async (changes: Change[]) => {
-    if (changes.length === 0) return
-    const log = await getEvents(id)
-    await appendEvents(id, log.seq, [{ type: 'change', changes }], log.revision ?? log.seq)
+    await writeChanges(id, changes)
     sheet.refresh()
   })
 
@@ -111,7 +107,7 @@ export function CharacterSheetScreen() {
   return (
     <Page
       mark={<Avatar image={identity.image} fallback={characterAvatar(identity.classes)} size={48} />}
-      trail={[{ label: identity.name || 'Unnamed' }]}
+      trail={[{ label: identity.name || t('common.unnamed') }]}
       /*
        * A mark, and only while the character is unfinished.
        *
@@ -142,7 +138,7 @@ export function CharacterSheetScreen() {
        * that answers it rather than to the one that reads the character.
        */
       actions={
-        <Group gap="xs" wrap="nowrap">
+        <Group gap="xs">
           {/* The chat this character was made in, while the server still has it. */}
           {s.importSession && (
             <Button component={Link} variant="light" to={`/ai-wizard/${encodeURIComponent(s.importSession)}`}>

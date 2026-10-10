@@ -686,15 +686,6 @@
   },
   {
     "slug": "custom-background",
-    "languageOptions": {
-      "prompt": "custom-background/language/0",
-      "choose": 2,
-      "kind": "language",
-      "from": {
-        "kind": "collection",
-        "collection": "language"
-      }
-    },
     "feature": "custom-background-choose-a-feature"
   },
   {

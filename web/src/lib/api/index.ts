@@ -26,6 +26,8 @@ export {
   unlinkProvider,
   setProfileImage,
 } from './auth'
+export { getAdminPlayerPacks, listAdminCharacters, listAdminPacks, listAdminPlayers, setAdminPlayerPacks } from './admin'
+export type { AdminCharacter, AdminFilters, AdminPack, AdminPlayer } from './admin'
 export type { AuthProviderInfo, SessionCredential, SessionIdentity, SessionUser } from './auth'
 
 // The compendium.
@@ -46,6 +48,7 @@ export type {
   CollectionInfo,
   Entry,
   Item,
+  ItemFilters,
   ItemHit,
   ItemPage,
   Manifest,
@@ -70,10 +73,14 @@ export type { Folder } from './folders'
 // Characters.
 export {
   appendEvents,
+  writeChanges,
   autoEquip,
   getVisibility,
   setVisibility,
+  acceptCopyLink,
   copyCharacter,
+  createCopyLink,
+  previewCopyLink,
   createCharacter,
   deleteCharacter,
   deleteEvent,
@@ -84,7 +91,6 @@ export {
   moveCharacter,
   replaceEvent,
   reviseEvents,
-  truncateEvents,
 } from './characters'
 export type {
   Abilities,
@@ -142,6 +148,9 @@ export {
   addToGame,
   patchGameEntry,
   restGame,
+  grantItem,
+  adjustCoins,
+  giveItem,
   deleteGameEntry,
   addGameMonster,
   orderGameEntries,
@@ -152,10 +161,10 @@ export {
   getSharedSheet,
   listGames,
   listTable,
-  removeFromGame,
   renameGame,
   shareCharacter,
   unshareCharacter,
+  grantCustomItem,
 } from './games'
 export type { GameDetail, GameSummary, TableCharacter, GameEntry, EntryPool, EntryStats, EntryPatch } from './games'
 

@@ -10,6 +10,7 @@ import { setupUser } from '@/test/user'
 import type { Viewport } from '@/test/viewport'
 
 import { GameScreen } from './GameScreen'
+import { jsonResponse } from '@/test/api'
 
 function gameAs(role: GroupRole): GameDetail {
   return {
@@ -43,10 +44,7 @@ function renderGame(viewport: Viewport, game: GameDetail) {
     'fetch',
     vi.fn(
       async () =>
-        new Response(JSON.stringify(game), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+        jsonResponse(game),
     ),
   )
   return renderAt(
@@ -168,7 +166,7 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     const fetch = vi.fn(async (_url: unknown, options?: RequestInit) => {
       const body = options?.body ? JSON.parse(options.body as string) : {}
       for (const pool of game.entries[0]!.resources!) pool.used = options?.method === 'POST' ? 0 : body.used?.[pool.id] ?? pool.used
-      return new Response(JSON.stringify(game), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return jsonResponse(game)
     })
     vi.stubGlobal('fetch', fetch)
     const user = setupUser()
@@ -201,21 +199,49 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
         const patch = JSON.parse(options.body as string)
         Object.assign(game.entries[0]!, patch)
       }
-      return new Response(JSON.stringify(game), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return jsonResponse(game)
     })
     vi.stubGlobal('fetch', fetch)
-    await pressRowAction(viewport, 'Ada', 'Edit')
+    await pressRowAction(viewport, 'Ada', 'HP')
     const user = setupUser()
     await user.clear(screen.getByLabelText('Hit points'))
     await user.type(screen.getByLabelText('Hit points'), '18')
-    await user.type(screen.getByLabelText('Initiative'), '17')
+    // Initiative has an entry of its own in the menu; this dialog is what a hit changes.
+    expect(within(screen.getByRole('dialog')).queryByLabelText('Initiative')).not.toBeInTheDocument()
     expect(within(screen.getByRole('dialog')).queryByRole('textbox', { name: 'Tags' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Apply' }))
     await waitFor(() => expect(fetch).toHaveBeenCalled())
     const request = fetch.mock.calls.find(([, options]) => options?.method === 'PATCH')!
     expect(String(request[0])).toMatch(/\/games\/gam_1\/entries\/pc_chr_1\?locale=en$/)
-    expect(JSON.parse(request[1]!.body as string)).toEqual({ hp: 18, initiative: 17 })
+    expect(JSON.parse(request[1]!.body as string)).toEqual({ hp: 18 })
     await waitFor(() => expect(within(screen.getByRole('article', { name: 'Ada' })).getByText('HP').nextElementSibling).toHaveTextContent(shown(viewport, 18)))
+  })
+
+  it('sets initiative from its own menu entry, and clears it when emptied', async () => {
+    const game = gameAs('player')
+    game.entries[0]!.can_edit = true
+    renderGame(viewport, game)
+    await screen.findByText('Ada')
+    const fetch = vi.fn(async (_url: unknown, options?: RequestInit) => {
+      if (options?.method === 'PATCH') Object.assign(game.entries[0]!, JSON.parse(options.body as string))
+      return jsonResponse(game)
+    })
+    vi.stubGlobal('fetch', fetch)
+    const sent = () => fetch.mock.calls.filter(([, options]) => options?.method === 'PATCH').map(([, options]) => JSON.parse(options!.body as string))
+    const user = setupUser()
+
+    await pressRowAction(viewport, 'Ada', 'Initiative')
+    const dialog = within(screen.getByRole('dialog'))
+    expect(dialog.queryByLabelText('Hit points')).not.toBeInTheDocument()
+    await user.type(dialog.getByLabelText('Initiative'), '17')
+    await user.click(dialog.getByRole('button', { name: 'Apply' }))
+    await waitFor(() => expect(sent()).toEqual([{ initiative: 17 }]))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    await pressRowAction(viewport, 'Ada', 'Initiative')
+    await user.clear(screen.getByLabelText('Initiative'))
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+    await waitFor(() => expect(sent()).toEqual([{ initiative: 17 }, { initiative: null }]))
   })
 
   it('keeps typed drafts during refresh and disables saving when the master locks the entry', async () => {
@@ -223,7 +249,7 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     game.entries[0]!.can_edit = true
     renderGame(viewport, game)
     await screen.findByText('Ada')
-    await pressRowAction(viewport, 'Ada', 'Edit')
+    await pressRowAction(viewport, 'Ada', 'HP')
     const user = setupUser()
     await user.clear(screen.getByLabelText('Hit points'))
     await user.type(screen.getByLabelText('Hit points'), '18')
@@ -282,7 +308,7 @@ describe.each(['mobile', 'desktop'] as const)('tracker ordering and layout (%s)'
     const user = setupUser()
     await user.click(screen.getByRole('button', { name: 'Actions for Ada' }))
     const menu = within(await screen.findByRole('menu'))
-    expect(menu.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument()
+    expect(menu.getByRole('menuitem', { name: 'HP' })).toBeInTheDocument()
     expect(menu.getByRole('menuitem', { name: 'Lock' })).toBeInTheDocument()
     expect(menu.getByRole('menuitem', { name: 'Move down' })).toBeInTheDocument()
     expect(menu.queryByRole('menuitem', { name: 'Move up' })).not.toBeInTheDocument()
@@ -429,7 +455,7 @@ describe.each(['mobile', 'desktop'] as const)('tracker ordering and layout (%s)'
     await screen.findByText('Ada')
     expect(screen.queryByRole('button', { name: /^Drag to reorder / })).not.toBeInTheDocument()
     await setupUser().click(screen.getByRole('button', { name: 'Actions for Ada' }))
-    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'HP' })).toBeInTheDocument()
     expect(screen.queryByRole('menuitem', { name: /^Move / })).not.toBeInTheDocument()
   })
 })
@@ -575,7 +601,7 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     game.entries[0]!.temp_hp = 3
     renderGame(viewport, game)
     await screen.findByText('Ada')
-    await pressRowAction(viewport, 'Ada', 'Edit')
+    await pressRowAction(viewport, 'Ada', 'HP')
     const fetch = vi.fn(async (_url: unknown, options?: RequestInit) => {
       if (options?.method === 'PATCH') Object.assign(game.entries[0]!, JSON.parse(options.body as string))
       return new Response(JSON.stringify(game), { status: 200 })
@@ -598,7 +624,7 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     game.entries[0]!.temp_hp = 3
     renderGame(viewport, game)
     await screen.findByText('Ada')
-    await pressRowAction(viewport, 'Ada', 'Edit')
+    await pressRowAction(viewport, 'Ada', 'HP')
     const user = setupUser()
     await user.type(screen.getByLabelText('Damage'), '7')
     expect(screen.getByLabelText('Hit points')).toHaveValue('16')
@@ -616,14 +642,14 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     game.entries[0]!.temp_hp = 3
     renderGame(viewport, game)
     await screen.findByText('Ada')
-    await pressRowAction(viewport, 'Ada', 'Edit')
+    await pressRowAction(viewport, 'Ada', 'HP')
     const fetch = vi.fn(async (_url: unknown, _options?: RequestInit) => new Response(JSON.stringify(game), { status: 200 }))
     vi.stubGlobal('fetch', fetch)
     const user = setupUser()
     await user.type(screen.getByLabelText('Damage'), '7')
     await user.click(screen.getByRole('button', { name: 'Close' }))
     expect(fetch.mock.calls.some(([, options]) => options?.method === 'PATCH')).toBe(false)
-    await pressRowAction(viewport, 'Ada', 'Edit')
+    await pressRowAction(viewport, 'Ada', 'HP')
     expect(screen.getByLabelText('Hit points')).toHaveValue('20')
     expect(screen.getByLabelText('Temp HP')).toHaveValue('3')
     expect(screen.getByLabelText('Damage')).toHaveValue('')
@@ -634,7 +660,7 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     game.entries[0]!.temp_hp = 3
     renderGame(viewport, game)
     await screen.findByText('Ada')
-    await pressRowAction(viewport, 'Ada', 'Edit')
+    await pressRowAction(viewport, 'Ada', 'HP')
     const user = setupUser()
     await user.type(screen.getByLabelText('Damage'), '7')
     await user.clear(screen.getByLabelText('Hit points'))
@@ -650,7 +676,7 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     game.entries[0]!.temp_hp = 3
     renderGame(viewport, game)
     await screen.findByText('Ada')
-    await pressRowAction(viewport, 'Ada', 'Edit')
+    await pressRowAction(viewport, 'Ada', 'HP')
     const fetch = vi.fn(async (_url: unknown, _options?: RequestInit) => new Response(JSON.stringify({ error: { code: 'access_denied' } }), { status: 403 }))
     vi.stubGlobal('fetch', fetch)
     const user = setupUser()
@@ -664,5 +690,113 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(fetch.mock.calls.filter(([, options]) => options?.method === 'PATCH').map(([, options]) => JSON.parse(options!.body as string)))
       .toEqual([{ hp: 16, temp_hp: 0 }, { hp: 16, temp_hp: 0 }])
+  })
+
+  it('lets a DM pay a character, charge them and hand out an item', async () => {
+    const game = gameAs('dm')
+    renderGame(viewport, game)
+    await screen.findByRole('article', { name: 'Ada' })
+    const fetch = vi.fn(async (url: unknown, _options?: RequestInit) => {
+      const path = String(url)
+      const body = path.includes('/shared/chr_1/sheet') ? { equipment: { equipped: [], backpack: [], loot: [], purse: { gp: 7 } } }
+        : path.includes('/shared/chr_1/catalog/items') ? { items: [{ slug: 'dagger', name: 'Dagger' }], total: 1, categories: [] }
+        : game
+      return jsonResponse(body)
+    })
+    vi.stubGlobal('fetch', fetch)
+    const user = setupUser()
+    const posted = (suffix: string) => fetch.mock.calls
+      .filter(([url, options]) => options?.method === 'POST' && String(url).includes(`/games/gam_1/entries/pc_chr_1/${suffix}?`))
+      .map(([, options]) => JSON.parse(options!.body as string))
+
+    // One coin under another, edited freely, and nothing is sent before Save: then the difference of each.
+    await pressRowAction(viewport, 'Ada', 'Coins')
+    const dialog = within(await screen.findByRole('dialog', { name: 'Ada: coins' }))
+    await waitFor(() => expect(dialog.getByRole('textbox', { name: 'Gold' })).toHaveValue('7'))
+    expect(dialog.getByRole('button', { name: 'Save' })).toBeDisabled()
+    await user.clear(dialog.getByRole('textbox', { name: 'Gold' }))
+    await user.type(dialog.getByRole('textbox', { name: 'Gold' }), '12')
+    await user.type(dialog.getByRole('textbox', { name: 'Silver' }), '4')
+    expect(posted('coins')).toEqual([])
+    await user.click(dialog.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(posted('coins')).toEqual([{ unit: 'sp', amount: 4 }, { unit: 'gp', amount: 5 }]))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'Give an item' }))
+    await user.click(await screen.findByRole('button', { name: 'Add Dagger' }))
+    await waitFor(() => expect(posted('items')).toEqual([{ item: 'dagger', count: 1 }]))
+    const notice = await screen.findByRole('status')
+    expect(notice).toHaveTextContent('Added')
+    expect(notice).toHaveTextContent('Dagger given to Ada.')
+    // The search closed behind the gift, and a hit is a link to its page under the game.
+    expect(screen.queryByRole('button', { name: 'Add Dagger' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Give an item' }))
+    expect(await screen.findByRole('link', { name: 'Dagger' })).toHaveAttribute('href', '/games/gam_1/characters/chr_1/items/dagger')
+  })
+
+  it('lets a player use one of their items and give one across the table, and offers neither on a card that is not theirs', async () => {
+    const game = gameAs('player')
+    game.characters[0]!.owner_id = 'abc'
+    game.characters.push({ id: 'chr_2', owner_id: 'player-2', name: 'Bo', level: 1, classes: [] })
+    game.entries.push({ ...game.entries[0]!, id: 'pc_chr_2', character_id: 'chr_2', name: 'Bo', can_edit: false })
+    renderGame(viewport, game)
+    await screen.findByRole('article', { name: 'Ada' })
+    expect(screen.queryByRole('button', { name: 'Give an item' })).not.toBeInTheDocument()
+    const fetch = vi.fn(async (url: unknown, _options?: RequestInit) => {
+      const path = String(url)
+      const body = path.includes('/characters/chr_1/sheet') ? {
+        equipment: { equipped: [], backpack: [{ item: 'potion-of-healing', count: 2 }, { item: 'rope', count: 1 }], loot: [], purse: { gp: 3 } },
+        catalog: { magicItems: [{ slug: 'potion-of-healing', name: 'Healing potion', category: 'potion' }], equipment: [{ slug: 'rope', name: 'Rope' }] },
+      } : path.includes('/characters/chr_1/events') ? { seq: 4, revision: 9, events: [] } : game
+      return jsonResponse(body)
+    })
+    vi.stubGlobal('fetch', fetch)
+    const user = setupUser()
+    const posted = (fragment: string) => fetch.mock.calls
+      .filter(([url, options]) => options?.method === 'POST' && String(url).includes(fragment))
+      .map(([, options]) => JSON.parse(options!.body as string))
+
+    await user.click(screen.getByRole('button', { name: 'Actions for Bo' }))
+    const theirs = within(await screen.findByRole('menu'))
+    for (const label of ['Coins', 'Use item', 'Consumable slots']) expect(theirs.queryByRole('menuitem', { name: label })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+
+    // Three entries, three dialogs: what is used up, what is handed over, and the coins.
+    await pressRowAction(viewport, 'Ada', 'Use item')
+    const using = within(await screen.findByRole('dialog', { name: 'Ada: use an item' }))
+    expect(await using.findByRole('link', { name: 'Healing potion' })).toHaveAttribute('href', '/games/gam_1/characters/chr_1/items/potion-of-healing')
+    expect(using.queryByText('Rope')).not.toBeInTheDocument()
+    expect(using.queryByRole('textbox', { name: 'Gold' })).not.toBeInTheDocument()
+    await user.click(using.getByRole('button', { name: 'Use Healing potion' }))
+    await waitFor(() => expect(posted('/characters/chr_1/events')).toEqual([{
+      expectedSeq: 4, expectedRevision: 9,
+      events: [{ type: 'change', changes: [{ path: 'equipment.backpack.potion-of-healing', op: 'set', value: { kind: 'int', int: 1 } }] }],
+    }]))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('status')).toHaveTextContent('Healing potion used.')
+
+    // Handing over is pressed on the card of whoever receives, and one transfer closes the dialog and says so.
+    await user.click(screen.getByRole('button', { name: 'Actions for Ada' }))
+    expect(within(await screen.findByRole('menu')).queryByRole('menuitem', { name: 'Transfer item' })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    await pressRowAction(viewport, 'Bo', 'Transfer item')
+    const giving = within(await screen.findByRole('dialog', { name: 'Transfer an item to Bo' }))
+    expect(giving.getAllByLabelText('From')[0]).toHaveValue('Ada')
+    await user.click(await giving.findByRole('button', { name: 'Transfer Rope' }))
+    await waitFor(() => expect(posted('/games/gam_1/entries/pc_chr_1/give')).toEqual([{ item: 'rope', count: 1, to: 'pc_chr_2' }]))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('status')).toHaveTextContent('Transferred')
+    expect(screen.getByRole('status')).toHaveTextContent('Rope given to Bo.')
+
+    await pressRowAction(viewport, 'Ada', 'Coins')
+    const coins = within(await screen.findByRole('dialog', { name: 'Ada: coins' }))
+    await waitFor(() => expect(coins.getByRole('textbox', { name: 'Gold' })).toHaveValue('3'))
+    await user.clear(coins.getByRole('textbox', { name: 'Gold' }))
+    await user.type(coins.getByRole('textbox', { name: 'Gold' }), '1')
+    await user.click(coins.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(posted('/characters/chr_1/events').at(-1)).toEqual({
+      expectedSeq: 4, expectedRevision: 9,
+      events: [{ type: 'change', changes: [{ path: 'equipment.purse.gp', op: 'set', value: { kind: 'int', int: 1 } }] }],
+    }))
   })
 })

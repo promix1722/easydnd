@@ -19,11 +19,10 @@ const HOME = { textDecoration: 'none', color: 'inherit' } as const
  * icons -- served as a static asset rather than inlined, so the browser reuses
  * the copy it already fetched for the tab.
  *
- * `order` sets the caption's heading level and nothing else. The mark is one
- * size in every header, because it is the same corner in every header: it used
- * to scale with `order`, so a phone drew 24px signed out and 28px signed in and
- * the icon changed size at the moment of signing in. Same reason `HEADER_HEIGHT`
- * is one number -- see ./chrome.ts.
+ * The mark is one size in every header, because it is the same corner in every
+ * header: it used to scale with the caption's heading level, so a phone drew
+ * 24px signed out and 28px signed in and the icon changed size at the moment of
+ * signing in. Same reason `HEADER_HEIGHT` is one number -- see ./chrome.ts.
  *
  * `caption={false}` draws the mark alone. That is the phone header, where the row
  * has to carry the section dropdown and two account controls as well, and the
@@ -43,7 +42,7 @@ const HOME = { textDecoration: 'none', color: 'inherit' } as const
  * link's own appearance -- a blue underlined "easydnd" in the corner would be
  * the browser's default styling showing through, not a decision. See `HOME`.
  */
-export function Wordmark({ order = 3, caption = true }: { order?: 3 | 4; caption?: boolean }) {
+export function Wordmark({ caption = true }: { caption?: boolean }) {
   // Alone, the mark is the only thing identifying the app, so it takes the
   // name. Beside the caption it is decorative -- announcing it as well would
   // only make a screen reader say easydnd twice.
@@ -66,7 +65,7 @@ export function Wordmark({ order = 3, caption = true }: { order?: 3 | 4; caption
     <Link to="/" style={HOME}>
       <Group gap="xs" wrap="nowrap">
         <img src="/favicon.svg" alt="" width={MARK} height={MARK} />
-        <Title order={order}>easydnd</Title>
+        <Title order={3}>easydnd</Title>
       </Group>
     </Link>
   )

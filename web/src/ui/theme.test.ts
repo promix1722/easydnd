@@ -19,7 +19,7 @@ import { DESKTOP_MEDIA_QUERY } from '@/theme/tokens'
  * on to try would cost the `isolate: false` speed the whole suite is built
  * around.
  *
- * It is the same shape as `make data/srd/check`: not a test of behaviour, a
+ * It is the same shape as `make web/icons/check`: not a test of behaviour, a
  * test that two artefacts which must agree still do.
  */
 

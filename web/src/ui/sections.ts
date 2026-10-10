@@ -1,5 +1,5 @@
 import type { Icon } from '@tabler/icons-react'
-import { IconSparkles, IconDice5, IconShield, IconUsers, IconWand } from '@tabler/icons-react'
+import { IconSparkles, IconDice5, IconMailOpened, IconShield, IconTable, IconUsers, IconWand } from '@tabler/icons-react'
 
 import type { MessageKey } from '@/lib/i18n'
 
@@ -19,6 +19,10 @@ export interface Section {
   to: string
   /** Omit authoring tools from the phone navigation. */
   desktopOnly?: boolean
+  /** Draw it only for a superadmin -- see `SessionUser.admin`. */
+  adminOnly?: boolean
+  /** Drawn under the menu's rule, beside the account: somewhere you go on an errand, not a part of the app you live in. */
+  belowRule?: boolean
   /**
    * What to call it -- a message key, not a word.
    *
@@ -70,6 +74,8 @@ export const SECTIONS: readonly Section[] = [
   { to: '/groups', label: 'section.groups', icon: IconShield, owns: ['/groups'] },
   { to: '/games', label: 'section.games', icon: IconDice5, owns: ['/games'] },
   { to: '/spells', label: 'section.spells', icon: IconWand, owns: ['/spells'] },
+  { to: '/admin', label: 'section.admin', icon: IconTable, owns: ['/admin'], desktopOnly: true, adminOnly: true },
+  { to: '/invitations', label: 'section.invitations', icon: IconMailOpened, owns: ['/invitations'], belowRule: true },
 ]
 
 /**

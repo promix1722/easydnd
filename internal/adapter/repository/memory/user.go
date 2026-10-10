@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"slices"
+	"strings"
 	"sync"
 
 	domain "github.com/promix1722/easydnd/internal/domain/user"
@@ -14,11 +15,9 @@ import (
 // It is no longer how production stores accounts -- that is
 // internal/adapter/repository/postgres. Two jobs remain for it.
 //
-// It is the development fallback: with no db.url the server runs on this
-// and warns, so `make run/server`, `go test ./...` and `make verify` all work
-// on a machine with no Postgres. config.validate refuses that combination in
-// production, where losing accounts means losing passkeys that cannot be
-// reissued.
+// It is what the tests run on: the server runs on Postgres and does not
+// start without db.url, so `go test ./...` and `make verify` are the callers
+// that need a store with no infrastructure behind it.
 //
 // And it is the reference implementation of domain.Repository. Both adapters
 // run internal/adapter/repository/repotest, so the contract is defined by what
@@ -320,4 +319,49 @@ func (r *UserRepository) SetImage(_ context.Context, id domain.ID, image string)
 	u.Image = image
 	r.items[id] = u
 	return nil
+}
+
+// Search lists accounts matching q, newest first.
+func (r *UserRepository) Search(_ context.Context, q domain.Query) ([]domain.Listed, int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	text := strings.ToLower(q.Text)
+	has := func(s string) bool { return strings.Contains(strings.ToLower(s), text) }
+	out := make([]domain.Listed, 0)
+	for _, u := range r.items {
+		row := domain.Listed{
+			ID: u.ID, DisplayName: u.DisplayName, CreatedAt: u.CreatedAt,
+			Passkeys:  len(u.Credentials),
+			Anonymous: strings.HasPrefix(string(u.ID), domain.AnonymousIDPrefix),
+		}
+		match := has(string(u.ID)) || has(u.DisplayName)
+		for _, c := range u.Credentials {
+			if c.LastUsedAt.After(row.LastUsedAt) {
+				row.LastUsedAt = c.LastUsedAt
+			}
+		}
+		for n, i := range u.Identities {
+			if n == 0 {
+				row.Email = i.Email
+			}
+			if i.LastUsedAt.After(row.LastUsedAt) {
+				row.LastUsedAt = i.LastUsedAt
+			}
+			match = match || has(i.Email)
+		}
+		if !match || len(q.IDs) > 0 && !slices.Contains(q.IDs, u.ID) ||
+			q.Guests != nil && *q.Guests != row.Anonymous {
+			continue
+		}
+		out = append(out, row)
+	}
+	slices.SortFunc(out, func(a, b domain.Listed) int {
+		if c := b.CreatedAt.Compare(a.CreatedAt); c != 0 {
+			return c
+		}
+		return strings.Compare(string(a.ID), string(b.ID))
+	})
+	total := len(out)
+	return out[min(max(q.Offset, 0), total):min(max(q.Offset, 0)+max(q.Limit, 0), total)], total, nil
 }

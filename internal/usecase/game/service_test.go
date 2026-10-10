@@ -12,6 +12,7 @@ import (
 
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
+	"github.com/promix1722/easydnd/internal/adapter/repository/repotest"
 	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/group"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -152,29 +153,43 @@ func TestAStrangerCannotReachTheTableAtAll(t *testing.T) {
 	}
 }
 
-func TestEveryMemberCanReadASharedSheetAndNoneCanEditIt(t *testing.T) {
+func TestWhoeverRunsTheTableReadsASharedSheetAndNoneCanEditIt(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
-	f.table(t, "grp_a", "alice", map[user.ID]group.Role{"bob": group.RolePlayer})
+	f.table(t, "grp_a", "alice", map[user.ID]group.Role{
+		"bob": group.RolePlayer, "dana": group.RoleDM, "erin": group.RolePlayer,
+	})
 	bobs := f.character(t, "bob")
 	if err := f.svc.Share(ctx, "bob", "grp_a", bobs); err != nil {
 		t.Fatalf("Share() error = %v", err)
 	}
 
-	// The owner, and the person at the other end of the table, see the same
-	// sheet. That is the whole point of sharing.
-	for _, who := range []user.ID{"bob", "alice"} {
+	// The owner, and whoever runs the table, see the same sheet. That is the
+	// whole point of sharing.
+	for _, who := range []user.ID{"bob", "alice", "dana"} {
 		if _, err := f.svc.Sheet(ctx, who, bobs, rules.DefaultLocale); err != nil {
 			t.Errorf("Sheet() for %q error = %v", who, err)
 		}
 	}
+	// Another player at the table reads it only once its owner opens it.
+	_, err := f.svc.Sheet(ctx, "erin", bobs, rules.DefaultLocale)
+	assertNotFound(t, err, "a player reading a closed shared sheet")
+	if err := f.characters.SetPublic(ctx, bobs, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.Sheet(ctx, "erin", bobs, rules.DefaultLocale); err != nil {
+		t.Errorf("a player reading an opened shared sheet: %v", err)
+	}
+	if err := f.characters.SetPublic(ctx, bobs, false); err != nil {
+		t.Fatal(err)
+	}
 	// A stranger sees nothing, and is told nothing.
-	_, err := f.svc.Sheet(ctx, "carol", bobs, rules.DefaultLocale)
+	_, err = f.svc.Sheet(ctx, "carol", bobs, rules.DefaultLocale)
 	assertNotFound(t, err, "a stranger reading a shared sheet")
 
-	// There is no write path here at all. That is the invariant this feature
-	// rests on, and it is proved by the character service being untouched --
-	// this package exposes nothing that appends to a log.
+	// Reading grants no write. That is the invariant this feature rests on, and
+	// it is proved by the character service being untouched; what a game lets
+	// its table hand over is items.go's, and is tested beside it.
 }
 
 func TestAnUnsharedCharacterIsInvisibleToTheTable(t *testing.T) {
@@ -510,7 +525,7 @@ func TestAnOpenedCharacterIsReadableByLinkUntilHidden(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	bobs := f.character(t, "bob")
-	if err := f.characters.Append(ctx, bobs, 0, character.Event{Type: character.EventInit}); err != nil {
+	if err := repotest.Append(ctx, f.characters, bobs, character.Event{Type: character.EventInit}); err != nil {
 		t.Fatal(err)
 	}
 	read := func() error {
@@ -531,5 +546,24 @@ func TestAnOpenedCharacterIsReadableByLinkUntilHidden(t *testing.T) {
 	}
 	if err := read(); !types.IsNotFound(err) {
 		t.Fatalf("a hidden character was still read: %v", err)
+	}
+}
+
+// A superadmin reads a sheet nobody shared and nobody opened; everybody else
+// is still refused it.
+func TestASuperadminReadsAPrivateSheet(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	bobs := f.character(t, "bob")
+	if err := repotest.Append(ctx, f.characters, bobs, character.Event{Type: character.EventInit}); err != nil {
+		t.Fatal(err)
+	}
+	f.svc.SetSuperadmin(func(_ context.Context, id user.ID) bool { return id == "alice" })
+
+	if _, err := f.svc.Sheet(ctx, "alice", bobs, rules.DefaultLocale); err != nil {
+		t.Fatalf("a superadmin was refused a private sheet: %v", err)
+	}
+	if _, err := f.svc.Sheet(ctx, "carol", bobs, rules.DefaultLocale); !types.IsNotFound(err) {
+		t.Fatalf("a private character was read by a stranger: %v", err)
 	}
 }

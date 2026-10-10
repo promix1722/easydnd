@@ -1643,6 +1643,24 @@
     "eldritch-invocations": [
       "srd-5.1"
     ],
+    "eldritch-invocations-5": [
+      "srd-5.1"
+    ],
+    "eldritch-invocations-7": [
+      "srd-5.1"
+    ],
+    "eldritch-invocations-9": [
+      "srd-5.1"
+    ],
+    "eldritch-invocations-12": [
+      "srd-5.1"
+    ],
+    "eldritch-invocations-15": [
+      "srd-5.1"
+    ],
+    "eldritch-invocations-18": [
+      "srd-5.1"
+    ],
     "eldritch-master": [
       "srd-5.1"
     ],
@@ -1683,6 +1701,48 @@
       "srd-5.1"
     ],
     "favored-enemy-3-enemies": [
+      "srd-5.1"
+    ],
+    "favored-enemy-aberrations": [
+      "srd-5.1"
+    ],
+    "favored-enemy-beasts": [
+      "srd-5.1"
+    ],
+    "favored-enemy-celestials": [
+      "srd-5.1"
+    ],
+    "favored-enemy-constructs": [
+      "srd-5.1"
+    ],
+    "favored-enemy-dragons": [
+      "srd-5.1"
+    ],
+    "favored-enemy-elementals": [
+      "srd-5.1"
+    ],
+    "favored-enemy-fey": [
+      "srd-5.1"
+    ],
+    "favored-enemy-fiends": [
+      "srd-5.1"
+    ],
+    "favored-enemy-giants": [
+      "srd-5.1"
+    ],
+    "favored-enemy-monstrosities": [
+      "srd-5.1"
+    ],
+    "favored-enemy-oozes": [
+      "srd-5.1"
+    ],
+    "favored-enemy-plants": [
+      "srd-5.1"
+    ],
+    "favored-enemy-undead": [
+      "srd-5.1"
+    ],
+    "favored-enemy-humanoids": [
       "srd-5.1"
     ],
     "feral-instinct": [
@@ -1953,6 +2013,27 @@
       "srd-5.1"
     ],
     "natural-explorer-3-terrain-types": [
+      "srd-5.1"
+    ],
+    "natural-explorer-arctic": [
+      "srd-5.1"
+    ],
+    "natural-explorer-coast": [
+      "srd-5.1"
+    ],
+    "natural-explorer-desert": [
+      "srd-5.1"
+    ],
+    "natural-explorer-forest": [
+      "srd-5.1"
+    ],
+    "natural-explorer-grassland": [
+      "srd-5.1"
+    ],
+    "natural-explorer-mountain": [
+      "srd-5.1"
+    ],
+    "natural-explorer-swamp": [
       "srd-5.1"
     ],
     "natural-recovery": [
@@ -2867,6 +2948,12 @@
     "divine-fury": [
       "xge"
     ],
+    "divine-fury-necrotic": [
+      "xge"
+    ],
+    "divine-fury-radiant": [
+      "xge"
+    ],
     "divine-magic": [
       "xge"
     ],
@@ -3231,6 +3318,18 @@
     "genies-vessel": [
       "tce"
     ],
+    "genies-vessel-dao": [
+      "tce"
+    ],
+    "genies-vessel-djinni": [
+      "tce"
+    ],
+    "genies-vessel-efreeti": [
+      "tce"
+    ],
+    "genies-vessel-marid": [
+      "tce"
+    ],
     "genies-wrath": [
       "tce"
     ],
@@ -3451,6 +3550,18 @@
       "tce"
     ],
     "infusions-known": [
+      "tce"
+    ],
+    "infusions-known-6": [
+      "tce"
+    ],
+    "infusions-known-10": [
+      "tce"
+    ],
+    "infusions-known-14": [
+      "tce"
+    ],
+    "infusions-known-18": [
       "tce"
     ],
     "insightful-fighting": [
@@ -4466,6 +4577,21 @@
     ],
     "zealous-presence": [
       "xge"
+    ],
+    "elemental-adept-acid": [
+      "phb"
+    ],
+    "elemental-adept-cold": [
+      "phb"
+    ],
+    "elemental-adept-fire": [
+      "phb"
+    ],
+    "elemental-adept-lightning": [
+      "phb"
+    ],
+    "elemental-adept-thunder": [
+      "phb"
     ]
   },
   "magic-items": {
@@ -5961,6 +6087,9 @@
     ],
     "human": [
       "srd-5.1"
+    ],
+    "variant-human": [
+      "phb"
     ],
     "tiefling": [
       "srd-5.1"
@@ -7871,6 +8000,9 @@
       "phb"
     ],
     "stout-resilience": [
+      "phb"
+    ],
+    "variant-human-skills": [
       "phb"
     ],
     "sunlight-sensitivity": [

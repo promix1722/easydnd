@@ -1,3 +1,4 @@
+// Package profile changes what an account shows of itself: its portrait.
 package profile
 
 import (

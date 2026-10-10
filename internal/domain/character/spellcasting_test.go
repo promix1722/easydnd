@@ -7,6 +7,7 @@ import (
 )
 
 func TestKindOfCasterIsReadFromTheData(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 
 	tests := []struct {
@@ -30,6 +31,7 @@ func TestKindOfCasterIsReadFromTheData(t *testing.T) {
 // multiclassSlotReference reads one full caster's table as the multiclass
 // table. That is only sound while every full caster's table is the same one.
 func TestFullCastersShareOneSlotTable(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 
 	full := []rules.Slug{"bard", "cleric", "druid", "sorcerer", "wizard"}
@@ -52,6 +54,7 @@ func TestFullCastersShareOneSlotTable(t *testing.T) {
 }
 
 func TestCasterLevelHalvesHalfCasters(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 
 	tests := []struct {
@@ -80,6 +83,7 @@ func TestCasterLevelHalvesHalfCasters(t *testing.T) {
 // two disagree for half casters, and a paladin whose slots were computed from
 // caster level 1 would be missing them entirely at level 2.
 func TestSingleClassCasterReadsItsOwnTable(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 
 	slots, pact := spellSlots(cat, []ClassLevel{{Class: "paladin", Level: 2}})
@@ -100,6 +104,7 @@ func TestSingleClassCasterReadsItsOwnTable(t *testing.T) {
 // The case the multiclass table exists for: two level-1 casters have the
 // slots of a level-2 caster, not of two level-1 casters.
 func TestMulticlassCastersShareOneSlotPool(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 
 	slots, _ := spellSlots(cat, []ClassLevel{{Class: "cleric", Level: 1}, {Class: "wizard", Level: 1}})
@@ -112,6 +117,7 @@ func TestMulticlassCastersShareOneSlotPool(t *testing.T) {
 // spell level, so merging it into SpellSlots would hand a warlock/wizard
 // slots they do not have.
 func TestPactMagicNeverMergesWithSpellSlots(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 
 	slots, pact := spellSlots(cat, []ClassLevel{{Class: "warlock", Level: 3}})
@@ -144,6 +150,7 @@ func TestPactMagicNeverMergesWithSpellSlots(t *testing.T) {
 }
 
 func TestSpellcastingSummariesAreOnePerCastingClass(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 
 	abilities := Abilities{Scores: map[rules.Ability]int{
@@ -173,6 +180,7 @@ func TestSpellcastingSummariesAreOnePerCastingClass(t *testing.T) {
 // A paladin does not cast until 2nd level; a level-1 paladin listing a spell
 // save DC would be advertising a number they cannot use.
 func TestHalfCasterHasNoSummaryBeforeItsCastingLevel(t *testing.T) {
+	t.Parallel()
 	cat := LoadCatalog(t)
 
 	abilities := Abilities{Scores: map[rules.Ability]int{rules.Charisma: 16}}

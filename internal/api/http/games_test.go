@@ -3,6 +3,7 @@ package httpapi_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,7 @@ func seatSecondAccount(
 // The whole feature end to end: a player puts a character on the table, the DM
 // opens a game and seats everybody, and the table reads a sheet it does not own.
 func TestAGameFromTheTableToItsRoster(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -123,6 +125,7 @@ func TestAGameFromTheTableToItsRoster(t *testing.T) {
 // The regression test for the whole design: sharing grants a read and nothing
 // else, and character.Service.owned was not loosened to achieve it.
 func TestTheTableCanReadTheSheetAndNotTouchIt(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -165,6 +168,7 @@ func TestTheTableCanReadTheSheetAndNotTouchIt(t *testing.T) {
 }
 
 func TestAnUnsharedCharacterIsInvisibleToTheTable(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -180,6 +184,7 @@ func TestAnUnsharedCharacterIsInvisibleToTheTable(t *testing.T) {
 }
 
 func TestASharedCharacterIsInvisibleOutsideTheGroup(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	mine := makeCharacter(t, r, owner, "Ada")
@@ -200,6 +205,7 @@ func TestASharedCharacterIsInvisibleOutsideTheGroup(t *testing.T) {
 }
 
 func TestUnsharingClearsTheSeatInEveryGame(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -235,6 +241,7 @@ func TestUnsharingClearsTheSeatInEveryGame(t *testing.T) {
 }
 
 func TestSeatingYourOwnCharacterPutsItOnTheTable(t *testing.T) {
+	t.Parallel()
 	r, owner, _ := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	private := makeCharacter(t, r, owner, "Ada")
@@ -256,6 +263,7 @@ func TestSeatingYourOwnCharacterPutsItOnTheTable(t *testing.T) {
 }
 
 func TestGameRoutesRequireASession(t *testing.T) {
+	t.Parallel()
 	r, _, _ := newFullRouterWithCeremony(t)
 	for _, probe := range []struct{ method, path string }{
 		{http.MethodGet, "/v1/groups/grp_x/characters"},
@@ -275,6 +283,7 @@ func TestGameRoutesRequireASession(t *testing.T) {
 // Deleting a character takes it off every table it was on, rather than leaving
 // a row that names nothing.
 func TestDeletingACharacterTakesItOffTheTable(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -301,6 +310,7 @@ func TestDeletingACharacterTakesItOffTheTable(t *testing.T) {
 
 // Deleting a group takes its games and its table with it.
 func TestDeletingAGroupTakesItsGamesWithIt(t *testing.T) {
+	t.Parallel()
 	r, owner, _ := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	mine := makeCharacter(t, r, owner, "Ada")
@@ -328,6 +338,7 @@ func TestDeletingAGroupTakesItsGamesWithIt(t *testing.T) {
 // A game is a section of its own: it comes back from /v1/games with the table
 // it sits at named, without the caller having to say which table first.
 func TestYourGamesComeBackWithTheTableTheySitAt(t *testing.T) {
+	t.Parallel()
 	r, owner, _ := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	rec := send(t, r, owner, http.MethodPost, "/v1/games",
@@ -356,6 +367,7 @@ func TestYourGamesComeBackWithTheTableTheySitAt(t *testing.T) {
 
 // Somebody else's game is not in your list, and naming it directly is a 404.
 func TestAnotherTablesGamesAreNotYours(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Wednesday Night")
 	rec := send(t, r, owner, http.MethodPost, "/v1/games",
@@ -377,6 +389,7 @@ func TestAnotherTablesGamesAreNotYours(t *testing.T) {
 
 // Monster privacy is enforced in JSON, including responses to rejected writes.
 func TestTrackerHTTPPermissionsAndMonsterRedaction(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	group := createGroup(t, r, owner, "Table")
 	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
@@ -506,6 +519,7 @@ func TestTrackerHTTPPermissionsAndMonsterRedaction(t *testing.T) {
 }
 
 func TestSpentUsesOverHTTP(t *testing.T) {
+	t.Parallel()
 	// Packs on, as in the running app: only a locked catalogue has resource pools.
 	r, owner, ceremony, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
 	group := createGroup(t, r, owner, "Table")
@@ -545,5 +559,55 @@ func TestSpentUsesOverHTTP(t *testing.T) {
 	}
 	if got = used(send(t, r, owner, http.MethodPost, root+"/rest", nil)); got["second-wind"] != 0 {
 		t.Fatalf("after rest: %+v", got)
+	}
+}
+
+// The three hand-overs over HTTP: the DM gives an item and coins, the player
+// passes the item on, and the recipient's own sheet shows what arrived.
+func TestItemsAndCoinsChangeHandsOverHTTP(t *testing.T) {
+	t.Parallel()
+	r, owner, ceremony := newFullRouterWithCeremony(t)
+	group := createGroup(t, r, owner, "Table")
+	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
+	mine, theirs := makeCharacter(t, r, owner, "Ada"), makeCharacter(t, r, player, "Hero")
+	shareCharacter(t, r, owner, group.ID, mine)
+	shareCharacter(t, r, player, group.ID, theirs)
+	rec := send(t, r, owner, http.MethodPost, "/v1/games", map[string]any{"group_id": group.ID, "name": "Fight"})
+	root := "/v1/games/" + decode[gameapi.Game](t, rec).ID
+	send(t, r, owner, http.MethodPost, root+"/characters", map[string]any{"character_ids": []string{mine, theirs}})
+	post := func(who *http.Cookie, path string, body map[string]any, want int) {
+		t.Helper()
+		if rec := send(t, r, who, http.MethodPost, root+"/entries/"+path, body); rec.Code != want {
+			t.Fatalf("POST %s = %d, want %d (%s)", path, rec.Code, want, rec.Body.String())
+		}
+	}
+	post(player, "pc_"+theirs+"/items", map[string]any{"item": "dagger", "count": 1}, http.StatusForbidden)
+	post(owner, "pc_"+theirs+"/items", map[string]any{"item": "dagger", "count": 2}, http.StatusOK)
+	post(owner, "pc_"+theirs+"/coins", map[string]any{"unit": "gp", "amount": 5}, http.StatusOK)
+	post(owner, "pc_"+theirs+"/coins", map[string]any{"unit": "gp", "amount": -9}, http.StatusBadRequest)
+	post(owner, "pc_"+theirs+"/give", map[string]any{"item": "dagger", "count": 1, "to": "pc_" + mine}, http.StatusForbidden)
+	post(player, "pc_"+theirs+"/give", map[string]any{"item": "dagger", "count": 1, "to": "pc_" + mine}, http.StatusOK)
+
+	for id, session := range map[string]*http.Cookie{mine: owner, theirs: player} {
+		rec := send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/sheet", nil)
+		body := rec.Body.String()
+		if rec.Code != http.StatusOK || !strings.Contains(body, `"dagger"`) {
+			t.Fatalf("sheet of %s = %d, no dagger in it (%s)", id, rec.Code, body)
+		}
+	}
+
+	// A custom item is given the same way, is on the sheet the DM reads, and
+	// is not among what the DM's search offers to give: it is already theirs.
+	if rec := send(t, r, owner, http.MethodPost, root+"/entries/pc_"+theirs+"/custom-items", map[string]any{"name": "Moonblade"}); rec.Code != http.StatusNoContent {
+		t.Fatalf("POST custom-items = %d (%s)", rec.Code, rec.Body.String())
+	}
+	if rec := send(t, r, owner, http.MethodGet, "/v1/shared/"+theirs+"/sheet", nil); !strings.Contains(rec.Body.String(), "Moonblade") {
+		t.Fatalf("shared sheet has no Moonblade (%s)", rec.Body.String())
+	}
+	if rec := send(t, r, owner, http.MethodGet, "/v1/shared/"+theirs+"/catalog/items?q=moonblade", nil); rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), "Moonblade") {
+		t.Fatalf("the give-item search offers a custom item: %d (%s)", rec.Code, rec.Body.String())
+	}
+	if rec := send(t, r, player, http.MethodGet, "/v1/characters/"+theirs+"/catalog/items?q=moonblade", nil); !strings.Contains(rec.Body.String(), "Moonblade") {
+		t.Fatalf("its owner's own search lost the custom item (%s)", rec.Body.String())
 	}
 }

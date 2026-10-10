@@ -22,7 +22,7 @@ export { Carousel } from '@mantine/carousel'
 // Arrow keys and the wheel for a carousel that fills its page. Spread on to a
 // `Carousel`; see the hook for what it borrows and when it gives it back.
 export { useCarouselGestures } from './carouselGestures'
-export { useDisclosure } from '@mantine/hooks'
+export { useDebouncedValue, useDisclosure } from '@mantine/hooks'
 
 // The icon set, named one glyph at a time. Re-exported for the same reason the
 // chrome above is: `shell/` builds the header and may not import a vendor
@@ -31,7 +31,10 @@ export { useDisclosure } from '@mantine/hooks'
 // also what keeps the production bundle to those instead of six thousand.
 export {
   IconArrowDown,
+  IconArrowsExchange,
   IconArrowUp,
+  IconBackpack,
+  IconCoins,
   IconCheck,
   IconChevronDown,
   IconChevronLeft,
@@ -47,7 +50,9 @@ export {
   IconPencil,
   IconPaperclip,
   IconPlus,
+  IconSend,
   IconShield,
+  IconSwords,
   IconTrash,
   IconUserCircle,
   IconUserPlus,
@@ -58,6 +63,8 @@ export {
 // Layout and typography primitives, re-exported unchanged.
 export {
   Alert,
+  Affix,
+  Notification,
   Anchor,
   Badge,
   Box,
@@ -65,7 +72,6 @@ export {
   Center,
   Checkbox,
   Grid,
-  MultiSelect,
   Code,
   Divider,
   Group,
@@ -78,13 +84,12 @@ export {
   ScrollArea,
   SimpleGrid,
   Skeleton,
-  Space,
   Stack,
   Text,
   Title,
   VisuallyHidden,
 } from '@mantine/core'
-export type { MantineColor, MantineSize } from '@mantine/core'
+export type { MantineColor } from '@mantine/core'
 
 // Controls.
 export {
@@ -96,8 +101,8 @@ export {
   // alternative is four buttons in every row, which DataList's mobile card
   // rendering cannot lay out legibly.
   Menu,
+  MultiSelect,
   NumberInput,
-  Popover,
   Select,
   Switch,
   Textarea,
@@ -112,17 +117,11 @@ export {
 // Composed, responsive-by-construction components.
 export { BlockList } from './BlockList'
 export type { BlockListItem, BlockListProps } from './BlockList'
-export { Bullet } from './Bullet'
-export type { BulletProps } from './Bullet'
-export { Columns } from './Columns'
-export type { ColumnsProps, ColumnsSection } from './Columns'
 export { D20Roll } from './D20'
 export type { D20RollProps } from './D20'
 export { ACTION_ICON_SIZE, SHEET_COMBOBOX } from './actions'
 export { DataList } from './DataList'
 export type { ColumnSlot, DataListColumn, DataListProps, RowAction } from './DataList'
-export { DragonMark } from './DragonMark'
-export type { DragonMarkProps } from './DragonMark'
 export { InstallAction } from './InstallAction'
 export type { InstallActionProps } from './InstallAction'
 export { InstallButton } from './InstallButton'
@@ -160,7 +159,6 @@ export { CHROME_INSET, CONTENT_MAX_WIDTH, ROW_HEIGHT, TOUCH_TARGET } from '@/the
 
 // Theme + provider, so main.tsx never imports Mantine either.
 export { AppTheme } from './AppTheme'
-export { theme } from './theme'
 export { Markdown } from './Markdown'
 export { joinProse } from './prose'
 export { ChoiceDetails } from './ChoiceDetails'
@@ -169,7 +167,6 @@ export { DevAccounts } from './DevAccounts'
 
 export { SourceTags } from './SourceTags'
 export { SummaryMultiSelect } from './SummaryMultiSelect'
-export { sourceAbbreviation } from './sourceAbbreviation'
 
 export { Avatar } from './Avatar'
 export { ITEM_ICON_SIZE, ItemIcon } from './ItemIcon'

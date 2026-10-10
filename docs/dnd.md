@@ -8,17 +8,22 @@ data comes from, [backend.md](backend.md) for the Go architecture around it and
 The **catalogue** is a compiled context of immutable JSON rule packs. A character
 pins exact releases and is derived from an editable ordered log. Pack-defined
 resources, casting profiles, grants, conditions, stat effects and action costs
-run through the same projector as the generated base rules. See
-[packs.md](packs.md) for the implemented contract. The legacy formulas and pool
-arrays described below remain compatibility paths; installed contexts use the
-base pack's explicit policy and `resources.pools`/`resources.parameters`.
+run through the same projector as the base rules. See
+[packs.md](packs.md) for the implemented contract. Every catalogue is compiled
+by the pack registry, which refuses a rules context without a core policy, so
+what runs is the base pack's explicit policy and
+`resources.pools`/`resources.parameters`. The projector's hard-coded 2014
+values remain only as fallbacks for the core fields a pack may leave out --
+base armor class, spell save base, senses, multiclass slots and casting
+profiles -- and the slot and Hit Dice arrays are still projected beside the
+pools.
 
-Usage events are temporal: spend/rest/action events validate against the build
-at their position, and later levels preserve spent uses. They are not how a
-sitting is tracked -- the game tracker counts spent uses per game entry and
-never writes the log; see [backend.md](backend.md#active-game-entries). Rules upgrades are
-explicit migrations with previews and rollback checkpoints. A new pack version
-never changes an existing build implicitly.
+The log holds build decisions only. What a character has spent -- slots, hit
+dice, uses of a feature -- is not an event: the game tracker counts spent uses
+per game entry and never writes the log; see
+[backend.md](backend.md#active-game-entries). A character's rules are fixed
+when it is created: a new pack version never changes an existing build, and
+there is no migration to move one onto it.
 
 Ability scores are fixed to STR, DEX, CON, INT, WIS and CHA. Addons may grant
 bonuses, features and actions, but cannot add custom characteristics.
@@ -51,17 +56,14 @@ feature is a *group* and not a *party*: "party" is a fiction word naming
 nothing this app stores, and a set of people with ranks is not a party in any
 sense the SRD uses.
 
-The client used to lean on this the other way round, short-labelling the
-Characters section "Party" on a phone. It no longer does — the section is
-"Characters" everywhere — and the argument above is unchanged, because it never
-depended on that label. What changed is that "party" is now a word in the
-fiction and in this document only: no screen, route, field or type in either
-half of the app is named one, so there is nothing left for "group" to collide
-with.
+"Party" is a word in the fiction and in this document only: no screen, route,
+field or type in either half of the app is named one, so there is nothing for
+"group" to collide with.
 
 A group is no longer only people. Its members may **share** characters with it,
 and what that grants is a read: every member can open a shared character's
-sheet, and only its owner can ever change it. The shared characters are not a
+sheet, and only its owner can ever change it -- save for what a table hands
+over at a game (docs/backend.md). The shared characters are not a
 party -- they are everything the table has to hand.
 
 A **folder** is the third word and the smallest of them: one account's private
@@ -108,15 +110,15 @@ Two of those are more than renaming:
 
 **Traits and features are different collections.** A **trait** comes from a race
 or subrace (Darkvision, Fey Ancestry); a **feature** comes from a class or
-subclass (Sneak Attack, Cunning Action). The SRD keeps them in two files —
-38 traits, 407 features — and so does the model. A merged bucket could not answer
+subclass (Sneak Attack, Cunning Action). The pack keeps them in two files —
+`traits.json` and `features.json` — and so does the model. A merged bucket could not answer
 "what did my race give me?".
 
 Dragonborn choose their draconic ancestry once. Breath Weapon and Damage
 Resistance are automatic racial traits; the selected ancestry determines their
-damage type without another confirmation. The legacy catalogue stores the
-ancestry's breath attack in a single-option `breathWeapon` choice-shaped payload
-for compatibility. This is ability data, not a player choice, so the prompt
+damage type without another confirmation. The catalogue stores the
+ancestry's breath attack in a single-option `breathWeapon` choice-shaped
+payload. This is ability data, not a player choice, so the prompt
 builder never offers it. Spell and subtrait choices remain real prompts.
 
 **"Slots" became resources.** `Resources` holds `SpellSlots`, `HitDice` and a
@@ -149,8 +151,8 @@ catalogue be shared immutably across requests.
 | Things | equipment, magic items |
 | Magic | spells |
 
-Monsters are deliberately **out of scope** for now; the vendored file stays
-reference-only until the battle tracker gets its own pass.
+Monsters are deliberately **out of scope** until the battle tracker gets its
+own pass.
 
 ### Sources
 
@@ -183,7 +185,7 @@ thieves' tools", and the compendium says exactly that: choose 1 of two
 branches. It is one question — choose 2 from your skills plus thieves' tools —
 and the same feature at sixth level, and both of the bard's, are already flat
 in the data. `oneList` reconciles it, in the domain rather than in the
-generator, so the compendium goes on saying what the book says. Both sides go
+data, so the compendium goes on saying what the book says. Both sides go
 through it: `Prompts` asks with it and `Project` reads with it, because
 projection resolves an answer by walking the catalogue's own shape and a
 flattened question with a nested reader would silently lose the answer. The
@@ -200,8 +202,8 @@ on one score. The prompt says it instead. Nothing in the compendium sets it;
 the domain does, on the improvement it synthesises.
 
 Every prompt carries a **stable id** (`fighter/starting-equipment/body`). That id is
-what a character's stored answer points at, so it must survive a data
-regeneration — otherwise reloading a character silently loses its choices.
+what a character's stored answer points at, so it must survive an edit of the
+data — otherwise reloading a character silently loses its choices.
 
 Every *option* carries a stable **slug** for the same reason, and it is derived
 from what the option is rather than from where it sits: a bundle of a shortbow
@@ -275,7 +277,7 @@ search.
 
 **Event sourcing.** The log is the source of truth; the sheet is a projection.
 That is what makes level-up reversible, makes "why do I have this proficiency?"
-answerable, and lets a character survive a catalogue regeneration — the events
+answerable, and lets a character survive a catalogue edit — the events
 record what was *chosen*, not what it evaluated to.
 
 **A folder is not part of this model.** Characters are filed into folders — see
@@ -294,12 +296,11 @@ character read, modify and write the same blob, and the later write silently
 discards the earlier.
 
 It is **not** append-only, and saying that it was hid the reason it is safe.
-The invariant is **append, drop a suffix, or replace one entry and revalidate
-what follows**. What holds across all three is that *a stored answer's meaning
-depends only on the entries before it*: dropping a suffix removes entries that
-nothing earlier depends on, and a replacement leaves the prefix untouched, so
-every earlier entry still means what it meant. What a replacement can
-invalidate is the suffix, which is therefore re-checked entry by entry against
+The invariant is **append, or replace or remove one entry and revalidate
+what follows**. What holds throughout is that *a stored answer's meaning
+depends only on the entries before it*: a replacement or a removal leaves the
+prefix untouched, so every earlier entry still means what it meant. What it
+can invalidate is the suffix, which is therefore re-checked entry by entry against
 the log rebuilt so far. Editing an entry in the middle *without* that replay is
 the thing that stays forbidden, and it is forbidden for the original reason: it
 would leave answers standing that the new prefix never offered.
@@ -327,8 +328,7 @@ missing.
   improvement's "two scores" and which two -- which is why a nested prompt's id
   sits under its parent's, and an answer nested under the entry's first answer
   travels with it. Anything else is a second question. This holds for an
-  import, a migration and a repository handed a whole log, not only for the
-  service.
+  import and a repository handed a whole log, not only for the service.
 - **The service** (`oneSelection` in `usecase/character/validate.go`, on
   append and on revise) refuses the same thing with a field error a client can
   point at, and one shape more that only it can see: an entry that *selects*
@@ -350,7 +350,7 @@ discriminator, not a sealed interface. Fields a given type does not use are zero
 | `race`, `subrace`, `background`, `class`, `subclass` | A catalogue entry plus the answers to its prompts |
 | `level` | What a level granted, answered — an improvement, an Expertise, a feature's pick |
 | `feat` | A feat taken |
-| `note` | A player's annotation; changes nothing |
+| `note` | A player's annotation; changes nothing. One carrying a custom entry of kind `note` is a titled text the player wrote, shown on the Custom tab |
 
 An event names a catalogue entry by typed reference, records `Choices` as
 answers keyed by prompt id, and — for `init` and `change` only — carries
@@ -492,50 +492,24 @@ grants one of each, and spending one does not spend another.
 
 ## Importing a foreign sheet
 
-> The HexSheet JSON importer this section was written for has been removed
-> (`internal/adapter/sheet/hexsheet` and `POST /v1/characters/import`). What
-> it describes still explains two things that outlived it: the override-tier
-> `skills.<skill>` and `savingThrows.<ability>` paths, and
-> `ValidateImported`, which the AI Wizard's tools and custom options still
-> call. Read "an import" below as history.
-
 A sheet exported from another tool is a **state**, not a **history**. It says
 what the character is; it does not say what was chosen to get there. That is
 the exact inverse of the log, and the gap is not closable: "proficient in
 Stealth" could have come from the class, the background or a racial trait, and
 the export does not say which.
 
-So an import does not reconstruct choices. The export's final state becomes the
-character's *opening* state — an `init` event carrying the numbers, plus typed
-`race`, `class` and `subclass` events and a declared `identity.desiredLevel`,
-naming what the export states outright so that traits, features and
-level-scaled values attach. A multiclassed export loses its later classes,
-reported as unresolved rather than folded into the first. **No prompt
-is answered.** An imported character arrives with every choice still open, and
-finishing it is the ordinary build loop.
-
-That is the honest representation. Guessing which prompt granted which
-proficiency would put an invented history in the one place the model treats as
-the truth, and every later projection would repeat it as fact.
-
-Two consequences follow from the projector's ordering rather than from any
-decision about imports:
+The AI Wizard is the only way a foreign sheet comes in, and it rebuilds the
+build rather than recording the state; see
+[Imported builds and final ability totals](#imported-builds-and-final-ability-totals).
+What every imported log passes through is `ValidateImported`, which the AI
+Wizard's tools and custom options call, and what a value stated outright
+relies on is the projector's ordering:
 
 - Ability scores are *input* tier, so racial bonuses are applied after them.
-  An import records the export's scores **minus the race's fixed bonuses** — a
-  half-elf's Charisma 14 is stored as 12 and projects back to 14. The race's
-  *optional* bonuses are neither subtracted nor inferred, so that prompt stays
-  open and the sheet can read a point or two light until it is answered.
 - Skills and saving throws are *override* tier, applied after the bonuses are
   derived, so `skills.<skill>` and `savingThrows.<ability>` recompute the bonus
   they invalidate. A change that set only the training level would leave a
   sheet reading "Expertise" beside the number for plain proficiency.
-
-Whatever cannot be expressed is named in an **import report** rather than
-dropped: a background the SRD does not publish, a purse, spent Hit Dice, a
-homebrew action. SRD 5.1 publishes one background and one feat, so a sheet from
-a tool with the full rules always leaves something behind, and the report is
-what makes that visible instead of silent.
 
 ## Status
 
@@ -594,9 +568,9 @@ equipped, whichever path took it off.
 
 ## Builder choices under the 2014 rules
 
-The target is [SRD 5.1](https://www.dndbeyond.com/attachments/39j2li89/SRD5.1-CCBY4.0License.pdf),
-using the vendored text for Equipment, each class's Spellcasting/Pact Magic,
-Fighting Style, Expertise and the SRD subclass features. Rule policy lives in
+The target is [SRD 5.1](https://www.dndbeyond.com/attachments/39j2li89/SRD5.1-CCBY4.0License.pdf):
+its Equipment chapter, each class's Spellcasting/Pact Magic, Fighting Style,
+Expertise and the SRD subclass features. Rule policy lives in
 `data/pack/srd-5.1/mechanics.json`, beside the entities it governs.
 
 Equipment categories are expanded by the catalogue before either validation or
@@ -648,7 +622,7 @@ the fighter's two backup handaxes and the paladin's five javelins remain.
 Catalogue tests enforce one equipment type per class-kit option and one
 matching item per worn slot.
 
-The generator repairs omissions against the SRD: ranger quivers, the rogue's
+The pack repairs the upstream dump's omissions against the SRD: ranger quivers, the rogue's
 quiver-bearing bow bundle, and the acolyte's five incense blocks, vestments,
 prayer-book/wheel choice and 15 gp. The rogue bundle retains its historical key
 `shortbow+arrow` although its resolved contents now include the quiver. A bundle
@@ -658,8 +632,71 @@ equipment pack is granted as its contents**: a dungeoneer's pack is a backpack,
 a crowbar, ten torches and the rest in the backpack, never a row called
 "Dungeoneer's Pack", because the contents are what a player reaches for and the
 pack is only how the book sells them together. The wizard still names the
-pack, and a settled answer reads it back as one. A counted write from an
-import (`equipment.backpack.dungeoneers-pack` set 1) is not unpacked.
+pack, and a settled answer reads it back as one. The AI Wizard's
+`set_inventory` opens a pack a sheet names in the same way, and a line the
+sheet has of its own for something in it -- seven torches left of the ten --
+stands over the pack's count. A bare counted write
+(`equipment.backpack.dungeoneers-pack` set 1) is still not unpacked: a count
+is set, and contents can only be added.
+
+### Picks a feature owns
+
+Everything a class, a subclass, a background, a race or a feat leaves to the
+player is a question in the one prompt grammar, and which of two places
+declares it depends only on how the character came by the thing that asks.
+
+**A feature a level row grants asks through `subfeatureOptions`** on its own
+row: Fighting Style, Metamagic, Pact Boon, a Totem Warrior's animal, a Storm
+Herald's environment, a Zealot's damage type. The picked options are features
+the character then holds, which is all that stops one being chosen twice --
+there is no "already picked" list beside `state.Features`. Favored Enemy and
+Natural Explorer use their older field names (`enemyTypeOptions`,
+`terrainTypeOptions`) and are otherwise the same thing: each enemy type and
+terrain is a feature row, so the second tier cannot repeat the first.
+
+**A pick that grows with level is one feature per tier**, each with its own
+prompt over the same list: `maneuvers` chooses three at third level and
+`additional-maneuvers` two more at seventh, exactly as `metamagic-1/2/3`
+always have. Battle Master maneuvers, Arcane Shots, runes, Elemental
+Disciplines, Eldritch Invocations (`eldritch-invocations`, then
+`eldritch-invocations-5` … `-18`) and infusions are all written this way. The
+count is the row's own `choose`; the `maneuvers-known` and `invocations-known`
+parameters are what the sheet prints and are not read to pose anything. The
+list is therefore written out once per tier, and
+`TestTieredPicksOfferTheSameList` is what keeps the copies equal and every
+option row in them.
+
+**Anything else asks through a rule's `choices`** in `mechanics.json`: a feat
+(Skilled's three proficiencies, Martial Adept's two maneuvers), a feature that
+was itself picked (Superior Technique's maneuver, a favored enemy's
+language), a background (the criminal's gaming set), a race (the variant
+human's feat) and a subclass feature's proficiency (Student of War's tool).
+A rule's question is filed with what owns the rule -- a background's with the
+background, a race's with the race -- and at the level that brought it: the
+level a feat was taken at, or the level on a feature's own row. A rule choice
+of kind `expertise` doubles a proficiency the character already holds
+(Skill Expert, Blessings of Knowledge) and grants nothing itself. An option
+may be a bundle: Resilient is one pick whose two halves are the score and its
+saving throw.
+
+**An option's prerequisites are read against the character as they stand.**
+`prerequisites` on a feature row -- a level, another feature, a spell -- block
+the option in every prompt that offers it (`Prompt.Blocked`, the same list the
+cleric's kit uses, greyed by the client and refused by the validator). The
+level is the character's level in the option's own `class`, *now*, not the
+level of the prompt offering it. That is deliberate and it is why there is no
+"replace an invocation when you gain a level" step: every earlier answer is
+editable, and a twelfth-level warlock may put Lifedrinker into the pick second
+level opened -- the same policy [the spell prompts](#current-level-spell-selection-and-custom-choices)
+follow. A character with no level in the option's class meets no prerequisite,
+which is Eldritch Adept's rule for a non-warlock. Feat prerequisites are
+**not** enforced: a feat is offered to everybody, see
+[known caveats](known-caveats.md#choices-the-builder-does-not-ask).
+
+A subclass feature that grants a *fixed* proficiency -- a Life cleric's heavy
+armor -- is prose on its row and is not granted; only the part the player
+chooses is modelled. That, and the picks still missing, are listed in the same
+caveat.
 
 ### Items carry their slot
 
@@ -687,6 +724,37 @@ Custom slot, the slot that takes a wearable of any shape. Every other placement 
 derived from the list and the catalogue on every read, because the shape
 decides it; Custom is stored because nothing else could decide it, and it only
 ever names something equipped.
+
+### A custom item is an item
+
+A character may carry an item no pack holds: a custom entry of kind `item`
+(`CustomOption.Item`, a `CustomItem`). It is the part of a catalogue item a
+person can fill in -- an icon, a category, a slot, a cost, a weight, and the
+whole of a weapon or of a suit of armor, never both -- and
+`WithCustomCatalog` turns it into a real `catalog.Item` named `custom-<id>` in
+that one character's overlay. From there nothing knows it is custom: its slot
+is the one it names or the one its shape gives (`Item.DefaultSlot`, the same
+function a pack row asks), a worn custom breastplate sets the armor class, and
+a wielded custom spear is an attack. A custom weapon joins the pack's
+`simple-weapons` or `martial-weapons` category in the overlay, which is what
+makes a proficiency with the category cover it.
+
+The icon is a **label**, not a picture: one of the pack item icons
+(`Catalog.ItemIcons`), resolved when the overlay is built, so a log stays small
+and no image is ever uploaded. The enum fields are stored as their numbers,
+which is why the constants in `domain/catalog/item.go` may be appended to and
+never reordered.
+
+**The definition says where the item starts, not where it is.** A selected
+custom item is seeded into the list its `Placement` names -- the backpack
+unless it says otherwise -- as an ordinary counted equipment change, placed
+just ahead of the first change the player made to that item, or last when
+there is none. So equipping, moving and dropping a custom item are the same
+`equipment.*` changes as for any other, and they have the final word; before
+this the item was put back on every projection, after the armor class had
+been worked out, and could be neither worn to any effect nor dropped. An
+untouched item is seeded last so that a whole-list write -- an import clears
+a list that way -- does not take it.
 
 ### Spell acquisition and preparation
 
@@ -716,7 +784,6 @@ Defense without interpreting their prose.
 | Wizard | Six entries initially plus two per later wizard level, using the current class-level pool | Spellbook subset, Intelligence modifier + wizard level, minimum one |
 | Cleric, druid | Cantrips follow the class table | Class-list subset, Wisdom modifier + class level, minimum one |
 | Paladin | Begins at level two | Class-list subset, Charisma modifier + half paladin level rounded down, minimum one |
-
 | Arcane Trickster, Eldritch Knight | Begins at level three, from the **subclass's** table and the wizard's list | Known spells are available |
 
 A class is not the only thing that casts. A rogue does not and an Arcane
@@ -726,9 +793,22 @@ spellcasting ability, since the subclass has neither; its cantrips known,
 spells known and slots are read from the subclass's own advancement rows, and
 its prompts are named after it (`arcane-trickster/spell/known/3`). Everything
 that asks how a class casts -- slots, the multiclass caster level, the
-spellcasting summary, the spell prompts -- asks one function, `castingFor`,
+spellcasting summary, the spell prompts -- asks one function, `castingProfile`,
 which answers with the subclass's profile when it has one and the class's
 otherwise. A rogue with any other archetype is exactly the non-caster it was.
+
+A **feat or a trait that teaches spells** is a spell source of its own,
+outside every class, declared as `spellBenefits` owned by it. The picks are
+drawn from a class list the benefit names (`list`: Wood Elf Magic's druid
+cantrip, and a Nature cleric's, which the class loop poses and counts as a
+cleric's), from a class the player chose in a rule choice the benefit points at
+(`listFrom`: Magic Initiate, Ritual Caster, Spell Sniper -- nothing is offered
+until that is answered), or from every list narrowed by `schools` (Fey Touched,
+Shadow Touched) or to `ritual` spells. Its casting ability is the benefit's
+own, or else the list class's. A feat's spell answers are posted as the feat's
+own event, which replays as "has this feat"; a level event would have been the
+natural home and would hand a fighter with Magic Initiate a wizard level. The
+spell a feat names outright -- Misty Step -- is a plain grant rule.
 
 The school limits are **not enforced**: an Arcane Trickster is offered the
 whole wizard list rather than enchantment and illusion plus the free picks at
@@ -755,9 +835,8 @@ projected. Arcanum remains separate from Pact Magic slots. These selections do
 not implement spell casting, copying costs or rest tracking.
 
 Existing logs need no event rewrite: newly required unanswered spell choices
-appear as open prompts. Existing pinned pack releases retain their own policy;
-changing a character's pinned rules still uses the explicit pack migration flow.
-
+appear as open prompts. Existing pinned pack releases retain their own policy,
+and a character's pinned rules never change.
 
 ### Current-level spell selection and custom choices
 
@@ -848,8 +927,8 @@ dependencies and conflicts are checked by the existing pack compiler. Core packs
 may define the six standard ability scores, whose identities remain STR, DEX, CON,
 INT, WIS and CHA. Packs cannot introduce a seventh score.
 
-Creation pins the complete resolved release lock. Subsequent selection changes
-use migration preview and revision-checked application. Published pack updates
+Creation pins the complete resolved release lock, and the selection is final:
+nothing moves a character onto another lock. Published pack updates
 never change an existing character implicitly. If group access to a pack ends,
 already pinned characters remain playable and can gain levels, while new
 characters and copies require current release access. Group shares are exact

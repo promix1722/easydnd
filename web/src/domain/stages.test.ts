@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest'
 import { stageOf, STAGES } from './stages'
 
-it('separates cantrip choices and legacy saved cantrips while keeping personality last', () => {
-  expect(STAGES.slice(-4)).toEqual(['cantrips', 'spells', 'equipment', 'personality'])
+it('separates cantrip choices and legacy saved cantrips while keeping personality and custom last', () => {
+  expect(STAGES.slice(-5)).toEqual(['cantrips', 'spells', 'equipment', 'personality', 'custom'])
   expect(stageOf('class', 'spell', 'custom/spell/0', 'cantrip')).toBe('cantrips')
   expect(stageOf('class', undefined, 'wizard/spell/cantrip/1')).toBe('cantrips')
   expect(stageOf('race', 'spell', 'high-elf-cantrip/spell/0')).toBe('cantrips')

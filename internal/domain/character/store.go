@@ -25,25 +25,11 @@ func (l *Log) Stamp() {
 	}
 }
 
-// ExpectSeq reports a *types.ValidationError when the log does not end at
-// expectedSeq -- the check behind Repository.Append, Truncate and Rewrite.
-func (c Character) ExpectSeq(expectedSeq int) error {
-	if got := c.Log.LastSeq(); got != expectedSeq {
-		return types.NewValidationError("character %q is at sequence %d, not %d", c.ID, got, expectedSeq)
-	}
-	return nil
-}
-
 // Commit replaces the log, advancing the revision, and is the whole of
-// Repository.Commit once the record is in hand. A stale expectedRevision or a
-// repeated command is a *types.ValidationError, and so is a log that does not
-// validate; on any error c is unchanged.
-func (c *Character) Commit(expectedRevision int, log Log, command string, checkpoint *Checkpoint) error {
-	if command != "" {
-		if _, ok := c.Commands[command]; ok {
-			return types.NewValidationError("command already committed; reload character revision")
-		}
-	}
+// Repository.Commit once the record is in hand. A stale expectedRevision is a
+// *types.ValidationError, and so is a log that does not validate; on any error
+// c is unchanged.
+func (c *Character) Commit(expectedRevision int, log Log) error {
 	if c.Revision != expectedRevision {
 		return types.NewValidationError("stale character revision: got %d, expected %d", expectedRevision, c.Revision)
 	}
@@ -52,19 +38,8 @@ func (c *Character) Commit(expectedRevision int, log Log, command string, checkp
 	}
 	updated := log.Clone()
 	updated.Stamp()
-	if checkpoint != nil {
-		cp := *checkpoint
-		cp.Log = cp.Log.Clone()
-		c.Checkpoints = append(c.Checkpoints, cp)
-	}
 	c.Revision += max(1, updated.Len()-c.Log.Len())
 	c.Log = updated
-	if command != "" {
-		if c.Commands == nil {
-			c.Commands = map[string]int{}
-		}
-		c.Commands[command] = c.Revision
-	}
 	return nil
 }
 

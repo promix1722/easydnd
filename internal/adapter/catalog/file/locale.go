@@ -101,7 +101,7 @@ func mergeProse(base, over Prose) Prose {
 
 // fillProse overlays over onto base, but only into fields base leaves empty,
 // and reports the first field both set. Two packs that describe one entity
-// must not have a winner picked by load order (docs/packs-plan.md), so a
+// must not have a winner picked by load order, so a
 // description both supply is an error rather than a merge -- which is also
 // what keeps a descriptions-only overlay honest about being exactly that.
 func fillProse(base, over Prose) (Prose, error) {

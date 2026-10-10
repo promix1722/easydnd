@@ -81,14 +81,8 @@ func TestDiceRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseDice() error = %v", err)
 	}
-	if got := d.Min(); got != 5 {
-		t.Errorf("Min() = %d, want 5", got)
-	}
 	if got := d.Max(); got != 15 {
 		t.Errorf("Max() = %d, want 15", got)
-	}
-	if got := d.Average(); got != 10 {
-		t.Errorf("Average() = %v, want 10", got)
 	}
 }
 
@@ -144,23 +138,5 @@ func TestRefRoundTrips(t *testing.T) {
 	// must be rejected rather than guessed at.
 	if _, ok := rules.ParseRef("acid-arrow"); ok {
 		t.Error("ParseRef() accepted an untyped reference")
-	}
-}
-
-func TestCoinsConvertToCopper(t *testing.T) {
-	tests := []struct {
-		coins rules.Coins
-		want  int
-	}{
-		{rules.Coins{Amount: 1, Unit: rules.Copper}, 1},
-		{rules.Coins{Amount: 1, Unit: rules.Silver}, 10},
-		{rules.Coins{Amount: 1, Unit: rules.Electrum}, 50},
-		{rules.Coins{Amount: 15, Unit: rules.Gold}, 1500},
-		{rules.Coins{Amount: 1, Unit: rules.Platinum}, 1000},
-	}
-	for _, tt := range tests {
-		if got := tt.coins.InCopper(); got != tt.want {
-			t.Errorf("%v InCopper() = %d, want %d", tt.coins, got, tt.want)
-		}
 	}
 }

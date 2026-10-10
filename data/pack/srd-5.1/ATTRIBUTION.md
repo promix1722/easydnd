@@ -27,8 +27,8 @@ available at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 Both the mechanics and the English prose here are currently derived from
 [`5e-bits/5e-database`](https://github.com/5e-bits/5e-database) (`src/2014/en`),
 whose code is MIT but whose **game material is stated as OGL 1.0a**, not CC-BY-4.0.
-`docs/reference_srd_5.1/data/ATTRIBUTION.md` records that, with an explicit
-"review before redistributing this JSON outside the project".
+`docs/reference_srd_5.1/README.md` records that, and says to revisit it before
+redistributing the raw JSON.
 
 The *mechanics* — dice, ranges, bonuses, slot tables — are facts and carry thin
 copyright. The **prose** under `i18n/en/` is the exposure. The clean fix is to

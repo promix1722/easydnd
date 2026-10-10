@@ -183,7 +183,7 @@ func TestCeremonyStateSurvivesARoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unmarshalState (second): %v", err)
 	}
-	if string(round.Challenge) != string(session.Challenge) {
+	if round.Challenge != session.Challenge {
 		t.Error("the challenge changed across a round trip")
 	}
 }

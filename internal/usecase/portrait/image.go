@@ -1,3 +1,5 @@
+// Package portrait decides whether an inline image is one the server will
+// store as a portrait.
 package portrait
 
 import (

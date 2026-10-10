@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 

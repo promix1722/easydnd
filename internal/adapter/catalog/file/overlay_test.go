@@ -24,6 +24,7 @@ func overlay(bundles map[string]file.Bundle) *file.PackDocument {
 }
 
 func TestOverlayFillsProseTheBaseLacks(t *testing.T) {
+	t.Parallel()
 	path := writeDocument(t, overlay(map[string]file.Bundle{
 		"classes": {"srd-2014:class:wizard": {Desc: []string{"A scholar of the arcane."}}},
 	}))
@@ -50,6 +51,7 @@ func TestOverlayFillsProseTheBaseLacks(t *testing.T) {
 }
 
 func TestOverlayCannotRestateOrInventProse(t *testing.T) {
+	t.Parallel()
 	for name, bundles := range map[string]map[string]file.Bundle{
 		"restates a description": {"spells": {"srd-2014:spell:fireball": {Desc: []string{"boom"}}}},
 		"restates a name":        {"spells": {"srd-2014:spell:fireball": {Name: "Fire Ball"}}},
@@ -62,6 +64,7 @@ func TestOverlayCannotRestateOrInventProse(t *testing.T) {
 }
 
 func TestOverlayKeysMustNameADeclaredDependency(t *testing.T) {
+	t.Parallel()
 	for name, bundles := range map[string]map[string]file.Bundle{
 		"undeclared pack":  {"spells": {"other:spell:fireball": {Desc: []string{"x"}}}},
 		"bare slug":        {"spells": {"fireball": {Desc: []string{"x"}}}},
@@ -78,6 +81,7 @@ func TestOverlayKeysMustNameADeclaredDependency(t *testing.T) {
 // by layout: the hand-maintained SRD pack relies on that for 650 icons and
 // every language it will ever add.
 func TestDirectoryPackNeedsNoFilesMap(t *testing.T) {
+	t.Parallel()
 	base, err := file.LoadPack(basePath())
 	if err != nil {
 		t.Fatal(err)

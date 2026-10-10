@@ -117,16 +117,21 @@ jobs:
       # are worth spelling out:
       #
       # lint/layers -- the inner layers must not import the HTTP framework,
-      # net/http, database/sql, pgx or goose. depguard says the same thing at
-      # lint time, but golangci is not run here; this grep over the real module
-      # graph is, and it is transitive, which is what catches a library that
-      # pulls net/http in three hops down.
+      # net/http, database/sql, pgx or goose. golangci's depguard says the same
+      # thing per import, below; this grep over the real module graph is
+      # transitive, which is what catches a library that pulls net/http in
+      # three hops down.
       #
       # pack/check -- the committed compendium is hand-maintained, so the real
       # pack loader is the gate: schema, references and choices, the same
-      # validation the server runs at startup.
-      - name: gofmt, vet, layers, pack
-        run: make fmt/check vet lint/layers pack/check
+      # validation the server runs at startup. data/lint/check holds its prose
+      # to the checks that are at zero.
+      - name: gofmt, vet, layers, pack, prose
+        run: make fmt/check vet lint/layers pack/check data/lint/check
+      # golangci-lint, built from source at the version the Makefile pins: no
+      # cache to read it from here, so this is a minute or two of the job.
+      - name: lint
+        run: make lint
 
   check-frontend:
     runs-on: ubuntu-latest
@@ -142,6 +147,10 @@ jobs:
         run: make web/deps
       - name: typecheck, lint, layers
         run: make web/lint
+      # The other half of what `make verify` checks here: the committed icons
+      # against the generator.
+      - name: icons
+        run: make web/icons/check
 
   # ---------------------------------------------------------------- BUILD -----
 
@@ -195,11 +204,10 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: api
-          path: |
-            easydnd
-            config.prod.yaml
-            deploy/deploy.sh
-            data/pack/srd-5.1
+          # The binary alone. The config, deploy.sh and the 19 MB compendium
+          # it used to carry are in the repository, and deploy-backend checks
+          # out this same commit before it downloads this.
+          path: easydnd
           retention-days: 7
 
   build-frontend:
@@ -306,7 +314,7 @@ jobs:
 
       # make test/db, not make test/unit, and the difference is `-p 1`.
       #
-      # Three packages reach the one database and each opens by wiping it --
+      # Two packages reach the one database and each opens by wiping it --
       # internal/adapter/repository/postgres (users, and groups), and
       # internal/api/http's durability test. Run in parallel, one truncates the
       # table another has just written and the red lands on whichever lost the
@@ -381,7 +389,7 @@ jobs:
   # the three run side by side and it gates on nothing by itself. Because
   # `!cancelled()` has already lifted the implicit rule, dropping the clause
   # would not fail loudly -- it would ship a release whose gofmt, vet, layer and
-  # SRD-drift checks were red. `== 'success'` and not `!= 'failure'`, unlike the
+  # pack checks were red. `== 'success'` and not `!= 'failure'`, unlike the
   # Test line: Check runs on every tag, so there is no legitimate way for it to
   # be skipped.
 
@@ -434,8 +442,8 @@ jobs:
           printf '%s\n' "${RELEASE_VERSION}" \
             | ssh -i ~/.ssh/id_deploy "deploy@$HOST" "cat > $REL/VERSION"
 
-          # The SRD data is ~1.7 MB across 50-odd files in nested directories.
-          # One tar beats fifty scp round trips, and lands the tree atomically
+          # The SRD data is ~19 MB across some 700 files in nested directories.
+          # One tar beats that many scp round trips, and lands the tree atomically
           # enough that deploy.sh's existence check is meaningful.
           tar -czf srd.tgz -C data/pack srd-5.1
           scp -i ~/.ssh/id_deploy srd.tgz "deploy@$HOST:$REL/srd.tgz"

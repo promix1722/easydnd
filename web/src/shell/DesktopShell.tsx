@@ -1,5 +1,6 @@
-import { Link, Outlet, useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
+import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 
 import {
@@ -21,6 +22,7 @@ import {
 
 import { AccountActions } from './AccountActions'
 import { HEADER_BOX, SAFE_TOP } from './chrome'
+import { RouteOutlet } from './RouteOutlet'
 import { Wordmark } from './Wordmark'
 
 /** The id the rail's control points `aria-controls` at. */
@@ -88,8 +90,7 @@ function rowStyles(opened: boolean) {
  * whole of the navigation, so each keeps its name in a tooltip and in its
  * accessible name -- see `ui/sections.ts`, where the glyphs are chosen.
  *
- * **The state is not remembered.** There is no `localStorage` anywhere in this
- * client, and the sheet's "Hide untrained" toggle is already deliberately
+ * **The state is not remembered.** The sheet's "Hide untrained" toggle is already deliberately
  * unpersisted; a second unpersisted toggle is consistent, where a persisted one
  * would be this app's first stored preference and would have to earn that. It
  * would also be a *setting* that no page lists, which is how you get a bug
@@ -108,28 +109,11 @@ export function DesktopShell() {
   const [opened, { toggle }] = useDisclosure(true)
 
   const t = useT()
+  const { user } = useAuth()
   const active = sectionFor(pathname)
   const label = opened ? t('nav.collapse') : t('nav.expand')
 
-  return (
-    <AppShell
-      header={{ height: HEADER_BOX }}
-      styles={{ header: { paddingTop: SAFE_TOP } }}
-      navbar={{ width: opened ? NAVBAR_WIDTH : RAIL_WIDTH, breakpoint: 'never' }}
-      padding="lg"
-    >
-      <AppShell.Header>
-        <Group h="100%" px="md" gap="sm">
-          <Wordmark />
-          {/* The language and the way out. The way *in* to the account is in
-              the navbar below, under the rule -- see ./AccountActions.tsx.
-              Shared with the phone header rather than written twice here. */}
-          <AccountActions />
-        </Group>
-      </AppShell.Header>
-
-      <AppShell.Navbar id={NAVBAR_ID} p={CHROME_INSET}>
-        {SECTIONS.map((section) => {
+  const row = (section: (typeof SECTIONS)[number]) => {
           const link = (
             <NavLink
               key={section.to}
@@ -155,7 +139,27 @@ export function DesktopShell() {
               {link}
             </Tooltip>
           )
-        })}
+  }
+
+  return (
+    <AppShell
+      header={{ height: HEADER_BOX }}
+      styles={{ header: { paddingTop: SAFE_TOP } }}
+      navbar={{ width: opened ? NAVBAR_WIDTH : RAIL_WIDTH, breakpoint: 'never' }}
+      padding="lg"
+    >
+      <AppShell.Header>
+        <Group h="100%" px="md" gap="sm">
+          <Wordmark />
+          {/* The language and the way out. The way *in* to the account is in
+              the navbar below, under the rule -- see ./AccountActions.tsx.
+              Shared with the phone header rather than written twice here. */}
+          <AccountActions />
+        </Group>
+      </AppShell.Header>
+
+      <AppShell.Navbar id={NAVBAR_ID} p={CHROME_INSET}>
+        {SECTIONS.filter((section) => !section.belowRule && (!section.adminOnly || user?.admin)).map(row)}
 
         {/*
           The two rows that are not sections: the account, and the control that
@@ -180,6 +184,8 @@ export function DesktopShell() {
           above it that go somewhere.
         */}
         <Divider my="xs" />
+        {/* Under the rule and over the account: a section still, with a trail of its own, but an errand rather than a place. */}
+        {SECTIONS.filter((section) => section.belowRule).map(row)}
         <AccountRow opened={opened} active={pathname === '/account'} />
         <ControlRow
           opened={opened}
@@ -208,7 +214,7 @@ export function DesktopShell() {
           paddingTop: `calc(var(--app-shell-header-offset, 0rem) + ${CHROME_INSET}px)`,
         }}
       >
-        <Outlet />
+        <RouteOutlet />
       </AppShell.Main>
     </AppShell>
   )

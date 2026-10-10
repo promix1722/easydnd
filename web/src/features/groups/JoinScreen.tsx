@@ -14,7 +14,7 @@ export interface JoinScreenProps {
    * The invitation, already recovered from the fragment or from where it was
    * saved before signing in. It arrives as a prop because the route has to
    * capture it before deciding whether this screen is rendered at all -- see
-   * routes/JoinRoute.tsx.
+   * routes/InvitationRoute.tsx.
    */
   token: string
 }
@@ -54,9 +54,6 @@ export function JoinScreen({ token }: JoinScreenProps) {
       <Alert color="red" title={t('join.missing.title')}>
         <Stack gap="xs" align="flex-start">
           <Text size="sm">{t('join.missing.detail')}</Text>
-          <Button variant="light" onClick={() => void navigate('/groups')}>
-            {t('join.yourGroups')}
-          </Button>
         </Stack>
       </Alert>
     )
@@ -80,9 +77,6 @@ export function JoinScreen({ token }: JoinScreenProps) {
           {/* Whatever the server said. An expired link is a 400 and never a
               401, so being here does not mean anybody has been signed out. */}
           <Text size="sm">{error ?? t('join.unusable.detail')}</Text>
-          <Button variant="light" onClick={() => void decline()}>
-            {t('join.yourGroups')}
-          </Button>
         </Stack>
       </Alert>
     )

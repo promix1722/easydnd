@@ -1,13 +1,8 @@
 package file
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
-	"io/fs"
-	"os"
-	"path/filepath"
-	"sync"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -17,7 +12,6 @@ import (
 // The mechanics files, relative to the data directory. Exported so whatever
 // writes a pack uses exactly the names this package reads.
 const (
-	FileManifest            = "manifest.json"
 	FileAbilities           = "abilities.json"
 	FileSkills              = "skills.json"
 	FileAlignments          = "alignments.json"
@@ -74,218 +68,133 @@ func ProseFiles() []string {
 	return append(MechanicsFiles(), FileTerms)
 }
 
-// Source loads the compendium from a directory of JSON files.
+// buildCatalog converts one rules context -- every pack's rows merged per
+// collection, and the prose already resolved for the locale -- into a Catalog.
 //
-// Loading is lazy and cached: the first request for a locale reads and
-// converts it, and every later request gets the same *catalog.Catalog. That is
-// safe because a Catalog is immutable, and it matters because converting all
-// 1,300 entries is not something to redo per request.
-type Source struct {
-	dir   string
-	files map[string][]byte
-
-	mu     sync.Mutex
-	loaded map[rules.Locale]*catalog.Catalog
-}
-
-// NewSource returns a Source reading from dir.
-func NewSource(dir string) *Source {
-	return &Source{dir: dir, loaded: make(map[rules.Locale]*catalog.Catalog)}
-}
-
-// Dir returns the directory this source reads from.
-func (s *Source) Dir() string { return s.dir }
-
-// Locales reports which locales the directory carries, ordered as
-// rules.SupportedLocales orders them so the most complete comes first.
-func (s *Source) Locales(_ context.Context) ([]rules.Locale, error) {
-	entries, err := os.ReadDir(filepath.Join(s.dir, LocaleDir))
-	if err != nil {
-		return nil, types.WrapServerError(err, "reading locales from %s", s.dir)
-	}
-	present := make(map[rules.Locale]bool, len(entries))
-	for _, e := range entries {
-		if e.IsDir() {
-			present[rules.Locale(e.Name())] = true
-		}
-	}
-	out := make([]rules.Locale, 0, len(present))
-	for _, known := range rules.SupportedLocales() {
-		if present[known] {
-			out = append(out, known)
-		}
-	}
-	if len(out) == 0 {
-		return nil, types.NewNotFoundError("no supported locales in %s", filepath.Join(s.dir, LocaleDir))
-	}
-	return out, nil
-}
-
-// Load reads and resolves the compendium for one locale.
-func (s *Source) Load(_ context.Context, locale rules.Locale) (*catalog.Catalog, error) {
-	if !locale.IsSupported() && s.files == nil {
-		return nil, types.NewNotFoundError("unsupported locale %q", locale)
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if cached, ok := s.loaded[locale]; ok {
-		return cached, nil
-	}
-
-	built, err := s.build(locale)
+// Rows arrive as decoded JSON values because that is what merging and
+// qualifying slugs across packs works on; each collection is encoded once
+// more here so that it lands in its wire type through that type's own
+// decoder, which is where the format's rules live.
+func buildCatalog(entities map[string][]any, prose map[string]Bundle, ruleset string, locale rules.Locale) (*catalog.Catalog, error) {
+	abilities, err := rows[AbilityScore](entities, FileAbilities)
 	if err != nil {
 		return nil, err
 	}
-	s.loaded[locale] = built
-	return built, nil
-}
-
-// bundles holds the resolved prose for one locale, one Bundle per collection.
-type bundles map[string]Bundle
-
-// get returns the bundle for a mechanics file, or an empty one.
-func (b bundles) get(file string) Bundle {
-	if got, ok := b[file]; ok {
-		return got
-	}
-	return Bundle{}
-}
-
-// build does the actual work of Load, without the cache.
-func (s *Source) build(locale rules.Locale) (*catalog.Catalog, error) {
-	prose, err := s.prose(locale)
+	skills, err := rows[Skill](entities, FileSkills)
 	if err != nil {
 		return nil, err
 	}
-
-	// Mechanics first: every file is read before anything is converted, so a
-	// missing file is reported as a missing file rather than as a dangling
-	// reference three collections later.
-	abilities, err := readSource[AbilityScore](s, FileAbilities)
+	alignments, err := rows[Named](entities, FileAlignments)
 	if err != nil {
 		return nil, err
 	}
-	skills, err := readSource[Skill](s, FileSkills)
+	languages, err := rows[Language](entities, FileLanguages)
 	if err != nil {
 		return nil, err
 	}
-	alignments, err := readSource[Named](s, FileAlignments)
+	conditions, err := rows[Named](entities, FileConditions)
 	if err != nil {
 		return nil, err
 	}
-	languages, err := readSource[Language](s, FileLanguages)
+	damageTypes, err := rows[Named](entities, FileDamageTypes)
 	if err != nil {
 		return nil, err
 	}
-	conditions, err := readSource[Named](s, FileConditions)
+	magicSchools, err := rows[Named](entities, FileMagicSchools)
 	if err != nil {
 		return nil, err
 	}
-	damageTypes, err := readSource[Named](s, FileDamageTypes)
+	weaponProperties, err := rows[Named](entities, FileWeaponProperties)
 	if err != nil {
 		return nil, err
 	}
-	magicSchools, err := readSource[Named](s, FileMagicSchools)
+	proficiencies, err := rows[Proficiency](entities, FileProficiencies)
 	if err != nil {
 		return nil, err
 	}
-	weaponProperties, err := readSource[Named](s, FileWeaponProperties)
+	equipmentCategories, err := rows[EquipmentCategory](entities, FileEquipmentCategories)
 	if err != nil {
 		return nil, err
 	}
-	proficiencies, err := readSource[Proficiency](s, FileProficiencies)
+	races, err := rows[Race](entities, FileRaces)
 	if err != nil {
 		return nil, err
 	}
-	equipmentCategories, err := readSource[EquipmentCategory](s, FileEquipmentCategories)
+	subraces, err := rows[Subrace](entities, FileSubraces)
 	if err != nil {
 		return nil, err
 	}
-	races, err := readSource[Race](s, FileRaces)
+	traits, err := rows[Trait](entities, FileTraits)
 	if err != nil {
 		return nil, err
 	}
-	subraces, err := readSource[Subrace](s, FileSubraces)
+	classes, err := rows[Class](entities, FileClasses)
 	if err != nil {
 		return nil, err
 	}
-	traits, err := readSource[Trait](s, FileTraits)
+	classLevels, err := rows[ClassLevel](entities, FileClassLevels)
 	if err != nil {
 		return nil, err
 	}
-	classes, err := readSource[Class](s, FileClasses)
+	subclasses, err := rows[Subclass](entities, FileSubclasses)
 	if err != nil {
 		return nil, err
 	}
-	classLevels, err := readSource[ClassLevel](s, FileClassLevels)
+	features, err := rows[Feature](entities, FileFeatures)
 	if err != nil {
 		return nil, err
 	}
-	subclasses, err := readSource[Subclass](s, FileSubclasses)
+	backgrounds, err := rows[Background](entities, FileBackgrounds)
 	if err != nil {
 		return nil, err
 	}
-	features, err := readSource[Feature](s, FileFeatures)
+	feats, err := rows[Feat](entities, FileFeats)
 	if err != nil {
 		return nil, err
 	}
-	backgrounds, err := readSource[Background](s, FileBackgrounds)
+	equipment, err := rows[Item](entities, FileEquipment)
 	if err != nil {
 		return nil, err
 	}
-	feats, err := readSource[Feat](s, FileFeats)
+	magicItems, err := rows[MagicItem](entities, FileMagicItems)
 	if err != nil {
 		return nil, err
 	}
-	equipment, err := readSource[Item](s, FileEquipment)
-	if err != nil {
-		return nil, err
-	}
-	magicItems, err := readSource[MagicItem](s, FileMagicItems)
-	if err != nil {
-		return nil, err
-	}
-	spells, err := readSource[Spell](s, FileSpells)
+	spells, err := rows[Spell](entities, FileSpells)
 	if err != nil {
 		return nil, err
 	}
 
-	manifest, err := readManifestSource(s)
-	if err != nil {
-		return nil, err
-	}
-
-	c := &conv{where: s.dir}
+	c := &conv{where: "<pack>"}
 	levels := mapEach(classLevels, func(w ClassLevel) catalog.ClassLevel { return c.classLevel(w) })
 
 	built := catalog.New(locale, levels)
-	built.Ruleset = manifest.Ruleset
-	built.Abilities = catalog.NewCollection(mapBundle(abilities, prose.get(FileAbilities), c.abilityScore))
-	built.Skills = catalog.NewCollection(mapBundle(skills, prose.get(FileSkills), c.skill))
-	built.Alignments = catalog.NewCollection(mapBundle(alignments, prose.get(FileAlignments), c.alignment))
-	built.Languages = catalog.NewCollection(mapBundle(languages, prose.get(FileLanguages), c.language))
-	built.Conditions = catalog.NewCollection(mapNamed[catalog.Condition](conditions, prose.get(FileConditions)))
-	built.DamageTypes = catalog.NewCollection(mapNamed[catalog.DamageType](damageTypes, prose.get(FileDamageTypes)))
-	built.MagicSchools = catalog.NewCollection(mapNamed[catalog.MagicSchool](magicSchools, prose.get(FileMagicSchools)))
-	built.WeaponProperties = catalog.NewCollection(mapNamed[catalog.WeaponProperty](weaponProperties, prose.get(FileWeaponProperties)))
-	built.Proficiencies = catalog.NewCollection(mapBundle(proficiencies, prose.get(FileProficiencies), c.proficiency))
-	built.EquipmentCategories = catalog.NewCollection(mapBundle(equipmentCategories, prose.get(FileEquipmentCategories),
+	built.Ruleset = ruleset
+	built.Abilities = catalog.NewCollection(mapBundle(abilities, prose[collectionOf(FileAbilities)], c.abilityScore))
+	built.Skills = catalog.NewCollection(mapBundle(skills, prose[collectionOf(FileSkills)], c.skill))
+	built.Alignments = catalog.NewCollection(mapBundle(alignments, prose[collectionOf(FileAlignments)], c.alignment))
+	built.Languages = catalog.NewCollection(mapBundle(languages, prose[collectionOf(FileLanguages)], c.language))
+	built.Conditions = catalog.NewCollection(mapNamed[catalog.Condition](conditions, prose[collectionOf(FileConditions)]))
+	built.DamageTypes = catalog.NewCollection(mapNamed[catalog.DamageType](damageTypes, prose[collectionOf(FileDamageTypes)]))
+	built.MagicSchools = catalog.NewCollection(mapNamed[catalog.MagicSchool](magicSchools, prose[collectionOf(FileMagicSchools)]))
+	built.WeaponProperties = catalog.NewCollection(mapNamed[catalog.WeaponProperty](weaponProperties, prose[collectionOf(FileWeaponProperties)]))
+	built.Proficiencies = catalog.NewCollection(mapBundle(proficiencies, prose[collectionOf(FileProficiencies)], c.proficiency))
+	built.EquipmentCategories = catalog.NewCollection(mapBundle(equipmentCategories, prose[collectionOf(FileEquipmentCategories)],
 		func(w EquipmentCategory, b Bundle) catalog.EquipmentCategory {
 			return catalog.EquipmentCategory{Entry: entry(w.Slug, b), Items: slugs(w.Items)}
 		}))
-	built.Races = catalog.NewCollection(mapBundle(races, prose.get(FileRaces), c.race))
-	built.Subraces = catalog.NewCollection(mapBundle(subraces, prose.get(FileSubraces), c.subrace))
-	built.Traits = catalog.NewCollection(mapBundle(traits, prose.get(FileTraits), c.trait))
-	built.Classes = catalog.NewCollection(mapBundle(classes, prose.get(FileClasses), c.class))
-	built.Subclasses = catalog.NewCollection(mapBundle(subclasses, prose.get(FileSubclasses), c.subclass))
-	built.Features = catalog.NewCollection(mapBundle(features, prose.get(FileFeatures), c.feature))
-	built.Backgrounds = catalog.NewCollection(mapBundle(backgrounds, prose.get(FileBackgrounds), c.background))
-	built.Feats = catalog.NewCollection(mapBundle(feats, prose.get(FileFeats), c.feat))
-	built.Items = catalog.NewCollection(mapBundle(equipment, prose.get(FileEquipment), c.item))
-	built.MagicItems = catalog.NewCollection(mapBundle(magicItems, prose.get(FileMagicItems), c.magicItem))
-	built.Spells = catalog.NewCollection(mapBundle(spells, prose.get(FileSpells), c.spell))
-	built.Terms = catalog.NewCollection(termsOf(prose.get(FileTerms)))
+	built.Races = catalog.NewCollection(mapBundle(races, prose[collectionOf(FileRaces)], c.race))
+	built.Subraces = catalog.NewCollection(mapBundle(subraces, prose[collectionOf(FileSubraces)], c.subrace))
+	built.Traits = catalog.NewCollection(mapBundle(traits, prose[collectionOf(FileTraits)], c.trait))
+	built.Classes = catalog.NewCollection(mapBundle(classes, prose[collectionOf(FileClasses)], c.class))
+	built.Subclasses = catalog.NewCollection(mapBundle(subclasses, prose[collectionOf(FileSubclasses)], c.subclass))
+	built.Features = catalog.NewCollection(mapBundle(features, prose[collectionOf(FileFeatures)], c.feature))
+	built.Backgrounds = catalog.NewCollection(mapBundle(backgrounds, prose[collectionOf(FileBackgrounds)], c.background))
+	built.Feats = catalog.NewCollection(mapBundle(feats, prose[collectionOf(FileFeats)], c.feat))
+	built.Items = catalog.NewCollection(mapBundle(equipment, prose[collectionOf(FileEquipment)], c.item))
+	built.MagicItems = catalog.NewCollection(mapBundle(magicItems, prose[collectionOf(FileMagicItems)], c.magicItem))
+	built.Spells = catalog.NewCollection(mapBundle(spells, prose[collectionOf(FileSpells)], c.spell))
+	built.Terms = catalog.NewCollection(termsOf(prose[collectionOf(FileTerms)]))
 
 	if err := c.Err(); err != nil {
 		return nil, err
@@ -293,77 +202,25 @@ func (s *Source) build(locale rules.Locale) (*catalog.Catalog, error) {
 	return built, nil
 }
 
-// prose reads the locale's bundles and merges the default locale underneath
-// them, so a partial translation falls back key by key.
-func (s *Source) prose(locale rules.Locale) (bundles, error) {
-	fallback, err := s.readBundles(rules.DefaultLocale, true)
-	if err != nil {
-		return nil, err
-	}
-	if locale == rules.DefaultLocale {
-		return fallback, nil
-	}
-	// A locale directory that does not exist is not an error: it means
-	// nothing is translated yet, and everything falls back.
-	preferred, err := s.readBundles(locale, false)
-	if err != nil {
-		return nil, err
-	}
-	merged := make(bundles, len(fallback))
-	for file, base := range fallback {
-		merged[file] = resolve(preferred[file], base)
-	}
-	return merged, nil
-}
+// collectionOf is a data file's collection name: the key its rows and its
+// prose are held under.
+func collectionOf(file string) string { return strings.TrimSuffix(file, ".json") }
 
-// readBundles reads every prose file for one locale. When required is false a
-// missing file or directory yields an empty bundle rather than an error.
-func (s *Source) readBundles(locale rules.Locale, required bool) (bundles, error) {
-	out := make(bundles, len(ProseFiles()))
-	for _, file := range ProseFiles() {
-		path := filepath.Join(s.dir, LocaleDir, locale.String(), file)
-		raw, err := s.bytes(filepath.Join(LocaleDir, locale.String(), file))
-		if err != nil {
-			if !required && errors.Is(err, fs.ErrNotExist) {
-				continue
-			}
-			return nil, types.WrapServerError(err, "reading %s", path)
-		}
-		var bundle Bundle
-		if err := json.Unmarshal(raw, &bundle); err != nil {
-			return nil, types.NewValidationError("%s: %v", path, err)
-		}
-		out[file] = bundle
+// rows decodes one collection into its wire type.
+func rows[T any](entities map[string][]any, file string) ([]T, error) {
+	values := entities[collectionOf(file)]
+	if values == nil {
+		values = []any{}
 	}
-	return out, nil
-}
-
-// read decodes one JSON array file into a slice.
-func readSource[T any](s *Source, file string) ([]T, error) {
-	path := filepath.Join(s.dir, file)
-	raw, err := s.bytes(file)
+	raw, err := json.Marshal(values)
 	if err != nil {
-		return nil, types.WrapServerError(err, "reading %s", path)
+		return nil, types.WrapServerError(err, "encoding %s", file)
 	}
 	var out []T
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return nil, types.NewValidationError("%s: %v", path, err)
+		return nil, types.NewValidationError("<pack>/%s: %v", file, err)
 	}
 	return out, nil
-}
-
-// ReadManifest returns the data directory's manifest.
-func ReadManifest(dir string) (Manifest, error) {
-	path := filepath.Join(dir, FileManifest)
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return Manifest{}, types.WrapServerError(err, "reading %s", path)
-	}
-	var m Manifest
-	if err := json.Unmarshal(raw, &m); err != nil {
-		return Manifest{}, types.NewValidationError("%s: %v", path, err)
-	}
-	return m, nil
 }
 
 // mapEach applies f to every element.
@@ -404,31 +261,4 @@ func mapNamed[Out ~struct{ catalog.Entry }](in []Named, b Bundle) []Out {
 		out = append(out, Out{entry(item.Slug, b)})
 	}
 	return out
-}
-
-// NewMemorySource consumes a normalized pack context. Files are private copies.
-func NewMemorySource(files map[string][]byte) *Source {
-	copied := make(map[string][]byte, len(files))
-	for name, data := range files {
-		copied[name] = append([]byte(nil), data...)
-	}
-	return &Source{dir: "<pack>", files: copied, loaded: make(map[rules.Locale]*catalog.Catalog)}
-}
-func (s *Source) bytes(name string) ([]byte, error) {
-	if s.files != nil {
-		if b, ok := s.files[filepath.ToSlash(name)]; ok {
-			return b, nil
-		}
-		return nil, fs.ErrNotExist
-	}
-	return os.ReadFile(filepath.Join(s.dir, name))
-}
-func readManifestSource(s *Source) (Manifest, error) {
-	b, err := s.bytes(FileManifest)
-	if err != nil {
-		return Manifest{}, err
-	}
-	var m Manifest
-	err = json.Unmarshal(b, &m)
-	return m, err
 }

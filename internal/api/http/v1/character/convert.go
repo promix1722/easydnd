@@ -1,9 +1,10 @@
 package character
 
 import (
-	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"strconv"
 	"time"
+
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
 
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -71,9 +72,6 @@ func characterOf(c domain.Character) Character {
 		events = append(events, eventOf(e))
 	}
 	out := Character{ID: c.ID.String(), Seq: c.Log.LastSeq(), Revision: c.Revision, Rules: helpers.RulesLockOf(c.Log.RulesLock()), Events: events}
-	for i, cp := range c.Checkpoints {
-		out.Checkpoints = append(out.Checkpoints, Checkpoint{Index: i, Revision: cp.Revision, Reason: cp.Reason, Rules: helpers.RulesLockOf(cp.Log.RulesLock())})
-	}
 	return out
 }
 
@@ -81,19 +79,13 @@ func eventOf(e domain.Event) Event {
 	out := Event{
 		Observed: e.Observed,
 		Evidence: e.Evidence,
-		ID:       e.ID, SchemaVersion: e.SchemaVersion, Resource: e.Resource.String(), Amount: e.Amount, Trigger: e.Trigger,
+		ID:       e.ID, SchemaVersion: e.SchemaVersion,
 		Seq:    e.Seq,
 		Type:   e.Type.String(),
 		Source: sourceString(e.Source),
 		Ref:    refString(e.Ref),
 		Level:  e.Level,
 		Note:   e.Note,
-	}
-	if len(e.Allocations) > 0 {
-		out.Allocations = map[string]int{}
-		for k, v := range e.Allocations {
-			out.Allocations[k.String()] = v
-		}
 	}
 	if !e.At.IsZero() {
 		out.At = e.At.UTC().Format(time.RFC3339)
@@ -301,13 +293,7 @@ func equipmentOf(e domain.Equipment) Equipment {
 func stacksOf(stacks []domain.ItemStack) []ItemStack {
 	out := make([]ItemStack, 0, len(stacks))
 	for _, s := range stacks {
-		stack := ItemStack{Item: s.Item.String(), Count: s.Count}
-		if s.Custom != nil {
-			stack.Custom = &CustomItem{
-				Name: s.Custom.Name, Description: s.Custom.Description, Weight: s.Custom.Weight,
-			}
-		}
-		out = append(out, stack)
+		out = append(out, ItemStack{Item: s.Item.String(), Count: s.Count})
 	}
 	return out
 }
@@ -428,13 +414,7 @@ func toEvent(p Event, index int) (domain.Event, []types.FieldError) {
 	// Source is deliberately not read. The server writes it, from the prompt
 	// the event turns out to answer; taking it from the body would let a
 	// client file its own answer under whatever category suited it.
-	out := domain.Event{Type: eventType, Level: p.Level, Note: p.Note, SchemaVersion: p.SchemaVersion, Resource: rules.Slug(p.Resource), Amount: p.Amount, Trigger: p.Trigger}
-	if len(p.Allocations) > 0 {
-		out.Allocations = map[rules.Slug]int{}
-		for k, v := range p.Allocations {
-			out.Allocations[rules.Slug(k)] = v
-		}
-	}
+	out := domain.Event{Type: eventType, Level: p.Level, Note: p.Note, SchemaVersion: p.SchemaVersion}
 	if p.Ref != "" {
 		ref, ok := rules.ParseRef(p.Ref)
 		if !ok {

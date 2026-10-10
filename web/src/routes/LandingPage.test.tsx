@@ -185,8 +185,7 @@ describe('LandingPage', () => {
     expect(screen.queryByRole('img', { name: 'easydnd' })).not.toBeInTheDocument()
   })
 
-  // The descendant of DragonMark's "takes a CSS length for its size" test, and
-  // it earns its place twice. Mantine's rem() mangles a length that does not
+  // It earns its place twice. Mantine's rem() mangles a length that does not
   // begin `calc(` or `clamp(`, so this catches the height arriving as nonsense;
   // and it catches an edit that drops the footer from the calc, which is the
   // difference between filling the page and running underneath the footer.

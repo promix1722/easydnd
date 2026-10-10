@@ -1,9 +1,10 @@
 package pack
 
 import (
-	"github.com/promix1722/easydnd/internal/types"
 	"regexp"
 	"strings"
+
+	"github.com/promix1722/easydnd/internal/types"
 )
 
 // Diagnostic supplies a stable translation key plus a document location. Details

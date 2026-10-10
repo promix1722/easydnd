@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"slices"
 	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/group"
@@ -20,7 +21,12 @@ type Service struct {
 	users  user.Repository
 	// superadmins is auth.superadmins: who reads restricted packs outright.
 	superadmins []string
+	limits      types.Limits
 }
+
+// SetLimits replaces the limits this service enforces; it starts with
+// types.DefaultLimits.
+func (s *Service) SetLimits(l types.Limits) { s.limits = l }
 
 func (s *Service) SetSuperadmins(list []string) { s.superadmins = list }
 
@@ -38,7 +44,7 @@ func (s *Service) Superadmin(ctx context.Context, u user.ID) bool {
 }
 
 func NewService(r domain.Repository, e domain.Engine, g group.Repository, u user.Repository) *Service {
-	return &Service{repo: r, engine: e, groups: g, users: u}
+	return &Service{repo: r, engine: e, groups: g, users: u, limits: types.DefaultLimits}
 }
 func (s *Service) Schema() []byte       { return s.engine.Schema() }
 func (s *Service) Default() domain.Lock { return s.engine.Default() }
@@ -47,38 +53,55 @@ func invalid(err error) error {
 	d := Diagnose(err)
 	return types.NewValidationError("invalid pack: %v", err).Because(d.Reason, d.Args)
 }
-func (s *Service) available(ctx context.Context, u user.ID) ([]domain.Record, map[domain.Release]bool, error) {
-	records, err := s.repo.List(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	records = append(records, s.engine.Builtins()...)
-	allowed := map[domain.Release]bool{}
-	for _, r := range records {
-		// A restricted disk pack is unowned too, but only a superadmin has it
-		// outright; everybody else reaches it through a group share below.
-		// ponytail: one account lookup per restricted pack per call; cache
-		// per request if a deployment ever installs more than a handful.
-		if !r.Archived && (r.Owner == u || r.Owner == "" && (!r.Restricted || s.Superadmin(ctx, u))) {
-			for _, d := range r.Releases {
-				allowed[d.Release] = true
-			}
-		}
-	}
+
+// available returns the records u can reach and which of their releases u may
+// use. It reads u's own packs, the ones u's groups share, and the ones named
+// in retained -- the releases a caller is about to allow on other grounds --
+// and never the whole table: a pack document can run to megabytes, and this
+// runs on every pack read.
+func (s *Service) available(ctx context.Context, u user.ID, retained ...domain.Release) ([]domain.Record, map[domain.Release]bool, error) {
 	groups, err := s.groups.ListFor(ctx, u)
 	if err != nil {
 		return nil, nil, err
 	}
+	shared := []domain.Release{}
 	for _, g := range groups {
 		shares, err := s.repo.Shares(ctx, string(g.Group.ID))
 		if err != nil {
 			return nil, nil, err
 		}
 		for _, share := range shares {
-			for _, r := range share.Lock.Packs {
-				allowed[r] = true
+			shared = append(shared, share.Lock.Packs...)
+		}
+	}
+	ids := make([]string, 0, len(shared)+len(retained))
+	for _, r := range slices.Concat(shared, retained) {
+		ids = append(ids, r.ID)
+	}
+	records, err := s.repo.ListFor(ctx, u, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+	records = append(records, s.engine.Builtins()...)
+	granted, err := s.repo.Grants(ctx, u)
+	if err != nil {
+		return nil, nil, err
+	}
+	allowed := map[domain.Release]bool{}
+	for _, r := range records {
+		// A restricted disk pack is unowned too, but only a superadmin has it
+		// outright; everybody else reaches it by a superadmin's grant, or
+		// through a group share below.
+		// ponytail: one account lookup per restricted pack per call; cache
+		// per request if a deployment ever installs more than a handful.
+		if !r.Archived && (r.Owner == u || r.Owner == "" && (!r.Restricted || slices.Contains(granted, r.ID) || s.Superadmin(ctx, u))) {
+			for _, d := range r.Releases {
+				allowed[d.Release] = true
 			}
 		}
+	}
+	for _, r := range shared {
+		allowed[r] = true
 	}
 	for _, r := range records {
 		if r.Archived {
@@ -88,6 +111,45 @@ func (s *Service) available(ctx context.Context, u user.ID) ([]domain.Record, ma
 		}
 	}
 	return records, allowed, nil
+}
+
+// Restricted lists the private disk packs installed here: what a superadmin
+// has to hand out.
+func (s *Service) Restricted() []domain.Record {
+	out := []domain.Record{}
+	for _, r := range s.engine.Builtins() {
+		if r.Restricted {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// Granted lists the restricted packs handed to one account.
+func (s *Service) Granted(ctx context.Context, u user.ID) ([]string, error) {
+	return s.repo.Grants(ctx, u)
+}
+
+// Grant replaces the restricted packs one account has been handed. It does
+// not ask who is calling: the route is the superadmin's, as with every admin
+// listing. The account must be a stored one -- a guest who never joined a
+// group has no row to hang a grant on -- and every id an installed restricted
+// pack, so a grant can never open a homebrew pack or name one that is not
+// there.
+//
+// Taking a pack away stops new characters being built on it. One already
+// built keeps loading: a read follows the character's lock, not this list.
+func (s *Service) Grant(ctx context.Context, u user.ID, packs []string) error {
+	if _, err := s.users.ByID(ctx, u); err != nil {
+		return err
+	}
+	restricted := s.Restricted()
+	for _, id := range packs {
+		if !slices.ContainsFunc(restricted, func(r domain.Record) bool { return r.ID == id }) {
+			return denied()
+		}
+	}
+	return s.repo.SetGrants(ctx, u, packs)
 }
 func (s *Service) List(ctx context.Context, u user.ID) ([]domain.Record, error) {
 	records, allowed, err := s.available(ctx, u)
@@ -140,6 +202,22 @@ func (s *Service) Create(ctx context.Context, u user.User, title string, data []
 	}
 	if u.ID == "" {
 		return domain.Record{}, denied()
+	}
+	// Archived packs do not count: a pack cannot be deleted, so counting them
+	// would leave an owner at the limit with no way back under it.
+	// ponytail: counts before it inserts; a guarded INSERT closes the race.
+	all, err := s.repo.ListFor(ctx, u.ID, nil)
+	if err != nil {
+		return domain.Record{}, err
+	}
+	held := 0
+	for _, r := range all {
+		if r.Owner == u.ID && !r.Archived {
+			held++
+		}
+	}
+	if held >= s.limits.Packs {
+		return domain.Record{}, types.LimitReached("packs", s.limits.Packs)
 	}
 	if u.Anonymous {
 		if err := s.users.EnsureGuest(ctx, u); err != nil {
@@ -229,7 +307,7 @@ func (s *Service) Resolve(ctx context.Context, u user.ID, roots []domain.Release
 // AuthorizeLock allows retained releases only through a character already owned
 // by the caller. Every newly introduced release still needs current access.
 func (s *Service) AuthorizeLock(ctx context.Context, u user.ID, target, retained domain.Lock) error {
-	records, allowed, err := s.available(ctx, u)
+	records, allowed, err := s.available(ctx, u, retained.Packs...)
 	if err != nil {
 		return err
 	}
@@ -277,6 +355,9 @@ func (s *Service) Publish(ctx context.Context, u user.ID, id string, revision in
 		if old.Release.Version == doc.Release.Version {
 			return r, types.NewValidationError("version already published").Because("pack.versionExists")
 		}
+	}
+	if len(r.Releases) >= s.limits.PackReleases {
+		return r, types.LimitReached("packReleases", s.limits.PackReleases)
 	}
 	r.Releases = append(r.Releases, doc)
 	r.Archived = false
@@ -349,6 +430,11 @@ func (s *Service) Share(ctx context.Context, u user.ID, g, id, version string) e
 		return err
 	}
 	groupAllowed := map[domain.Release]bool{}
+	// Sharing another version of a pack the group has replaces it.
+	// ponytail: count, then insert -- racing shares can overshoot by a few.
+	if len(shared) >= s.limits.GroupPacks && !slices.ContainsFunc(shared, func(sh domain.Share) bool { return sh.Pack == id }) {
+		return types.LimitReached("groupPacks", s.limits.GroupPacks)
+	}
 	for _, sh := range shared {
 		for _, p := range sh.Lock.Packs {
 			groupAllowed[p] = true

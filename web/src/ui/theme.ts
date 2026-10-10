@@ -1,6 +1,6 @@
 import { Button, Paper, createTheme, type CSSVariablesResolver, type MantineThemeOverride } from '@mantine/core'
 
-import { BREAKPOINTS, PALETTE, RADIUS_DEFAULT } from '@/theme/tokens'
+import { BREAKPOINTS, RADIUS_DEFAULT } from '@/theme/tokens'
 import type { Palette, Scheme } from '@/theme/palettes'
 
 /**
@@ -37,8 +37,6 @@ export function themeForPalette(palette: Palette): MantineThemeOverride {
   })
 }
 
-export const theme = themeForPalette(PALETTE)
-
 /**
  * Bind palette surfaces to Mantine's semantic variables and the ramp shades
  * its cards, inputs and table borders read directly. Light and dark remain
@@ -63,8 +61,6 @@ export function variablesForPalette(palette: Palette): CSSVariablesResolver {
     },
   })
 }
-
-export const cssVariables = variablesForPalette(PALETTE)
 
 function schemeVariables(scheme: Scheme): Record<string, string> {
   return {

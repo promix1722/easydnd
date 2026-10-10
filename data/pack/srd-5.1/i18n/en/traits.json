@@ -262,5 +262,8 @@
   },
   "stout-resilience": {
     "name": "Stout Resilience"
+  },
+  "variant-human-skills": {
+    "name": "Skills"
   }
 }

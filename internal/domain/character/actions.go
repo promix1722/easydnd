@@ -22,9 +22,6 @@ import (
 func deriveActions(s *State, cat *catalog.Catalog) {
 	s.Actions = nil
 	for _, stack := range s.Equipment.Equipped {
-		if stack.Custom != nil {
-			continue
-		}
 		if it, ok := cat.Items.Get(stack.Item); ok {
 			origin := rules.NewRef(rules.RefItem, it.Slug)
 			if it.Weapon != nil {

@@ -9,6 +9,7 @@ import (
 )
 
 func TestRogueLogValidates(t *testing.T) {
+	t.Parallel()
 	log := domain.RogueLog(t)
 
 	// Eight literals in the fixture, thirteen entries in the log: the ones
@@ -32,6 +33,7 @@ func TestRogueLogValidates(t *testing.T) {
 // Every answer must name a prompt, because that slug is the only link back to
 // the catalogue question it answers.
 func TestRogueChoicesCarryPrompts(t *testing.T) {
+	t.Parallel()
 	for _, e := range domain.RogueLog(t).Events {
 		for _, answer := range e.Choices {
 			if answer.Prompt.IsZero() {
@@ -45,6 +47,7 @@ func TestRogueChoicesCarryPrompts(t *testing.T) {
 }
 
 func TestAppendRejectsAnUntypedEvent(t *testing.T) {
+	t.Parallel()
 	var log domain.Log
 	if err := log.Append(domain.Event{}); err == nil {
 		t.Error("Append() accepted an event with no type")
@@ -55,6 +58,7 @@ func TestAppendRejectsAnUntypedEvent(t *testing.T) {
 }
 
 func TestAppendRejectsAStaleSequence(t *testing.T) {
+	t.Parallel()
 	var log domain.Log
 	if err := log.Append(domain.Event{Type: domain.EventInit}); err != nil {
 		t.Fatalf("Append() error = %v", err)
@@ -66,6 +70,7 @@ func TestAppendRejectsAStaleSequence(t *testing.T) {
 }
 
 func TestValidateRequiresInitFirst(t *testing.T) {
+	t.Parallel()
 	log := domain.Log{Events: []domain.Event{
 		{Seq: 1, Type: domain.EventRace},
 		{Seq: 2, Type: domain.EventInit},
@@ -83,6 +88,7 @@ func TestValidateRequiresInitFirst(t *testing.T) {
 // Rebuild is what closes the log up again after a replacement drops entries
 // out of the middle of it, and renumbering is the whole of what it does.
 func TestRebuildRenumbers(t *testing.T) {
+	t.Parallel()
 	log := domain.RogueLog(t)
 	// Drop the fifth entry, exactly as a revision does.
 	kept := append(slices.Clone(log.Events[:4]), log.Events[5:]...)
@@ -114,6 +120,7 @@ func TestRebuildRenumbers(t *testing.T) {
 
 // The invariants Rebuild refuses to produce a log without.
 func TestRebuildRefusesAnUnreadableLog(t *testing.T) {
+	t.Parallel()
 	if _, err := domain.Rebuild([]domain.Event{{Type: domain.EventRace}}); err == nil {
 		t.Error("Rebuild() accepted a log that does not begin with an init event")
 	}
@@ -128,6 +135,7 @@ func TestRebuildRefusesAnUnreadableLog(t *testing.T) {
 }
 
 func TestEventTypeRoundTrips(t *testing.T) {
+	t.Parallel()
 	for _, want := range []domain.EventType{
 		domain.EventInit, domain.EventChange, domain.EventRace, domain.EventSubrace,
 		domain.EventBackground, domain.EventClass, domain.EventSubclass,
@@ -141,6 +149,7 @@ func TestEventTypeRoundTrips(t *testing.T) {
 }
 
 func TestIdentityLevelSumsClasses(t *testing.T) {
+	t.Parallel()
 	id := domain.Identity{Classes: []domain.ClassLevel{
 		{Class: "cleric", Level: 2},
 		{Class: "wizard", Level: 1},
@@ -151,6 +160,7 @@ func TestIdentityLevelSumsClasses(t *testing.T) {
 }
 
 func TestAbilitiesDefaultToTen(t *testing.T) {
+	t.Parallel()
 	a := domain.Abilities{Scores: map[rules.Ability]int{rules.Dexterity: 16}}
 	if got := a.Score(rules.Dexterity); got != 16 {
 		t.Errorf("Score(DEX) = %d, want 16", got)

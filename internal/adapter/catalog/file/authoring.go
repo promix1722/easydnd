@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -23,8 +24,10 @@ import (
 type Authoring struct {
 	base        *Registry
 	repo        pack.Repository
-	cache       sync.Map
-	private     sync.Map // immutable import releases, excluded from public pack lists; a cache over repo.GetPrivate
+	cacheMu     sync.Mutex
+	cache       map[string]*catalog.Catalog // see compiled
+	recent      []string                    // cache keys, least recently used first
+	private     sync.Map                    // immutable import releases, excluded from public pack lists; a cache over repo.GetPrivate
 	builtinOnce sync.Once
 	builtins    []pack.Record
 	decoded     sync.Map // keyed by actual document bytes, never a caller-supplied digest
@@ -32,15 +35,8 @@ type Authoring struct {
 }
 
 func NewAuthoring(base *Registry, repo pack.Repository) *Authoring {
-	a := &Authoring{base: base, repo: repo}
+	a := &Authoring{base: base, repo: repo, cache: map[string]*catalog.Catalog{}}
 	a.Builtins() // Encode immutable installed releases once, before serving requests.
-	locales, _ := base.Locales(context.Background())
-	for _, locale := range locales {
-		lock := base.DefaultLock()
-		if c, err := base.LoadLocked(context.Background(), locale, lock); err == nil {
-			a.cache.Store(catalogCacheKey(locale, lock), c)
-		}
-	}
 	return a
 }
 
@@ -49,15 +45,17 @@ func NewAuthoring(base *Registry, repo pack.Repository) *Authoring {
 // overlay installed beside the SRD reaches new characters without being
 // picked by hand.
 func (a *Authoring) Default() pack.Lock { return a.base.DefaultLock() }
+
+// Builtins lists the installed releases. The caller gets its own slices to
+// sort and filter, and SHARES each release's encoded bytes: a release is
+// immutable, nothing writes into Document.Data, and every signed-in request
+// asks this -- copying 22 MB each time is what ran a 1 GB host out of memory.
 func (a *Authoring) Builtins() []pack.Record {
 	a.builtinOnce.Do(func() { a.builtins = a.buildBuiltinRecords() })
 	out := make([]pack.Record, len(a.builtins))
 	for i, record := range a.builtins {
 		out[i] = record
-		out[i].Releases = make([]pack.Document, len(record.Releases))
-		for j, doc := range record.Releases {
-			out[i].Releases[j] = pack.Document{Release: doc.Release, Data: bytes.Clone(doc.Data)}
-		}
+		out[i].Releases = slices.Clone(record.Releases)
 	}
 	return out
 }
@@ -71,6 +69,9 @@ func (a *Authoring) buildBuiltinRecords() []pack.Record {
 		}
 		for _, d := range versions {
 			b, _ := EncodePack(d)
+			// Kept for the life of the process, so drop the encoder's spare
+			// capacity: it rounds a 22 MB document up to 42.
+			b = bytes.Clone(b)
 			a.decoded.Store(sha256.Sum256(b), decodedRelease{d, a.base.identities[d]})
 			r.Releases = append(r.Releases, pack.Document{Release: a.base.identities[d], Data: b})
 		}
@@ -273,7 +274,7 @@ func (a *Authoring) Resolve(ctx context.Context, docs []pack.Document, roots []p
 		return l, err
 	}
 	for _, locale := range locales {
-		if _, err = a.compiled(locale, l, func() (*catalog.Catalog, error) { return r.LoadLocked(ctx, locale, l) }); err != nil {
+		if _, err = a.compiled(ctx, locale, l, func() (*catalog.Catalog, error) { return r.LoadLocked(ctx, locale, l) }); err != nil {
 			return l, err
 		}
 	}
@@ -311,7 +312,7 @@ func (a *Authoring) LoadLocked(ctx context.Context, locale rules.Locale, l pack.
 	if err := l.Validate(); err != nil {
 		return nil, err
 	}
-	return a.compiled(locale, l, func() (*catalog.Catalog, error) {
+	return a.compiled(ctx, locale, l, func() (*catalog.Catalog, error) {
 		r, err := a.registryForLock(ctx, l)
 		if err != nil {
 			return nil, err
@@ -328,23 +329,62 @@ func catalogCacheKey(locale rules.Locale, lock pack.Lock) string {
 	return string(key)
 }
 
-// Compilation is shared by exact immutable lock and locale. Authorization stays
-// in the service, and Resolve still solves against only currently allowed releases.
-func (a *Authoring) compiled(locale rules.Locale, lock pack.Lock, load func() (*catalog.Catalog, error)) (*catalog.Catalog, error) {
+// maxCompiledCatalogues bounds the catalogues kept for locks that include a
+// pack from the database -- homebrew, a group's share, an import. Each is a
+// whole compiled rules context, megabytes of it, and there is one per distinct
+// lock and locale anybody has ever opened; kept forever, that is a leak that
+// grows with users rather than with requests.
+// ponytail: a count, not a byte budget, and least-recently-used eviction by a
+// slice scan. An evicted lock recompiles on its next use (about a second);
+// raise this, or weigh entries, if profiles show tables thrashing.
+const maxCompiledCatalogues = 8
+
+// compiled returns the catalogue for one exact immutable lock and locale,
+// compiling it at most once while it is kept. Authorization stays in the
+// service, and Resolve still solves against only currently allowed releases.
+//
+// A lock made only of installed disk packs belongs to the base registry, which
+// compiled every one of those at startup and keeps them for the life of the
+// process; building a second registry here compiled each of them twice.
+func (a *Authoring) compiled(ctx context.Context, locale rules.Locale, lock pack.Lock, load func() (*catalog.Catalog, error)) (*catalog.Catalog, error) {
+	if a.base.installed(lock) {
+		return a.base.LoadLocked(ctx, locale, lock)
+	}
 	key := catalogCacheKey(locale, lock)
-	if v, ok := a.cache.Load(key); ok {
-		return v.(*catalog.Catalog), nil
+	if c := a.cached(key); c != nil {
+		return c, nil
 	}
 	a.compileMu.Lock()
 	defer a.compileMu.Unlock()
-	if v, ok := a.cache.Load(key); ok {
-		return v.(*catalog.Catalog), nil
+	if c := a.cached(key); c != nil {
+		return c, nil
 	}
 	c, err := load()
-	if err == nil {
-		a.cache.Store(key, c)
+	if err != nil {
+		return nil, err
 	}
-	return c, err
+	a.cacheMu.Lock()
+	defer a.cacheMu.Unlock()
+	a.cache[key] = c
+	a.recent = append(a.recent, key)
+	if len(a.recent) > maxCompiledCatalogues {
+		delete(a.cache, a.recent[0])
+		a.recent = a.recent[1:]
+	}
+	return c, nil
+}
+
+// cached returns a kept catalogue and marks it the most recently used.
+func (a *Authoring) cached(key string) *catalog.Catalog {
+	a.cacheMu.Lock()
+	defer a.cacheMu.Unlock()
+	c := a.cache[key]
+	if c != nil {
+		if i := slices.Index(a.recent, key); i >= 0 {
+			a.recent = append(slices.Delete(a.recent, i, i+1), key)
+		}
+	}
+	return c
 }
 
 type decodedRelease struct {
@@ -371,7 +411,11 @@ func (a *Authoring) decodeRelease(data []byte) (decodedRelease, error) {
 }
 
 func (a *Authoring) registryForLock(ctx context.Context, l pack.Lock) (*Registry, error) {
-	records, err := a.repo.List(ctx)
+	ids := make([]string, 0, len(l.Packs))
+	for _, p := range l.Packs {
+		ids = append(ids, p.ID)
+	}
+	records, err := a.repo.ListFor(ctx, "", ids)
 	if err != nil {
 		return nil, err
 	}

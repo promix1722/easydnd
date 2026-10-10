@@ -19,6 +19,7 @@ import (
 
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"github.com/promix1722/easydnd/internal/api/http/middleware"
+	adminapi "github.com/promix1722/easydnd/internal/api/http/v1/admin"
 	appearanceapi "github.com/promix1722/easydnd/internal/api/http/v1/appearance"
 	"github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
@@ -39,6 +40,7 @@ import (
 type Handlers struct {
 	Development *development.Handler
 	System      *system.Handler
+	Admin       *adminapi.Handler
 	Auth        *auth.Handler
 	Appearance  *appearanceapi.Handler
 	Profile     *profileapi.Handler
@@ -138,6 +140,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// nginx happens to have no proxy_cache configured.
 		v1.GET("/version", middleware.NoStore(), h.System.Version)
 		v1.GET("/health", h.System.Health)
+		v1.GET("/analytics-config", middleware.NoStore(), h.System.AnalyticsConfig)
 		if cfg.Env == config.EnvDevelopment && h.Development != nil {
 			v1.POST("/dev/login", middleware.NoStore(), h.Development.Login)
 		}
@@ -207,6 +210,19 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// in a comment that it is deliberate.
 		authed := v1.Group("", middleware.RequireSession(h.Authenticator, cookies))
 		{
+			if h.Admin != nil {
+				// Every account and every character, for the accounts
+				// auth.superadmins names and a 404 for everybody else.
+				admin := authed.Group("/admin", middleware.NoStore(),
+					middleware.RequireSuperadmin(cfg.Auth.Superadmins))
+				admin.GET("/players", h.Admin.Players)
+				admin.GET("/characters", h.Admin.Characters)
+				// The one thing a superadmin writes: which private packs an
+				// account has been handed.
+				admin.GET("/packs", h.Admin.Packs)
+				admin.GET("/players/:id/packs", h.Admin.PlayerPacks)
+				admin.PUT("/players/:id/packs", h.Admin.SetPlayerPacks)
+			}
 			if h.Profile != nil {
 				authed.PUT("/profile/image", middleware.NoStore(), h.Profile.PutImage)
 			}
@@ -258,12 +274,10 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.GET("/characters/:id/events", h.Character.Events)
 			authed.GET("/characters/:id/custom-options", h.Character.CustomOptions)
 			authed.POST("/characters/:id/custom-options", h.Character.UpsertCustomOption)
+			authed.DELETE("/characters/:id/custom-options/:option", h.Character.RemoveCustomOption)
 			authed.GET("/characters/:id/catalog/:collection", h.Character.Catalog)
 			authed.POST("/characters/:id/catalog/spells/search", h.Character.SpellSearch)
-			authed.POST("/characters/:id/rules", h.Character.MigrateRules)
-			authed.POST("/characters/:id/rules/restore", h.Character.RestoreRules)
 			authed.POST("/characters/:id/events", h.Character.AppendEvents)
-			authed.DELETE("/characters/:id/events", h.Character.TruncateEvents)
 			authed.POST("/characters/:id/auto-equip", h.Character.AutoEquip)
 			// One entry of that log, addressed by position -- which is what
 			// Seq means. Addressing a member of a sub-resource collection is
@@ -282,6 +296,14 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.GET("/characters/:id/visibility", h.Character.GetVisibility)
 			authed.PUT("/characters/:id/visibility", h.Character.SetVisibility)
 			authed.POST("/characters/:id/copy", h.Character.Copy)
+
+			// A copy for somebody else, by link. Minting hangs off the
+			// character; redeeming is a tree of its own for the reason
+			// /invites is -- the holder cannot address a character that is
+			// not theirs, and the token goes in the body, not the URL.
+			authed.POST("/characters/:id/copy-links", h.Character.CreateCopyLink)
+			authed.POST("/copy-links/preview", h.Character.PreviewCopyLink)
+			authed.POST("/copy-links/accept", h.Character.AcceptCopyLink)
 
 			// Folders: where one account files its own characters. The
 			// neighbouring word is taken and this is not it -- a folder
@@ -310,8 +332,8 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// One member is addressed by ?user= rather than by a second path
 			// segment. Either would be consistent with the routes above --
 			// events/:seq addresses a member of a collection the same way --
-			// but this is the shape TruncateEvents already uses, and a member
-			// is named by an opaque account id rather than by position.
+			// but a member is named by an opaque account id rather than by
+			// position.
 			authed.PATCH("/groups/:id/members", h.Group.SetMemberRole)
 			authed.DELETE("/groups/:id/members", h.Group.RemoveMember)
 
@@ -356,6 +378,12 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.DELETE("/games/:id/characters", h.Game.RemoveCharacter)
 			authed.PATCH("/games/:id/entries/:entry", h.Game.PatchEntry)
 			authed.DELETE("/games/:id/entries/:entry", h.Game.DeleteEntry)
+			// The four writes that reach a character its actor does not own:
+			// see internal/usecase/game/items.go.
+			authed.POST("/games/:id/entries/:entry/items", h.Game.GrantItem)
+			authed.POST("/games/:id/entries/:entry/custom-items", h.Game.GrantCustomItem)
+			authed.POST("/games/:id/entries/:entry/coins", h.Game.AdjustCoins)
+			authed.POST("/games/:id/entries/:entry/give", h.Game.GiveItem)
 			authed.POST("/games/:id/monsters", h.Game.AddMonster)
 			authed.POST("/games/:id/order", h.Game.OrderEntries)
 			authed.POST("/games/:id/rest", h.Game.Rest)

@@ -43,10 +43,12 @@ const shown = {
   // Items are not authored here: the tab is only on screen while a starting
   // kit is being chosen, and what the character carries is edited on the sheet.
   equipment: [],
-  personal: ['note'],
-  personality: ['note'],
+  personal: [],
+  personality: [],
   rules: [],
   abilities: [],
+  // Notes are the Custom tab's own list -- see CustomNotes.
+  custom: [],
 } satisfies Record<Stage, string[]>
 export function CustomOptionsPanel({
   id,

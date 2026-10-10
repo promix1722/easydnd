@@ -9,40 +9,14 @@ SRD compendium, passkey and Google sign-in, and the rules math for creation and
 level-up are built and tested. A character can be created, built and levelled
 over HTTP.
 
-## Single-image generation
-
-`internal/usecase/spellicon` contains the synchronous OpenAI image request,
-bounded retries, cancellation, PNG decoding, resizing and WebP encoding.
-This standalone package is the explicit exception to the inner-layer HTTP
-dependency rule; the layer checks still prohibit importing it from other
-usecases and still reject server frameworks and persistence in the generator.
-It returns 128×128 WebP bytes and has no queue, catalog dependency, file store,
-server configuration or application startup integration.
-
-The standalone binary owns command-line input and atomic file output:
-
-```sh
-go build -o bin/spellicon ./cmd/spellicon
-OPENAI_API_KEY=... bin/spellicon -prompt 'A glowing arcane rune' -out /tmp/rune.webp
-```
-
-Its default model is `gpt-image-2.5-sunburst`, overridable with `-model`.
-Requests use transparent 1024×1024 artwork at low quality, then convert to
-128×128 lossless WebP. `-timeout` defaults to five minutes including retries;
-`-overwrite` permits replacing an existing regular file. Generation failure
-preserves existing output. The CLI handles interruption and never exposes the
-key through a web interface. `make image/generate IMAGE_FLAGS='-prompt ...
--out ...'` is an equivalent development command. The existing `llm` CLI remains
-compatible for offline translation and PNG batches.
-
 ## Rule pack runtime
 
 Startup registers the base pack plus `data.pack_files` and
 `data.autoload_packs`, resolves
 `data.default_packs`, and compiles the selected contexts before readiness.
 `data.pack_archive` retains immutable releases by digest outside deployment
-folders. [packs.md](packs.md) documents the file format, CLI and new migration
-and contextual catalogue routes. Autoloaded folders are additional public
+folders. [packs.md](packs.md) documents the file format, CLI and
+contextual catalogue routes. Autoloaded folders are additional public
 catalogue choices, excluded from implicit default roots so replacement cores
 can coexist. Each path accepts a pack directory or a repository with a `pack/`
 child; an optional ID override gives replacement datasets their own namespace.
@@ -50,44 +24,71 @@ child; an optional ID override gives replacement datasets their own namespace.
 `auth.superadmins` and the groups one of them grants a pack to; see
 [packs.md](packs.md#common-and-private-disk-packs).
 Missing or invalid configured packs fail startup. Changes require a restart.
+
+### What the process holds
+
+A release is read from disk once, and three things are kept for the life of
+the process: the decoded document, its encoded JSON (what `export` and
+resolution hand around), and its artwork as data URLs. Every catalogue
+compiled from it *shares* those -- which matters, because the SRD pack is 19 MB
+and 13 MB of that is spell icons.
+
+- **A request copies none of it.** `Authoring.Builtins` hands out the same
+  immutable bytes every time; nothing may write into a `Document.Data`.
+  v1.1.0 cloned them on each call -- 22 MB per pack listing, three listings
+  per spell-browser request -- and re-encoded the icons into each compiled
+  catalogue, 19 MB apiece.
+- **A lock of disk packs is compiled once**, at startup, by the base
+  registry, and kept: one catalogue per lock and locale, bounded by what is
+  installed.
+- **A lock with a database pack in it** -- homebrew, a share, an import -- is
+  compiled on first use and kept in a least-recently-used cache of
+  `maxCompiledCatalogues` (8). An evicted one recompiles when next opened.
+  Without the bound there is one catalogue per lock and locale anybody ever
+  opened, forever.
+
+Measured with the base pack and one private overlay: about 75 MB of live heap,
+225 MB resident, and the same after 600 requests as after none.
+`TestMemoryPackRequestsDoNotCopyOrLeak` holds the first two points and logs
+the figures under `-v`; `TestCompiledCataloguesAreBounded...` holds the third.
+Decoded documents of database packs (`Authoring.decoded`) are still kept
+without a bound, one per published release.
+
 The authoring service separately manages private drafts, published releases,
 imports and group sharing.
 
 All application character writes use repository revision CAS. `expectedSeq`
 identifies positions; `expectedRevision` detects concurrent same-length edits.
 Each init event pins a rules lock, and character/list/copy/shared-game reads use
-that lock. Migration/restore endpoints retain checkpoints atomically with the
-new log. Characters, their checkpoints, folders, shares and games are in
+that lock, which never changes afterwards. Characters, folders, shares and games are in
 PostgreSQL whenever accounts are; see
-[Where everything lives](#where-accounts-and-groups-live).
+[Where accounts and groups live](#where-accounts-and-groups-live).
 
 ## Quick start
 
 ```sh
-make run/server                     # dev mode: text logs, debug level
-curl localhost:8080/v1/health       # {"status":"ok"}
-curl localhost:8080/v1/catalog      # the compendium's index
-curl localhost:8080/v1/characters   # {"characters":[]}
+make dev                            # Postgres, the API and the web client, one Ctrl-C
+make ports                          # what this worktree claimed, and where to open it
 
 make verify                         # everything CI checks, back and front, two jobs at once
 ```
 
-`make run/server` needs no database: `config.dev.yaml` sets no `db.url`, so it
-runs on the in-memory account store and says so. For durable accounts locally:
+Everything past `health` and `version` needs a session; in development
+`POST /v1/dev/login` gives one, see
+[Seeded development party](#seeded-development-party).
+
+The server needs a database and does not start without `db.url`.
+`config.dev.yaml` sets none, because the URL depends on the worktree's slot:
+`make` passes it. The pieces `make dev` runs, one at a time:
 
 ```sh
-make db/up                          # throwaway Postgres on :5433
+make db/up                          # this worktree's throwaway Postgres
 make run/db                         # the API against it, migrating on startup
 make test/db                        # the suite including the Postgres adapter (-p 1: shared database)
 make db/down                        # and delete it again
 ```
 
-Or all of it at once, which is also the way to run more than one worktree:
-
-```sh
-make dev                            # Postgres, the API and the web client, one Ctrl-C
-make ports                          # what this worktree claimed, and where to open it
-```
+`make verify` needs no database: the tests run on the in-memory stores.
 
 ### An opened character is read by its link
 
@@ -96,20 +97,21 @@ folder rather than in its log -- who may look at a character is not a fact
 about the character. Open, **anybody signed in who has the link** may read the
 sheet through the same `/v1/shared/{id}/...` routes a group's read uses,
 whatever table they do or do not sit at; a guest session counts as signed in.
-Hidden, which is the default, the character is its owner's and its groups'.
+Hidden, which is the default, the character is its owner's and, in the groups
+it is shared with, the DMs' and the group owner's -- not the other players'.
 
 It is one line in one place: `readable` in `usecase/game/service.go`, the gate
 every shared read already passes, answers yes for a public character before it
-asks about groups. Nothing about writing changes -- every write goes through
+asks about groups -- and, last of all, yes for a superadmin, whatever the
+switch says. Nothing about writing changes -- every write goes through
 the character service, which asks who owns the character and nothing else. A
 hidden character and a missing one both answer 404, so a link says nothing
-about a character it does not open. Like the folder, the switch lives with the
-in-memory character and is gone when the process is.
+about a character it does not open. Like the folder, the switch is a column
+beside the log (`characters.public`), not an event in it.
 
 ### Seeded development party
 
-Every API startup with `env: development`, including `make dev` and
-`make run/server`, creates a ready-to-play group **Development party** and
+Every API startup with `env: development` creates a ready-to-play group **Development party** and
 three test accounts: **master**, **player1**, **player2**. The master owns the
 group; both other accounts are players. Each owns one finished first-level
 half-elf rogue, built through validated events rather than asserted stats.
@@ -131,11 +133,9 @@ skills, a subclass, a fourth-level improvement, cantrips and prepared spells.
 Every seed is a list of selections in `internal/app/dev_builds.go`, applied
 entry by entry through the same validation an append from the build screen
 takes, and `seedCharacter` refuses to return a character with a required
-prompt still open. So a compendium regeneration that renames a prompt fails
+prompt still open. So a compendium edit that renames a prompt fails
 start-up, naming the entry, rather than quietly seeding a sheet that opens as
-"Unfinished" with no race and six tens -- which is what the two casters were
-while they were seeded with a class event and nothing else. There is no
-"stub" route or button any more: the seeds are the ready-made characters.
+"Unfinished" with no race and six tens.
 
 `POST /v1/dev/login` with `{"account":"master"}` (or `player1`, `player2`)
 issues the normal HttpOnly session cookie and returns the seeded `game_ids`.
@@ -153,11 +153,9 @@ with no database it builds them every start. Signing in again within the same
 run does not reseed or reset game changes. Open separate tabs and choose master, player1 and player2
 in each: development shortcuts keep a random cookie selector in tab-local
 `sessionStorage` and send it as `X-EasyDnD-Dev-Session`. It selects a signed
-HttpOnly cookie and is ignored in production.
-Each successful switch
+HttpOnly cookie and is ignored in production. Each successful switch
 uses a new selector, including in duplicated tabs; a failed switch keeps the
-previous identity. The signed token stays in an HttpOnly cookie. This header
-is ignored in production.
+previous identity.
 
 All development auth cookie names also include a namespace derived from the
 API listen address. Different worktree ports on the same browser hostname
@@ -206,59 +204,74 @@ CI sets it against a service container, so they are not skipped there.
 ## Tests
 
 ```sh
-make test/unit                      # the suite, ~4s
-make test/race                      # the same suite under the race detector, ~9s
+make test/unit                      # the suite, ~60s cold and ~3s with a warm test cache
+make test/race                      # the same suite under the race detector, minutes
 make test/db                        # including the Postgres adapter (needs make db/up)
 ```
 
 **Where a database is involved, `test/db` is the only correct target**, and CI
-runs it for that reason. Three packages reach the one database and each opens by
-wiping it -- `internal/adapter/repository/postgres` for users and for groups, and
+runs it for that reason. Two packages reach the one database and each
+wipes it -- `internal/adapter/repository/postgres` between subtests, and
 `internal/api/http`'s durability test. `go test ./...` runs packages in parallel,
 so without `test/db`'s `-p 1` one truncates a table another has just written,
 and the failure surfaces in whichever package lost the race rather than in
 whichever caused it. Both go red at once, which is the signature to recognise.
 
-CI used to run `make test/unit` with `TEST_DATABASE_URL` set -- the one place
-that combination arose, because on a machine without the variable those tests
-skip and the race cannot happen. It failed the v1.0.1 release and cost a manual
-re-run of the whole job. The rule is in `CLAUDE.md` because it is easy to
-reintroduce: set `TEST_DATABASE_URL`, run `test/db`.
+The rule is in `CLAUDE.md` because it is easy to reintroduce -- `make test/unit`
+with `TEST_DATABASE_URL` set failed the v1.0.1 release in CI, the one place the
+combination arose: set `TEST_DATABASE_URL`, run `test/db`.
 
 `make verify` runs `test/unit`. It does **not** run `test/race`, and that is a
 deliberate trade rather than an oversight.
 
 The race detector used to be on by default, and it cost far more than it
-looked: 46s against 10s. Two thirds of that gap was not even work. A `-race`
-test binary sleeps a full second at exit -- `GORACE`'s `atexit_sleep_ms`,
-defaulting to 1000 -- and this module has sixteen test packages, so every run
-spent sixteen seconds on an idle machine. `make test/race` sets
-`atexit_sleep_ms=0` and takes that back, which is why it now costs 9s rather
-than 25s. What the sleep buys is a last chance to check a goroutine still
-running when `main` returns, and nothing here leaves one: the HTTP tests drive
-`httptest` in-process and synchronously, and `internal/app`, which owns the
-only real server lifecycle, has no tests. A race *during* a test is reported
-exactly as before.
+looked. Part of that was not even work: a `-race` test binary sleeps a full
+second at exit -- `GORACE`'s `atexit_sleep_ms`, defaulting to 1000 -- and this
+module has a couple of dozen test packages, so every run spent that long on an
+idle machine. `make test/race` sets `atexit_sleep_ms=0` and takes it back.
+What the sleep buys is a last chance to check a goroutine still running when
+`main` returns, and nothing here leaves one: the HTTP tests drive `httptest`
+in-process and synchronously, and `internal/app`, which owns the only real
+server lifecycle, builds its server without listening. A race *during* a test
+is reported exactly as before. The rest is real: the detector slows the
+catalogue adapter's CPU-bound tests about ten times over, so the whole suite
+takes minutes under it.
 
-That leaves 9s against 4s, and the reason the detector still sits outside
-`verify` is what `verify` is for. Nothing runs on `main`, so it is the only
+That is the reason the detector still sits outside `verify`, which is what
+`verify` is for. Nothing runs on `main`, so it is the only
 gate there is, and a gate slow enough to be worth skipping stops being a gate.
 The detector moved onto the path worth taking before a `git tag` -- the point
 where a missed race would otherwise ship. **Run `make test/race` before
 tagging.** It found real races in the HTTP layer and the stores once, and
 `make test/unit` will not find the next one.
 
+The heavy packages also run their tests in parallel: every top-level test in
+`internal/adapter/catalog/file`, `internal/domain/character`,
+`internal/usecase/character`, `internal/api/http` and `internal/app` calls
+`t.Parallel()`, which is what lets the catalogue adapter's CPU-bound tests use
+all four cores instead of one. `internal/usecase/agent` deliberately does not:
+its tests wait on the agent settling under four-second deadlines, and under
+load they starve. A new test in a parallel package calls `t.Parallel()` too,
+unless it writes a package variable; `make test/race` is the check.
+
 ### verify runs two jobs, longest first
 
-`verify` used to be a serial chain, which meant the Go side's time was added to
-the frontend's rather than spent inside it. It is now a `make -j2` over the same
-leaf targets, and **the order they are named in is the schedule**: `make -j`
-starts goals left to right as slots come free, so `web/test` -- fifteen seconds
-against six for everything else put together -- has to go first. Left at the end
-of the list it lands in the last slot and the run costs its length plus
-everything before it. Named first, the Go lane, the frontend's typecheck and the
-production build all happen inside its shadow, and `verify` costs about what
-`web/test` costs.
+`verify` is a `make -j2` over the leaf targets other than `test/unit`, so the
+Go side's small checks are spent inside the frontend's time rather than added
+to it, and **the order they are named in is the
+schedule**: `make -j` starts goals left to right as slots come free, so
+`web/test` -- about forty seconds -- goes first, and the frontend's typecheck,
+the production build and the small Go checks all happen inside its shadow.
+Left at the end of the list it would land in the last slot and the run would
+cost its length plus everything before it.
+
+`test/unit` then runs **after** that group, alone. That is a measurement, not
+tidiness: the heavy Go packages run their tests in parallel, so the Go
+suite and vitest each want every core, and side by side they thrash -- a cold
+Go suite that takes 60s alone took 100s beside vitest, vitest's 40s became
+167s, and `verify` took 184s. One after the other it is 40s + 60s with a cold
+test cache and 40s + 3s with a warm one, and the warm number is the one a
+developer sees most.
 
 Two jobs, not more. One of them is vitest, which forks
 `availableParallelism - 1` workers of its own, so `-j2` is already the whole of
@@ -267,29 +280,33 @@ a four-core machine; `VERIFY_JOBS` is the knob for a worktree sharing the box.
 failure arrives as one block rather than interleaved with whatever else was
 mid-run -- at the cost of nothing printing until a target finishes.
 
-CI has the same two lanes, and since the pipeline was unchained it goes further:
-its six check, build and test jobs all start at once. See
+CI has the same two lanes and goes further: its six check, build and test jobs all start at once. See
 [The three checks run at once](#the-three-checks-run-at-once-and-nothing-is-cached).
 `verify` cannot copy that -- one machine, not six -- so here the lanes are two
 and the order they are named in does the scheduling.
 
 The other reason the suite is fast is that each test package shares **one**
-`catalogfile.Source`. `Source.Load` caches a converted `*catalog.Catalog` per
-locale, and a `Catalog` is immutable, so one read of the 1.55 MB compendium
-serves every test in the binary. Building a fresh `Source` per test threw that
-cache away, and the suite was doing it about 120 times a run -- which was most
-of its remaining runtime. `internal/domain/character` alone went from 3.0s to
-0.06s. If you add a helper that needs the compendium, reach for the package's
-existing `catalogSource` rather than calling `NewSource` again; the internal
-and external test packages of one directory need one each, since a package-level
+`catalogfile.Registry`. It caches a compiled `*catalog.Catalog` per lock and
+locale, and a `Catalog` is immutable, so one read of the compendium serves
+every test in the binary. A `Registry` is dear to build: `NewRegistry` decodes the pack with
+the strict two-pass decoder, re-marshals the whole document -- 13.5 MB of WebP
+icons in base64 included -- to digest and validate it, then compiles every
+locale, about eight CPU-seconds per build. So the tests share one through
+a `sync.OnceValues` helper per package (`sharedRegistry`, `spellCatalog`,
+`packBase`, `namespacedRegistry`), and reads of a registry are safe to share.
+A test that *writes* into one -- `CompilePrivate` installs a release -- takes
+a fresh one, and a test that changes a shared catalogue clones the map it
+touches first. If you add a helper that needs the compendium, reach for
+`filetest.SRD()` -- the SRD pack loaded the way the server loads it, once per
+test binary -- or the package's shared registry rather than calling
+`NewRegistry` again. The internal and external test packages of one directory need one each, since a package-level
 var cannot cross that line.
 
 ## Running more than one worktree
 
-Every port the local stack binds used to be a constant, so exactly one checkout
-could run at a time -- and worse, a second `make db/up` adopted the first one's
-container and its database. Ports are now derived from a **slot**, one number
-per worktree:
+Every port the local stack binds is derived from a **slot**, one number per
+worktree, so more than one checkout can run at a time and a second
+`make db/up` cannot adopt the first one's container and its database:
 
 | | port | reached at |
 | --- | --- | --- |
@@ -351,16 +368,16 @@ PUBLIC_PORT_BASE := 8880
 That is the whole configuration. `make dev` then passes
 `http://dev.example.org:{8880 + slot}` to the API as the first of its
 `auth.rp_origins` and hands it to Vite, which needs it for two things of its
-own -- see [web.md](web.md#one-dev-server-per-worktree).
+own -- see [web.md](web/shipping.md#one-dev-server-per-worktree).
 
-Two consequences of reaching the app over plain HTTP on a name that is not
-`localhost`, both by design rather than breakage:
+Three consequences of reaching the app over plain HTTP on a name that is not
+`localhost`, all by design rather than breakage:
 
 - **Passkeys are unavailable on the `888x` ports.** WebAuthn requires a secure
   context, so `window.PublicKeyCredential` is undefined and the sign-in page
   draws no passkey card at all. The guest session is the way in. They do work at
   `http://localhost:{port}`, which browsers treat as secure, and they work in
-  `make preview` -- see [web.md](web.md#make-preview-is-the-only-secure-origin),
+  `make preview` -- see [web.md](web/shipping.md#make-preview-is-the-only-secure-origin),
   which exists because service workers and the install prompt are blocked by
   this same rule.
 - **`env: development` is doing real work.** It is what clears the cookie
@@ -369,9 +386,7 @@ Two consequences of reaching the app over plain HTTP on a name that is not
 - **`navigator.clipboard` is undefined**, for exactly the same reason as
   `PublicKeyCredential`. The invite sheet falls back to a selection copy and,
   if even that is refused, says so and selects the link -- see
-  [web.md](web.md#copying-the-invite-link). Worth knowing because the first
-  version used Mantine's `CopyButton`, which drops the error its own hook
-  reports, so the button silently did nothing here and worked on production.
+  [web.md](web/shell.md#copying-the-invite-link).
 
 ## Layout
 
@@ -387,17 +402,21 @@ cmd/llm/              dev-machine OpenAI tool: batch image generation, JSON tran
 internal/
   app/                composition root -- the only package that knows every layer
   buildinfo/          Version, stamped by the linker
-  config/             env-driven configuration
+  config/             a committed YAML per environment, with a fixed env overlay
   logging/            slog constructor + request-scoped logger on context
   types/              transport-agnostic error vocabulary
   domain/rules/       shared value objects: slugs, dice, coins, choices  (layer 1)
   domain/catalog/     the SRD compendium and its Source port             (layer 1)
   domain/character/   the event-sourced character aggregate              (layer 1)
   domain/user/        the account aggregate and its passkeys             (layer 1)
+  domain/group/       a table of people and their ranks                  (layer 1)
+  domain/game/        one sitting at a group's table                     (layer 1)
+  domain/pack/        rule packs, releases and locks                     (layer 1)
   domain/auth/        the ceremony and token-signing ports               (layer 1)
   usecase/            application services                              (layer 2)
   adapter/catalog/    reads the compendium off disk                     (layer 3)
-  adapter/repository/ outbound adapters: memory, and postgres for accounts (layer 3)
+  adapter/repository/ outbound adapters: memory and postgres, one contract suite (layer 3)
+  adapter/agent/      the AI Wizard's model client                       (layer 3)
   adapter/webauthn/   runs the WebAuthn ceremonies                       (layer 3)
   adapter/oidc/       exchanges authorization codes with Google          (layer 3)
   adapter/token/      signs the session and ceremony cookies             (layer 3)
@@ -447,7 +466,7 @@ that.
 | `GET` | `/v1/health` | liveness |
 | `GET` | `/v1/version` | the release identifier -- a deploy contract, see below |
 | `GET` | `/v1/catalog` | the compendium's index: ruleset, locales, collections and counts |
-| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it. Magic items list as *summaries*, and `?slugs=` returns full fidelity. **Spells are never served whole** -- see [below](#spells-are-never-served-whole): they answer `?slugs=`, or search parameters (`q`, `level`, `school`, `class`, `castingTime`, `concentration`, `ritual`, `material`, `limit`, `offset`) with a filtered, level-then-name-sorted, paged `{spells, total}` envelope -- the filter itself is `domain/catalog.SpellFilter` -- and the bare URL is a 400. `spell-filters` in place of a collection name returns what spells can be filtered by. `items` in place of a collection name is equipment and magic items **searched together by name**, `?q=&limit=&offset=`, as a name-sorted, paged `{items: [{slug, name, category, magic}], total}` envelope -- the sheet's Add item picker reads it -- and like spells it is never served whole |
+| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it. Magic items list as *summaries*, and `?slugs=` returns full fidelity. **Spells are never served whole** -- see [below](#spells-are-never-served-whole): they answer `?slugs=`, or search parameters (`q`, `level`, `school`, `class`, `castingTime`, `concentration`, `ritual`, `material`, `limit`, `offset`) with a filtered, level-then-name-sorted, paged `{spells, total}` envelope -- the filter itself is `domain/catalog.SpellFilter` -- and the bare URL is a 400. `spell-filters` in place of a collection name returns what spells can be filtered by. `items` in place of a collection name is equipment and magic items **searched together**, `?q=&wearable=&category=&magic=&limit=&offset=`, as a name-sorted, paged `{items: [{slug, name, category, categoryName, cost, weight, magic}], total, categories}` envelope -- the sheet's Add pickers read it -- and like spells it is never served whole |
 | `POST` | `/v1/catalog/spells/search` | the same search with a body, for an offer too long for a URL; also at `/v1/characters/{id}/catalog/spells/search` |
 | `GET` | `/v1/characters` | summaries |
 | `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
@@ -458,13 +477,18 @@ that.
 | `GET` | `/v1/characters/{id}/prompts` | what must be decided next |
 | `GET` | `/v1/characters/{id}/events` | the log |
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
-| `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
+| `GET` | `/v1/characters/{id}/custom-options` | the character's custom entries, `{revision, options}` |
+| `POST` | `/v1/characters/{id}/custom-options` | add or rewrite one, `{revision, option}`; an option without an `id` is new. Answers the new revision and sheet |
+| `DELETE` | `/v1/characters/{id}/custom-options/{option}?revision=` | erase a custom entry of kind `note`; any other kind is a 400 -- see [below](#a-note-is-the-one-custom-entry-that-can-be-deleted) |
 | `POST` | `/v1/characters/{id}/auto-equip` | dress a character who has nothing on: one suitable backpack item per slot; 204, and a no-op once anything is equipped |
 | `GET` / `PUT` | `/v1/characters/{id}/visibility` | `{"public": bool}`: whether anybody signed in who has the character's link may read its sheet; owner only |
 | `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
 | `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
 | `PUT` | `/v1/characters/{id}/folder` | file it elsewhere |
 | `POST` | `/v1/characters/{id}/copy` | duplicate it, log and all |
+| `POST` | `/v1/characters/{id}/copy-links` | mint a link whose holder may take a copy; owner only |
+| `POST` | `/v1/copy-links/preview` | read a copy link: the character's name and class line |
+| `POST` | `/v1/copy-links/accept` | take the copy, into your default folder |
 | `GET` | `/v1/folders` | the account's folders, default first, then in their owner's order |
 | `POST` | `/v1/folders` | create: a name |
 | `PUT` | `/v1/folders/order` | the whole order: every movable folder, in sequence |
@@ -496,6 +520,11 @@ that.
 | `POST` | `/v1/games/{id}/order` | stable sort: `{"by_initiative":true}`; move: `{"entry_id":"...","direction":-1}` (or `1`); DM or owner |
 | `POST` | `/v1/games/{id}/rest` | a rest for the table; DM or owner. Long by default: every entry gets all of its spent uses back. `?kind=short`: only the pools a short rest refills |
 | `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only, resolved the same way |
+| `GET` | `/v1/admin/players` | every stored account, newest first; `?q=` (name, email or id), `?kind=account\|guest`, `?limit=&offset=`. **Superadmin only**, 404 otherwise |
+| `GET` | `/v1/admin/packs` | the private disk packs installed here. **Superadmin only** |
+| `GET` | `/v1/admin/players/{id}/packs` | the private packs that account has been handed: `{"packs":["id"]}`. **Superadmin only** |
+| `PUT` | `/v1/admin/players/{id}/packs` | replace that list whole. **Superadmin only** |
+| `GET` | `/v1/admin/characters` | every character, newest first; `?owner=` (name, email or id), `?id=`, `?public=true\|false`, `?limit=&offset=`. **Superadmin only**, 404 otherwise |
 
 Three of those need a word about their shape.
 
@@ -533,12 +562,8 @@ is what `Seq` means. That is not a third level: `events` is the sub-resource,
 `{seq}` names one of them, and there is no route below it.
 
 A group's members are addressed the other way, by `?user=`. Either would have
-been consistent with the rule above; the query parameter is what
-`DELETE /v1/characters/{id}/events?after=N` already does, and a member is named
-by an opaque account id rather than by position.
-
-`PATCH` arrives with groups, as `PUT` does with the log entry routes above:
-everything older than both is `GET`, `POST` or `DELETE`.
+been consistent with the rule above; a member is named by an opaque account
+id rather than by position, so it travels as a query parameter.
 
 The invite routes are a separate tree rather than sitting under `/v1/groups`
 because somebody redeeming a link is **not in the group yet and cannot name
@@ -546,7 +571,8 @@ it** -- the token carries the id, so there is no addressed parent to hang them
 off. Both take the token in the **body** and never in the URL: our own access
 log records the route pattern, but nginx in front of it logs the whole request
 line, and an invite token is usable for a day. The browser keeps it in a URL
-*fragment*, which is never sent to any server at all.
+*fragment*, which is never sent to any server at all. `/v1/copy-links` is the
+same shape for the same two reasons.
 
 `GET /v1/characters` takes `?folder=` to narrow the listing, and `POST
 /v1/characters` takes a `folder` in the body.
@@ -554,10 +580,9 @@ line, and an invite token is usable for a day. The browser keeps it in a URL
 ### Spells are never served whole
 
 Every spell carries its artwork inline, about 30 KB of it, so the spells
-collection is 11 MB. Nothing a screen does needs all of it, and for a long time
-three screens downloaded it anyway -- to name a dozen spells, to list the books
-a filter offers, to page through a class's list in the browser. So the route
-does not offer it: `GET …/catalog/spells` with neither `?slugs=` nor a search
+collection is 11 MB. Nothing a screen does needs all of it -- naming a dozen
+spells, listing the books a filter offers, paging through a class's list --
+so the route does not offer it: `GET …/catalog/spells` with neither `?slugs=` nor a search
 parameter is a 400 (`field.limit.required`), on every scope the catalogue is
 read through. A client that drifts back into fetching the list finds out on
 the first request, not from a slow page.
@@ -583,13 +608,30 @@ name alone.
 
 **`items` is held to the same rule for the opposite reason.** Equipment and
 magic items are small enough to serve whole, and the plain collections still
-are; but the one screen that *searches* them -- the sheet's Add item picker --
+are; but the one screen that *searches* them -- the sheet's Add pickers --
 needs a page, not a download, and a client that pages never drifts into
 holding the catalogue. So `GET …/catalog/items?q=&limit=&offset=` answers
 both collections together, matched on name, sorted by name, in an
-`{items, total}` envelope with the `magic` flag telling the two apart, and the
-bare `…/catalog/items` is the same 400. It is served on every scope a
-collection is, so a character's picker sees the character's packs.
+`{items, total, categories}` envelope with the `magic` flag telling the two
+apart, and the bare `…/catalog/items` is the same 400. It is served on every
+scope a collection is, so a character's picker sees the character's packs.
+
+Three filters narrow it, and they are the search's own rather than the spell
+parser's:
+
+- `wearable=true|false` -- whether the item has a **slot**. That is the field
+  the client splits the sheet's Equipment tab from its Items tab on, so each
+  tab's picker asks for its own half and what it adds turns up on that tab.
+- `category=<slug>` -- one equipment category.
+- `magic=true|false` -- which of the two collections.
+
+A hit carries what the picker's table shows and no more: the category **and
+its name in the request's locale**, and for equipment its cost and weight (a
+magic item has neither). `categories` is the category filter's options: every
+category present under the `wearable` scope, **ignoring `q`, `category` and
+`magic`** -- otherwise picking one would leave it the only option -- and sent
+here so the client neither fetches `equipment-categories` nor derives the
+list from a collection it is never given whole.
 
 ### The sheet arrives resolved
 
@@ -602,20 +644,32 @@ through one function, `character.ResolvedSheetOf`:
   sheet only names: race, subrace, classes, subclasses, background, traits,
   features, feats, languages, and the source of each spell list. The projection
   already wrote the names of imported and custom entries there; those are kept.
+- **`origins`**, what gave the character each trait and feature, both sides
+  spelled as `catalogNames` keys: `features:maneuver-parry` to
+  `features:maneuvers`, `features:second-wind` to `classes:fighter`. Worked out
+  by `character.Origins` from the same catalogue, nearest source first -- the
+  feature a pick was made under, then the owner of the rule that granted it,
+  then the background or race, then the class or subclass on the entry's own
+  row -- and the sheet draws it beside the name. An entry nothing accounts
+  for, an imported one, has none.
 - **`catalog`**, the entries a panel reads more than a name from, in the shapes
   the collection routes serve: the character's proficiencies, the items it
   holds (asked of both item collections, because a stack does not say which it
   came from), **its own spells with their artwork**, and all eighteen skills,
   which every sheet draws.
+  Beside them, prose only: `actions`, keyed by each action's origin, and
+  `traits`, `features` and `languages` -- the description of each one the
+  character has, where the catalogue holds a description. The sheet opens a
+  row onto it without asking again.
 
 A slug the catalogue does not define is skipped, not an error: the client
 title-cases it, as it always has.
 
 The reason is the cost of the alternative. The server holds the character's
 catalogue when it projects, so the lookup is a few map reads. Left to the
-client it was fourteen whole collections per sheet, the spell list with its
+client it would be fourteen whole collections per sheet, the spell list with its
 inlined artwork among them -- about 11 MB to print a dozen names. A sheet read
-is now one response, sized by the character rather than by the rules.
+is one response, sized by the character rather than by the rules.
 
 A write's echo of the sheet (`WriteResponse.sheet`) carries no `catalog`. It is
 there to confirm the write; a screen that draws a sheet reads the sheet.
@@ -623,10 +677,8 @@ there to confirm the write; a screen that draws a sheet reads the sheet.
 ### Creating a character takes a name
 
 `POST /v1/characters` takes a name, and an alignment if the player already has
-one in mind. It used to take the generation method and the six base scores as
-well, and the init event it seeded carried all eight -- which is precisely why
-the name and the scores were the two things a build screen could not offer to
-revisit. The log is **one entry per selection**; a selection with no entry of
+one in mind. It takes neither the generation method nor the six base scores,
+because the log is **one entry per selection**; a selection with no entry of
 its own is a selection nobody can point at. See
 [dnd.md](dnd.md#log-and-events).
 
@@ -637,12 +689,12 @@ and the log's own validation refuses the second case for every other writer.
 See [dnd.md](dnd.md#log-and-events). A batch may still carry several entries
 -- a race, then what the race asked -- in one request.
 
-So the scores are an ordinary open choice now. A freshly created character has
+So the scores are an ordinary open choice. A freshly created character has
 `character/abilities` outstanding, answered with a `change` event carrying the
 six `abilities.<ability>` paths, and the generation method travels with that
 answer rather than with creation. The bound on a score -- 1 to 30, wide enough
-for a DM's ruling and narrow enough to reject a typo -- moved with them, and is
-checked where they now arrive.
+for a DM's ruling and narrow enough to reject a typo -- travels with them, and is
+checked where they arrive.
 
 ### Creation and level-up are one flow
 
@@ -662,16 +714,13 @@ separate question: levelling up is raising the declaration, from the sheet's
 Level up button or the identity tab, and creation is the first pass through
 the same loop.
 
-Nothing takes a level as an entry of its own. `character/level` is gone, and a
-bare `level` event -- one naming a class and carrying no answers -- is refused
+Nothing takes a level as an entry of its own: a bare `level` event -- one naming a class and carrying no answers -- is refused
 on append, because no prompt offers it. The `level` event type is still in use
 for what a level *grants*: an improvement, an Expertise, a feature's pick all
 arrive as level events carrying answers.
 
 **Multiclassing is not offered.** Nothing poses a question that would give a
-character a second class, so `canMulticlassInto` and the `multiclassing`
-constant that gated it are gone -- git has them, and
-[dnd.md](dnd.md#characters-are-event-sourced) says what the rule was. What
+character a second class; [dnd.md](dnd.md#log-and-events) says what the rule was. What
 stays is everything that *reads* a multiclassed character: `Identity.Classes`
 is a slice, `applyClasses` walks it, `classGrant` still knows a later class
 grants no starting equipment, and the spellcasting summary is still one block
@@ -679,13 +728,9 @@ per casting class. Turning multiclassing back on is posing the question again
 and stopping `advanceToDesiredLevel` from applying; the two go together, since
 a declaration cannot say which class a level went into.
 
-Two consequences worth knowing. An **imported** multiclassed character loses
+One consequence worth knowing: an **imported** multiclassed character loses
 its later classes -- reported as unresolved rather than folded into the first,
-which would give it levels in a class it never took. And a character built
-before this change, whose log takes levels as entries, still *projects*
-correctly (levels are max-by-number, so the entries still count) but would
-lose them to a `Revise`, since nothing poses the prompt they answered. No such
-character was ever written to a durable store, so the window is closed.
+which would give it levels in a class it never took.
 
 Four fields make the client mechanical rather than knowledgeable:
 
@@ -705,34 +750,33 @@ Four fields make the client mechanical rather than knowledgeable:
 - **`repeatable`**, on the choice rather than the prompt, says one option may
   be picked more than once — the picks are points to spend. Only a level's
   Ability Score Improvement says so: "+2 to one ability, or +1 to two". It is
-  not the choice's *kind*, which is what this used to be read off, because a
+  not read off the choice's *kind*, because a
   half-elf's two bonuses are the same kind over the same options and must go to
   two different scores.
 
 An answer to a branch and the answer it opens arrive in **one event**, in that
 order. `surviving` re-projects the prompts between each answer in a batch, so
 the second is legal because the first landed — see
-[web.md](web.md#a-choice-inside-a-choice-is-answered-where-it-was-asked) for
+[web.md](web/builder.md#a-choice-inside-a-choice-is-answered-where-it-was-asked) for
 why the client sends them together.
 
 A prompt whose option set is **explicit and empty** is a question the player
 answers in their own words. Three exist: a name, and the four roleplaying lines
 in the `personality` group -- a personality trait, an ideal, a bond and a flaw.
 SRD 5.1 prints eight of each and the compendium still carries them, but they
-are offered as prompts no longer: a trait is the one line on a sheet that is
+are not offered as prompts: a trait is the one line on a sheet that is
 nobody's but the player's, and a menu of eight makes it the compendium's. The
-state behind all four was always free text (`State.Identity.PersonalityTraits`
-is a `[]string`), so what changed is that the prompt stopped pretending
-otherwise.
+state behind all four is free text (`State.Identity.PersonalityTraits` is a
+`[]string`), and the prompt does not pretend otherwise.
 
 Those four are posed the way `character/alignment` is, and for the same reason:
 there is no option set to compare an answer against, so "answered" is a
 question about the sheet rather than about the log. `promptBuilder.personality`
 emits each only while its value is unset, and the change that sets it is what
 closes it -- which is also what attributes the entry, through the same
-`closedGroup` path the six ability scores go down. The projector no longer
-seeds any of them from a picked suggestion; it used to, which meant choosing a
-background *after* writing a trait silently overwrote it.
+`closedGroup` path the six ability scores go down. The projector seeds none
+of them from a picked suggestion, so choosing a background *after* writing a
+trait cannot overwrite it.
 
 ### Writing to a character
 
@@ -756,19 +800,12 @@ free to disagree with the one the rules produce. Entries the server cannot
 attribute -- an imported log, a DM's `change` -- carry no source. `GET
 /characters/{id}/events` remains the unabridged record either way.
 
-`DELETE /events?after=N&expectedSeq=M` is the undo primitive: dropping a suffix,
-which is what un-taking a level is. Nothing in the web client calls it any
-more -- changing a pick goes through the replace route below -- but it is
-working, tested API, and removing it would be a breaking change made as a side
-effect of a UI decision.
-
-An earlier version of this page said that changing a pick needs no undo,
-because answers fold last-write-wins and re-answering a prompt is a plain
-append. **That was false.** `promptBuilder.add` stops emitting a prompt the
+**Changing a pick is not a plain append**, even though answers fold
+last-write-wins. `promptBuilder.add` stops emitting a prompt the
 moment it is fully answered, so posting the same prompt again is rejected as a
 prompt the character does not have open. Last-write-wins is what lets a *later*
 entry answer an *earlier* entry's question -- a trait's prompt does not exist
-until the race is chosen -- and it was never a way to change an answer. The
+until the race is chosen -- and it is not a way to change an answer. The
 route below is what changing an answer needs.
 
 #### Replacing an entry
@@ -806,8 +843,7 @@ Two invariants make this something a player can trust.
 **Revalidation is never stricter than the predicate that accepted the entry,
 except where that predicate was wrong.** The replay checks each entry against
 exactly the prefix it will sit on, which is the same thing the append checked
-against. The exception is deliberate and is the whole reason the bug below had
-to be closed first: an entry that only ever got in because nothing checked it
+against. The exception is deliberate: an entry that only ever got in because nothing checked it
 does not survive a replay.
 
 **An entry carrying a `Ref` is never dropped merely because its answers died.**
@@ -816,7 +852,7 @@ rogue: the class entry stands, keeps every other answer it carries -- the
 Expertise, the starting weapon -- and the invalidated question comes back
 outstanding under its own group. Deleting the entry would take the class, the
 answers that were still fine and every level built on it, and a revalidation
-that silently eats a player's choices is worse than the truncation it replaces.
+that silently eats a player's choices is worse than none.
 
 The granularity is one **answer**, not one pick. An answer is what a prompt was
 asked for, so half of one answers nothing: four skills picked together stand or
@@ -839,11 +875,12 @@ stale preview cannot be committed silently either, and that costs nothing
 extra: the commit re-runs the replay, and if the log moved in between,
 `expectedSeq` makes it the ordinary sequence conflict.
 
-`Repository.Commit` is the port method behind it -- neither an append nor a
-truncation, because replacing one entry can drop entries after it and the
-stored log comes back a different length. The in-memory adapter is the only
-implementation; the Postgres adapter holds accounts only, so there is no
-migration and no backfill for `source` either.
+`Repository.Commit` is the port method behind it -- a whole-log write
+rather than an append, because replacing one entry can drop entries after it
+and the stored log comes back a different length. It is the only write the
+port has for an existing log (`CreateWithLog` stores a new character with
+one): the in-memory and Postgres adapters both implement it, and `source`
+needed no migration or backfill because the log is one `json` column.
 
 #### Saving several spell edits together
 
@@ -865,14 +902,12 @@ spells while adding new ones without partial writes or losing another draft.
 #### Two questions about a reference
 
 `validateRef` asks **does this entry exist in the compendium?**
-`answersAnOpenPrompt` asks **was the character offered it?** Only the first
-used to be asked, and that is a bug this change closes on the way: `POST
-.../events {"type":"subrace","ref":"subrace:hill-dwarf"}` was accepted for a
-half-elf, because `subrace:hill-dwarf` resolves perfectly well and nothing
-looked at whether anything had asked for a subrace at all. The projector then
-applied it. Revalidation cannot work until that is closed -- a replay with no
+`answersAnOpenPrompt` asks **was the character offered it?** The first alone is not enough: `POST
+.../events {"type":"subrace","ref":"subrace:hill-dwarf"}` would be accepted for
+a half-elf, because `subrace:hill-dwarf` resolves perfectly well, and the
+projector would apply it. Revalidation needs the second too -- a replay with no
 notion of "was this offered?" has no way to notice an entry the new prefix
-orphaned -- so the two are now asked together, in that order, on every
+orphaned -- so the two are asked together, in that order, on every
 structural event.
 
 `answersAnOpenPrompt` matches on the prompt's own `event` block -- the same
@@ -884,11 +919,11 @@ keeps a race's own follow-up entries alive. It is also the function that yields
 the entry's `source`, so an entry's group and its legality are decided by one
 match rather than two that can disagree.
 
-One consequence worth stating: a `feat` event is no longer acceptable, because
+One consequence worth stating: a `feat` event is not acceptable, because
 no prompt offers one. The Ability Score Improvement's feat branch is answered
 as a `level` event -- that is what the prompt says to post -- and no other
 prompt asks for a feat at all. The projector still knows the type; "nothing can
-be answered before it is asked" simply now applies to it like everything else,
+be answered before it is asked" simply applies to it like everything else,
 and a prompt that wants one has to say so.
 
 ### Folders
@@ -896,8 +931,7 @@ and a prompt that wants one has to say so.
 A folder is a named place one account files its characters. That is the whole
 of it: one owner, nothing shared, no rule in the game reads it. It is **not** a
 group of players -- that word is reserved, and kept out of this feature's
-types, routes and screens on purpose, so the two cannot be confused when the
-other one arrives.
+types, routes and screens on purpose, so the two cannot be confused.
 
 **Every account always has one.** The default folder is created by the first
 read that needs it -- `GET /v1/folders`, or creating a character with no folder
@@ -1047,12 +1081,55 @@ one account read another's character, and it needed a third chokepoint rather
 than a loosening of either existing one.
 
 `character.Service.owned` asks **"is this yours"** and grants a read *and* a
-write. `game.Service.readable` asks **"is it on a table you sit at"** and grants
+write. `game.Service.readable` asks **"is it on a table you run, or opened by
+its owner"** and grants
 a read and nothing else. Neither was widened to accommodate the other: they are
 different functions, in different packages, over different stores, and the write
 paths still go only through the first. There is no route anywhere that writes to
 a character through the second, which is why "read-only" here is a property of
 the API's shape rather than a rule somebody has to remember.
+
+#### What a table hands over
+
+There is one exception, and it is not a widening of either function: four
+routes under a game write to a seated character its actor does not own, and
+they write a backpack count, a coin or one new custom item and nothing else.
+
+| Route | Who | Does |
+| --- | --- | --- |
+| `POST /v1/games/{id}/entries/{entry}/items` `{item, count}` | DM or group owner | `count` more of `item` in the character's backpack |
+| `POST /v1/games/{id}/entries/{entry}/custom-items` `{name, description, item}` | DM or group owner | one new custom item in the character's backpack; see "A custom item" below |
+| `POST /v1/games/{id}/entries/{entry}/coins` `{unit, amount}` | DM or group owner | adds a signed `amount` to the purse; below zero is a 400 `coins.notEnough` |
+| `POST /v1/games/{id}/entries/{entry}/give` `{item, count, to}` | the owner of `entry`'s character | moves `count` of `item` to the player entry `to` |
+
+A table hands things over -- the DM gives out treasure, one player passes
+another a potion -- and a rule that made the recipient type it into their own
+sheet would be a rule nobody follows. What grants the write is the **game**:
+the recipient is seated in it, and the actor either runs its table or is giving
+up something of their own. So the routes hang off a game entry and not off
+`/v1/characters`, whose every route is still the owner's alone, and
+`character.Service.owned` is still untouched.
+
+The write (`usecase/game/items.go`, `changeCharacter`) is an ordinary `change`
+event with absolute `set` values on `equipment.backpack.<slug>` and
+`equipment.purse.<unit>`, computed from the sheet as it stands and committed
+against the character's revision -- the same event the owner's sheet sends, so
+the log has one vocabulary and the owner can revise it like any other entry.
+An owner's write landing between the read and the commit is a stale-revision
+400, not a silent overwrite.
+
+A give takes from the backpack, then from the loot, and never what is worn
+(`item.worn`); more than is carried is `item.notCarried`. The item must exist
+in the **recipient's** locked catalogue (`item.unknownToRecipient`): a custom
+item, or one from a pack the recipient does not play with, has no slug there to
+be counted under, and that is checked before anything leaves the giver. A grant
+takes any slug the recipient's catalogue has, up to 100 at a time.
+
+A give is **two commits, not one transaction** -- giver first, then recipient,
+and the giver's is put back if the second fails. No repository method commits
+two characters at once, so a crash between the two loses the item; it can never
+duplicate it, and the DM can hand it back. Nothing records who gave what beyond
+the two log entries.
 
 Both refuse with **404**, and for the reason `owned` does: a character id is a
 short sequence number, so a 403 on one that is not yours confirms it exists. A character
@@ -1062,7 +1139,8 @@ indistinguishable from outside.
 | | its owner | group owner | dm | player | not a member |
 |---|---|---|---|---|---|
 | see the group's table | — | yes | yes | yes | **404** |
-| read a shared sheet | yes | yes | yes | yes | **404** |
+| read a shared sheet, closed | yes | yes | yes | **404** | **404** |
+| read a shared sheet, opened | yes | yes | yes | yes | yes |
 | read a character *not* shared here | yes | **404** | **404** | **404** | **404** |
 | share your own character | yes | yes | yes | yes | **404** |
 | share somebody else's | **404** | **404** | **404** | **404** | **404** |
@@ -1077,9 +1155,13 @@ indistinguishable from outside.
 | edit locked game values | **403** | yes | yes | **403** | **404** |
 | lock/unlock, reorder, manage monsters, call a long rest | **403** | yes | yes | **403** | **404** |
 
+A player still sees a closed character's row on the table -- name, class,
+level -- because that is who is sitting there, not the sheet. The row carries
+`public`, so the client draws the name as a link only for a reader the read
+would admit.
+
 Two rows are worth saying in prose. **A player may share** — that is the whole
-of what a player does at a table, and it is the half of a group that was missing
-until now. **A DM may unshare somebody else's character**, which looks like a
+of what a player does at a table. **A DM may unshare somebody else's character**, which looks like a
 reach into another account and is not: a guest's session expires and cannot be
 recovered, so without it their character would sit on the table forever with
 nobody able to take it down.
@@ -1097,14 +1179,120 @@ thing being deleted, so a character still knows nothing about groups and a group
 still knows nothing about games.
 
 **Both stores are in Postgres, and neither has a foreign key to a character.**
-`shared_characters` and `games.roster` name character ids, and those are now
-drawn from a sequence that never hands an id out twice, so the argument
-`00003_groups.sql` once made against naming one no longer applies. The keys are
-still left out on purpose: the ports say the store does not verify the
+`shared_characters` and `games.roster` name character ids, which are
+drawn from a sequence that never hands an id out twice. The keys are left out
+on purpose: the ports say the store does not verify the
 character -- that is the usecase's authorization question -- and the in-memory
 adapter cannot verify it either, so a key would make the two adapters answer
 the same call differently. The cascades above are what keep the rows honest,
 and every read already skips an id that is gone.
+
+### A superadmin reads everything and writes one thing
+
+An account named in `auth.superadmins` gets three reads beyond the private
+packs, and one write: which private packs an account has been handed.
+
+**Two listings**, `GET /v1/admin/players` and `GET /v1/admin/characters`,
+behind `middleware.RequireSuperadmin`. The middleware runs after
+`RequireSession`, whose account already carries its identities, so the check
+costs no query; everybody else gets the **404** an unrouted path would, because
+a 403 would tell any signed-in account that the surface exists. Both page with
+`limit`/`offset` (default 50, at most 200) and answer `{players|characters,
+total}`, the spell search's contract.
+
+The listings are `Search` on the two repository ports, in both adapters. A
+character's **name, level and class are not stored** -- they are folded from
+its log -- so `usecase/admin` pages in SQL and runs `character.Summarize` on
+the page it is about to return, and none of the three is a filter. What is
+stored is filterable: the owner, the id, the public switch. The owner filter
+is text a person types; the usecase resolves it to account ids through the
+account `Search` (the first 200 matches) and adds the text itself as a literal
+id, because a guest who never joined a group owns characters with no `users`
+row to match by name. For the same reason **the players listing is the stored
+accounts, not everybody who has played**: such a guest appears only as the
+owner of their characters. "Last sign-in" is the newest `last_used_at` over an
+account's passkeys and identities; nothing records later activity.
+
+**Every sheet.** `game.Service.readable` asks a third question last, after
+"is it yours" and "is it public or on a table you sit at": is the actor a
+superadmin. So the client links an admin row to the existing
+`/v1/shared/{id}/...` routes and there is no admin sheet endpoint. It is still
+only `readable` -- `character.owned` was not touched, so a superadmin can
+change nobody's character.
+
+**A flag on the session.** `GET /v1/auth/me` carries `admin: true` for a
+superadmin, so the client knows to draw the section. It grants nothing; the
+routes above ask again on every request.
+
+**The write: a private pack for one account.** `GET /v1/admin/packs` lists the
+restricted disk packs installed here, and `GET`/`PUT
+/v1/admin/players/{id}/packs` reads and replaces the ids one account has been
+handed; the players listing carries the same ids on each row as `packs`. They
+are rows in `user_rule_packs`, read by the same
+`pack.Service.available` that already decided who has a pack, so a grant shows
+up everywhere a pack does and nowhere new. It is by **pack id**, not by release
+as a group share is: a private pack is replaced on disk by hand, and a grant
+that pinned a version would silently end at the next copy. The usecase accepts
+only an installed restricted pack and only a stored account -- a guest who
+never joined a group has no row to hang it on. What a grant does and does not
+give is in [packs.md](packs.md#common-and-private-disk-packs).
+
+### A custom item
+
+`POST /v1/characters/{id}/custom-options` takes an `item` on a custom entry of
+kind `item`, in the catalogue's own item shape -- `category`, `slot`, `cost`,
+`weight`, `weapon`, `armor` -- with `icon` being a pack icon's label. The
+handler parses the words (`CustomItemOf`); `UpsertCustom` bounds the numbers
+and checks every slug against the character's rules (`checkCustomItem`), and
+answers a field error with reason `custom.item.invalid`. A write that carries
+no `item` for an entry that has one keeps it, so the AI Wizard renaming what
+it imported does not erase what a person filled in. What the model does with
+it is in docs/dnd.md, "A custom item is an item".
+
+The icons to choose from are the collection `item-icons`: label and data URL
+for every item icon the character's packs carry, on the same
+`.../catalog/{collection}` routes as the rest. It is not in the manifest, and
+it is the one collection with artwork served whole -- about 1.7 MB -- because
+a picker shows all of it; the client asks only when the picker is opened.
+
+**A DM gives one at a game** through
+`POST /v1/games/{id}/entries/{entry}/custom-items`, one of the hand-overs in
+"What a table hands over" and held to the same rule as `GrantItem`: the caller
+runs the table and the entry is a player's. `GrantCustomItem` appends exactly
+one new definition, in the backpack, through the same `UpsertCustom` and the
+same `CheckSheet` limits as the owner's route, and answers 204. It takes no
+id, placement or count, so it cannot replace, move or remove anything.
+`changeCharacter` projects against the character's custom overlay, so an item
+that was given can be given on like any other.
+The item search on the shared route, `/v1/shared/{id}/catalog/items`, leaves a
+character's custom items out: it is what a DM hands out from, and those are
+already that character's. Named outright they still answer, which is how a
+shared sheet draws them.
+
+A shared sheet and its catalogue (`/v1/shared/{id}/...`) are projected against
+the character's custom overlay, as the owner's are, so a DM sees the item they
+gave with its icon and numbers.
+
+### A note is the one custom entry that can be deleted
+
+A custom entry lives in the log as a `note` event carrying the definition, and
+every kind but one may be something the character is built on: a custom class
+it has levels in, a custom spell it prepared. Those are switched off through
+their own `selected` flag and never removed, which is why
+`DELETE …/events/{seq}` refuses a custom event outright.
+
+Kind `note` is the exception because nothing can depend on it: it is a name
+and a description the server gives no meaning to -- the player's own titled
+text, drawn on the Custom tab of the sheet and the build screen. So
+`DELETE /v1/characters/{id}/custom-options/{option}?revision=` drops that one
+event and rebuilds the log, under the same ownership and revision checks as
+the POST; the revision is in the query because a DELETE carries no body. A
+non-note answers 400 `custom.notRemovable`, an unknown id 404. The AI Wizard's
+tools still may not write a note, so what is on that tab is what the player
+put there, plus whatever an older import left.
+
+A title is 1-300 **bytes** and a text at most 16000, not characters: Cyrillic
+gets about half. That is every custom entry's limit, not this route's.
 
 ### Active game entries
 
@@ -1125,7 +1313,10 @@ copy under the game repository mutex. Rejected changes leave storage untouched,
 and independent field edits survive concurrent writes. The latest accepted
 write wins when two requests change the same field.
 
-**Consumables are game values too.** A player entry carries `resources`: the
+**Consumables are game values too**, and they are sent only to the
+character's owner and to whoever runs the table: another player's entry
+arrives without `resources`, because what somebody has left to spend is theirs
+to tell. A player entry carries `resources`: the
 character's spendable pools -- spell slots by level, Pact Magic, every
 pack-declared pool such as Channel Divinity or ki, and Hit Dice last -- each
 `{id, name, group, max, used, dice?, slot_level?}`. Capacity is projected live
@@ -1137,9 +1328,8 @@ pool the character does not have is a 400. It is one of the entry's game
 values, so the same rule decides who may write it: the owner on their unlocked
 entry, a DM or the group owner on any.
 
-This deliberately does **not** use the character log's `resource.spent` and
-`rest.completed` events, which stay available to API clients and unused by the
-browser. A spent slot is a fact about one sitting, exactly as a hit point lost
+This is deliberately not an entry in the character's log, which holds build
+decisions and nothing spent. A spent slot is a fact about one sitting, exactly as a hit point lost
 is: the same character seated in two games has two independent counts, the
 sheet always shows full pools, and a DM can correct a player's count without a
 write path into somebody else's character. There are two recoveries, both `POST
@@ -1199,6 +1389,93 @@ would sign out the perfectly signed-in person who clicked it. `openInvite`
 translates it into a `*types.ValidationError` -- a 400 -- and there is a test
 for it.
 
+### Giving a character to somebody is giving them a copy
+
+There is one way to hand a character to another person, and it does not change
+who owns anything: the owner mints a **copy link**, and whoever opens it gets a
+new character of their own with the same log. The original keeps its owner, its
+folder, its group shares, its game seats and its AI Wizard chats, because
+nothing about it was touched -- which is the whole reason this is a copy and
+not a transfer. Moving `owner_id` would have to reconcile every one of those:
+a folder that belongs to the old owner, a game seat whose stored owner decides
+who may edit it, a chat that can still commit.
+
+The link is the invite's design again (`internal/domain/character/copylink.go`):
+a signed token naming the character and the owner who made it, 24 hours,
+**reusable and not revocable**. That is a cheaper trade here than for a group,
+since any number of redemptions cost the sender nothing. Redeeming loads the
+character *as the owner in the token*, so a link dies with the character, and
+the same 401-to-400 translation applies. Unlike the same-owner Copy there is no
+`(copy)` suffix -- the recipient has no original to tell it from -- and the pack
+check runs against the **recipient**: a character built on a pack they cannot
+use is refused with `pack.unavailable` rather than handed over. A guest may
+accept, as a guest may own a character.
+
+### Limits
+
+Everything a person can make more of has a number on it, and making one past
+the number is refused. The numbers are one struct, `types.Limits` in
+`internal/types/limits.go`, and `types.DefaultLimits` is its only value:
+
+| Limit | Default | Counted | `reason` |
+| --- | --- | --- | --- |
+| `Characters` | 100 | per owner | `limit.characters` |
+| `Folders` | 50 | per owner, the default folder included | `limit.folders` |
+| `Groups` | 20 | groups an account owns now | `limit.groups` |
+| `GroupMembers` | 50 | per group | `limit.groupMembers` |
+| `GroupCharacters` | 200 | characters on one group's table | `limit.groupCharacters` |
+| `GroupGames` | 50 | per group | `limit.groupGames` |
+| `GroupPacks` | 20 | packs shared with one group | `limit.groupPacks` |
+| `GameEntries` | 100 | one game's roster, characters and monsters | `limit.gameEntries` |
+| `Packs` | 30 | an owner's unarchived packs | `limit.packs` |
+| `PackReleases` | 100 | published versions of one pack | `limit.packReleases` |
+| `CharacterItems` | 500 | item stacks on one character | `limit.characterItems` |
+| `CharacterNotes` | 100 | Custom-tab texts on one character | `limit.characterNotes` |
+| `CharacterCustomOptions` | 300 | custom entries of every kind on one character | `limit.characterCustomOptions` |
+| `CharacterEvents` | 20000 | entries in one character's log | `limit.characterEvents` |
+| `WizardRunsPerDay` | 20 | AI Wizard chats an owner started in 24 hours | `limit.wizardRuns` |
+
+A refusal is `types.LimitReached`: a 400 `validation_error` whose reason is in
+the table and whose `args.max` is the number, so the caption never repeats it.
+It is a 400 and not a 429 because nothing about it is a rate -- waiting does
+not help, deleting something does -- and it is the class `agent.capacity`
+already used.
+
+**It is a struct and not a block of YAML** for the reason `InviteTTL` is a
+constant: an unknown config key stops the process at startup, so a key costs
+two releases, and none of these numbers has needed to differ between
+environments. Each service copies `DefaultLimits` when it is built and has a
+`SetLimits` that the tests use; the AI Wizard reads the character service's.
+The day a number has to vary, that setter is where the configuration lands.
+
+Limits belong to whatever holds the list, which is not always a person. A game,
+a shared character and a shared pack are a group's, so those are counted per
+group and whoever adds the one too many is refused. `Groups` counts ownership
+as it stands, so handing a group on frees a place.
+
+**The per-character limits refuse growth, not size.** `character.CheckSheet`
+compares the log before a write with the log after it and refuses only a count
+that is over its limit *and* larger than it was. A character already past a
+number -- the number was lowered, or an older import left it there -- can still
+be edited, trimmed and levelled; it just cannot get bigger. It is called at
+every place a log is written: `Apply`, `ReviseBatch`, `UpsertCustomOption`, and
+the AI Wizard's tool calls, which write around all three and hand the refusal
+to the model like any other tool error.
+
+`CharacterEvents` is the catch-all. Personality traits, proficiencies and
+conditions are all entries in the same log, so one
+number bounds every list on a character that the struct does not name. It is
+high because play adds to the log for as long as a campaign runs.
+
+A character may be created four ways -- `Create`, a same-owner copy, a
+redeemed copy link and the AI Wizard's import, which writes to the repository
+directly -- and all four go through `Service.CheckCharacterLimit`. Both copies
+share `copyTo`, which checks the limit of whoever receives the character, so a
+copy link is refused when the *recipient* is full. A fifth must too.
+
+Three things these limits do not do are in
+[known-caveats.md](known-caveats.md#limits-are-counted-not-reserved).
+
 ### Dependency rule
 
 ```
@@ -1228,11 +1505,15 @@ Imports point inward, never outward:
   makes `types` safe for the domain to import.
 - **`internal/app`** is the only package importing across all layers.
 
-Two mechanical checks back this up: `make lint/layers` greps the dependency
-graph of the inner layers, and a `depguard` rule in `.golangci.yml` denies the
-same imports at lint time. The standalone `usecase/spellicon` generator is
-the outbound HTTP exception described above; other inner packages cannot
-import it, and its dependencies still exclude server frameworks and storage.
+Two mechanical checks back this up, and both are gates -- `make verify` and
+the CI check job run each. `make lint/layers` greps the dependency graph of the
+inner layers, transitively. `make lint` runs golangci-lint, whose `depguard`
+rules deny the same imports one file at a time and add two things the grep
+does not cover: no authentication library in the inner layers, and no adapter
+importing another. The rest of what it enforces is in `.golangci.yml`:
+unchecked errors, error wrapping, requests without a context, import grouping.
+One rule is deliberately off -- a comment on every exported name -- for the
+reason given beside it.
 
 The frontend has its own layer rule and its own checker; see
 [web.md](web.md#dependency-rule).
@@ -1257,6 +1538,15 @@ for what must not be committed**:
 | development | `config.dev.yaml` | `~/config/easydnd/dev.env`, one for every worktree, loaded by `make` |
 | production | `config.prod.yaml`, shipped in each release as `config.yaml` | `/etc/easydnd/prod.env`, loaded by supervisor |
 
+Analytics takes its token from `EASYDND_POSTHOG_TOKEN` in the existing env file,
+entered by the operator and never committed. `analytics.host` remains in the
+committed YAML as the HTTPS ingestion URL. With no env token, the committed
+configs leave analytics disabled. Use the browser project token (`phc_`), not
+a personal or secret API key. The public, uncached `GET /v1/analytics-config`
+exposes only `environment`, `token`, and `host`, with environment taken from
+the running server's `env`. It never serializes the full server config. See
+[browser analytics](web/shipping.md#analytics) for setup and tracking behavior.
+
 The app finds the YAML via the `EASYDND_CONFIG` environment variable, or a
 `-config <path>` flag which takes precedence; there is no default location and
 the file is **mandatory in every environment**. It logs which file it loaded.
@@ -1267,6 +1557,7 @@ naming rule, so a stray export cannot reach a key nobody meant to open:
 
 | Variable | Sets | Where it comes from |
 |---|---|---|
+| `EASYDND_POSTHOG_TOKEN` | `analytics.token` | the env file, both environments |
 | `EASYDND_AGENT_API_KEY` | `agent.api_key` | the env file, both environments |
 | `EASYDND_SESSION_SECRET` | `auth.session_secret` | `prod.env` |
 | `EASYDND_DB_URL` | `db.url` | `prod.env`; in development, `make` from the slot |
@@ -1334,7 +1625,7 @@ rather than quietly defaulted.
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
 | `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The template's placeholder is rejected by name |
-| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups: a **verified** Google email, or an account id |
+| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups or to single accounts, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes one thing](#a-superadmin-reads-everything-and-writes-one-thing)): a **verified** Google email, or an account id |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
 | `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. The first is where Google sign-in returns to. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
@@ -1344,7 +1635,7 @@ rather than quietly defaulted.
 | `auth.google.client_id` | *(none)* | omitting the whole `auth.google` block means Google sign-in is **not offered**, which is a supported deployment |
 | `auth.google.client_secret` | *(none)* | must be set together with the id; half a configuration is a startup error. The template's placeholder is rejected by name |
 | `auth.google.redirect_url` | `/v1/auth/sso/google/callback` on the first of `auth.rp_origins` | must match a URI registered with Google byte for byte. In development that origin is the **Vite dev server**, not this process, and differs per worktree |
-| `agent.model` | *(none)* | the AI Wizard's model; inert without `agent.api_key`. The other `agent.*` keys are in [agent.md](agent.md#configuration) |
+| `agent.model` | *(none)* | the AI Wizard's model; inert without `agent.api_key`. The other `agent.*` keys are in [agent.md](agent.md#configuration-and-deployment) |
 | `agent.api_key` | *(none)* | **never in a committed file** -- `EASYDND_AGENT_API_KEY`. Unset means the AI Wizard is off |
 
 Cookie `Secure` and the `__Host-` / `__Secure-` name prefixes are derived from
@@ -1408,7 +1699,7 @@ merge them. What makes this cheap rather than alarming is that
 **`register/begin` stores nothing**: the candidate rides inside the sealed
 ceremony cookie and reaches `repo.Create` only once an attestation verifies, so
 an abandoned fallback leaves no record at all. The browser half of this bargain
-is in [web.md](web.md#one-button-means-both-halves).
+is in [web.md](web/auth.md#one-button-means-both-halves).
 
 | Route | Guard | Does |
 |---|---|---|
@@ -1516,16 +1807,14 @@ A guest session is the same signed token in the same `HttpOnly` cookie as any
 other, carrying one extra private claim, `anon`. It rides in the token because
 there is nothing to look it up in.
 
-A guest used to have no row anywhere at all. **Groups ended that, but only
-just**: a guest who joins somebody else's table has to be nameable in a roster
+A guest has no row anywhere at all -- **until they touch a group**: a guest who joins somebody else's table has to be nameable in a roster
 other people read, and `group_members.user_id` is a real foreign key. So the
 group usecase writes a `users` row for a guest the first time they create or
-join a group -- `EnsureGuest`, idempotent, and called on those two paths and
-nowhere else. A guest who never touches a group is still stored nowhere.
+join a group -- `EnsureGuest`, idempotent, and called on those two paths and on a
+guest's first pack. A guest who does none of the three is stored nowhere.
 
-Which raised the question of what to call them. "Guest" was legible while a
-guest could only see their own things and useless the moment three shared a
-roster: nobody could tell which one to remove. A guest is now "Guest" plus four
+A bare "Guest" is useless the moment three share a roster: nobody can tell
+which one to remove. So a guest is "Guest" plus four
 characters of the id they already carry -- `guestName`, a pure function of the
 session's subject.
 
@@ -1627,7 +1916,10 @@ visitor already holds would verify perfectly well as an invitation to any group
 whose id they could guess -- and an invite link, which is meant to be forwarded
 to strangers, would verify as somebody's session. `internal/adapter/token` is
 still the only package that knows any of these are JWTs; the group usecase
-sees an `Inviter` port trading in strings and domain types.
+sees an `Inviter` port trading in strings and domain types. A **copy link is a
+fifth**, behind `character.CopyLinks`; it reuses the invite's two claim slots,
+so the kind claim is also all that keeps a group invitation from being redeemed
+as a copy of whichever character shares its id.
 
 CSRF is covered three ways, in `middleware.SameOrigin`: `SameSite` on the
 cookie, an `Origin` check against `auth.rp_origins`, and a required
@@ -1637,8 +1929,8 @@ every call, and which an HTML form cannot set at all.
 That `Origin` check is why `auth.rp_origins` is not only a passkey setting. It
 is the list of addresses this instance will accept a write from, so a
 development instance reached on some other host has to have that host in it or
-every POST comes back "request origin is not allowed" -- which is what
-`make dev` generates it for.
+every POST comes back "request origin is not allowed" -- which is why
+`make dev` passes it.
 
 ### `auth.rp_id` is permanent
 
@@ -1670,7 +1962,7 @@ chats are kept there too, and are described with their own features:
 | `groups` | a group's id, name and who made it |
 | `group_members` | one row per seat: who, in which group, at which rank |
 | `folders` | one account's shelves; one is flagged the default |
-| `characters` | one row per character: owner, folder, revision, and the whole log, its checkpoints and command keys as `json` |
+| `characters` | one row per character: owner, folder, revision, and the whole log as `json` |
 | `shared_characters` | one row per character a member has put on a group's table |
 | `games` | a game and, as one `json` column, its whole roster |
 | `private_releases` | the rule packs an AI Wizard import compiled, pinned by a character's lock and never listed |
@@ -1679,7 +1971,7 @@ Character and folder ids come from two sequences, `characters_id_seq` and
 `folders_id_seq`, rendered in the same `chr_000001` / `fld_000001` shape the
 in-memory store mints -- so nothing downstream can tell the adapters apart,
 and, the point of it, an id never names a different character after a restart.
-That is what `00003_groups.sql` was waiting for. The rows that name a
+The rows that name a
 character still carry **no foreign key** to it; the reason is under
 [Ownership, and membership](#ownership-and-membership). `owner_id` on
 `folders` and `characters` has none either, for the reason `agent_sessions`
@@ -1688,9 +1980,8 @@ be named in a group.
 
 A character's log is `json` rather than `jsonb`, as the wizard's document is:
 it is never queried, and `jsonb` refuses the `\u0000` a transcribed source can
-carry. The rules a write applies -- the revision guard, the sequence guard,
-event stamping -- are the domain's (`Character.Commit`, `ExpectSeq`,
-`Log.Stamp`), so the SQL adapter is load-under-`FOR UPDATE`, call, store, and
+carry. The rules a write applies -- the revision guard and event stamping --
+are the domain's (`Character.Commit`, `Log.Stamp`), so the SQL adapter is load-under-`FOR UPDATE`, call, store, and
 cannot drift from the in-memory one; `repotest` runs both.
 
 `users` is the only place a display name is stored, and a roster is a join
@@ -1736,22 +2027,17 @@ the local zone, so **compare stored times with `time.Time.Equal`, never `==` or
 
 #### Two adapters, one contract
 
-`user.Repository` still has two implementations. The in-memory one is the
-development fallback: with no `db.url` the server logs a warning and runs
-on it, so `make run/server`, `go test ./...` and `make verify` all work with no
-Postgres installed. `config.validate` refuses that combination in production.
+`user.Repository` has two implementations, as every store does. The server
+runs on the Postgres one and refuses to start without `db.url`. The in-memory
+one is what the tests run on, so `go test ./...` and `make verify` work with no
+Postgres installed; `app.Options.InMemory` is the only way to select it, and
+only this repository's tests set it.
 
 Both run the same test suite, `internal/adapter/repository/repotest`. That is
 not tidiness. `internal/api/http/helpers` maps a `*types.ValidationError` to 400
 and a `*types.NotFoundError` to 404 exactly once, so two implementations that
 disagree about which error a bad call produces are two different ports wearing
 one name -- and only one of them can be right.
-
-The sharpest instance: Postgres evaluates a unique constraint **before** it
-fires a foreign key trigger. `AddCredential` against a missing account whose
-credential id is already claimed therefore reports the duplicate, where the
-in-memory adapter reports the missing account -- so the SQL adapter probes for
-the account explicitly first. `repotest` has a case for it.
 
 ### Migrations
 
@@ -1821,7 +2107,7 @@ One pipeline ships the API, the SRD data and the frontend together, and it is
 | Event | Runs |
 |---|---|
 | push to `main` | *nothing* -- no build, no tests |
-| push a `v*` tag | gofmt, vet, tests, build, version-injection check, then deploy |
+| push a `v*` tag | gofmt, vet, lint, tests, build, version-injection check, then deploy |
 | push a `v*-notest` tag | the same minus the two suites; the version assertions still run |
 | push a `ci/*` tag | everything except Deploy and Restart -- a dry run that cannot ship |
 | manual run on a `v*` tag | the same -- how you re-run a tag that failed halfway |
@@ -1835,10 +2121,9 @@ checks twice buys nothing, so a tag named for the exemption skips both test
 jobs. Naming the tag is the whole mechanism: the workflow reads it off the ref,
 and `git tag` therefore shows for ever which releases went out untested.
 
-What it gives up is the two suites, and now nothing else. The pair of version
+What it gives up is the two suites and nothing else. The pair of version
 assertions -- that `./easydnd -version` and the bundle's `version.json` both
-report this release -- used to live in the Test stage and go with it. They are
-in Build now, beside the artifact each is about, so a `-notest` release still
+report this release -- is in Build, beside the artifact each is about, so a `-notest` release still
 proves the identifier landed. That matters more than it sounds: an unfound `-X`
 symbol is a *silent* no-op, and without the assertion the same mistake still
 gets caught, but by `deploy.sh`'s health gate -- a rollback and a red `restart`
@@ -1887,10 +2172,8 @@ reverts the UI, the API and its data as a unit.
 
 The path of the data inside a release is part of the contract between the
 tarball, `deploy.sh`'s existence check and the server's `data.srd_dir`. All
-three now travel with the tag -- `srd_dir` is in `config.prod.yaml`, inside the
-release -- so moving the directory is one change and one deploy. It used to
-take a hand edit on the server *before* tagging, and forgetting it cost a
-rollback with nothing on the run page saying why.
+three travel with the tag -- `srd_dir` is in `config.prod.yaml`, inside the
+release -- so moving the directory is one change and one deploy.
 
 The database is the exception, and the only piece of state that does **not**
 swap with a release. That is what makes the expand-only rule above binding: a
@@ -1908,11 +2191,8 @@ Nothing in the workflow was taught about it: Deploy and Restart already ask
 `startsWith(github.ref, 'refs/tags/v')`, and a `ci/` ref fails that, so they skip
 on their own.
 
-It works only because the trigger and the deploy gate stopped being the same
-condition. They both used to say "starts with `v`" -- the trigger as the glob
-`v*`, the gate as `startsWith(…, 'refs/tags/v')` -- so every tag that could
-start the pipeline could also ship from it, and there was no way to run CI on a
-tag without a release at the end of it.
+It works because the trigger and the deploy gate are different conditions: the
+trigger also matches `ci/*`, the gate does not.
 
 **A dry-run tag must not begin with `v`.** `v*` is a glob and not a version
 pattern: `vtest` and `verify` both match the trigger *and* pass the deploy gate,
@@ -1931,18 +2211,17 @@ testing.
 ### The three checks run at once, and nothing is cached
 
 Check, Build and Test are six jobs with no dependencies between them -- three
-per lane, all starting together. They used to be a chain per lane, and the chain
-cost more than its contents: the Go module graph was compiled from scratch in
-each of the three backend jobs, one after another, 31s then 38s then 39s of a
-202s release. Nothing in Check produces anything Build or Test reads. The only
-real tie was the version assertions, which needed a built artifact -- so they
-moved into the job that builds it.
+per lane, all starting together. A chain per lane cost
+more than its contents: the Go module graph was compiled from scratch in each
+of the three backend jobs, one after another. Nothing in Check produces
+anything Build or Test reads; the only real tie is the version assertions,
+which need a built artifact -- so they live in the job that builds it.
 
-The one thing that arrangement costs is that **Check no longer gates anything by
+The one thing that arrangement costs is that **Check does not gate anything by
 being upstream of it.** The two Deploy jobs name `check-*` in `needs` and test
 its result explicitly. They have to: their `if` already lifts the implicit
 `success()` gate so that `-notest` can work, so a missing clause there would not
-fail loudly -- it would ship a release whose gofmt, vet, layer and drift checks
+fail loudly -- it would ship a release whose gofmt, vet, lint, layer and drift checks
 were red.
 
 **Nothing is cached, and that is not an oversight.** A GitHub Actions cache is
@@ -2007,6 +2286,7 @@ Everything below is set up once, by hand, and no tag changes it:
 | sudoers | `deploy` may run `/usr/bin/supervisorctl restart easydnd` without a password |
 | `/etc/supervisor/conf.d/easydnd.conf` | from `deploy/supervisor/easydnd.conf`, **after** `prod.env` exists |
 | `/var/log/easydnd/` | exists; supervisor writes `out.log` and `err.log` there |
+| memory | a swap file (2 GB on the 1 GB host), and `GOMEMLIMIT` in the supervisor conf as a ceiling. v1.1.0 was OOM-killed a minute after its first sign-in; see [What the process holds](#what-the-process-holds) for why and for what it costs now |
 | nginx and certbot | `deploy/nginx/easydnd.conf`, the `$connection_upgrade` map, the certificate |
 | Postgres | the steps above |
 | `/opt/easydnd/private-packs/` | optional: private rule packs, pushed by hand with `deploy/push-private-pack.sh` and named in `prod.env` |
@@ -2025,10 +2305,8 @@ say:
   `/opt/easydnd/current/config.yaml`, so the config follows the symlink swap.
 - `deploy/nginx/easydnd.conf` -- the routing: `/v1/` to the Go process,
   everything else to the bundle with an SPA fallback, plus the whole of the
-  HTTP caching policy. Its cache rules changed with the release-identifier
-  work -- `/icons/`, `/manifest.webmanifest`, `/favicon.svg`, the Workbox
-  runtime chunk and the source maps -- and **a tag deploy does not carry any of
-  that**. The live copy has to be replaced by hand or the new rules are simply
+  HTTP caching policy. **A tag deploy does not carry any of that**: after a
+  change here the live copy has to be replaced by hand or the new rules are simply
   not in effect, silently, with nothing failing to say so.
 
 > **Apply the nginx config before the first tagged deploy carrying a
@@ -2070,12 +2348,10 @@ A `v*-notest` tag reports itself in full, `-notest` and all. That is deliberate:
 a release that skipped its suites should say so wherever anyone reads its
 version.
 
-**A release lives in a directory named by commit SHA.** `releases/<sha>/`, as it
-always has. A tag can be moved; a commit cannot, so the SHA is what guarantees
-two builds never land on top of each other. On a tag push `GITHUB_SHA` is the
-commit the tag points at, so nothing about the directory layout changed.
+**A release lives in a directory named by commit SHA.** `releases/<sha>/`. A tag can be moved; a commit cannot, so the SHA is what guarantees
+two builds never land on top of each other. On a tag push `GITHUB_SHA` is the commit the tag points at.
 
-Because those two are no longer the same string, `deploy.sh` cannot derive the
+Because those two are not the same string, `deploy.sh` cannot derive the
 one from the other, and it needs the identifier twice -- once for the release it
 is activating and once for whatever it rolls back to. So the deploy job writes
 `releases/<sha>/VERSION` beside the binary, and `deploy.sh` reads it. Releases
@@ -2128,8 +2404,7 @@ through, so any request it was going to make anyway is the check. See
 `/v1/version` itself is `no-store`. It answers "which release is live", an
 answer that can be held is not an answer to that question, and it has two
 readers -- the deploy gate and the browser -- who would both be misled by a
-stale one. It carried no cache header at any layer until that was noticed, and
-was safe only because nginx happens to have no `proxy_cache`.
+stale one.
 
 ## Adding a feature
 
@@ -2186,10 +2461,10 @@ holds one, for every other caption in the app.
 ### The English is not lost
 
 It moved to the log. `types.NewValidationError("character %q is at sequence %d,
-not %d", …)` still says exactly that, and `helpers.FormatError` now logs **every**
+not %d", …)` still says exactly that, and `helpers.FormatError` logs **every**
 refusal rather than only the 5xx, tagged with the request id the browser is
 holding. So "why did that fail" is still one `grep` away, and the person who hit
-it is no longer shown a sequence number.
+it is not shown a sequence number.
 
 ### Most errors do not need a slug
 
@@ -2216,6 +2491,9 @@ That keeps the vocabulary a translator has to cover down to the set somebody
 actually reads -- about fifty -- and adding to it later is one call at the raise
 site rather than a schema change.
 
+Every limit in [Limits](#limits) shares one family, `limit.<what>`, raised by
+`types.LimitReached` with the number as `args.max`.
+
 **Never put an opaque id in `Args`.** "character %q not found" with `chr_9f2a`
 spliced in reads worse in every language than "that character is not there", and
 a visitor can do nothing with it. The id belongs in the log next to the request
@@ -2231,13 +2509,11 @@ before using it, so that fallback is a real branch rather than a hope.
 
 ## Changing the SRD data
 
-Edit `data/pack/srd-5.1/` in place. It used to be generated from a vendored
-dump by `cmd/srdgen`, with a drift check that reverted hand edits; the
-generator earned its keep while the format was being found and has been
-retired now that the pack is the thing being maintained. There is nothing to
-regenerate and no second copy to keep in step.
+Edit `data/pack/srd-5.1/` in place. The generator that first produced it from a
+vendored dump is retired: there is nothing to regenerate and no second copy to
+keep in step.
 
-What stands in for the drift check is the loader itself: `make pack/check`
+What gates an edit is the loader itself: `make pack/check`
 runs `cmd/pack` over the directory, which is the validation the server does at
 startup -- schema, every cross-reference, every choice, every icon label --
 and `make data/lint/check` holds the prose to the lint checks that are at zero.
@@ -2318,8 +2594,8 @@ Source-specific spell benefits and conditional equipment requirements are valida
 Append and revision use the same offered options and held/blocked checks. Replay
 removes invalid dependent answers through the existing preview mechanism; it does
 not silently grant unavailable equipment or spells. Catalogue option expansion
-is shared with equipment projection. The generated-data drift check therefore
-protects the same definitions used by both validation and sheet reads.
+is shared with equipment projection, so validation and sheet reads use the
+same definitions.
 
 
 ### Reading the original spell question
@@ -2410,18 +2686,23 @@ The adapter constructs immutable registry snapshots; character reads resolve exa
 locks against built-in and retained database releases. The compiled cache is not
 an authorization boundary. Catalogue selection, exports and new locks check access
 on each request; character-owned reads can retain already pinned releases after
-membership or sharing changes. Existing checkpoint restore stays character-scoped.
+membership or sharing changes.
 
 Migration 00004 adds `rule_packs` and `group_rule_packs`. Pack records store portable
 release bytes and draft metadata together, with revision compare-and-swap writes.
-Group shares store an exact dependency closure. Deleting a group removes shares;
+Group shares store an exact dependency closure. Migration 00010 drops the
+share's foreign key to `rule_packs`: a restricted disk pack is shared the same
+way and has no row there. Deleting a group removes shares;
 no release garbage collection is performed. Memory and PostgreSQL repositories
-share concurrency and round-trip contract tests. Guest rows are materialized on
+share concurrency and round-trip contract tests. A pack read never loads the
+table: `ListFor` returns one owner's records plus the ones named by id -- the
+packs the caller's groups share, or the ones a lock pins -- because the
+availability check runs on every pack request and a document with artwork runs
+to megabytes. Guest rows are materialized on
 first pack creation using the same account repository operation as groups.
 
-`POST /v1/characters` now accepts an optional `rules` lock. Omitting it selects SRD
-5.1. Rules migration checks current access for newly introduced releases and
-permits retained releases already in the character lock. Event responses include
+`POST /v1/characters` accepts an optional `rules` lock. Omitting it selects SRD
+5.1. Event responses include
 `rules`. Shared-sheet catalogue reads use `/v1/shared/:id/catalog/:collection` and
 the same authorization as the shared sheet. Pack import is bounded to 64 MiB and
 uses the existing strict JSON parser. `/v1/packs/schema` describes every editor

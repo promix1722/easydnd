@@ -53,8 +53,6 @@ CREATE TABLE characters (
     folder_id   text        NOT NULL,
     revision    integer     NOT NULL DEFAULT 0,
     log         json        NOT NULL,
-    checkpoints json,
-    commands    json,
     created_at  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX characters_owner_idx ON characters (owner_id);

@@ -50,11 +50,19 @@ type Service interface {
 type Handler struct {
 	svc     Service
 	cookies helpers.CookieOptions
+	// superadmins is auth.superadmins, kept only to fill User.Admin.
+	superadmins []string
 }
 
 // New builds the handler.
 func New(svc Service, cookies helpers.CookieOptions) *Handler {
 	return &Handler{svc: svc, cookies: cookies}
+}
+
+// WithSuperadmins names the accounts whose session is reported as an admin's.
+func (h *Handler) WithSuperadmins(list []string) *Handler {
+	h.superadmins = list
+	return h
 }
 
 // User is the wire form of an account. It carries the display name and the
@@ -70,6 +78,9 @@ type User struct {
 	// providers, and nothing that survives the token. The client needs it to
 	// stop offering account management to somebody who has no account.
 	Anonymous bool `json:"anonymous"`
+	// Admin tells the client to offer the admin section. It grants nothing:
+	// the admin routes ask the same question again on every request.
+	Admin bool `json:"admin"`
 }
 
 // Identity is the wire form of one linked external account.
@@ -126,7 +137,7 @@ func (h *Handler) establish(c *gin.Context, account user.User, token string, ttl
 	// sealed challenge from being presented a second time.
 	h.cookies.ClearCeremony(c)
 	h.cookies.SetSession(c, token, ttl)
-	c.JSON(http.StatusOK, SessionResponse{User: toWire(account)})
+	c.JSON(http.StatusOK, SessionResponse{User: h.toWire(account)})
 }
 
 // ceremonyBody reads a finish request's raw WebAuthn response.
@@ -148,7 +159,7 @@ func ceremonyBody(c *gin.Context) ([]byte, error) {
 	return body, nil
 }
 
-func toWire(u user.User) User {
+func (h *Handler) toWire(u user.User) User {
 	credentials := make([]Credential, 0, len(u.Credentials))
 	for _, c := range u.Credentials {
 		credentials = append(credentials, Credential{
@@ -179,5 +190,6 @@ func toWire(u user.User) User {
 		Credentials: credentials,
 		Identities:  identities,
 		Anonymous:   u.Anonymous,
+		Admin:       !u.Anonymous && u.Superadmin(h.superadmins),
 	}
 }

@@ -21,7 +21,6 @@ export interface ItemLike {
 export interface StackLike {
   item?: string
   count: number
-  custom?: { name: string }
 }
 
 export interface EquipmentLike {
@@ -40,7 +39,6 @@ export interface EquipmentChange {
 }
 
 export type ItemGroup = 'wearable' | 'consumable' | 'gear'
-export const ITEM_GROUPS: readonly ItemGroup[] = ['wearable', 'consumable', 'gear']
 
 /**
  * The DMG's "Wearing and Wielding Items" set, as the catalogue spells it:
@@ -101,10 +99,9 @@ export function groupOf(item: ItemLike | undefined): ItemGroup {
 
 /** One inventory row: an entity once, however many lists it is split across. */
 export interface InventoryRow {
-  /** The item slug, or `custom:<name>` for an item the catalogue does not hold. */
+  /** The item slug. */
   key: string
   item?: string
-  customName?: string
   count: number
   equipped: number
 }
@@ -112,10 +109,10 @@ export interface InventoryRow {
 export function mergeStacks(equipment: EquipmentLike): InventoryRow[] {
   const rows = new Map<string, InventoryRow>()
   const add = (stack: StackLike, equipped: boolean) => {
-    const key = stack.item ?? `custom:${stack.custom?.name ?? ''}`
+    const key = stack.item ?? ''
     const row = rows.get(key) ?? {
       key,
-      ...(stack.item === undefined ? { customName: stack.custom?.name ?? '' } : { item: stack.item }),
+      ...(stack.item === undefined ? {} : { item: stack.item }),
       count: 0,
       equipped: 0,
     }

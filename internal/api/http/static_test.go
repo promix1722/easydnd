@@ -25,7 +25,6 @@ import (
 // whole auth graph would obscure that.
 func routerServing(t *testing.T, webDir string) *gin.Engine {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
 
 	r, err := httpapi.NewRouter(
 		&config.Config{
@@ -34,7 +33,7 @@ func routerServing(t *testing.T, webDir string) *gin.Engine {
 			Auth: config.AuthConfig{RPOrigins: []string{testOrigin}},
 		},
 		slog.New(slog.NewJSONHandler(io.Discard, nil)),
-		httpapi.Handlers{System: system.New(testVersion), Version: testVersion, WebDir: webDir},
+		httpapi.Handlers{System: system.New(testVersion, system.AnalyticsConfigResponse{Environment: "development"}), Version: testVersion, WebDir: webDir},
 	)
 	if err != nil {
 		t.Fatalf("NewRouter: %v", err)
@@ -80,6 +79,7 @@ func notFoundEnvelope(t *testing.T, body []byte) {
 // -web is unset on the server, so every one of these paths has to answer
 // exactly as it did before the flag existed.
 func TestWithoutABundleNothingChanges(t *testing.T) {
+	t.Parallel()
 	r := routerServing(t, "")
 
 	for _, path := range []string{"/", "/characters", "/v1/nope", "/index.html"} {
@@ -100,6 +100,7 @@ func TestWithoutABundleNothingChanges(t *testing.T) {
 // and the browser reports a MIME type error naming neither the stale page nor
 // the missing chunk. nginx answers `=404` here; so does this.
 func TestAMissingAssetIs404NotTheIndex(t *testing.T) {
+	t.Parallel()
 	r := routerServing(t, bundle(t))
 
 	rec := do(t, r, http.MethodGet, "/assets/index-gone.js", nil)
@@ -122,6 +123,7 @@ func TestAMissingAssetIs404NotTheIndex(t *testing.T) {
 // heuristic freshness, and the update dialog's reload finds no new worker to
 // wait for and comes back to the same page.
 func TestTheBundleSaysHowLongItKeeps(t *testing.T) {
+	t.Parallel()
 	r := routerServing(t, bundle(t))
 
 	for path, want := range map[string]string{
@@ -144,6 +146,7 @@ func TestTheBundleSaysHowLongItKeeps(t *testing.T) {
 // routes or the client-side not-found page and begin life with the homepage's
 // metadata before React replaces it.
 func TestOnlyTheHomepageIsIndexable(t *testing.T) {
+	t.Parallel()
 	r := routerServing(t, bundle(t))
 
 	for path, want := range map[string]string{
@@ -163,6 +166,7 @@ func TestOnlyTheHomepageIsIndexable(t *testing.T) {
 }
 
 func TestDiscoveryFilesAreServedAsFiles(t *testing.T) {
+	t.Parallel()
 	dir := bundle(t)
 	write(t, filepath.Join(dir, "robots.txt"), "User-agent: *\n")
 	write(t, filepath.Join(dir, "sitemap.xml"), "<?xml version=\"1.0\"?><urlset></urlset>")
@@ -192,6 +196,7 @@ func TestDiscoveryFilesAreServedAsFiles(t *testing.T) {
 // net/http's helpers answer it with a 301 to ./, so the install spent a
 // redirect and stored a response marked `redirected`. nginx serves the file.
 func TestIndexHtmlIsServedRatherThanRedirected(t *testing.T) {
+	t.Parallel()
 	r := routerServing(t, bundle(t))
 
 	rec := do(t, r, http.MethodGet, "/index.html", nil)
@@ -210,6 +215,7 @@ func TestIndexHtmlIsServedRatherThanRedirected(t *testing.T) {
 // 404 would surface as a parse failure somewhere far from its cause, and only
 // in the one configuration a developer is using to test something else.
 func TestAPIPathsNeverGetTheBundle(t *testing.T) {
+	t.Parallel()
 	r := routerServing(t, bundle(t))
 
 	// All unrouted: a mounted path like /v1/characters/:id answers 401 and
@@ -224,6 +230,7 @@ func TestAPIPathsNeverGetTheBundle(t *testing.T) {
 }
 
 func TestABundleIsServedWithASPAFallback(t *testing.T) {
+	t.Parallel()
 	dir := bundle(t)
 	r := routerServing(t, dir)
 

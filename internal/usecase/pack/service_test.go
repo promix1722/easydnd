@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/promix1722/easydnd/internal/types"
+
 	file "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	"github.com/promix1722/easydnd/internal/domain/group"
@@ -161,11 +163,10 @@ func TestInvalidDraftCanSaveButNotPublish(t *testing.T) {
 	}
 }
 
-// restrictedFixture installs a descriptions-only overlay as a private pack and
-// names root as the superadmin, by verified email.
-func restrictedFixture(t *testing.T) (context.Context, *uc.Service, *memory.GroupRepository, pack.Release) {
+// overlayDir writes a descriptions-only overlay pack where a private folder
+// can be pointed at it.
+func overlayDir(t *testing.T) string {
 	t.Helper()
-	ctx := context.Background()
 	doc, err := file.EncodePack(&file.PackDocument{
 		Manifest: file.PackManifest{SchemaVersion: 1, ID: "overlay", Version: "1.0.0", Edition: "2014", Semantics: "1", DefaultLocale: "en",
 			Dependencies: []file.Dependency{{ID: "srd-2014", Version: ">=1.0.0"}}},
@@ -179,6 +180,15 @@ func restrictedFixture(t *testing.T) (context.Context, *uc.Service, *memory.Grou
 	if err = os.WriteFile(filepath.Join(dir, "pack"), doc, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	return dir
+}
+
+// restrictedFixture installs a descriptions-only overlay as a private pack and
+// names root as the superadmin, by verified email.
+func restrictedFixture(t *testing.T) (context.Context, *uc.Service, *memory.GroupRepository, pack.Release) {
+	t.Helper()
+	ctx := context.Background()
+	dir := overlayDir(t)
 	base, err := file.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "", file.PackFolder{Path: dir, Restricted: true})
 	if err != nil {
 		t.Fatal(err)
@@ -266,6 +276,47 @@ func TestRestrictedPackIsTheSuperadminsUntilGranted(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := s.Resolve(ctx, "player", roots); err == nil {
+		t.Fatal("the grant outlived its removal")
+	}
+}
+
+// A superadmin may hand the pack to one account, with no table between them.
+func TestRestrictedPackGrantedToOneAccount(t *testing.T) {
+	ctx, s, _, overlay := restrictedFixture(t)
+	roots := []pack.Release{overlay}
+
+	if err := s.Grant(ctx, "claimed", []string{"overlay"}); err != nil {
+		t.Fatalf("Grant: %v", err)
+	}
+	if _, err := s.Resolve(ctx, "claimed", roots); err != nil {
+		t.Fatalf("the granted account cannot select it: %v", err)
+	}
+	if granted, err := s.Granted(ctx, "claimed"); err != nil || len(granted) != 1 || granted[0] != "overlay" {
+		t.Fatalf("Granted = %v, %v", granted, err)
+	}
+	if _, err := s.Resolve(ctx, "player", roots); err == nil {
+		t.Fatal("a grant to one account reached another")
+	}
+	// To play with, not to take a copy of or pass on.
+	if _, err := s.Export(ctx, "claimed", "overlay", "1.0.0"); err == nil {
+		t.Fatal("a granted account exported the private pack")
+	}
+	if err := s.Share(ctx, "claimed", "table", "overlay", "1.0.0"); err == nil {
+		t.Fatal("a granted account shared the private pack")
+	}
+
+	// Only a restricted pack, and only to an account that is stored.
+	if err := s.Grant(ctx, "claimed", []string{"srd-2014"}); err == nil {
+		t.Fatal("a grant named a pack that is not private")
+	}
+	if err := s.Grant(ctx, "anon:guest", []string{"overlay"}); !types.IsNotFound(err) {
+		t.Fatalf("Grant to an unstored guest = %v, want not found", err)
+	}
+
+	if err := s.Grant(ctx, "claimed", nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Resolve(ctx, "claimed", roots); err == nil {
 		t.Fatal("the grant outlived its removal")
 	}
 }

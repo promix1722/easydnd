@@ -48,7 +48,7 @@ describe('HomeRoute', () => {
     expect(screen.queryByRole('heading', { name: 'Characters' })).not.toBeInTheDocument()
   })
 
-  it('renders the party when authenticated', () => {
+  it('renders the party when authenticated', async () => {
     homeAt({
       status: 'authenticated',
       user: {
@@ -61,7 +61,8 @@ describe('HomeRoute', () => {
       },
     })
 
-    expect(screen.getByRole('heading', { name: 'Characters' })).toBeInTheDocument()
+    // The list is fetched on first use, so it arrives a tick after the render.
+    expect(await screen.findByRole('heading', { name: 'Characters' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'What easydnd is for' })).not.toBeInTheDocument()
   })
 
@@ -97,14 +98,14 @@ describe('HomeRoute', () => {
 
   // A guest session is the one case the home page still speaks up about: it
   // ends without warning and takes the characters with it.
-  it('does not stand a guest notice over the character list', () => {
+  it('does not stand a guest notice over the character list', async () => {
     homeAt({ status: 'authenticated', user: testGuest })
 
     // What a guest session costs belongs where a guest goes to find out about
     // their account -- /account says it, and the header names the session
     // beside the button that ends it -- not over the list every time they open
     // the app.
+    expect(await screen.findByText('Characters')).toBeInTheDocument()
     expect(screen.queryByText(/You are playing as a guest/i)).not.toBeInTheDocument()
-    expect(screen.getByText('Characters')).toBeInTheDocument()
   })
 })

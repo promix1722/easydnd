@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { getGroupPacks, listPacks, sharePack, unsharePack } from '@/lib/api/packs'
-import { describeError } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
+import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import { Alert, Button, Group, Panel, Select, Stack, Text } from '@/ui'
 /**
@@ -17,25 +17,16 @@ export function GroupPacks({ group, canManage }: { group: string; canManage: boo
     return { shares, available }
   })
   const [selection, setSelection] = useState<string | null>(null)
-  const [error, setError] = useState('')
-  const [pending, setPending] = useState(false)
-  async function act(work: () => Promise<unknown>) {
-    setPending(true)
-    setError('')
-    try {
-      await work()
-      loaded.refresh()
-    } catch (e) {
-      setError(describeError(t, e))
-    } finally {
-      setPending(false)
-    }
-  }
+  const action = useAction(async (work: () => Promise<unknown>) => {
+    await work()
+    loaded.refresh()
+  })
+  const act = action.run
+  const pending = action.pending
+  const error = action.error ?? loaded.error
   return (
     <Stack>
-      {(error || loaded.error) && (
-        <Alert color="red">{error || describeError(t, loaded.error)}</Alert>
-      )}
+      {error && <Alert color="red">{error}</Alert>}
       <Group align="end">
         <Select
           label={t('packs.share')}

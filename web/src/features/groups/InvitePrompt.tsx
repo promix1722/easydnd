@@ -18,7 +18,11 @@ import { Alert, Button, Stack, Text, Title } from '@/ui'
  * the whole reason this screen exists, and opening that up so a stranger could
  * read a group's name off a link is not a trade worth making for one sentence.
  */
-export function InvitePrompt({ hasToken }: { hasToken: boolean }) {
+export function InvitePrompt({ hasToken, character = false }: {
+  hasToken: boolean
+  /** The link offers a copy of a character rather than a seat in a group. */
+  character?: boolean
+}) {
   const t = useT()
   const location = useLocation()
 
@@ -31,9 +35,9 @@ export function InvitePrompt({ hasToken }: { hasToken: boolean }) {
   return (
     <Stack gap="md" align="flex-start">
       <div>
-        <Title order={2}>{t('invitePrompt.title')}</Title>
+        <Title order={2}>{character ? t('receivePrompt.title') : t('invitePrompt.title')}</Title>
         <Text c="dimmed" size="sm">
-          {t('invitePrompt.detail')}
+          {character ? t('receivePrompt.detail') : t('invitePrompt.detail')}
         </Text>
       </div>
       {/* The location rides along exactly as the header's button does, so
@@ -41,7 +45,7 @@ export function InvitePrompt({ hasToken }: { hasToken: boolean }) {
           token is saved besides -- see inviteToken.ts, because Google's round
           trip drops the fragment on the floor. */}
       <Button component={Link} to="/login" state={{ from: location }}>
-        {t('invitePrompt.action')}
+        {character ? t('receivePrompt.action') : t('invitePrompt.action')}
       </Button>
     </Stack>
   )

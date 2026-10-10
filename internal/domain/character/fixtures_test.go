@@ -2,12 +2,12 @@ package character
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
+
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
@@ -22,7 +22,7 @@ import (
 // make -- one of them inside a seven-case subtest loop -- into a single one. A
 // fresh Source per call threw that cache away. Sharing is safe for the reason
 // the cache is: a Catalog is immutable, and Load is mutex-guarded.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
+var catalogSource = filetest.SRD()
 
 // LoadCatalog loads the committed compendium.
 //

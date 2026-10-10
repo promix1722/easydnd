@@ -247,7 +247,3 @@ type Spell struct {
 	// HigherLevel is the "At Higher Levels" prose, in the catalogue's locale.
 	HigherLevel []string
 }
-
-// IsCantrip reports whether the spell is a cantrip, which costs no slot and
-// scales with character level rather than slot level.
-func (s Spell) IsCantrip() bool { return s.Level == 0 }

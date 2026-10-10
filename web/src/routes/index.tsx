@@ -1,25 +1,56 @@
-import { PacksScreen, PackEditorScreen } from '@/features/packs'
+import { lazy, type ComponentType } from 'react'
 import { createBrowserRouter } from 'react-router'
 
-import { AvatarGalleryScreen } from '@/features/avatars'
-import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
-import { BuildScreen, CharacterLogScreen, CharacterSheetScreen, ItemScreen } from '@/features/character'
-import { ImportCharacterScreen } from '@/features/characters'
-import { DiceScreen } from '@/features/dice'
-import { GameScreen, GamesScreen, SharedSheetScreen } from '@/features/games'
-import { GroupListScreen, GroupScreen } from '@/features/groups'
-import { LegalScreen } from '@/features/legal'
-import { SpellScreen, SpellsScreen } from '@/features/spells'
 
 import { LandingShell } from '@/shell/LandingShell'
 import { RootGate } from '@/shell/RootGate'
 
 import { HomeRoute } from './HomeRoute'
-import { JoinRoute } from './JoinRoute'
+import { AdminOnly } from './AdminOnly'
 import { NotFoundPage } from './NotFoundPage'
 import { Private } from './Private'
 import { LegacyImportRedirect } from './LegacyImportRedirect'
+
+/**
+ * A screen fetched when its route is first visited, not with the entry chunk.
+ *
+ * Everything behind sign-in is loaded this way, so a visitor reading the
+ * landing page does not download the builder, the tracker, the pack editor and
+ * the admin tables to do it. Each import names the screen's own file rather
+ * than its feature's barrel, and that is the point rather than a shortcut: a
+ * barrel re-exports every screen of its feature, and a module that is
+ * imported both ways stays in the entry chunk. The shells hold the
+ * `Suspense` boundary, around their `Outlet`.
+ */
+// `any` is the bound React itself puts on a lazy component: each screen keeps
+// its own props, and a bound of `object` would refuse the ones that take any.
+function screen<K extends string, C extends ComponentType<any>>(load: () => Promise<Record<NoInfer<K>, C>>, name: K) {
+  return lazy<C>(() => load().then((module) => ({ default: module[name] })))
+}
+
+const InvitationLink = screen(() => import('./InvitationRoute'), 'InvitationLink')
+const InvitationRoute = screen(() => import('./InvitationRoute'), 'InvitationRoute')
+const PacksScreen = screen(() => import('@/features/packs/PacksScreen'), 'PacksScreen')
+const PackEditorScreen = screen(() => import('@/features/packs/PackEditorScreen'), 'PackEditorScreen')
+const AvatarGalleryScreen = screen(() => import('@/features/avatars/AvatarGalleryScreen'), 'AvatarGalleryScreen')
+const AccountScreen = screen(() => import('@/features/account/AccountScreen'), 'AccountScreen')
+const BuildScreen = screen(() => import('@/features/character/BuildScreen'), 'BuildScreen')
+const CharacterLogScreen = screen(() => import('@/features/character/CharacterLogScreen'), 'CharacterLogScreen')
+const CharacterSheetScreen = screen(() => import('@/features/character/CharacterSheetScreen'), 'CharacterSheetScreen')
+const CustomItemScreen = screen(() => import('@/features/character/CustomItemScreen'), 'CustomItemScreen')
+const ItemScreen = screen(() => import('@/features/character/ItemScreen'), 'ItemScreen')
+const AgentImportScreen = screen(() => import('@/features/characters/AgentImportScreen'), 'AgentImportScreen')
+const DiceScreen = screen(() => import('@/features/dice/DiceScreen'), 'DiceScreen')
+const AdminScreen = screen(() => import('@/features/admin/AdminScreen'), 'AdminScreen')
+const GameScreen = screen(() => import('@/features/games/GameScreen'), 'GameScreen')
+const GamesScreen = screen(() => import('@/features/games/GamesScreen'), 'GamesScreen')
+const SharedSheetScreen = screen(() => import('@/features/games/SharedSheetScreen'), 'SharedSheetScreen')
+const GroupListScreen = screen(() => import('@/features/groups/GroupListScreen'), 'GroupListScreen')
+const GroupScreen = screen(() => import('@/features/groups/GroupScreen'), 'GroupScreen')
+const LegalScreen = screen(() => import('@/features/legal/LegalScreen'), 'LegalScreen')
+const SpellScreen = screen(() => import('@/features/spells/SpellScreen'), 'SpellScreen')
+const SpellsScreen = screen(() => import('@/features/spells/SpellsScreen'), 'SpellsScreen')
 
 /**
  * The complete route table -- one tree for both viewports and for both sides
@@ -68,16 +99,19 @@ export const router = createBrowserRouter([
         path: 'ai-wizard',
         element: (
           <Private>
-            <ImportCharacterScreen />
+            <AgentImportScreen />
           </Private>
         ),
       },
       {
         path: 'ai-wizard/:sessionId',
-        element: <Private><ImportCharacterScreen /></Private>,
+        element: <Private><AgentImportScreen /></Private>,
       },
       { path: 'characters/import', element: <LegacyImportRedirect /> },
       { path: 'characters/import/:sessionId/:importView?', element: <LegacyImportRedirect /> },
+      // Not `Private`, and ahead of `characters/:id`, for the reasons
+      // `groups/join` is both.
+      { path: 'characters/receive', element: <InvitationLink kind="character" /> },
       {
         path: 'characters/:id',
         element: (
@@ -96,11 +130,17 @@ export const router = createBrowserRouter([
       },
 
       // The log rather than the sheet: same character, the record instead of
-      // what the record means. Not a NAV_ITEMS entry -- it hangs off a
+      // what the record means. Not a SECTIONS entry -- it hangs off a
       // character, not off the app.
       {
         path: 'characters/:id/items/:slug',
         element: <Private><ItemScreen /></Private>,
+      },
+      // Writing an item the catalogue does not hold, or with an entry's id
+      // changing one. A page under the sheet, so its crumb is the way back.
+      {
+        path: 'characters/:id/custom-item/:option?',
+        element: <Private><CustomItemScreen /></Private>,
       },
       {
         path: 'characters/:id/log',
@@ -130,8 +170,10 @@ export const router = createBrowserRouter([
       // Not wrapped in Private, and that is the point: this is the one deep
       // link that routinely arrives at somebody with no account at all, so
       // the token has to be saved before the branch rather than inside the
-      // screen that a signed-out visitor never reaches. JoinRoute does both.
-      { path: 'groups/join', element: <JoinRoute /> },
+      // screen that a signed-out visitor never reaches. InvitationRoute does both.
+      { path: 'groups/join', element: <InvitationLink kind="group" /> },
+      // The same page from the menu, with a field to paste either kind of link into.
+      { path: 'invitations', element: <InvitationRoute /> },
       {
         path: 'groups/:id',
         element: (
@@ -158,6 +200,11 @@ export const router = createBrowserRouter([
         element: <Private><ItemScreen /></Private>,
       },
       {
+        // An item read from a game: the trail leads back to the game, not to a sheet.
+        path: 'games/:game/characters/:character/items/:slug',
+        element: <Private><ItemScreen /></Private>,
+      },
+      {
         path: 'groups/:id/characters/:character',
         element: (
           <Private>
@@ -168,7 +215,17 @@ export const router = createBrowserRouter([
 
       // Games are their own section, so they sit at the top level rather than
       // under the group they are played at -- which is also what keeps
-      // activeNavPath lighting Games instead of Groups when one is open.
+      // the navbar lighting Games instead of Groups when one is open.
+      // Not behind Private: AdminOnly answers a signed-out visitor with the
+      // same not-found page as everybody else who is not a superadmin.
+      {
+        path: 'admin',
+        element: (
+          <AdminOnly>
+            <AdminScreen />
+          </AdminOnly>
+        ),
+      },
       {
         path: 'games',
         element: (
@@ -176,6 +233,12 @@ export const router = createBrowserRouter([
             <GamesScreen />
           </Private>
         ),
+      },
+      // The same screen as `characters/:id/custom-item`, reached from a game:
+      // under /games so the trail reads Games / the game / the character.
+      {
+        path: 'games/:id/characters/:character/custom-item',
+        element: <Private><CustomItemScreen /></Private>,
       },
       {
         path: 'games/:id',
@@ -249,7 +312,7 @@ export const router = createBrowserRouter([
   // /legal sits outside RootGate: a licence notice you have to sign in to read
   // is not a notice. The SRD 5.1 data is CC-BY-4.0 and that licence expects its
   // attribution in the product, so the landing footer links here and this
-  // renders for everybody. Absent from shell/nav.ts -- it is a document, not a
+  // renders for everybody. Absent from ui/sections.ts -- it is a document, not a
   // section of the app.
   {
     path: '/legal',

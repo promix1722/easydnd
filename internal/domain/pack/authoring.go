@@ -28,12 +28,21 @@ type Share struct {
 	Lock        Lock
 }
 type Repository interface {
-	List(context.Context) ([]Record, error)
+	// ListFor returns the records owner holds and those whose id is in ids,
+	// by id. It never returns the whole table: every caller knows whose
+	// packs it wants or which ones, and a pack document can run to megabytes.
+	// An empty owner selects by ids alone.
+	ListFor(ctx context.Context, owner user.ID, ids []string) ([]Record, error)
 	Get(context.Context, string) (Record, error)
 	Save(context.Context, Record, int) error
 	Shares(context.Context, string) ([]Share, error)
 	PutShare(context.Context, Share) error
 	DeleteShare(context.Context, string, string) error
+
+	// Grants lists the ids of the restricted packs handed to one account,
+	// sorted. SetGrants replaces that list whole.
+	Grants(context.Context, user.ID) ([]string, error)
+	SetGrants(context.Context, user.ID, []string) error
 
 	// PutPrivate keeps a release an import compiled for one character, so
 	// that the character can be loaded after the process that compiled it

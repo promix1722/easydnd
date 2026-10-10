@@ -265,7 +265,7 @@ if (mocking.length > 0) {
   console.error('  Pass the dependency in instead. InviteSheet takes an optional')
   console.error('  `copyLink` prop that defaults to the real `copyText`, and its test')
   console.error('  hands over a `vi.fn()`; nothing global is touched and nothing leaks')
-  console.error('  into the next file. See docs/web.md#the-test-suite-does-not-isolate-test-files.')
+  console.error('  into the next file. See docs/web/testing.md#the-test-suite-does-not-isolate-test-files.')
   console.error('')
   process.exit(1)
 }

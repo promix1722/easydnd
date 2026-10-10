@@ -160,6 +160,34 @@ type Identity struct {
 	LastUsedAt time.Time
 }
 
+// Query narrows and pages a listing of every stored account. The zero value
+// of each filter means "do not filter on this".
+type Query struct {
+	// Text matches case-insensitively anywhere in the id, the display name
+	// or a linked identity's email.
+	Text string
+	IDs  []ID
+	// Guests, when set, keeps only guest rows (true) or only accounts.
+	Guests *bool
+	Limit  int
+	Offset int
+}
+
+// Listed is one row of that listing: what an operator reads to tell accounts
+// apart, and none of the key material a User carries.
+type Listed struct {
+	ID          ID
+	DisplayName string
+	// Email is the first linked identity's, for display only.
+	Email     string
+	CreatedAt time.Time
+	// LastUsedAt is the latest sign-in by any passkey or identity, and zero
+	// for a row nobody ever signed in to.
+	LastUsedAt time.Time
+	Passkeys   int
+	Anonymous  bool
+}
+
 // Repository is the persistence port for accounts. Implementations live under
 // internal/adapter/repository; internal/app picks the concrete one, and that
 // assignment is what proves conformance at compile time.
@@ -188,6 +216,11 @@ type Repository interface {
 
 	// ByID returns the account with the given id, or a *types.NotFoundError.
 	ByID(ctx context.Context, id ID) (User, error)
+
+	// Search lists stored accounts matching q, newest first, and reports how
+	// many match in all. A guest who never joined a group has no row and is
+	// not in it.
+	Search(ctx context.Context, q Query) ([]Listed, int, error)
 
 	// ByCredentialID returns the account owning the given raw credential id,
 	// or a *types.NotFoundError. This is the lookup a usernameless sign-in

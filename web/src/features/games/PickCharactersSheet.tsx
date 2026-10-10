@@ -76,7 +76,7 @@ export function PickCharactersSheet({
               <Group gap="sm" wrap="nowrap">
                 <Avatar image={character.image} fallback={characterAvatar(character.classes)} />
                 <div>
-                  <Text size="sm">{character.name || 'Unnamed'}</Text>
+                  <Text size="sm">{character.name || t('common.unnamed')}</Text>
                   <Text size="xs" c="dimmed">
                     {classLine(character.classes)}
                   </Text>

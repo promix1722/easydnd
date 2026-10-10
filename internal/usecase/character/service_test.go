@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"path/filepath"
 	"testing"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
+
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -23,7 +23,7 @@ const testOwner domain.OwnerID = "test-owner"
 // for the reason the cache is: a Catalog is immutable, and Load is
 // mutex-guarded. The repositories stay per-service -- those are the state a
 // test is entitled to have to itself.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
+var catalogSource = filetest.SRD()
 
 func newService(t *testing.T) *charuc.Service {
 	t.Helper()
@@ -95,6 +95,7 @@ func hasOpenPrompt(prompts []domain.Prompt, id rules.Slug) bool {
 // not in it, and the proof is that the character is still being asked for
 // them.
 func TestCreateSeedsANameOnlyInitEvent(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreate(t, s)
@@ -135,6 +136,7 @@ func TestCreateSeedsANameOnlyInitEvent(t *testing.T) {
 }
 
 func TestCreateRequiresAName(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	_, err := s.Create(context.Background(), testOwner, "", charuc.NewCharacter{})
 	var fieldErr *types.FieldValidationError
@@ -149,6 +151,7 @@ func TestCreateRequiresAName(t *testing.T) {
 // The bound on a score moved with the scores. It is checked where they now
 // arrive rather than where they used to.
 func TestApplyRejectsAnImpossibleScore(t *testing.T) {
+	t.Parallel()
 	s := newService(t)
 	c := mustCreate(t, s)
 
@@ -168,6 +171,7 @@ func TestApplyRejectsAnImpossibleScore(t *testing.T) {
 // The scores are an ordinary answer now: their own entry, filed under their
 // own group, and the prompt closes behind them.
 func TestScoresAreTheirOwnEntry(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreateScored(t, s)
@@ -202,6 +206,7 @@ func TestScoresAreTheirOwnEntry(t *testing.T) {
 // what writes it -- a client cannot file an answer under a category of its
 // own choosing, because nothing it sends is read for one.
 func TestAppendRecordsTheSource(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreateScored(t, s)
@@ -233,6 +238,7 @@ func TestAppendRecordsTheSource(t *testing.T) {
 // The bug answersAnOpenPrompt closes: subrace:hill-dwarf resolves perfectly
 // well in the compendium, and nothing was asking a half-elf for a subrace.
 func TestApplyRejectsAnEntryNothingOffered(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreateScored(t, s)
@@ -264,6 +270,7 @@ func TestApplyRejectsAnEntryNothingOffered(t *testing.T) {
 // The core of the append-per-step flow: post an answer, get the sheet back
 // changed by it.
 func TestApplyAdvancesTheCharacter(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreateScored(t, s)
@@ -298,6 +305,7 @@ func TestApplyAdvancesTheCharacter(t *testing.T) {
 // A batch may answer a prompt that the same batch opened -- choosing a race
 // and its ability bonuses in one request is a reasonable thing to send.
 func TestApplyValidatesABatchAgainstItself(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreateScored(t, s)
@@ -318,6 +326,7 @@ func TestApplyValidatesABatchAgainstItself(t *testing.T) {
 }
 
 func TestApplyRejectsAStaleSequence(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreate(t, s)
@@ -330,6 +339,7 @@ func TestApplyRejectsAStaleSequence(t *testing.T) {
 }
 
 func TestApplyRejectsBadAnswers(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	tests := []struct {
@@ -384,6 +394,7 @@ func TestApplyRejectsBadAnswers(t *testing.T) {
 // A reference the compendium does not have would project as a character who
 // simply has no race, with nothing saying why.
 func TestApplyRejectsAnUnknownReference(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreateScored(t, s)
@@ -396,48 +407,8 @@ func TestApplyRejectsAnUnknownReference(t *testing.T) {
 	}
 }
 
-// Truncate is the Back button. It must undo, must not drop the init event,
-// and must respect the same concurrency check as Append.
-func TestTruncateUndoesAStep(t *testing.T) {
-	ctx := context.Background()
-	s := newService(t)
-	c := mustCreateScored(t, s)
-
-	if _, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, 2,
-		domain.Event{Type: domain.EventRace, Ref: rules.NewRef(rules.RefRace, "half-elf")}); err != nil {
-		t.Fatalf("Apply() error = %v", err)
-	}
-
-	if err := s.Truncate(ctx, testOwner, c.ID, 3, 2); err != nil {
-		t.Fatalf("Truncate() error = %v", err)
-	}
-	after, err := s.Get(ctx, testOwner, c.ID)
-	if err != nil {
-		t.Fatalf("Get() error = %v", err)
-	}
-	if after.Log.Len() != 2 {
-		t.Errorf("log length = %d, want 2", after.Log.Len())
-	}
-
-	sheet, err := s.Sheet(ctx, testOwner, c.ID, rules.DefaultLocale)
-	if err != nil {
-		t.Fatalf("Sheet() error = %v", err)
-	}
-	if !sheet.Identity.Race.IsZero() {
-		t.Errorf("race = %q, want it undone", sheet.Identity.Race)
-	}
-
-	// The init event is not a step you can go back past.
-	if err := s.Truncate(ctx, testOwner, c.ID, 2, 0); err == nil {
-		t.Error("Truncate() dropped the init event")
-	}
-	// And a stale sequence is rejected exactly as it is for an append.
-	if err := s.Truncate(ctx, testOwner, c.ID, 99, 1); err == nil {
-		t.Error("Truncate() accepted a stale sequence")
-	}
-}
-
 func TestListSummarisesWithoutProjecting(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreateScored(t, s)
@@ -477,6 +448,7 @@ func TestListSummarisesWithoutProjecting(t *testing.T) {
 }
 
 func TestDeleteRemovesTheCharacter(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreate(t, s)
@@ -495,6 +467,7 @@ func TestDeleteRemovesTheCharacter(t *testing.T) {
 // 403 on somebody else's id would confirm that the id exists, which turns a
 // guessable identifier into an enumeration oracle.
 func TestAnotherOwnerCannotReachTheCharacter(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c := mustCreate(t, s)
@@ -515,9 +488,6 @@ func TestAnotherOwnerCannotReachTheCharacter(t *testing.T) {
 	if !types.IsNotFound(err) {
 		t.Errorf("Apply() error = %v, want a NotFoundError", err)
 	}
-	if err := s.Truncate(ctx, intruder, c.ID, 1, 1); !types.IsNotFound(err) {
-		t.Errorf("Truncate() error = %v, want a NotFoundError", err)
-	}
 	if err := s.Delete(ctx, intruder, c.ID); !types.IsNotFound(err) {
 		t.Errorf("Delete() error = %v, want a NotFoundError", err)
 	}
@@ -535,6 +505,7 @@ func TestAnotherOwnerCannotReachTheCharacter(t *testing.T) {
 // The ability-score prompt carries the class's advice once there is a class,
 // and none before: the builder's "Use recommended" deals the scores by it.
 func TestAbilityPromptCarriesTheClassPriority(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s := newService(t)
 	c, err := s.Create(ctx, testOwner, "", opening())

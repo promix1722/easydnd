@@ -1,12 +1,10 @@
 # JSON rule packs
 
 The server runs characters against immutable, versioned packs. `pack` and
-`addon` mean the same artifact. The generated SRD is the base pack; configured
+`addon` mean the same artifact. The SRD is the base pack; configured
 addons pass through the same decoder, dependency resolver and compiler.
-The original design discussion is in [packs-plan.md](packs-plan.md).
 
-This delivery covers files, the core evaluator, character locks, revisions,
-resource events and migration APIs. Pack editing, JSON uploads, publishing,
+This delivery covers files, the core evaluator, character locks and revisions. Pack editing, JSON uploads, publishing,
 private storage, and group sharing are available through the Homebrew section;
 see Homebrew authoring below. Character imports can also compile temporary,
 session-scoped private definitions; see [agent.md](agent.md#custom-content).
@@ -35,12 +33,8 @@ rejects a label with no file behind it. A row without a label has no icon --
 the non-SRD items reuse an existing label where one fits and go without where
 none does. New artwork and assignments require a new release.
 
-To convert approved PNGs from `output/imagegen/item-samples/` and
-`output/imagegen/item-icons/`, run `node web/scripts/item-icons.mjs` after
-installing the web dependencies. This uses nearest-neighbor resizing and
-lossless WebP, checks dimensions and transparency, and preserves source PNGs.
-Then run `make pack/check`: the loader finds the files by name, so a new WebP
-under `item-icons/` is in the pack the moment a row names it.
+After adding artwork run `make pack/check`: the loader finds the files by name,
+so a new WebP under `item-icons/` is in the pack the moment a row names it.
 
 Item detail, collection, and search responses expose an optional `icon` data
 URL, just as spells do. The UI displays item artwork at 88×88 alongside its
@@ -73,10 +67,15 @@ summary/detail routes expose an optional `icon` data URL; no image routes or
 separate image storage are used.
 
 The SRD pack's version is the `version` field of
-`data/pack/srd-5.1/pack-manifest.json` (now `2.0.0`), bumped by hand with the
-content it describes. Preserve
-`data.pack_archive` when deploying so characters pinned to an earlier release
-continue to use the archived bytes; startup refuses an archived release whose
+`data/pack/srd-5.1/pack-manifest.json` (now `2.1.0`), bumped by hand with the
+content it describes. 2.1.0 changes what 2.0.0 asks -- a Totem Warrior chooses
+an animal where 2.0.0 granted all five -- and **nothing carries a 2.0.0
+character across**: production runs without `data.pack_archive`, so a
+character pinned to 2.0.0 fails closed once 2.1.0 replaces it, and has to be
+deleted. That is deliberate; the project keeps no backward compatibility for
+characters or packs yet. Where `data.pack_archive` is set, preserve it when
+deploying so characters pinned to an earlier release continue to use the
+archived bytes; startup refuses an archived release whose
 bytes have changed under the same version. An explicit
 `data.default_packs.srd-2014` pin must be updated to select the new version.
 
@@ -174,7 +173,7 @@ data:
     - path: /path/to/another-pack-repository
       id: another-core # optional namespace override
   default_packs:
-    srd-2014: "2.0.0"
+    srd-2014: "2.1.0"
     easydnd-2014-personal: "1.0.0"
   pack_archive: .pack-archive
 ```
@@ -232,7 +231,7 @@ decided by the key that names it:
 | | Key | Who has it |
 |---|---|---|
 | **common** | `data.pack_files`, `data.autoload_packs` | every session, guests included |
-| **private** | `data.private_pack_files` | a **superadmin**, and the members of any group a superadmin has shared it with |
+| **private** | `data.private_pack_files` | a **superadmin**, any account a superadmin has handed it to, and the members of any group a superadmin has shared it with |
 
 A private pack is installed and compiled at startup like any other, and then
 kept out of everything that is the same for everybody: it is never a default
@@ -242,13 +241,15 @@ the pack does not exist -- not in `GET /v1/packs`, the pack selector, the spell
 browser or `export`, and naming it in a lock is refused exactly as a stranger's
 homebrew pack is. The choke point is the one that already existed,
 `Service.available` in `internal/usecase/pack`: an unowned record marked
-`Restricted` is allowed only for a superadmin, and the group-share loop below
-it grants it to a table.
+`Restricted` is allowed only for a superadmin or an account it was granted
+to, and the group-share loop below it grants it to a table.
 
 **A superadmin** is an account named in `auth.superadmins`, by the *verified*
 email of a linked Google account or by account id. An unverified email is
 anybody's to claim and never matches; a passkey-only account has no email and
 can only be named by id, which is how `config.dev.yaml` names `dev:master`.
+The same list opens the admin listings and every sheet for reading; see
+[backend.md](backend.md#a-superadmin-reads-everything-and-writes-one-thing).
 
 **Granting** reuses pack sharing. On a group they belong to, a superadmin sees
 a *Private packs* tab and shares a release with the table through
@@ -264,6 +265,14 @@ from new characters. Two things follow from how sharing already worked:
 - A member who was granted the pack may publish homebrew that depends on it,
   but cannot share that homebrew with another table: a restricted dependency
   is passed on only by a superadmin (`pack.dependencyPrivate`).
+
+**Granting to one account** needs no table. On the admin Players tab a row's
+*Private packs* action ticks the packs that account has
+(`PUT /v1/admin/players/:id/packs`), and they appear in that player's pack
+selector. The same three rules hold -- a character built on it keeps it after
+the tick is removed, the player cannot export it, and cannot share it or
+homebrew built on it with a table -- and the grant follows the pack id, so it
+survives the pack being replaced on disk by a newer version.
 
 Privacy is by **pack ID**, taken from the folders configured at this startup.
 With `data.pack_archive` set, drop a path from `private_pack_files` and its
@@ -289,7 +298,7 @@ push restarts nothing and prints the line to add to `/etc/easydnd/prod.env`:
 a path that does not exist is a startup error, so the pack has to be there
 before the server is told about it.
 
-The archive preserves packs, **not characters**. Character logs, checkpoints,
+The archive preserves packs, **not characters**. Character logs,
 folders, shares and games are in PostgreSQL when `db.url` is set, and in
 memory otherwise.
 
@@ -311,7 +320,7 @@ shipped content.
     "edition": "2014",
     "semantics": "1",
     "requires": ["resources.v1"],
-    "dependencies": [{"id": "srd-2014", "version": "^1.0.0"}],
+    "dependencies": [{"id": "srd-2014", "version": ">=2.0.0 <3.0.0"}],
     "defaultLocale": "en"
   },
   "entities": {},
@@ -320,8 +329,8 @@ shipped content.
 }
 ```
 
-A directory contains `manifest.json` (the SRD uses `pack-manifest.json` to
-coexist with its old catalogue index) and either a `files` map or a layout.
+A directory contains `manifest.json` or `pack-manifest.json` (the SRD's name,
+and the one read when both are present) and either a `files` map or a layout.
 The map names each logical key's file:
 
 ```json
@@ -399,12 +408,22 @@ at load. The base data's Unarmored Defense is the example:
 
 Characters retain exactly STR, DEX, CON, INT, WIS and CHA. Packs may modify
 these scores, but cannot introduce additional characteristics. The example pack
-uses a Wisdom bonus; version 2.0.0 removes its former demonstration Luck score.
+uses a Wisdom bonus.
 
 Numeric effects support `add`, `max`, `set` on ability scores, AC, initiative,
 passive Perception, HP maximum and movement speeds. Grants support features,
 traits, feats, spells, proficiencies, languages and equipment. Rules can expose
-choices through the existing prompt/answer grammar. A class's
+choices through the existing prompt/answer grammar. A rule's prompt is filed
+with its owner -- race, subrace and trait owners under the race, a background's
+under the background, everything else with the class levels, at the level a
+feat was taken or a feature's row names. A choice of kind `expertise` doubles
+a proficiency already held instead of granting its refs. A feature offered as
+an option is blocked while the character does not meet that feature's own
+`prerequisites`, read at the character's current level in the feature's
+`class`; see [Picks a feature owns](dnd.md#picks-a-feature-owns).
+
+A feature's picks are `subfeatureOptions` on the feature and on one feature
+per later tier. A class's
 `startingEquipmentOptions` carry a `slot` apiece -- `body`, `main-hand`,
 `off-hand`, `backup`, `pack`, `focus` or `instrument` -- which titles the
 builder's card and equips nothing: every kit item is carried until the
@@ -450,7 +469,7 @@ entries that lack them and duplicates nothing; leaving it out leaves those
 entries with a name, their mechanics and an empty description. Whole-entity
 replacement is still not a thing a pack can do; an overlay only fills blanks.
 
-## Resources and temporal events
+## Resources
 
 A resource declares `id`, `owner`, `minimumLevel`, `kind` (`pool` or `parameter`),
 `input`, and `rows` or `capacity`. Threshold rows use `from`, `capacity`, optional
@@ -471,26 +490,16 @@ Ordinary spell slots and Hit Dice retain family instance IDs. `resources.pools`
 is authoritative for usage; `resources.parameters` separates damage/scaling
 values from consumables. The older slot/class arrays remain compatibility views.
 
-The usage events below are the character's own record. The browser's game
-tracker does not write them: it keeps a spent count per pool on the game entry,
-so a use spent at one table is not spent at another. See
-[backend.md](backend.md#active-game-entries).
+Spending is not recorded on the character. The browser's game tracker keeps a
+spent count per pool on the game entry, so a use spent at one table is not
+spent at another, and the sheet always shows full pools; see
+[backend.md](backend.md#active-game-entries). The log has no usage events.
 
-```json
-{"type":"resource.spent","resource":"example/combat-dice","amount":1}
-{"type":"rest.completed","trigger":"short-rest"}
-{"type":"action.used","ref":"example:action:maneuver"}
-{"type":"rest.completed","trigger":"long-rest","allocations":{"hit-dice/fighter":2,"hit-dice/wizard":1}}
-```
-
-Each event is validated at its position in the log. Later levels cannot legalize
-an earlier overspend. Capacity changes preserve spent uses; available uses are
-`max(0, maximum - used)`. Recovery operations are `all`, `amount` or `budget`;
-shared budgets require explicit recorded allocation. Conditional recovery uses
-`when`. An action verifies ownership and all costs before charging any pool.
-Its rolls and other outcomes remain manual. The sheet exposes localized
-`packActions`, affordability, `manualRules` and contributions with rule/owner
-and originating event identity where directly attributable.
+Recovery operations are `all`, `amount` or `budget`, and conditional recovery
+uses `when`; the tracker applies them on a rest. An action's rolls and other
+outcomes remain manual. The sheet exposes localized `packActions`,
+affordability, `manualRules` and contributions with rule/owner and originating
+event identity where directly attributable.
 
 ## Action tags
 
@@ -534,7 +543,7 @@ only the first is tagged, or a tenth-level bard would list it three times.
 Equipped weapons need no tag; their attack is derived from `weapon`. Unowned
 actions are not in `packActions` -- that list is what can be *spent*.
 
-## Revisions and migrations
+## Revisions and locks
 
 Characters keep editable ordered build choices. Events have stable IDs and a
 schema version; sequence is their current position. The record's `revision`
@@ -550,20 +559,10 @@ Missing releases or unsupported semantics fail closed. The catalogue manifest
 returns the default lock, and `GET /v1/characters/:id/catalog/:collection` serves
 an owned character's pinned content.
 
-`POST /v1/characters/:id/rules?dryRun=true` accepts `expectedRevision`, `rules`
-(the proposed lock), and optional `entities`, `prompts`, `options`, `paths` mappings. Resource references in usage
-and allocation events follow explicit entity mappings; path mappings handle
-renamed score/stat paths.
-It replays without writing and reports before/after sections and invalid event
-identities. Remove `dryRun=true` to revalidate and commit with revision CAS; a
-checkpoint retains the original log/lock. No invalid choices are silently dropped.
-`POST /v1/characters/:id/rules/restore?dryRun=true` takes `expectedRevision` and
-`checkpoint` index. Applying it saves the current build as another checkpoint.
-Later edits therefore remain recoverable.
+A lock is for the life of the character. There is no route that moves a
+character onto another lock.
 
-The existing foreign-sheet importer imports a **snapshot** under the configured
-context and reports unresolved content. It does not claim to reconstruct a
-historical event log. Unsupported event/pack schema versions fail rather than
+Unsupported event/pack schema versions fail rather than
 being guessed. Version 0 events in existing memory fixtures are upgraded to 1 at
 the repository boundary.
 
@@ -628,6 +627,26 @@ Expressions can read `equipped:armor` and `equipped:shield` as 0/1 flags for
 catalog body armor and shields currently equipped. Backpack items do not set
 these flags.
 
+A benefit normally draws on its `class`'s list, or on every list with
+`from: "any"`. Four optional fields change that: `list` names another class's
+list (a Nature cleric's druid cantrip -- `class` stays "whose level-up poses
+it"); `listFrom` names a prompt whose answer is the class, for a feat that lets
+the player choose it, and offers nothing until it is answered; `schools` and
+`ritual` narrow the picks. A rule choice may list `class:` refs for exactly
+that purpose: a class is the one ref kind a rule choice can offer that grants
+nothing by being chosen. A benefit owned by a feat is a spell source outside
+every class, and its answers are posted as the feat's event.
+
+```json
+{"id": "magic-initiate-class", "owner": "feat:magic-initiate", "minimumLevel": 1, "choices": [
+  {"prompt": "magic-initiate/class/0", "choose": 1, "kind": "feature", "from": {"kind": "explicit",
+   "options": [{"kind": "ref", "ref": "class:wizard", "count": 1}]}}]}
+{"id": "magic-initiate-cantrips", "owner": "feat:magic-initiate", "listFrom": "magic-initiate/class/0",
+ "level": 1, "count": 2, "spellLevel": 0, "mode": "cantrip", "from": "class"}
+{"id": "fey-touched-spell", "owner": "feat:fey-touched", "level": 1, "count": 1, "spellLevel": 1,
+ "mode": "known", "from": "any", "schools": ["divination", "enchantment"]}
+```
+
 `choiceRequirements` gate conditional equipment offers
 on any of a list of proficiencies. Referenced owners, classes, spells and
 proficiencies must resolve in the pinned catalogue.
@@ -650,17 +669,17 @@ same portable JSON as the CLI. Drafts may be incomplete; saving uses an expected
 revision, while publishing requires validation and compilation in every supplied
 locale. Published versions cannot be overwritten. To publish another version,
 edit the draft's manifest version. Archiving hides a pack from new selections;
-its release bytes are retained for existing characters and checkpoints.
+its release bytes are retained for existing characters.
 
 SRD 5.1 is the default selection, independently of additional operator-installed
 packs. The first character tab and the spell browser accept multiple compatible
 roots. Dependencies are resolved automatically; one core provider is required.
 An independent core can define the same six standard scores, whose identities
 remain global; additional ability scores are still rejected. The character's
-exact lock governs choices, spells, names and shared-sheet catalogues. Changing
-packs on an existing character previews and commits through the rules migration
-API. Copies require current access to their releases; existing characters retain
-access for progression and restoration after a share is removed.
+exact lock governs choices, spells, names and shared-sheet catalogues, and is
+fixed when the character is created. Copies require current access to their
+releases; existing characters retain access for progression after a share is
+removed.
 
 Any group member may share a release they own. A share records its exact
 transitive closure and does not advance when another version is published. The
@@ -703,6 +722,13 @@ Drafts and all private authoring/catalogue responses use `Cache-Control: no-stor
 Validation has localized reason codes, document locations, and expandable compiler
 details for diagnosing unsupported mechanics.
 
+Three counts are limited (see [Limits](backend.md#limits)): an owner holds at
+most 30 unarchived packs, a pack at most 100 published versions, and a group at
+most 20 shared packs. Archived packs are not counted, because a pack cannot be
+deleted and counting them would leave an owner at the limit with no way back
+under it. Sharing another version of a pack the group already has replaces it
+and is never refused.
+
 ## Class ability priority
 
 A class may carry `abilityPriority`: all six abilities, most important first --
@@ -741,8 +767,7 @@ arrays of source IDs. A directory references it as `files.provenance`:
 This is an excerpt, not a complete pack. The SRD pack itself keeps its sources
 to bare ids -- `{"srd-5.1": "SRD 5.1", "phb": "PHB", "xge": "XGE", "tce": "TCE"}`
 -- and ships no `sources` bundle: a tag, not a title, is all a row needs to
-say where it came from (`web/src/ui/sourceAbbreviation.ts` renders the
-abbreviation). Source mappings must name existing entities and declared
+say where it came from. Source mappings must name existing entities and declared
 sources. Membership ordering is not semantic. Provenance
 is part of the immutable release digest, survives JSON/directory/ZIP round trips,
 and requires a version bump when changed. Importing a copy retains book

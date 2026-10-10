@@ -1,3 +1,4 @@
+import { track } from '@/lib/analytics'
 import type { BuildPolicy } from './packPolicy'
 import type { RulesLock } from './packs'
 import type { Choice, Entry, Item, Option, Proficiency, Skill as CatalogSkill, Spell } from './catalog'
@@ -104,7 +105,6 @@ export interface Status {
 export interface ItemStack {
   item?: string
   count: number
-  custom?: { name: string; description?: string; weight?: number }
 }
 
 export interface Equipment {
@@ -183,13 +183,22 @@ export interface CustomOption {
  speed?: number
  count?: number
  selected: boolean
+ /** A custom item's mechanics. Absent for every other kind, and for an item written before it could say. */
+ item?: CustomItem
 }
+/** What a custom item is beyond its name, in the catalogue's item shape -- except `icon`, which is the pack's label and not the picture. */
+export type CustomItem = Pick<Item, 'icon' | 'category' | 'slot' | 'cost' | 'weight' | 'weapon' | 'armor'>
 export const upsertCustomOption = (id: string, revision: number, option: CustomOption) =>
  request<WriteResponse>(`${characterPath(id)}/custom-options`, { method: 'POST', body: { revision, option } })
+/** Deletes a custom entry. The server allows it for a `note` only: any other kind may be something the character is built on. */
+export const deleteCustomOption = (id: string, revision: number, option: string) =>
+ request<WriteResponse>(`${characterPath(id)}/custom-options/${encodeURIComponent(option)}?revision=${revision}`, { method: 'DELETE' })
 export interface Sheet {
  customOptions?: CustomOption[]
  importSession?: string
  catalogNames?: Record<string,string>
+  /** What gave the character each trait and feature; both sides are `catalogNames` keys. */
+  origins?: Record<string, string>
   /**
    * What the sheet's slugs mean, resolved by the server in the same response:
    * the entries a panel reads more than a name from. Present on a sheet that
@@ -202,6 +211,10 @@ export interface Sheet {
     magicItems?: Item[]
     /** The prose behind `actions`, each entry's `slug` being an action's `origin`. */
     actions?: Entry[]
+    /** The prose behind the "Traits and features" rows; only the entries that have any. */
+    traits?: Entry[]
+    features?: Entry[]
+    languages?: Entry[]
     spells?: Spell[]
   }
  importedNotes?: string[]
@@ -429,20 +442,22 @@ export function listCharacters(
   signal?: AbortSignal,
 ): Promise<{ characters: Summary[] }> {
   const path = folder ? `/characters?folder=${encodeURIComponent(folder)}` : '/characters'
-  return request<{ characters: Summary[] }>(path, signal ? { signal } : {})
+  return request<{ characters: Summary[] }>(path, { signal })
 }
 
-export function createCharacter(body: NewCharacter): Promise<CreateResponse> {
-  return request<CreateResponse>('/characters', { method: 'POST', body })
+export async function createCharacter(body: NewCharacter): Promise<CreateResponse> {
+  const result = await request<CreateResponse>('/characters', { method: 'POST', body })
+  track('character_created')
+  return result
 }
 
 export function getSheet(id: string, signal?: AbortSignal): Promise<Sheet> {
-  return request<Sheet>(`${characterPath(id)}/sheet`, signal ? { signal } : {})
+  return request<Sheet>(`${characterPath(id)}/sheet`, { signal })
 }
 
 export function getPrompts(id: string, signal?: AbortSignal, before?: number): Promise<PromptsResponse> {
   const query = before === undefined ? '' : `?before=${before}`
-  return request<PromptsResponse>(`${characterPath(id)}/prompts${query}`, signal ? { signal } : {})
+  return request<PromptsResponse>(`${characterPath(id)}/prompts${query}`, { signal })
 }
 
 export function getEvents(
@@ -451,7 +466,7 @@ export function getEvents(
 ): Promise<{ seq: number; revision?: number; rules?: RulesLock; events: CharacterEvent[] }> {
   return request<{ seq: number; revision?: number; rules?: RulesLock; events: CharacterEvent[] }>(
     `${characterPath(id)}/events`,
-    signal ? { signal } : {},
+    { signal },
   )
 }
 
@@ -472,6 +487,17 @@ export function appendEvents(
     method: 'POST',
     body: { expectedSeq, expectedRevision, events },
   })
+}
+
+/**
+ * Appends one `change` entry, reading the log's head at the moment of writing:
+ * a sheet does not carry a sequence, and an edit made in another tab should
+ * conflict rather than vanish.
+ */
+export async function writeChanges(id: string, changes: Change[]): Promise<void> {
+  if (changes.length === 0) return
+  const log = await getEvents(id)
+  await appendEvents(id, log.seq, [{ type: 'change', changes }], log.revision ?? log.seq)
 }
 
 /**
@@ -527,26 +553,6 @@ export function deleteEvent(
   )
 }
 
-/**
- * Drops every event after `after`.
- *
- * Nothing in this client calls it any more -- changing an answer is
- * `replaceEvent`, and un-taking a level is `deleteEvent` -- but it is working,
- * tested API, and withdrawing it would be a breaking change made as a side
- * effect of a decision about a screen.
- */
-export function truncateEvents(
-  id: string,
-  expectedSeq: number,
-  after: number,
-  expectedRevision = expectedSeq,
-): Promise<WriteResponse> {
-  return request<WriteResponse>(
-    `${characterPath(id)}/events?after=${after}&expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}`,
-    { method: 'DELETE' },
-  )
-}
-
 export function deleteCharacter(id: string): Promise<void> {
   return request<void>(`${characterPath(id)}`, { method: 'DELETE' })
 }
@@ -575,6 +581,43 @@ export function copyCharacter(id: string, folder?: string): Promise<CreateRespon
     method: 'POST',
     body: { folder: folder ?? '' },
   })
+}
+
+/** A minted copy link: the token to put in a URL fragment, and when it stops working. */
+export interface CopyLink {
+  token: string
+  expires_at: string
+}
+
+/** What the holder of a copy link is shown before taking the copy. */
+export interface CopyLinkPreview {
+  name: string
+  level: number
+  classes?: ClassLevel[]
+}
+
+/**
+ * Mints a link whose holder may take their own copy of a character.
+ *
+ * Reusable for a day and not cancellable short of deleting the character --
+ * what it gives away is a copy, so the original is never at stake.
+ */
+export function createCopyLink(id: string): Promise<CopyLink> {
+  return request<CopyLink>(`${characterPath(id)}/copy-links`, { method: 'POST' })
+}
+
+/** Reads a copy link without taking it. The token goes in the body; see `previewInvite`. */
+export function previewCopyLink(token: string, signal?: AbortSignal): Promise<CopyLinkPreview> {
+  return request<CopyLinkPreview>('/copy-links/preview', {
+    method: 'POST',
+    body: { token },
+    signal,
+  })
+}
+
+/** Takes the copy: a new character of the caller's own, in their default folder. */
+export function acceptCopyLink(token: string): Promise<CreateResponse> {
+  return request<CreateResponse>('/copy-links/accept', { method: 'POST', body: { token } })
 }
 
 /** Atomically save edits to several past choices together with new answers. */
@@ -607,7 +650,7 @@ export interface Visibility {
 }
 
 export function getVisibility(id: string, signal?: AbortSignal): Promise<Visibility> {
-  return request<Visibility>(`${characterPath(id)}/visibility`, signal ? { signal } : {})
+  return request<Visibility>(`${characterPath(id)}/visibility`, { signal })
 }
 
 export function setVisibility(id: string, visible: boolean): Promise<Visibility> {

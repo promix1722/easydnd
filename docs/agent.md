@@ -313,7 +313,7 @@ relevant. The sheet links back to the chat. An edit made in the builder is an
 ordinary edit of an ordinary character; the assistant notices it on its next
 tool call (see [Session lifetime](#session-lifetime)).
 
-Unresolved choices belong in chat. `ask_user` records a question and up to six
+Unresolved choices belong in chat. `ask_user` records a question and up to ten
 suggested text answers. The latest unanswered question shows clickable replies;
 the composer always permits a different free-text answer. A reply is an ordinary
 user message, and the assistant applies it using validated choice tools. The
@@ -332,13 +332,17 @@ the same list a second time passes. It used to block until every entry was
 satisfied, and a model that had worded one in a way nothing could satisfy
 responded by inventing custom content until the list went quiet.
 
-There is no interruption control in the UI. The message box stays open while
-the assistant is running, but nothing can be sent from it: Send and the reply
+**Stop** takes Send's place while a turn is running or queued. It sends the
+`stop` control, which ends the turn `paused` with the usual Resume: everything
+imported so far is kept. A stop is honoured from a stale revision while a turn
+is in flight, because a running turn moves the revision with every tool call
+and the page is usually a step behind; one that arrives after the turn ended
+does nothing. The message box stays open while
+the assistant is running, but nothing can be sent from it: the reply
 buttons wait for the turn to end. Terminal status snapshots enable them and
 focus it. The page learns of them by [polling](polling.md), which
 never disables input.
 Resume continues a paused conversation; Retry continues after a failure.
-The internal stop API remains for cancellation and lifecycle handling.
 Waiting for a reply holds no worker. **Discard deletes the character with the
 chat** -- it is what discarding the draft used to mean -- while leaving the
 chat any other way leaves the character where it is. A character whose
@@ -461,7 +465,7 @@ described in [polling.md](polling.md).
 
 ## Tools and rules
 
-The OpenAI adapter supplies function schemas; the character usecase implements
+The OpenAI adapter supplies function schemas; the agent use case implements
 the tools. The vendor boundary is the small `AgentModel` port, not an agent SDK
 woven into the rules engine. The initial adapter uses the official Go Responses
 SDK, native PDF/image input, streamed output, `store: false`, and encrypted
@@ -472,7 +476,7 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 | --- | --- |
 | `get_build_context` | The draft by fact path, open prompts **with their options** and what the owner has already said about each, the answers given so far, the owner's replies to every question (`userAnswers`), custom entries, differences from the sheet's printed numbers, checklist entries not yet covered |
 | `read_source` | Text/JSON source contents, or reference to an attached image/PDF |
-| `plan_import` | Transcribe the sheet in one typed call: name, alignment, personality traits, ideals, bonds and flaws, final ability totals, level, hit points, armor class, speed, every skill and save bonus, coins, inventory and spells, plus a checklist of what else it documents |
+| `plan_import` | Transcribe the sheet in one typed call: name, alignment, personality traits, ideals, bonds and flaws, final ability totals, level, hit points, armor class, speed, every skill and save bonus, coins, inventory, the attacks table's names and spells, plus a checklist of what else it documents |
 | `import_facts` | Race, subrace, class with its level, subclass, background and feats **by printed name**; printed values at a path. Per-fact errors with candidates |
 | `assign_skills` | Distribute the sheet's proficient skills over the prompts that grant skills, and its expertise over the expertise prompts |
 | `assign_spells` | Distribute the sheet's cantrips and spells over the build's spell prompts, and keep the ones past the build's count as spells known |
@@ -480,7 +484,7 @@ Files are included again on each request; there is no OCR/extraction cache yet.
 | `answer_choices` | Answer open prompts in one batch, by option key or printed name, through the existing character validator. Rejections name the pick and the rule |
 | `revise_choice` | Replace a prior choice and report invalidated dependent entries |
 | `list_choice_options` | Page through a prompt with more than 60 options |
-| `set_inventory` | Items by printed name, count and placement; unmatched names come back with candidates |
+| `set_inventory` | Items by printed name, count and placement; an equipment pack is carried as its contents; unmatched names come back with candidates |
 | `search_catalog` | Ranked identities across supported locales within the pinned rules lock |
 | `get_option_details` | Exact catalogue mechanics and, when available, a pack wire example |
 | `upsert_custom_option` | Keep content the rules lack as an editable typed definition. Refuses to copy what the pack or the build already has |
@@ -559,7 +563,14 @@ lists have slots for that reason: asked for afterwards as separate facts, a
 field's second paragraph was what got left out. The name slot is nullable, and
 a value that is only the box's caption ("Character Name") is refused, since a
 blank box still prints one. Level, coins, items and those identity fields are
-written to the character. The six scores are held by the session and *solved into* it (see
+written to the character. **`attacks` is the name in each row of the attacks
+table, and it is a slot of its own because a sentence asking for those weapons
+among the items was not enough**: a sheet attacking with a longsword listed a
+rapier in its equipment box and no sword, and the model copied the box. The
+server resolves each name, keeps the ones that are catalogue weapons, and puts
+them at the head of the inventory as equipped -- moving up the box's own line
+for one it lists too -- so with one item to a slot the sword is in hand and
+the rapier carried. A row that is no weapon (a breath weapon) is not an item. The six scores are held by the session and *solved into* it (see
 below). The derived numbers are kept as a reference and never written.
 
 **The server does the arithmetic and the matching.** From the printed bonuses
@@ -728,8 +739,11 @@ a control of its own. The builder offers six: a custom **race**, **class** and
 **background** as the last option of those pickers, a custom **item** as the
 last option of an equipment choice, and a custom **cantrip** or **spell** as
 the last entry of the spell tabs' list. Each opens the entry's form with its
-kind already said. No tab has a "Custom…" button under it -- the Personal tab
-used to end with one that made a note. Entries written earlier are offered in
+kind already said. No tab has a "Custom…" button under it. Notes are the one
+exception to all of this: they answer no question, so they have a tab of their
+own, Custom, where the player adds, rewrites and deletes them
+(docs/web/characters.md#custom-is-what-the-player-writes-unasked). The assistant still
+may not write one. Entries written earlier are offered in
 their list beside the catalogue's, marked Custom.
 
 A custom entry on a character is a block on its tab like any other decision
@@ -746,8 +760,8 @@ and projection must succeed before a complete definition changes the lock.
 
 Private releases never enter the default catalogue. Older versions remain
 available for older locks; copied/shared characters retain the attached lock
-and receive localized private names/descriptions in their projection. Migration
-cannot attach another character's private release. The releases are stored in
+and receive localized private names/descriptions in their projection. The
+releases are stored in
 `private_releases` and cached per process; this is not a general pack editor,
 upload library or publisher.
 
@@ -770,13 +784,11 @@ Normal characters expose GET/POST `/v1/characters/:id/custom-options`.
 GET returns `{revision, options}`; POST accepts `{revision, option}` and returns
 the updated sheet and revision. Writes check ownership and optimistic revision.
 Definitions cannot be erased by generic note replacement.
+`DELETE /v1/characters/:id/custom-options/:option?revision=` erases one, and
+only a `note`: see docs/backend.md.
 
 The character itself is read and edited through the ordinary
 `/v1/characters/:id` routes. There is no draft surface.
-
-The HexSheet JSON importer that used to sit beside this at `POST
-/v1/characters/import` is gone: the AI Wizard is the only way a foreign sheet
-comes in.
 
 ### An import wears one item to a slot
 
@@ -853,6 +865,16 @@ output tokens per response and two SDK retries. Conversation growth is bounded
 by item/event counts and a 2 MiB transcript threshold. Turns pause at the run
 limit; manual Resume starts another bounded run. These are request/run limits,
 not a billed-token accounting system.
+
+One limit is per person: an owner may start 20 chats in 24 hours
+(`WizardRunsPerDay`, see [Limits](backend.md#limits)). It is checked at a
+chat's first message, which is also where its character is made and so where
+the owner's character limit is checked; an opened chat nobody has written in
+costs nothing and is not counted. The refusal is 400 `limit.wizardRuns`. The
+count is read from the chats still stored, so discarding one gives its run
+back -- see [known-caveats.md](known-caveats.md#limits-are-counted-not-reserved).
+A tool call that would take a character past a per-character limit is refused
+to the model as a tool error and the log is left as it was.
 
 The checked-in nginx configuration raises `/v1/`'s body limit to 21 MiB. **Deploying
 a release does not install nginx configuration**: apply that file separately.

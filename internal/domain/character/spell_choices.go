@@ -32,13 +32,19 @@ func spellChoices(state State, cat *catalog.Catalog, answers answers, all bool) 
 	for _, taken := range state.Identity.Classes {
 		b.class(taken)
 	}
+	// What a trait or a feat teaches is a source of its own, outside every
+	// class: a fighter with Magic Initiate has a wizard's cantrips and no
+	// wizard level.
+	owners := make([]rules.Ref, 0, len(state.Traits)+len(state.Feats))
 	for _, slug := range state.Traits {
-		trait, ok := cat.Traits.Get(slug)
-		if !ok {
-			continue
-		}
-		source := SpellSource{Source: rules.NewRef(rules.RefTrait, slug)}
-		if trait.Specific != nil && trait.Specific.SpellOptions != nil {
+		owners = append(owners, rules.NewRef(rules.RefTrait, slug))
+	}
+	for _, slug := range state.Feats {
+		owners = append(owners, rules.NewRef(rules.RefFeat, slug))
+	}
+	for _, owner := range owners {
+		source := SpellSource{Source: owner}
+		if trait, ok := cat.Traits.Get(owner.Slug); ok && owner.Kind == rules.RefTrait && trait.Specific != nil && trait.Specific.SpellOptions != nil {
 			for _, spell := range answers.slugs(trait.Specific.SpellOptions) {
 				if def, ok := cat.Spells.Get(spell); ok && def.Level == 0 {
 					source.Cantrips = appendUnique(source.Cantrips, spell)
@@ -92,7 +98,13 @@ func (b *spellBuilder) pick(source rules.Ref, class rules.Slug, id rules.Slug, p
 	p := Prompt{Choice: rules.Choice{Prompt: id, Kind: rules.ChooseSpell, Choose: count, From: refOptions(rules.RefSpell, pool)},
 		Source: source, Group: GroupClass, Level: level, Purpose: purpose, UpTo: upTo, Optional: optional,
 		Event: PromptEvent{Type: EventLevel, Ref: rules.NewRef(rules.RefClass, class), Level: level}, Held: slices.Clone(held)}
-	if class.IsZero() {
+	switch {
+	case source.Kind == rules.RefFeat:
+		// Posted as the feat's own event, which replays as "has this feat"
+		// and nothing more. A level event would be the natural home and
+		// would hand the character a level in the class.
+		p.Event = PromptEvent{Type: EventFeat, Ref: source}
+	case class.IsZero():
 		p.Group = GroupRace
 		p.Event = PromptEvent{Type: EventRace, Ref: rules.NewRef(rules.RefRace, b.state.Identity.Race)}
 	}
@@ -255,10 +267,29 @@ func (b *spellBuilder) benefit(source *SpellSource, benefit catalog.SpellBenefit
 			upper = maxLevel
 		}
 		listClass := benefit.Class
+		if !benefit.List.IsZero() {
+			listClass = benefit.List
+		}
+		if !benefit.ListFrom.IsZero() {
+			chosen := b.answers.picks(benefit.ListFrom)
+			if len(chosen) == 0 {
+				return
+			}
+			listClass = chosen[0]
+		}
+		if source.Ability == "" {
+			if class, ok := b.cat.Classes.Get(listClass); ok && class.Spellcasting != nil {
+				source.Ability = class.Spellcasting.Ability
+			}
+		}
 		if benefit.From == "any" {
 			listClass = ""
 		}
 		pool = b.pool(listClass, minLevel, upper, nil)
+		pool = slices.DeleteFunc(pool, func(slug rules.Slug) bool {
+			spell, _ := b.cat.Spells.Get(slug)
+			return len(benefit.Schools) > 0 && !slices.Contains(benefit.Schools, spell.School) || benefit.Ritual && !spell.Ritual
+		})
 		if benefit.From == "book" {
 			pool = slices.DeleteFunc(pool, func(s rules.Slug) bool { return !slices.Contains(source.Spellbook, s) })
 		}

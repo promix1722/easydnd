@@ -28,7 +28,6 @@ linters:
           files:
             - "**/internal/domain/**"
             - "**/internal/usecase/**"
-            - "!**/internal/usecase/spellicon/**"
             - "**/internal/types/**"
           deny:
             - pkg: "github.com/gin-gonic/gin"
@@ -50,29 +49,6 @@ linters:
             - pkg: "golang.org/x/oauth2"
               desc: "the authorization-code exchange belongs in internal/adapter/oidc, behind the auth.Federation port"
 
-        # The offline icon generator intentionally owns outbound HTTP.
-        # Server frameworks and persistence remain forbidden here too.
-        standalone-icon-generator:
-          files:
-            - "**/internal/usecase/spellicon/**"
-          deny:
-            - pkg: "github.com/gin-gonic/gin"
-              desc: "the standalone generator has no server framework"
-            - pkg: "database/sql"
-              desc: "the generator returns bytes and has no storage"
-            - pkg: "github.com/jackc/pgx"
-              desc: "the generator returns bytes and has no storage"
-            - pkg: "github.com/pressly/goose"
-              desc: "the generator has no database migrations"
-            - pkg: "github.com/go-webauthn"
-              desc: "authentication belongs in server adapters"
-            - pkg: "github.com/golang-jwt"
-              desc: "authentication belongs in server adapters"
-            - pkg: "github.com/coreos/go-oidc"
-              desc: "authentication belongs in server adapters"
-            - pkg: "golang.org/x/oauth2"
-              desc: "authentication belongs in server adapters"
-
         # Adapters depend inward, never sideways into one another.
         outbound-adapters:
           files:
@@ -89,11 +65,17 @@ linters:
       comparison: true
 
     revive:
+      # `exported` is off on purpose. It asks for a comment on every exported
+      # name -- 270 of them when this linter was first gated -- and a comment
+      # written to satisfy it says what the name already says. Comments here
+      # explain why; a package still has to say what it is for.
       rules:
-        - name: exported
         - name: package-comments
         - name: error-strings
         - name: context-as-argument
+          # A test helper takes t first; that is the convention there.
+          arguments:
+            - allowTypesBefore: "*testing.T"
         - name: indent-error-flow
 
   exclusions:
@@ -102,6 +84,12 @@ linters:
       # Tests may be looser about context plumbing and unchecked errors.
       - path: _test\.go$
         linters: [errcheck, noctx]
+
+# No cap on what is reported. The defaults show 50 findings per linter and 3
+# of a kind, which is how 322 findings once read as 69.
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
 
 formatters:
   enable:

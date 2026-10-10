@@ -358,32 +358,51 @@ export function searchSpells(search: SpellSearch, signal?: AbortSignal, scope = 
   for (const [key, value] of Object.entries(search)) {
     if (value !== undefined && value !== '') params.set(key, String(value))
   }
-  return request<SpellPage>(queryURL(scope === 'browse' ? '/packs/spells' : catalogURL('spells', scope), params.toString()), signal ? { signal } : {})
+  return request<SpellPage>(queryURL(scope === 'browse' ? '/packs/spells' : catalogURL('spells', scope), params.toString()), { signal })
 }
 
-/** One row of an items search: enough to pick by. The sheet asks for the rest once it is owned. */
+/** One row of an items search: what the picker's table shows. The sheet asks for the rest once it is owned. */
 export interface ItemHit {
   icon?: string
   slug: string
   name: string
   category?: string
+  /** The category in the request's locale, resolved by the server. */
+  categoryName?: string
+  /** Equipment only: a magic item has neither a cost nor a weight. */
+  cost?: { amount: number; unit: string }
+  weight?: number
   magic?: boolean
 }
 
 export interface ItemPage {
   items: ItemHit[]
   total: number
+  /** The category filter's options: what the `wearable` scope holds, whatever else was filtered by. */
+  categories: { slug: string; name: string }[]
+}
+
+/** What an items search narrows by. `null` and `''` mean "any". */
+export interface ItemFilters {
+  q: string
+  /** With a slot (the sheet's Equipment tab) or without (its Items tab). */
+  wearable?: boolean | null
+  category?: string | null
+  magic?: boolean | null
 }
 
 /**
- * Searches equipment and magic items together by name, a page at a time.
+ * Searches equipment and magic items together, a page at a time.
  *
  * Like spells, `items` is never served whole: the one screen that reads it is
- * the sheet's Add item picker, and a picker needs a page, not a download.
+ * the sheet's Add picker, and a picker needs a page, not a download.
  */
-export function searchItems(q: string, limit: number, offset: number, signal?: AbortSignal, scope = ''): Promise<ItemPage> {
-  const params = new URLSearchParams({ q, limit: String(limit), offset: String(offset) })
-  return request<ItemPage>(queryURL(catalogURL('items', scope), params.toString()), signal ? { signal } : {})
+export function searchItems(filters: ItemFilters, limit: number, offset: number, signal?: AbortSignal, scope = ''): Promise<ItemPage> {
+  const params = new URLSearchParams({ q: filters.q, limit: String(limit), offset: String(offset) })
+  if (filters.wearable != null) params.set('wearable', String(filters.wearable))
+  if (filters.category) params.set('category', filters.category)
+  if (filters.magic != null) params.set('magic', String(filters.magic))
+  return request<ItemPage>(queryURL(catalogURL('items', scope), params.toString()), { signal })
 }
 
 /**
@@ -414,7 +433,7 @@ export interface SpellOfferSearch extends Omit<SpellSearch, 'pack' | 'source' | 
  */
 export function searchSpellOffer(search: SpellOfferSearch, signal?: AbortSignal, scope = ''): Promise<SpellPage> {
   const [base, query] = catalogURL('spells', scope).split('?')
-  return request<SpellPage>(`${base}/search${query ? `?${query}` : ''}`, { method: 'POST', body: search, ...(signal ? { signal } : {}) })
+  return request<SpellPage>(`${base}/search${query ? `?${query}` : ''}`, { method: 'POST', body: search, signal })
 }
 
 export const getSpellBrowseOptions = (versions = '') => request<SpellBrowseOptions>(`/packs/spell-filters?versions=${encodeURIComponent(versions)}`)

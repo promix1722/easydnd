@@ -1,6 +1,8 @@
 package file_test
 
 import (
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
@@ -94,6 +96,7 @@ func everyChoice(c *catalog.Catalog, visit func(rules.Choice)) {
 // builder titles the card by -- so every kit choice must carry one the client
 // has a caption for, under the prompt id it names.
 func TestClassKitsAreAskedBySlot(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 	known := map[rules.Slug]bool{"body": true, "main-hand": true, "off-hand": true, "backup": true, "pack": true, "focus": true, "instrument": true}
 	for _, cl := range c.Classes.All() {
@@ -112,6 +115,7 @@ func TestClassKitsAreAskedBySlot(t *testing.T) {
 }
 
 func TestStartingEquipmentOptionsContainOneEquipmentType(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 	var choices []rules.Choice
 	for _, class := range c.Classes.All() {
@@ -152,7 +156,7 @@ func TestStartingEquipmentOptionsContainOneEquipmentType(t *testing.T) {
 				default:
 					continue
 				}
-				if ref.Count != 1 || item.Slot != want && !(want == catalog.SlotOffHand && item.Slot == catalog.SlotMainHand) {
+				if ref.Count != 1 || item.Slot != want && (want != catalog.SlotOffHand || item.Slot != catalog.SlotMainHand) {
 					t.Errorf("%s: %s ×%d does not fill exactly one %s slot", choice.Prompt, item.Slug, ref.Count, choice.Slot)
 				}
 			}
@@ -171,6 +175,7 @@ func TestStartingEquipmentOptionsContainOneEquipmentType(t *testing.T) {
 // This is the test that would catch a future SRD collection whose options are
 // all bundles, or a generator change that drops a TextOption's key.
 func TestOptionKeysAreTotalAndUniquePerPrompt(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	prompts := 0
@@ -206,6 +211,7 @@ func TestOptionKeysAreTotalAndUniquePerPrompt(t *testing.T) {
 // The rogue's starting kit and Expertise are the two prompts that motivated
 // OptionKey; pin them so a regression is legible rather than statistical.
 func TestRogueBundleAndNestedPromptsAreAnswerable(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	rogue, ok := c.Classes.Get("rogue")
@@ -268,6 +274,7 @@ func TestRogueBundleAndNestedPromptsAreAnswerable(t *testing.T) {
 // both derived "rogue-expertise-1/expertise/0/0" while asking for a different
 // number of picks.
 func TestPromptIDsAreGloballyUnique(t *testing.T) {
+	t.Parallel()
 	c := load(t, rules.LocaleEN)
 
 	seen := make(map[rules.Slug]bool)
@@ -284,4 +291,53 @@ func TestPromptIDsAreGloballyUnique(t *testing.T) {
 		t.Fatalf("walked %d prompts, expected at least the 112 the compendium poses", total)
 	}
 	t.Logf("checked %d prompt ids", total)
+}
+
+// A pick that grows with level is asked once per tier, each tier a feature
+// with its own prompt over the same list -- so the list is written out once
+// per tier, and nothing but this keeps the copies the same. A maneuver added to
+// third level's list and not to seventh's would be learnable at one and not
+// the other, and a new option row left out of all of them is a row nobody can
+// ever pick.
+func TestTieredPicksOfferTheSameList(t *testing.T) {
+	t.Parallel()
+	c := load(t, rules.LocaleEN)
+	for prefix, tiers := range map[string][]rules.Slug{
+		"maneuver-":            {"maneuvers", "additional-maneuvers", "battle-master-additional-maneuvers", "fighter-additional-maneuvers"},
+		"arcane-shot-":         {"arcane-shot-options", "additional-arcane-shot-option", "arcane-archer-additional-arcane-shot-option", "fighter-additional-arcane-shot-option", "arcane-archer-additional-arcane-shot-option-2"},
+		"rune-":                {"rune-carver", "additional-rune-known", "rune-knight-additional-rune-known", "fighter-additional-rune-known"},
+		"elemental-discipline": {"elemental-disciplines", "extra-elemental-discipline", "four-elements-extra-elemental-discipline", "monk-extra-elemental-discipline"},
+		"metamagic-":           {"metamagic-1", "metamagic-2", "metamagic-3"},
+		"eldritch-invocation-": {"eldritch-invocations", "eldritch-invocations-5", "eldritch-invocations-7", "eldritch-invocations-9", "eldritch-invocations-12", "eldritch-invocations-15", "eldritch-invocations-18"},
+		"infusion-":            {"infusions-known", "infusions-known-6", "infusions-known-10", "infusions-known-14", "infusions-known-18"},
+	} {
+		var first []rules.Slug
+		for _, tier := range tiers {
+			f, ok := c.Features.Get(tier)
+			if !ok || f.Specific == nil || f.Specific.SubfeatureOptions == nil {
+				t.Errorf("%s poses no pick", tier)
+				continue
+			}
+			keys := rules.OptionKeys(f.Specific.SubfeatureOptions.From)
+			if first == nil {
+				first = keys
+			} else if !slices.Equal(first, keys) {
+				t.Errorf("%s offers a different list than %s", tier, tiers[0])
+			}
+		}
+		// Every row named like an option is one: only the rows that pose the
+		// pick, and the one discipline every Four Elements monk is given,
+		// share the prefix without being offered.
+		for _, f := range c.Features.All() {
+			posesAPick := f.Specific != nil && f.Specific.SubfeatureOptions != nil
+			if !strings.HasPrefix(f.Slug.String(), prefix) || posesAPick || slices.Contains(first, f.Slug) {
+				continue
+			}
+			switch f.Slug {
+			case "maneuver-options", "rune-knight-bonus-proficiencies", "elemental-discipline-elemental-attunement":
+				continue
+			}
+			t.Errorf("%s is in no tier of %s", f.Slug, tiers[0])
+		}
+	}
 }

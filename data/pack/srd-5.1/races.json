@@ -397,6 +397,142 @@
     }
   },
   {
+    "slug": "variant-human",
+    "speed": 30,
+    "size": "medium",
+    "abilityBonusOptions": {
+      "prompt": "variant-human/ability-bonus/0",
+      "choose": 2,
+      "kind": "ability-bonus",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ability-bonus",
+            "ability": "str",
+            "bonus": 1
+          },
+          {
+            "kind": "ability-bonus",
+            "ability": "dex",
+            "bonus": 1
+          },
+          {
+            "kind": "ability-bonus",
+            "ability": "con",
+            "bonus": 1
+          },
+          {
+            "kind": "ability-bonus",
+            "ability": "int",
+            "bonus": 1
+          },
+          {
+            "kind": "ability-bonus",
+            "ability": "wis",
+            "bonus": 1
+          },
+          {
+            "kind": "ability-bonus",
+            "ability": "cha",
+            "bonus": 1
+          }
+        ]
+      }
+    },
+    "languages": [
+      "common"
+    ],
+    "languageOptions": {
+      "prompt": "variant-human/language/0",
+      "choose": 1,
+      "kind": "language",
+      "from": {
+        "kind": "explicit",
+        "options": [
+          {
+            "kind": "ref",
+            "ref": "language:dwarvish",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:elvish",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:giant",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:gnomish",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:goblin",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:halfling",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:orc",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:abyssal",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:celestial",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:draconic",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:deep-speech",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:infernal",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:primordial",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:sylvan",
+            "count": 1
+          },
+          {
+            "kind": "ref",
+            "ref": "language:undercommon",
+            "count": 1
+          }
+        ]
+      }
+    },
+    "traits": [
+      "variant-human-skills"
+    ]
+  },
+  {
     "slug": "tiefling",
     "speed": 30,
     "size": "medium",

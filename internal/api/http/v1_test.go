@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/promix1722/easydnd/internal/adapter/catalog/file/filetest"
 
 	"github.com/gin-gonic/gin"
 
@@ -81,7 +83,19 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 // that touched a catalogue route. Everything else here stays per-router:
 // each test gets its own account store, its own characters and its own
 // ceremony, which is what keeps them independent.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
+// Set once for the binary: SetMode is a plain write to a package variable,
+// and the tests here run in parallel.
+func init() { gin.SetMode(gin.TestMode) }
+
+// packBase is the registry the pack-aware routers are built on, loaded once:
+// building it reads and digests the whole SRD, and every test that asked for
+// packs used to pay that. Reads of a registry are safe to share; the Authoring
+// built on it stays per test, since that holds the private state.
+var packBase = sync.OnceValues(func() (*catalogfile.Registry, error) {
+	return catalogfile.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "")
+})
+
+var catalogSource = filetest.SRD()
 
 // newFullRouterInEnv is the same table built for a named environment.
 //
@@ -93,7 +107,6 @@ func newFullRouterInEnv(
 	t *testing.T, env string, withPacks ...bool,
 ) (*gin.Engine, *http.Cookie, *stubCeremony, *stubFederation) {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
 
 	cfg := &config.Config{
 		Env:  env,
@@ -139,7 +152,7 @@ func newFullRouterInEnv(
 	var packHandler *packapi.Handler
 	groupRepo := memory.NewGroupRepository(users)
 	if len(withPacks) > 0 && withPacks[0] {
-		base, err := catalogfile.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "")
+		base, err := packBase()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -169,7 +182,7 @@ func newFullRouterInEnv(
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
 		Pack:          packHandler,
-		System:        system.New(testVersion),
+		System:        system.New(testVersion, system.AnalyticsConfigResponse{Environment: "development"}),
 		Auth:          authapi.New(authService, cookies),
 		Authenticator: authService,
 		Catalog:       catalogapi.New(source, log),
@@ -217,6 +230,7 @@ func signInWithGoogle(
 // arrived through a passkey does. This is the seam where a federated sign-in
 // meets domain.OwnerID, and nothing else exercises it end to end.
 func TestAGoogleAccountOwnsItsCharacters(t *testing.T) {
+	t.Parallel()
 	r, _, _, federation := newFullRouterWithFederation(t)
 	cookies := helpers.CookieOptions{Secure: false}
 
@@ -315,6 +329,7 @@ func decode[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
 }
 
 func TestCatalogManifestIndexesEveryCollection(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	rec := send(t, r, session, http.MethodGet, "/v1/catalog", nil)
@@ -350,6 +365,7 @@ func TestCatalogManifestIndexesEveryCollection(t *testing.T) {
 }
 
 func TestCatalogNegotiatesLocale(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	type named struct {
@@ -382,6 +398,7 @@ func TestCatalogNegotiatesLocale(t *testing.T) {
 }
 
 func TestUnknownCollectionIsNotFound(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	rec := send(t, r, session, http.MethodGet, "/v1/catalog/dragons", nil)
 	if rec.Code != http.StatusNotFound {
@@ -393,6 +410,7 @@ func TestUnknownCollectionIsNotFound(t *testing.T) {
 // paged envelope, and is never served whole: every spell carries its artwork,
 // so the bare collection is megabytes nobody needs.
 func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	search := func(query string) catalogapi.SpellSearchResult {
@@ -458,6 +476,7 @@ func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 // The sheet's item picker searches equipment and magic items together, by
 // name, a page at a time -- and like spells the bare list is refused.
 func TestItemSearchPagesEquipmentAndMagicItems(t *testing.T) {
+	t.Parallel()
 	r, session, _, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
 
 	search := func(query string) catalogapi.ItemSearchResult {
@@ -503,12 +522,62 @@ func TestItemSearchPagesEquipmentAndMagicItems(t *testing.T) {
 	if rec := send(t, r, session, http.MethodGet, "/v1/catalog/items", nil); rec.Code != http.StatusBadRequest {
 		t.Errorf("plain collection = %d, want 400", rec.Code)
 	}
+
+	// The sheet's two tabs each ask for their own half: with a slot, without.
+	everything := search("limit=1").Total
+	worn, carried := search("wearable=true&limit=200"), search("wearable=false&limit=1")
+	if worn.Total == 0 || carried.Total == 0 || worn.Total+carried.Total != everything {
+		t.Errorf("wearable %d + carried %d, want both and a sum of %d", worn.Total, carried.Total, everything)
+	}
+	has := func(query, slug string) bool {
+		return slices.ContainsFunc(search(query+"&limit=200").Items, func(hit catalogapi.ItemHit) bool { return hit.Slug == slug })
+	}
+	if !has("wearable=true&q=shield", "shield") || !has("wearable=true&q=longsword", "longsword") ||
+		has("wearable=true&q=rope", "rope-hempen-50-feet") || !has("wearable=false&q=rope", "rope-hempen-50-feet") {
+		t.Errorf("a shield and a longsword are worn and rope is carried; the search disagrees")
+	}
+
+	// Category and magic narrow further, and a hit carries what a row shows.
+	armor := search("wearable=true&category=armor&magic=false&limit=200")
+	if armor.Total == 0 || armor.Total >= worn.Total {
+		t.Fatalf("mundane armor = %d of %d wearables, want some and fewer", armor.Total, worn.Total)
+	}
+	for _, hit := range armor.Items {
+		if hit.Category != "armor" || hit.CategoryName != "Armor" || hit.Magic || hit.Cost == nil {
+			t.Errorf("mundane armor hit = %+v", hit)
+		}
+	}
+	if potions := search("magic=true&category=potion&limit=1"); potions.Total == 0 || !potions.Items[0].Magic {
+		t.Errorf("magic potions = %+v, want some, each marked magic", potions)
+	}
+
+	// The category options follow the wearable scope and nothing else, so
+	// picking one does not empty the list it was picked from.
+	names := func(page catalogapi.ItemSearchResult) (out []string) {
+		for _, c := range page.Categories {
+			out = append(out, c.Slug)
+		}
+		return out
+	}
+	if got := names(armor); !slices.Equal(got, names(worn)) || !slices.Contains(got, "weapon") {
+		t.Errorf("categories under a category filter = %v, want the scope's %v", got, names(worn))
+	}
+	if slices.Contains(names(worn), "potion") || !slices.Contains(names(carried), "potion") {
+		t.Errorf("potion: wearable %v, carried %v; want only carried", names(worn), names(carried))
+	}
+
+	for _, bad := range []string{"wearable=maybe&limit=1", "magic=2&limit=1"} {
+		if rec := send(t, r, session, http.MethodGet, "/v1/catalog/items?"+bad, nil); rec.Code != http.StatusBadRequest {
+			t.Errorf("?%s = %d, want 400", bad, rec.Code)
+		}
+	}
 }
 
 // A build screen pages through what one character may pick. The offer goes in
 // a body because it can name every spell in the rules; what comes back is one
 // page of it.
 func TestSpellSearchOverAnOffer(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	search := func(body map[string]any) catalogapi.SpellSearchResult {
 		t.Helper()
@@ -555,6 +624,7 @@ func TestSpellSearchOverAnOffer(t *testing.T) {
 // The whole build flow through the API, in the shape a client actually sends
 // it: read the prompts, answer one, read the prompts again.
 func TestCharacterBuildFlow(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	rec := send(t, r, session, http.MethodPost, "/v1/characters", map[string]any{
@@ -667,6 +737,7 @@ func TestCharacterBuildFlow(t *testing.T) {
 // client reads directly -- so the shape of what it returns is a contract, not
 // an implementation detail.
 func TestEventsReturnsTheLog(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 
@@ -753,6 +824,7 @@ func readLog(t *testing.T, r *gin.Engine, session *http.Cookie, id string) *http
 // against a sequence that has moved must be told rather than silently
 // discarding whatever moved it.
 func TestAppendRejectsAStaleSequence(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 
@@ -771,6 +843,7 @@ func TestAppendRejectsAStaleSequence(t *testing.T) {
 // A bad answer names the prompt it failed on, so a client can point at the
 // control that produced it rather than showing a banner.
 func TestBadAnswerIsAFieldError(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 
@@ -808,45 +881,8 @@ func TestBadAnswerIsAFieldError(t *testing.T) {
 	}
 }
 
-// Undo, and the one thing undo may never do.
-func TestTruncateUndoesAndProtectsInit(t *testing.T) {
-	r, session := newFullRouter(t)
-	id := createCharacter(t, r, session)
-
-	send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
-		"expectedSeq": 1,
-		"events":      []map[string]any{{"type": "race", "ref": "race:half-elf"}},
-	})
-
-	rec := send(t, r, session, http.MethodDelete,
-		"/v1/characters/"+id+"/events?after=1&expectedSeq=2", nil)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("truncate = %d, want 200: %s", rec.Code, rec.Body)
-	}
-	written := decode[characterapi.WriteResponse](t, rec)
-	if written.Seq != 1 {
-		t.Errorf("seq = %d, want 1", written.Seq)
-	}
-	if written.Sheet.Identity.Race != "" {
-		t.Errorf("race = %q, want it undone", written.Sheet.Identity.Race)
-	}
-
-	rec = send(t, r, session, http.MethodDelete, "/v1/characters/"+id+"/events?after=0&expectedSeq=1", nil)
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("dropping the init event = %d, want 400", rec.Code)
-	}
-
-	// Both parameters are required: a truncation with no expected sequence
-	// is a deletion with no concurrency check.
-	rec = send(t, r, session, http.MethodDelete, "/v1/characters/"+id+"/events?after=1", nil)
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("truncate without expectedSeq = %d, want 400", rec.Code)
-	}
-}
-
-// The route pair that makes a choice changeable, over HTTP: replace one entry
-// by position, see what it cost, and see it not cost anything until asked.
 func TestReplaceAndDeleteAnEntry(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 
@@ -922,6 +958,7 @@ func TestReplaceAndDeleteAnEntry(t *testing.T) {
 
 // The guards on the route: the position, the concurrency token, and the flag.
 func TestReplaceGuards(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 
@@ -991,6 +1028,7 @@ func TestReplaceGuards(t *testing.T) {
 }
 
 func TestListAndDelete(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 
@@ -1077,6 +1115,7 @@ func errorCode(t *testing.T, rec *httptest.ResponseRecorder) string {
 // notices an endpoint declared one line above the guarded group, which is the
 // failure the router's own comment warns about.
 func TestCharacterRoutesRequireASession(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 
@@ -1092,7 +1131,6 @@ func TestCharacterRoutesRequireASession(t *testing.T) {
 		{http.MethodGet, "/v1/characters/" + id + "/prompts"},
 		{http.MethodGet, "/v1/characters/" + id + "/events"},
 		{http.MethodPost, "/v1/characters/" + id + "/events"},
-		{http.MethodDelete, "/v1/characters/" + id + "/events?after=1&expectedSeq=1"},
 		{http.MethodPut, "/v1/characters/" + id + "/events/1"},
 		{http.MethodDelete, "/v1/characters/" + id + "/events/1?expectedSeq=1"},
 		{http.MethodGet, "/v1/catalog"},
@@ -1122,6 +1160,7 @@ func TestCharacterRoutesRequireASession(t *testing.T) {
 // read it, write to it or delete it -- and must not be able to learn that it
 // exists, which is why the answer is 404 rather than 403.
 func TestAnotherAccountCannotReachTheCharacter(t *testing.T) {
+	t.Parallel()
 	r, session, ceremony := newFullRouterWithCeremony(t)
 	id := createCharacter(t, r, session)
 
@@ -1143,7 +1182,6 @@ func TestAnotherAccountCannotReachTheCharacter(t *testing.T) {
 			http.MethodPost, "/v1/characters/" + id + "/events",
 			map[string]any{"expectedSeq": 1, "events": []map[string]any{{"type": "note", "note": "mine"}}},
 		},
-		{http.MethodDelete, "/v1/characters/" + id + "/events?after=1&expectedSeq=1", nil},
 		{
 			http.MethodPut, "/v1/characters/" + id + "/events/1",
 			map[string]any{"expectedSeq": 1, "event": map[string]any{"type": "init"}},
@@ -1180,6 +1218,7 @@ func newFullRouterAsGuest(t *testing.T) (*gin.Engine, *http.Cookie) {
 // A guest owns characters like anybody else. Nothing in the character path
 // touches the account store, and this is what proves it stays that way.
 func TestGuestCanCreateAndListCharacters(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouterAsGuest(t)
 
 	created := send(t, r, session, http.MethodPost, "/v1/characters", map[string]any{"name": "Ghost"})
@@ -1207,6 +1246,7 @@ func TestGuestCanCreateAndListCharacters(t *testing.T) {
 // Two guests are two owners. They share no row, so the only thing keeping them
 // apart is the id in the token.
 func TestGuestsDoNotSeeEachOthersCharacters(t *testing.T) {
+	t.Parallel()
 	r, first := newFullRouterAsGuest(t)
 	second := guest(t, r, helpers.CookieOptions{Secure: false})
 
@@ -1231,6 +1271,7 @@ func TestGuestsDoNotSeeEachOthersCharacters(t *testing.T) {
 }
 
 func TestSavedEquipmentSelectionsPreserveBundleQuantities(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
@@ -1257,6 +1298,7 @@ func TestSavedEquipmentSelectionsPreserveBundleQuantities(t *testing.T) {
 }
 
 func TestPromptEditPreviewDoesNotWrite(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
@@ -1286,6 +1328,7 @@ func TestPromptEditPreviewDoesNotWrite(t *testing.T) {
 }
 
 func TestReviseEventsAtomically(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 	id := createCharacter(t, r, session)
 	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
@@ -1330,5 +1373,55 @@ func TestReviseEventsAtomically(t *testing.T) {
 	rec = send(t, r, nil, http.MethodPost, path, payload)
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated = %d", rec.Code)
+	}
+}
+
+// A note is written through custom-options and deleted through it too; the
+// delete names the revision in the query, a DELETE having no body.
+func TestCustomNoteIsDeletedThroughItsRoute(t *testing.T) {
+	t.Parallel()
+	r, session := newFullRouter(t)
+	created := send(t, r, session, http.MethodPost, "/v1/characters", map[string]any{"name": "Scribe"})
+	if created.Code != http.StatusCreated && created.Code != http.StatusOK {
+		t.Fatalf("create = %d: %s", created.Code, created.Body)
+	}
+	id := decode[struct {
+		ID string `json:"id"`
+	}](t, created).ID
+	base := "/v1/characters/" + id + "/custom-options"
+	type listing struct {
+		Revision int `json:"revision"`
+		Options  []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"options"`
+	}
+	list := func() listing { return decode[listing](t, send(t, r, session, http.MethodGet, base, nil)) }
+
+	added := send(t, r, session, http.MethodPost, base, map[string]any{
+		"revision": list().Revision,
+		"option":   map[string]any{"kind": "note", "name": "Backstory", "description": "Born at sea.", "selected": true},
+	})
+	if added.Code != http.StatusOK {
+		t.Fatalf("add = %d: %s", added.Code, added.Body)
+	}
+	now := list()
+	if len(now.Options) != 1 || now.Options[0].Name != "Backstory" {
+		t.Fatalf("options = %+v, want the note", now.Options)
+	}
+	one := base + "/" + now.Options[0].ID
+	for query, want := range map[string]int{
+		"": http.StatusBadRequest,
+		"?revision=" + strconv.Itoa(now.Revision+7): http.StatusBadRequest,
+	} {
+		if rec := send(t, r, session, http.MethodDelete, one+query, nil); rec.Code != want {
+			t.Errorf("DELETE %q = %d, want %d", query, rec.Code, want)
+		}
+	}
+	if rec := send(t, r, session, http.MethodDelete, one+"?revision="+strconv.Itoa(now.Revision), nil); rec.Code != http.StatusOK {
+		t.Fatalf("delete = %d: %s", rec.Code, rec.Body)
+	}
+	if left := list(); len(left.Options) != 0 {
+		t.Errorf("after delete = %+v, want none", left.Options)
 	}
 }

@@ -3,7 +3,6 @@
 BINARY      := easydnd
 MODULE      := github.com/promix1722/easydnd
 CMD         := ./cmd/$(BINARY)
-BIN_DIR     := bin
 SRD_DIR     := data/pack/srd-5.1
 DEV_CONFIG  := config.dev.yaml
 
@@ -125,40 +124,32 @@ PREVIEW_URL         := $(if $(PUBLIC_HOST),https://$(PUBLIC_HOST):$(PREVIEW_PUBL
 help:
 	@grep -hE '^## ' $(MAKEFILE_LIST) | sed 's/^## /  /'
 
-## build/server: build the API binary into bin/
-build/server:
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY) $(CMD)
-
 ## build/release: build exactly what CI ships (linux/amd64, static)
 build/release:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BINARY) $(CMD)
 
-## run/server: run the API in development mode, no database
-run/server:
-	@$(call dev_env,$(API_PORT),$(DEV_ORIGINS),); \
-	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_CONFIG)
-
-## test/unit: run the test suite (~4s)
+## test/unit: run the test suite (~60s cold, ~3s with the test cache warm)
 # No -race here, and that is a deliberate trade rather than an oversight: the
-# detector costs roughly 9s against 4s, and it used to cost 46s against 10s
-# before the compendium sharing below. A gate slow enough to be worth skipping
-# stops being a gate, and since nothing runs on main this is the only one there
-# is.
+# detector multiplies the cold minute several times over. A gate slow enough
+# to be worth skipping stops being a gate, and since nothing runs on main this
+# is the only one there is.
 #
 # The detector is not gone, it has moved off the path everybody walks. Run
 # `make test/race` before tagging. See docs/backend.md#tests.
 test/unit:
 	go test ./...
 
-## test/race: the whole suite under the race detector (~9s) -- not in `verify`
-# atexit_sleep_ms=0 is most of why this is nine seconds and not twenty-five.
-# The race runtime sleeps a full second at the exit of every test binary by
-# default, which across sixteen test packages is sixteen seconds of an idle
-# machine. What the sleep buys is a last chance to check a goroutine still
-# running when main returns; nothing here leaves one, because the HTTP tests
-# drive httptest in-process and synchronously and internal/app -- which owns
-# the only real server lifecycle -- has no tests at all. A race *during* a test
-# is reported exactly as it was before, which is what this target is for.
+## test/race: the whole suite under the race detector (minutes) -- not in `verify`
+# atexit_sleep_ms=0 takes back a second per test binary: the race runtime
+# sleeps a full second at the exit of each one by default, which across the
+# test packages here is a quarter of a minute of an idle machine. What the
+# sleep buys is a last chance to check a goroutine still running when main
+# returns; nothing here leaves one, because the HTTP tests drive httptest
+# in-process and synchronously and internal/app builds its server without
+# listening. A race *during* a test is reported exactly as it was before,
+# which is what this target is for. The catalogue adapter's package is most
+# of the cost: its tests run in parallel, and the detector slows each by
+# roughly ten times.
 test/race:
 	GORACE=atexit_sleep_ms=0 go test -race ./...
 
@@ -285,11 +276,6 @@ ports:
 	@echo "slot $(if $(SLOT),$(SLOT),<unclaimed>)  web $(WEB_PORT)  api $(API_PORT)  pg $(PG_PORT)  compose $(COMPOSE_PROJECT)"
 	@echo "open $(if $(WEB_PUBLIC_URL),$(WEB_PUBLIC_URL),http://127.0.0.1:$(WEB_PORT))"
 
-## test/cover: run tests and summarise coverage
-test/cover:
-	go test -coverprofile=coverage.out ./...
-	go tool cover -func=coverage.out | tail -1
-
 ## pack/check: load the hand-maintained SRD pack through the real loader
 # The pack is edited by hand, so there is nothing to regenerate and diff; the
 # gate is the same validation the server runs at startup -- schema, every
@@ -319,13 +305,13 @@ fmt:
 
 ## fmt/check: fail if any file is unformatted (mirrors CI)
 fmt/check:
-	@test -z "$$(gofmt -l .)" || { gofmt -l .; exit 1; }
+	@test -z "$$(gofmt -l cmd internal)" || { gofmt -l cmd internal; exit 1; }
 
 ## vet: run go vet (mirrors CI)
 vet:
 	go vet ./...
 
-## lint: run golangci-lint without adding it to go.mod
+## lint: run golangci-lint without adding it to go.mod (mirrors CI)
 lint:
 	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...
 
@@ -367,7 +353,7 @@ web/icons:
 	cd web && npm run icons
 
 ## web/icons/check: fail if the committed icons differ from the generator
-# Not a `diff -rq` like pack/check, and for a specific reason: the PNG
+# Not a `diff -rq`, and for a specific reason: the PNG
 # encoder's zlib output is deterministic for a given zlib but is not promised
 # to be stable across Node versions, so a byte diff would go red on a machine
 # whose Node differs from CI's -- failing for a reason that has nothing to do
@@ -383,10 +369,6 @@ web/icons/check:
 ## web/release: build exactly what CI ships to the server
 web/release: web/build
 	tar -czf web.tar.gz -C web/dist .
-
-## image/generate: generate one 128px WebP (manual, costs OpenAI credit)
-image/generate:
-	go run ./cmd/spellicon $(IMAGE_FLAGS)
 
 ## spell-icons: generate the per-spell icons -- manual, costs OpenAI credit
 # Three steps: build the prompts from the SRD, generate 1024px PNGs into a
@@ -435,17 +417,11 @@ translate/ru:
 	  -reasoning $(TRANSLATE_REASONING) \
 	  -to ru $(TRANSLATE_FLAGS)
 
-# The standalone spellicon usecase owns its provider HTTP calls by design.
-# Excluding its root still catches any other usecase that imports it transitively.
 ## lint/layers: fail if the inner layers reach for transport or storage
 lint/layers:
-	@! go list -deps $$(go list ./internal/domain/... ./internal/usecase/... \
-	  | grep -v '^github.com/promix1722/easydnd/internal/usecase/spellicon$$') \
+	@! go list -deps ./internal/domain/... ./internal/usecase/... \
 	  | grep -E 'gin-gonic|^net/http$$|^database/sql$$|jackc/pgx|pressly/goose' \
 	  || { echo "LAYER VIOLATION: inner layers must not import transport or storage"; exit 1; }
-	@! go list -deps ./internal/usecase/spellicon \
-	  | grep -E 'gin-gonic|^database/sql$$|jackc/pgx|pressly/goose' \
-	  || { echo "LAYER VIOLATION: standalone icon generation must not import server frameworks or storage"; exit 1; }
 	@echo "layers clean"
 
 ## tidy: sync go.mod and go.sum
@@ -459,12 +435,17 @@ tidy:
 # separate jobs; this is the same arrangement locally.
 #
 # The order of the goals is the schedule. `make -j` starts them left to right
-# as slots come free, so `web/test` -- fifteen seconds against six for
-# everything else put together -- has to be named first. Left where it was, it
-# lands in the last slot and `verify` costs its length plus everything that ran
-# before it, which is most of what the serial version was paying for. Named
-# first, the rest of the run happens inside its shadow and `verify` costs about
-# what `web/test` costs.
+# as slots come free, so `web/test` -- about forty seconds -- is named first
+# and everything small happens inside its shadow. Left at the end it would land
+# in the last slot and `verify` would cost its length plus everything that ran
+# before it, which is most of what the serial version was paying for.
+#
+# `test/unit` runs AFTER that group, alone, and that is measured rather than
+# tidy. Both it and vitest now use every core -- the heavy Go packages run
+# their tests in parallel -- and side by side they thrash: a cold suite that
+# takes 60s alone took 100s beside vitest, and vitest's 40s became 167s, for
+# 184s in all. One after the other is 40s + 60s cold and 40s + 3s with a warm
+# test cache, and the second number is the one a developer sees most.
 #
 # -j2 rather than a bare -j: one of those two jobs is vitest, which forks
 # `availableParallelism - 1` workers of its own, so two make jobs is already the
@@ -481,20 +462,21 @@ tidy:
 VERIFY_JOBS ?= 2
 verify:
 	@$(MAKE) --no-print-directory -j$(VERIFY_JOBS) --output-sync=target \
-	  web/test web/build web/lint vet test/unit build/release pack/check data/lint/check \
-	  web/icons/check fmt/check lint/layers
+	  web/test web/build web/lint vet build/release pack/check data/lint/check \
+	  web/icons/check fmt/check lint/layers lint
+	@$(MAKE) --no-print-directory test/unit
 
 ## clean: remove build artefacts
 clean:
 # Not .dev-slot: that is this worktree's identity, and deleting it would move
 # the address you reach it on.
-	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist
+	rm -rf $(BINARY) web.tar.gz web/dist web/dev-dist
 
-.PHONY: help build/server build/release run/server run/db test/unit test/race test/cover \
+.PHONY: help build/release run/db test/unit test/race \
         dev dev/up dev/down slots ports \
         preview preview/up \
         db/up db/down db/psql test/db \
         pack/check data/lint data/lint/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \
         web/deps web/dev web/lint web/test web/check web/build web/release \
-        web/icons web/icons/check spell-icons image/generate
+        web/icons web/icons/check spell-icons

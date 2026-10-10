@@ -186,6 +186,10 @@ type SpellBenefit struct {
 	From        string   `json:"from,omitempty"`
 	Spells      []string `json:"spells,omitempty"`
 	CountsKnown bool     `json:"countsKnown,omitempty"`
+	List        string   `json:"list,omitempty"`
+	ListFrom    string   `json:"listFrom,omitempty"`
+	Schools     []string `json:"schools,omitempty"`
+	Ritual      bool     `json:"ritual,omitempty"`
 }
 
 type ChoiceRequirement struct {
@@ -223,7 +227,7 @@ func (w PackMechanics) domain(prose, actionProse Bundle) (catalog.Mechanics, err
 		out.ChoiceRequirements = append(out.ChoiceRequirements, catalog.ChoiceRequirement{Prompt: rules.Slug(r.Prompt), Pick: rules.Slug(r.Pick), AnyProficiency: slugs(r.AnyProficiency)})
 	}
 	for _, b := range w.SpellBenefits {
-		out.SpellBenefits = append(out.SpellBenefits, catalog.SpellBenefit{Ability: c.ability(b.Ability), ID: rules.Slug(b.ID), Owner: c.ref(b.Owner), Class: rules.Slug(b.Class), Level: b.Level, Count: b.Count, SpellLevel: b.SpellLevel, Mode: b.Mode, From: b.From, Spells: slugs(b.Spells), CountsKnown: b.CountsKnown})
+		out.SpellBenefits = append(out.SpellBenefits, catalog.SpellBenefit{Ability: c.ability(b.Ability), ID: rules.Slug(b.ID), Owner: c.ref(b.Owner), Class: rules.Slug(b.Class), Level: b.Level, Count: b.Count, SpellLevel: b.SpellLevel, Mode: b.Mode, From: b.From, Spells: slugs(b.Spells), CountsKnown: b.CountsKnown, List: rules.Slug(b.List), ListFrom: rules.Slug(b.ListFrom), Schools: slugs(b.Schools), Ritual: b.Ritual})
 	}
 	for _, w := range w.Resources {
 		d := catalog.ResourceDefinition{RequiresSubclass: w.RequiresSubclass, Entry: entry(w.ID, prose), Owner: c.ref(w.Owner), MinimumLevel: w.MinimumLevel, Kind: w.Kind, Input: w.Input, SharedKey: rules.Slug(w.SharedKey), Combine: w.Combine, Group: w.Group}

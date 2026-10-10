@@ -2,7 +2,9 @@ package file
 
 import (
 	"fmt"
+
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 

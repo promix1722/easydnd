@@ -10,10 +10,14 @@
 // the codebase that widens a character's visibility beyond its owner.
 //
 // It is deliberately the only thing. character.Service.owned is untouched, so
-// every path that writes to a log is still owner-only by construction rather
-// than by anybody remembering to check -- and the new rule is a separate
-// function returning a separate answer, which is what stops the two from being
-// confused later.
+// every path of the character service that writes to a log is still owner-only
+// by construction rather than by anybody remembering to check -- and the new
+// rule is a separate function returning a separate answer, which is what stops
+// the two from being confused later.
+//
+// One file here does write to a character its actor does not own: items.go,
+// what a table hands over. It is granted by a seat at a game, not by
+// `readable`, and it writes a backpack count or a coin and nothing else.
 //
 // The service owns both aggregates for the reason character.Service owns
 // folders as well as characters: a game's roster may only contain characters
@@ -51,19 +55,33 @@ type Service struct {
 	// clock is injected so a test can predict the timestamps a share and a
 	// roster entry are stamped with. Nil means the real clock; see now.
 	clock func() time.Time
+
+	// superadmin reports whether an account may read every sheet. Nil means
+	// nobody may.
+	superadmin func(context.Context, user.ID) bool
+
+	limits types.Limits
 }
+
+// SetLimits replaces the limits this service enforces; it starts with
+// types.DefaultLimits.
+func (s *Service) SetLimits(l types.Limits) { s.limits = l }
+
+// SetSuperadmin installs the predicate readable consults last.
+func (s *Service) SetSuperadmin(is func(context.Context, user.ID) bool) { s.superadmin = is }
 
 // NewService wires a Service over the two new stores and the three aggregates
 // they refer to.
 //
 // It takes the group store rather than the group service because the only
-// thing it needs is a rank, which is one query -- and because a usecase
-// reaching into another usecase is a dependency this architecture does not
-// have anywhere else. It takes the character store and the catalogue for the
-// same reason: character.Summarize and character.Project are pure functions of
-// a log and a compendium, so rendering a shared sheet needs neither the
-// character service nor its ownership rule, which is exactly the rule that
-// must not apply here.
+// thing it needs is a rank, which is one query, and a service would bring its
+// own authorization with it. It takes the character store and the catalogue
+// for the same reason: character.Summarize and character.Project are pure
+// functions of a log and a compendium, so rendering a shared sheet needs
+// neither the character service nor its ownership rule, which is exactly the
+// rule that must not apply here. GrantCustomItem borrows two pure functions
+// from the character usecase package -- UpsertCustom and CheckSheet -- and
+// still not its Service.
 func NewService(
 	games domain.Repository,
 	shared domain.SharedRepository,
@@ -73,6 +91,7 @@ func NewService(
 	log *slog.Logger,
 ) *Service {
 	return &Service{
+		limits:     types.DefaultLimits,
 		games:      games,
 		shared:     shared,
 		groups:     groups,
@@ -115,8 +134,11 @@ func (s *Service) member(
 // readable fetches a character the actor is allowed to see, and is the only
 // function in the codebase that lets anybody but an owner see one.
 //
-// Two ways in: you own it, or it is shared into a group you belong to. The
-// refusal is a NotFoundError in both cases, matching character.owned exactly
+// Four ways in: you own it, its owner opened it, it is shared into a group
+// you run -- as its DM or its owner -- or you are a superadmin, who may read
+// every sheet and still change none. A player at that table reads it only
+// once it is opened. The
+// refusal is a NotFoundError in every case, matching character.owned exactly
 // -- a character id is a short counter, and a 403 on one that is not yours
 // would say it exists.
 //
@@ -146,11 +168,19 @@ func (s *Service) readable(
 		return character.Character{}, err
 	}
 	for _, g := range groups {
-		if _, err := s.groups.MemberRole(ctx, g, actor); err == nil {
-			return c, nil
+		// Sharing seats a character at a table; it does not open the sheet
+		// to the table. Only whoever runs it reads a closed one.
+		if role, err := s.groups.MemberRole(ctx, g, actor); err == nil {
+			if role.AtLeast(group.RoleDM) {
+				return c, nil
+			}
 		} else if !types.IsNotFound(err) {
 			return character.Character{}, err
 		}
+	}
+	// Asked last, so the common reads above never pay for the account lookup.
+	if s.superadmin != nil && s.superadmin(ctx, actor) {
+		return c, nil
 	}
 	return character.Character{}, types.NewNotFoundError("character %q", id).Because("character.notFound")
 }
@@ -159,9 +189,8 @@ func (s *Service) readable(
 //
 // This is the whole point of sharing: a DM opens it to run the character, and
 // a player opens a friend's to see what they are playing beside. It is read
-// only, and there is no writing counterpart anywhere in this package -- every
-// write still goes through the character service, which still refuses anybody
-// but the owner.
+// only: being able to read a sheet never grants a write to it. The writes
+// this package does make are items.go's, and a seat at a game grants those.
 func (s *Service) Sheet(
 	ctx context.Context, actor user.ID, id character.ID, locale rules.Locale,
 ) (character.State, error) {
@@ -182,6 +211,8 @@ func (s *Service) SheetWithCatalog(
 	if err != nil {
 		return character.State{}, nil, err
 	}
+	// The sheet's own items are part of what a reader is shown.
+	cat = character.WithCustomCatalog(c.Log, cat)
 	state, err := character.Project(c.Log, cat)
 	return state, cat, err
 }
@@ -210,7 +241,9 @@ func (s *Service) summarize(
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, character.Summarize(c.ID, c.Owner, c.Folder, c.Log, cat))
+		sum := character.Summarize(c.ID, c.Owner, c.Folder, c.Log, cat)
+		sum.Public = c.Public
+		out = append(out, sum)
 	}
 	return out, nil
 }
@@ -221,5 +254,9 @@ func (s *Service) CharacterCatalog(ctx context.Context, actor user.ID, id charac
 	if err != nil {
 		return nil, err
 	}
-	return catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
+	cat, err := catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
+	if err != nil {
+		return nil, err
+	}
+	return character.WithCustomCatalog(c.Log, cat), nil
 }

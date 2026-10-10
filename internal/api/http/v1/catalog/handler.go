@@ -3,11 +3,15 @@ package catalog
 import (
 	"context"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"log/slog"
+	"maps"
+	"slices"
 	"strings"
 	"sync"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
 
 	domain "github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -72,6 +76,7 @@ const (
 	CollectionMagicItems          = "magic-items"
 	CollectionSpells              = "spells"
 	CollectionTerms               = "terms"
+	CollectionItemIcons           = "item-icons"
 	// CollectionItems is not a collection of its own: it is equipment and magic
 	// items searched together, by name, a page at a time. It is served only with
 	// search parameters, for the same reason spells are never served whole --
@@ -147,6 +152,14 @@ func entries(c converter, collection string) (any, bool) {
 		return mapAll(cat.Spells.All(), c.spellSummary), true
 	case CollectionTerms:
 		return mapAll(cat.Terms.All(), c.termEntry), true
+	case CollectionItemIcons:
+		// Not in Collections: it is the palette a custom item's icon is picked
+		// from, asked for when that picker opens, and no manifest lists it.
+		icons := make([]Item, 0, len(cat.ItemIcons))
+		for _, label := range slices.Sorted(maps.Keys(cat.ItemIcons)) {
+			icons = append(icons, Item{Entry: Entry{Slug: label}, Icon: cat.ItemIcons[label]})
+		}
+		return icons, true
 	}
 	return nil, false
 }

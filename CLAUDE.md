@@ -10,7 +10,7 @@
   a refactor that keeps behaviour, but whenever a change moves a rule, a route,
   a config key, a layer boundary or a deploy step, the matching page in `docs/`
   is part of that change and not a follow-up: `docs/dnd.md` for the game model,
-  `docs/backend.md` for the service, `docs/web.md` for the client,
+  `docs/backend.md` for the service, `docs/web.md` and the files under `docs/web/` for the client,
   `docs/licensing.md` for anything about the SRD data's terms. These documents
   explain *why*, so a stale one is worse than a missing one -- it argues for a
   design the code no longer has.
@@ -44,9 +44,7 @@
   compares decoded pixels rather than bytes, because zlib output is not stable
   across Node versions.
 - Layer rules are enforced, not advisory: `make lint/layers` for Go,
-  `npm run lint:layers` for the web client. Inner layers import no framework. The standalone `internal/usecase/spellicon`
-  generator owns outbound HTTP; it is excluded only from the HTTP dependency
-  restriction and must not be imported by other usecases.
+  `npm run lint:layers` for the web client. Inner layers import no framework.
 - Configuration is a committed YAML per environment -- `config.dev.yaml`,
   `config.prod.yaml` -- and **no secret goes in either**. Secrets come from an
   env file the process never reads itself: `~/config/easydnd/dev.env` (loaded

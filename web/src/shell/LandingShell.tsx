@@ -1,10 +1,9 @@
-import { Outlet } from 'react-router'
-
 import { AppShell, Group, PAGE_BACKDROP } from '@/ui'
 
 import { HEADER_BOX, SAFE_BOTTOM, SAFE_TOP } from './chrome'
 import { LandingFooter } from './LandingFooter'
 import { SignInActions } from './SignInActions'
+import { RouteOutlet } from './RouteOutlet'
 import { Wordmark } from './Wordmark'
 
 /**
@@ -53,7 +52,7 @@ export function LandingShell() {
           than the argument, and at 88% wash what shows through the slide gap is
           texture rather than a picture. */}
       <AppShell.Main style={PAGE_BACKDROP}>
-        <Outlet />
+        <RouteOutlet />
       </AppShell.Main>
 
       <AppShell.Footer>

@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
-	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -218,12 +216,7 @@ func TestSourceScoresAndInventoryCountsSurviveBatchTools(t *testing.T) {
 }
 
 func TestImportedClassUsesSelectedPackNamespaceAndSurvivesEditing(t *testing.T) {
-	path := filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")
-	base, err := catalogfile.LoadPack(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	registry, err := catalogfile.NewRegistry([]string{path}, []catalogfile.Dependency{{ID: "dnd-2014", Version: base.Manifest.Version}}, "", catalogfile.PackFolder{Path: path, ID: "dnd-2014"})
+	registry, err := namespacedRegistry()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,5 +278,36 @@ func TestImportedClassUsesSelectedPackNamespaceAndSurvivesEditing(t *testing.T) 
 		if dropped.Type == domain.EventClass || dropped.Type == domain.EventSubclass {
 			t.Fatalf("imported class dropped: %+v", dropped)
 		}
+	}
+}
+
+// A sheet that says "Dungeoneer's Pack" is carrying what is in one. The pack
+// is opened, as it is when a class grants it, and a line the sheet has of its
+// own -- seven torches left of the ten -- stands whichever side of the pack it
+// is printed on.
+func TestSetInventoryOpensAnEquipmentPack(t *testing.T) {
+	model := &script{turns: [][]agentuc.AgentCall{{
+		call("plan", "plan_import", `{"expected":["identity.name"],"scores":{"str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10}}`),
+		call("facts", "import_facts", `{"facts":[{"path":"identity.name","value":"Hero"}]}`),
+		call("gear", "set_inventory", `{"items":[{"name":"Torch","count":7},{"name":"Dungeoneer's Pack"},{"name":"Crowbar","count":2}]}`),
+		call("done", "prepare_review", `{"text":"Ready","allow_incomplete":true}`),
+	}}}
+	a := agentuc.NewAgent(newService(t), answering{model}, agentuc.AgentConfig{Workers: 1})
+	defer a.Close()
+	s, err := a.Create(context.Background(), testOwner, "", rules.DefaultLocale, agentFile(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s = waitAgent(t, a, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "review" })
+	sheet, err := a.Sheet(context.Background(), s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	counts := map[rules.Slug]int{}
+	for _, stack := range sheet.Equipment.Backpack {
+		counts[stack.Item] += stack.Count
+	}
+	if _, whole := counts["dungeoneers-pack"]; whole || counts["backpack"] != 1 || counts["torch"] != 7 || counts["crowbar"] != 2 || counts["rations-1-day"] != 10 {
+		t.Fatalf("pack not opened, or the sheet's own counts lost: %+v\n%s", sheet.Equipment.Backpack, model.output("gear"))
 	}
 }

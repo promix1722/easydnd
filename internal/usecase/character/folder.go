@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -43,6 +44,14 @@ func (s *Service) CreateFolder(
 	name, err := validateFolderName(name)
 	if err != nil {
 		return domain.Folder{}, err
+	}
+	// ponytail: count, then insert; see CheckCharacterLimit.
+	held, err := s.folders.List(ctx, owner)
+	if err != nil {
+		return domain.Folder{}, err
+	}
+	if len(held) >= s.limits.Folders {
+		return domain.Folder{}, types.LimitReached("folders", s.limits.Folders)
 	}
 	return s.folders.Create(ctx, owner, name)
 }
@@ -162,12 +171,12 @@ func (s *Service) MoveCharacter(
 // A zero target folder means "beside the original", which is what a Copy button
 // on a row is asking for.
 //
-// The copy is built the way an import is -- create, then append the whole log
-// at sequence zero -- and its new name arrives as one more appended event
-// rather than as an edit of the init event it came with. That is not
-// fastidiousness: the log's invariant is append, or drop a suffix, never edit
-// the middle, and a copy that rewrote its own history would be the one record
-// in the system that broke it.
+// The copy is built the way an import is -- stored with its whole log in one
+// write -- and its new name arrives as one more appended event rather than as
+// an edit of the init event it came with. That is not fastidiousness: the
+// log's invariant is append, or replace an entry and revalidate what follows,
+// never edit the middle, and a copy that rewrote its own history would be the
+// one record in the system that broke it.
 func (s *Service) CopyCharacter(
 	ctx context.Context,
 	owner domain.OwnerID,
@@ -179,6 +188,32 @@ func (s *Service) CopyCharacter(
 	if err != nil {
 		return domain.Character{}, err
 	}
+	if target.IsZero() {
+		target = source.Folder
+	}
+	return s.copyTo(ctx, source, cat, owner, target, " (copy)")
+}
+
+// copyTo writes a duplicate of source into one of to's folders, the zero
+// folder meaning their default. suffix is appended to the copy's name, and an
+// empty one leaves the name alone.
+//
+// The pack check is against to, not against the source's owner: a copy is a
+// new character, and nobody gets one built on rules they could not have
+// chosen themselves.
+func (s *Service) copyTo(
+	ctx context.Context,
+	source domain.Character,
+	cat *catalog.Catalog,
+	to domain.OwnerID,
+	target domain.FolderID,
+	suffix string,
+) (domain.Character, error) {
+	// The limit is to's, like the pack check: a copy link fills the
+	// recipient's shelf, not the sender's.
+	if err := s.CheckCharacterLimit(ctx, to); err != nil {
+		return domain.Character{}, err
+	}
 	if s.packAccess != nil {
 		retained := pack.Lock{}
 		if private, ok := s.catalog.(interface {
@@ -186,19 +221,11 @@ func (s *Service) CopyCharacter(
 		}); ok {
 			retained = private.PrivateReleases(ctx, source.Log.RulesLock())
 		}
-		if err := s.packAccess.AuthorizeLock(ctx, user.ID(owner), source.Log.RulesLock(), retained); err != nil {
+		if err := s.packAccess.AuthorizeLock(ctx, user.ID(to), source.Log.RulesLock(), retained); err != nil {
 			return domain.Character{}, err
 		}
 	}
-	if target.IsZero() {
-		target = source.Folder
-	}
-	target, err = s.ResolveFolder(ctx, owner, target)
-	if err != nil {
-		return domain.Character{}, err
-	}
-
-	created, err := s.repo.Create(ctx, owner, target)
+	target, err := s.ResolveFolder(ctx, to, target)
 	if err != nil {
 		return domain.Character{}, err
 	}
@@ -211,13 +238,14 @@ func (s *Service) CopyCharacter(
 		e.Seq = 0
 		events = append(events, e)
 	}
-	if name := domain.Summarize(id, owner, source.Folder, source.Log, cat).Name; name != "" {
+	name := domain.Summarize(source.ID, source.Owner, source.Folder, source.Log, cat).Name
+	if name != "" && suffix != "" {
 		events = append(events, domain.Event{
 			Type: domain.EventChange,
 			Changes: []domain.Change{{
 				Path:  "identity.name",
 				Op:    domain.OpSet,
-				Value: domain.StringValue(name + " (copy)"),
+				Value: domain.StringValue(name + suffix),
 			}},
 		})
 	}
@@ -226,10 +254,8 @@ func (s *Service) CopyCharacter(
 	if err != nil {
 		return domain.Character{}, err
 	}
-	if err := s.repo.Commit(ctx, created.ID, 0, copied, "", nil); err != nil {
-		return domain.Character{}, err
-	}
-	return s.repo.Get(ctx, created.ID)
+	// One write, so a failed copy leaves nothing in the recipient's folder.
+	return s.repo.CreateWithLog(ctx, to, target, copied)
 }
 
 // resolveFolder turns a caller's folder into one owner definitely has: the

@@ -712,6 +712,114 @@
       "spells": [
         "minor-illusion"
       ]
+    },
+    {
+      "id": "magic-initiate-cantrips",
+      "owner": "feat:magic-initiate",
+      "level": 1,
+      "count": 2,
+      "spellLevel": 0,
+      "mode": "cantrip",
+      "from": "class",
+      "listFrom": "magic-initiate/class/0"
+    },
+    {
+      "id": "magic-initiate-spell",
+      "owner": "feat:magic-initiate",
+      "level": 1,
+      "count": 1,
+      "spellLevel": 1,
+      "mode": "known",
+      "from": "class",
+      "listFrom": "magic-initiate/class/0"
+    },
+    {
+      "id": "ritual-caster-rituals",
+      "owner": "feat:ritual-caster",
+      "level": 1,
+      "count": 2,
+      "spellLevel": 1,
+      "mode": "known",
+      "from": "class",
+      "listFrom": "ritual-caster/class/0",
+      "ritual": true
+    },
+    {
+      "id": "spell-sniper-cantrip",
+      "owner": "feat:spell-sniper",
+      "level": 1,
+      "count": 1,
+      "spellLevel": 0,
+      "mode": "cantrip",
+      "from": "class",
+      "listFrom": "spell-sniper/class/0"
+    },
+    {
+      "id": "fey-touched-spell",
+      "owner": "feat:fey-touched",
+      "level": 1,
+      "count": 1,
+      "spellLevel": 1,
+      "mode": "known",
+      "from": "any",
+      "schools": [
+        "divination",
+        "enchantment"
+      ]
+    },
+    {
+      "id": "shadow-touched-spell",
+      "owner": "feat:shadow-touched",
+      "level": 1,
+      "count": 1,
+      "spellLevel": 1,
+      "mode": "known",
+      "from": "any",
+      "schools": [
+        "illusion",
+        "necromancy"
+      ]
+    },
+    {
+      "id": "artificer-initiate-cantrip",
+      "owner": "feat:artificer-initiate",
+      "level": 1,
+      "count": 1,
+      "spellLevel": 0,
+      "mode": "cantrip",
+      "from": "class",
+      "list": "artificer"
+    },
+    {
+      "id": "artificer-initiate-spell",
+      "owner": "feat:artificer-initiate",
+      "level": 1,
+      "count": 1,
+      "spellLevel": 1,
+      "mode": "known",
+      "from": "class",
+      "list": "artificer"
+    },
+    {
+      "id": "wood-elf-magic-cantrip",
+      "owner": "feat:wood-elf-magic",
+      "level": 1,
+      "count": 1,
+      "spellLevel": 0,
+      "mode": "cantrip",
+      "from": "class",
+      "list": "druid"
+    },
+    {
+      "id": "acolyte-of-nature",
+      "owner": "feature:acolyte-of-nature",
+      "level": 1,
+      "count": 1,
+      "spellLevel": 0,
+      "mode": "cantrip",
+      "class": "cleric",
+      "from": "class",
+      "list": "druid"
     }
   ],
   "actions": [
@@ -2033,11 +2141,11 @@
           "capacity": 2
         },
         {
-          "from": 4,
+          "from": 5,
           "capacity": 3
         },
         {
-          "from": 6,
+          "from": 7,
           "capacity": 4
         },
         {
@@ -4034,34 +4142,100 @@
             "kind": "explicit",
             "options": [
               {
-                "kind": "ability-bonus",
-                "ability": "str",
-                "bonus": 1
+                "kind": "bundle",
+                "key": "str",
+                "items": [
+                  {
+                    "kind": "ability-bonus",
+                    "ability": "str",
+                    "bonus": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:saving-throw-str",
+                    "count": 1
+                  }
+                ]
               },
               {
-                "kind": "ability-bonus",
-                "ability": "dex",
-                "bonus": 1
+                "kind": "bundle",
+                "key": "dex",
+                "items": [
+                  {
+                    "kind": "ability-bonus",
+                    "ability": "dex",
+                    "bonus": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:saving-throw-dex",
+                    "count": 1
+                  }
+                ]
               },
               {
-                "kind": "ability-bonus",
-                "ability": "con",
-                "bonus": 1
+                "kind": "bundle",
+                "key": "con",
+                "items": [
+                  {
+                    "kind": "ability-bonus",
+                    "ability": "con",
+                    "bonus": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:saving-throw-con",
+                    "count": 1
+                  }
+                ]
               },
               {
-                "kind": "ability-bonus",
-                "ability": "int",
-                "bonus": 1
+                "kind": "bundle",
+                "key": "int",
+                "items": [
+                  {
+                    "kind": "ability-bonus",
+                    "ability": "int",
+                    "bonus": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:saving-throw-int",
+                    "count": 1
+                  }
+                ]
               },
               {
-                "kind": "ability-bonus",
-                "ability": "wis",
-                "bonus": 1
+                "kind": "bundle",
+                "key": "wis",
+                "items": [
+                  {
+                    "kind": "ability-bonus",
+                    "ability": "wis",
+                    "bonus": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:saving-throw-wis",
+                    "count": 1
+                  }
+                ]
               },
               {
-                "kind": "ability-bonus",
-                "ability": "cha",
-                "bonus": 1
+                "kind": "bundle",
+                "key": "cha",
+                "items": [
+                  {
+                    "kind": "ability-bonus",
+                    "ability": "cha",
+                    "bonus": 1
+                  },
+                  {
+                    "kind": "ref",
+                    "ref": "proficiency:saving-throw-cha",
+                    "count": 1
+                  }
+                ]
               }
             ]
           }
@@ -4359,6 +4533,4417 @@
               }
             ]
           }
+        }
+      ]
+    },
+    {
+      "id": "storm-herald-desert",
+      "owner": "feature:desert",
+      "minimumLevel": 6,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "feature:storm-herald-desert"
+        }
+      ]
+    },
+    {
+      "id": "barbarian-desert",
+      "owner": "feature:desert",
+      "minimumLevel": 14,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "feature:barbarian-desert"
+        }
+      ]
+    },
+    {
+      "id": "storm-herald-sea",
+      "owner": "feature:sea",
+      "minimumLevel": 6,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "feature:storm-herald-sea"
+        }
+      ]
+    },
+    {
+      "id": "barbarian-sea",
+      "owner": "feature:sea",
+      "minimumLevel": 14,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "feature:barbarian-sea"
+        }
+      ]
+    },
+    {
+      "id": "storm-herald-tundra",
+      "owner": "feature:tundra",
+      "minimumLevel": 6,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "feature:storm-herald-tundra"
+        }
+      ]
+    },
+    {
+      "id": "barbarian-tundra",
+      "owner": "feature:tundra",
+      "minimumLevel": 14,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "feature:barbarian-tundra"
+        }
+      ]
+    },
+    {
+      "id": "eldritch-adept",
+      "owner": "feat:eldritch-adept",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "eldritch-adept/invocation/0",
+          "choose": 1,
+          "kind": "feature",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-agonizing-blast",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-armor-of-shadows",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-ascendant-step",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-aspect-of-the-moon",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-beast-speech",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-beguiling-influence",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-bewitching-whispers",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-bond-of-the-talisman",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-book-of-ancient-secrets",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-chains-of-carceri",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-cloak-of-flies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-devils-sight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-dreadful-word",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-eldritch-mind",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-eldritch-sight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-eldritch-smite",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-eldritch-spear",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-eyes-of-the-rune-keeper",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-far-scribe",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-fiendish-vigor",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-gaze-of-two-minds",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-ghostly-gaze",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-gift-of-the-depths",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-gift-of-the-ever-living-ones",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-gift-of-the-protectors",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-grasp-of-hadar",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-improved-pact-weapon",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-investment-of-the-chain-master",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-lance-of-lethargy",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-lifedrinker",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-maddening-hex",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-mask-of-many-faces",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-master-of-myriad-forms",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-minions-of-chaos",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-mire-the-mind",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-misty-visions",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-one-with-shadows",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-otherworldly-leap",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-protection-of-the-talisman",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-rebuke-of-the-talisman",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-relentless-hex",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-repelling-blast",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-sculptor-of-flesh",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-shroud-of-shadow",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-sign-of-ill-omen",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-thief-of-five-fates",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-thirsting-blade",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-tomb-of-levistus",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-tricksters-escape",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-undying-servitude",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-visions-of-distant-realms",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-voice-of-the-chain-master",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-whispers-of-the-grave",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:eldritch-invocation-witch-sight",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "bonus-proficiencies",
+      "owner": "feature:bonus-proficiencies",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "bonus-proficiencies/proficiency/0",
+          "choose": 3,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-acrobatics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-animal-handling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-athletics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-deception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-intimidation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-investigation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-medicine",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-perception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-religion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-sleight-of-hand",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-stealth",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-survival",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "order-bonus-proficiencies",
+      "owner": "feature:order-bonus-proficiencies",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "order-bonus-proficiencies/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-intimidation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "implement-of-peace",
+      "owner": "feature:implement-of-peace",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "implement-of-peace/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "student-of-war",
+      "owner": "feature:student-of-war",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "student-of-war/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:alchemists-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:brewers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:calligraphers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:carpenters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cartographers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cobblers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cooks-utensils",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:glassblowers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:jewelers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:leatherworkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:masons-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:painters-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:potters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:smiths-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tinkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:weavers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:woodcarvers-tools",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "arcane-archer-lore",
+      "owner": "feature:arcane-archer-lore",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "arcane-archer-lore/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              }
+            ]
+          }
+        },
+        {
+          "prompt": "arcane-archer-lore/spell/0",
+          "choose": 1,
+          "kind": "spell",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "spell:prestidigitation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "spell:druidcraft",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "otherworldly-glamour",
+      "owner": "feature:otherworldly-glamour",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "otherworldly-glamour/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-deception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "acolyte-of-nature",
+      "owner": "feature:acolyte-of-nature",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "acolyte-of-nature/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-animal-handling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-survival",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "path-of-the-kensei",
+      "owner": "feature:path-of-the-kensei",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "path-of-the-kensei/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:calligraphers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:painters-supplies",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "training-in-war-and-song-bladesinging",
+      "owner": "feature:training-in-war-and-song-bladesinging",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "training-in-war-and-song-bladesinging/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:clubs",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:daggers",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:handaxes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:javelins",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:light-hammers",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:maces",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:quarterstaffs",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:sickles",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:spears",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:battleaxes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:flails",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:longswords",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:morningstars",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:rapiers",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:scimitars",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:shortswords",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tridents",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:war-picks",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:warhammers",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:whips",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "cavalier-bonus-proficiency",
+      "owner": "feature:cavalier-bonus-proficiency",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "cavalier-bonus-proficiency/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-animal-handling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:abyssal",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:celestial",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:common",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:deep-speech",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:draconic",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:dwarvish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:elvish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:giant",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:gnomish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:goblin",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:halfling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:infernal",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:orc",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:primordial",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:sylvan",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:undercommon",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "samurai-bonus-proficiency",
+      "owner": "feature:samurai-bonus-proficiency",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "samurai-bonus-proficiency/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:abyssal",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:celestial",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:common",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:deep-speech",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:draconic",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:dwarvish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:elvish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:giant",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:gnomish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:goblin",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:halfling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:infernal",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:orc",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:primordial",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:sylvan",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:undercommon",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "blessings-of-knowledge",
+      "owner": "feature:blessings-of-knowledge",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "blessings-of-knowledge/language/0",
+          "choose": 2,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        },
+        {
+          "prompt": "blessings-of-knowledge/proficiency/0",
+          "choose": 2,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-religion",
+                "count": 1
+              }
+            ]
+          }
+        },
+        {
+          "prompt": "blessings-of-knowledge/expertise/0",
+          "choose": 2,
+          "kind": "expertise",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-religion",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "master-of-intrigue",
+      "owner": "feature:master-of-intrigue",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "master-of-intrigue/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:dice-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:playing-card-set",
+                "count": 1
+              }
+            ]
+          }
+        },
+        {
+          "prompt": "master-of-intrigue/language/0",
+          "choose": 2,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "superior-technique",
+      "owner": "feature:fighting-style-superior-technique",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "fighting-style-superior-technique/maneuver/0",
+          "choose": 1,
+          "kind": "feature",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-ambush",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-bait-and-switch",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-brace",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-commanders-strike",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-commanding-presence",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-disarming-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-distracting-strike",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-evasive-footwork",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-feinting-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-goading-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-grappling-strike",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-lunging-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-maneuvering-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-menacing-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-parry",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-precision-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-pushing-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-quick-toss",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-rally",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-riposte",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-sweeping-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-tactical-assessment",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-trip-attack",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "criminal-tool",
+      "owner": "background:criminal",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "criminal/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:dice-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:playing-card-set",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spy-tool",
+      "owner": "background:spy",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "spy/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:dice-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:playing-card-set",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "knight-tool",
+      "owner": "background:knight",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "knight/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:dice-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:playing-card-set",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "noble-tool",
+      "owner": "background:noble",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "noble/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:dice-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:playing-card-set",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "soldier-tool",
+      "owner": "background:soldier",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "soldier/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:dice-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:playing-card-set",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "entertainer-tool",
+      "owner": "background:entertainer",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "entertainer/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:bagpipes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:drum",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:dulcimer",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:horn",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lyre",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:pan-flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:shawm",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:viol",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "gladiator-tool",
+      "owner": "background:gladiator",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "gladiator/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:bagpipes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:drum",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:dulcimer",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:horn",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lyre",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:pan-flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:shawm",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:viol",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outlander-tool",
+      "owner": "background:outlander",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "outlander/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:bagpipes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:drum",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:dulcimer",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:horn",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lyre",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:pan-flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:shawm",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:viol",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "folk-hero-tool",
+      "owner": "background:folk-hero",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "folk-hero/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:alchemists-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:brewers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:calligraphers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:carpenters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cartographers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cobblers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cooks-utensils",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:glassblowers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:jewelers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:leatherworkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:masons-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:painters-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:potters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:smiths-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tinkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:weavers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:woodcarvers-tools",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "guild-artisan-tool",
+      "owner": "background:guild-artisan",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "guild-artisan/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:alchemists-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:brewers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:calligraphers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:carpenters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cartographers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cobblers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cooks-utensils",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:glassblowers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:jewelers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:leatherworkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:masons-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:painters-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:potters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:smiths-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tinkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:weavers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:woodcarvers-tools",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "guild-merchant-tool",
+      "owner": "background:guild-merchant",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "guild-merchant/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:alchemists-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:brewers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:calligraphers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:carpenters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cartographers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cobblers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cooks-utensils",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:glassblowers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:jewelers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:leatherworkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:masons-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:painters-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:potters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:smiths-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tinkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:weavers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:woodcarvers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:navigators-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:abyssal",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:celestial",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:common",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:deep-speech",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:draconic",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:dwarvish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:elvish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:giant",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:gnomish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:goblin",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:halfling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:infernal",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:orc",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:primordial",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:sylvan",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:undercommon",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "custom-background",
+      "owner": "background:custom-background",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "custom-background/proficiency/0",
+          "choose": 2,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-acrobatics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-animal-handling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-athletics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-deception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-intimidation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-investigation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-medicine",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-perception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-religion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-sleight-of-hand",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-stealth",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-survival",
+                "count": 1
+              }
+            ]
+          }
+        },
+        {
+          "prompt": "custom-background/tool-or-language/0",
+          "choose": 2,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:alchemists-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:brewers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:calligraphers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:carpenters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cartographers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cobblers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cooks-utensils",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:disguise-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:forgery-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:glassblowers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:jewelers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:leatherworkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:masons-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:painters-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:potters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:smiths-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tinkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:weavers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:woodcarvers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:dice-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:playing-card-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:bagpipes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:drum",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:dulcimer",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:horn",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lyre",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:pan-flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:shawm",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:viol",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:herbalism-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:navigators-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:poisoners-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:thieves-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:abyssal",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:celestial",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:common",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:deep-speech",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:draconic",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:dwarvish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:elvish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:giant",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:gnomish",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:goblin",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:halfling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:infernal",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:orc",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:primordial",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:sylvan",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "language:undercommon",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "skilled",
+      "owner": "feat:skilled",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "skilled/proficiency/0",
+          "choose": 3,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-acrobatics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-animal-handling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-athletics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-deception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-intimidation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-investigation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-medicine",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-perception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-religion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-sleight-of-hand",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-stealth",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-survival",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:alchemists-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:brewers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:calligraphers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:carpenters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cartographers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cobblers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cooks-utensils",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:disguise-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:forgery-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:glassblowers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:jewelers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:leatherworkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:masons-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:painters-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:potters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:smiths-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tinkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:weavers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:woodcarvers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:dice-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:playing-card-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:bagpipes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:drum",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:dulcimer",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:horn",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lyre",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:pan-flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:shawm",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:viol",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:herbalism-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:navigators-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:poisoners-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:thieves-tools",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "linguist-languages",
+      "owner": "feat:linguist",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "linguist/language/0",
+          "choose": 3,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "weapon-master",
+      "owner": "feat:weapon-master",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "weapon-master/proficiency/0",
+          "choose": 4,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:battleaxes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:blowguns",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:clubs",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:crossbows-heavy",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:crossbows-light",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:daggers",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:darts",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:flails",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:glaives",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:greataxes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:greatclubs",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:greatswords",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:halberds",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:hand-crossbows",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:handaxes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:javelins",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lances",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:light-hammers",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:longbows",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:longswords",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:maces",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:mauls",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:morningstars",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:nets",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:pikes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:quarterstaffs",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:rapiers",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:scimitars",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:shortbows",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:shortswords",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:sickles",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:slings",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:spears",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tridents",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:war-picks",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:warhammers",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:whips",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "squat-nimbleness",
+      "owner": "feat:squat-nimbleness",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "squat-nimbleness/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-acrobatics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-athletics",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "martial-adept",
+      "owner": "feat:martial-adept",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "martial-adept/maneuver/0",
+          "choose": 2,
+          "kind": "feature",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-ambush",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-bait-and-switch",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-brace",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-commanders-strike",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-commanding-presence",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-disarming-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-distracting-strike",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-evasive-footwork",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-feinting-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-goading-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-grappling-strike",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-lunging-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-maneuvering-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-menacing-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-parry",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-precision-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-pushing-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-quick-toss",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-rally",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-riposte",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-sweeping-attack",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-tactical-assessment",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:maneuver-trip-attack",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "metamagic-adept",
+      "owner": "feat:metamagic-adept",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "metamagic-adept/metamagic/0",
+          "choose": 2,
+          "kind": "feature",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-careful-spell",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-distant-spell",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-empowered-spell",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-extended-spell",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-heightened-spell",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-quickened-spell",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-seeking-spell",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-subtle-spell",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-transmuted-spell",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:metamagic-twinned-spell",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fighting-initiate",
+      "owner": "feat:fighting-initiate",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "fighting-initiate/fighting-style/0",
+          "choose": 1,
+          "kind": "feature",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "feature:fighter-fighting-style-archery",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighter-fighting-style-defense",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighter-fighting-style-dueling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighter-fighting-style-great-weapon-fighting",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighter-fighting-style-protection",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighter-fighting-style-two-weapon-fighting",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighting-style-blind-fighting",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighting-style-interception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighting-style-superior-technique",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighting-style-thrown-weapon-fighting",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:fighting-style-unarmed-fighting",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "skill-expert",
+      "owner": "feat:skill-expert",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "skill-expert/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-acrobatics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-animal-handling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-athletics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-deception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-intimidation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-investigation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-medicine",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-perception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-religion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-sleight-of-hand",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-stealth",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-survival",
+                "count": 1
+              }
+            ]
+          }
+        },
+        {
+          "prompt": "skill-expert/expertise/0",
+          "choose": 1,
+          "kind": "expertise",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-acrobatics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-animal-handling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-athletics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-deception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-intimidation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-investigation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-medicine",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-perception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-religion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-sleight-of-hand",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-stealth",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-survival",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "prodigy",
+      "owner": "feat:prodigy",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "prodigy/proficiency/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-acrobatics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-animal-handling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-athletics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-deception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-intimidation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-investigation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-medicine",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-perception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-religion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-sleight-of-hand",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-stealth",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-survival",
+                "count": 1
+              }
+            ]
+          }
+        },
+        {
+          "prompt": "prodigy/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:alchemists-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:brewers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:calligraphers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:carpenters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cartographers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cobblers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cooks-utensils",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:disguise-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:forgery-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:glassblowers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:jewelers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:leatherworkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:masons-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:painters-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:potters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:smiths-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tinkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:weavers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:woodcarvers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:dice-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:playing-card-set",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:bagpipes",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:drum",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:dulcimer",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:horn",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:lyre",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:pan-flute",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:shawm",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:viol",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:herbalism-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:navigators-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:poisoners-kit",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:thieves-tools",
+                "count": 1
+              }
+            ]
+          }
+        },
+        {
+          "prompt": "prodigy/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        },
+        {
+          "prompt": "prodigy/expertise/0",
+          "choose": 1,
+          "kind": "expertise",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-acrobatics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-animal-handling",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-arcana",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-athletics",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-deception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-history",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-insight",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-intimidation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-investigation",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-medicine",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-nature",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-perception",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-performance",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-persuasion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-religion",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-sleight-of-hand",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-stealth",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:skill-survival",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "divine-magic",
+      "owner": "feature:divine-magic",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "divine-magic/spell/0",
+          "choose": 1,
+          "kind": "spell",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "spell:cure-wounds",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "spell:inflict-wounds",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "spell:bless",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "spell:bane",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "spell:protection-from-evil-and-good",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "elemental-adept",
+      "owner": "feat:elemental-adept",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "elemental-adept/damage-type/0",
+          "choose": 1,
+          "kind": "feature",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "feature:elemental-adept-acid",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:elemental-adept-cold",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:elemental-adept-fire",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:elemental-adept-lightning",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "feature:elemental-adept-thunder",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-aberrations-language",
+      "owner": "feature:favored-enemy-aberrations",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-aberrations/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-celestials-language",
+      "owner": "feature:favored-enemy-celestials",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-celestials/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-dragons-language",
+      "owner": "feature:favored-enemy-dragons",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-dragons/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-elementals-language",
+      "owner": "feature:favored-enemy-elementals",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-elementals/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-fey-language",
+      "owner": "feature:favored-enemy-fey",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-fey/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-fiends-language",
+      "owner": "feature:favored-enemy-fiends",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-fiends/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-giants-language",
+      "owner": "feature:favored-enemy-giants",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-giants/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-monstrosities-language",
+      "owner": "feature:favored-enemy-monstrosities",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-monstrosities/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-undead-language",
+      "owner": "feature:favored-enemy-undead",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-undead/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "favored-enemy-humanoids-language",
+      "owner": "feature:favored-enemy-humanoids",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "favored-enemy-humanoids/language/0",
+          "choose": 1,
+          "kind": "language",
+          "from": {
+            "kind": "collection",
+            "collection": "language"
+          }
+        }
+      ]
+    },
+    {
+      "id": "variant-human-feat",
+      "owner": "race:variant-human",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "variant-human/feat/0",
+          "choose": 1,
+          "kind": "feature",
+          "from": {
+            "kind": "collection",
+            "collection": "feat"
+          }
+        }
+      ]
+    },
+    {
+      "id": "magic-initiate-class",
+      "owner": "feat:magic-initiate",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "magic-initiate/class/0",
+          "choose": 1,
+          "kind": "feature",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "class:bard",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:cleric",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:druid",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:sorcerer",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:warlock",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:wizard",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ritual-caster-class",
+      "owner": "feat:ritual-caster",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "ritual-caster/class/0",
+          "choose": 1,
+          "kind": "feature",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "class:bard",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:cleric",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:druid",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:sorcerer",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:warlock",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:wizard",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spell-sniper-class",
+      "owner": "feat:spell-sniper",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "spell-sniper/class/0",
+          "choose": 1,
+          "kind": "feature",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "class:bard",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:cleric",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:druid",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:sorcerer",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:warlock",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "class:wizard",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fey-touched-spell-misty-step",
+      "owner": "feat:fey-touched",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "spell:misty-step"
+        }
+      ]
+    },
+    {
+      "id": "shadow-touched-spell-invisibility",
+      "owner": "feat:shadow-touched",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "spell:invisibility"
+        }
+      ]
+    },
+    {
+      "id": "artificer-initiate-tool",
+      "owner": "feat:artificer-initiate",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "artificer-initiate/tool/0",
+          "choose": 1,
+          "kind": "proficiency",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ref",
+                "ref": "proficiency:alchemists-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:brewers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:calligraphers-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:carpenters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cartographers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cobblers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:cooks-utensils",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:glassblowers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:jewelers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:leatherworkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:masons-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:painters-supplies",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:potters-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:smiths-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:tinkers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:weavers-tools",
+                "count": 1
+              },
+              {
+                "kind": "ref",
+                "ref": "proficiency:woodcarvers-tools",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wood-elf-magic-spell-longstrider",
+      "owner": "feat:wood-elf-magic",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "spell:longstrider"
+        }
+      ]
+    },
+    {
+      "id": "wood-elf-magic-spell-pass-without-trace",
+      "owner": "feat:wood-elf-magic",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "spell:pass-without-trace"
         }
       ]
     }

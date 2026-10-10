@@ -3,10 +3,13 @@ package memory
 import (
 	"context"
 	"encoding/json"
-	"github.com/promix1722/easydnd/internal/domain/pack"
-	"github.com/promix1722/easydnd/internal/types"
+	"slices"
 	"sort"
 	"sync"
+
+	"github.com/promix1722/easydnd/internal/domain/pack"
+	"github.com/promix1722/easydnd/internal/domain/user"
+	"github.com/promix1722/easydnd/internal/types"
 )
 
 type PackRepository struct {
@@ -14,10 +17,11 @@ type PackRepository struct {
 	records map[string]pack.Record
 	shares  map[string]map[string]pack.Share
 	private map[pack.Release]pack.Document
+	grants  map[user.ID][]string
 }
 
 func NewPackRepository() *PackRepository {
-	return &PackRepository{records: map[string]pack.Record{}, shares: map[string]map[string]pack.Share{}, private: map[pack.Release]pack.Document{}}
+	return &PackRepository{records: map[string]pack.Record{}, shares: map[string]map[string]pack.Share{}, private: map[pack.Release]pack.Document{}, grants: map[user.ID][]string{}}
 }
 func clonePack[T any](v T) T {
 	b, _ := json.Marshal(v)
@@ -25,12 +29,14 @@ func clonePack[T any](v T) T {
 	_ = json.Unmarshal(b, &out)
 	return out
 }
-func (r *PackRepository) List(context.Context) ([]pack.Record, error) {
+func (r *PackRepository) ListFor(_ context.Context, owner user.ID, ids []string) ([]pack.Record, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := []pack.Record{}
 	for _, v := range r.records {
-		out = append(out, clonePack(v))
+		if (owner != "" && v.Owner == owner) || slices.Contains(ids, v.ID) {
+			out = append(out, clonePack(v))
+		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, nil
@@ -78,6 +84,19 @@ func (r *PackRepository) DeleteShare(_ context.Context, g, p string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.shares[g], p)
+	return nil
+}
+func (r *PackRepository) Grants(_ context.Context, u user.ID) ([]string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string{}, r.grants[u]...), nil
+}
+func (r *PackRepository) SetGrants(_ context.Context, u user.ID, packs []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	packs = append([]string{}, packs...)
+	sort.Strings(packs)
+	r.grants[u] = slices.Compact(packs)
 	return nil
 }
 func (r *PackRepository) PutPrivate(_ context.Context, d pack.Document) error {

@@ -54,6 +54,7 @@ func characterOf(c character.Summary) Character {
 	return Character{
 		ID:      string(c.ID),
 		OwnerID: string(c.Owner),
+		Public:  c.Public,
 		Name:    c.Name,
 		Image:   c.Image,
 		Level:   c.Level,

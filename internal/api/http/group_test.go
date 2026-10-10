@@ -36,6 +36,7 @@ func inviteToken(
 // The whole feature, end to end over HTTP: one person makes a table, another
 // joins it by link, the owner hands it on, and the ex-owner walks away.
 func TestAGroupFromCreationToHandover(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	created := createGroup(t, r, owner, "Wednesday Night")
 
@@ -122,6 +123,7 @@ func TestAGroupFromCreationToHandover(t *testing.T) {
 // a 404: they are standing in the group, so there is nothing to hide, and the
 // message has to be able to tell them what to do instead.
 func TestTheOwnerCannotLeaveOverHTTP(t *testing.T) {
+	t.Parallel()
 	r, owner := newFullRouter(t)
 	created := createGroup(t, r, owner, "Wednesday Night")
 
@@ -144,6 +146,7 @@ func TestTheOwnerCannotLeaveOverHTTP(t *testing.T) {
 // read it, change it or learn that it exists -- which is why every answer here
 // is 404 and never 403, exactly as for a character.
 func TestAnotherAccountCannotReachTheGroup(t *testing.T) {
+	t.Parallel()
 	r, owner, ceremony := newFullRouterWithCeremony(t)
 	created := createGroup(t, r, owner, "Wednesday Night")
 
@@ -193,6 +196,7 @@ func TestAnotherAccountCannotReachTheGroup(t *testing.T) {
 // leaked out here, clicking yesterday's invitation would drop the perfectly
 // signed-in person who clicked it back onto the landing page.
 func TestABadInviteLinkDoesNotSignYouOut(t *testing.T) {
+	t.Parallel()
 	r, session := newFullRouter(t)
 
 	for _, path := range []string{"/v1/invites/preview", "/v1/invites/accept"} {
@@ -211,6 +215,7 @@ func TestABadInviteLinkDoesNotSignYouOut(t *testing.T) {
 // somebody else's roster, which is the only reason a users row is written for
 // them at all.
 func TestAGuestCanKeepAGroup(t *testing.T) {
+	t.Parallel()
 	r, _ := newFullRouter(t)
 	session := guest(t, r, helpers.CookieOptions{Secure: false})
 

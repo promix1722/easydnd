@@ -1062,6 +1062,54 @@
       "Additionally, when you gain a level in this class, you can choose one of the invocations you know and replace it with another invocation that you could learn at that level."
     ]
   },
+  "eldritch-invocations-5": {
+    "name": "Eldritch Invocations",
+    "desc": [
+      "In your study of occult lore, you have unearthed eldritch invocations, fragments of forbidden knowledge that imbue you with an abiding magical ability.",
+      "At 2nd level, you gain two eldritch invocations of your choice. Your invocation options are detailed at the end of the class description. When you gain certain warlock levels, you gain additional invocations of your choice, as shown in the Invocations Known column of the Warlock table.",
+      "Additionally, when you gain a level in this class, you can choose one of the invocations you know and replace it with another invocation that you could learn at that level."
+    ]
+  },
+  "eldritch-invocations-7": {
+    "name": "Eldritch Invocations",
+    "desc": [
+      "In your study of occult lore, you have unearthed eldritch invocations, fragments of forbidden knowledge that imbue you with an abiding magical ability.",
+      "At 2nd level, you gain two eldritch invocations of your choice. Your invocation options are detailed at the end of the class description. When you gain certain warlock levels, you gain additional invocations of your choice, as shown in the Invocations Known column of the Warlock table.",
+      "Additionally, when you gain a level in this class, you can choose one of the invocations you know and replace it with another invocation that you could learn at that level."
+    ]
+  },
+  "eldritch-invocations-9": {
+    "name": "Eldritch Invocations",
+    "desc": [
+      "In your study of occult lore, you have unearthed eldritch invocations, fragments of forbidden knowledge that imbue you with an abiding magical ability.",
+      "At 2nd level, you gain two eldritch invocations of your choice. Your invocation options are detailed at the end of the class description. When you gain certain warlock levels, you gain additional invocations of your choice, as shown in the Invocations Known column of the Warlock table.",
+      "Additionally, when you gain a level in this class, you can choose one of the invocations you know and replace it with another invocation that you could learn at that level."
+    ]
+  },
+  "eldritch-invocations-12": {
+    "name": "Eldritch Invocations",
+    "desc": [
+      "In your study of occult lore, you have unearthed eldritch invocations, fragments of forbidden knowledge that imbue you with an abiding magical ability.",
+      "At 2nd level, you gain two eldritch invocations of your choice. Your invocation options are detailed at the end of the class description. When you gain certain warlock levels, you gain additional invocations of your choice, as shown in the Invocations Known column of the Warlock table.",
+      "Additionally, when you gain a level in this class, you can choose one of the invocations you know and replace it with another invocation that you could learn at that level."
+    ]
+  },
+  "eldritch-invocations-15": {
+    "name": "Eldritch Invocations",
+    "desc": [
+      "In your study of occult lore, you have unearthed eldritch invocations, fragments of forbidden knowledge that imbue you with an abiding magical ability.",
+      "At 2nd level, you gain two eldritch invocations of your choice. Your invocation options are detailed at the end of the class description. When you gain certain warlock levels, you gain additional invocations of your choice, as shown in the Invocations Known column of the Warlock table.",
+      "Additionally, when you gain a level in this class, you can choose one of the invocations you know and replace it with another invocation that you could learn at that level."
+    ]
+  },
+  "eldritch-invocations-18": {
+    "name": "Eldritch Invocations",
+    "desc": [
+      "In your study of occult lore, you have unearthed eldritch invocations, fragments of forbidden knowledge that imbue you with an abiding magical ability.",
+      "At 2nd level, you gain two eldritch invocations of your choice. Your invocation options are detailed at the end of the class description. When you gain certain warlock levels, you gain additional invocations of your choice, as shown in the Invocations Known column of the Warlock table.",
+      "Additionally, when you gain a level in this class, you can choose one of the invocations you know and replace it with another invocation that you could learn at that level."
+    ]
+  },
   "eldritch-master": {
     "name": "Eldritch Master",
     "desc": [
@@ -1159,6 +1207,48 @@
       "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all.",
       "You choose one additional favored enemy, as well as an associated language, at 6th and 14th level. As you gain levels, your choices should reflect the types of monsters you have encountered on your adventures."
     ]
+  },
+  "favored-enemy-aberrations": {
+    "name": "Favored Enemy: Aberrations"
+  },
+  "favored-enemy-beasts": {
+    "name": "Favored Enemy: Beasts"
+  },
+  "favored-enemy-celestials": {
+    "name": "Favored Enemy: Celestials"
+  },
+  "favored-enemy-constructs": {
+    "name": "Favored Enemy: Constructs"
+  },
+  "favored-enemy-dragons": {
+    "name": "Favored Enemy: Dragons"
+  },
+  "favored-enemy-elementals": {
+    "name": "Favored Enemy: Elementals"
+  },
+  "favored-enemy-fey": {
+    "name": "Favored Enemy: Fey"
+  },
+  "favored-enemy-fiends": {
+    "name": "Favored Enemy: Fiends"
+  },
+  "favored-enemy-giants": {
+    "name": "Favored Enemy: Giants"
+  },
+  "favored-enemy-monstrosities": {
+    "name": "Favored Enemy: Monstrosities"
+  },
+  "favored-enemy-oozes": {
+    "name": "Favored Enemy: Oozes"
+  },
+  "favored-enemy-plants": {
+    "name": "Favored Enemy: Plants"
+  },
+  "favored-enemy-undead": {
+    "name": "Favored Enemy: Undead"
+  },
+  "favored-enemy-humanoids": {
+    "name": "Favored Enemy: Humanoids"
   },
   "feral-instinct": {
     "name": "Feral Instinct",
@@ -1771,6 +1861,27 @@
       "- While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area.",
       "You choose additional favored terrain types at 6th and 10th level."
     ]
+  },
+  "natural-explorer-arctic": {
+    "name": "Natural Explorer: Arctic"
+  },
+  "natural-explorer-coast": {
+    "name": "Natural Explorer: Coast"
+  },
+  "natural-explorer-desert": {
+    "name": "Natural Explorer: Desert"
+  },
+  "natural-explorer-forest": {
+    "name": "Natural Explorer: Forest"
+  },
+  "natural-explorer-grassland": {
+    "name": "Natural Explorer: Grassland"
+  },
+  "natural-explorer-mountain": {
+    "name": "Natural Explorer: Mountain"
+  },
+  "natural-explorer-swamp": {
+    "name": "Natural Explorer: Swamp"
   },
   "natural-recovery": {
     "name": "Natural Recovery",
@@ -3108,6 +3219,18 @@
   "infusions-known": {
     "name": "Infusions Known"
   },
+  "infusions-known-6": {
+    "name": "Infusions Known"
+  },
+  "infusions-known-10": {
+    "name": "Infusions Known"
+  },
+  "infusions-known-14": {
+    "name": "Infusions Known"
+  },
+  "infusions-known-18": {
+    "name": "Infusions Known"
+  },
   "artificer-specialist": {
     "name": "Artificer Specialist"
   },
@@ -3273,6 +3396,12 @@
   "divine-fury": {
     "name": "Divine Fury"
   },
+  "divine-fury-necrotic": {
+    "name": "Divine Fury: Necrotic"
+  },
+  "divine-fury-radiant": {
+    "name": "Divine Fury: Radiant"
+  },
   "warrior-of-the-gods": {
     "name": "Warrior of the Gods"
   },
@@ -3281,6 +3410,21 @@
   },
   "zealous-presence": {
     "name": "Zealous Presence"
+  },
+  "elemental-adept-acid": {
+    "name": "Elemental Adept: Acid"
+  },
+  "elemental-adept-cold": {
+    "name": "Elemental Adept: Cold"
+  },
+  "elemental-adept-fire": {
+    "name": "Elemental Adept: Fire"
+  },
+  "elemental-adept-lightning": {
+    "name": "Elemental Adept: Lightning"
+  },
+  "elemental-adept-thunder": {
+    "name": "Elemental Adept: Thunder"
   },
   "rage-beyond-death": {
     "name": "Rage beyond Death"
@@ -4580,6 +4724,18 @@
   },
   "genies-vessel": {
     "name": "Genie's Vessel"
+  },
+  "genies-vessel-dao": {
+    "name": "Dao"
+  },
+  "genies-vessel-djinni": {
+    "name": "Djinni"
+  },
+  "genies-vessel-efreeti": {
+    "name": "Efreeti"
+  },
+  "genies-vessel-marid": {
+    "name": "Marid"
   },
   "elemental-gift": {
     "name": "Elemental Gift"

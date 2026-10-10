@@ -121,6 +121,14 @@ func (s *Service) Accept(ctx context.Context, actor user.User, token string) (do
 		return domain.Group{}, err
 	}
 
+	// ponytail: count, then insert -- racing accepts can overshoot by a few.
+	seated, err := s.repo.Members(ctx, g.ID)
+	if err != nil {
+		return domain.Group{}, err
+	}
+	if len(seated) >= s.limits.GroupMembers {
+		return domain.Group{}, types.LimitReached("groupMembers", s.limits.GroupMembers)
+	}
 	if err := s.ensureStored(ctx, actor); err != nil {
 		return domain.Group{}, err
 	}
