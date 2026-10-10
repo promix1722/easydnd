@@ -2007,6 +2007,7 @@ Everything below is set up once, by hand, and no tag changes it:
 | sudoers | `deploy` may run `/usr/bin/supervisorctl restart easydnd` without a password |
 | `/etc/supervisor/conf.d/easydnd.conf` | from `deploy/supervisor/easydnd.conf`, **after** `prod.env` exists |
 | `/var/log/easydnd/` | exists; supervisor writes `out.log` and `err.log` there |
+| memory | a swap file (2 GB on the 1 GB host), and `GOMEMLIMIT` in the supervisor conf. The compiled catalogues are a few hundred MB of live heap -- about 110 MB more per private pack -- and without the limit Go lets that double: v1.1.0 was OOM-killed a minute after its first sign-in |
 | nginx and certbot | `deploy/nginx/easydnd.conf`, the `$connection_upgrade` map, the certificate |
 | Postgres | the steps above |
 | `/opt/easydnd/private-packs/` | optional: private rule packs, pushed by hand with `deploy/push-private-pack.sh` and named in `prod.env` |
