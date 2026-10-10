@@ -54,7 +54,9 @@ All application character writes use repository revision CAS. `expectedSeq`
 identifies positions; `expectedRevision` detects concurrent same-length edits.
 Each init event pins a rules lock, and character/list/copy/shared-game reads use
 that lock. Migration/restore endpoints retain checkpoints atomically with the
-new log. Characters and checkpoints remain memory-only even with a pack archive.
+new log. Characters, their checkpoints, folders, shares and games are in
+PostgreSQL whenever accounts are; see
+[Where everything lives](#where-accounts-and-groups-live).
 
 ## Quick start
 
@@ -124,10 +126,11 @@ buttons on `/login` and an account switcher in the signed-in header.
 Switching keeps the current seeded game when possible and reloads the page so
 no previous identity's resource data or edit drafts remain.
 
-Accounts and the group are reused when the API restarts against an existing
-development database. Characters and games are rebuilt because their stores
-are process-local. Signing in again within the same run does not reseed or
-reset game changes. Open separate tabs and choose master, player1 and player2
+Accounts, the group, the characters and the games are all reused when the API
+restarts against an existing development database: the seed looks for
+master's characters and builds nothing when they are there. Against a process
+with no database it builds them every start. Signing in again within the same
+run does not reseed or reset game changes. Open separate tabs and choose master, player1 and player2
 in each: development shortcuts keep a random cookie selector in tab-local
 `sessionStorage` and send it as `X-EasyDnD-Dev-Session`. It selects a signed
 HttpOnly cookie and is ignored in production.
@@ -652,9 +655,8 @@ its later classes -- reported as unresolved rather than folded into the first,
 which would give it levels in a class it never took. And a character built
 before this change, whose log takes levels as entries, still *projects*
 correctly (levels are max-by-number, so the entries still count) but would
-lose them to a `Revise`, since nothing poses the prompt they answered.
-Characters live in memory and die with the process, so that window closes on
-its own.
+lose them to a `Revise`, since nothing poses the prompt they answered. No such
+character was ever written to a durable store, so the window is closed.
 
 Four fields make the client mechanical rather than knowledgeable:
 
@@ -922,8 +924,7 @@ character -- they are facts about the record: who it belongs to, and where its
 owner filed it. Moving a character to another folder is not something that
 happened to them in the fiction and has no business appearing in their history.
 
-**Deleting a folder deletes the characters in it.** There is no undo, and
-characters live in memory, so there is not even a backup behind it. A client
+**Deleting a folder deletes the characters in it.** There is no undo. A client
 that offers the button owes the player a confirmation that says how many
 characters are about to go; the web client's does. The cascade runs in the
 usecase, not the store -- two aggregates, two stores, and a repository that
@@ -1025,7 +1026,7 @@ a character through the second, which is why "read-only" here is a property of
 the API's shape rather than a rule somebody has to remember.
 
 Both refuse with **404**, and for the reason `owned` does: a character id is a
-short counter, so a 403 on one that is not yours confirms it exists. A character
+short sequence number, so a 403 on one that is not yours confirms it exists. A character
 that was never shared, one unshared a moment ago and one that never existed are
 indistinguishable from outside.
 
@@ -1066,12 +1067,15 @@ game service and wired in `internal/app`. The arrows point outward from the
 thing being deleted, so a character still knows nothing about groups and a group
 still knows nothing about games.
 
-**Neither store is in Postgres, deliberately.** Every shared player row
-names a character id, and a character id is the process-local counter — the same
-argument `00003_groups.sql` makes for why the groups schema refuses to name one.
-So a group and its members survive a restart and the characters shared with it
-do not. That split is surprising and it is the price of having the feature
-before characters are durable; the two move to Postgres together or not at all.
+**Both stores are in Postgres, and neither has a foreign key to a character.**
+`shared_characters` and `games.roster` name character ids, and those are now
+drawn from a sequence that never hands an id out twice, so the argument
+`00003_groups.sql` once made against naming one no longer applies. The keys are
+still left out on purpose: the ports say the store does not verify the
+character -- that is the usecase's authorization question -- and the in-memory
+adapter cannot verify it either, so a key would make the two adapters answer
+the same call differently. The cascades above are what keep the rows honest,
+and every read already skips an id that is gone.
 
 ### Active game entries
 
@@ -1149,7 +1153,8 @@ to place one entry before a stable target ID; an empty `before_id` appends it.
 Missing source or target IDs reject the operation without changing the roster.
 This atomic operation preserves entries added since the client's last view.
 Sorting includes monsters without publishing
-their initiative values. Games, including monster copies, remain process-local.
+their initiative values. A game's roster, monster copies included, is one JSON
+column on its row.
 
 Invitations are stateless. A link is a signed token naming a group and a rank,
 valid for 24 hours, **reusable and not revocable** -- there is no invites table
@@ -1268,7 +1273,7 @@ rather than quietly defaulted.
 | `data.default_packs` | `{}` | selected root IDs and version constraints; omitted means configured inputs |
 | `data.pack_archive` | empty | optional persistent digest-addressed release directory |
 | `data.srd_dir` | `data/pack/srd-5.1` | read at startup; a missing or malformed directory is a fatal error, by design. Absolute in production, through `current/` so it follows the symlink swap |
-| `db.url` | *(none)* | **required in production**; libpq URL for the account store. Say `sslmode=verify-full` -- an omitted `sslmode` means libpq's `prefer`, which is unauthenticated and permits a plaintext fallback. Unset in development falls back to the in-memory store with a warning. The example file's placeholder password is rejected by name |
+| `db.url` | *(none)* | **required in production**; libpq URL for the store that holds accounts, groups, characters, folders, games, packs and wizard chats. Say `sslmode=verify-full` -- an omitted `sslmode` means libpq's `prefer`, which is unauthenticated and permits a plaintext fallback. Unset in development falls back to the in-memory store with a warning. The example file's placeholder password is rejected by name |
 | `db.max_conns` | `10` | pgxpool size |
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
@@ -1491,8 +1496,9 @@ cannot collide even by accident.
 Everything downstream then works unchanged, because nothing downstream reads
 the account store: the character handlers use only the owner id, and the
 catalog handlers ignore the user entirely. A guest therefore owns characters
-with no schema change. They live in the in-memory character store and die with
-the process, which is honest for a session that cannot be signed back into.
+with no schema change. They are stored like anybody's, and nothing deletes them
+when the guest session that could reach them expires; see
+[known-caveats.md](known-caveats.md).
 
 Two consequences worth stating plainly:
 
@@ -1590,9 +1596,10 @@ correct.
 
 ### Where accounts and groups live
 
-Accounts, their passkeys, their linked external identities and the groups they
-play in are stored in PostgreSQL -- AWS RDS in production -- by
-`internal/adapter/repository/postgres`. Five tables (rule packs and AI Wizard
+Accounts, their passkeys, their linked external identities, the groups they
+play in, their characters and folders, and the pools and games at each table
+are stored in PostgreSQL -- AWS RDS in production -- by
+`internal/adapter/repository/postgres`. Ten tables (rule packs and AI Wizard
 chats are kept there too, and are described with their own features:
 [packs.md](packs.md), [agent.md](agent.md#session-lifetime)):
 
@@ -1603,12 +1610,29 @@ chats are kept there too, and are described with their own features:
 | `user_identities` | one row per linked external account |
 | `groups` | a group's id, name and who made it |
 | `group_members` | one row per seat: who, in which group, at which rank |
+| `folders` | one account's shelves; one is flagged the default |
+| `characters` | one row per character: owner, folder, revision, and the whole log, its checkpoints and command keys as `json` |
+| `shared_characters` | one row per character a member has put on a group's table |
+| `games` | a game and, as one `json` column, its whole roster |
+| `private_releases` | the rule packs an AI Wizard import compiled, pinned by a character's lock and never listed |
 
-Characters are **not** among them. They still live in the in-memory store and
-die with the process, which is why nothing in `groups` refers to one: a
-character id is a process-local counter, so a foreign key to it would be
-dangling by the next restart, and a schema written against an unfinished
-feature is a migration nobody can revise later.
+Character and folder ids come from two sequences, `characters_id_seq` and
+`folders_id_seq`, rendered in the same `chr_000001` / `fld_000001` shape the
+in-memory store mints -- so nothing downstream can tell the adapters apart,
+and, the point of it, an id never names a different character after a restart.
+That is what `00003_groups.sql` was waiting for. The rows that name a
+character still carry **no foreign key** to it; the reason is under
+[Ownership, and membership](#ownership-and-membership). `owner_id` on
+`folders` and `characters` has none either, for the reason `agent_sessions`
+gives: a guest may own one, and a guest is a `users` row only once they ask to
+be named in a group.
+
+A character's log is `json` rather than `jsonb`, as the wizard's document is:
+it is never queried, and `jsonb` refuses the `\u0000` a transcribed source can
+carry. The rules a write applies -- the revision guard, the sequence guard,
+event stamping -- are the domain's (`Character.Commit`, `ExpectSeq`,
+`Log.Stamp`), so the SQL adapter is load-under-`FOR UPDATE`, call, store, and
+cannot drift from the in-memory one; `repotest` runs both.
 
 `users` is the only place a display name is stored, and a roster is a join
 rather than a copy -- so a rename shows up in every group at once or in none.
@@ -2293,8 +2317,8 @@ call. Sessions and their source bytes are in PostgreSQL (`agent_sessions`,
 lease, and a process that stops gives its turn back to the queue. The wizard
 also owns the service's only timer: once a second it looks for a turn queued
 by another process, and every ten minutes it deletes the chats nobody has
-used for a day. The character and the private packs a chat makes are still
-process-local, so a restart keeps the chat and loses what it built.
+used for a day. The character and the private packs a chat makes are stored
+with everything else, so a restart keeps all three.
 See [agent.md](agent.md) for tool contracts, lifecycle, bounds and the `agent`
 YAML configuration. The nginx upload-limit change must be installed separately
 from a release. The browser follows a session by
@@ -2332,8 +2356,9 @@ Private pack endpoints send no-store. General API failures retain reason slugs;
 authoring validation additionally returns a document path and technical compiler
 details, since authors need to diagnose unsupported rules and references.
 
-The authoring adapter also retains the import agent's generated private releases
-in memory. They stay outside pack listings and the default catalogue. Existing
+The authoring adapter stores the import agent's generated private releases in
+`private_releases` and keeps the ones it has seen in a per-process cache. They
+stay outside pack listings and the default catalogue. Existing
 imported characters and their copies resolve those exact definitions; copying
 still checks current access to any ordinary homebrew releases in the same lock.
 

@@ -352,14 +352,14 @@ keeps it, and browser reload recovers it from the URL's session ID (or legacy
 no `db.url`, the CLI, the tests -- keeps the same sessions in memory behind
 the same `Store` port.
 
-**The character is not stored with it.** Characters and the private packs an
-import writes are still in the memory of one process, which is why the wizard
-[cannot yet be run as more than one API process](known-caveats.md): a chat
-survives a restart and the character it built does not. The assistant checks
-that a character is the one its chat created before writing to it -- an id
-is a counter that starts again, so after a restart it names somebody else --
-and fails the session otherwise; the chat list leaves such a chat out, so the
-wizard does not reopen one whose character is gone.
+**The character is stored beside it, not with it.** The character is an
+ordinary row in `characters`, and the private packs an import writes are rows
+in `private_releases`, so a chat, its character and the rules it compiled all
+survive a restart together and any API process can pick the turn up. The
+assistant still checks that the character is its owner's before writing to
+it, and fails the session if the character has been deleted; the chat list
+leaves such a chat out, so the wizard does not reopen one whose character is
+gone.
 
 **A chat nobody has used for a day is deleted**, whatever its status, by a
 sweep every API process runs every ten minutes. "Used" is a write, a turn, or
@@ -745,8 +745,9 @@ and projection must succeed before a complete definition changes the lock.
 Private releases never enter the default catalogue. Older versions remain
 available for older locks; copied/shared characters retain the attached lock
 and receive localized private names/descriptions in their projection. Migration
-cannot attach another character's private release. The registry is still
-process-local; this is not a general pack editor, upload library or publisher.
+cannot attach another character's private release. The releases are stored in
+`private_releases` and cached per process; this is not a general pack editor,
+upload library or publisher.
 
 ## HTTP surface
 
@@ -876,13 +877,13 @@ smoke test requires deployment credentials and a configured model.
 
 Sessions, attachments, the transcript with its provider state, operation
 outcomes and the revision and generation are stored together, with turns
-claimed under a lease (see [Session lifetime](#session-lifetime)). What a
-restart still loses is the character and the private releases, which are not
-the wizard's to store. `RunAgentStore` runs one contract over the PostgreSQL
+claimed under a lease (see [Session lifetime](#session-lifetime)). The
+character and the private releases are stored by their own adapters, so a
+restart loses nothing. `RunAgentStore` runs one contract over the PostgreSQL
 and in-memory stores -- one winner among eight claims, a fenced turn that
 cannot save or append, an expired lease taken over, the sweep -- and the use
 case tests run two agents over one store: a turn released by a stopping
-process and finished by another, and a recycled character id refused.
+process and finished by another.
 Text-only character creation uses the same bounded tools. A future MCP adapter
 can reuse them.
 

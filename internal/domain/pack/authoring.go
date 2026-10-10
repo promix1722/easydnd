@@ -31,6 +31,15 @@ type Repository interface {
 	Shares(context.Context, string) ([]Share, error)
 	PutShare(context.Context, Share) error
 	DeleteShare(context.Context, string, string) error
+
+	// PutPrivate keeps a release an import compiled for one character, so
+	// that the character can be loaded after the process that compiled it
+	// is gone. It is never listed: a private release is reachable only
+	// through the lock that pins it. Storing the same release twice is not
+	// an error.
+	PutPrivate(context.Context, Document) error
+	// GetPrivate returns a stored private release, or a *types.NotFoundError.
+	GetPrivate(context.Context, Release) (Document, error)
 }
 
 // Engine is the adapter boundary for the existing portable codec and compiler.

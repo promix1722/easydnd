@@ -45,6 +45,8 @@ import (
 	"github.com/promix1722/easydnd/internal/buildinfo"
 	"github.com/promix1722/easydnd/internal/config"
 	authdomain "github.com/promix1722/easydnd/internal/domain/auth"
+	"github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/game"
 	"github.com/promix1722/easydnd/internal/domain/group"
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -110,36 +112,21 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 			slog.String("config", cfg.Source))
 	}
 
-	// Outbound adapters. The assignments below are what type-check the adapters
-	// against the domain's ports, which is how the account store could move to
-	// Postgres without a line changing above this layer.
-	characterRepo := memory.NewCharacterRepository()
-	folderRepo := memory.NewFolderRepository()
-
-	// The characters a group's members have offered to each other, and the
-	// games played from them. In memory even when Postgres is configured, and
-	// for the reason 00003_groups.sql gives for refusing to name a character
-	// at all: every row here points at a character id, and a character id is
-	// the process-local counter above. A table of these would be full of ids
-	// naming nothing by morning. They die with the characters they name, all
-	// three together, which is the only self-consistent thing they can do
-	// until characters are durable.
-	sharedRepo := memory.NewSharedRepository()
-	gameRepo := memory.NewGameRepository()
-
-	// Accounts and groups are durable; characters, the folders they are filed
-	// in, the tables they are shared on and the games run from them are not.
-	// They still live in the process because a character id is a process-local
-	// counter, and a durable row that referred to one would be dangling after
-	// the next restart -- a schema written against an unfinished feature is a
-	// migration nobody can revise later. A restart therefore still costs a
-	// player everything they made, and moving them to Postgres is its own
-	// change: the assignments above are what a SQL sibling would have to
-	// satisfy.
-	userRepo, groupRepo, pool, err := newRepositories(ctx, cfg, log)
+	// Outbound adapters. The assignments in newRepositories are what
+	// type-check the adapters against the domain's ports: every store has an
+	// in-memory and a Postgres implementation, and which one runs is decided
+	// there, by db.url, in one place.
+	// ponytail: a guest's characters are rows nothing deletes once the guest
+	// session expires; see docs/known-caveats.md. Add a sweep beside the
+	// wizard's, keyed on the guest id prefix and the guest session TTL, when
+	// the table's size says so.
+	repos, err := newRepositories(ctx, cfg, log)
 	if err != nil {
 		return nil, err
 	}
+	userRepo, groupRepo, pool := repos.users, repos.groups, repos.pool
+	characterRepo, folderRepo := repos.characters, repos.folders
+	sharedRepo, gameRepo := repos.shared, repos.games
 
 	// Every failure from here on has to hand the pool back, or a failed start
 	// leaves connections open against RDS until the process is reaped.
@@ -200,12 +187,8 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 		return fail(fmt.Errorf("load SRD data from %s: %w", cfg.Data.SRDDir, err))
 	}
 
-	var packRepo pack.Repository = memory.NewPackRepository()
-	if pool != nil {
-		packRepo = postgres.NewPackRepository(pool)
-	}
-	packSource := catalogfile.NewAuthoring(catalogSource, packRepo)
-	packService := packuc.NewService(packRepo, packSource, groupRepo, userRepo)
+	packSource := catalogfile.NewAuthoring(catalogSource, repos.packs)
+	packService := packuc.NewService(repos.packs, packSource, groupRepo, userRepo)
 
 	// Application layer. The game service is built first because the two
 	// services either side of it have to tell it when the things it refers to
@@ -303,7 +286,20 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	}, nil
 }
 
-// newUserRepository picks the account store and, when it is the durable one,
+// repositories is every outbound store the graph is built from, and the pool
+// they share when they are the durable ones.
+type repositories struct {
+	users      user.Repository
+	groups     group.Repository
+	characters character.Repository
+	folders    character.FolderRepository
+	shared     game.SharedRepository
+	games      game.Repository
+	packs      pack.Repository
+	pool       *pgxpool.Pool
+}
+
+// newRepositories picks the stores and, when they are the durable ones,
 // brings the schema up to date before anything can read it.
 //
 // Migrating here -- before the pool the request path will use, before the
@@ -317,31 +313,48 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 // work on it. Migrations must be expand-only.
 func newRepositories(
 	ctx context.Context, cfg *config.Config, log *slog.Logger,
-) (user.Repository, group.Repository, *pgxpool.Pool, error) {
+) (repositories, error) {
 	if !cfg.DB.Enabled() {
 		// config.validate refuses this in production, so it can only be a
 		// developer with no Postgres running.
-		log.Warn("db.url is unset; accounts and groups live in this process only -- every restart destroys every account, every registered passkey and every group",
+		log.Warn("db.url is unset; accounts, groups, characters, folders and games live in this process only -- every restart destroys all of them, every registered passkey included",
 			"config", cfg.Source)
 		// One user store, shared. The in-memory group store reads display
 		// names out of it, exactly as the Postgres one reads them with a
 		// join -- give it a second instance and every roster comes back
 		// nameless.
 		users := memory.NewUserRepository()
-		return users, memory.NewGroupRepository(users), nil, nil
+		return repositories{
+			users:      users,
+			groups:     memory.NewGroupRepository(users),
+			characters: memory.NewCharacterRepository(),
+			folders:    memory.NewFolderRepository(),
+			shared:     memory.NewSharedRepository(),
+			games:      memory.NewGameRepository(),
+			packs:      memory.NewPackRepository(),
+		}, nil
 	}
 
 	if cfg.DB.MigrateOnStart {
 		if err := postgres.Migrate(ctx, cfg.DB, log, postgres.CommandUp); err != nil {
-			return nil, nil, nil, fmt.Errorf("migrate database: %w", err)
+			return repositories{}, fmt.Errorf("migrate database: %w", err)
 		}
 	}
 
 	pool, err := postgres.NewPool(ctx, cfg.DB)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("connect to database: %w", err)
+		return repositories{}, fmt.Errorf("connect to database: %w", err)
 	}
-	return postgres.NewUserRepository(pool), postgres.NewGroupRepository(pool), pool, nil
+	return repositories{
+		users:      postgres.NewUserRepository(pool),
+		groups:     postgres.NewGroupRepository(pool),
+		characters: postgres.NewCharacterRepository(pool),
+		folders:    postgres.NewFolderRepository(pool),
+		shared:     postgres.NewSharedRepository(pool),
+		games:      postgres.NewGameRepository(pool),
+		packs:      postgres.NewPackRepository(pool),
+		pool:       pool,
+	}, nil
 }
 
 // Migrate runs one schema command and returns, without building the graph.

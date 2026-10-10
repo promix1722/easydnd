@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/promix1722/easydnd/internal/domain/pack"
+	"github.com/promix1722/easydnd/internal/types"
 )
 
 // RunPackRepository verifies CAS and lossless storage in both adapters.
@@ -69,5 +70,36 @@ func RunPackRepository(t *testing.T, factory func(*testing.T) pack.Repository) {
 	got, err = r.Get(ctx, original.ID)
 	if err != nil || string(got.Releases[0].Data) != string(original.Releases[0].Data) {
 		t.Fatal("unsharing damaged release", err)
+	}
+
+	private := pack.Document{Release: pack.Release{ID: "import-s1", Version: "0.0.0-abc", Digest: "d1"}, Data: []byte(`{"private":true}`)}
+	if _, err := r.GetPrivate(ctx, private.Release); !types.IsNotFound(err) {
+		t.Fatalf("GetPrivate before PutPrivate = %v, want not found", err)
+	}
+	if err := r.PutPrivate(ctx, private); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.PutPrivate(ctx, private); err != nil {
+		t.Fatalf("PutPrivate twice: %v", err)
+	}
+	kept, err := r.GetPrivate(ctx, private.Release)
+	if err != nil || string(kept.Data) != string(private.Data) || kept.Release != private.Release {
+		t.Fatalf("GetPrivate = %+v, %v", kept, err)
+	}
+	// The lock names bytes: the same version under another digest is not it.
+	other := private.Release
+	other.Digest = "d2"
+	if _, err := r.GetPrivate(ctx, other); !types.IsNotFound(err) {
+		t.Fatalf("GetPrivate with another digest = %v, want not found", err)
+	}
+	// And a private release is not a listed pack.
+	records, err := r.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, rec := range records {
+		if rec.ID == private.Release.ID {
+			t.Fatal("a private release was listed")
+		}
 	}
 }

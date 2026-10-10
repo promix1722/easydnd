@@ -15,12 +15,18 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
+	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
+	"github.com/promix1722/easydnd/internal/adapter/token"
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	"github.com/promix1722/easydnd/internal/config"
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
+	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
+	packuc "github.com/promix1722/easydnd/internal/usecase/pack"
 )
 
 func developmentApp(t *testing.T, env string) *App {
@@ -320,5 +326,54 @@ func TestCompendiumBrowsesDefaultPacksTogether(t *testing.T) {
 	one := devRequest(t, a, http.MethodGet, "/v1/packs/catalog/spells?slugs=blade-ward&packs="+url.QueryEscape("prose-overlay@1.0.0,"+context), nil, master)
 	if !strings.Contains(one.Body.String(), "A sigil of warding.") {
 		t.Fatalf("overlay prose missing: %d %s", one.Code, one.Body.String())
+	}
+}
+
+// Against a durable store a second process starts on top of the first one's
+// seed. It must find the characters and games already there rather than add a
+// second party beside them.
+func TestDevelopmentSeedIsIdempotent(t *testing.T) {
+	ctx := context.Background()
+	srdDir := filepath.Join("..", "..", "data", "pack", "srd-5.1")
+	base, err := catalogfile.LoadPack(srdDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry, err := catalogfile.NewRegistry([]string{srdDir}, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	seedRules, err := registry.Resolve([]catalogfile.Dependency{{ID: base.Manifest.ID, Version: base.Manifest.Version}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	users := memory.NewUserRepository()
+	groups := memory.NewGroupRepository(users)
+	characters := memory.NewCharacterRepository()
+	packRepo := memory.NewPackRepository()
+	packSource := catalogfile.NewAuthoring(registry, packRepo)
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	games := gameuc.NewService(memory.NewGameRepository(), memory.NewSharedRepository(), groups, characters, packSource, quiet)
+	chars := charuc.NewService(characters, memory.NewFolderRepository(), packSource, games, quiet)
+	chars.SetPackAccess(packuc.NewService(packRepo, packSource, groups, users))
+	signer := token.NewSigner([]byte("seed-test-secret-seed-test-secret"), time.Hour)
+
+	first, err := seedDevelopment(ctx, users, groups, chars, games, signer, time.Hour, seedRules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := seedDevelopment(ctx, users, groups, chars, games, signer, time.Hour, seedRules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(first.games, second.games) || len(second.games) != 2 {
+		t.Fatalf("second seed found games %v, want the first seed's %v", second.games, first.games)
+	}
+	mine, err := characters.List(ctx, "dev:master")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mine) != 1 {
+		t.Fatalf("master has %d characters after two seeds, want 1", len(mine))
 	}
 }

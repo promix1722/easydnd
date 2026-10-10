@@ -8,7 +8,6 @@ import (
 
 	"github.com/promix1722/easydnd/internal/adapter/repository/repotest"
 	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
-	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
 func TestMemoryStore(t *testing.T) {
@@ -50,54 +49,6 @@ func TestAgentTurnIsTakenOverByAnotherProcess(t *testing.T) {
 	done := waitAgent(t, second, s.ID, func(s agentuc.AgentSession) bool { return s.Status == "review" })
 	if done.CharacterID != s.CharacterID {
 		t.Fatal("the import changed character on the way")
-	}
-}
-
-// A session outlives the process; a character id does not. After a restart
-// the id a session kept names whatever character was made next, and the
-// assistant must not write to it.
-func TestAgentRefusesACharacterItDidNotMake(t *testing.T) {
-	store := agentuc.NewMemoryStore()
-	hold := make(chan struct{})
-	model := modelFunc(func(ctx context.Context, _ agentuc.AgentRequest, _ func(string)) (agentuc.AgentResponse, error) {
-		select {
-		case <-hold:
-		case <-ctx.Done():
-			return agentuc.AgentResponse{}, ctx.Err()
-		}
-		return agentuc.AgentResponse{Calls: []agentuc.AgentCall{{ID: "name", Name: "resolve_import_facts", Arguments: `{"path":"identity.name","value":"Intruder"}`}}}, nil
-	})
-	first := agentuc.NewAgent(newService(t), model, agentuc.AgentConfig{Workers: 1, Store: store})
-	s, err := first.Create(context.Background(), testOwner, "", "en", agentFile(), "Import")
-	if err != nil {
-		t.Fatal(err)
-	}
-	first.Close()
-
-	// The restart: a new repository, whose first character gets the same id.
-	service := newService(t)
-	mine, err := service.Create(context.Background(), testOwner, "", charuc.NewCharacter{Name: "Mine"})
-	if err != nil || mine.ID != s.CharacterID {
-		t.Fatalf("expected the id to be reused: %v %v %v", mine.ID, s.CharacterID, err)
-	}
-	second := agentuc.NewAgent(service, model, agentuc.AgentConfig{Workers: 1, Store: store})
-	defer second.Close()
-	close(hold)
-	for deadline := time.Now().Add(4 * time.Second); ; time.Sleep(time.Millisecond) {
-		if rec, _ := store.Get(context.Background(), s.ID); rec.Status == "failed" {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("the session went on with a character that is not its own")
-		}
-	}
-	after, err := service.Repository().Get(context.Background(), mine.ID)
-	if err != nil || after.Revision != mine.Revision {
-		t.Fatalf("the assistant wrote to a character it did not make: %v", err)
-	}
-	// And a chat whose character is gone is not offered to be reopened.
-	if listed := second.List(testOwner); len(listed) != 0 {
-		t.Fatal(listed)
 	}
 }
 

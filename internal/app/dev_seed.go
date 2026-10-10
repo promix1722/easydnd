@@ -44,9 +44,10 @@ func (d *devLogin) Login(ctx context.Context, account string) (string, []string,
 	return token, d.games, err
 }
 
-// seedDevelopment reuses durable demo accounts and their group after an API
-// restart. Characters and games are process-local, so every new process builds
-// them through the normal usecases, with real ownership and permission checks.
+// seedDevelopment reuses the demo accounts, their group, and -- when the stores
+// are durable -- the characters and games a previous process already built.
+// Only a store that has none gets them built, through the normal usecases,
+// with real ownership and permission checks.
 func seedDevelopment(ctx context.Context, users user.Repository, groups group.Repository, chars *charuc.Service, games *gameuc.Service, signer authdomain.Signer, ttl time.Duration, seedRules pack.Lock) (*devLogin, error) {
 	now := time.Now().UTC()
 	for _, name := range []string{"master", "player1", "player2"} {
@@ -76,6 +77,27 @@ func seedDevelopment(ctx context.Context, users user.Repository, groups group.Re
 			return nil, err
 		}
 	}
+	login := &devLogin{users: users, signer: signer, ttl: ttl}
+	if existing, err := chars.Repository().List(ctx, character.OwnerID(master)); err != nil {
+		return nil, err
+	} else if len(existing) > 0 {
+		// Seeded before, by a process whose stores this one shares. The
+		// games are found by the names given below, in that order.
+		mine, err := games.Mine(ctx, master)
+		if err != nil {
+			return nil, err
+		}
+		for _, name := range []string{"Training encounter", "Locked encounter"} {
+			for _, at := range mine {
+				if at.Game.Group == devGroupID && at.Game.Name == name {
+					login.games = append(login.games, string(at.Game.ID))
+					break
+				}
+			}
+		}
+		return login, nil
+	}
+
 	var players []character.ID
 	var masterCharacter character.ID
 	for _, account := range []string{"master", "player1", "player2"} {
@@ -107,7 +129,6 @@ func seedDevelopment(ctx context.Context, users user.Repository, groups group.Re
 		}
 		players = append(players, c.ID)
 	}
-	login := &devLogin{users: users, signer: signer, ttl: ttl}
 	for _, name := range []string{"Training encounter", "Locked encounter"} {
 		g, err := games.Create(ctx, master, devGroupID, name)
 		if err != nil {

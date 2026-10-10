@@ -657,14 +657,11 @@ func (a *Agent) pull(ctx context.Context, s *AgentSession) (bool, error) {
 	return true, nil
 }
 
-// made reports whether c is the character this session created. A session
-// outlives the process and a character id does not -- it is a counter that
-// starts again -- so after a restart the id a session holds can name a
-// different character, even one of the same owner's.
+// made reports whether c is a character this session may write to: its
+// owner's. The id a session holds is durable, as the session is, so the
+// check is ownership and nothing more.
 func (a *Agent) made(s *AgentSession, c domain.Character) bool {
-	return c.Owner == s.Owner && slices.ContainsFunc(c.Log.Events, func(e domain.Event) bool {
-		return e.Type == domain.EventNote && e.Note == "import.session:"+s.ID
-	})
+	return c.Owner == s.Owner
 }
 
 // push writes the working copy back, refusing if the player got there first.
@@ -757,10 +754,8 @@ func (a *Agent) List(owner domain.OwnerID) []AgentSession {
 		if err != nil {
 			continue
 		}
-		// ponytail: a chat outlives a restart and its character does not, and
-		// the wizard reopens the latest unfinished chat -- so one whose
-		// character this process cannot find is left out. Drop this when
-		// characters are stored.
+		// The wizard reopens the latest unfinished chat, so one whose
+		// character has since been deleted is left out.
 		if c, err := a.service.Repository().Get(a.ctx, s.CharacterID); s.Status != "opening" && (err != nil || !a.made(s, c)) {
 			continue
 		}
@@ -977,8 +972,9 @@ func (a *Agent) turn(ctx context.Context, cancel context.CancelFunc, rec Record)
 		s.count = len(s.Events)
 		return true
 	}
-	// Before the model is asked anything: a chat kept across a restart has no
-	// character to build, and a request would be spent finding that out.
+	// Before the model is asked anything: a chat whose character has been
+	// deleted has nothing to build, and a request would be spent finding
+	// that out.
 	if c, err := a.service.Repository().Get(ctx, s.CharacterID); err != nil && ctx.Err() == nil || err == nil && !a.made(s, c) {
 		a.service.Logger().Warn("AI wizard session has no character of its own", "session", s.ID, "character", s.CharacterID, "error", err)
 		_ = setStatus(s, "failed")

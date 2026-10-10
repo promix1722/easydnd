@@ -17,12 +17,6 @@ import (
 
 // SharedRepository is a concurrency-safe in-process store for the characters
 // groups have shared.
-//
-// In memory is not a placeholder here in the way it is for accounts, which
-// have a Postgres sibling. Every row points at a character id, and a character
-// id is the counter in CharacterRepository below -- so this store is exactly
-// as durable as the thing it refers to, on purpose. A SQL sibling arrives when
-// characters do, and not before.
 type SharedRepository struct {
 	mu sync.RWMutex
 	// Keyed by group, then character, which is the shape of every question

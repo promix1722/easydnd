@@ -1186,7 +1186,7 @@ rejects that operation with a validation error, the client falls back to its
 existing adjacent moves, using each confirmed response to check stable IDs and
 the destination. Only the dragged entry moves; retries are bounded, missing
 entries abort, and permission failures do not trigger fallback. This permits
-frontend updates without clearing process-local test games for an API restart.
+frontend updates to run against an older API.
 
 The game resource polls every three seconds while visible and refreshes on
 focus, visibility return, and successful writes. `useResource` aborts superseded
@@ -1210,8 +1210,8 @@ Two things on that screen are not cosmetic:
   account is guaranteed to have, and the API refuses to delete it. Rename is
   offered, because what an account cannot lose is the folder, not its name.
 - **The delete-folder confirmation states the character count.** Deleting a
-  folder deletes the characters in it, and characters live in memory, so there
-  is no undo and no backup. A dialog that only named the folder would be
+  folder deletes the characters in it, and there is no undo. A dialog that
+  only named the folder would be
   describing a smaller action than the one about to happen.
 
 New character carries its own folder through as `?folder=`: there is one under
@@ -4481,7 +4481,7 @@ scroll into view unless the user has scrolled up.
 Source notes and private catalogue names appear in the shared `SheetBody`, so
 copies and shared sheets retain custom content. Captions/errors have English
 and Russian translations. See [agent.md](agent.md) for the tool/question
-contract and the current in-memory lifetime.
+contract and the session lifetime.
 
 ### No "imported values"
 

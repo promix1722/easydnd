@@ -244,8 +244,8 @@ export async function orderGameEntries(id: string, order: {entry_id?: string; di
   try {
     return await request<GameDetail>(endpoint, { method: 'POST', body: order })
   } catch (cause) {
-    // A frontend update must not force a restart of process-local games.
-    // Older APIs reject before_id-only moves before changing any entries.
+    // A frontend update may run against an older API. Those reject
+    // before_id-only moves before changing any entries.
     if (order.before_id === undefined || !order.entry_id || !(cause instanceof ApiError)
       || cause.status !== 400 || cause.code !== 'validation_error') throw cause
   }

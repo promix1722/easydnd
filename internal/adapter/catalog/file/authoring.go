@@ -24,7 +24,7 @@ type Authoring struct {
 	base        *Registry
 	repo        pack.Repository
 	cache       sync.Map
-	private     sync.Map // immutable import releases, excluded from public pack lists
+	private     sync.Map // immutable import releases, excluded from public pack lists; a cache over repo.GetPrivate
 	builtinOnce sync.Once
 	builtins    []pack.Record
 	decoded     sync.Map // keyed by actual document bytes, never a caller-supplied digest
@@ -239,8 +239,8 @@ func (a *Authoring) registry(docs []pack.Document) (*Registry, error) {
 }
 func (a *Authoring) Resolve(ctx context.Context, docs []pack.Document, roots []pack.Release) (pack.Lock, error) {
 	for _, root := range roots {
-		if doc, ok := a.private.Load(root); ok {
-			docs = append(docs, doc.(pack.Document))
+		if doc, ok := a.privateRelease(ctx, root); ok {
+			docs = append(docs, doc)
 		}
 	}
 	r, err := a.registry(docs)
@@ -378,8 +378,8 @@ func (a *Authoring) registryForLock(ctx context.Context, l pack.Lock) (*Registry
 	records = append(records, a.Builtins()...)
 	docs := []pack.Document{}
 	for _, p := range l.Packs {
-		if doc, ok := a.private.Load(p); ok {
-			docs = append(docs, doc.(pack.Document))
+		if doc, ok := a.privateRelease(ctx, p); ok {
+			docs = append(docs, doc)
 			continue
 		}
 		found := false
@@ -417,9 +417,32 @@ func (a *Authoring) CompilePrivate(ctx context.Context, base pack.Lock, session 
 		if err != nil {
 			return nil, err
 		}
-		a.private.Store(release, pack.Document{Release: release, Data: data})
+		doc := pack.Document{Release: release, Data: data}
+		// Stored before it is cached: a character pinned to this release
+		// has to find it after the process that compiled it is gone.
+		if err := a.repo.PutPrivate(ctx, doc); err != nil {
+			return nil, err
+		}
+		a.private.Store(release, doc)
 	}
 	return c, nil
+}
+
+// privateRelease finds an import's release: in this process's cache, or in
+// the store when another process compiled it or this one has restarted.
+func (a *Authoring) privateRelease(ctx context.Context, release pack.Release) (pack.Document, bool) {
+	if doc, ok := a.private.Load(release); ok {
+		return doc.(pack.Document), true
+	}
+	if a.repo == nil {
+		return pack.Document{}, false
+	}
+	doc, err := a.repo.GetPrivate(ctx, release)
+	if err != nil {
+		return pack.Document{}, false
+	}
+	a.private.Store(release, doc)
+	return doc, true
 }
 
 func (a *Authoring) CustomExample(ctx context.Context, lock pack.Lock, ref rules.Ref) (any, error) {
@@ -432,11 +455,11 @@ func (a *Authoring) CustomExample(ctx context.Context, lock pack.Lock, ref rules
 
 // PrivateReleases identifies generated import definitions already pinned by an
 // owned character. Copying it retains these without granting library access.
-func (a *Authoring) PrivateReleases(lock pack.Lock) pack.Lock {
+func (a *Authoring) PrivateReleases(ctx context.Context, lock pack.Lock) pack.Lock {
 	retained := lock.Clone()
 	retained.Packs = nil
 	for _, release := range lock.Packs {
-		if _, ok := a.private.Load(release); ok {
+		if _, ok := a.privateRelease(ctx, release); ok {
 			retained.Packs = append(retained.Packs, release)
 		}
 	}

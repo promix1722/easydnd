@@ -99,3 +99,32 @@ func (r *PackRepository) DeleteShare(ctx context.Context, g, p string) error {
 	_, err := r.pool.Exec(ctx, "DELETE FROM group_rule_packs WHERE group_id=$1 AND pack_id=$2", g, p)
 	return err
 }
+
+// PutPrivate stores an import's compiled release. The same release stored
+// twice is the same bytes -- its version carries the digest of its source --
+// so a repeat is a no-op.
+func (r *PackRepository) PutPrivate(ctx context.Context, d pack.Document) error {
+	_, err := r.pool.Exec(ctx,
+		"INSERT INTO private_releases(id,version,digest,data) VALUES($1,$2,$3,$4) ON CONFLICT (id,version) DO NOTHING",
+		d.Release.ID, d.Release.Version, d.Release.Digest, d.Data)
+	if err != nil {
+		return types.WrapServerError(err, "store private release")
+	}
+	return nil
+}
+
+// GetPrivate returns a stored private release. A digest that does not match
+// is not found: the lock names bytes, not a version.
+func (r *PackRepository) GetPrivate(ctx context.Context, release pack.Release) (pack.Document, error) {
+	d := pack.Document{Release: release}
+	var digest string
+	err := r.pool.QueryRow(ctx, "SELECT digest, data FROM private_releases WHERE id=$1 AND version=$2",
+		release.ID, release.Version).Scan(&digest, &d.Data)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows) || (err == nil && digest != release.Digest):
+		return pack.Document{}, types.NewNotFoundError("private release not found")
+	case err != nil:
+		return pack.Document{}, types.WrapServerError(err, "load private release")
+	}
+	return d, nil
+}

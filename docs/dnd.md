@@ -77,10 +77,9 @@ game in the way a folder is a fact about a character. It is called a game and
 never a *session*, because that word is spent several times over on the thing
 that proves a request belongs to an account.
 
-One consequence is worth stating plainly because it is surprising. A group and
-its members live in PostgreSQL and survive a restart; the characters shared with
-it and the games run from it **do not**, because player rows name a
-character id and a character id is a process-local counter. See
+A group, its members, the characters shared with it and the games run from it
+all live in PostgreSQL and survive a restart. The rows that name a character
+carry no foreign key to it, on purpose; see
 [backend.md](backend.md#ownership-and-membership).
 
 An active game has an ordered list of player characters and NPCs. Player

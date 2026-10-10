@@ -32,6 +32,14 @@ const (
 	// usecase failed to materialise one, which is a bug and belongs in the
 	// 500 log rather than in a polite 400.
 	constraintGroupMembersGroupFK = "group_members_group_id_fkey"
+
+	// 00008_characters.sql. The two group foreign keys are mapped because a
+	// share or a game named at a group that is gone is a 400 the caller can
+	// act on, as the membership one is a 404.
+	constraintSharedCharactersPK      = "shared_characters_pkey"
+	constraintSharedCharactersGroupFK = "shared_characters_group_id_fkey"
+	constraintGamesPK                 = "games_pkey"
+	constraintGamesGroupFK            = "games_group_id_fkey"
 )
 
 // group_members_one_owner_idx deliberately has no constant here.

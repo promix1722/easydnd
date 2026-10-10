@@ -209,7 +209,7 @@ endef
 # folder-autoload settings also apply to worktree and preview servers.
 #
 # No auth.session_secret: development invents one per process and says so,
-# which is honest given that a restart also empties the character store.
+# and a restart signing everyone out is the only thing it costs.
 config/dev:
 	@{ printf 'env: development\n'; \
 	   printf 'log:\n  format: text\n  level: debug\n'; \

@@ -13,10 +13,11 @@ type PackRepository struct {
 	mu      sync.Mutex
 	records map[string]pack.Record
 	shares  map[string]map[string]pack.Share
+	private map[pack.Release]pack.Document
 }
 
 func NewPackRepository() *PackRepository {
-	return &PackRepository{records: map[string]pack.Record{}, shares: map[string]map[string]pack.Share{}}
+	return &PackRepository{records: map[string]pack.Record{}, shares: map[string]map[string]pack.Share{}, private: map[pack.Release]pack.Document{}}
 }
 func clonePack[T any](v T) T {
 	b, _ := json.Marshal(v)
@@ -78,4 +79,19 @@ func (r *PackRepository) DeleteShare(_ context.Context, g, p string) error {
 	defer r.mu.Unlock()
 	delete(r.shares[g], p)
 	return nil
+}
+func (r *PackRepository) PutPrivate(_ context.Context, d pack.Document) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.private[d.Release] = clonePack(d)
+	return nil
+}
+func (r *PackRepository) GetPrivate(_ context.Context, release pack.Release) (pack.Document, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	d, ok := r.private[release]
+	if !ok {
+		return pack.Document{}, types.NewNotFoundError("private release not found")
+	}
+	return clonePack(d), nil
 }

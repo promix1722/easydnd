@@ -35,7 +35,7 @@ JSON that a person can write by hand; it must not introduce a second rules forma
 | Casting | `spellcasting.go` infers caster kind from the level-20 table; multiclass slots use the wizard table | Explicit casting profiles, contribution policies and independent tables |
 | Mechanics | Darkvision mapping, proficiency formula, ability generation, ASI prompts and other rules are in code | Move game-specific choices and formulas into base-pack JSON |
 | Localization | Per-key English fallback; runtime locale list is hardcoded to English/Russian | Discover pack locales; use a default locale per pack |
-| Storage | Characters, folders, shares and games are in memory; accounts/groups use PostgreSQL | Retain that distinction in planning; durable character replay also needs durable logs and pack releases |
+| Storage | Characters, folders, shares and games are in memory; accounts/groups use PostgreSQL | Superseded: all of them, and the import agent's private releases, are in PostgreSQL now |
 | Browser | Resource labels and ability-generation constants are hardcoded | Later consume pack metadata and server-provided policies |
 
 Two specific gaps matter. `addClassResources` copies counts and dice but not

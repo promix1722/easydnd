@@ -27,18 +27,14 @@
 // this is not. A game is one sitting, run by a DM, which is what a player
 // means when they say "are you coming to the game on Thursday".
 //
-// # Why none of this is stored
+// # Why nothing here has a foreign key to a character
 //
-// Player entries point at a character id, and a character id is a
-// process-local counter that dies with the process -- see the memory
-// repository. A table in Postgres would therefore be full of ids naming
-// nothing by the next morning, which is the argument 00003_groups.sql already
-// makes for why a group holds no characters. So the store is in memory, beside
-// the characters it names, and the pool and the games are empty after a
-// restart. That is a cost, written down rather than hidden: the group survives
-// and the table it sat at does not. When characters become durable this
-// package moves with them, and the ports below are what make that one adapter
-// rather than a rewrite.
+// Player entries point at a character id. The ports below say the store does
+// not verify it -- whether the character exists and may be seated is the
+// usecase's question -- and the in-memory adapter cannot verify it, so a key
+// in the SQL one would make two adapters answer one call differently. The
+// usecases order their cascades instead (unshare, then delete), and every
+// read skips an id that is gone.
 //
 // It is an inner layer: the standard library, and the character, group and
 // account aggregates. Nothing points back at it -- character and group are
@@ -83,10 +79,10 @@ const (
 //
 // Owner is recorded here rather than read back from the character, because
 // every question this type has to answer -- may this person unshare it, whose
-// was it -- must stay answerable when the character itself is gone. After a
-// restart the pool is empty anyway, but within one process a character can be
-// deleted while a roster still names it, and a row that could only describe
-// itself by fetching the thing it describes would have nothing to say.
+// was it -- must stay answerable when the character itself is gone: a
+// character can be deleted while a roster still names it, and a row that could
+// only describe itself by fetching the thing it describes would have nothing
+// to say.
 type Shared struct {
 	Group     group.ID
 	Character character.ID

@@ -24,12 +24,12 @@ is passkeys only. Accounts, their passkeys and their linked accounts are
 stored in PostgreSQL, with the schema migrating itself at startup, so a restart
 no longer costs anybody their account. There is also a **guest session**: one
 click, no account, nothing stored beyond the group roster a guest asks to be
-named in, and nothing that survives it. **Characters and the folders they are
-filed in still live in memory** and are wiped by a restart. See
-[Authentication](docs/backend.md#authentication) and
+named in and the characters they make. **Characters and the folders they are
+filed in are in PostgreSQL too**, and survive a restart with everything else.
+See [Authentication](docs/backend.md#authentication) and
 [Folders](docs/backend.md#folders). **AI Wizard chats are in PostgreSQL**,
-kept for a day after they were last used -- so a chat outlives the restart
-that takes its character; see [Session lifetime](docs/agent.md#session-lifetime).
+kept for a day after they were last used; see
+[Session lifetime](docs/agent.md#session-lifetime).
 
 **Groups** are the second main section: a table of people with three ranks --
 owner, DM, player -- who invite each other with a link that works for 24 hours.
@@ -43,10 +43,8 @@ owner can ever change it.
 one sitting run by a DM, played at one group's table, with a roster of the
 characters that group has shared. They are listed together across every table
 you sit at rather than being reached through a group -- the group is a fact
-about a game, not the way in to one. Note the split, which is surprising: the
-group and its members are in PostgreSQL, while the characters shared with it and
-the games run from them are **in memory and die with the characters they name**,
-because a character id does not outlive the process. See
+about a game, not the way in to one. The characters shared with a group and
+the games run from them are in PostgreSQL beside it. See
 [Ownership, and membership](docs/backend.md#ownership-and-membership).
 
 A **group**, a **game** and a **folder** are different things and the words are
@@ -69,7 +67,7 @@ an account; use the account icon in the header to switch roles. See
 | [docs/packs-plan.md](docs/packs-plan.md) | Original design and later milestones |
 | [docs/agent.md](docs/agent.md) | Character import tools, chat workspace, private content, configuration and resumability |
 | [docs/polling.md](docs/polling.md) | How the AI Wizard page follows a running import: one request a second, answered at once |
-| [docs/known-caveats.md](docs/known-caveats.md) | Limits that are known and deliberate, starting with the AI Wizard not scaling horizontally |
+| [docs/known-caveats.md](docs/known-caveats.md) | Limits that are known and deliberate |
 | [docs/backend.md](docs/backend.md) | The Go service: layout, layer rules, configuration, deployment |
 | [docs/web.md](docs/web.md) | The browser client: layout, layer rules, how it ships |
 | [docs/seo.md](docs/seo.md) | Search-engine and answer-engine discovery, submission, and monitoring |

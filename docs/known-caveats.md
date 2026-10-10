@@ -3,33 +3,30 @@
 Limits that are known and, for now, deliberate. Each says what breaks, why,
 and what would lift it.
 
-## The AI Wizard does not scale horizontally
+## A guest's characters are never deleted
 
-**Run one API process.** A second one behind the same address breaks the
-wizard, and nothing in the service detects or prevents it.
+A guest session is one click and no account, and it owns the characters it
+makes like any account does: they are rows in `characters`, with the guest's
+id as the owner. The session expires; the rows do not. Nothing can reach them
+again -- a guest id is never issued twice -- and nothing sweeps them, so the
+table grows by whatever guests make and leave behind.
 
-Less of an import lives in one process than used to. The session --
-transcript, status, attachments -- is in PostgreSQL, a turn is claimed under
-a lease by whichever process is free, and the page's [poll](polling.md) is
-answered from the database by whichever process it reaches
-([agent.md](agent.md#session-lifetime)). What is still in the memory of the
-process that started the import:
+That is a size, not a correctness problem: no read lists them, no join reaches
+them, and the one index on `owner_id` is what every query uses. It is left as
+it is because the honest fix is a question the product has not answered yet:
+how long a guest's work should outlive the guest.
 
-- **the character it is building** -- with every other character, folder and
-  game (see the [README](../README.md));
-- **the private packs it wrote** for content the rules lack.
+**What would lift it:** a sweep like the wizard's, deleting characters whose
+owner is a guest id older than the guest session's lifetime, and the folders
+with them. `ponytail:` in `internal/app/app.go` marks the spot.
 
-So with two processes the chat is readable from either, and its turn can be
-claimed by either, but only the one that made the character can find it. A
-turn claimed by the other fails the session at its first tool call, and the
-chat is missing from the other's list of chats to reopen. The same is true of
-one process across a restart: the chat is kept and its turn is claimed again,
-and it fails because the character is gone.
+## The AI Wizard scales horizontally now
 
-That failure is deliberate rather than merely what happens. A character id is
-a counter that starts again with the process, so the id a stored chat holds
-will name some *other* character after a restart; the assistant checks that
-the character is the one its own chat created before it writes to it.
-
-**What would lift it:** characters, folders and private packs in the shared
-store. Nothing in the wizard would then need to change.
+This used to be the first caveat: the character an import built and the packs
+it compiled lived in one process's memory, so a second API process could read
+the chat and claim its turn but not find its character. Both are in PostgreSQL
+now (`characters`, `private_releases`), and nothing in the wizard needed to
+change. It is kept here so that the reasoning is not lost: a turn claimed by
+any process finds the character by id, loads the private release by its lock
+from the store on a cache miss, and writes back under the character's
+revision.

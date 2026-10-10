@@ -11,7 +11,7 @@ private storage, and group sharing are available through the Homebrew section;
 see Homebrew authoring below. Character imports can also compile temporary,
 session-scoped private definitions; see [agent.md](agent.md#custom-content).
 These releases use the same validator and immutable locks, never enter the
-default catalogue, and live in memory. The
+default catalogue, and are stored in `private_releases`. The
 existing browser still uses its original ability editor; its resource displays
 read `resources.pools` and `resources.parameters`.
 
@@ -236,8 +236,8 @@ of `config.dev.yaml`; a private `config.local.yaml` remains a complete override
 and must include the same setting if desired.
 
 The archive preserves packs, **not characters**. Character logs, checkpoints,
-folders, shares and games still live in memory. Durable character storage is a
-separate dependency before replay across application restarts can be promised.
+folders, shares and games are in PostgreSQL when `db.url` is set, and in
+memory otherwise.
 
 ## File contract
 
@@ -589,7 +589,6 @@ new policy does not silently migrate existing pinned characters.
 exactly the same authoring endpoints; their stored guest identity owns the packs,
 so access still depends on retaining that guest session. PostgreSQL persists packs
 and group shares when configured. Development without a database uses memory.
-Character logs remain memory-only.
 
 The visual editor is described by the existing typed wire definitions, including
 all entity collections, locale bundles and recursive mechanics. It writes the

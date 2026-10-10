@@ -99,7 +99,7 @@ func TestAuthoringRetainsPrivateImportDefinitions(t *testing.T) {
 	if global.Feats.Has("import-private/star-touched") {
 		t.Fatal("private import leaked into default catalogue")
 	}
-	retained := a.PrivateReleases(oldLock)
+	retained := a.PrivateReleases(context.Background(), oldLock)
 	if len(retained.Packs) != 1 || retained.Packs[0].ID != "import-private" {
 		t.Fatal("copy must retain only private definitions")
 	}

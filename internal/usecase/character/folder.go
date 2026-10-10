@@ -181,8 +181,10 @@ func (s *Service) CopyCharacter(
 	}
 	if s.packAccess != nil {
 		retained := pack.Lock{}
-		if private, ok := s.catalog.(interface{ PrivateReleases(pack.Lock) pack.Lock }); ok {
-			retained = private.PrivateReleases(source.Log.RulesLock())
+		if private, ok := s.catalog.(interface {
+			PrivateReleases(context.Context, pack.Lock) pack.Lock
+		}); ok {
+			retained = private.PrivateReleases(ctx, source.Log.RulesLock())
 		}
 		if err := s.packAccess.AuthorizeLock(ctx, user.ID(owner), source.Log.RulesLock(), retained); err != nil {
 			return domain.Character{}, err
