@@ -41,9 +41,7 @@ written at the first message; `ponytail:` on `Agent.room` marks the spot.
 count followed by an insert, so requests racing at the limit can leave a list
 a few over it. The roster is exact because it is checked under the row lock
 `MutateEntries` already takes. *What would lift it:* the guarded insert the
-wizard's `max_sessions` uses (`postgres/agent.go`, `Create`). Counting an
-owner's packs also reads every pack; a count over `rule_packs_owner` would
-replace it.
+wizard's `max_sessions` uses (`postgres/agent.go`, `Create`).
 
 ## Choices the builder does not ask
 

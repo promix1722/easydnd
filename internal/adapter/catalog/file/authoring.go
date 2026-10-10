@@ -411,7 +411,11 @@ func (a *Authoring) decodeRelease(data []byte) (decodedRelease, error) {
 }
 
 func (a *Authoring) registryForLock(ctx context.Context, l pack.Lock) (*Registry, error) {
-	records, err := a.repo.List(ctx)
+	ids := make([]string, 0, len(l.Packs))
+	for _, p := range l.Packs {
+		ids = append(ids, p.ID)
+	}
+	records, err := a.repo.ListFor(ctx, "", ids)
 	if err != nil {
 		return nil, err
 	}

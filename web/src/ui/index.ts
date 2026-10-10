@@ -22,7 +22,7 @@ export { Carousel } from '@mantine/carousel'
 // Arrow keys and the wheel for a carousel that fills its page. Spread on to a
 // `Carousel`; see the hook for what it borrows and when it gives it back.
 export { useCarouselGestures } from './carouselGestures'
-export { useDisclosure } from '@mantine/hooks'
+export { useDebouncedValue, useDisclosure } from '@mantine/hooks'
 
 // The icon set, named one glyph at a time. Re-exported for the same reason the
 // chrome above is: `shell/` builds the header and may not import a vendor

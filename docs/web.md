@@ -396,11 +396,17 @@ three.js out of the main bundle, and all three are load-bearing:
    on mount. The die is the fourth panel of a carousel; embla mounts all four,
    but only the panel you have swiped to is on screen. Swipe to the die and it
    fetches. Never swipe and it never does.
-2. `vite.config.ts` gives the chunk a stable name through `manualChunks` and
-   then names that chunk in workbox's `globIgnores`. Without this the service
-   worker would have precached it on first visit -- it globs `**/*.js` -- and
-   every visitor would have downloaded three.js in the background regardless
-   of step 1. This is the step that is easy to miss and silent when wrong.
+2. `vite.config.ts` names that chunk in workbox's `globIgnores`. Without this
+   the service worker would have precached it on first visit -- it globs
+   `**/*.js` -- and every visitor would have downloaded three.js in the
+   background regardless of step 1. This is the step that is easy to miss and
+   silent when wrong, and it has gone wrong: the chunk used to get its name
+   from a `manualChunks` rule, and under Rolldown a manual chunk also takes its
+   modules' dependencies, so React moved into it and the page preloaded
+   three.js for everybody while the die went on working. The chunk is now
+   simply the one the dynamic `import()` produces, `D20Scene-*.js`, and the
+   `lazyScene` build plugin fails the build unless there is exactly one such
+   chunk and nothing the entry loads reaches it.
 3. `scripts/check-layers.mjs` lists `three` and `cannon-es` as `ui/`-only
    vendors, so a feature cannot import either directly and quietly undo the
    split.
@@ -422,9 +428,9 @@ page is open. Loading is announced by the spinner's own name rather than through
 the polite live region below it, which carries results; a spinner interrupting
 the number somebody just rolled is the wrong trade.
 
-The measured result: `index-*.js` is 260 kB gzipped and contains no three.js at
-all; `d20-scene-*.js` is 158 kB and is not in the precache manifest. Both are
-worth re-checking after a dependency bump, because nothing fails if they merge.
+The measured result: `D20Scene-*.js` is 154 kB gzipped, is not in the precache
+manifest, and is not among the chunks `index.html` loads. The build checks the
+last of those; the precache is worth a look after a dependency bump.
 
 The trade this makes is that a die thrown for the first time *offline* does not
 work. That is the right way round: a visitor who never opens the die should not
@@ -4322,6 +4328,36 @@ precisely why it went unnoticed.
 
 `manifest.webmanifest` had no rule at all, and stock nginx `mime.types` has no
 `webmanifest` entry, so it was served as `application/octet-stream`.
+
+## Screens are fetched on first visit
+
+`routes/index.tsx` reaches every screen behind sign-in through `React.lazy`,
+so the entry chunk is the shell, the landing page, the sign-in screen and the
+design system, and each screen is a chunk of its own. A signed-out visitor used
+to download the builder, the tracker, the pack editor and the admin tables to
+read a carousel: about 545 kB gzipped up front, three.js included (see
+[the die](#the-die-is-real-3d-and-it-is-paid-for-in-one-chunk)), against about 300 kB now.
+
+Three things hold it together:
+
+- **Each import names the screen's file, not its feature's barrel.** A barrel
+  re-exports every screen of its feature, and a module that is imported both
+  statically and dynamically stays where the static import puts it. `HomeRoute`
+  fetches the character list the same way for the same reason: it is the one
+  route the landing page shares.
+- **The `Suspense` boundary is `shell/RouteOutlet.tsx`**, inside the chrome, so
+  a deep link shows the header and a loader rather than a blank window. A
+  navigation between screens never shows the fallback: the router makes it a
+  transition and the page being left stays up.
+- **A chunk that fails to load reloads the tab, once.** The usual cause is a
+  release that went out while the tab was open, and `main.tsx` answers Vite's
+  `vite:preloadError` with the same reload the update dialog performs. Installed
+  clients rarely get that far: the service worker precaches every chunk but the
+  die's.
+
+Both locale catalogues still ship in the entry chunk. Fetching the inactive
+one on switch would save about 25 kB gzipped and would make the first render
+of a Russian visit wait on a request; it has not been worth that.
 
 ## How it ships
 

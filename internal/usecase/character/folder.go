@@ -230,11 +230,6 @@ func (s *Service) copyTo(
 		return domain.Character{}, err
 	}
 
-	created, err := s.repo.Create(ctx, to, target)
-	if err != nil {
-		return domain.Character{}, err
-	}
-
 	// Seq is zeroed rather than carried across: numbering is Log.Append's
 	// job, and a caller that hands it numbers is asserting something it has
 	// no way to know is still true.
@@ -259,10 +254,8 @@ func (s *Service) copyTo(
 	if err != nil {
 		return domain.Character{}, err
 	}
-	if err := s.repo.Commit(ctx, created.ID, 0, copied, nil); err != nil {
-		return domain.Character{}, err
-	}
-	return s.repo.Get(ctx, created.ID)
+	// One write, so a failed copy leaves nothing in the recipient's folder.
+	return s.repo.CreateWithLog(ctx, to, target, copied)
 }
 
 // resolveFolder turns a caller's folder into one owner definitely has: the

@@ -44,6 +44,36 @@ function themeColour(): Plugin {
  * "dev", the pipeline's public check would never match the SHA, and the deploy
  * would fail minutes later with no obvious cause. Fail at build time instead.
  */
+/**
+ * Fails the build if the 3D die stops being something only its thrower pays for.
+ *
+ * `ui/D20Scene.tsx` is behind a dynamic `import()`, so the bundler gives it,
+ * three.js and cannon-es a chunk of their own, named after the module. Two
+ * things have to stay true of that chunk and nothing else notices when they
+ * do not: the page must not load it up front, and the service worker's
+ * `globIgnores` must still match its name. Both broke silently once -- a
+ * `manualChunks` rule that named the chunk also moved React into it, so every
+ * visitor downloaded three.js to read the landing page, and the die kept
+ * working. Hence a check rather than a comment.
+ */
+function lazyScene(): Plugin {
+  return {
+    name: 'easydnd:lazy-scene',
+    apply: 'build',
+    generateBundle(_, bundle) {
+      const chunks = Object.values(bundle).filter((file) => file.type === 'chunk')
+      const scene = chunks.filter((chunk) => /\/D20Scene-[^/]*\.js$/.test(chunk.fileName))
+      if (scene.length !== 1) this.error(`expected one D20Scene chunk, found ${scene.length}`)
+      const eager = new Set(chunks.filter((chunk) => chunk.isEntry).map((chunk) => chunk.fileName))
+      for (const name of eager) {
+        const chunk = bundle[name]
+        if (chunk?.type === 'chunk') chunk.imports.forEach((imported) => eager.add(imported))
+      }
+      if (eager.has(scene[0]!.fileName)) this.error('the D20Scene chunk is loaded with the entry chunk')
+    },
+  }
+}
+
 function versionManifest(): Plugin {
   let version = ''
   return {
@@ -101,6 +131,7 @@ export default defineConfig({
     react(),
     themeColour(),
     versionManifest(),
+    lazyScene(),
     VitePWA({
       /**
        * 'prompt', not 'autoUpdate', and the difference is not a preference.
@@ -137,13 +168,14 @@ export default defineConfig({
          * is to download everything up front, so on a first visit it would
          * have pulled the whole 180 kB in the background regardless and made
          * that trouble pointless. The pattern matches Rollup's hashed name for
-         * the chunk; `manualChunks` below names it, so the two move together.
+         * the chunk, which is named after `ui/D20Scene.tsx`; `lazyScene` above fails
+         * the build if the two stop agreeing.
          *
          * The cost is that a die thrown for the first time offline does not
          * work. That is the correct trade: an offline visitor who never opens
          * the die should not have paid for it.
          */
-        globIgnores: ['**/d20-scene-*.js'],
+        globIgnores: ['**/D20Scene-*.js'],
         // Navigations to /v1/ are the API's, not the router's. This is load
         // bearing rather than tidy: the Google sign-in return is a top-level
         // navigation to /v1/auth/sso/:provider/callback, and without this the
@@ -236,26 +268,6 @@ export default defineConfig({
     // minified chunk offsets, and the release that produced them is pruned
     // after five deploys.
     sourcemap: true,
-    rollupOptions: {
-      output: {
-        /*
-         * One named chunk, so the service worker can be told to skip it.
-         *
-         * Rollup would split `ui/D20Scene.tsx` out on its own anyway -- it is
-         * behind a dynamic `import()` -- but it would name it after the module
-         * and the name would drift with a rename. `globIgnores` above matches
-         * on this name, and a precache pattern that silently stops matching is
-         * exactly the kind of regression nothing fails on: the die would keep
-         * working, and every visitor would quietly download three.js again.
-         */
-        manualChunks(id) {
-          if (id.includes('/three/') || id.includes('/cannon-es/') || id.includes('D20Scene')) {
-            return 'd20-scene'
-          }
-          return undefined
-        },
-      },
-    },
   },
   /**
    * The test suite, in one project that isolates nothing.

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/promix1722/easydnd/internal/domain/pack"
+	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
 )
 
@@ -119,13 +120,22 @@ func RunPackRepository(t *testing.T, factory func(*testing.T) pack.Repository) {
 		t.Fatalf("GetPrivate with another digest = %v, want not found", err)
 	}
 	// And a private release is not a listed pack.
-	records, err := r.List(ctx)
+	records, err := r.ListFor(ctx, "", []string{private.Release.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, rec := range records {
-		if rec.ID == private.Release.ID {
-			t.Fatal("a private release was listed")
+	if len(records) != 0 {
+		t.Fatal("a private release was listed")
+	}
+	// A listing is somebody's packs or named ones, never the table.
+	for _, c := range []struct {
+		owner string
+		ids   []string
+		want  int
+	}{{string(original.Owner), nil, 1}, {"anon:stranger", nil, 0}, {"", []string{original.ID}, 1}, {"anon:stranger", []string{original.ID}, 1}, {"", nil, 0}} {
+		got, err := r.ListFor(ctx, user.ID(c.owner), c.ids)
+		if err != nil || len(got) != c.want {
+			t.Fatalf("ListFor(%q, %v) = %d records, %v; want %d", c.owner, c.ids, len(got), err, c.want)
 		}
 	}
 }

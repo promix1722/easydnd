@@ -1,7 +1,15 @@
-import { CharacterListScreen } from '@/features/characters'
+import { lazy } from 'react'
+
 import { useAuth } from '@/lib/auth'
 
 import { LandingPage } from './LandingPage'
+
+// Fetched on first use, like every screen behind sign-in: a static import
+// here would put the list, and every feature barrel it reaches, in the chunk
+// a signed-out visitor downloads to read the landing page. See ./index.tsx.
+const CharacterListScreen = lazy(() =>
+  import('@/features/characters/CharacterListScreen').then((m) => ({ default: m.CharacterListScreen })),
+)
 
 /**
  * `/` for everybody.

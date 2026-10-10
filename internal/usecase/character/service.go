@@ -149,20 +149,14 @@ func (s *Service) Create(
 	if err != nil {
 		return domain.Character{}, err
 	}
-	created, err := s.repo.Create(ctx, owner, folder)
-	if err != nil {
-		return domain.Character{}, err
-	}
 	event := InitEvent(opening)
 	event.RulesLock = cat.Lock.Clone()
 	log := domain.Log{}
 	if err := log.Append(event); err != nil {
 		return domain.Character{}, err
 	}
-	if err := s.repo.Commit(ctx, created.ID, 0, log, nil); err != nil {
-		return domain.Character{}, err
-	}
-	return s.repo.Get(ctx, created.ID)
+	// One write, so a failure cannot leave a character with no log behind.
+	return s.repo.CreateWithLog(ctx, owner, folder, log)
 }
 
 // validateOpening checks the name and optional portrait carried at creation.

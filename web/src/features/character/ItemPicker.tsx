@@ -7,7 +7,7 @@ import type { Entry, Item, ItemFilters, ItemHit, ItemPage } from '@/lib/api'
 import { useCatalogScope } from '@/lib/api/catalogScope'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
-import { Badge, Box, Button, ChoiceDetails, Group, ItemIcon, PageBody, Paper, Select, Stack, Text, TextInput, pageState } from '@/ui'
+import { Badge, Box, Button, ChoiceDetails, Group, ItemIcon, PageBody, Paper, Select, Stack, Text, TextInput, pageState, useDebouncedValue } from '@/ui'
 
 import { ItemBody } from './ItemScreen'
 
@@ -50,7 +50,10 @@ export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabl
   const [category, setCategory] = useState<string | null>(null)
   const [kind, setKind] = useState<string | null>(null)
   const [reading, setReading] = useState<string | null>(null)
-  const filters: ItemFilters = { q, wearable, category, magic: kind === null ? null : kind === 'magic' }
+  // The box follows the keys; the search follows the pause after them. A hit
+  // carries its artwork, so a request per letter is megabytes nobody reads.
+  const [asked] = useDebouncedValue(q, 300)
+  const filters: ItemFilters = { q: asked, wearable, category, magic: kind === null ? null : kind === 'magic' }
 
   const [lastPage, setLastPage] = useState<ItemPage | null>(null)
   const [more, setMore] = useState<{ key: string; items: ItemHit[]; loading: boolean }>({ key: '', items: [], loading: false })

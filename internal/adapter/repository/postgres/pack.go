@@ -14,8 +14,10 @@ import (
 type PackRepository struct{ pool *pgxpool.Pool }
 
 func NewPackRepository(pool *pgxpool.Pool) *PackRepository { return &PackRepository{pool: pool} }
-func (r *PackRepository) List(ctx context.Context) ([]pack.Record, error) {
-	rows, err := r.pool.Query(ctx, "SELECT document FROM rule_packs ORDER BY id")
+func (r *PackRepository) ListFor(ctx context.Context, owner user.ID, ids []string) ([]pack.Record, error) {
+	rows, err := r.pool.Query(ctx,
+		"SELECT document FROM rule_packs WHERE ($1 <> '' AND owner_id = $1) OR id = ANY($2) ORDER BY id",
+		string(owner), ids)
 	if err != nil {
 		return nil, err
 	}

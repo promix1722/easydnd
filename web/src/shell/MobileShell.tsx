@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
 import { useT } from '@/lib/i18n'
 
@@ -19,6 +19,7 @@ import type { Section } from '@/ui'
 
 import { AccountActions } from './AccountActions'
 import { HEADER_BOX, SAFE_BOTTOM, SAFE_TOP } from './chrome'
+import { RouteOutlet } from './RouteOutlet'
 import { Wordmark } from './Wordmark'
 
 
@@ -224,7 +225,7 @@ export function MobileShell() {
           ui/backdrop.ts. Not behind this header: chrome keeps its own flat
           ground. */}
       <AppShell.Main style={PAGE_BACKDROP}>
-        <Outlet />
+        <RouteOutlet />
       </AppShell.Main>
 
     </AppShell>

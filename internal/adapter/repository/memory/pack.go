@@ -28,12 +28,14 @@ func clonePack[T any](v T) T {
 	_ = json.Unmarshal(b, &out)
 	return out
 }
-func (r *PackRepository) List(context.Context) ([]pack.Record, error) {
+func (r *PackRepository) ListFor(_ context.Context, owner user.ID, ids []string) ([]pack.Record, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := []pack.Record{}
 	for _, v := range r.records {
-		out = append(out, clonePack(v))
+		if (owner != "" && v.Owner == owner) || slices.Contains(ids, v.ID) {
+			out = append(out, clonePack(v))
+		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, nil

@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
@@ -22,6 +22,7 @@ import {
 
 import { AccountActions } from './AccountActions'
 import { HEADER_BOX, SAFE_TOP } from './chrome'
+import { RouteOutlet } from './RouteOutlet'
 import { Wordmark } from './Wordmark'
 
 /** The id the rail's control points `aria-controls` at. */
@@ -214,7 +215,7 @@ export function DesktopShell() {
           paddingTop: `calc(var(--app-shell-header-offset, 0rem) + ${CHROME_INSET}px)`,
         }}
       >
-        <Outlet />
+        <RouteOutlet />
       </AppShell.Main>
     </AppShell>
   )

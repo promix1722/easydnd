@@ -53,8 +53,32 @@ func invalid(err error) error {
 	d := Diagnose(err)
 	return types.NewValidationError("invalid pack: %v", err).Because(d.Reason, d.Args)
 }
-func (s *Service) available(ctx context.Context, u user.ID) ([]domain.Record, map[domain.Release]bool, error) {
-	records, err := s.repo.List(ctx)
+
+// available returns the records u can reach and which of their releases u may
+// use. It reads u's own packs, the ones u's groups share, and the ones named
+// in retained -- the releases a caller is about to allow on other grounds --
+// and never the whole table: a pack document can run to megabytes, and this
+// runs on every pack read.
+func (s *Service) available(ctx context.Context, u user.ID, retained ...domain.Release) ([]domain.Record, map[domain.Release]bool, error) {
+	groups, err := s.groups.ListFor(ctx, u)
+	if err != nil {
+		return nil, nil, err
+	}
+	shared := []domain.Release{}
+	for _, g := range groups {
+		shares, err := s.repo.Shares(ctx, string(g.Group.ID))
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, share := range shares {
+			shared = append(shared, share.Lock.Packs...)
+		}
+	}
+	ids := make([]string, 0, len(shared)+len(retained))
+	for _, r := range slices.Concat(shared, retained) {
+		ids = append(ids, r.ID)
+	}
+	records, err := s.repo.ListFor(ctx, u, ids)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,20 +100,8 @@ func (s *Service) available(ctx context.Context, u user.ID) ([]domain.Record, ma
 			}
 		}
 	}
-	groups, err := s.groups.ListFor(ctx, u)
-	if err != nil {
-		return nil, nil, err
-	}
-	for _, g := range groups {
-		shares, err := s.repo.Shares(ctx, string(g.Group.ID))
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, share := range shares {
-			for _, r := range share.Lock.Packs {
-				allowed[r] = true
-			}
-		}
+	for _, r := range shared {
+		allowed[r] = true
 	}
 	for _, r := range records {
 		if r.Archived {
@@ -193,10 +205,8 @@ func (s *Service) Create(ctx context.Context, u user.User, title string, data []
 	}
 	// Archived packs do not count: a pack cannot be deleted, so counting them
 	// would leave an owner at the limit with no way back under it.
-	// ponytail: reads every pack to count one owner's, and counts before it
-	// inserts. A CountByOwner port over rule_packs_owner fixes the first, a
-	// guarded INSERT the second.
-	all, err := s.repo.List(ctx)
+	// ponytail: counts before it inserts; a guarded INSERT closes the race.
+	all, err := s.repo.ListFor(ctx, u.ID, nil)
 	if err != nil {
 		return domain.Record{}, err
 	}
@@ -297,7 +307,7 @@ func (s *Service) Resolve(ctx context.Context, u user.ID, roots []domain.Release
 // AuthorizeLock allows retained releases only through a character already owned
 // by the caller. Every newly introduced release still needs current access.
 func (s *Service) AuthorizeLock(ctx context.Context, u user.ID, target, retained domain.Lock) error {
-	records, allowed, err := s.available(ctx, u)
+	records, allowed, err := s.available(ctx, u, retained.Packs...)
 	if err != nil {
 		return err
 	}

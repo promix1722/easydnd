@@ -1,27 +1,56 @@
-import { PacksScreen, PackEditorScreen } from '@/features/packs'
+import { lazy, type ComponentType } from 'react'
 import { createBrowserRouter } from 'react-router'
 
-import { AvatarGalleryScreen } from '@/features/avatars'
-import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
-import { BuildScreen, CharacterLogScreen, CharacterSheetScreen, CustomItemScreen, ItemScreen } from '@/features/character'
-import { AgentImportScreen } from '@/features/characters'
-import { DiceScreen } from '@/features/dice'
-import { AdminScreen } from '@/features/admin'
-import { GameScreen, GamesScreen, SharedSheetScreen } from '@/features/games'
-import { GroupListScreen, GroupScreen } from '@/features/groups'
-import { LegalScreen } from '@/features/legal'
-import { SpellScreen, SpellsScreen } from '@/features/spells'
 
 import { LandingShell } from '@/shell/LandingShell'
 import { RootGate } from '@/shell/RootGate'
 
 import { HomeRoute } from './HomeRoute'
-import { InvitationLink, InvitationRoute } from './InvitationRoute'
 import { AdminOnly } from './AdminOnly'
 import { NotFoundPage } from './NotFoundPage'
 import { Private } from './Private'
 import { LegacyImportRedirect } from './LegacyImportRedirect'
+
+/**
+ * A screen fetched when its route is first visited, not with the entry chunk.
+ *
+ * Everything behind sign-in is loaded this way, so a visitor reading the
+ * landing page does not download the builder, the tracker, the pack editor and
+ * the admin tables to do it. Each import names the screen's own file rather
+ * than its feature's barrel, and that is the point rather than a shortcut: a
+ * barrel re-exports every screen of its feature, and a module that is
+ * imported both ways stays in the entry chunk. The shells hold the
+ * `Suspense` boundary, around their `Outlet`.
+ */
+// `any` is the bound React itself puts on a lazy component: each screen keeps
+// its own props, and a bound of `object` would refuse the ones that take any.
+function screen<K extends string, C extends ComponentType<any>>(load: () => Promise<Record<NoInfer<K>, C>>, name: K) {
+  return lazy<C>(() => load().then((module) => ({ default: module[name] })))
+}
+
+const InvitationLink = screen(() => import('./InvitationRoute'), 'InvitationLink')
+const InvitationRoute = screen(() => import('./InvitationRoute'), 'InvitationRoute')
+const PacksScreen = screen(() => import('@/features/packs/PacksScreen'), 'PacksScreen')
+const PackEditorScreen = screen(() => import('@/features/packs/PackEditorScreen'), 'PackEditorScreen')
+const AvatarGalleryScreen = screen(() => import('@/features/avatars/AvatarGalleryScreen'), 'AvatarGalleryScreen')
+const AccountScreen = screen(() => import('@/features/account/AccountScreen'), 'AccountScreen')
+const BuildScreen = screen(() => import('@/features/character/BuildScreen'), 'BuildScreen')
+const CharacterLogScreen = screen(() => import('@/features/character/CharacterLogScreen'), 'CharacterLogScreen')
+const CharacterSheetScreen = screen(() => import('@/features/character/CharacterSheetScreen'), 'CharacterSheetScreen')
+const CustomItemScreen = screen(() => import('@/features/character/CustomItemScreen'), 'CustomItemScreen')
+const ItemScreen = screen(() => import('@/features/character/ItemScreen'), 'ItemScreen')
+const AgentImportScreen = screen(() => import('@/features/characters/AgentImportScreen'), 'AgentImportScreen')
+const DiceScreen = screen(() => import('@/features/dice/DiceScreen'), 'DiceScreen')
+const AdminScreen = screen(() => import('@/features/admin/AdminScreen'), 'AdminScreen')
+const GameScreen = screen(() => import('@/features/games/GameScreen'), 'GameScreen')
+const GamesScreen = screen(() => import('@/features/games/GamesScreen'), 'GamesScreen')
+const SharedSheetScreen = screen(() => import('@/features/games/SharedSheetScreen'), 'SharedSheetScreen')
+const GroupListScreen = screen(() => import('@/features/groups/GroupListScreen'), 'GroupListScreen')
+const GroupScreen = screen(() => import('@/features/groups/GroupScreen'), 'GroupScreen')
+const LegalScreen = screen(() => import('@/features/legal/LegalScreen'), 'LegalScreen')
+const SpellScreen = screen(() => import('@/features/spells/SpellScreen'), 'SpellScreen')
+const SpellsScreen = screen(() => import('@/features/spells/SpellsScreen'), 'SpellsScreen')
 
 /**
  * The complete route table -- one tree for both viewports and for both sides

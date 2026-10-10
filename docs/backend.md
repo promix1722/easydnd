@@ -2783,7 +2783,11 @@ Group shares store an exact dependency closure. Migration 00010 drops the
 share's foreign key to `rule_packs`: a restricted disk pack is shared the same
 way and has no row there. Deleting a group removes shares;
 no release garbage collection is performed. Memory and PostgreSQL repositories
-share concurrency and round-trip contract tests. Guest rows are materialized on
+share concurrency and round-trip contract tests. A pack read never loads the
+table: `ListFor` returns one owner's records plus the ones named by id -- the
+packs the caller's groups share, or the ones a lock pins -- because the
+availability check runs on every pack request and a document with artwork runs
+to megabytes. It used to read every author's packs each time. Guest rows are materialized on
 first pack creation using the same account repository operation as groups.
 
 `POST /v1/characters` now accepts an optional `rules` lock. Omitting it selects SRD
