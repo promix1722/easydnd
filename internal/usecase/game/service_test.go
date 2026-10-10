@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -24,6 +25,12 @@ type fixture struct {
 	groups     group.Repository
 	characters character.Repository
 }
+
+// packs is the registry the app wires, loaded once: only a locked catalogue
+// has resource pools, and compiling it per test costs seconds.
+var packs = sync.OnceValues(func() (*catalogfile.Registry, error) {
+	return catalogfile.NewRegistry([]string{filepath.Join("..", "..", "..", "data", "pack", "srd-5.1")}, nil, "")
+})
 
 // newFixture seeds three accounts and wires the service over empty stores.
 //
@@ -44,6 +51,10 @@ func newFixture(t *testing.T) *fixture {
 	groups := memory.NewGroupRepository(users)
 	characters := memory.NewCharacterRepository()
 	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	source, err := packs()
+	if err != nil {
+		t.Fatalf("load packs: %v", err)
+	}
 
 	return &fixture{
 		svc: gameuc.NewService(
@@ -51,7 +62,7 @@ func newFixture(t *testing.T) *fixture {
 			memory.NewSharedRepository(),
 			groups,
 			characters,
-			catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1")),
+			source,
 			log,
 		),
 		groups:     groups,
@@ -489,5 +500,36 @@ func TestARefusedNameSaysSoOnTheField(t *testing.T) {
 	// reason of its own, so one of the two must be set.
 	if got.Reason == "" && got.Rule == "" {
 		t.Error("the field error carries neither a reason nor a rule, so the input shows nothing")
+	}
+}
+
+// A character its owner opened is read by anybody signed in who has its link,
+// table or no table, and by nobody once it is hidden again. Reading is all it
+// grants: nothing here writes.
+func TestAnOpenedCharacterIsReadableByLinkUntilHidden(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	bobs := f.character(t, "bob")
+	if err := f.characters.Append(ctx, bobs, 0, character.Event{Type: character.EventInit}); err != nil {
+		t.Fatal(err)
+	}
+	read := func() error {
+		_, err := f.svc.Sheet(ctx, "stranger", bobs, rules.DefaultLocale)
+		return err
+	}
+	if err := read(); !types.IsNotFound(err) {
+		t.Fatalf("a private character was read by a stranger: %v", err)
+	}
+	if err := f.characters.SetPublic(ctx, bobs, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := read(); err != nil {
+		t.Fatalf("an opened character was refused: %v", err)
+	}
+	if err := f.characters.SetPublic(ctx, bobs, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := read(); !types.IsNotFound(err) {
+		t.Fatalf("a hidden character was still read: %v", err)
 	}
 }

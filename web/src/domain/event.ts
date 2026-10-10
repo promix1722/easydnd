@@ -55,6 +55,7 @@ const REF_COLLECTIONS: Record<string, string> = {
   skill: 'skills',
   condition: 'conditions',
   'damage-type': 'damage-types',
+  'equipment-category': 'equipment-categories',
 }
 
 /**

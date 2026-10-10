@@ -1,15 +1,15 @@
-import { useParams } from 'react-router'
+import { Navigate, useParams } from 'react-router'
 
 import type { Sheet } from '@/lib/api'
-import { getGroup, getSharedSheet } from '@/lib/api'
+import { getSharedOwner, getSharedSheet } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
+import { CatalogScope } from '@/lib/api/catalogScope'
 import { useResource } from '@/lib/useResource'
 import { useLocale, useT } from '@/lib/i18n'
-import { Badge, Page, pageState } from '@/ui'
+import { Avatar, characterAvatar, Badge, Page, pageState } from '@/ui'
 
 import { titleCase } from '@/domain'
 
-import type { Compendium } from '../character/compendium'
-import { loadCompendium } from '../character/compendium'
 import { SheetBody } from '../character/SheetBody'
 
 /**
@@ -25,33 +25,24 @@ export function SharedSheetScreen() {
   const t = useT()
   const locale = useLocale()
   const { id: groupId = '', character = '' } = useParams()
-  // The same compendium the owner's own sheet loads, so the two name things
-  // out of one set. Both requests are session-cached.
+  // The sheet names its own slugs, exactly as the owner's does: one resolver
+  // on the server writes both, so the two cannot name things differently.
   const { data, error, loading, reload } = useResource<{
     sheet: Sheet
-    compendium: Compendium
     /**
-     * The group's name, for the middle crumb, or null when the lookup failed.
-     *
-     * Fetched here rather than threaded through the route because the trail is
-     * `Groups / <group> / <character>` and a crumb that says a group id is no
-     * better than one that says nothing. The failure is tolerated on the same
-     * bargain the owner's sheet already makes for `prompts` and the compendium:
-     * a shared sheet is worth drawing, and is not worth losing to a second
-     * request for one word. A null renders as the crumb's placeholder.
+     * Whose character it is, for the crumb before its name, or null when the
+     * lookup failed. A sheet does not say who owns it, so this is asked beside
+     * it -- and tolerated failing, on the bargain the owner's sheet already
+     * makes for `prompts`: a shared sheet is worth drawing, and is not worth
+     * losing to a second request for one name.
      */
-    groupName: string | null
+    owner: { id: string; name: string } | null
   }>(`shared:${locale}:${character}`, async (signal) => {
-    const [sheet, compendium, groupName] = await Promise.all([
-      getSharedSheet(character, signal),
-      loadCompendium(),
-      getGroup(groupId, signal).then(
-        (group) => group.name,
-        () => null,
-      ),
-    ])
-    return { sheet, compendium, groupName }
+    // Opened by link there is no group, and so nobody to ask whose it is.
+    const [sheet, owner] = await Promise.all([getSharedSheet(character, signal), groupId ? getSharedOwner(groupId, character, signal) : Promise.resolve(null)])
+    return { sheet, owner }
   })
+  const { user } = useAuth()
 
   const state = pageState(
     { data, error, loading },
@@ -62,15 +53,23 @@ export function SharedSheetScreen() {
     },
   )
 
-  // The group is a crumb here, unlike on a game: a shared sheet really does
-  // hang off the group, which is what grants the read. See
-  // docs/web.md#sharing-is-reading.
-  const group = { label: data?.groupName ?? null, to: `/groups/${groupId}` }
+  // The trail is the player and then the character: a character is somebody's,
+  // and that is the fact a reader opening it from a game or a group wants
+  // first. It used to be the group, which is how the read was granted rather
+  // than whose sheet this is. The player has no page yet, so the crumb is a
+  // name and not a link.
+  const player = groupId === '' ? [] : [{ label: data === null ? null : (data.owner?.name || t('common.unnamed')) }]
+
+  // Your own character is not a thing to read at arm's length: it opens as
+  // your own sheet, with everything that can be done to it.
+  if (data?.owner != null && user != null && data.owner.id === user.id) {
+    return <Navigate replace to={`/characters/${encodeURIComponent(character)}`} />
+  }
 
   if (state.kind !== 'ready' || data === null) {
     return (
       <Page
-        trail={[group, { label: null }]}
+        trail={[...player, { label: null }]}
         state={state.kind === 'loading' ? { ...state, what: t('sharedSheet.loading') } : state}
       />
     )
@@ -80,14 +79,15 @@ export function SharedSheetScreen() {
   const named = (collection: string, slug: string | undefined) =>
     slug === undefined
       ? null
-      : (data.compendium.names?.get(`${collection}:${slug}`) ?? titleCase(slug))
+      : (data.sheet.catalogNames?.[`${collection}:${slug}`] ?? titleCase(slug))
   const classes = (identity.classes ?? [])
     .map(({ class: slug, level }) => `${named('classes', slug) ?? slug} ${level}`)
     .join(' / ')
 
   return (
     <Page
-      trail={[group, { label: identity.name || 'Unnamed' }]}
+      mark={<Avatar image={identity.image} fallback={characterAvatar(identity.classes)} size={48} />}
+      trail={[...player, { label: identity.name || 'Unnamed' }]}
       badge={<Badge variant="light">{t('sharedSheet.readOnly')}</Badge>}
       subtitle={
         <>
@@ -103,7 +103,9 @@ export function SharedSheetScreen() {
     >
       {/* The way back is the trail now. The "Back to the group" button that
           used to sit here said the same thing in a second place. */}
-      <SheetBody sheet={data.sheet} compendium={data.compendium} />
+      <CatalogScope.Provider value={`/shared/${encodeURIComponent(character)}/catalog`}>
+        <SheetBody sheet={data.sheet} />
+      </CatalogScope.Provider>
     </Page>
   )
 }

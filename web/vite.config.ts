@@ -294,6 +294,14 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     isolate: false,
+    // Twenty seconds rather than the default five, for the reason
+    // `asyncUtilTimeout` in src/test/setup.ts is five rather than one. The
+    // slowest test here takes under four seconds on an idle machine, and
+    // `make verify` does not run it on one: the Go suite shares the same four
+    // cores, and a test measured at 1.8s alone was killed at 5s inside the
+    // gate with nothing wrong with it. The cap only decides how long a hung
+    // test takes to be reported.
+    testTimeout: 20_000,
     // No `css: true`: nothing in the suite reads a cascaded style. The only
     // style assertions are on inline `element.style` -- DragonMark's width and
     // the carousel's custom properties, both written by JS -- and Mantine emits

@@ -100,6 +100,7 @@ type Group struct {
 type Member struct {
 	UserID      user.ID
 	DisplayName string
+	Image       string
 	Role        Role
 	JoinedAt    time.Time
 }

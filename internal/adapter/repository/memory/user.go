@@ -82,6 +82,7 @@ func (r *UserRepository) Create(_ context.Context, u domain.User) error {
 		}
 	}
 
+	u.Appearance = u.Appearance.WithDefaults()
 	r.items[u.ID] = cloneUser(u)
 	for _, c := range u.Credentials {
 		r.byCredential[string(c.ID)] = u.ID
@@ -114,6 +115,7 @@ func (r *UserRepository) EnsureGuest(_ context.Context, u domain.User) error {
 	// token and repositories never persist it. What marks this row as a guest
 	// is the id, which carries user.AnonymousIDPrefix.
 	stored := domain.User{ID: u.ID, DisplayName: u.DisplayName, CreatedAt: u.CreatedAt}
+	stored.Appearance = stored.Appearance.WithDefaults()
 	r.items[u.ID] = stored
 	return nil
 }
@@ -293,3 +295,29 @@ func cloneUser(u domain.User) domain.User {
 
 // Compile-time proof that this adapter satisfies the port.
 var _ domain.Repository = (*UserRepository)(nil)
+
+// SetAppearance updates only the personal appearance fields.
+func (r *UserRepository) SetAppearance(_ context.Context, id domain.ID, a domain.Appearance) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, ok := r.items[id]
+	if !ok {
+		return types.NewNotFoundError("account not found").Because("account.notFound")
+	}
+	u.Appearance = a
+	r.items[id] = u
+	return nil
+}
+
+// SetImage replaces only the account portrait.
+func (r *UserRepository) SetImage(_ context.Context, id domain.ID, image string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, ok := r.items[id]
+	if !ok {
+		return types.NewNotFoundError("account not found").Because("account.notFound")
+	}
+	u.Image = image
+	r.items[id] = u
+	return nil
+}

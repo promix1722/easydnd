@@ -5,53 +5,32 @@ package rules
 // The SRD calls these "ability scores", never "attributes" -- the word
 // "attribute" does not appear anywhere in SRD 5.1. The naming is followed here
 // so that a reader with the rulebook open finds the same words in the code.
-type Ability uint8
+type Ability string
 
-// The six abilities, in the order every character sheet prints them.
 const (
-	AbilityNone Ability = iota
-	Strength
-	Dexterity
-	Constitution
-	Intelligence
-	Wisdom
-	Charisma
+	AbilityNone  Ability = ""
+	Strength     Ability = "str"
+	Dexterity    Ability = "dex"
+	Constitution Ability = "con"
+	Intelligence Ability = "int"
+	Wisdom       Ability = "wis"
+	Charisma     Ability = "cha"
 )
 
-// Abilities lists the six abilities in sheet order. Callers must not mutate
-// the returned slice.
 func Abilities() []Ability {
 	return []Ability{Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma}
 }
-
-var abilityNames = map[Ability]string{
-	AbilityNone:  "none",
-	Strength:     "str",
-	Dexterity:    "dex",
-	Constitution: "con",
-	Intelligence: "int",
-	Wisdom:       "wis",
-	Charisma:     "cha",
-}
-
-// String returns the three-letter abbreviation the SRD data uses as its slug
-// ("str", "dex", ...), or "unknown" outside the enumeration.
 func (a Ability) String() string {
-	if name, ok := abilityNames[a]; ok {
-		return name
+	if a == AbilityNone {
+		return "none"
 	}
-	return "unknown"
+	return string(a)
 }
-
-// Slug returns the ability's catalogue slug.
-func (a Ability) Slug() Slug { return Slug(a.String()) }
-
-// ParseAbility maps a three-letter abbreviation to its Ability. The second
-// result reports whether the abbreviation was recognised.
+func (a Ability) Slug() Slug { return Slug(a) }
 func ParseAbility(s string) (Ability, bool) {
-	for ability, name := range abilityNames {
-		if name == s && ability != AbilityNone {
-			return ability, true
+	for _, a := range Abilities() {
+		if string(a) == s {
+			return a, true
 		}
 	}
 	return AbilityNone, false

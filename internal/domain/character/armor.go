@@ -22,13 +22,13 @@ const unarmoredBaseAC = 10
 // backpack would put a rogue's spare shield on their arm alongside a
 // two-handed weapon and produce a wrong number with no rule to appeal to.
 //
-// Not implemented: the Unarmored Defense of monks and barbarians, which
-// replaces the base with 10 + DEX + WIS or 10 + DEX + CON. Both are class
-// features and neither is expressible from the catalogue data, which records
-// them as prose. A character with either gets the plain unarmored number
-// until features carry mechanics.
+// Pack effects can adjust this base result for features such as Unarmored
+// Defense, using equipped:armor and equipped:shield to express eligibility.
 func armorClass(equipped []ItemStack, cat *catalog.Catalog, dexModifier int) int {
 	base := unarmoredBaseAC
+	if cat.Mechanics.Core.BaseArmorClass != 0 {
+		base = cat.Mechanics.Core.BaseArmorClass
+	}
 	dex := dexModifier
 	wearing := false
 	shields := 0
@@ -60,6 +60,25 @@ func armorClass(equipped []ItemStack, cat *catalog.Catalog, dexModifier int) int
 		dex = dexModifier
 	}
 	return base + dex + shields
+}
+
+// worn reports whether the character is wearing body armor, and whether they
+// carry a shield. They are the two facts about equipment a rule can ask for:
+// "while you are not wearing armor" is how the rules word every unarmored
+// defense, and the monk's adds "or wielding a shield".
+func worn(equipped []ItemStack, cat *catalog.Catalog) (armor, shield bool) {
+	for _, stack := range equipped {
+		item, ok := cat.Items.Get(stack.Item)
+		if !ok || item.Armor == nil {
+			continue
+		}
+		if item.Armor.Category == catalog.Shield {
+			shield = true
+		} else {
+			armor = true
+		}
+	}
+	return armor, shield
 }
 
 // equippedSlugs is the item slugs a character has equipped, for the callers

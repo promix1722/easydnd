@@ -56,6 +56,17 @@ var actionKindNames = map[ActionKind]string{
 // enumeration.
 func (k ActionKind) String() string { return enumName(actionKindNames, k) }
 
+var actionCategoryNames = map[ActionCategory]string{
+	ActionCategoryNone:  "none",
+	BasicAction:         "basic",
+	ActionFromEquipment: "equipment",
+	ActionFromFeature:   "feature",
+}
+
+// String returns the category's wire name, or "unknown" outside the
+// enumeration.
+func (c ActionCategory) String() string { return enumName(actionCategoryNames, c) }
+
 var actionSourceNames = map[ActionSource]string{
 	ActionSourceNone: "none",
 	Derived:          "derived",

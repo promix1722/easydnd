@@ -49,12 +49,12 @@ export function subscribeToRelease(listener: () => void): () => void {
  * caller and it takes the default.
  */
 export function noteRelease(deployed: string | null | undefined, own: string = WEB_VERSION): void {
-  // In order: already latched; a dev bundle, which has no release to be behind
-  // and would otherwise open the dialog on every `make dev` session's first
-  // request; no header at all, meaning something other than our Go handler
-  // answered -- an nginx error page, a proxy timeout, a captive portal -- which
-  // is not evidence about anything; and the ordinary case of agreeing.
-  if (stale || own === 'dev' || !deployed || deployed === own) return
+  // Vite keeps the commit passed at startup even when the API is rebuilt.
+  // Reloading cannot reconcile those versions. Development uses HMR, so the
+  // release gate must check the build mode, not assume dev versions say "dev".
+  // Unversioned bundles, missing headers and matching releases cannot establish
+  // that a newer release is deployed either.
+  if (import.meta.env.DEV || stale || own === 'dev' || !deployed || deployed === own) return
 
   stale = true
   for (const listener of listeners) listener()

@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 
 import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent } from '@/lib/api'
-import type { Prompt, Sheet } from '@/lib/api'
+import { CatalogScope } from '@/lib/api/catalogScope'
+import { characterPath } from '@/lib/api/characters'
+import type { Change, Sheet } from '@/lib/api'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
-import { Badge, Button, Group, ModalSheet, NumberInput, Page, Stack, Text, pageState } from '@/ui'
+import { Avatar, characterAvatar, Badge, Button, Group, ModalSheet, NumberInput, Page, Stack, Text, pageState } from '@/ui'
 
-import type { Compendium } from './compendium'
-import { loadCompendium } from './compendium'
 import { desiredLevelChange } from './desiredLevel'
 import { SheetBody } from './SheetBody'
+import { VisibilityAction } from './VisibilityAction'
 
 import { MAX_LEVEL } from '@/domain'
 
@@ -18,20 +19,14 @@ import { useLocale, useT } from '@/lib/i18n'
 
 /** The sheet, and what the character has not decided yet. */
 interface SheetView {
+  maxLevel: number
   sheet: Sheet
   /**
-   * Null when `/prompts` failed. The list of what is left is worth having and
+   * Null when `/prompts` failed. Whether anything is left is worth having and
    * is not worth losing the sheet over -- a sheet that refuses to draw because
    * a second request failed is a page that fails for a reason it is not about.
    */
-  prompts: Prompt[] | null
-  /**
-   * The compendium collections the body names things out of. Each is null when
-   * its request failed -- the same bargain as `prompts` above: the sheet is
-   * worth drawing with title-cased slugs, and is not worth losing to a second
-   * request.
-   */
-  compendium: Compendium
+  complete: boolean | null
 }
 
 
@@ -63,7 +58,7 @@ export function CharacterSheetScreen() {
       )
       return replaceEvent(id, entry.seq, log.seq, { type: entry.type, changes })
     }
-    return appendEvents(id, log.seq, [{ type: 'change', changes: [desiredLevelChange(target)] }])
+    return appendEvents(id, log.seq, [{ type: 'change', changes: [desiredLevelChange(target)] }], log.revision ?? log.seq)
   })
 
   const confirmLevelUp = async (target: number) => {
@@ -72,18 +67,23 @@ export function CharacterSheetScreen() {
     setPickingLevel(null)
     await navigate(`/characters/${id}/build`, { state: { stage: 'class' } })
   }
-  // A projected sheet contains stable slugs, but its compendium contains
-  // localized names. Changing language must therefore reload this resource;
-  // clearing the catalogue cache alone cannot replace data already in state.
+  // The sheet carries the localized names of its own slugs, so changing
+  // language must reload it: that is what the locale is doing in the key.
   const sheet = useResource<SheetView>(`sheet:${locale}:${id}`, async (signal) => {
-    const [projected, prompts, compendium] = await Promise.all([
+    const [projected, prompts] = await Promise.all([
       getSheet(id, signal),
-      getPrompts(id, signal).then((response) => response.prompts ?? [], () => null),
-      // Session-cached, so this is one request for the whole visit however
-      // many sheets are opened.
-      loadCompendium(),
+      getPrompts(id, signal).then((response) => response, () => null),
     ])
-    return { sheet: projected, prompts, compendium }
+    return { sheet: projected, complete: prompts?.complete ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL }
+  })
+
+  // Read the log's head at the moment of writing: the sheet does not carry a
+  // sequence, and an edit made in another tab should conflict rather than vanish.
+  const editEquipment = useAction(async (changes: Change[]) => {
+    if (changes.length === 0) return
+    const log = await getEvents(id)
+    await appendEvents(id, log.seq, [{ type: 'change', changes }], log.revision ?? log.seq)
+    sheet.refresh()
   })
 
   const state = pageState(sheet, {
@@ -107,10 +107,10 @@ export function CharacterSheetScreen() {
 
   const s = sheet.data.sheet
   const identity = s.identity
-  const outstanding = sheet.data.prompts ?? []
 
   return (
     <Page
+      mark={<Avatar image={identity.image} fallback={characterAvatar(identity.classes)} size={48} />}
       trail={[{ label: identity.name || 'Unnamed' }]}
       /*
        * A mark, and only while the character is unfinished.
@@ -121,11 +121,15 @@ export function CharacterSheetScreen() {
        * news is a badge on the name -- where a rank or "Read only" already
        * goes -- and the way in is a button that is always there.
        *
+       * Unfinished is the server's `complete`, not "anything still open": an
+       * optional question -- an alignment, a custom spell -- is open on every
+       * character for ever, and counting those left the badge on for good.
+       *
        * A `/prompts` that failed is `null`, deliberately survivable, and draws
        * no badge: silence is the right answer to a question that could not be
        * asked, where "unfinished" would be a guess.
        */
-      {...(outstanding.length > 0
+      {...(sheet.data.complete === false
         ? { badge: <Badge variant="light">{t('sheet.unfinished')}</Badge> }
         : {})}
       /*
@@ -139,12 +143,18 @@ export function CharacterSheetScreen() {
        */
       actions={
         <Group gap="xs" wrap="nowrap">
+          {/* The chat this character was made in, while the server still has it. */}
+          {s.importSession && (
+            <Button component={Link} variant="light" to={`/ai-wizard/${encodeURIComponent(s.importSession)}`}>
+              {t('agent.history')}
+            </Button>
+          )}
           {/*
             Only for a character with a level to raise: one that has not taken
             its first class yet is still being created, and the build screen is
             already the whole of that. Gone at 20, where the rules stop.
           */}
-          {identity.level >= 1 && identity.level < MAX_LEVEL && (
+          {identity.level >= 1 && identity.level < sheet.data.maxLevel && (
             <Button
               variant="light"
               onClick={() =>
@@ -159,13 +169,28 @@ export function CharacterSheetScreen() {
               {t('sheet.levelUp')}
             </Button>
           )}
+          <VisibilityAction id={id} />
           <Button component={Link} to={`/characters/${id}/build`} variant="light">
             {t('common.edit')}
           </Button>
         </Group>
       }
     >
-      <SheetBody sheet={s} compendium={sheet.data.compendium} />
+      {editEquipment.error !== null && (
+        <Text size="sm" c="red">
+          {editEquipment.error}
+        </Text>
+      )}
+      {/* The Items tab's picker and the Spells tab both read this character's catalogue, packs included. */}
+      <CatalogScope.Provider value={`${characterPath(id)}/catalog`}>
+        <SheetBody
+          sheet={s}
+          characterId={id}
+          onChanged={sheet.refresh}
+          pending={editEquipment.pending}
+          onEquipment={(changes) => void editEquipment.run(changes)}
+        />
+      </CatalogScope.Provider>
 
       <ModalSheet
         opened={pickingLevel !== null}

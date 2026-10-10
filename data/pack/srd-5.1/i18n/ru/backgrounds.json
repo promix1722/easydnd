@@ -1,0 +1,59 @@
+{
+  "acolyte": {
+    "name": "Послушник"
+  },
+  "entertainer": {
+    "name": "Артист"
+  },
+  "urchin": {
+    "name": "Беспризорник"
+  },
+  "noble": {
+    "name": "Благородный"
+  },
+  "guild-artisan": {
+    "name": "Гильдейский ремесленник"
+  },
+  "sailor": {
+    "name": "Моряк"
+  },
+  "sage": {
+    "name": "Мудрец"
+  },
+  "folk-hero": {
+    "name": "Народный герой"
+  },
+  "hermit": {
+    "name": "Отшельник"
+  },
+  "pirate": {
+    "name": "Пират"
+  },
+  "criminal": {
+    "name": "Преступник"
+  },
+  "soldier": {
+    "name": "Солдат"
+  },
+  "outlander": {
+    "name": "Чужеземец"
+  },
+  "charlatan": {
+    "name": "Шарлатан"
+  },
+  "custom-background": {
+    "name": "Настраиваемая предыстория"
+  },
+  "spy": {
+    "name": "Шпион"
+  },
+  "gladiator": {
+    "name": "Гладиатор"
+  },
+  "guild-merchant": {
+    "name": "Гильдейский торговец"
+  },
+  "knight": {
+    "name": "Рыцарь"
+  }
+}

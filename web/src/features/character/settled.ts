@@ -1,7 +1,8 @@
 import type { Answer, Change, CharacterEvent } from '@/lib/api'
 
-import { writtenLabel } from './promptNames'
+import { writtenLabel, spellChoiceName, choiceName } from './promptNames'
 import { refName } from './refNames'
+import { optionLabel } from './options'
 
 import { ABILITY_ORDER, pickLabel, promptLabel, stageOf } from '@/domain'
 import type { Stage } from '@/domain'
@@ -39,11 +40,9 @@ export interface SettledView {
 /**
  * Every stored selection, grouped by the tab it was made on.
  *
- * The grouping is the server's: each entry carries the group of the prompt it
- * answered, so nothing here infers a category from an event's type. That
- * matters because the same type lands in two places -- a `level` event is the
- * class story, and a `change` event might be the six ability scores or a DM's
- * ruling -- and only the server knows which prompt it settled.
+ * The server's choice kind puts spell and equipment answers on their dedicated
+ * tabs. Other entries use the group of the prompt they answered. Event type is
+ * not a tab: a level event can record a class feature or a spell selection.
  *
  * An entry the server could not attribute is in no tab at all. It is not lost:
  * `/characters/:id/log` is the unabridged record, and this screen is a
@@ -52,7 +51,13 @@ export interface SettledView {
 export function settledByStage(t: Translate, view: SettledView): Map<Stage, SettledRow[]> {
   const byStage = new Map<Stage, SettledRow[]>()
   for (const event of view.events) {
-    const stage = stageOf(event.source)
+    if (event.observed && event.type !== 'init' && event.changes?.length) continue
+    const input = event.changes?.some((change) => change.path === 'identity.ruleset')
+      ? 'character/ruleset'
+      : event.changes?.some((change) => change.path === 'identity.desiredLevel')
+        ? 'character/desired-level'
+        : undefined
+    const stage = stageOf(event.source, event.choiceKind, event.choices?.[0]?.prompt ?? input, event.purpose)
     if (stage === null) continue
     const row = rowFor(t, event, stage, view.names)
     if (row === null) continue
@@ -85,13 +90,19 @@ function rowFor(
   const answers = event.choices ?? []
   const first = answers.find((answer) => answer.picks.length > 0)
   if (first !== undefined) {
+    const entries = new Map([...names].map(([ref, name]) => {
+      const slug = ref.split(':').at(-1) ?? ref
+      return [slug, { slug, name }]
+    }))
     return {
       seq,
       stage,
-      label: settledPromptName(t, first.prompt, names),
+      label: resolvedPromptName(t, event, first, names),
       // Read as what was chosen: the branch answers in between say only which
       // way the question went.
-      value: leafAnswers(answers)
+      value: event.selections?.length
+        ? event.selections.map((option) => optionLabel(t, option, entries)).join(t('option.bundleJoin'))
+        : leafAnswers(answers)
         .flatMap((answer) => answer.picks)
         .map((pick) => settledPickName(t, pick, names))
         .join(', '),
@@ -112,7 +123,7 @@ function rowFor(
   }
 
   const changes = event.changes ?? []
-  if (changes.length > 0) return { seq, stage, ...summarise(t, changes), ...level, event }
+  if (changes.length > 0) return { seq, stage, ...summarise(t, changes, names), ...level, event }
 
   return null
 }
@@ -131,6 +142,7 @@ function settledPromptName(
   t: Translate,
   prompt: string,
   names: ReadonlyMap<string, string>,
+  count = 1,
 ): string {
   const parts = prompt.split('/').filter((part) => part !== '' && !/^\d+$/.test(part))
   const owner = parts[0] ?? ''
@@ -138,6 +150,11 @@ function settledPromptName(
     .map((kind) => names.get(`${kind}:${owner}`))
     .find((name) => name !== undefined)
   const kind = parts.findLast((part) => part !== owner)
+  const spellAt = parts.indexOf('spell')
+  if (spellAt >= 0) {
+    const name = spellChoiceName(t, parts[spellAt + 1] ?? '', count)
+    return ownerName === undefined ? name : `${ownerName} · ${name}`
+  }
   const kindName =
     kind === 'proficiency' || kind === 'expertise' || kind === 'multiclass'
       ? t('sheet.proficiencies')
@@ -179,13 +196,23 @@ export function leafAnswers(answers: readonly Answer[]): Answer[] {
  * rendering, on the same principle `eventLabel` follows: an entry drawn plainly
  * is better than one refused.
  */
-function summarise(t: Translate, changes: readonly Change[]): { label: string; value: string } {
+function summarise(
+  t: Translate,
+  changes: readonly Change[],
+  names: ReadonlyMap<string, string>,
+): { label: string; value: string } {
   const name = changes.find((change) => change.path === 'identity.name')
   if (name !== undefined) return { label: t('settled.name'), value: formatValue(t, name.value) }
 
   const alignment = changes.find((change) => change.path === 'identity.alignment')
   if (alignment !== undefined) {
-    return { label: t('settled.alignment'), value: formatValue(t, alignment.value) }
+    // By the compendium's name for it. The slug read back as words is English
+    // in every language, and under a rule pack it is the pack's id as well:
+    // "Dnd 2014/neutral Good".
+    return {
+      label: t('settled.alignment'),
+      value: names.get(`alignment:${alignment.value.slug ?? ''}`) ?? formatValue(t, alignment.value),
+    }
   }
 
   const desired = changes.find((change) => change.path === 'identity.desiredLevel')
@@ -211,9 +238,12 @@ function summarise(t: Translate, changes: readonly Change[]): { label: string; v
     const label = writtenLabel(written.path)
     return {
       label: label === undefined ? '' : t(label),
+      // As written. The AI Wizard stores the lines as a list, and a list is
+      // printed as slugs are -- title-cased, hyphens taken for spaces -- which
+      // is right for "point-buy" and turned "кто-нибудь" into "кто Нибудь".
       value: changes
         .filter((change) => change.path === written.path)
-        .map((change) => formatValue(t, change.value))
+        .flatMap((change) => change.value.slugs ?? [formatValue(t, change.value)])
         .join(' · '),
     }
   }
@@ -244,4 +274,30 @@ function summarise(t: Translate, changes: readonly Change[]): { label: string; v
     label: eventLabel(t, 'change'),
     value: changes.map((change) => describeChange(t, change)).join(', '),
   }
+}
+
+function resolvedPromptName(
+  t: Translate,
+  event: CharacterEvent,
+  answer: Answer,
+  names: ReadonlyMap<string, string>,
+): string {
+  if (event.choiceKind === undefined) {
+    return settledPromptName(t, answer.prompt, names, answer.picks.length)
+  }
+  const name = choiceName(t, {
+    group: event.source ?? '',
+    source: event.choiceSource ?? '',
+    event: { type: event.type },
+    optional: false,
+    heldOnly: false,
+    ...(event.purpose === undefined ? {} : { purpose: event.purpose }),
+    choice: {
+      prompt: answer.prompt,
+      kind: event.choiceKind,
+      choose: answer.picks.length,
+      from: { kind: 'explicit', options: event.selections ?? [] },
+    },
+  })
+  return event.choiceSource === undefined || event.choiceSource === 'rule:custom-spells' ? name : `${refName(event.choiceSource, names)} · ${name}`
 }

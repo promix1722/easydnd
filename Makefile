@@ -4,7 +4,7 @@ BINARY      := easydnd
 MODULE      := github.com/promix1722/easydnd
 CMD         := ./cmd/$(BINARY)
 BIN_DIR     := bin
-SRD_DIR     := data/srd_5.1
+SRD_DIR     := data/pack/srd-5.1
 DEV_CONFIG  := config.dev.yaml
 
 # The release identifier: the tag on a tagged commit, a short SHA anywhere
@@ -74,10 +74,34 @@ DEVSLOT_FLAGS := -count $(SLOT_COUNT) -web $(WEB_PORT_BASE) -api $(API_PORT_BASE
 # RDS over TLS; this is sslmode=disable because a throwaway container has no CA.
 TEST_DATABASE_URL ?= postgres://easydnd:easydnd@127.0.0.1:$(PG_PORT)/easydnd?sslmode=disable
 
-# Written by config/dev: a whole development config for this worktree's slot.
-# Gitignored, never edited by hand -- edit config.dev.yaml, or make a
-# config.local.yaml, instead.
-DEV_RUN_CONFIG := config.dev-run.yaml
+# What a committed config cannot carry: secrets, and anything true of this
+# machine only. One file for every worktree, outside all of them, loaded into
+# the API's environment by the targets that run it -- see easydnd.example.env
+# for the names. Optional: without it the stack still runs, with the AI Wizard
+# off.
+DEV_ENV ?= $(HOME)/config/easydnd/dev.env
+
+# The origins a browser may reach this worktree on. The public one first when
+# there is one, because the first is where Google sign-in sends people back to.
+comma := ,
+DEV_ORIGINS := $(if $(WEB_PUBLIC_URL),$(WEB_PUBLIC_URL)$(comma))http://localhost:$(WEB_PORT)
+
+# dev_env: the environment a development API runs in -- DEV_ENV, then this
+# worktree's slot laid over it. $(1) port, $(2) origins, $(3) database URL.
+# The slot is passed rather than written down: config.dev.yaml is the same file
+# in every worktree, and internal/config reads these four over it.
+define dev_env
+set -a; \
+	if [ -f "$(DEV_ENV)" ]; then . "$(DEV_ENV)"; else echo "no $(DEV_ENV) -- AI Wizard off, see easydnd.example.env"; fi; \
+	EASYDND_HTTP_PORT='$(1)'; EASYDND_RP_ID='$(RP_ID)'; EASYDND_RP_ORIGINS='$(2)'; \
+	$(if $(3),EASYDND_DB_URL='$(3)';) \
+	set +a
+endef
+
+# llm_key: the same key for the command-line tools that spend OpenAI credit.
+define llm_key
+if [ -f "$(DEV_ENV)" ]; then . "$(DEV_ENV)"; fi; export OPENAI_API_KEY="$${OPENAI_API_KEY:-$$EASYDND_AGENT_API_KEY}"
+endef
 
 # `make preview`: the built bundle and the API on one origin, behind TLS.
 #
@@ -91,7 +115,6 @@ DEV_RUN_CONFIG := config.dev-run.yaml
 # deliberate; a preview is a verification pass, not somewhere to live.
 PREVIEW_PORT        := 8090
 PREVIEW_PUBLIC_PORT := 8890
-PREVIEW_CONFIG      := config.preview.yaml
 PREVIEW_URL         := $(if $(PUBLIC_HOST),https://$(PUBLIC_HOST):$(PREVIEW_PUBLIC_PORT),https://localhost:$(PREVIEW_PUBLIC_PORT))
 
 .DEFAULT_GOAL := help
@@ -111,11 +134,9 @@ build/release:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BINARY) $(CMD)
 
 ## run/server: run the API in development mode, no database
-# Unclaimed, this is config.dev.yaml exactly as it always was. Once the
-# worktree holds a slot it needs that slot's port and origin instead, so it
-# runs the generated config.
-run/server: $(if $(SLOT),config/dev)
-	go run -ldflags "$(LDFLAGS)" $(CMD) -config $(if $(SLOT),$(DEV_RUN_CONFIG),$(DEV_CONFIG))
+run/server:
+	@$(call dev_env,$(API_PORT),$(DEV_ORIGINS),); \
+	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_CONFIG)
 
 ## test/unit: run the test suite (~4s)
 # No -race here, and that is a deliberate trade rather than an oversight: the
@@ -182,38 +203,6 @@ db/psql:
 test/db:
 	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test -p 1 ./...
 
-## config/dev: write the generated development config for this worktree
-# Written whole rather than appended to config.dev.yaml, because a slot needs
-# http.port and auth.rp_origins -- and a second `auth:` block in one file is a
-# duplicate mapping key, which the loader rejects outright. What it leaves out
-# the loader defaults for; data.srd_dir is already data/srd_5.1.
-#
-# No auth.session_secret: development invents one per process and says so,
-# which is honest given that a restart also empties the character store.
-config/dev:
-	@{ printf 'env: development\n'; \
-	   printf 'log:\n  format: text\n  level: debug\n'; \
-	   printf 'http:\n  port: "%s"\n' '$(API_PORT)'; \
-	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - http://localhost:%s\n' '$(RP_ID)' '$(WEB_PORT)'; \
-	   $(if $(WEB_PUBLIC_URL),printf '    - %s\n' '$(WEB_PUBLIC_URL)';) \
-	   $(if $(DEV_DB_URL),printf 'db:\n  url: %s\n' '$(DEV_DB_URL)';) } > $(DEV_RUN_CONFIG)
-	@chmod 600 $(DEV_RUN_CONFIG)
-	@echo "wrote $(DEV_RUN_CONFIG)"
-
-## config/preview: write the config `make preview` runs the API with
-# Same shape as config/dev and a different pair of answers: one port, because
-# Go is serving the bundle as well as the API, and an https origin, because
-# middleware.SameOrigin compares auth.rp_origins against the browser's Origin
-# byte for byte and the browser will say https here.
-config/preview:
-	@{ printf 'env: development\n'; \
-	   printf 'log:\n  format: text\n  level: debug\n'; \
-	   printf 'http:\n  port: "%s"\n' '$(PREVIEW_PORT)'; \
-	   printf 'auth:\n  rp_id: %s\n  rp_origins:\n    - %s\n' '$(RP_ID)' '$(PREVIEW_URL)'; \
-	   printf 'db:\n  url: %s\n' '$(TEST_DATABASE_URL)'; } > $(PREVIEW_CONFIG)
-	@chmod 600 $(PREVIEW_CONFIG)
-	@echo "wrote $(PREVIEW_CONFIG)"
-
 ## preview: serve the BUILT bundle and the API on one TLS origin, for PWA testing
 # What the dev server cannot do. `make web/dev` has no service worker at all
 # (devOptions.enabled is false in vite.config.ts, so a worker cannot shadow the
@@ -230,24 +219,20 @@ preview:
 	@go run ./cmd/devslot claim $(DEVSLOT_FLAGS) >/dev/null
 	@$(MAKE) preview/up
 
-preview/up: db/up web/build config/preview
+# One port, because Go is serving the bundle as well as the API, and an https
+# origin, because middleware.SameOrigin compares auth.rp_origins against the
+# browser's Origin byte for byte and the browser will say https here.
+preview/up: db/up web/build
 	@echo "preview  $(PREVIEW_URL)  (127.0.0.1:$(PREVIEW_PORT))"; \
 	 trap 'exit 0' INT TERM; \
 	 trap '$(MAKE) --no-print-directory db/down' EXIT; \
-	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(PREVIEW_CONFIG) -web web/dist
+	 $(call dev_env,$(PREVIEW_PORT),$(PREVIEW_URL),$(TEST_DATABASE_URL)); \
+	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_CONFIG) -web web/dist
 
 ## run/db: run the API in development mode against this worktree's Postgres
-# config.local.yaml wins if you have made one (it is gitignored), which is the
-# hook for anything the generated file cannot carry -- auth.google, say. Its
-# ports and origins are then yours to keep correct: nothing rewrites it.
-run/db: DEV_DB_URL := $(TEST_DATABASE_URL)
-run/db: $(if $(wildcard config.local.yaml),,config/dev)
-	@if [ -f config.local.yaml ]; then \
-	  echo "using config.local.yaml -- its ports and origins are yours to keep correct"; \
-	  go run -ldflags "$(LDFLAGS)" $(CMD) -config config.local.yaml; \
-	else \
-	  go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_RUN_CONFIG); \
-	fi
+run/db:
+	@$(call dev_env,$(API_PORT),$(DEV_ORIGINS),$(TEST_DATABASE_URL)); \
+	 go run -ldflags "$(LDFLAGS)" $(CMD) -config $(DEV_CONFIG)
 
 ## dev: this worktree's whole stack -- Postgres, the API and the web client
 # Claims a slot first, then re-enters make: SLOT is resolved when the Makefile
@@ -305,22 +290,28 @@ test/cover:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -func=coverage.out | tail -1
 
-## data/srd: regenerate data/srd_5.1 from the vendored SRD dump
-data/srd:
-	go run ./cmd/srdgen
+## pack/check: load the hand-maintained SRD pack through the real loader
+# The pack is edited by hand, so there is nothing to regenerate and diff; the
+# gate is the same validation the server runs at startup -- schema, every
+# reference, every choice -- plus the item and spell icons it names.
+pack/check:
+	@go run ./cmd/pack -in $(SRD_DIR) >/dev/null && echo "srd pack loads"
 
-## data/srd/check: fail if the committed data differs from srdgen's output
-data/srd/check:
-	@tmp=$$(mktemp -d); \
-	 go run ./cmd/srdgen -out $$tmp >/dev/null || { rm -rf $$tmp; exit 1; }; \
-	 if ! diff -rq $(SRD_DIR) $$tmp >/dev/null; then \
-	   diff -rq $(SRD_DIR) $$tmp || true; \
-	   rm -rf $$tmp; \
-	   echo "DATA DRIFT: $(SRD_DIR) does not match srdgen; run 'make data/srd'"; \
-	   exit 1; \
-	 fi; \
-	 rm -rf $$tmp; \
-	 echo "srd data current"
+## data/lint: report suspicious prose in a pack (PACK=dir, default the SRD)
+# See docs/packs.md#linting-the-prose.
+PACK ?= $(SRD_DIR)
+LINT_GLOSSARY ?= data/locale-terms-locked/ru.glossary.json
+data/lint:
+	go run ./cmd/packlint -in $(PACK) -glossary $(LINT_GLOSSARY)
+
+## data/lint/check: fail if the SRD prose regresses on a check that is at zero
+# A check joins this list when its last finding is fixed, not before: a gate
+# that starts red is a gate people learn to skip.
+LINT_GATED ?= markup-leftover,source-code-leak,stray-punctuation,space-before-punctuation,double-space,html,edge-whitespace,empty-string,malformed-table,markdown-in-plain-field,cyrillic-dice,metric-units,inline-table,heading-glued-to-paragraph,english-in-brackets,nonstandard-abbreviation,untranslated-words,same-as-default-locale,slug-not-in-default-locale,missing-name,missing-desc,missing-fields,missing-blocks,paragraph-count-differs,values-differ
+data/lint/check:
+	@go run ./cmd/packlint -in $(SRD_DIR) -samples 0 -fail "$(LINT_GATED)" >/dev/null \
+	  || { go run ./cmd/packlint -in $(SRD_DIR) | sed -n '/^[a-z][a-z] /,$$p'; echo "PROSE LINT: a gated check has findings; see above"; exit 1; }
+	@echo "srd prose clean"
 
 ## fmt: format all Go source
 fmt:
@@ -343,19 +334,9 @@ web/deps:
 	cd web && npm ci
 
 ## web/dev: run the Vite dev server; it proxies /v1 to this worktree's API
-# VITE_APP_VERSION is passed here as well as to web/build, and it has to be the
-# same $(VERSION) the API alongside it was built with. Two reasons.
-#
-# The footer would otherwise read "dev", which is not a version -- it cannot be
-# matched against a bug report or against what the API says. Now it reads this
-# commit, which is the honest answer for a dev build.
-#
-# And the two halves must agree, or `make dev` would open the update dialog on
-# its first request: the client compares its own version against the one the
-# API stamps on every response, and disagreeing is the entire trigger. Both
-# come from $(VERSION) in the same checkout, so they do. Running `make web/dev`
-# against an API left over from another commit will show the dialog, and that
-# is correct rather than a bug -- the bundle really is out of step with it.
+# Keep the commit visible for diagnostics. Development release checks are
+# disabled by Vite's build mode: a long-running Vite process and a rebuilt API
+# can report different commits, and reloading cannot change Vite's startup env.
 web/dev:
 	cd web && EASYDND_WEB_PORT=$(WEB_PORT) \
 	          EASYDND_WEB_PUBLIC_URL=$(WEB_PUBLIC_URL) \
@@ -386,7 +367,7 @@ web/icons:
 	cd web && npm run icons
 
 ## web/icons/check: fail if the committed icons differ from the generator
-# Not a `diff -rq` like data/srd/check, and for a specific reason: the PNG
+# Not a `diff -rq` like pack/check, and for a specific reason: the PNG
 # encoder's zlib output is deterministic for a given zlib but is not promised
 # to be stable across Node versions, so a byte diff would go red on a machine
 # whose Node differs from CI's -- failing for a reason that has nothing to do
@@ -403,27 +384,68 @@ web/icons/check:
 web/release: web/build
 	tar -czf web.tar.gz -C web/dist .
 
+## image/generate: generate one 128px WebP (manual, costs OpenAI credit)
+image/generate:
+	go run ./cmd/spellicon $(IMAGE_FLAGS)
+
 ## spell-icons: generate the per-spell icons -- manual, costs OpenAI credit
 # Three steps: build the prompts from the SRD, generate 1024px PNGs into a
 # cache outside the repo (the expensive artifact, so it survives worktrees and
-# reruns), downscale to the 128px webp the client imports. Every step skips
+# reruns), downscale to the 128px WebPs owned by the SRD pack. Every step skips
 # what already exists, so an interrupted run resumes for free; rerolling one
 # icon means deleting its webp here and its PNG in the cache. Never part of
 # `verify` -- icons are art, and art has no drift check.
 SPELL_ICON_CACHE := $(HOME)/.cache/easydnd/spell-icons
 spell-icons:
-	@test -n "$$OPENAI_API_KEY" || { \
-	  echo "OPENAI_API_KEY is not set; source your secrets file first."; exit 1; }
+	@$(llm_key); test -n "$$OPENAI_API_KEY" || { \
+	  echo "no LLM key: set EASYDND_AGENT_API_KEY in $(DEV_ENV)."; exit 1; }
 	node web/scripts/spell-icons.mjs prompts $(SPELL_ICON_CACHE)/prompts.json
-	go run ./cmd/llm images -in $(SPELL_ICON_CACHE)/prompts.json \
+	$(llm_key); go run ./cmd/llm images -in $(SPELL_ICON_CACHE)/prompts.json \
 	  -out $(SPELL_ICON_CACHE)/png -quality low -background transparent
 	node web/scripts/spell-icons.mjs convert $(SPELL_ICON_CACHE)/png
 
+## translate/ru: re-translate the Russian spell prose -- manual, costs OpenAI credit
+# `-preserve name` is what makes this a reroll rather than a no-op: -existing
+# points at the output file, so without it every leaf already there counts as
+# done and the run translates nothing while exiting successfully. Naming the
+# leaves to keep re-requests every description and keeps the hand-checked names.
+#
+# Model and reasoning effort are pinned and explicit because
+# data/locale-terms-locked/ru.sources.json records both, and a record that says
+# "whatever the alias meant that day" is not a record. Override either on the
+# command line to compare settings:
+#
+#   make translate/ru TRANSLATE_FLAGS=-dry-run        # counts only, no key, no spend
+#   make translate/ru TRANSLATE_REASONING=high
+#
+# Never part of `verify`: it costs money and hits the network.
+TRANSLATE_MODEL     ?= gpt-5.4-2026-03-05
+TRANSLATE_REASONING ?= medium
+TRANSLATE_FLAGS     ?=
+translate/ru:
+	@$(llm_key); test -n "$$OPENAI_API_KEY" || test -n "$(findstring -dry-run,$(TRANSLATE_FLAGS))" || { \
+	  echo "no LLM key: set EASYDND_AGENT_API_KEY in $(DEV_ENV)."; exit 1; }
+	$(llm_key); go run ./cmd/llm translate \
+	  -in $(SRD_DIR)/i18n/en/spells.json \
+	  -out data/pack/srd-5.1/i18n/ru/spells.json \
+	  -existing data/pack/srd-5.1/i18n/ru/spells.json \
+	  -preserve name \
+	  -glossary data/locale-terms-locked/ru.glossary.json \
+	  -model $(TRANSLATE_MODEL) \
+	  -reasoning $(TRANSLATE_REASONING) \
+	  -to ru $(TRANSLATE_FLAGS)
+
+# The standalone spellicon usecase owns its provider HTTP calls by design.
+# Excluding its root still catches any other usecase that imports it transitively.
 ## lint/layers: fail if the inner layers reach for transport or storage
 lint/layers:
-	@! go list -deps ./internal/domain/... ./internal/usecase/... \
+	@! go list -deps $$(go list ./internal/domain/... ./internal/usecase/... \
+	  | grep -v '^github.com/promix1722/easydnd/internal/usecase/spellicon$$') \
 	  | grep -E 'gin-gonic|^net/http$$|^database/sql$$|jackc/pgx|pressly/goose' \
 	  || { echo "LAYER VIOLATION: inner layers must not import transport or storage"; exit 1; }
+	@! go list -deps ./internal/usecase/spellicon \
+	  | grep -E 'gin-gonic|^database/sql$$|jackc/pgx|pressly/goose' \
+	  || { echo "LAYER VIOLATION: standalone icon generation must not import server frameworks or storage"; exit 1; }
 	@echo "layers clean"
 
 ## tidy: sync go.mod and go.sum
@@ -459,21 +481,20 @@ tidy:
 VERIFY_JOBS ?= 2
 verify:
 	@$(MAKE) --no-print-directory -j$(VERIFY_JOBS) --output-sync=target \
-	  web/test web/build web/lint vet test/unit build/release data/srd/check web/icons/check \
-	  fmt/check lint/layers
+	  web/test web/build web/lint vet test/unit build/release pack/check data/lint/check \
+	  web/icons/check fmt/check lint/layers
 
 ## clean: remove build artefacts
 clean:
 # Not .dev-slot: that is this worktree's identity, and deleting it would move
 # the address you reach it on.
-	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist \
-	       $(DEV_RUN_CONFIG) $(PREVIEW_CONFIG)
+	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist
 
 .PHONY: help build/server build/release run/server run/db test/unit test/race test/cover \
-        dev dev/up dev/down slots ports config/dev \
-        preview preview/up config/preview \
+        dev dev/up dev/down slots ports \
+        preview preview/up \
         db/up db/down db/psql test/db \
-        data/srd data/srd/check \
+        pack/check data/lint data/lint/check \
         fmt fmt/check vet lint lint/layers tidy verify clean \
         web/deps web/dev web/lint web/test web/check web/build web/release \
-        web/icons web/icons/check spell-icons
+        web/icons web/icons/check spell-icons image/generate

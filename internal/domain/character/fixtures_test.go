@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ import (
 // make -- one of them inside a seven-case subtest loop -- into a single one. A
 // fresh Source per call threw that cache away. Sharing is safe for the reason
 // the cache is: a Catalog is immutable, and Load is mutex-guarded.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
 
 // LoadCatalog loads the committed compendium.
 //
@@ -68,7 +69,7 @@ func RogueLog(t *testing.T) Log {
 	at := time.Date(2026, time.August, 23, 14, 27, 51, 0, time.UTC)
 
 	var log Log
-	err := log.Append(
+	err := log.Append(oneQuestionEach(
 		Event{
 			Type: EventInit,
 			At:   at,
@@ -123,11 +124,11 @@ func RogueLog(t *testing.T) Log {
 				{Prompt: "rogue-expertise-1/expertise/0", Picks: []rules.Slug{
 					"skill-persuasion", "skill-stealth",
 				}},
-				{Prompt: "rogue/starting-equipment/0", Picks: []rules.Slug{"rapier"}},
+				{Prompt: "rogue/starting-equipment/main-hand", Picks: []rules.Slug{"rapier"}},
 				// The shortbow-and-arrows bundle has no slug of its own, so
 				// it is named by what is in it.
-				{Prompt: "rogue/starting-equipment/1", Picks: []rules.Slug{"shortbow+arrow"}},
-				{Prompt: "rogue/starting-equipment/2", Picks: []rules.Slug{"burglars-pack"}},
+				{Prompt: "rogue/starting-equipment/backup", Picks: []rules.Slug{"shortbow+arrow"}},
+				{Prompt: "rogue/starting-equipment/pack", Picks: []rules.Slug{"burglars-pack"}},
 			},
 		},
 		// A rogue's kit includes leather armor, but wearing it is a decision
@@ -149,9 +150,39 @@ func RogueLog(t *testing.T) Log {
 			Level: 3,
 		},
 		Event{Type: EventLevel, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 3},
-	)
+	)...)
 	if err != nil {
 		t.Fatalf("Append() error = %v", err)
 	}
 	return log
+}
+
+// oneQuestionEach spells a fixture out the way a log has to be stored: an
+// entry that answers several questions becomes one entry per question, in
+// order, each carrying the first one's type, reference and level.
+//
+// The fixtures here were written before a log refused such an entry, and what
+// they transcribe -- "a half-elf, with these two bonuses and these two skills"
+// -- reads better as one literal than as three. So they stay written that
+// way and are split on the way in.
+func oneQuestionEach(events ...Event) []Event {
+	var out []Event
+	for _, event := range events {
+		answers := event.Choices
+		if len(answers) < 2 {
+			out = append(out, event)
+			continue
+		}
+		for len(answers) > 0 {
+			group := 1
+			for group < len(answers) && strings.HasPrefix(string(answers[group].Prompt), string(answers[0].Prompt)+"/") {
+				group++
+			}
+			each := event
+			each.Choices = answers[:group]
+			out = append(out, each)
+			answers = answers[group:]
+		}
+	}
+	return out
 }

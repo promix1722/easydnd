@@ -23,6 +23,9 @@ func Summarize(id ID, owner OwnerID, folder FolderID, log Log, cat *catalog.Cata
 		switch e.Type {
 		case EventInit, EventChange:
 			for _, ch := range e.Changes {
+				if ch.Path == "identity.image" && ch.Op == OpSet && ch.Value.Kind == ValueString {
+					s.Image = ch.Value.Str
+				}
 				if ch.Path == "identity.name" && ch.Op == OpSet {
 					if ch.Value.Kind == ValueString {
 						s.Name = ch.Value.Str

@@ -134,6 +134,12 @@ func (s *Service) readable(
 	if c.Owner == character.OwnerID(actor) {
 		return c, nil
 	}
+	// Its owner opened it: anybody signed in who has the link may read it,
+	// whatever table they do or do not sit at. Still only a read -- every
+	// write goes through the character service, which asks who owns it.
+	if c.Public {
+		return c, nil
+	}
 
 	groups, err := s.shared.GroupsSharing(ctx, id)
 	if err != nil {
@@ -159,15 +165,25 @@ func (s *Service) readable(
 func (s *Service) Sheet(
 	ctx context.Context, actor user.ID, id character.ID, locale rules.Locale,
 ) (character.State, error) {
+	state, _, err := s.SheetWithCatalog(ctx, actor, id, locale)
+	return state, err
+}
+
+// SheetWithCatalog is Sheet plus the catalogue it was projected against. See
+// the character service's method of the same name.
+func (s *Service) SheetWithCatalog(
+	ctx context.Context, actor user.ID, id character.ID, locale rules.Locale,
+) (character.State, *catalog.Catalog, error) {
 	c, err := s.readable(ctx, actor, id)
 	if err != nil {
-		return character.State{}, err
+		return character.State{}, nil, err
 	}
-	cat, err := s.catalog.Load(ctx, locale)
+	cat, err := catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
 	if err != nil {
-		return character.State{}, err
+		return character.State{}, nil, err
 	}
-	return character.Project(c.Log, cat)
+	state, err := character.Project(c.Log, cat)
+	return state, cat, err
 }
 
 // summarize folds a set of character ids into the short form a roster shows,
@@ -181,10 +197,6 @@ func (s *Service) Sheet(
 func (s *Service) summarize(
 	ctx context.Context, ids []character.ID, locale rules.Locale,
 ) ([]character.Summary, error) {
-	cat, err := s.catalog.Load(ctx, locale)
-	if err != nil {
-		return nil, err
-	}
 	out := make([]character.Summary, 0, len(ids))
 	for _, id := range ids {
 		c, err := s.characters.Get(ctx, id)
@@ -194,7 +206,20 @@ func (s *Service) summarize(
 			}
 			return nil, err
 		}
+		cat, err := catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
+		if err != nil {
+			return nil, err
+		}
 		out = append(out, character.Summarize(c.ID, c.Owner, c.Folder, c.Log, cat))
 	}
 	return out, nil
+}
+
+// CharacterCatalog follows the same read authorization as a shared sheet.
+func (s *Service) CharacterCatalog(ctx context.Context, actor user.ID, id character.ID, locale rules.Locale) (*catalog.Catalog, error) {
+	c, err := s.readable(ctx, actor, id)
+	if err != nil {
+		return nil, err
+	}
+	return catalog.LoadLocked(ctx, s.catalog, locale, c.Log.RulesLock())
 }

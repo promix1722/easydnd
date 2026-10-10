@@ -59,6 +59,8 @@ type Dropped struct {
 
 // Revision is the outcome of replacing or removing one entry.
 type Revision struct {
+	Revision int
+
 	// Seq is where the log ends afterwards -- or would end, on a dry run.
 	Seq     int
 	Dropped []Dropped
@@ -119,44 +121,97 @@ func Revise(
 			"field.seq.initFirst")
 	}
 
-	// The prefix is a Log rather than a bare slice, and each entry is staged
-	// through Append, because the replay projects the prefix at every step
-	// and Project refuses a log whose sequence numbers do not run 1..n. The
-	// numbering therefore has to be right *during* the rebuild, not only at
-	// the end of it.
-	rebuilt := domain.Log{Events: slices.Clone(log.Events[:targetSeq-1])}
+	return reviseMany(log, cat, map[int]*domain.Event{targetSeq: replacement}, nil)
+}
+
+// reviseMany validates explicit edits against the rebuilt prefix, retaining
+// original event addresses until every replacement has been applied.
+func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*domain.Event, added []domain.Event) (domain.Log, []Dropped, error) {
+	for seq, replacement := range replacements {
+		if seq < 1 || seq > log.LastSeq() || (seq == 1 && (replacement == nil || replacement.Type != domain.EventInit)) || (seq != 1 && replacement != nil && replacement.Type == domain.EventInit) {
+			return domain.Log{}, nil, seqError("invalid replacement address", "field.seq.outOfRange")
+		}
+	}
+	rebuilt := domain.Log{}
 	stage := func(event domain.Event) error {
 		event.Seq = 0
 		return rebuilt.Append(event)
 	}
 
-	if replacement != nil {
-		open, err := domain.Prompts(rebuilt, cat)
-		if err != nil {
-			return domain.Log{}, nil, err
-		}
-		// Strict, exactly as an append is: a replacement is something the
-		// player is choosing right now. A rejection here writes nothing at
-		// all, so the stored log is byte-identical afterwards.
-		staged := *replacement
-		staged.Seq = 0
-		if err := validateEvent(rebuilt, cat, open, staged, 0); err != nil {
-			return domain.Log{}, nil, err
-		}
-		staged.Source = sourceOf(rebuilt, cat, open, staged)
-		if err := stage(staged); err != nil {
-			return domain.Log{}, nil, err
-		}
-	}
-
 	var dropped []Dropped
-	for _, event := range log.Events[targetSeq:] {
+	for _, event := range log.Events {
+		if replacement, edited := replacements[event.Seq]; edited {
+			if event.Custom != nil {
+				if replacement == nil {
+					return domain.Log{}, nil, types.NewValidationError("edit custom definitions through custom options")
+				}
+				copied := *event.Custom
+				replacement.Custom = &copied
+			}
+			if replacement == nil {
+				continue
+			}
+			staged := *replacement
+			staged.ID = event.ID
+			staged.Observed = event.Observed
+			staged.Evidence = event.Evidence
+			if event.Type == domain.EventInit && staged.Type == domain.EventInit {
+				// A field edit must not erase other observations stored in older init events.
+				merged := slices.Clone(event.Changes)
+				for _, ch := range staged.Changes {
+					merged = slices.DeleteFunc(merged, func(old domain.Change) bool { return old.Path == ch.Path })
+					merged = append(merged, ch)
+				}
+				staged.Changes = merged
+			}
+			staged.Seq = 0
+			if event.Seq == 1 {
+				staged.RulesLock = log.RulesLock()
+			}
+			validationLog, err := spellEditContext(rebuilt, log, cat, staged)
+			if err != nil {
+				return domain.Log{}, nil, err
+			}
+			open, err := domain.Prompts(validationLog, cat)
+			if err != nil {
+				return domain.Log{}, nil, err
+			}
+			if err := validateEvent(validationLog, cat, open, staged, 0); err != nil {
+				return domain.Log{}, nil, err
+			}
+			staged.Source = sourceOf(rebuilt, cat, open, staged)
+			if staged.Observed && staged.Source == domain.PromptGroupNone {
+				staged.Source = event.Source
+			}
+			if err := stage(staged); err != nil {
+				return domain.Log{}, nil, err
+			}
+			continue
+		}
+		// The untouched prefix must not be revalidated as new user input.
+		beforeFirst := true
+		for seq := range replacements {
+			if seq < event.Seq {
+				beforeFirst = false
+				break
+			}
+		}
+		if beforeFirst {
+			if err := stage(event); err != nil {
+				return domain.Log{}, nil, err
+			}
+			continue
+		}
+		if event.Observed && !observedAssociation(rebuilt, cat, event) {
+			dropped = append(dropped, droppedEntry(event, DropNotOffered, nil))
+			continue
+		}
 		open, err := domain.Prompts(rebuilt, cat)
 		if err != nil {
 			return domain.Log{}, nil, err
 		}
 
-		if requiredRef(event) {
+		if requiredRef(event) && !event.Observed {
 			if _, ok := answersAnOpenPrompt(open, event); !ok {
 				dropped = append(dropped, droppedEntry(event, DropNotOffered, nil))
 				continue
@@ -170,7 +225,7 @@ func Revise(
 		staged := event
 		staged.Choices = kept
 		switch {
-		case saysNothing(staged):
+		case SaysNothing(staged):
 			// An entry that was nothing but answers, all of which died. Its
 			// own reason rather than answers-dropped, because the row it
 			// names has gone from the screen rather than got shorter -- and
@@ -182,7 +237,20 @@ func Revise(
 			dropped = append(dropped, droppedEntry(event, DropAnswersDropped, lost))
 		}
 		staged.Source = sourceOf(rebuilt, cat, open, staged)
+		if staged.Observed && staged.Source == domain.PromptGroupNone {
+			staged.Source = event.Source
+		}
 		if err := stage(staged); err != nil {
+			return domain.Log{}, nil, err
+		}
+	}
+
+	appended := slices.Clone(added)
+	if err := ValidateAndAttribute(rebuilt, cat, appended); err != nil {
+		return domain.Log{}, nil, err
+	}
+	for _, event := range appended {
+		if err := stage(event); err != nil {
 			return domain.Log{}, nil, err
 		}
 	}
@@ -203,7 +271,7 @@ func Revise(
 // An entry with a Ref never says nothing, which is the guard behind the
 // second property in Revise's comment -- a race entry that lost every answer
 // is still the entry that sets the race.
-func saysNothing(event domain.Event) bool {
+func SaysNothing(event domain.Event) bool {
 	return !requiredRef(event) &&
 		len(event.Choices) == 0 && len(event.Changes) == 0 && event.Note == ""
 }
@@ -258,8 +326,16 @@ func (s *Service) Revise(
 	replacement *domain.Event,
 	commit bool,
 ) (Revision, error) {
+	return s.ReviseBatch(ctx, owner, id, locale, expectedSeq, map[int]*domain.Event{targetSeq: replacement}, nil, commit)
+}
+
+// ReviseBatch commits replacements and acquisitions as one guarded log update.
+func (s *Service) ReviseBatch(ctx context.Context, owner domain.OwnerID, id domain.ID, locale rules.Locale, expectedSeq int, replacements map[int]*domain.Event, added []domain.Event, commit bool) (Revision, error) {
 	character, cat, err := s.load(ctx, owner, id, locale)
 	if err != nil {
+		return Revision{}, err
+	}
+	if err := checkRevision(ctx, character); err != nil {
 		return Revision{}, err
 	}
 	if got := character.Log.LastSeq(); got != expectedSeq {
@@ -267,7 +343,15 @@ func (s *Service) Revise(
 			"character %q is at sequence %d, not %d", id, got, expectedSeq)
 	}
 
-	rebuilt, dropped, err := Revise(character.Log, cat, targetSeq, replacement)
+	var rebuilt domain.Log
+	var dropped []Dropped
+	if len(replacements) == 1 && len(added) == 0 {
+		for seq, event := range replacements {
+			rebuilt, dropped, err = Revise(character.Log, cat, seq, event)
+		}
+	} else {
+		rebuilt, dropped, err = reviseMany(character.Log, cat, replacements, added)
+	}
 	if err != nil {
 		return Revision{}, err
 	}
@@ -278,9 +362,13 @@ func (s *Service) Revise(
 		return Revision{}, err
 	}
 	if commit {
-		if err := s.repo.Rewrite(ctx, id, expectedSeq, rebuilt); err != nil {
+		if err := s.repo.Commit(ctx, id, character.Revision, rebuilt, commandID(ctx), nil); err != nil {
 			return Revision{}, err
 		}
 	}
-	return Revision{Seq: rebuilt.LastSeq(), Dropped: dropped, Sheet: sheet}, nil
+	revision := character.Revision
+	if commit {
+		revision += max(1, rebuilt.Len()-character.Log.Len())
+	}
+	return Revision{Revision: revision, Seq: rebuilt.LastSeq(), Dropped: dropped, Sheet: sheet}, nil
 }

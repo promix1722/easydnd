@@ -1,0 +1,356 @@
+{
+  "alchemists-supplies": {
+    "name": "Принадлежности алхимика"
+  },
+  "all-armor": {
+    "name": "Все доспехи"
+  },
+  "bagpipes": {
+    "name": "Волынка"
+  },
+  "battleaxes": {
+    "name": "Боевые топоры"
+  },
+  "blowguns": {
+    "name": "Духовые трубки"
+  },
+  "breastplate": {
+    "name": "Кираса"
+  },
+  "brewers-supplies": {
+    "name": "Принадлежности пивовара"
+  },
+  "calligraphers-supplies": {
+    "name": "Принадлежности каллиграфа"
+  },
+  "carpenters-tools": {
+    "name": "Инструменты плотника"
+  },
+  "cartographers-tools": {
+    "name": "Инструменты картографа"
+  },
+  "chain-mail": {
+    "name": "Кольчуга"
+  },
+  "chain-shirt": {
+    "name": "Кольчужная рубаха"
+  },
+  "clubs": {
+    "name": "Дубинки"
+  },
+  "cobblers-tools": {
+    "name": "Инструменты сапожника"
+  },
+  "cooks-utensils": {
+    "name": "Кулинарные принадлежности"
+  },
+  "crossbows-heavy": {
+    "name": "Арбалеты, тяжёлые"
+  },
+  "crossbows-light": {
+    "name": "Арбалеты, лёгкие"
+  },
+  "daggers": {
+    "name": "Кинжалы"
+  },
+  "darts": {
+    "name": "Дротики"
+  },
+  "dice-set": {
+    "name": "Набор игральных костей"
+  },
+  "disguise-kit": {
+    "name": "Набор для маскировки"
+  },
+  "drum": {
+    "name": "Барабан"
+  },
+  "dulcimer": {
+    "name": "Цимбалы"
+  },
+  "flails": {
+    "name": "Цепы"
+  },
+  "flute": {
+    "name": "Флейта"
+  },
+  "forgery-kit": {
+    "name": "Набор для подделки документов"
+  },
+  "glaives": {
+    "name": "Глефы"
+  },
+  "glassblowers-tools": {
+    "name": "Инструменты стеклодува"
+  },
+  "greataxes": {
+    "name": "Секиры"
+  },
+  "greatclubs": {
+    "name": "Палицы"
+  },
+  "greatswords": {
+    "name": "Двуручные мечи"
+  },
+  "halberds": {
+    "name": "Алебарды"
+  },
+  "half-plate-armor": {
+    "name": "Полулаты"
+  },
+  "hand-crossbows": {
+    "name": "Ручные арбалеты"
+  },
+  "handaxes": {
+    "name": "Ручные топоры"
+  },
+  "heavy-armor": {
+    "name": "Тяжёлые доспехи"
+  },
+  "herbalism-kit": {
+    "name": "Набор травника"
+  },
+  "hide-armor": {
+    "name": "Шкурный доспех"
+  },
+  "horn": {
+    "name": "Рог"
+  },
+  "javelins": {
+    "name": "Метательные копья"
+  },
+  "jewelers-tools": {
+    "name": "Инструменты ювелира"
+  },
+  "lances": {
+    "name": "Длинные копья"
+  },
+  "land-vehicles": {
+    "name": "Наземные транспортные средства"
+  },
+  "leather-armor": {
+    "name": "Кожаный доспех"
+  },
+  "leatherworkers-tools": {
+    "name": "Инструменты кожевника"
+  },
+  "light-armor": {
+    "name": "Лёгкие доспехи"
+  },
+  "light-hammers": {
+    "name": "Лёгкие молоты"
+  },
+  "longbows": {
+    "name": "Длинные луки"
+  },
+  "longswords": {
+    "name": "Длинные мечи"
+  },
+  "lute": {
+    "name": "Лютня"
+  },
+  "lyre": {
+    "name": "Лира"
+  },
+  "maces": {
+    "name": "Булавы"
+  },
+  "martial-weapons": {
+    "name": "Воинское оружие"
+  },
+  "masons-tools": {
+    "name": "Инструменты каменщика"
+  },
+  "mauls": {
+    "name": "Двуручные молоты"
+  },
+  "medium-armor": {
+    "name": "Средние доспехи"
+  },
+  "morningstars": {
+    "name": "Моргенштерны"
+  },
+  "navigators-tools": {
+    "name": "Инструменты навигатора"
+  },
+  "nets": {
+    "name": "Сети"
+  },
+  "padded-armor": {
+    "name": "Стёганый доспех"
+  },
+  "painters-supplies": {
+    "name": "Принадлежности художника"
+  },
+  "pan-flute": {
+    "name": "Свирель"
+  },
+  "pikes": {
+    "name": "Пики"
+  },
+  "plate-armor": {
+    "name": "Латы"
+  },
+  "playing-card-set": {
+    "name": "Набор игральных карт"
+  },
+  "poisoners-kit": {
+    "name": "Набор отравителя"
+  },
+  "potters-tools": {
+    "name": "Инструменты гончара"
+  },
+  "quarterstaffs": {
+    "name": "Боевые посохи"
+  },
+  "rapiers": {
+    "name": "Рапиры"
+  },
+  "ring-mail": {
+    "name": "Колечный доспех"
+  },
+  "saving-throw-cha": {
+    "name": "Спасбросок: Хар."
+  },
+  "saving-throw-con": {
+    "name": "Спасбросок: Тел."
+  },
+  "saving-throw-dex": {
+    "name": "Спасбросок: Лов."
+  },
+  "saving-throw-int": {
+    "name": "Спасбросок: Инт."
+  },
+  "saving-throw-str": {
+    "name": "Спасбросок: Сил."
+  },
+  "saving-throw-wis": {
+    "name": "Спасбросок: Муд."
+  },
+  "scale-mail": {
+    "name": "Чешуйчатый доспех"
+  },
+  "scimitars": {
+    "name": "Скимитары"
+  },
+  "shawm": {
+    "name": "Шалмей"
+  },
+  "shields": {
+    "name": "Щиты"
+  },
+  "shortbows": {
+    "name": "Короткие луки"
+  },
+  "shortswords": {
+    "name": "Короткие мечи"
+  },
+  "sickles": {
+    "name": "Серпы"
+  },
+  "simple-weapons": {
+    "name": "Простое оружие"
+  },
+  "skill-acrobatics": {
+    "name": "Навык: Акробатика"
+  },
+  "skill-animal-handling": {
+    "name": "Навык: Уход за животными"
+  },
+  "skill-arcana": {
+    "name": "Навык: Магия"
+  },
+  "skill-athletics": {
+    "name": "Навык: Атлетика"
+  },
+  "skill-deception": {
+    "name": "Навык: Обман"
+  },
+  "skill-history": {
+    "name": "Навык: История"
+  },
+  "skill-insight": {
+    "name": "Навык: Проницательность"
+  },
+  "skill-intimidation": {
+    "name": "Навык: Запугивание"
+  },
+  "skill-investigation": {
+    "name": "Навык: Расследование"
+  },
+  "skill-medicine": {
+    "name": "Навык: Медицина"
+  },
+  "skill-nature": {
+    "name": "Навык: Природа"
+  },
+  "skill-perception": {
+    "name": "Навык: Восприятие"
+  },
+  "skill-performance": {
+    "name": "Навык: Выступление"
+  },
+  "skill-persuasion": {
+    "name": "Навык: Убеждение"
+  },
+  "skill-religion": {
+    "name": "Навык: Религия"
+  },
+  "skill-sleight-of-hand": {
+    "name": "Навык: Ловкость рук"
+  },
+  "skill-stealth": {
+    "name": "Навык: Скрытность"
+  },
+  "skill-survival": {
+    "name": "Навык: Выживание"
+  },
+  "slings": {
+    "name": "Пращи"
+  },
+  "smiths-tools": {
+    "name": "Кузнечные инструменты"
+  },
+  "spears": {
+    "name": "Копья"
+  },
+  "splint-armor": {
+    "name": "Наборный доспех"
+  },
+  "studded-leather-armor": {
+    "name": "Проклёпанный кожаный доспех"
+  },
+  "thieves-tools": {
+    "name": "Воровские инструменты"
+  },
+  "tinkers-tools": {
+    "name": "Инструменты жестянщика"
+  },
+  "tridents": {
+    "name": "Трезубцы"
+  },
+  "viol": {
+    "name": "Виола"
+  },
+  "war-picks": {
+    "name": "Боевые кирки"
+  },
+  "warhammers": {
+    "name": "Боевые молоты"
+  },
+  "water-vehicles": {
+    "name": "Водные транспортные средства"
+  },
+  "weavers-tools": {
+    "name": "Инструменты ткача"
+  },
+  "whips": {
+    "name": "Кнуты"
+  },
+  "woodcarvers-tools": {
+    "name": "Инструменты резчика по дереву"
+  },
+  "firearms": {
+    "name": "Огнестрельное оружие"
+  }
+}

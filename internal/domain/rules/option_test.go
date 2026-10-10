@@ -35,7 +35,7 @@ func TestOptionKeyNamesEveryOptionKind(t *testing.T) {
 		// A branch is named by the pool it draws from, and falls back to its
 		// own prompt only where it lists its options inline.
 		{"nested from a category", rules.NestedOption{Choice: rules.Choice{
-			Prompt: "fighter/starting-equipment/1/0/0",
+			Prompt: "fighter/starting-equipment/off-hand/martial-weapons",
 			From:   rules.OptionSet{Kind: rules.OptionsFromEquipmentCategory, Category: "martial-weapons"},
 		}}, "martial-weapons"},
 		{"nested from a collection", rules.NestedOption{Choice: rules.Choice{
@@ -59,7 +59,7 @@ func TestOptionKeyNamesEveryOptionKind(t *testing.T) {
 // bundle, in a log row and in a hand-written fixture alike.
 func TestBundleKeysReadAsTheirContents(t *testing.T) {
 	nested := rules.NestedOption{Choice: rules.Choice{
-		Prompt: "fighter/starting-equipment/1/0/0",
+		Prompt: "fighter/starting-equipment/off-hand/martial-weapons",
 		From:   rules.OptionSet{Kind: rules.OptionsFromEquipmentCategory, Category: "martial-weapons"},
 	}}
 	key := rules.OptionKey(rules.BundleOption{Items: []rules.Option{

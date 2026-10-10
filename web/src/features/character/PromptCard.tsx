@@ -1,15 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Answer, Choice, Entry, Option, Prompt } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
-import { Button, Group, Stack, Text } from '@/ui'
+import { Badge, Box, Button, Group, Markdown, SourceTags, Stack, Text } from '@/ui'
+
+import { SpellChoices } from './SpellChoices'
 
 import { choosableOptions, optionLabel } from './options'
 import type { Choosable } from './options'
 
 export interface PromptCardProps {
   prompt: Prompt
+  initialAnswers?: readonly Answer[]
   /** Resolved catalogue entries, for options that name one. */
   entries: Map<string, Entry>
   pending: boolean
@@ -26,12 +29,8 @@ export interface PromptCardProps {
 /**
  * Renders one prompt's options and collects an answer.
  *
- * There is deliberately one component for every kind of prompt rather than one
- * per kind. Every prompt in this application is the same shape -- choose N of
- * these, where each option carries the key that names it -- because the server
- * synthesises "which race?" into the compendium's own grammar rather than
- * inventing a second one. A per-kind component set would be several files that
- * differ only in their labels.
+ * Every prompt shares the same answer state and confirmation rules. Spell
+ * choices add catalogue filters and richer rows without changing that contract.
  *
  * It does not say what the question is. The block it opens inside is headed by
  * the choice's own name, and a card that repeated it -- "Two more languages",
@@ -51,27 +50,35 @@ export interface PromptCardProps {
  * same card with nothing fetched and nothing posted, and Confirm sends the
  * branch answer and its contents together in one event.
  */
-export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardProps) {
+export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers = [] }: PromptCardProps) {
   const t = useT()
+  const confirmRef = useRef<HTMLButtonElement>(null)
+  const lastOptionRef = useRef<HTMLElement | null>(null)
+  const [touched, setTouched] = useState(false)
 
   // One piece of state, because a new prompt has to reset all of it at once:
   // the questions this card is walking, the answers it has, and the picks in
   // hand. Carrying any of them over would silently pre-select something the
   // player never chose. Reset during render rather than in an effect, so the
   // new prompt is never painted once wearing the old one's answer.
-  const [progress, setProgress] = useState<Progress>(() => begin(t, prompt, entries))
-  if (progress.for !== prompt.choice.prompt) setProgress(begin(t, prompt, entries))
+  const [progress, setProgress] = useState<Progress>(() => begin(t, prompt, entries, initialAnswers))
+  if (progress.for !== prompt.choice.prompt) setProgress(begin(t, prompt, entries, initialAnswers))
 
-  const stage = progress.stages[progress.answers.length] ?? prompt.choice
+  const stages = progress.stages.map((choice) => findChoice(prompt.choice, choice.prompt) ?? choice)
+  const stage = stages[progress.answers.length] ?? prompt.choice
   // The stage wears the prompt's envelope: `held` and `heldOnly` are about the
   // character rather than about which question is on screen, and the server
   // reports `held` across a prompt's branches for exactly this reason.
-  const asked: Prompt = { ...prompt, choice: stage }
+  const previous = progress.answers.flatMap((answer) => answer.picks)
+  const held = stage.kind === 'equipment' || stage.repeatable === true ? prompt.held
+    : prompt.heldOnly ? prompt.held?.filter((key) => !previous.includes(key))
+      : [...(prompt.held ?? []), ...previous]
+  const asked: Prompt = { ...prompt, choice: stage, ...(held === undefined ? {} : { held }) }
   const options = choosableOptions(t, asked, entries)
 
   const target = stage.choose
   const picked = progress.picked
-  const ready = picked.length === target
+  const ready = prompt.upTo === true ? picked.length > 0 && picked.length <= target : picked.length === target
   // "Choose one" is a different question from "choose two", and the
   // difference is what a click on a third option means.
   const one = target === 1
@@ -83,45 +90,105 @@ export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardPro
   // scores.
   const repeatable = stage.repeatable === true
 
+  // A pick keeps the picked option in view and goes nowhere else. It used to
+  // jump to Confirm once the answer was ready, which in a long list -- sixteen
+  // backgrounds, thirty weapons -- threw the page to the bottom on every click
+  // and took the option just chosen, and its description, off the screen.
+  useEffect(() => {
+    if (!touched) return
+    const target = lastOptionRef.current
+    if (target?.isConnected) target.scrollIntoView?.({ block: 'nearest' })
+  }, [progress, touched])
+
   const toggle = (key: string) => {
+    setTouched(true)
     setProgress((current) =>
       settle(t, prompt, entries, {
         ...current,
+        stages,
         picked: pick(current.picked, key, { target, one, repeatable }),
       }),
     )
   }
+
+  const confirmation = (
+      <Group>
+        <Button
+          ref={confirmRef}
+          onClick={() => onAnswer([...progress.answers, { prompt: stage.prompt, picks: [...picked] }])}
+          disabled={!ready || pending}
+          loading={pending}
+        >
+          {stage.kind === 'spell' ? t('prompt.finishSpells') : ready ? t('answer.confirm') : t('prompt.chooseMore', { count: target - picked.length })}
+        </Button>
+        {/*
+          Back to the top of the question, not just to an empty list. Once a
+          branch has been taken, clearing the picks inside it would leave the
+          player in a branch they may not have wanted with no way out.
+        */}
+        {(picked.length > 0 || progress.answers.length > 0) && (
+          <Button variant="subtle" disabled={pending} onClick={() => setProgress(begin(t, prompt, entries))}>
+            {t('prompt.clear')}
+          </Button>
+        )}
+      </Group>
+  )
 
   return (
     <Stack gap="md">
       {progress.answers.length > 0 && (
         <Text size="xs" c="dimmed">
           {progress.answers
-            .map((answer) => labelsOf(t, prompt, progress.stages, answer, entries))
+            .map((answer) => labelsOf(t, prompt, stages, answer, entries))
             .join(t('option.bundleJoin'))}
         </Text>
       )}
 
-      <Stack gap="xs">
+      {prompt.upTo === true && <Text size="sm">{t('prompt.upTo', { count: target })}</Text>}
+      {stage.kind === 'spell' ? (
+        <SpellChoices key={stage.prompt} choice={stage} options={options} entries={entries} picked={picked} pending={pending} onToggle={toggle} confirmation={confirmation} />
+      ) : <Stack gap="xs">
         {options.map((option) => {
           const count = picked.filter((k) => k === option.key).length
           // Once as many are picked as are wanted, the rest go grey: the
           // question has been answered, and an option that still looks
           // pressable but does nothing reads as a broken button. Not where
           // only one is wanted -- there the rest are how you change it.
-          const spent = ready && !one && count === 0
+          const spent = picked.length === target && !one && count === 0
+          // A picked option and what it says about itself are one box: the
+          // box takes the picked colour and the button inside it goes bare.
+          const detail = count > 0 ? option.detail : undefined
+          const described = detail !== undefined
           return (
+            // The focus ring goes round the whole box (`.picked-option` in
+            // app.css), not the button: a ring on the button alone framed the
+            // name and left the description hanging out underneath it. The
+            // description is padded to where a button puts its label (15px).
+            <Stack key={option.key} gap={0} {...(described ? { className: 'picked-option' } : {})} style={described ? {
+              background: 'var(--mantine-primary-color-light)',
+              borderRadius: 'var(--mantine-radius-default)',
+            } : undefined}>
             <Button
-              key={option.key}
-              variant={count > 0 ? 'filled' : 'default'}
+              aria-label={stacked(t, stage, option.key, count, entries) ?? option.label}
+              variant={described ? 'transparent' : count > 0 ? 'light' : 'default'}
+              c="var(--mantine-color-text)"
+              aria-pressed={count > 0}
               justify="space-between"
+              styles={{ label: { width: '100%', minWidth: 0 } }}
               // The description underneath makes a picked option two or three
               // lines tall, and a button that fixes its own height would crop
               // it. Padded rather than sized.
               h="auto"
               py="xs"
-              disabled={option.disabled || spent}
-              onClick={() => toggle(option.key)}
+              disabled={pending || option.disabled || spent}
+              // Once the answer is ready, Tab should reach Confirm from the
+              // chosen option even when more options follow it in a long list.
+              tabIndex={ready && option.key !== picked[picked.length - 1] ? -1 : 0}
+              onFocus={(event) => event.currentTarget.scrollIntoView?.({ block: 'nearest' })}
+              onClick={(event) => {
+                lastOptionRef.current = event.currentTarget
+                toggle(option.key)
+              }}
               rightSection={
                 option.disabled ? (
                   <Text size="xs" c="dimmed">
@@ -130,29 +197,40 @@ export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardPro
                 ) : null
               }
             >
-              <Stack gap={2} style={{ textAlign: 'left' }}>
-                <Text size="sm" style={{ whiteSpace: 'normal' }}>
-                  {/*
-                    Two points into Strength reads "Strength +2". It used to
-                    read "Strength +1" with a ×2 badge beside it, which is the
-                    number the option is worth and the number of them, left for
-                    the player to multiply.
-                  */}
-                  {stacked(t, stage, option.key, count, entries) ?? option.label}
-                </Text>
-                {/*
-                  Only under the one that was picked. Every option carrying its
-                  own paragraph turns a list of six into a page nobody reads,
-                  and the same text cut to fit one line stops mid-word -- so it
-                  is shown where it is being decided about, in full.
-                */}
-                {count > 0 && option.detail !== undefined && (
-                  <Text size="xs" style={{ whiteSpace: 'normal', opacity: 0.8 }}>
-                    {option.detail}
+              <Stack gap={2} w="100%" style={{ textAlign: 'left', minWidth: 0 }}>
+                <Group justify="space-between" wrap="nowrap" w="100%">
+                  <Text size="sm" style={{ whiteSpace: 'normal', minWidth: 0, flex: 1 }}>
+                    {/*
+                      Two points into Strength reads "Strength +2". It used to
+                      read "Strength +1" with a ×2 badge beside it, which is the
+                      number the option is worth and the number of them, left for
+                      the player to multiply.
+                    */}
+                    {stacked(t, stage, option.key, count, entries) ?? option.label}
                   </Text>
-                )}
+                  {option.manual === true && <Badge>{t('custom.manual')}</Badge>}
+                  <SourceTags provenance={option.provenance} rightAligned />
+                </Group>
               </Stack>
             </Button>
+            {/*
+              Only under the one that was picked. Every option carrying its
+              own paragraph turns a list of six into a page nobody reads, and
+              the same text cut to fit one line stops mid-word -- so it is
+              shown where it is being decided about, in full. In the same box
+              as the button but not inside the button: the description is
+              Markdown, and a table or a list is not something a button may
+              contain.
+            */}
+            {detail !== undefined && (
+              // Smaller, so it reads as about the option rather than as
+              // another one -- but not dimmed: grey on the picked colour is
+              // not legible.
+              <Box pb="xs" px={15}>
+                <Markdown size="xs">{detail}</Markdown>
+              </Box>
+            )}
+            </Stack>
           )
         })}
         {options.length === 0 && (
@@ -160,29 +238,11 @@ export function PromptCard({ prompt, entries, pending, onAnswer }: PromptCardPro
             {t('prompt.nothingOffered')}
           </Text>
         )}
-      </Stack>
+      </Stack>}
 
-      {repeatable && <Text size="xs" c="dimmed">{t('prompt.pointsToSpend')}</Text>}
+      {repeatable && <Text size="xs" c="dimmed">{stage.kind === 'equipment' ? t('prompt.repeatEquipment') : t('prompt.pointsToSpend')}</Text>}
 
-      <Group>
-        <Button
-          onClick={() => onAnswer([...progress.answers, { prompt: stage.prompt, picks: [...picked] }])}
-          disabled={!ready}
-          loading={pending}
-        >
-          {ready ? t('answer.confirm') : t('prompt.chooseMore', { count: target - picked.length })}
-        </Button>
-        {/*
-          Back to the top of the question, not just to an empty list. Once a
-          branch has been taken, clearing the picks inside it would leave the
-          player in a branch they may not have wanted with no way out.
-        */}
-        {(picked.length > 0 || progress.answers.length > 0) && (
-          <Button variant="subtle" onClick={() => setProgress(begin(t, prompt, entries))}>
-            {t('prompt.clear')}
-          </Button>
-        )}
-      </Group>
+      {stage.kind !== 'spell' && confirmation}
     </Stack>
   )
 }
@@ -201,12 +261,41 @@ interface Progress {
   picked: string[]
 }
 
-function begin(t: Translate, prompt: Prompt, entries: Map<string, Entry>): Progress {
+function begin(t: Translate, prompt: Prompt, entries: Map<string, Entry>, initialAnswers: readonly Answer[] = []): Progress {
+  // A question reopened to change its answer opens *on* that answer: the
+  // class that was chosen is the pressed one in the list, not one more
+  // unpressed row among twelve. (A saved spell answer is likewise a draft
+  // until confirmed; it is not reseeded when catalogue details arrive, or
+  // removals would be undone.)
+  const saved = initialAnswers.find((answer) => answer.prompt === prompt.choice.prompt)
+  // Seeded without settling: settle takes a finished stage as answered and
+  // moves on, and an answer shown for changing has not been given again.
+  if (saved !== undefined && prompt.choice.kind !== 'spell') {
+    // And it opens as deep as the answer went: a focus chosen out of "an
+    // arcane focus" opens on the list of foci with that one pressed, not back
+    // at the branch with the focus forgotten.
+    let out: Progress = { for: prompt.choice.prompt, stages: [prompt.choice], answers: [], picked: [...saved.picks] }
+    for (let depth = 0; depth < 8; depth += 1) {
+      const stage = out.stages[out.answers.length]
+      if (stage === undefined) break
+      const opened = opens(stage, out.picked)
+      const following = [...out.stages, ...opened][out.answers.length + 1]
+      const nested = following === undefined ? undefined : initialAnswers.find((answer) => answer.prompt === following.prompt)
+      if (nested === undefined) break
+      out = {
+        for: out.for,
+        stages: [...out.stages, ...opened],
+        answers: [...out.answers, { prompt: stage.prompt, picks: out.picked }],
+        picked: [...nested.picks],
+      }
+    }
+    return out
+  }
   return settle(t, prompt, entries, {
     for: prompt.choice.prompt,
     stages: [prompt.choice],
     answers: [],
-    picked: only(prompt, choosableOptions(t, prompt, entries)),
+    picked: saved === undefined ? only(prompt, choosableOptions(t, prompt, entries)) : [...saved.picks],
   })
 }
 
@@ -235,7 +324,7 @@ function settle(
     const stage = out.stages[out.answers.length]
     if (stage === undefined || out.picked.length !== stage.choose) return out
     const opened = opens(stage, out.picked)
-    if (opened.length === 0) return out
+    if (opened.length === 0 && out.answers.length + 1 >= out.stages.length) return out
 
     const answers = [...out.answers, { prompt: stage.prompt, picks: out.picked }]
     const stages = [...out.stages, ...opened]
@@ -350,7 +439,21 @@ function labelsOf(
  * only button before pressing Confirm is a step that decides nothing.
  */
 function only(prompt: Prompt, options: readonly Choosable[]): string[] {
-  if (prompt.choice.choose !== 1) return []
+  if (prompt.choice.choose !== 1 || prompt.choice.kind === 'spell') return []
   const open = options.filter((option) => !option.disabled)
   return open.length === 1 && open[0] !== undefined ? [open[0].key] : []
+}
+
+function findChoice(root: Choice, id: string): Choice | undefined {
+ if (root.prompt === id) return root
+ const visit = (option: Option): Choice | undefined => {
+  if (option.choice !== undefined) {
+   const found = findChoice(option.choice, id)
+   if (found !== undefined) return found
+  }
+  for (const item of option.items ?? []) { const found = visit(item); if (found !== undefined) return found }
+  return undefined
+ }
+ for (const option of root.from.options ?? []) { const found = visit(option); if (found !== undefined) return found }
+ return undefined
 }

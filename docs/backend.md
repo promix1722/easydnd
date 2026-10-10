@@ -9,6 +9,58 @@ SRD compendium, passkey and Google sign-in, and the rules math for creation and
 level-up are built and tested. A character can be created, built and levelled
 over HTTP.
 
+## Single-image generation
+
+`internal/usecase/spellicon` contains the synchronous OpenAI image request,
+bounded retries, cancellation, PNG decoding, resizing and WebP encoding.
+This standalone package is the explicit exception to the inner-layer HTTP
+dependency rule; the layer checks still prohibit importing it from other
+usecases and still reject server frameworks and persistence in the generator.
+It returns 128×128 WebP bytes and has no queue, catalog dependency, file store,
+server configuration or application startup integration.
+
+The standalone binary owns command-line input and atomic file output:
+
+```sh
+go build -o bin/spellicon ./cmd/spellicon
+OPENAI_API_KEY=... bin/spellicon -prompt 'A glowing arcane rune' -out /tmp/rune.webp
+```
+
+Its default model is `gpt-image-2.5-sunburst`, overridable with `-model`.
+Requests use transparent 1024×1024 artwork at low quality, then convert to
+128×128 lossless WebP. `-timeout` defaults to five minutes including retries;
+`-overwrite` permits replacing an existing regular file. Generation failure
+preserves existing output. The CLI handles interruption and never exposes the
+key through a web interface. `make image/generate IMAGE_FLAGS='-prompt ...
+-out ...'` is an equivalent development command. The existing `llm` CLI remains
+compatible for offline translation and PNG batches.
+
+## Rule pack runtime
+
+Startup registers the base pack plus `data.pack_files` and
+`data.autoload_packs`, resolves
+`data.default_packs`, and compiles the selected contexts before readiness.
+`data.pack_archive` retains immutable releases by digest outside deployment
+folders. [packs.md](packs.md) documents the file format, CLI and new migration
+and contextual catalogue routes. Autoloaded folders are additional public
+catalogue choices, excluded from implicit default roots so replacement cores
+can coexist. Each path accepts a pack directory or a repository with a `pack/`
+child; an optional ID override gives replacement datasets their own namespace.
+`data.private_pack_files` are installed the same way and then restricted to
+`auth.superadmins` and the groups one of them grants a pack to; see
+[packs.md](packs.md#common-and-private-disk-packs).
+Missing or invalid configured packs fail startup. Changes require a restart.
+The authoring service separately manages private drafts, published releases,
+imports and group sharing.
+
+All application character writes use repository revision CAS. `expectedSeq`
+identifies positions; `expectedRevision` detects concurrent same-length edits.
+Each init event pins a rules lock, and character/list/copy/shared-game reads use
+that lock. Migration/restore endpoints retain checkpoints atomically with the
+new log. Characters, their checkpoints, folders, shares and games are in
+PostgreSQL whenever accounts are; see
+[Where everything lives](#where-accounts-and-groups-live).
+
 ## Quick start
 
 ```sh
@@ -37,15 +89,115 @@ make dev                            # Postgres, the API and the web client, one 
 make ports                          # what this worktree claimed, and where to open it
 ```
 
+### An opened character is read by its link
+
+A character has one switch its owner throws, `Public`, stored beside its
+folder rather than in its log -- who may look at a character is not a fact
+about the character. Open, **anybody signed in who has the link** may read the
+sheet through the same `/v1/shared/{id}/...` routes a group's read uses,
+whatever table they do or do not sit at; a guest session counts as signed in.
+Hidden, which is the default, the character is its owner's and its groups'.
+
+It is one line in one place: `readable` in `usecase/game/service.go`, the gate
+every shared read already passes, answers yes for a public character before it
+asks about groups. Nothing about writing changes -- every write goes through
+the character service, which asks who owns the character and nothing else. A
+hidden character and a missing one both answer 404, so a link says nothing
+about a character it does not open. Like the folder, the switch lives with the
+in-memory character and is gone when the process is.
+
+### Seeded development party
+
+Every API startup with `env: development`, including `make dev` and
+`make run/server`, creates a ready-to-play group **Development party** and
+three test accounts: **master**, **player1**, **player2**. The master owns the
+group; both other accounts are players. Each owns one finished first-level
+half-elf rogue, built through validated events rather than asserted stats.
+The players' rogues are shared and seated in two games:
+
+- **Training encounter**: both players are unlocked, with initiative rolls,
+  temporary HP and a sample tag. Two private monsters demonstrate a character
+  copy and a 10/10 HP stub. The master's original character stays private.
+- **Locked encounter**: player2 is locked, so the master can test unlocking
+  before that player edits game values.
+
+Both games also seat two more shared characters, one per player: a fifth-level
+paladin and a fifth-level cleric. They exist to show the
+consumables tracker, which a first-level rogue cannot -- spell slots at several
+levels, Channel Divinity, a pool too large for marks (Lay on Hands, 25), Hit
+Dice. They are finished characters too -- a human acolyte each, with scores,
+skills, a subclass, a fourth-level improvement, cantrips and prepared spells.
+
+Every seed is a list of selections in `internal/app/dev_builds.go`, applied
+entry by entry through the same validation an append from the build screen
+takes, and `seedCharacter` refuses to return a character with a required
+prompt still open. So a compendium regeneration that renames a prompt fails
+start-up, naming the entry, rather than quietly seeding a sheet that opens as
+"Unfinished" with no race and six tens -- which is what the two casters were
+while they were seeded with a class event and nothing else. There is no
+"stub" route or button any more: the seeds are the ready-made characters.
+
+`POST /v1/dev/login` with `{"account":"master"}` (or `player1`, `player2`)
+issues the normal HttpOnly session cookie and returns the seeded `game_ids`.
+It accepts only these three identities, keeps the `/v1` same-origin mutation
+checks, and is never registered in production. No password or passkey is
+required for these development accounts. The development client offers these
+buttons on `/login` and an account switcher in the signed-in header.
+Switching keeps the current seeded game when possible and reloads the page so
+no previous identity's resource data or edit drafts remain.
+
+Accounts, the group, the characters and the games are all reused when the API
+restarts against an existing development database: the seed looks for
+master's characters and builds nothing when they are there. Against a process
+with no database it builds them every start. Signing in again within the same
+run does not reseed or reset game changes. Open separate tabs and choose master, player1 and player2
+in each: development shortcuts keep a random cookie selector in tab-local
+`sessionStorage` and send it as `X-EasyDnD-Dev-Session`. It selects a signed
+HttpOnly cookie and is ignored in production.
+Each successful switch
+uses a new selector, including in duplicated tabs; a failed switch keeps the
+previous identity. The signed token stays in an HttpOnly cookie. This header
+is ignored in production.
+
+All development auth cookie names also include a namespace derived from the
+API listen address. Different worktree ports on the same browser hostname
+therefore cannot overwrite or clear one another's sessions, passkey ceremonies
+or SSO flight cookies. Production cookie names are unchanged. Restarting an
+API without `auth.session_secret` still invalidates that API's sessions because
+its signing key is generated per process. Because a browser does not isolate
+cookies by port, a shared development hostname collects one such dead cookie
+per switch and per restart, across every worktree's namespace, until the
+`Cookie` header outgrows the proxy's 8 KB line limit and nginx answers
+`400 Request Header Or Cookie Too Large` before the API sees anything. So in
+development `RequireSession` also verifies every other session cookie of its
+own namespace in the request and clears the ones that no longer work; cookies
+of other namespaces are left alone, since another server's token cannot be
+checked here and may be live. A jar that is already over the limit has to be
+emptied in the browser once.
+
 `make dev` is a **disposable** stack: Ctrl-C takes the database down with the
 servers, so every run starts on an empty schema and nothing is left behind.
 When you want accounts to survive a restart, use the three targets it composes
 instead -- `make db/up` once, then `make run/db` and `make web/dev` -- and
 `make dev/down` when you are finished with them.
 
-`make run/db` loads `config.local.yaml` if you have one (it is gitignored);
-otherwise `make config/dev` writes `config.dev-run.yaml` for it, carrying this
-worktree's ports and origins.
+Every one of those targets runs the API on the same committed
+`config.dev.yaml`. What that file cannot say reaches the process through its
+environment, in two layers that `make` puts there:
+
+- **`~/config/easydnd/dev.env`** -- this machine's secrets, one file for every
+  worktree and outside all of them (`DEV_ENV` overrides the path). Copy
+  `easydnd.example.env` there, mode 600. **The AI Wizard's key is
+  `EASYDND_AGENT_API_KEY` in this file**; the model is `agent.model` in
+  `config.dev.yaml`. The file is optional: without it the server starts with
+  the feature off and the target says so.
+- **this worktree's slot** -- `EASYDND_HTTP_PORT`, `EASYDND_RP_ID`,
+  `EASYDND_RP_ORIGINS` and, for `run/db`, `EASYDND_DB_URL`. They are passed,
+  not written down: no config file is generated, so there is nothing per
+  worktree to go stale or to hold a copy of a key.
+
+`make spell-icons` and `make translate/ru` take their OpenAI key from the same
+file. See [Configuration](#configuration) for the full list of variables.
 
 Without `TEST_DATABASE_URL` the Postgres adapter tests skip themselves, which is
 what keeps `go test ./...` and `make verify` green on a machine with no Docker.
@@ -196,8 +348,8 @@ PUBLIC_HOST      := dev.example.org
 PUBLIC_PORT_BASE := 8880
 ```
 
-That is the whole configuration. `make dev` then puts
-`http://dev.example.org:{8880 + slot}` into the generated config's
+That is the whole configuration. `make dev` then passes
+`http://dev.example.org:{8880 + slot}` to the API as the first of its
 `auth.rp_origins` and hands it to Vite, which needs it for two things of its
 own -- see [web.md](web.md#one-dev-server-per-worktree).
 
@@ -213,7 +365,7 @@ Two consequences of reaching the app over plain HTTP on a name that is not
   this same rule.
 - **`env: development` is doing real work.** It is what clears the cookie
   `Secure` flag and the `__Host-` prefix; a production-mode cookie would never
-  be sent over such a connection. The generated config always sets it.
+  be sent over such a connection. `config.dev.yaml` sets it.
 - **`navigator.clipboard` is undefined**, for exactly the same reason as
   `PublicKeyCredential`. The invite sheet falls back to a selection copy and,
   if even that is refused, says so and selects the link -- see
@@ -228,7 +380,8 @@ internals follow clean architecture.
 
 ```
 cmd/easydnd/          process entrypoint: flags, config, logger, signals
-cmd/srdgen/           converts the vendored SRD dump into data/srd_5.1/
+cmd/pack/             loads, validates and exports packs; `make pack/check` is this
+cmd/packlint/         reads the pack's prose the way a player would and reports what is off
 cmd/devslot/          hands each worktree its own development ports
 cmd/llm/              dev-machine OpenAI tool: batch image generation, JSON translation
 internal/
@@ -245,21 +398,22 @@ internal/
   usecase/            application services                              (layer 2)
   adapter/catalog/    reads the compendium off disk                     (layer 3)
   adapter/repository/ outbound adapters: memory, and postgres for accounts (layer 3)
-  adapter/sheet/      reads character sheets exported by other tools     (layer 3)
   adapter/webauthn/   runs the WebAuthn ceremonies                       (layer 3)
   adapter/oidc/       exchanges authorization codes with Google          (layer 3)
   adapter/token/      signs the session and ceremony cookies             (layer 3)
   api/http/           inbound adapter, gin                              (layer 3)
 web/                  browser client (React + TypeScript, Vite); see web.md
-data/srd_5.1/         generated SRD data, read at startup
+data/pack/srd-5.1/    the compendium, hand-maintained, read at startup
+data/locale-terms-locked/ the translators' glossary and provenance record
 deploy/               server-side release activation and the nginx site
-docs/reference_srd_5.1/   vendored SRD 5.1 source data (reference only)
+docs/reference_srd_5.1/   where the SRD data came from, and the licence question (notes only)
 docs/reference_hexsheet/  a real exported character sheet, used as a shape reference
 ```
 
-`docs/reference_srd_5.1/` is the *input*: an untouched vendored dump. `data/srd_5.1/`
-is the *output*: this project's own format, generated by `cmd/srdgen` and read at
-runtime. Nothing outside the generator reads the vendored dump.
+`data/pack/srd-5.1/` is a pack in this project's own format and nothing else:
+there is no upstream dump and no generator between an edit and the server.
+It was derived once from the `5e-bits/5e-database` dump and has been edited in
+place since; see [Changing the SRD data](#changing-the-srd-data).
 
 `cmd/llm` is a development-machine tool and no part of the service: it calls
 the OpenAI API (key from `OPENAI_API_KEY`) to batch-generate entity artwork
@@ -270,7 +424,7 @@ wherever they belong -- it knows nothing of the repo's layouts. `llm images
 resumes by rerunning; `-workers N` generates that many concurrently, safe
 because a 429 self-throttles via its `Retry-After` (a free-tier cap of a few
 images per minute makes more than 2 mostly queue). `llm translate -in
-data/srd_5.1/i18n/en/spells.json -out spells.ru.json -to ru` writes a
+data/pack/srd-5.1/i18n/en/spells.json -out spells.ru.json -to ru` writes a
 same-shaped copy with every string leaf translated, keys and
 `{{placeholders}}` verified untouched. `-dry-run` on either shows the work
 without the key or the spend.
@@ -278,8 +432,8 @@ without the key or the spend.
 The first consumer is the spell icons: `make spell-icons` chains a prompt
 builder and a webp downscale (both `web/scripts/spell-icons.mjs`) around
 `llm images`, caching the 1024px masters in `~/.cache/easydnd/spell-icons/`
-and committing 128px webps to `web/src/assets/spells/` -- see docs/web.md for
-why they live there.
+and committing 128px WebPs to `data/pack/srd-5.1/spell-icons/`. The loader
+picks those files up by name; see [packs.md](packs.md#spell-artwork).
 
 ## The API
 
@@ -293,18 +447,20 @@ that.
 | `GET` | `/v1/health` | liveness |
 | `GET` | `/v1/version` | the release identifier -- a deploy contract, see below |
 | `GET` | `/v1/catalog` | the compendium's index: ruleset, locales, collections and counts |
-| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it. Spells and magic items list as *summaries*, and `?slugs=` returns full fidelity. Spells alone also answer search parameters (`q`, `level`, `school`, `class`, `castingTime`, `concentration`, `ritual`, `material`, `limit`, `offset`) with a filtered, level-then-name-sorted, paged `{spells, total}` envelope -- the filter itself is `domain/catalog.SpellFilter`; with no search parameter the route serves the bare array from its byte cache, unchanged |
+| `GET` | `/v1/catalog/{collection}` | one collection; `?slugs=a,b` narrows it. Magic items list as *summaries*, and `?slugs=` returns full fidelity. **Spells are never served whole** -- see [below](#spells-are-never-served-whole): they answer `?slugs=`, or search parameters (`q`, `level`, `school`, `class`, `castingTime`, `concentration`, `ritual`, `material`, `limit`, `offset`) with a filtered, level-then-name-sorted, paged `{spells, total}` envelope -- the filter itself is `domain/catalog.SpellFilter` -- and the bare URL is a 400. `spell-filters` in place of a collection name returns what spells can be filtered by. `items` in place of a collection name is equipment and magic items **searched together by name**, `?q=&limit=&offset=`, as a name-sorted, paged `{items: [{slug, name, category, magic}], total}` envelope -- the sheet's Add item picker reads it -- and like spells it is never served whole |
+| `POST` | `/v1/catalog/spells/search` | the same search with a body, for an offer too long for a URL; also at `/v1/characters/{id}/catalog/spells/search` |
 | `GET` | `/v1/characters` | summaries |
 | `POST` | `/v1/characters` | create: a name (and an alignment, if there is one) |
-| `POST` | `/v1/characters/import` | import a sheet exported by another tool |
-| `POST` | `/v1/characters/stub` | **development only** -- build the reference character in one call |
+| `POST` | `/v1/dev/login` | **development only** -- sign in as master, player1, or player2 in the seeded party |
 | `GET` | `/v1/characters/{id}` | the log |
 | `DELETE` | `/v1/characters/{id}` | |
-| `GET` | `/v1/characters/{id}/sheet` | the projection |
+| `GET` | `/v1/characters/{id}/sheet` | the projection, with what its slugs mean -- see [The sheet arrives resolved](#the-sheet-arrives-resolved) |
 | `GET` | `/v1/characters/{id}/prompts` | what must be decided next |
 | `GET` | `/v1/characters/{id}/events` | the log |
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
 | `DELETE` | `/v1/characters/{id}/events` | truncate: `?after=N&expectedSeq=M` |
+| `POST` | `/v1/characters/{id}/auto-equip` | dress a character who has nothing on: one suitable backpack item per slot; 204, and a no-op once anything is equipped |
+| `GET` / `PUT` | `/v1/characters/{id}/visibility` | `{"public": bool}`: whether anybody signed in who has the character's link may read its sheet; owner only |
 | `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
 | `DELETE` | `/v1/characters/{id}/events/{seq}` | remove one entry: `?expectedSeq=M`, `?dryRun=true` |
 | `PUT` | `/v1/characters/{id}/folder` | file it elsewhere |
@@ -334,7 +490,12 @@ that.
 | `DELETE` | `/v1/games/{id}` | DM or owner; the characters stay on the table |
 | `POST` | `/v1/games/{id}/characters` | seat some: `{"character_ids":[...]}`; your own land on the table too |
 | `DELETE` | `/v1/games/{id}/characters` | unseat one: `?character=C` |
-| `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only |
+| `PATCH` | `/v1/games/{id}/entries/{entry}` | patch game HP, temp HP, initiative, tags and spent uses (`{"used":{"spell-slots/1":2}}`); masters also lock players and edit monster base stats |
+| `DELETE` | `/v1/games/{id}/entries/{entry}` | remove a player entry or monster; DM or owner |
+| `POST` | `/v1/games/{id}/monsters` | private copy: `{"character_id":"..."}`; `{}` creates a stub; DM or owner |
+| `POST` | `/v1/games/{id}/order` | stable sort: `{"by_initiative":true}`; move: `{"entry_id":"...","direction":-1}` (or `1`); DM or owner |
+| `POST` | `/v1/games/{id}/rest` | a rest for the table; DM or owner. Long by default: every entry gets all of its spent uses back. `?kind=short`: only the pools a short rest refills |
+| `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only, resolved the same way |
 
 Three of those need a word about their shape.
 
@@ -360,7 +521,7 @@ in, and that is not the table's business. A table sees what a character **is**.
 one character or nine, and "everyone at this table" is the client sending the
 list it already has on screen.
 
-**Seating your own character shares it.** Everything on a roster has to be
+**Seating your own player character shares it.** Every player character on a roster has to be
 readable by every member -- a game carrying a name nobody but its owner may
 open would be a leak the DM caused by accident -- so a character that is not on
 the table yet is put there, provided it belongs to the caller. Somebody else's
@@ -388,50 +549,76 @@ line, and an invite token is usable for a day. The browser keeps it in a URL
 *fragment*, which is never sent to any server at all.
 
 `GET /v1/characters` takes `?folder=` to narrow the listing, and `POST
-/v1/characters` takes a `folder` in the body. `POST /v1/characters/import` takes
-`?folder=` instead, because its body is the exported sheet itself.
+/v1/characters` takes a `folder` in the body.
 
-### Importing states, not histories
+### Spells are never served whole
 
-`POST /v1/characters/import` takes a sheet exported from another tool -- today
-HexSheet -- as the request body, and answers with a character plus a **report**
-of what did not survive.
+Every spell carries its artwork inline, about 30 KB of it, so the spells
+collection is 11 MB. Nothing a screen does needs all of it, and for a long time
+three screens downloaded it anyway -- to name a dozen spells, to list the books
+a filter offers, to page through a class's list in the browser. So the route
+does not offer it: `GET …/catalog/spells` with neither `?slugs=` nor a search
+parameter is a 400 (`field.limit.required`), on every scope the catalogue is
+read through. A client that drifts back into fetching the list finds out on
+the first request, not from a slow page.
 
-The route exists in tension with everything above it. easydnd stores *choices*
-and derives the sheet; an exported sheet is the opposite, a set of finished
-numbers with no record of where they came from. It says the character is
-proficient in Stealth, not whether the class, the background or a racial trait
-granted it.
+What replaces it:
 
-The importer does not try to bridge that by reconstructing the choices.
-Recovering them means solving a matching problem -- six proficient skills
-across a class prompt taking four from a restricted list and a trait prompt
-taking two from all eighteen -- and then presenting one of several answers that
-fit as the one the player made. So instead:
+- **Named spells**, `?slugs=`, at full fidelity. Bounded at 200 per request.
+- **A page of a search.** The query-string search above, or
+  `POST …/catalog/spells/search` with the same filters and two things a URL
+  cannot hold, `only` and `exclude`. `only` is an *offer* --
+  `{slugs, fitting: [{minLevel, maxLevel, classes}]}`, the spells a character
+  may pick, named or described; a spell is in it when either says so, and an
+  empty offer matches nothing. `exclude` is what is already chosen. `limit` is
+  required and at most 200. It is a POST because a bard's Magical Secrets
+  offers every spell there is; it writes nothing.
+- **`…/catalog/spell-filters`**: the packs, books, schools and classes the
+  catalogue's spells can be filtered by, so that no screen reads them off the
+  spells.
+- **Resolved in a sheet**, below.
 
-- the export's final state becomes the character's **opening** state, as an
-  `init` event carrying the numbers;
-- typed `race`, `class`, `level` and `subclass` events name what the export
-  states outright, so traits, features and level-scaled values attach -- each
-  level before the subclass it makes due, so that the log the importer writes
-  is one the build flow could have written itself and one a later replacement
-  will keep;
-- **no prompt is answered.** Every choice stays open, and the client sends the
-  player to the build screen rather than the sheet;
-- anything with no home in the model is named in the report rather than
-  dropped.
+The manifest still counts the collection; it just cannot be fetched by that
+name alone.
 
-One consequence is worth stating because it looks like a bug. Ability scores
-are input tier, applied *before* racial bonuses, so the init event records the
-export's scores **minus the race's fixed bonuses** -- a half-elf's Charisma 14
-is stored as 12 and projects back to 14. The race's *optional* bonuses are not
-subtracted and not guessed: the export does not record where they went, so that
-prompt simply stays open, which is why an imported character can look a point
-or two light until it is answered.
+**`items` is held to the same rule for the opposite reason.** Equipment and
+magic items are small enough to serve whole, and the plain collections still
+are; but the one screen that *searches* them -- the sheet's Add item picker --
+needs a page, not a download, and a client that pages never drifts into
+holding the catalogue. So `GET …/catalog/items?q=&limit=&offset=` answers
+both collections together, matched on name, sorted by name, in an
+`{items, total}` envelope with the `magic` flag telling the two apart, and the
+bare `…/catalog/items` is the same 400. It is served on every scope a
+collection is, so a character's picker sees the character's packs.
 
-`internal/adapter/sheet/hexsheet` also holds the codebase's only name-to-slug
-lookup. Everywhere else a reference is already a slug; an import is the one
-place a display name is all there is.
+### The sheet arrives resolved
+
+A projected sheet is slugs: `race: "half-elf"`, a list of features, the spells
+a caster has. The two sheet reads -- `/v1/characters/{id}/sheet` and
+`/v1/shared/{id}/sheet` -- send what those slugs mean in the same response,
+through one function, `character.ResolvedSheetOf`:
+
+- **`catalogNames`**, `"<collection>:<slug>"` to the localized name, for what a
+  sheet only names: race, subrace, classes, subclasses, background, traits,
+  features, feats, languages, and the source of each spell list. The projection
+  already wrote the names of imported and custom entries there; those are kept.
+- **`catalog`**, the entries a panel reads more than a name from, in the shapes
+  the collection routes serve: the character's proficiencies, the items it
+  holds (asked of both item collections, because a stack does not say which it
+  came from), **its own spells with their artwork**, and all eighteen skills,
+  which every sheet draws.
+
+A slug the catalogue does not define is skipped, not an error: the client
+title-cases it, as it always has.
+
+The reason is the cost of the alternative. The server holds the character's
+catalogue when it projects, so the lookup is a few map reads. Left to the
+client it was fourteen whole collections per sheet, the spell list with its
+inlined artwork among them -- about 11 MB to print a dozen names. A sheet read
+is now one response, sized by the character rather than by the rules.
+
+A write's echo of the sheet (`WriteResponse.sheet`) carries no `catalog`. It is
+there to confirm the write; a screen that draws a sheet reads the sheet.
 
 ### Creating a character takes a name
 
@@ -443,90 +630,19 @@ revisit. The log is **one entry per selection**; a selection with no entry of
 its own is a selection nobody can point at. See
 [dnd.md](dnd.md#log-and-events).
 
+That rule is refused, not just kept: an append or a revise whose entry selects
+something *and* answers a question, or answers more than one question, is a
+400 with the field rule `one-selection` (reason `field.answer.oneSelection`),
+and the log's own validation refuses the second case for every other writer.
+See [dnd.md](dnd.md#log-and-events). A batch may still carry several entries
+-- a race, then what the race asked -- in one request.
+
 So the scores are an ordinary open choice now. A freshly created character has
 `character/abilities` outstanding, answered with a `change` event carrying the
 six `abilities.<ability>` paths, and the generation method travels with that
 answer rather than with creation. The bound on a score -- 1 to 30, wide enough
 for a DM's ruling and narrow enough to reject a typo -- moved with them, and is
 checked where they now arrive.
-
-### The stub builds a character; it does not import one
-
-`POST /v1/characters/stub` makes the level-3 half-elf rogue of
-`docs/reference_hexsheet/` in one call. It is a development convenience --
-reaching a character worth looking at otherwise means five tabs and a dozen
-answers, and the character store is in memory, so a restart costs that walk
-again.
-
-It would have been one line to point it at the importer, and that would have
-been wrong. An import records what a character *is* rather than what was
-chosen, so an imported log answers no prompts and arrives with every choice
-still open -- see [Importing states, not
-histories](#importing-states-not-histories). That is the honest way to carry a
-foreign sheet across and the exact opposite of what a stub is for. So the stub
-is *built*: `Create` writes the opening entry and one `Apply` puts the eight
-selections through `validateAndAttribute`, the same path an append from the
-build screen takes. Every entry is checked against the prompts open at that
-moment and stamped with the group of the prompt it answers, which is what keeps
-the stub a log the build flow could have written rather than a shape only this
-endpoint can produce.
-
-Two consequences of going through that path, both of which the tests pin:
-
-- **The level comes before the subclass it makes due.** A rogue is offered a
-  Roguish Archetype *because* they have reached level 3, so nothing offers
-  `subclass:thief` until the level granting it is in the log. Answering them the
-  other way round is rejected outright. The domain's own fixture in
-  `fixtures_test.go` has them the other way round and is not wrong to: it calls
-  `Log.Append`, which checks the shape of an entry and never asks whether
-  anything was offering it.
-- **One entry carries no source.** Equipping the leather armor a rogue's kit
-  contains answers no prompt and closes none, because no rule says a kit is
-  worn. It is therefore unattributed, exactly as a DM's ruling is, and sits in
-  no build-screen tab.
-
-The stub answers its **optional** prompts too, and that is worth saying because
-"complete" and "finished" are not the same thing. Seven prompts here are
-optional -- the half-elf's third language and all six acolyte poses -- so the
-character counted as complete while the build screen still listed seven rows
-under "still to choose". Those seven answers are the only part of the log that
-is *invented* rather than transcribed: the export names no third language, and
-its background is Urchin, which SRD 5.1 does not publish. Nothing at all is
-left open: the stub declares a desired level of 3, which *is* the rogue's
-third level, and answers what those levels open.
-
-One of the seven records an answer and buys nothing, and it is a gap in the
-model rather than in the stub. `acolyte/starting-equipment/0` draws its options
-from an equipment *category* (`rules.OptionsFromEquipmentCategory`, "any item in
-holy-symbols"), and nothing outside the catalogue DTO reads that option-set
-kind. `rules.OptionKeys` returns no keys for it, so `validateAnswer` skips the
-membership check and **any slug at all is accepted** -- a nonexistent one, or a
-rapier as a holy symbol -- and `Project` materialises none of them. The prompt
-closes, so the build screen is right to show it settled; the item simply never
-reaches the sheet. Every category-drawn equipment prompt in the compendium
-behaves this way, and `TestStubOptionalAnswersReachTheSheet` asserts the gap so
-that closing it fails loudly.
-
-The route exists **only when `env` is `development`**, which is why there is no
-check inside the handler: a guard in two places is a guard that can disagree
-with itself, and the routing table already answers "does this endpoint exist?".
-In production the path is not registered, so it answers 405 rather than 404 --
-`GET`/`DELETE /v1/characters/{id}` already claim that shape, and to gin "stub"
-is a character id there. Which of the two refusals gin picks is a routing
-detail; that no handler runs is the point.
-
-Gating it needed **no new configuration key**. `env` already distinguishes
-development from production and already defaults to production, which matters
-because unknown keys are fatal and a new one would have had to stage across two
-releases -- see [Configuration](#configuration).
-
-The stub's character is a second transcription of the one in
-`internal/domain/character/fixtures_test.go`, and they deliberately do not share
-a definition: that file is `package character` in the domain, so importing the
-application layer from it would be a cycle. They also differ in one place worth
-knowing when reconciling them -- the fixture carries the six ability scores in
-its `init` event, which is what an imported log looks like, whereas creation no
-longer bundles them and the stub answers `character/abilities` as its own entry.
 
 ### Creation and level-up are one flow
 
@@ -568,9 +684,8 @@ its later classes -- reported as unresolved rather than folded into the first,
 which would give it levels in a class it never took. And a character built
 before this change, whose log takes levels as entries, still *projects*
 correctly (levels are max-by-number, so the entries still count) but would
-lose them to a `Revise`, since nothing poses the prompt they answered.
-Characters live in memory and die with the process, so that window closes on
-its own.
+lose them to a `Revise`, since nothing poses the prompt they answered. No such
+character was ever written to a durable store, so the window is closed.
 
 Four fields make the client mechanical rather than knowledgeable:
 
@@ -718,17 +833,34 @@ minus some answers.
 
 **The dry run is the same function with `commit=false`.** It loads, validates,
 replays, renumbers, validates the rebuilt log and projects it, then skips
-exactly one line: `repo.Rewrite`. A separate preview route would be two paths
+exactly one line: `repo.Commit`. A separate preview route would be two paths
 to drift, and a preview that disagrees with its commit is worse than none. A
 stale preview cannot be committed silently either, and that costs nothing
 extra: the commit re-runs the replay, and if the log moved in between,
 `expectedSeq` makes it the ordinary sequence conflict.
 
-`Repository.Rewrite` is the port method behind it -- neither an append nor a
+`Repository.Commit` is the port method behind it -- neither an append nor a
 truncation, because replacing one entry can drop entries after it and the
 stored log comes back a different length. The in-memory adapter is the only
 implementation; the Postgres adapter holds accounts only, so there is no
 migration and no backfill for `source` either.
+
+#### Saving several spell edits together
+
+`POST /v1/characters/:id/events/revise[?dryRun=true]` accepts `expectedSeq`,
+`expectedRevision`, `replacements: [{seq, event}]` and appended `events`. It uses
+the same ownership and revision guards as a single replacement. Original
+sequence numbers address every replacement throughout the replay, even if an
+untouched event between them is dropped. Explicit replacements are validated
+strictly against the rebuilt prefix; untouched suffix events retain the existing
+survival rules. New acquisitions are validated after the replacements. Event
+identities survive replacement.
+
+The entire resulting log is projected before one repository commit. A failure in
+any replacement or appended event writes nothing. Dry-run returns the final
+sheet and dependent losses without saving; committing repeats those checks
+against the same revision guard. The builder uses this to edit multiple saved
+spells while adding new ones without partial writes or losing another draft.
 
 #### Two questions about a reference
 
@@ -821,14 +953,15 @@ character -- they are facts about the record: who it belongs to, and where its
 owner filed it. Moving a character to another folder is not something that
 happened to them in the fiction and has no business appearing in their history.
 
-**Deleting a folder deletes the characters in it.** There is no undo, and
-characters live in memory, so there is not even a backup behind it. A client
+**Deleting a folder deletes the characters in it.** There is no undo. A client
 that offers the button owes the player a confirmation that says how many
 characters are about to go; the web client's does. The cascade runs in the
 usecase, not the store -- two aggregates, two stores, and a repository that
-wrote to both would be two repositories sharing a name. Characters go first and
-the folder last: there is no transaction across the two, so the order is chosen
-for what a crash half way leaves behind. This one leaves a folder holding fewer
+wrote to both would be two repositories sharing a name. Characters go first,
+each through the same `Delete` a single character gets -- so one that was shared
+with a group or seated at a game comes off those too -- and the folder last:
+there is no transaction across the two, so the order is chosen for what a crash
+half way leaves behind. This one leaves a folder holding fewer
 characters, which the application already understands. The other would leave
 characters filed in a folder that no longer exists, which nothing can list.
 
@@ -922,7 +1055,7 @@ a character through the second, which is why "read-only" here is a property of
 the API's shape rather than a rule somebody has to remember.
 
 Both refuse with **404**, and for the reason `owned` does: a character id is a
-short counter, so a 403 on one that is not yours confirms it exists. A character
+short sequence number, so a 403 on one that is not yours confirms it exists. A character
 that was never shared, one unshared a moment ago and one that never existed are
 indistinguishable from outside.
 
@@ -940,6 +1073,9 @@ indistinguishable from outside.
 | seat or unseat a character | — | yes | yes | **403** | **404** |
 | seat your own, not yet shared | — | yes | yes | **403** | **404** |
 | seat somebody else's, not yet shared | — | **400** | **400** | **403** | **404** |
+| edit unlocked game values | yes | yes | yes | own character only | **404** |
+| edit locked game values | **403** | yes | yes | **403** | **404** |
+| lock/unlock, reorder, manage monsters, call a long rest | **403** | yes | yes | **403** | **404** |
 
 Two rows are worth saying in prose. **A player may share** — that is the whole
 of what a player does at a table, and it is the half of a group that was missing
@@ -960,12 +1096,94 @@ game service and wired in `internal/app`. The arrows point outward from the
 thing being deleted, so a character still knows nothing about groups and a group
 still knows nothing about games.
 
-**Neither store is in Postgres, deliberately.** Every row on a table or a roster
-names a character id, and a character id is the process-local counter — the same
-argument `00003_groups.sql` makes for why the groups schema refuses to name one.
-So a group and its members survive a restart and the characters shared with it
-do not. That split is surprising and it is the price of having the feature
-before characters are durable; the two move to Postgres together or not at all.
+**Both stores are in Postgres, and neither has a foreign key to a character.**
+`shared_characters` and `games.roster` name character ids, and those are now
+drawn from a sequence that never hands an id out twice, so the argument
+`00003_groups.sql` once made against naming one no longer applies. The keys are
+still left out on purpose: the ports say the store does not verify the
+character -- that is the usecase's authorization question -- and the in-memory
+adapter cannot verify it either, so a key would make the two adapters answer
+the same call differently. The cascades above are what keep the rows honest,
+and every read already skips an id that is gone.
+
+### Active game entries
+
+Game detail responses include ordered `entries`, separate from the legacy player
+`characters` summaries used by character pickers. Each entry has a game entry
+`id`, `kind`, `name`, optional portrait `image` and starting `class`, and caller-specific `can_edit`. Player entries additionally
+carry `character_id`, `locked`, `hp`, `temp_hp`, optional `initiative`, `tags`, and
+compact `stats`. The stats block contains `name`, `max_hp`, `armor_class`,
+`spellcasting`, `speeds`, `senses`, and `abilities`; nested fields reuse sheet
+shapes. An absent initiative is unset. PATCH accepts `initiative: null` to clear it.
+
+Player base stats are projected live against their locked rules pack. HP and
+other game values are initialized once, stored on the entry, and never written
+to a character log. Newly seated characters are unlocked. Owners can edit only
+their own unlocked entries; group owners and DMs can edit all entries.
+`MutateEntries` runs the lock/ownership check and field patches against a deep
+copy under the game repository mutex. Rejected changes leave storage untouched,
+and independent field edits survive concurrent writes. The latest accepted
+write wins when two requests change the same field.
+
+**Consumables are game values too.** A player entry carries `resources`: the
+character's spendable pools -- spell slots by level, Pact Magic, every
+pack-declared pool such as Channel Divinity or ki, and Hit Dice last -- each
+`{id, name, group, max, used, dice?, slot_level?}`. Capacity is projected live
+from the sheet like the other base stats; `used` is stored on the entry, per
+game, and is what `PATCH .../entries/{entry}` sets through `used`, a map of
+pool id to spent count merged key by key so two pools edited at once do not
+overwrite each other. A count below zero, above the pool's capacity, or for a
+pool the character does not have is a 400. It is one of the entry's game
+values, so the same rule decides who may write it: the owner on their unlocked
+entry, a DM or the group owner on any.
+
+This deliberately does **not** use the character log's `resource.spent` and
+`rest.completed` events, which stay available to API clients and unused by the
+browser. A spent slot is a fact about one sitting, exactly as a hit point lost
+is: the same character seated in two games has two independent counts, the
+sheet always shows full pools, and a DM can correct a player's count without a
+write path into somebody else's character. There are two recoveries, both `POST
+/v1/games/{id}/rest` and both master-only, and neither touches HP. A **long
+rest** clears every entry's spent uses -- Hit Dice included, where the rules
+would return half. A **short rest** (`?kind=short`) clears only the pools whose
+own recovery policy says a short rest refills them in full -- Second Wind,
+Channel Divinity, a warlock's slots -- read from each player's sheet
+(`ResourcePool.RestoredBy`). A policy with a condition counts as not applying:
+no SRD pool has one, and evaluating it needs the catalogue.
+A game can also spend a sheet's **plain-number scaling values** -- Extra
+Attacks: 1, Maneuvers: 3 -- as pools of that many uses, under the id
+`scaling/<parameter>` (`consumables` in `usecase/game/tracker.go`). A pack calls
+them parameters because no rule spends them, but a table counts them off within
+a turn, and the tracker is where counting is done. A value that is a die, a
+fraction or a word has no number of uses and is not offered. A scaling value
+has no recovery policy, so a short rest leaves it spent and only a long rest or
+the row's plus gives it back.
+The row's plus button is the undo for everything smaller. Monsters have
+no pools.
+
+NPCs hold private copies or editable default stats. New stubs are named NPC
+and start with 10 current and maximum HP. The internal kind `monster` and
+`/monsters` API route remain stable. Copying checks source
+ownership and does not share the source. Multiple copies have separate IDs.
+Copies retain their starting class for the default portrait. Players receive only
+a monster's ID, kind, name, portrait image, starting class, and `can_edit: false`; private
+fields and source links are omitted server-side. Source deletion/unsharing
+removes linked player entries but does not remove copied monsters. Monster
+`stats` patches update only supplied base fields and recalculate ability
+modifiers; derived modifiers supplied by clients are ignored.
+
+HP pools must be nonnegative integers; HP may exceed the sheet's maximum.
+Initiative accepts signed integers. Tags are trimmed, deduplicated text, with
+at most 20 tags of at most 100 characters. Tags have no rules effects. Monster
+base values and movement ranges must be nonnegative; ability scores are 1–30.
+Ordering is master-only: descending initiative, unset last, stable ties. Manual
+menu moves exchange adjacent entries. Drag moves use `entry_id` and `before_id`
+to place one entry before a stable target ID; an empty `before_id` appends it.
+Missing source or target IDs reject the operation without changing the roster.
+This atomic operation preserves entries added since the client's last view.
+Sorting includes monsters without publishing
+their initiative values. A game's roster, monster copies included, is one JSON
+column on its row.
 
 Invitations are stateless. A link is a signed token naming a group and a rank,
 valid for 24 hours, **reusable and not revocable** -- there is no invites table
@@ -1012,7 +1230,9 @@ Imports point inward, never outward:
 
 Two mechanical checks back this up: `make lint/layers` greps the dependency
 graph of the inner layers, and a `depguard` rule in `.golangci.yml` denies the
-same imports at lint time.
+same imports at lint time. The standalone `usecase/spellicon` generator is
+the outbound HTTP exception described above; other inner packages cannot
+import it, and its dependencies still exclude server frameworks and storage.
 
 The frontend has its own layer rule and its own checker; see
 [web.md](web.md#dependency-rule).
@@ -1029,26 +1249,46 @@ The frontend has its own layer rule and its own checker; see
 
 ## Configuration
 
-All configuration lives in **one YAML file**. The app finds it via the
-`EASYDND_CONFIG` environment variable, or a `-config <path>` flag which takes
-precedence; there is no default location and the file is **mandatory in every
-environment**. `EASYDND_CONFIG` is the only environment variable the app reads —
-individual settings cannot be overridden from the environment, so what the file
-says is what the process runs.
+Configuration is **one committed YAML file per environment, plus an env file
+for what must not be committed**:
 
-`config.dev.yaml` is committed and is what `make run/server` loads.
-`deploy/config.example.yaml` is the production template; the live copy is
-installed by hand, once:
+| | Config -- committed, no secrets | Env file -- secrets, never committed |
+|---|---|---|
+| development | `config.dev.yaml` | `~/config/easydnd/dev.env`, one for every worktree, loaded by `make` |
+| production | `config.prod.yaml`, shipped in each release as `config.yaml` | `/etc/easydnd/prod.env`, loaded by supervisor |
+
+The app finds the YAML via the `EASYDND_CONFIG` environment variable, or a
+`-config <path>` flag which takes precedence; there is no default location and
+the file is **mandatory in every environment**. It logs which file it loaded.
+
+The app never reads an env *file*. Whatever starts the process loads it, and
+the loader lays a fixed list of variables over the parsed YAML -- a list, not a
+naming rule, so a stray export cannot reach a key nobody meant to open:
+
+| Variable | Sets | Where it comes from |
+|---|---|---|
+| `EASYDND_AGENT_API_KEY` | `agent.api_key` | the env file, both environments |
+| `EASYDND_SESSION_SECRET` | `auth.session_secret` | `prod.env` |
+| `EASYDND_DB_URL` | `db.url` | `prod.env`; in development, `make` from the slot |
+| `EASYDND_GOOGLE_CLIENT_ID`, `EASYDND_GOOGLE_CLIENT_SECRET` | `auth.google.*` | the env file, optional |
+| `EASYDND_PRIVATE_PACK_FILES` (comma-separated) | `data.private_pack_files` | the env file -- a directory on that host, not a secret |
+| `EASYDND_HTTP_PORT`, `EASYDND_RP_ID`, `EASYDND_RP_ORIGINS` (comma-separated) | `http.port`, `auth.rp_id`, `auth.rp_origins` | `make`, from the worktree's slot |
+
+A set variable wins over the file; an unset or empty one leaves it alone. Two
+tests keep the split honest: neither committed config may set a secret key, and
+`config.prod.yaml` must be refused without the secrets and load with them.
+
+`easydnd.example.env` is the template for both env files. In production it is
+installed once, by hand:
 
 ```sh
 sudo install -d -o root -g easydnd -m 751 /etc/easydnd
-sudo install -o root -g easydnd -m 640 deploy/config.example.yaml /etc/easydnd/config.yaml
-sudo -e /etc/easydnd/config.yaml        # fill in auth.session_secret
+sudo install -o root -g easydnd -m 640 easydnd.example.env /etc/easydnd/prod.env
+sudo -e /etc/easydnd/prod.env        # session secret, database URL, LLM key
 ```
 
 Mode `640 root:easydnd` is the point: the service account can read the signing
-key and nothing else on the host can. The app warns at startup if the file is
-world-readable, and logs which file it loaded.
+key and nothing else on the host can.
 
 The directory is `751`, not `750`: `deploy/deploy.sh` runs as `deploy` and
 checks this file exists before swapping the release symlink, and testing a path
@@ -1056,6 +1296,12 @@ needs execute permission on every parent directory. A `750` directory fails that
 check with `EACCES` while the file itself is perfectly fine — which is how the
 v0.5.0 deploy failed. `751` grants others `--x`, so the path can be traversed
 but the directory cannot be listed and the `640` file still cannot be read.
+
+Because `config.prod.yaml` travels inside the release, the file a binary reads
+is always the one it was tested against: a key added or removed in the loader
+ships with the config that uses it, and a rollback takes both back together.
+Only a *new required secret* still needs a hand step on the server before the
+release that wants it.
 
 Every key is optional — the defaults below apply to anything the file omits —
 but an **unknown key is a startup error**, so `rp_origin` for `rp_origins` fails
@@ -1077,21 +1323,29 @@ rather than quietly defaulted.
 | `http.trusted_proxies` | `[127.0.0.1, "::1"]` | gin trusts `0.0.0.0/0` by default; narrowed here |
 | `log.level` | `info` | `debug`, `info`, `warn`, `error` |
 | `log.format` | `json` | `json` or `text` |
-| `data.srd_dir` | `data/srd_5.1` | read at startup; a missing or malformed directory is a fatal error, by design. Absolute in production, through `current/` so it follows the symlink swap |
-| `db.url` | *(none)* | **required in production**; libpq URL for the account store. Say `sslmode=verify-full` -- an omitted `sslmode` means libpq's `prefer`, which is unauthenticated and permits a plaintext fallback. Unset in development falls back to the in-memory store with a warning. The example file's placeholder password is rejected by name |
+| `data.pack_files` | `[]` | additional installed pack files/directories, common to everybody |
+| `data.private_pack_files` | `[]` | pack directories only superadmins and granted groups can see; never a default root. Set from `EASYDND_PRIVATE_PACK_FILES` |
+| `data.autoload_packs` | `[]` | additional public packs, each with a folder `path` and optional `id` override; root manifest or `pack/` child; does not add default roots |
+| `data.default_packs` | `{}` | selected root IDs and version constraints; omitted means configured inputs |
+| `data.pack_archive` | empty | optional persistent digest-addressed release directory |
+| `data.srd_dir` | `data/pack/srd-5.1` | read at startup; a missing or malformed directory is a fatal error, by design. Absolute in production, through `current/` so it follows the symlink swap |
+| `db.url` | *(none)* | **required in production**; libpq URL for the store that holds accounts, groups, characters, folders, games, packs and wizard chats. Say `sslmode=verify-full` -- an omitted `sslmode` means libpq's `prefer`, which is unauthenticated and permits a plaintext fallback. Unset in development falls back to the in-memory store with a warning. The template's placeholder password is rejected by name |
 | `db.max_conns` | `10` | pgxpool size |
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
-| `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The example file's placeholder is rejected by name |
+| `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The template's placeholder is rejected by name |
+| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups: a **verified** Google email, or an account id |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
-| `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
+| `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. The first is where Google sign-in returns to. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
 | `auth.session_ttl` | `168h` | how long a session cookie lasts |
 | `auth.guest_session_ttl` | `24h` | how long an anonymous session lasts. Deliberately its own key, and shorter: a guest token cannot be revoked and names nothing recoverable, so the only thing bounding a leaked one is how soon it expires |
 | `auth.ceremony_ttl` | `5m` | how long a begin/finish pair stays valid; also bounds an in-flight SSO redirect |
 | `auth.google.client_id` | *(none)* | omitting the whole `auth.google` block means Google sign-in is **not offered**, which is a supported deployment |
-| `auth.google.client_secret` | *(none)* | must be set together with the id; half a configuration is a startup error. The example file's placeholder is rejected by name |
-| `auth.google.redirect_url` | `https://easydnd.org/v1/auth/sso/google/callback` / `http://localhost:5173/v1/auth/sso/google/callback` | must match a URI registered with Google byte for byte. The development default is the **Vite dev server**, not this process |
+| `auth.google.client_secret` | *(none)* | must be set together with the id; half a configuration is a startup error. The template's placeholder is rejected by name |
+| `auth.google.redirect_url` | `/v1/auth/sso/google/callback` on the first of `auth.rp_origins` | must match a URI registered with Google byte for byte. In development that origin is the **Vite dev server**, not this process, and differs per worktree |
+| `agent.model` | *(none)* | the AI Wizard's model; inert without `agent.api_key`. The other `agent.*` keys are in [agent.md](agent.md#configuration) |
+| `agent.api_key` | *(none)* | **never in a committed file** -- `EASYDND_AGENT_API_KEY`. Unset means the AI Wizard is off |
 
 Cookie `Secure` and the `__Host-` / `__Secure-` name prefixes are derived from
 `env`, not configured: the Vite dev server is plain HTTP, and a `Secure`
@@ -1170,6 +1424,21 @@ is in [web.md](web.md#one-button-means-both-halves).
 | `GET /v1/auth/sso/{provider}/link` | session | same, but attaches to the signed-in account |
 | `POST /v1/auth/sso/{provider}/unlink` | session | disconnects an external account |
 | `GET /v1/auth/me` | session | the signed-in account, or 401 |
+| `GET /v1/appearance` | account session | read the current account's appearance |
+| `PUT /v1/appearance` | account session | replace `{ "palette": "dragon", "color_scheme": "auto" }`; return saved appearance |
+
+**Appearance is a separate resource for the current account.** Both methods
+return the same representation, with a palette (`dragon`, `parchment`,
+`midnight`, `moss`) and `color_scheme`
+(`light`, `dark`, `auto`). The account aggregate and both repositories store
+these fields; migration `00005_appearance.sql` defaults existing accounts to
+Dragon/System and constrains the allowed values. The appearance endpoint requires
+both fields, validates them in the appearance usecase, returns 400 for invalid input,
+401 without a session and 403 for guests. GET and PUT use `Cache-Control: no-store`.
+Appearance does not appear in authentication responses. PUT only changes the
+current account's
+appearance; credentials and identities remain intact. Guests store appearance
+in their browser without creating an account row.
 
 ### Sign in with Google
 
@@ -1286,8 +1555,9 @@ cannot collide even by accident.
 Everything downstream then works unchanged, because nothing downstream reads
 the account store: the character handlers use only the owner id, and the
 catalog handlers ignore the user entirely. A guest therefore owns characters
-with no schema change. They live in the in-memory character store and die with
-the process, which is honest for a session that cannot be signed back into.
+with no schema change. They are stored like anybody's, and nothing deletes them
+when the guest session that could reach them expires; see
+[known-caveats.md](known-caveats.md).
 
 Two consequences worth stating plainly:
 
@@ -1385,9 +1655,12 @@ correct.
 
 ### Where accounts and groups live
 
-Accounts, their passkeys, their linked external identities and the groups they
-play in are stored in PostgreSQL -- AWS RDS in production -- by
-`internal/adapter/repository/postgres`. Five tables:
+Accounts, their passkeys, their linked external identities, the groups they
+play in, their characters and folders, and the pools and games at each table
+are stored in PostgreSQL -- AWS RDS in production -- by
+`internal/adapter/repository/postgres`. Ten tables (rule packs and AI Wizard
+chats are kept there too, and are described with their own features:
+[packs.md](packs.md), [agent.md](agent.md#session-lifetime)):
 
 | Table | Holds |
 |---|---|
@@ -1396,12 +1669,29 @@ play in are stored in PostgreSQL -- AWS RDS in production -- by
 | `user_identities` | one row per linked external account |
 | `groups` | a group's id, name and who made it |
 | `group_members` | one row per seat: who, in which group, at which rank |
+| `folders` | one account's shelves; one is flagged the default |
+| `characters` | one row per character: owner, folder, revision, and the whole log, its checkpoints and command keys as `json` |
+| `shared_characters` | one row per character a member has put on a group's table |
+| `games` | a game and, as one `json` column, its whole roster |
+| `private_releases` | the rule packs an AI Wizard import compiled, pinned by a character's lock and never listed |
 
-Characters are **not** among them. They still live in the in-memory store and
-die with the process, which is why nothing in `groups` refers to one: a
-character id is a process-local counter, so a foreign key to it would be
-dangling by the next restart, and a schema written against an unfinished
-feature is a migration nobody can revise later.
+Character and folder ids come from two sequences, `characters_id_seq` and
+`folders_id_seq`, rendered in the same `chr_000001` / `fld_000001` shape the
+in-memory store mints -- so nothing downstream can tell the adapters apart,
+and, the point of it, an id never names a different character after a restart.
+That is what `00003_groups.sql` was waiting for. The rows that name a
+character still carry **no foreign key** to it; the reason is under
+[Ownership, and membership](#ownership-and-membership). `owner_id` on
+`folders` and `characters` has none either, for the reason `agent_sessions`
+gives: a guest may own one, and a guest is a `users` row only once they ask to
+be named in a group.
+
+A character's log is `json` rather than `jsonb`, as the wizard's document is:
+it is never queried, and `jsonb` refuses the `\u0000` a transcribed source can
+carry. The rules a write applies -- the revision guard, the sequence guard,
+event stamping -- are the domain's (`Character.Commit`, `ExpectSeq`,
+`Log.Stamp`), so the SQL adapter is load-under-`FOR UPDATE`, call, store, and
+cannot drift from the in-memory one; `repotest` runs both.
 
 `users` is the only place a display name is stored, and a roster is a join
 rather than a copy -- so a rename shows up in every group at once or in none.
@@ -1484,7 +1774,7 @@ Never renumber or delete a migration once it has been applied -- goose errors on
 a database version it cannot find in the embedded files.
 
 `easydnd -migrate=status|up|down` runs one command and exits without starting
-the server, for the operator who set `DB_MIGRATE_ON_START=false` to stage a
+the server, for the operator who set `db.migrate_on_start: false` to stage a
 risky change. `-migrate=down` in production additionally requires
 `-migrate-force`: it drops passkeys, and a passkey cannot be reissued.
 
@@ -1569,17 +1859,20 @@ git push origin v0.1.0
 ```
 
 That builds a static `linux/amd64` binary, a `web.tar.gz` of the frontend and a
-tarball of `data/srd_5.1/`, ships all three into `/opt/easydnd/releases/<sha>/`,
+tarball of `data/pack/srd-5.1/`, ships all three and `config.prod.yaml` into
+`/opt/easydnd/releases/<sha>/`,
 and runs `deploy/deploy.sh`: unpack the bundle, atomic symlink swap, supervisor
 restart, health gate, automatic rollback on failure, prune to the last 5
 releases.
 
 ```
 /opt/easydnd/releases/<sha>/easydnd        supervisor runs this
-/opt/easydnd/releases/<sha>/data/srd_5.1/  the API reads this at startup
+/opt/easydnd/releases/<sha>/data/pack/srd-5.1/  the API reads this at startup
 /opt/easydnd/releases/<sha>/web/           nginx serves this
 /opt/easydnd/releases/<sha>/VERSION        what this release calls itself
-/opt/easydnd/current -> releases/<sha>     all four follow this symlink
+/opt/easydnd/releases/<sha>/config.yaml    config.prod.yaml; EASYDND_CONFIG reads it
+/opt/easydnd/current -> releases/<sha>     all five follow this symlink
+/etc/easydnd/prod.env                      the secrets; not part of any release
 ```
 
 A release is therefore a **directory, not a file** -- the compendium is read
@@ -1591,6 +1884,13 @@ site that the API-side health gate cannot see and will not roll back.
 
 Because all three sit behind one symlink they swap together, so a rollback
 reverts the UI, the API and its data as a unit.
+
+The path of the data inside a release is part of the contract between the
+tarball, `deploy.sh`'s existence check and the server's `data.srd_dir`. All
+three now travel with the tag -- `srd_dir` is in `config.prod.yaml`, inside the
+release -- so moving the directory is one change and one deploy. It used to
+take a hand edit on the server *before* tagging, and forgetting it cost a
+rollback with nothing on the run page saying why.
 
 The database is the exception, and the only piece of state that does **not**
 swap with a release. That is what makes the expand-only rule above binding: a
@@ -1686,25 +1986,43 @@ Once, by hand:
    the schema. There is no password, no email and no account recovery, so a lost
    `users` table orphans every passkey in every user's password manager
    permanently.
-7. Put `db.url` in `/etc/easydnd/config.yaml`, alongside `auth.session_secret`.
-   That file is `640 root:easydnd` precisely because it now holds two
-   credentials. **Install it before deploying the release that needs it** --
-   the new binary refuses to start without `db.url`, which the health gate
-   would turn into a rollback. Editing it while the old release is live is
-   safe: the old binary reads the same file and simply ignores a `db:` section
-   it does not know.
+7. Put `EASYDND_DB_URL` in `/etc/easydnd/prod.env`, alongside
+   `EASYDND_SESSION_SECRET`. That file is `640 root:easydnd` precisely because
+   it holds the credentials. **Install it before deploying the release that
+   needs it** -- the binary refuses to start without a database URL, which the
+   health gate would turn into a rollback. Adding a variable while an older
+   release is live is safe: a binary ignores variables it does not read.
+
+### What the server needs, in one place
+
+A deploy carries the binary, the bundle, the compendium and `config.yaml`.
+Everything below is set up once, by hand, and no tag changes it:
+
+| Where | What |
+|---|---|
+| GitHub repository secrets | `SSH_HOST`, `SSH_PRIVATE_KEY`, `SSH_KNOWN_HOSTS` -- the deploy key's public half in `deploy`'s `authorized_keys`. No application secret is ever stored in GitHub |
+| accounts | `deploy` (ships and activates releases), `easydnd` (runs the service), `www-data` in group `easydnd` |
+| `/opt/easydnd` | owned `deploy:easydnd`, mode `2750` |
+| `/etc/easydnd/prod.env` | from `easydnd.example.env`, `640 root:easydnd`, directory `751`: the session secret, the database URL, the LLM key, optionally the Google client |
+| sudoers | `deploy` may run `/usr/bin/supervisorctl restart easydnd` without a password |
+| `/etc/supervisor/conf.d/easydnd.conf` | from `deploy/supervisor/easydnd.conf`, **after** `prod.env` exists |
+| `/var/log/easydnd/` | exists; supervisor writes `out.log` and `err.log` there |
+| nginx and certbot | `deploy/nginx/easydnd.conf`, the `$connection_upgrade` map, the certificate |
+| Postgres | the steps above |
+| `/opt/easydnd/private-packs/` | optional: private rule packs, pushed by hand with `deploy/push-private-pack.sh` and named in `prod.env` |
+
+`deploy.sh` checks before the swap that the release has its `config.yaml` and
+that `prod.env` exists; it cannot read the latter, so a *missing variable* still
+surfaces as a failed health gate and a rollback, with the reason in
+`/var/log/easydnd/err.log`.
 
 Two server-side configs are applied **by hand**, not by the pipeline, and both
 are mirrored in the repo as the source of truth for what the live copy should
 say:
 
-- `deploy/supervisor/easydnd.conf` -- the API process. It must set
-  `data.srd_dir` to an absolute path under `current/`, because the config
-  default is *relative* and resolves against `directory=`, not against the
-  release. Getting this wrong costs a deploy: the binary dies on every restart
-  with `load SRD data from data/srd_5.1: ... no such file or directory`, the
-  health gate times out, and the release rolls back. It is written that way in
-  the committed copy for exactly that reason.
+- `deploy/supervisor/easydnd.conf` -- the API process. It loads
+  `/etc/easydnd/prod.env` into the environment and points `EASYDND_CONFIG` at
+  `/opt/easydnd/current/config.yaml`, so the config follows the symlink swap.
 - `deploy/nginx/easydnd.conf` -- the routing: `/v1/` to the Go process,
   everything else to the bundle with an SPA fallback, plus the whole of the
   HTTP caching policy. Its cache rules changed with the release-identifier
@@ -1913,44 +2231,228 @@ before using it, so that fallback is a real branch rather than a hope.
 
 ## Changing the SRD data
 
-Never edit `data/srd_5.1/` by hand -- `make verify` regenerates it into a
-temporary directory and fails on any difference, so a hand-edit survives only
-until the next run. Change `cmd/srdgen` and run `make data/srd` instead.
+Edit `data/pack/srd-5.1/` in place. It used to be generated from a vendored
+dump by `cmd/srdgen`, with a drift check that reverted hand edits; the
+generator earned its keep while the format was being found and has been
+retired now that the pack is the thing being maintained. There is nothing to
+regenerate and no second copy to keep in step.
 
-**A translation is not a change to the generator.** Those go in
-`data/translations/<locale>/`, which is hand-edited by design; see
-[data/translations/README.md](../data/translations/README.md) and
-[dnd.md](dnd.md#localization).
+What stands in for the drift check is the loader itself: `make pack/check`
+runs `cmd/pack` over the directory, which is the validation the server does at
+startup -- schema, every cross-reference, every choice, every icon label --
+and `make data/lint/check` holds the prose to the lint checks that are at zero.
+Both are in `make verify`. A typo in a slug fails the load with the collection
+and the slug named; a doubled space or an unclosed table row fails the lint.
+Nothing tidies an edit silently, which is the point: a normaliser that rewrites
+files behind the editor is a generator by another name.
 
-The generator does four things the raw dump does not:
+The shape of the pack is what the generator established, and it still holds:
 
-1. **Splits mechanics from prose.** Language-neutral data lives in the directory
-   root; translatable text lives under `i18n/<locale>/`, keyed by the same slug.
-   A partial locale falls back to English *per key*, so a translated name with an
-   untranslated description works.
-2. **Merges translations from `data/translations/`.** Each locale is a
-   subdirectory named by its language tag, and `srdgen` reads what is there
-   rather than a list in code -- so adding a language is `mkdir`, and
-   `rules.SupportedLocales()` is the only place a tag has to be legal. A slug the
-   English bundle does not define is a warning, and `maxWarnings` is zero, so a
-   typo fails the build with the file and the slug printed rather than being
-   dropped into a file nothing reads. The generated locale directory holds only
-   what was translated: the loader merges at read time, and writing the merge out
-   would put a megabyte of untouched English into every language's diff.
-3. **Normalises rule strings.** `"1 action"`, `"90 feet"` and `"Up to 1 minute"`
-   are mechanics wearing prose clothing; they become structured values and are
-   re-rendered per locale.
-4. **Types every cross-reference** as `kind:slug`, using the upstream URL --
+1. **Mechanics are split from prose.** Language-neutral data lives in the
+   directory root; translatable text lives under `i18n/<locale>/`, keyed by
+   the same slug. A partial locale falls back to English *per key*, so a
+   translated name with an untranslated description works. A locale directory
+   holds only what has been translated: the loader merges at read time, and
+   writing the merge out would put a megabyte of untouched English into every
+   language's diff. Adding a language is `mkdir`; the manifest names no files,
+   the loader reads the layout (see [packs.md](packs.md#file-contract)).
+   `rules.SupportedLocales()` is the only place a tag has to be legal, and
+   nothing asks for a tag outside it.
+2. **Rule strings are structured.** `"1 action"`, `"90 feet"` and
+   `"Up to 1 minute"` are mechanics wearing prose clothing; they are stored as
+   values and re-rendered per locale.
+3. **What the books only say in prose is written as data.** `mechanics.json`
+   holds the pools, rules and the actions open to everybody, with their English
+   in `i18n/en/resources.json` and `i18n/en/actions.json`; a feature or trait
+   that belongs in a character's action list carries an `action` tag on the
+   row itself (see [packs.md](packs.md#action-tags)).
+4. **Every cross-reference is typed** as `kind:slug` --
    `skill:acrobatics` and `proficiency:skill-acrobatics` are different things
    with confusingly similar names.
 
-The wire format is defined once, in `internal/adapter/catalog/file/wire.go`, and
-imported by both the generator that writes it and the loader that reads it. That
-is what makes them impossible to drift apart.
+The wire format is defined once, in `internal/adapter/catalog/file/wire.go`.
+The exported types are what a tool that writes a pack -- `cmd/pack`, a
+homebrew editor -- has to produce, and the loader is the only reader.
 
-Optionality comes from the Zod schemas in
-`docs/reference_srd_5.1/data/5e-database-2014-en/schemas/`, not from inspecting
-the data. Guessing is how a level-up calculator reads "this cantrip has no
-scaling table" as "this cantrip does zero damage".
+**Every row is edited here.** `provenance.json` tags each row with its source,
+and that is attribution, not ownership: the rows tagged `phb`, `xge` or `tce`
+-- the non-SRD mechanics and names, converted once from a 5etools dump in
+2026-10 -- are maintained in place like the SRD rows. What sets them apart is
+what they lack: no prose, by design. Their text ships as a separate, private
+overlay pack that is never deployed, see [packs.md](packs.md#prose-overlays)
+and [licensing.md](licensing.md).
+
+A translation is a change to the pack like any other: `i18n/<locale>/`, see
+[data/locale-terms-locked/README.md](../data/locale-terms-locked/README.md)
+and [dnd.md](dnd.md#localization).
 
 [layout]: https://github.com/golang-standards/project-layout
+
+## Builder choice responses
+
+The existing prompts, events, append and revision routes serve equipment and
+spell choices. No second spell-writing endpoint bypasses event validation.
+Prompts add `purpose` (spell acquisition/preparation category), `upTo` (preparation
+capacity) and `blocked` (conditional options requiring proficiency). Equipment
+categories and supported collection choices are expanded into explicit legal
+options, retaining category/collection metadata and stable option keys.
+
+The events read endpoint adds read-only `choiceSource`, `choiceKind` and
+`purpose` to name closed questions in the current locale, plus `selections`: resolved leaf options for
+the event's answered choice trees, including item quantities and fixed components
+of nested bundles. The normal catalogue option DTO is reused. Client-supplied
+selection metadata is ignored; the server derives it from the character's log
+and pinned catalogue. This prevents clients from parsing display text out of
+bundle keys. Sequence/revision checks and mutation addresses are unchanged.
+
+Sheet spell state adds `sources`, preserving source reference, class, casting
+ability, cantrips, known spells, spellbook entries, preparation, special Arcanum
+and mastery selections, and preparation limits. Existing aggregate fields remain.
+Pack casting profiles describe learning mode, spellbook additions, preparation
+and replacement policy. Profiles may belong to a selected subclass, with explicit
+spell-list and ability overrides; parent class identity and level remain intact.
+Repository autoload adopts matching sibling `spell-icons/` artwork into the
+release, so exports and archives contain the same icons as catalog responses.
+Source-specific spell benefits and conditional equipment requirements are validated with their referenced catalogue entries.
+
+Append and revision use the same offered options and held/blocked checks. Replay
+removes invalid dependent answers through the existing preview mechanism; it does
+not silently grant unavailable equipment or spells. Catalogue option expansion
+is shared with equipment projection. The generated-data drift check therefore
+protects the same definitions used by both validation and sheet reads.
+
+
+### Reading the original spell question
+
+`GET /v1/characters/:id/prompts?before=N` returns the questions obtained by
+projecting the event prefix strictly before saved event N. N must name an
+existing event after the initial entry. This is a read-only operation with the
+same ownership checks and pinned catalogue as the ordinary prompt read; it never
+removes an event or writes a revision. The response retains the current head's
+sequence and revision for concurrency checks, while its prompts and completion
+flag describe the prefix. Spell editing uses this to obtain the original legal
+pool without treating the saved picks as spells learned elsewhere. The client
+seeds the editor from the saved event, then submits a normal event replacement;
+replacement preview and suffix validation still apply.
+
+
+### Explicit custom spells and wizard allowance metadata
+
+`GET /v1/characters/:id/prompts` includes `spellRules`: source, class, acquisition
+level, count, permitted spell-level range, shared class-list restrictions,
+purpose, optionality, and any automatic spell grants. This is derived from the
+same rules and catalogue as normal prompts, including already-answered choices.
+It describes the current character and aggregates learning counts by source
+and purpose. Spell-level bounds for ordinary learning use the current class
+level. No new forget/replacement prompts or templates are exposed.
+
+`before` reads the original answer prefix. For spell-only edits, a read-only
+validation context adds the character's current levels and subclasses for classes already in
+that prefix. This widens the spell pool to today's level while keeping the
+original answer count and held selections. The same context is used by explicit
+spell revisions, so a choice offered while editing is accepted when saved.
+Synthetic context levels are never stored, never exceed the current character's
+class levels, and do not affect non-spell revision validation.
+
+Two optional prompts, `custom/spell/cantrip` and `custom/spell/known`, accept any
+distinct catalogue spells of their respective spell-level category, independent
+of class, character level and normal count limits. They use `change` events and
+project into a separate `rule:custom-spells` source. They are explicit player
+exceptions, not relaxation of ordinary spell validation. Unknown slugs,
+duplicates and spells in the wrong category are rejected. Custom known spells
+are also prepared; no casting ability is inferred for the custom source.
+Empty answers remove a custom selection and reopen its optional prompt. Custom
+prompts never prevent a character from being complete, and never satisfy an
+unanswered class/racial prompt. Existing owner checks, revision guards and
+atomic revision handling apply unchanged.
+
+`spellRules.maxLevelCount` is present for ordinary class learning (known spells
+and spellbook entries). It is the sum of actual acquisition counts at the current
+maximum spell level plus eligible replacement opportunities, capped by the class
+total. Feature grants stay separate. Append and atomic revision validate the
+final projected class selection against this aggregate cap; checking individual
+historical prompt counts alone would allow excess highest-level spells. Custom
+sources are excluded. Existing logs still project for editing and correction.
+
+`change` events at `spellLimits.known` and `spellLimits.cantrip` set or increment
+an extra allowance (0–1000). These project independently from class rules and
+return as optional `spellRules` entries with purpose `custom-limit`. The wizard
+saves limit adjustments atomically with its spell selections. Custom spell
+provenance remains in the event choices, so labels survive later editing.
+
+## Character import sessions
+
+The optional import agent uses a fixed Go worker pool and an OpenAI Responses
+adapter behind the `AgentModel` port. Its authenticated `/v1/agent-sessions`
+routes hold the conversation; the character it builds is an ordinary one in
+the ordinary repository from the first message, committed to after every tool
+call. Sessions and their source bytes are in PostgreSQL (`agent_sessions`,
+`agent_events`, `agent_files`) behind the `Store` port declared beside
+`AgentModel`; a turn is run by whichever API process claimed it under a
+lease, and a process that stops gives its turn back to the queue. The wizard
+also owns the service's only timer: once a second it looks for a turn queued
+by another process, and every ten minutes it deletes the chats nobody has
+used for a day. The character and the private packs a chat makes are stored
+with everything else, so a restart keeps all three.
+See [agent.md](agent.md) for tool contracts, lifecycle, bounds and the `agent`
+YAML configuration. The nginx upload-limit change must be installed separately
+from a release. The browser follows a session by
+[polling](polling.md) once a second, which needs no proxy configuration; an idle
+poll -- a `GET` answered `204` -- is logged at Debug rather than Info, since
+every open wizard tab sends one a second. The wizard is also why the API
+[runs as one process](known-caveats.md).
+
+## User-authored rule packs
+
+The pack usecase owns drafts, releases, and authorization. Its engine port reuses
+`adapter/catalog/file` decoding, dependency resolution, normalization and compilation.
+The adapter constructs immutable registry snapshots; character reads resolve exact
+locks against built-in and retained database releases. The compiled cache is not
+an authorization boundary. Catalogue selection, exports and new locks check access
+on each request; character-owned reads can retain already pinned releases after
+membership or sharing changes. Existing checkpoint restore stays character-scoped.
+
+Migration 00004 adds `rule_packs` and `group_rule_packs`. Pack records store portable
+release bytes and draft metadata together, with revision compare-and-swap writes.
+Group shares store an exact dependency closure. Deleting a group removes shares;
+no release garbage collection is performed. Memory and PostgreSQL repositories
+share concurrency and round-trip contract tests. Guest rows are materialized on
+first pack creation using the same account repository operation as groups.
+
+`POST /v1/characters` now accepts an optional `rules` lock. Omitting it selects SRD
+5.1. Rules migration checks current access for newly introduced releases and
+permits retained releases already in the character lock. Event responses include
+`rules`. Shared-sheet catalogue reads use `/v1/shared/:id/catalog/:collection` and
+the same authorization as the shared sheet. Pack import is bounded to 64 MiB and
+uses the existing strict JSON parser. `/v1/packs/schema` describes every editor
+field from the wire types; it is presentation metadata, not a new pack format.
+
+Private pack endpoints send no-store. General API failures retain reason slugs;
+authoring validation additionally returns a document path and technical compiler
+details, since authors need to diagnose unsupported rules and references.
+
+The authoring adapter stores the import agent's generated private releases in
+`private_releases` and keeps the ones it has seen in a per-process cache. They
+stay outside pack listings and the default catalogue. Existing
+imported characters and their copies resolve those exact definitions; copying
+still checks current access to any ordinary homebrew releases in the same lock.
+
+### Character portraits
+
+Optional `image` values in character creation, sheet identity, summaries and game
+rosters are inline raster data URLs. The existing log stores `identity.image` as
+a string set; an empty string removes it. Editing the init event preserves fields
+not included in the replacement, so a rename does not discard the portrait.
+Copies retain it. Character portraits use the existing log storage.
+
+Creation and event writes validate the image before committing: only JPEG, PNG
+and WebP data URLs, at most 256 KiB including base64, with valid decoded pixels
+and dimensions from 1 to 256 on each axis. URLs and SVG are rejected. Existing
+character access checks also protect portraits. Monster entries inherit the
+portrait when copied from a character and follow the existing privacy filtering.
+
+
+Account portraits use the same validation. `PUT /v1/profile/image` accepts an
+`image` string, including empty for removal, and updates only the signed-in
+account. Guests cannot upload avatars. Migration 00006 adds the bounded image
+column to users. Session and group-member responses include optional portraits.

@@ -19,12 +19,23 @@
  *   - a key used in src/ that en.json does not define      -> fail
  *   - a key en.json defines that src/ never uses           -> fail
  *   - a key ru.json defines that en.json does not          -> fail
- *   - how much of en.json ru.json has translated           -> report
+ *   - a key en.json defines that ru.json does not          -> fail
  *
- * Russian being incomplete is **never** a failure. A partial locale is the
- * normal state of a growing one -- the whole design falls back per key so that
- * it works -- and a build that went red as English grew would make adding a
- * caption feel like breaking the translation.
+ * That last rule used to be a printed percentage, on the argument that a
+ * partial locale is the normal state of a growing one and that going red as
+ * English grew would make adding a caption feel like breaking the translation.
+ *
+ * It was wrong, and the spells screen is why. Russian shipped with every
+ * `spell.*` key missing; the per-key fallback did exactly what it promised and
+ * served English, so nothing was broken enough to notice -- and the screen sat
+ * half-translated in front of users until somebody read it. A fallback that
+ * good is precisely what stops a gap ever surfacing on its own, which makes
+ * the number nobody reads the wrong instrument.
+ *
+ * So Russian is now complete or the build is red. Adding an English caption
+ * means adding its Russian in the same change. The fallback stays, because it
+ * still saves a user from a blank screen if a key slips through at runtime --
+ * it just no longer decides what "finished" means.
  *
  * Run with `npm run check:messages`.
  */
@@ -165,6 +176,15 @@ for (const key of Object.keys(ru)) {
   }
 }
 
+// Compared on base keys, so Russian is free to carry the _few and _many forms
+// English has no use for, and is never asked for a suffix its grammar does not
+// want.
+const translatedKeys = new Set(Object.keys(ru).map(base))
+const untranslated = [...defined].filter((key) => !translatedKeys.has(key))
+for (const key of untranslated.sort()) {
+  problems.push(`  '${key}' is in locales/en.json but locales/ru.json does not translate it`)
+}
+
 if (problems.length > 0) {
   console.error('MESSAGE CATALOGUE IS OUT OF SYNC\n')
   console.error(problems.sort().join('\n'))
@@ -172,14 +192,14 @@ if (problems.length > 0) {
   console.error('  Every caption lives in web/locales/. Add the key to en.json when you')
   console.error('  add the string, and delete it when the last caller goes -- a catalogue')
   console.error('  full of keys nothing renders is a catalogue nobody can translate.')
+  if (untranslated.length > 0) {
+    console.error('')
+    console.error(`  ${untranslated.length} of those are missing Russian. English falls back`)
+    console.error('  cleanly, so this will not look broken -- it will just quietly be in the')
+    console.error('  wrong language. Translate them in this change rather than the next one.')
+  }
   console.error('')
   process.exit(1)
 }
 
-const translated = [...defined].filter((key) =>
-  Object.keys(ru).some((each) => base(each) === key),
-).length
-const percent = defined.size === 0 ? 100 : Math.round((translated / defined.size) * 100)
-
-console.log(`messages in sync: ${defined.size} keys`)
-console.log(`ru: ${translated}/${defined.size} translated (${percent}%) -- the rest falls back to English`)
+console.log(`messages in sync: ${defined.size} keys, en and ru complete`)

@@ -1,5 +1,5 @@
-import { screen, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { renderAt } from '@/test/render'
 import { setupUser } from '@/test/user'
@@ -80,4 +80,49 @@ describe('useResource', () => {
       expect(screen.queryByText('first')).not.toBeInTheDocument()
     })
   })
+})
+
+function Reader({ fetcher }: { fetcher: (signal: AbortSignal) => Promise<string> }) {
+  const resource = useResource('game:test', fetcher, { pollInterval: 3000, retainOnRefreshError: true })
+  return <div>{resource.data}<button onClick={resource.refresh}>refresh</button></div>
+}
+
+afterEach(() => { vi.useRealTimers() })
+
+it('polls every three seconds while visible and ignores aborted stale responses', async () => {
+  vi.useFakeTimers()
+  let resolveOld!: (value: string) => void
+  const fetcher = vi.fn<(signal: AbortSignal) => Promise<string>>()
+    .mockResolvedValueOnce('initial')
+    .mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve }))
+    .mockResolvedValueOnce('newest')
+  renderAt('desktop', <Reader fetcher={fetcher} />)
+  await act(async () => {})
+  expect(screen.getByText('initial')).toBeInTheDocument()
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000) })
+  expect(fetcher).toHaveBeenCalledTimes(2)
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000) })
+  expect(fetcher).toHaveBeenCalledTimes(2)
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'refresh' })) })
+  expect(fetcher.mock.calls[1]![0].aborted).toBe(true)
+  expect(screen.getByText('newest')).toBeInTheDocument()
+  await act(async () => { resolveOld('stale') })
+  expect(screen.queryByText('stale')).not.toBeInTheDocument()
+})
+
+it('pauses polling while hidden and refreshes when visibility returns', async () => {
+  vi.useFakeTimers()
+  const fetcher = vi.fn(async () => 'initial')
+  const visible = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+  const view = renderAt('desktop', <Reader fetcher={fetcher} />)
+  await act(async () => {})
+  await act(async () => { await vi.advanceTimersByTimeAsync(6000) })
+  expect(fetcher).toHaveBeenCalledTimes(1)
+  visible.mockReturnValue('visible')
+  await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+  expect(fetcher).toHaveBeenCalledTimes(2)
+  view.unmount()
+  await act(async () => { await vi.advanceTimersByTimeAsync(6000) })
+  expect(fetcher).toHaveBeenCalledTimes(2)
+  visible.mockRestore()
 })

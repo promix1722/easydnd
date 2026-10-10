@@ -2,6 +2,8 @@ package file
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -131,6 +133,7 @@ func (c *conv) choiceValue(w Choice) rules.Choice {
 		Choose: w.Choose,
 		Kind:   c.choiceKind(w.Kind),
 		From:   c.optionSet(w.From),
+		Slot:   rules.Slug(w.Slot),
 	}
 }
 
@@ -184,7 +187,7 @@ func (c *conv) option(w Option) rules.Option {
 		for _, item := range w.Items {
 			items = append(items, c.option(item))
 		}
-		return rules.BundleOption{Items: items}
+		return rules.BundleOption{Key: rules.Slug(w.Key), Items: items}
 	case OptionAbilityBonus:
 		return rules.AbilityBonusOption{Ability: c.ability(w.Ability), Bonus: w.Bonus}
 	case OptionDamage:
@@ -257,6 +260,18 @@ func entry(slug string, bundle Bundle) catalog.Entry {
 		name = slug
 	}
 	return catalog.Entry{Slug: rules.Slug(slug), Name: name, Desc: p.Desc}
+}
+
+// tagged attaches a pack's action tag to an entry.
+func (c *conv) tagged(e catalog.Entry, w *ActionTag) catalog.Entry {
+	if w == nil {
+		return e
+	}
+	if !slices.Contains(ActionKinds, w.Kind) {
+		c.fail("%s: unknown action kind %q", e.Slug, w.Kind)
+	}
+	e.Action = &catalog.ActionTag{Kind: w.Kind, Uses: rules.Slug(w.Uses)}
+	return e
 }
 
 // prose returns the bundle entry for a slug, or the zero Prose.
@@ -359,7 +374,7 @@ func (c *conv) subrace(w Subrace, b Bundle) catalog.Subrace {
 
 func (c *conv) trait(w Trait, b Bundle) catalog.Trait {
 	t := catalog.Trait{
-		Entry:              entry(w.Slug, b),
+		Entry:              c.tagged(entry(w.Slug, b), w.Action),
 		Races:              slugs(w.Races),
 		Subraces:           slugs(w.Subraces),
 		Proficiencies:      slugs(w.Proficiencies),
@@ -383,6 +398,7 @@ func (c *conv) class(w Class, b Bundle) catalog.Class {
 		Entry:                    entry(w.Slug, b),
 		HitDie:                   w.HitDie,
 		SavingThrows:             c.abilities(w.SavingThrows),
+		AbilityPriority:          c.abilities(w.AbilityPriority),
 		Proficiencies:            slugs(w.Proficiencies),
 		ProficiencyOptions:       c.choices(w.ProficiencyOptions),
 		StartingEquipment:        c.itemStacks(w.StartingEquipment),
@@ -481,7 +497,7 @@ func (c *conv) subclass(w Subclass, b Bundle) catalog.Subclass {
 
 func (c *conv) feature(w Feature, b Bundle) catalog.Feature {
 	f := catalog.Feature{
-		Entry:         entry(w.Slug, b),
+		Entry:         c.tagged(entry(w.Slug, b), w.Action),
 		Class:         rules.Slug(w.Class),
 		Subclass:      rules.Slug(w.Subclass),
 		Level:         w.Level,
@@ -529,13 +545,13 @@ func (c *conv) background(w Background, b Bundle) catalog.Background {
 }
 
 func (c *conv) feat(w Feat, b Bundle) catalog.Feat {
-	return catalog.Feat{Entry: entry(w.Slug, b), Prerequisites: c.prerequisites(w.Prerequisites)}
+	return catalog.Feat{Entry: c.tagged(entry(w.Slug, b), w.Action), Prerequisites: c.prerequisites(w.Prerequisites)}
 }
 
 func (c *conv) item(w Item, b Bundle) catalog.Item {
 	p := prose(w.Slug, b)
 	it := catalog.Item{
-		Entry:    entry(w.Slug, b),
+		Entry:    c.tagged(entry(w.Slug, b), w.Action),
 		Category: rules.Slug(w.Category),
 		Cost:     c.cost(w.Cost),
 		Weight:   w.Weight,
@@ -564,7 +580,43 @@ func (c *conv) item(w Item, b Bundle) catalog.Item {
 			Capacity:        p.Field(ProseCapacity),
 		}
 	}
+	it.Slot = c.slot(w.Slot, func() catalog.Slot {
+		switch {
+		case it.Armor != nil && it.Armor.Category == catalog.Shield:
+			return catalog.SlotOffHand
+		case it.Armor != nil:
+			return catalog.SlotBody
+		case it.Weapon != nil:
+			return catalog.SlotMainHand
+		case it.Gear != nil && (it.Gear.GearCategory == "arcane-foci" || it.Gear.GearCategory == "druidic-foci"):
+			return catalog.SlotMainHand
+		}
+		return catalog.SlotNone
+	})
 	return it
+}
+
+// slot reads an explicit slot, or asks the item's shape where it goes.
+//
+// The shape is asked here and nowhere else: the SRD rows carry a slot only where
+// the shape cannot tell (a cloak, a pair of boots, a robe), and a homebrew pack may
+// write none at all and still have its armor worn and its swords held.
+func (c *conv) slot(explicit string, derive func() catalog.Slot) catalog.Slot {
+	if explicit == "" {
+		return derive()
+	}
+	slot, ok := slots[explicit]
+	if !ok {
+		c.fail("unknown slot %q", explicit)
+	}
+	return slot
+}
+
+// bareSlug strips a pack qualifier: a namespaced pack's top-level item
+// category arrives as "dnd-2014/ring".
+func bareSlug(s rules.Slug) string {
+	str := s.String()
+	return str[strings.LastIndex(str, "/")+1:]
 }
 
 func (c *conv) weapon(w Weapon) *catalog.Weapon {
@@ -614,12 +666,24 @@ func (c *conv) magicItem(w MagicItem, b Bundle) catalog.MagicItem {
 	if !ok && w.Rarity != "" {
 		c.fail("unknown rarity %q", w.Rarity)
 	}
+	category := rules.Slug(w.Category)
 	return catalog.MagicItem{
-		Entry:     entry(w.Slug, b),
-		Category:  rules.Slug(w.Category),
+		Entry:     c.tagged(entry(w.Slug, b), w.Action),
+		Category:  category,
 		Rarity:    rarity,
 		Variants:  slugs(w.Variants),
 		IsVariant: w.IsVariant,
+		Slot: c.slot(w.Slot, func() catalog.Slot {
+			switch bareSlug(category) {
+			case "armor":
+				return catalog.SlotBody
+			case "weapon", "wand", "staff", "rod":
+				return catalog.SlotMainHand
+			case "ring":
+				return catalog.SlotRing
+			}
+			return catalog.SlotNone
+		}),
 	}
 }
 

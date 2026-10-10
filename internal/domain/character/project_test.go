@@ -105,6 +105,153 @@ func TestProjectRogueStatusBlock(t *testing.T) {
 	}
 }
 
+// The Custom slot is the one placement the character records, and it only
+// ever names something worn: take the item off, by count or by list, and the
+// slot forgets it.
+func TestProjectCustomSlotFollowsWhatIsEquipped(t *testing.T) {
+	log := RogueLog(t)
+	cat := LoadCatalog(t)
+	custom := func(slugs ...rules.Slug) Event {
+		return Event{Type: EventChange, Changes: []Change{{Path: "equipment.custom", Op: OpSet, Value: SlugListValue(slugs)}}}
+	}
+	if err := log.Append(custom("leather-armor")); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Project(log, cat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Equipment.Custom != "leather-armor" {
+		t.Fatalf("custom = %q, want leather-armor", s.Equipment.Custom)
+	}
+	if err := log.Append(Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped.leather-armor", Op: OpSet, Value: IntValue(0)}}}); err != nil {
+		t.Fatal(err)
+	}
+	if s, err = Project(log, cat); err != nil {
+		t.Fatal(err)
+	}
+	if s.Equipment.Custom != "" {
+		t.Errorf("custom = %q after taking the armor off by count, want none", s.Equipment.Custom)
+	}
+	if err := log.Append(
+		Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue([]rules.Slug{"leather-armor"})}}},
+		custom("leather-armor"),
+		Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue(nil)}}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if s, err = Project(log, cat); err != nil {
+		t.Fatal(err)
+	}
+	if s.Equipment.Custom != "" {
+		t.Errorf("custom = %q after a whole-list set without it, want none", s.Equipment.Custom)
+	}
+	if err := log.Append(custom("not-an-item")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = Project(log, cat); err == nil {
+		t.Error("a custom slot naming nothing in the catalogue projected")
+	}
+}
+
+// Armor worn as a counted stack protects exactly as armor worn as a list
+// entry does. The import writes stacks, because a sheet prints quantities.
+func TestProjectArmorEquippedByCountSetsArmorClass(t *testing.T) {
+	log := RogueLog(t)
+	if err := log.Append(
+		Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue(nil)}}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	bare, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bare.Status.ArmorClass != 13 {
+		t.Fatalf("unarmored armor class = %d, want 10 + DEX 3", bare.Status.ArmorClass)
+	}
+	if err := log.Append(
+		Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped.leather-armor", Op: OpSet, Value: IntValue(1)}}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	worn, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if worn.Status.ArmorClass != 14 {
+		t.Errorf("armor class = %d, want leather 11 + DEX 3", worn.Status.ArmorClass)
+	}
+}
+
+// A counted write edits the stack where it is. The sheet draws the backpack
+// in list order, so "one fewer" that deleted and re-appended sent the row to
+// the bottom on every use.
+func TestProjectCountedWriteKeepsTheStackInPlace(t *testing.T) {
+	log := RogueLog(t)
+	if err := log.Append(
+		Event{Type: EventChange, Changes: []Change{
+			{Path: "equipment.backpack", Op: OpSet, Value: SlugListValue(nil)},
+			{Path: "equipment.backpack.torch", Op: OpSet, Value: IntValue(2)},
+			{Path: "equipment.backpack.candle", Op: OpSet, Value: IntValue(1)},
+			{Path: "equipment.backpack.torch", Op: OpSet, Value: IntValue(1)},
+		}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []ItemStack{{Item: "torch", Count: 1}, {Item: "candle", Count: 1}}
+	if !slices.Equal(got.Equipment.Backpack, want) {
+		t.Errorf("backpack = %v, want %v", got.Equipment.Backpack, want)
+	}
+}
+
+// Unarmored Defense is a rule the pack states, not a number armorClass knows:
+// a barbarian adds Constitution while wearing no armor and keeps a shield, a
+// monk adds Wisdom and loses it to either. Nobody else gets anything.
+func TestProjectUnarmoredDefense(t *testing.T) {
+	// The installed pack, not the bare compendium: a rule is pack policy, and
+	// the plain source carries none.
+	cat := spellCatalog(t)
+	for _, tt := range []struct {
+		name     string
+		class    rules.Slug
+		equipped []rules.Slug
+		want     int
+	}{
+		{"barbarian, bare", "barbarian", nil, 13},                                // 10 + DEX 2 + CON 1
+		{"barbarian with a shield", "barbarian", []rules.Slug{"shield"}, 15},     // + 2
+		{"barbarian in leather", "barbarian", []rules.Slug{"leather-armor"}, 13}, // 11 + DEX 2, no CON
+		{"monk, bare", "monk", nil, 15},                                          // 10 + DEX 2 + WIS 3
+		{"monk with a shield", "monk", []rules.Slug{"shield"}, 14},               // 10 + DEX 2 + 2, no WIS
+		{"fighter, bare", "fighter", nil, 12},
+	} {
+		var log Log
+		if err := log.Append(
+			Event{Type: EventInit, Changes: []Change{
+				{Path: "identity.name", Op: OpSet, Value: StringValue("Bare")},
+				{Path: "abilities.dex", Op: OpSet, Value: IntValue(14)},
+				{Path: "abilities.con", Op: OpSet, Value: IntValue(13)},
+				{Path: "abilities.wis", Op: OpSet, Value: IntValue(16)},
+			}},
+			Event{Type: EventClass, Ref: rules.NewRef(rules.RefClass, tt.class), Level: 1},
+			Event{Type: EventChange, Changes: []Change{{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue(tt.equipped)}}},
+		); err != nil {
+			t.Fatal(err)
+		}
+		state, err := Project(log, cat)
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if state.Status.ArmorClass != tt.want {
+			t.Errorf("%s: armor class = %d, want %d", tt.name, state.Status.ArmorClass, tt.want)
+		}
+	}
+}
+
 func TestProjectRogueSkillsAndSaves(t *testing.T) {
 	s := rogueSheet(t)
 
@@ -212,7 +359,7 @@ func TestProjectPutsEveryUntrainedSkillOnTheSheet(t *testing.T) {
 // all eighteen and the guard has to ask about the training level instead.
 func TestProjectGivesExpertiseOnlyToTrainedSkills(t *testing.T) {
 	var log Log
-	err := log.Append(
+	err := log.Append(oneQuestionEach(
 		Event{Type: EventInit, Changes: []Change{
 			{Path: "identity.name", Op: OpSet, Value: StringValue("Test")},
 			{Path: "abilities.str", Op: OpSet, Value: IntValue(16)},
@@ -232,7 +379,7 @@ func TestProjectGivesExpertiseOnlyToTrainedSkills(t *testing.T) {
 				}},
 			},
 		},
-	)
+	)...)
 	if err != nil {
 		t.Fatalf("Append() error = %v", err)
 	}
@@ -355,15 +502,36 @@ func TestProjectRogueResourcesAndEquipment(t *testing.T) {
 		}
 	}
 
-	// Equipping is an explicit change; everything else stays packed.
-	if len(s.Equipment.Equipped) != 1 || s.Equipment.Equipped[0].Item != "leather-armor" {
-		t.Errorf("equipped = %+v, want the leather armor", s.Equipment.Equipped)
+	// A kit choice is carried, not worn, whatever slot it was asked for: the
+	// armor is on because an explicit change put it on, and the rapier is in
+	// the backpack until something equips it. The burglar's pack is carried as
+	// its contents, never as a pack.
+	has := func(list []ItemStack, want rules.Slug) bool {
+		return slices.ContainsFunc(list, func(st ItemStack) bool { return st.Item == want })
 	}
-	for _, want := range []rules.Slug{"dagger", "thieves-tools", "rapier", "shortbow", "burglars-pack"} {
-		found := slices.ContainsFunc(s.Equipment.Backpack, func(st ItemStack) bool { return st.Item == want })
-		if !found {
+	if len(s.Equipment.Equipped) != 1 || !has(s.Equipment.Equipped, "leather-armor") {
+		t.Errorf("equipped = %+v, want only the leather armor", s.Equipment.Equipped)
+	}
+	// Something is already worn, so auto-equip has nothing to say.
+	if got := AutoEquip(s, LoadCatalog(t)); got != nil {
+		t.Errorf("AutoEquip over a dressed character = %+v, want nothing", got)
+	}
+	// With nothing worn it takes one thing per slot: the rapier for the hand
+	// and the armor for the body, and not the shortbow or a dagger as well.
+	bare := s
+	bare.Equipment.Backpack = append(slices.Clone(s.Equipment.Backpack), s.Equipment.Equipped...)
+	bare.Equipment.Equipped = nil
+	changes := AutoEquip(bare, LoadCatalog(t))
+	if len(changes) == 0 || changes[0].Path != "equipment.equipped" || !slices.Equal(changes[0].Value.Slugs, []rules.Slug{"rapier", "leather-armor"}) {
+		t.Errorf("AutoEquip = %+v, want the rapier and the leather armor", changes)
+	}
+	for _, want := range []rules.Slug{"rapier", "dagger", "thieves-tools", "shortbow", "crowbar", "ball-bearings-bag-of-1000"} {
+		if !has(s.Equipment.Backpack, want) {
 			t.Errorf("backpack %v is missing %q", s.Equipment.Backpack, want)
 		}
+	}
+	if has(s.Equipment.Backpack, "burglars-pack") {
+		t.Errorf("backpack %v still carries the pack itself", s.Equipment.Backpack)
 	}
 	// Two daggers, not one: a RefOption's Count is a quantity.
 	for _, stack := range s.Equipment.Backpack {
@@ -460,4 +628,89 @@ func TestProficiencyBonusMatchesTheData(t *testing.T) {
 			}
 		}
 	}
+}
+
+// The action list is derived from what is wielded and what the pack tagged.
+// The actions a pack gives everybody live in its mechanics, which this
+// package's bare Source does not read; the file adapter's tests cover them.
+func TestProjectActionsComeFromWeaponsAndTags(t *testing.T) {
+	log := RogueLog(t)
+	if err := log.Append(Event{Type: EventChange, Changes: []Change{
+		{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue([]rules.Slug{"rapier", "shortbow", "greataxe"})},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]Action{}
+	for _, a := range s.Actions {
+		got[a.Origin.String()] = a
+	}
+	attack := func(origin string, toHit int, damage string, reach rules.Feet) {
+		t.Helper()
+		a, ok := got[origin]
+		if !ok || a.ToHit == nil || a.Damage == nil {
+			t.Errorf("%s gives no attack: %+v", origin, a)
+			return
+		}
+		if *a.ToHit != toHit || a.Damage.Dice.String() != damage || a.Range != reach || a.Kind != MainAction || a.Category != ActionFromEquipment {
+			t.Errorf("%s = to hit %d, damage %s, range %d; want %d, %s, %d", origin, *a.ToHit, a.Damage.Dice, a.Range, toHit, damage, reach)
+		}
+	}
+	// Finesse takes Dexterity 3 over Strength; a rogue is proficient, +2.
+	attack("item:rapier", 5, "1d8+3", 5)
+	attack("item:shortbow", 5, "1d6+3", 80)
+	// No proficiency with a greataxe, and it is swung with Strength.
+	strength := s.Abilities.Modifier(rules.Strength)
+	if a := got["item:greataxe"]; a.ToHit == nil || *a.ToHit != strength {
+		t.Errorf("greataxe to hit = %v, want the bare Strength modifier %d", a.ToHit, strength)
+	}
+	if a := got["feature:cunning-action"]; a.Kind != BonusAction || a.Category != ActionFromFeature || a.Name == "" {
+		t.Errorf("Cunning Action = %+v, want a bonus action from a feature", a)
+	}
+	// Carried is not wielded.
+	if _, ok := got["item:leather-armor"]; ok {
+		t.Error("armor produced an action")
+	}
+	if _, ok := rogueSheetActions(t)["item:shortbow"]; ok {
+		t.Error("a shortbow that is not equipped produced an attack")
+	}
+}
+
+// The kit's worn items are the baseline a sheet edit replaces, not a grant
+// re-applied on top of it: before this, every rewrite of the equipped list
+// gained one more copy of the kit's weapon.
+func TestKitWornItemsAreReplacedByAnEquippedWrite(t *testing.T) {
+	log := RogueLog(t)
+	for range 3 {
+		if err := log.Append(Event{Type: EventChange, Changes: []Change{
+			{Path: "equipment.equipped", Op: OpSet, Value: SlugListValue([]rules.Slug{"rapier", "leather-armor"})},
+		}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rapiers := 0
+	for _, st := range s.Equipment.Equipped {
+		if st.Item == "rapier" {
+			rapiers += st.Count
+		}
+	}
+	if rapiers != 1 || len(s.Equipment.Equipped) != 2 {
+		t.Errorf("equipped = %+v, want one rapier and the armor", s.Equipment.Equipped)
+	}
+}
+
+func rogueSheetActions(t *testing.T) map[string]Action {
+	t.Helper()
+	out := map[string]Action{}
+	for _, a := range rogueSheet(t).Actions {
+		out[a.Origin.String()] = a
+	}
+	return out
 }

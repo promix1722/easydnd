@@ -49,8 +49,8 @@ func validateName(name string) (string, error) {
 // in URLs people paste to each other, and a counter there would say how many
 // games exist and let a stranger address the next one. Note this is the
 // usecase's job and not the store's -- the character store mints its own ids
-// as a counter, which is exactly what must not happen to something reachable
-// by link.
+// from a sequence, which is exactly what must not happen to something
+// reachable by link.
 func newGameID() (domain.ID, error) {
 	raw := make([]byte, gameIDBytes)
 	if _, err := rand.Read(raw); err != nil {

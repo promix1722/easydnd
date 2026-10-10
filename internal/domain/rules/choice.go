@@ -5,9 +5,10 @@ package rules
 // two abilities. Those prompts nest -- an equipment option can itself be a
 // choice between bundles -- so the grammar below is recursive.
 //
-// It is a transcription of the option grammar in the vendored Zod schemas
-// (docs/reference_srd_5.1/data/5e-database-2014-en/schemas/_common.ts), which
-// is the authoritative spec for both the shape and the optionality.
+// It is a transcription of the option grammar in the Zod schemas of the
+// 5e-bits/5e-database dump the data was derived from (schemas/_common.ts,
+// no longer vendored), which was the authoritative spec for both the shape
+// and the optionality.
 
 // ChoiceKind names what a prompt is choosing, so a UI can render "pick two
 // skills" differently from "pick a weapon" without inspecting the options.
@@ -106,7 +107,7 @@ func ParseChoiceKind(s string) (ChoiceKind, bool) {
 // Choice is "choose Choose of these", and nests arbitrarily deep.
 type Choice struct {
 	// Prompt identifies this prompt within its owning entry, e.g.
-	// "fighter/starting-equipment/1". It is load-bearing: a character's log
+	// "fighter/starting-equipment/body". It is load-bearing: a character's log
 	// records answers against it, so it must stay stable across catalogue
 	// regenerations or stored characters lose their choices.
 	Prompt Slug
@@ -118,8 +119,8 @@ type Choice struct {
 	// Repeatable allows one option to be picked more than once, which turns
 	// the picks into points being spent rather than a set being chosen.
 	//
-	// Exactly one thing needs it, and one thing that looks identical must not
-	// have it. A level's Ability Score Improvement is "+2 to one ability, or
+	// Ability Score Improvement and multiple equipment picks permit it, but
+	// racial bonuses do not. A level's Ability Score Improvement is "+2 to one ability, or
 	// +1 to two", so two points into Dexterity is a legal answer; a half-elf's
 	// is "+1 to two *different* scores", and it is the same kind over the same
 	// ability-bonus options. Keying the rule on the kind -- which is what both
@@ -130,8 +131,18 @@ type Choice struct {
 	// reasons: "may I pick this twice?" is a statement about the question
 	// where HeldOnly is one about the character, and a branch rendered inside
 	// its parent's card arrives as a Choice with no Prompt around it. Nothing
-	// in the compendium sets it; the domain does, on the prompt it synthesises.
+	// in the source compendium sets it; choice resolution sets it for equipment
+	// categories and the domain sets it on synthesised improvement prompts.
 	Repeatable bool
+
+	// Slot names what a starting-kit choice fills, so a builder can ask
+	// "what goes on your body?" rather than read the book's "(a) chain mail
+	// or (b) leather armor, a longbow and 20 arrows" back to the player. It
+	// is one of the catalogue's worn slots -- body, main-hand, off-hand --
+	// or a kit-only word: backup (a second weapon), pack, focus, instrument.
+	// Empty on every other choice. Only a worn slot has a mechanical effect:
+	// the item chosen for it is equipped rather than carried.
+	Slot Slug
 }
 
 // OptionSetKind distinguishes how an option set names its members.
@@ -210,6 +221,8 @@ func (NestedOption) optionKind() OptionKind { return OptionKindNested }
 
 // BundleOption is several things granted together as one selectable answer.
 type BundleOption struct {
+	// Key preserves a historical identity when a transcription correction adds an item.
+	Key   Slug
 	Items []Option
 }
 

@@ -1,0 +1,441 @@
+[
+  {
+    "slug": "grappler",
+    "prerequisites": [
+      {
+        "kind": "ability",
+        "ability": "str",
+        "minimumScore": 13
+      }
+    ]
+  },
+  {
+    "slug": "actor"
+  },
+  {
+    "slug": "alert"
+  },
+  {
+    "slug": "artificer-initiate"
+  },
+  {
+    "slug": "athlete"
+  },
+  {
+    "slug": "bountiful-luck",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:halfling"
+      }
+    ]
+  },
+  {
+    "slug": "charger",
+    "action": {
+      "kind": "bonus-action"
+    }
+  },
+  {
+    "slug": "chef"
+  },
+  {
+    "slug": "crossbow-expert",
+    "action": {
+      "kind": "bonus-action"
+    }
+  },
+  {
+    "slug": "crusher"
+  },
+  {
+    "slug": "defensive-duelist",
+    "prerequisites": [
+      {
+        "kind": "ability",
+        "ability": "dex",
+        "minimumScore": 13
+      }
+    ],
+    "action": {
+      "kind": "reaction"
+    }
+  },
+  {
+    "slug": "dragon-fear",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:dragonborn"
+      }
+    ]
+  },
+  {
+    "slug": "dragon-hide",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:dragonborn"
+      }
+    ]
+  },
+  {
+    "slug": "drow-high-magic",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "subrace:drow"
+      }
+    ]
+  },
+  {
+    "slug": "dual-wielder"
+  },
+  {
+    "slug": "dungeon-delver"
+  },
+  {
+    "slug": "durable"
+  },
+  {
+    "slug": "dwarven-fortitude",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:dwarf"
+      }
+    ]
+  },
+  {
+    "slug": "eldritch-adept",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "feature:spellcasting"
+      }
+    ]
+  },
+  {
+    "slug": "elemental-adept",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "feature:spellcasting"
+      }
+    ]
+  },
+  {
+    "slug": "elven-accuracy",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:elf"
+      }
+    ]
+  },
+  {
+    "slug": "fade-away",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:gnome"
+      }
+    ]
+  },
+  {
+    "slug": "fey-teleportation",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "subrace:high-elf"
+      }
+    ]
+  },
+  {
+    "slug": "fey-touched"
+  },
+  {
+    "slug": "fighting-initiate",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "proficiency:martial-weapons"
+      }
+    ]
+  },
+  {
+    "slug": "flames-of-phlegethos",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:tiefling"
+      }
+    ]
+  },
+  {
+    "slug": "great-weapon-master",
+    "action": {
+      "kind": "bonus-action"
+    }
+  },
+  {
+    "slug": "gunner"
+  },
+  {
+    "slug": "healer",
+    "action": {
+      "kind": "action"
+    }
+  },
+  {
+    "slug": "heavily-armored",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "proficiency:medium-armor"
+      }
+    ]
+  },
+  {
+    "slug": "heavy-armor-master",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "proficiency:heavy-armor"
+      }
+    ]
+  },
+  {
+    "slug": "infernal-constitution",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:tiefling"
+      }
+    ]
+  },
+  {
+    "slug": "inspiring-leader",
+    "prerequisites": [
+      {
+        "kind": "ability",
+        "ability": "cha",
+        "minimumScore": 13
+      }
+    ]
+  },
+  {
+    "slug": "keen-mind"
+  },
+  {
+    "slug": "lightly-armored"
+  },
+  {
+    "slug": "linguist"
+  },
+  {
+    "slug": "lucky"
+  },
+  {
+    "slug": "mage-slayer",
+    "action": {
+      "kind": "reaction"
+    }
+  },
+  {
+    "slug": "magic-initiate"
+  },
+  {
+    "slug": "martial-adept"
+  },
+  {
+    "slug": "medium-armor-master",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "proficiency:medium-armor"
+      }
+    ]
+  },
+  {
+    "slug": "metamagic-adept",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "feature:spellcasting"
+      }
+    ]
+  },
+  {
+    "slug": "mobile"
+  },
+  {
+    "slug": "moderately-armored",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "proficiency:light-armor"
+      }
+    ]
+  },
+  {
+    "slug": "mounted-combatant"
+  },
+  {
+    "slug": "observant"
+  },
+  {
+    "slug": "orcish-fury",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:half-orc"
+      }
+    ]
+  },
+  {
+    "slug": "piercer"
+  },
+  {
+    "slug": "poisoner"
+  },
+  {
+    "slug": "polearm-master",
+    "action": {
+      "kind": "bonus-action"
+    }
+  },
+  {
+    "slug": "prodigy",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:half-elf"
+      }
+    ]
+  },
+  {
+    "slug": "resilient"
+  },
+  {
+    "slug": "ritual-caster",
+    "prerequisites": [
+      {
+        "kind": "ability",
+        "ability": "int",
+        "minimumScore": 13
+      },
+      {
+        "kind": "ability",
+        "ability": "wis",
+        "minimumScore": 13
+      }
+    ]
+  },
+  {
+    "slug": "savage-attacker"
+  },
+  {
+    "slug": "second-chance",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:halfling"
+      }
+    ]
+  },
+  {
+    "slug": "sentinel",
+    "action": {
+      "kind": "reaction"
+    }
+  },
+  {
+    "slug": "shadow-touched"
+  },
+  {
+    "slug": "sharpshooter"
+  },
+  {
+    "slug": "shield-master",
+    "action": {
+      "kind": "bonus-action"
+    }
+  },
+  {
+    "slug": "skill-expert"
+  },
+  {
+    "slug": "skilled"
+  },
+  {
+    "slug": "skulker",
+    "prerequisites": [
+      {
+        "kind": "ability",
+        "ability": "dex",
+        "minimumScore": 13
+      }
+    ]
+  },
+  {
+    "slug": "slasher"
+  },
+  {
+    "slug": "spell-sniper",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "feature:spellcasting"
+      }
+    ]
+  },
+  {
+    "slug": "squat-nimbleness",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "race:dwarf"
+      }
+    ]
+  },
+  {
+    "slug": "tavern-brawler",
+    "action": {
+      "kind": "bonus-action"
+    }
+  },
+  {
+    "slug": "telekinetic"
+  },
+  {
+    "slug": "telepathic"
+  },
+  {
+    "slug": "tough"
+  },
+  {
+    "slug": "war-caster",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "feature:spellcasting"
+      }
+    ],
+    "action": {
+      "kind": "reaction"
+    }
+  },
+  {
+    "slug": "weapon-master"
+  },
+  {
+    "slug": "wood-elf-magic",
+    "prerequisites": [
+      {
+        "kind": "entry",
+        "ref": "subrace:wood-elf"
+      }
+    ]
+  }
+]

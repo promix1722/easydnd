@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"golang.org/x/text/language"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -33,22 +34,43 @@ func Locale(c *gin.Context) rules.Locale {
 	c.Writer.Header().Add("Vary", "Accept-Language")
 
 	if requested := c.Query(LocaleQueryParam); requested != "" {
-		if locale, ok := supported(requested); ok {
+		if locale, ok := supported(c, requested); ok {
 			return locale
 		}
 	}
 	for _, tag := range acceptedLanguages(c.GetHeader("Accept-Language")) {
-		if locale, ok := supported(tag); ok {
+		if locale, ok := supported(c, tag); ok {
 			return locale
 		}
 	}
 	return rules.DefaultLocale
 }
 
-func supported(tag string) (rules.Locale, bool) {
-	locale := rules.Locale(strings.ToLower(strings.TrimSpace(tag)))
-	if locale.IsSupported() {
-		return locale, true
+// ContentLocales installs the catalogue's supported languages once per router.
+func ContentLocales(locales []rules.Locale) gin.HandlerFunc {
+	return func(c *gin.Context) { c.Set("content-locales", locales); c.Next() }
+}
+func supported(c *gin.Context, tag string) (rules.Locale, bool) {
+	parsed, err := language.Parse(strings.TrimSpace(tag))
+	if err != nil {
+		return "", false
+	}
+	locale := parsed.String()
+	available := rules.SupportedLocales()
+	if value, ok := c.Get("content-locales"); ok {
+		available = value.([]rules.Locale)
+	}
+	for locale != "" {
+		for _, candidate := range available {
+			if strings.EqualFold(candidate.String(), locale) {
+				return candidate, true
+			}
+		}
+		at := strings.LastIndex(locale, "-")
+		if at < 0 {
+			break
+		}
+		locale = locale[:at]
 	}
 	return "", false
 }
@@ -61,22 +83,13 @@ func supported(tag string) (rules.Locale, bool) {
 // is asking for a subtlety this application has no way to reward -- there are
 // two locales.
 func acceptedLanguages(header string) []string {
-	if header == "" {
+	tags, _, err := language.ParseAcceptLanguage(header)
+	if err != nil {
 		return nil
 	}
-	parts := strings.Split(header, ",")
-	out := make([]string, 0, len(parts)*2)
-	for _, part := range parts {
-		tag, _, _ := strings.Cut(part, ";")
-		tag = strings.TrimSpace(tag)
-		if tag == "" || tag == "*" {
-			continue
-		}
-		out = append(out, tag)
-		// "ru-RU" should match the "ru" bundle.
-		if base, _, found := strings.Cut(tag, "-"); found {
-			out = append(out, base)
-		}
+	out := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		out = append(out, tag.String())
 	}
 	return out
 }

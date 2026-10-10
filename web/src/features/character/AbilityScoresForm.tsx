@@ -1,3 +1,4 @@
+import { useCharacterPolicy } from '@/lib/api/catalogScope'
 import { useState } from 'react'
 
 import type { ApiFieldError, Change } from '@/lib/api'
@@ -7,6 +8,7 @@ import { PointBuy } from './PointBuy'
 import { ScoreAssignment } from './ScoreAssignment'
 import type { Placement } from './ScoreAssignment'
 import { ScoreStepper } from './ScoreStepper'
+import { abilityName } from './labels'
 
 import {
   ABILITY_ORDER,
@@ -44,6 +46,12 @@ export interface AbilityScoresFormProps {
   /** The scores as they stand, so changing them starts from what they are. */
   scores?: Scores
   method?: string
+  /**
+   * The class's advice: every ability, most important first. With it the form
+   * offers to deal the scores out for the player; without it -- no class yet,
+   * or a pack that gives none -- there is nothing to recommend and no button.
+   */
+  recommended?: readonly string[]
   pending: boolean
   /** The server's per-field complaints, pointed at the input that caused one. */
   fields?: readonly ApiFieldError[]
@@ -88,22 +96,26 @@ export interface AbilityScoresFormProps {
 export function AbilityScoresForm({
   scores,
   method = 'standard-array',
+  recommended,
   pending,
   fields = [],
   submitLabel,
   onSubmit,
 }: AbilityScoresFormProps) {
   const t = useT()
+  const policy = useCharacterPolicy()
+  const buyMin = Math.min(...Object.keys(policy.pointCosts).map(Number))
+  const buyMax = Math.max(...Object.keys(policy.pointCosts).map(Number))
   const [how, setHow] = useState(method)
   // The pool the dealing methods deal from, and where each of its numbers has
   // been put. Scores that are already stored arrive placed: they were dealt
   // out once already, and the entry records where they landed.
-  const [values, setValues] = useState<number[]>(() => dealt(method, scores))
+  const [values, setValues] = useState<number[]>(() => dealt(method, scores, policy.standardArray))
   const [placed, setPlaced] = useState<Placement>(() => (scores ? inOrder() : nothingPlaced()))
   // Point buy holds numbers, because its steppers can only produce numbers.
   // Manual holds whatever has been typed, including nothing at all: a field
   // that refills itself with a 10 the moment it is cleared cannot be typed in.
-  const [bought, setBought] = useState<Scores>(() => boughtFrom(method, scores))
+  const [bought, setBought] = useState<Scores>(() => boughtFrom(method, scores, buyMin, buyMax))
   const [written, setWritten] = useState<Written>(() => ({ ...(scores ?? allAt(10)) }))
 
   const chosen = (): Scores => {
@@ -114,7 +126,7 @@ export function AbilityScoresForm({
     }
     if (how === 'point-buy') {
       return Object.fromEntries(
-        ABILITY_ORDER.map((ability) => [ability, bought[ability] ?? POINT_BUY_MIN]),
+        ABILITY_ORDER.map((ability) => [ability, bought[ability] ?? buyMin]),
       )
     }
     return Object.fromEntries(ABILITY_ORDER.map((ability) => [ability, written10(written, ability)]))
@@ -122,25 +134,49 @@ export function AbilityScoresForm({
 
   const ready = !dealsOut(how) || ABILITY_ORDER.every((ability) => placed[ability] !== null)
 
+  /*
+   * The recommendation is an order, not six numbers, so it fits whatever the
+   * method has to give: the dealt numbers go out best-first by it, and the
+   * methods with no numbers of their own get the standard array the same way.
+   * Point buy only when the array is something its budget can buy -- under a
+   * pack whose prices put it out of reach there is no honest suggestion.
+   */
+  const byPriority = (numbers: readonly number[]): Scores => {
+    const best = [...numbers].sort((a, b) => b - a)
+    return Object.fromEntries((recommended ?? []).map((ability, at) => [ability, best[at] ?? 0]))
+  }
+  const affordable = policy.standardArray.every((score) => policy.pointCosts[score] !== undefined)
+    && policy.standardArray.reduce((sum, score) => sum + (policy.pointCosts[score] ?? 0), 0) <= policy.pointBuyBudget
+  const canRecommend = recommended !== undefined && recommended.length === ABILITY_ORDER.length
+    && ABILITY_ORDER.every((ability) => recommended.includes(ability)) && (how !== 'point-buy' || affordable)
+  const useRecommended = () => {
+    if (dealsOut(how)) {
+      // Each ability takes the place of the best number still unclaimed.
+      const places = values.map((_, place) => place).sort((a, b) => (values[b] ?? 0) - (values[a] ?? 0))
+      setPlaced(Object.fromEntries((recommended ?? []).map((ability, at) => [ability, places[at] ?? null])))
+    } else if (how === 'point-buy') setBought(byPriority(policy.standardArray))
+    else setWritten(byPriority(policy.standardArray))
+  }
+
   const change = (next: string) => {
     setHow(next)
     // Each method starts from its own beginning. Carrying the last one's
     // numbers over would produce a point-buy character with a 17 in it, or an
     // array that is not the array.
     if (next === 'standard-array') {
-      setValues([...STANDARD_ARRAY])
+      setValues([...policy.standardArray])
       setPlaced(nothingPlaced())
     } else if (next === 'rolled') {
       setValues(rollAbilityScores())
       setPlaced(nothingPlaced())
     } else if (next === 'point-buy') {
-      setBought(allAt(POINT_BUY_MIN))
+      setBought(allAt(buyMin))
     } else {
       // Only where the method being left actually produced six scores. An
       // unplaced array has none, and `chosen` reports a place nobody has taken
       // as a 0 -- so this used to open manual entry on six zeros, below its
       // own minimum, which then saved as six 10s. Ten is where manual starts.
-      setWritten(carried(chosen()))
+      setWritten(carried(chosen(), policy.minScore, policy.maxScore))
     }
   }
 
@@ -166,7 +202,13 @@ export function AbilityScoresForm({
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" onKeyDown={(event) => {
+      if (how !== 'manual' || !ready || pending || event.key !== 'Enter' || event.nativeEvent.isComposing) return
+      const target = event.target
+      if (!(target instanceof HTMLInputElement) || !ABILITY_ORDER.some((ability) => target.getAttribute('aria-label') === abilityName(t, ability))) return
+      event.preventDefault()
+      submit()
+    }}>
       <Select
         label={t('scores.methodLabel')}
         description={t('scores.methodHint')}
@@ -206,7 +248,7 @@ export function AbilityScoresForm({
       {how === 'manual' && (
         <div>
           <Text size="xs" c="dimmed" mb="xs">
-            {t('scores.manualHint')}
+            {t('scores.manualHint', { min: policy.minScore, max: policy.maxScore })}
           </Text>
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
             {ABILITY_ORDER.map((ability, at) => {
@@ -216,16 +258,16 @@ export function AbilityScoresForm({
                   key={ability}
                   ability={ability}
                   value={written[ability] ?? ''}
-                  canLower={score > MANUAL_MIN}
-                  canRaise={score < MANUAL_MAX}
+                  canLower={score > policy.minScore}
+                  canRaise={score < policy.maxScore}
                   onStep={(by) =>
                     setWritten((current) => ({ ...current, [ability]: score + by }))
                   }
                   onValueChange={(value) =>
                     setWritten((current) => ({ ...current, [ability]: value }))
                   }
-                  min={MANUAL_MIN}
-                  max={MANUAL_MAX}
+                  min={policy.minScore}
+                  max={policy.maxScore}
                   {...maybeError(errorFor(at))}
                 />
               )
@@ -238,15 +280,16 @@ export function AbilityScoresForm({
         <Button onClick={submit} loading={pending} disabled={!ready}>
           {ready ? submitLabel : t('scores.placeAllSix')}
         </Button>
+        {canRecommend && <Button variant="light" disabled={pending} onClick={useRecommended}>{t('scores.useRecommended')}</Button>}
       </Group>
     </Stack>
   )
 }
 
 /** The numbers a dealing method starts with, in the order they were produced. */
-function dealt(method: string, scores?: Scores): number[] {
+function dealt(method: string, scores?: Scores, standard: readonly number[] = STANDARD_ARRAY): number[] {
   if (scores !== undefined) return ABILITY_ORDER.map((ability) => scores[ability] ?? 10)
-  return method === 'rolled' ? rollAbilityScores() : [...STANDARD_ARRAY]
+  return method === 'rolled' ? rollAbilityScores() : [...standard]
 }
 
 /** Each ability holding the number that was stored against it. */
@@ -277,10 +320,10 @@ type Written = Record<string, number | string>
  * was part-way through typing. Manual starts at ten in that case, which is
  * where it starts from nothing.
  */
-function carried(scores: Scores): Scores {
+function carried(scores: Scores, minimum = MANUAL_MIN, maximum = MANUAL_MAX): Scores {
   const usable = ABILITY_ORDER.every((ability) => {
     const score = scores[ability] ?? 0
-    return score >= MANUAL_MIN && score <= MANUAL_MAX
+    return score >= minimum && score <= maximum
   })
   return usable ? { ...scores } : allAt(10)
 }
@@ -303,11 +346,11 @@ function written10(written: Written, ability: string): number {
  * has no price -- so it starts from six 8s, which is where point buy starts
  * anyway.
  */
-function boughtFrom(method: string, scores?: Scores): Scores {
-  if (scores === undefined || method !== 'point-buy') return allAt(POINT_BUY_MIN)
+function boughtFrom(method: string, scores?: Scores, minimum = POINT_BUY_MIN, maximum = POINT_BUY_MAX): Scores {
+  if (scores === undefined || method !== 'point-buy') return allAt(minimum)
   const buyable = ABILITY_ORDER.every((ability) => {
     const score = scores[ability] ?? 0
-    return score >= POINT_BUY_MIN && score <= POINT_BUY_MAX
+    return score >= minimum && score <= maximum
   })
-  return buyable ? { ...scores } : allAt(POINT_BUY_MIN)
+  return buyable ? { ...scores } : allAt(minimum)
 }

@@ -12,7 +12,10 @@ import (
 
 // Prompt is one question the character still has to answer.
 type Prompt struct {
-	Choice catalogapi.Choice `json:"choice"`
+	Blocked []string          `json:"blocked,omitempty"`
+	Purpose string            `json:"purpose,omitempty"`
+	UpTo    bool              `json:"upTo,omitempty"`
+	Choice  catalogapi.Choice `json:"choice"`
 
 	// Source names the catalogue entry posing this prompt, as "kind:slug".
 	// Empty for a prompt the compendium does not pose.
@@ -38,6 +41,10 @@ type Prompt struct {
 	// answers rather than the illegal ones. Expertise is the case -- it
 	// doubles a proficiency the character already has.
 	HeldOnly bool `json:"heldOnly"`
+
+	// Recommended is the class's advice for the ability scores: every ability,
+	// most important first. Present on the ability-score prompt only.
+	Recommended []string `json:"recommended,omitempty"`
 }
 
 // PromptEvent is the event an answer must be posted as.
@@ -48,8 +55,34 @@ type PromptEvent struct {
 }
 
 // PromptsResponse is the body of GET /v1/characters/{id}/prompts.
+type SpellRule struct {
+	ID            string   `json:"id"`
+	Source        string   `json:"source"`
+	Class         string   `json:"class,omitempty"`
+	ClassLevel    int      `json:"classLevel,omitempty"`
+	Count         int      `json:"count"`
+	MinLevel      int      `json:"minLevel"`
+	MaxLevel      int      `json:"maxLevel"`
+	MaxLevelCount *int     `json:"maxLevelCount,omitempty"`
+	Purpose       string   `json:"purpose"`
+	Optional      bool     `json:"optional"`
+	ListClasses   []string `json:"listClasses,omitempty"`
+	Automatic     []string `json:"automatic,omitempty"`
+}
+
+type BuildPolicy struct {
+	MinScore       int         `json:"minScore"`
+	MaxScore       int         `json:"maxScore"`
+	MaxLevel       int         `json:"maxLevel"`
+	StandardArray  []int       `json:"standardArray"`
+	PointBuyBudget int         `json:"pointBuyBudget"`
+	PointCosts     map[int]int `json:"pointCosts"`
+}
 type PromptsResponse struct {
-	Seq int `json:"seq"`
+	BuildPolicy *BuildPolicy `json:"buildPolicy,omitempty"`
+	SpellRules  []SpellRule  `json:"spellRules,omitempty"`
+	Revision    int          `json:"revision"`
+	Seq         int          `json:"seq"`
 
 	// Complete reports that nothing required is outstanding. It is separate
 	// from the list being empty, because a character with only optional
@@ -75,39 +108,74 @@ func (h *Handler) Prompts(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	prompts, err := h.service.Prompts(ctx, owner, id, locale)
+	var prompts []domain.Prompt
+	if c.Request.URL.Query().Has("before") {
+		var before int
+		before, err = intQuery(c, "before")
+		if err == nil {
+			prompts, err = h.service.PromptsBefore(ctx, owner, id, locale, before)
+		}
+	} else {
+		prompts, err = h.service.Prompts(ctx, owner, id, locale)
+	}
 	if err != nil {
 		helpers.FormatError(c, err)
 		return
 	}
-	cat, err := h.service.Catalog(ctx, locale)
+	cat, err := h.service.CharacterCatalog(ctx, owner, id, locale)
 	if err != nil {
 		helpers.FormatError(c, err)
 		return
 	}
 
+	rules, err := domain.SpellRules(character.Log, cat)
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	spellRules := make([]SpellRule, 0, len(rules))
+	for _, r := range rules {
+		spellRules = append(spellRules, SpellRule{ID: r.ID.String(), Source: refString(r.Source), Class: r.Class.String(), ClassLevel: r.ClassLevel, Count: r.Count, MinLevel: r.MinLevel, MaxLevel: r.MaxLevel, MaxLevelCount: r.MaxLevelCount, Purpose: r.Purpose, Optional: r.Optional, ListClasses: slugStrings(r.ListClasses), Automatic: slugStrings(r.Automatic)})
+	}
 	conv := catalogapi.NewConverter(cat)
 	out := make([]Prompt, 0, len(prompts))
 	for _, p := range prompts {
-		out = append(out, Prompt{
-			Choice:   conv.ChoiceValue(p.Choice),
-			Source:   refString(p.Source),
-			Group:    p.Group.String(),
-			Level:    p.Level,
-			Optional: p.Optional,
-			Event: PromptEvent{
-				Type:  p.Event.Type.String(),
-				Ref:   refString(p.Event.Ref),
-				Level: p.Event.Level,
-			},
-			Held:     slugStrings(p.Held),
-			HeldOnly: p.HeldOnly,
-		})
+		out = append(out, promptOf(p, conv))
 	}
 
+	var policy *BuildPolicy
+	if core := cat.Mechanics.Core; core.MaxScore > 0 {
+		policy = &BuildPolicy{core.MinScore, core.MaxScore, core.MaxLevel, core.StandardArray, core.PointBuyBudget, core.PointCosts}
+	}
 	c.JSON(http.StatusOK, PromptsResponse{
-		Seq:      character.Log.LastSeq(),
-		Complete: domain.Complete(prompts),
-		Prompts:  out,
+		BuildPolicy: policy,
+		SpellRules:  spellRules,
+		Seq:         character.Log.LastSeq(),
+		Revision:    character.Revision,
+		Complete:    domain.Complete(prompts),
+		Prompts:     out,
 	})
+}
+
+func promptOf(p domain.Prompt, conv catalogapi.Converter) Prompt {
+	out := Prompt{
+		Choice:  conv.ChoiceValue(p.Choice),
+		Purpose: p.Purpose, UpTo: p.UpTo,
+		Source:   refString(p.Source),
+		Group:    p.Group.String(),
+		Level:    p.Level,
+		Optional: p.Optional,
+		Event: PromptEvent{
+			Type:  p.Event.Type.String(),
+			Ref:   refString(p.Event.Ref),
+			Level: p.Event.Level,
+		},
+		Held:     slugStrings(p.Held),
+		Blocked:  slugStrings(p.Blocked),
+		HeldOnly: p.HeldOnly,
+	}
+	for _, ability := range p.Recommended {
+		out.Recommended = append(out.Recommended, string(ability))
+	}
+	return out
 }

@@ -33,7 +33,7 @@ async function place(user: ReturnType<typeof setupUser>, value: string, ability:
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */
@@ -66,6 +66,23 @@ describe('the standard array', () => {
     expect(method(changes)).toBe('standard-array')
     expect(scored(changes, 'str')).toBe(15)
     expect(scored(changes, 'cha')).toBe(8)
+  })
+
+  // The class's advice is an order, most important first; the button deals
+  // the numbers out by it, and there is no button without advice to give.
+  it('deals the array out by the class\'s priority on request', async () => {
+    const user = setupUser()
+    const onSubmit = vi.fn()
+    const { unmount } = renderAt(viewport, form())
+    expect(screen.queryByRole('button', { name: 'Use recommended' })).not.toBeInTheDocument()
+    unmount()
+
+    renderAt(viewport, form({ onSubmit, recommended: ['int', 'wis', 'con', 'dex', 'cha', 'str'] }))
+    await user.click(screen.getByRole('button', { name: 'Use recommended' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    const changes = onSubmit.mock.calls[0]?.[0] as Change[]
+    expect(['str', 'dex', 'con', 'int', 'wis', 'cha'].map((ability) => scored(changes, ability))).toEqual([8, 12, 13, 15, 14, 10])
   })
 
   it('swaps when a number is put where another one already is', async () => {
@@ -179,7 +196,7 @@ describe('the standard array', () => {
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */
@@ -220,7 +237,7 @@ function pool(): number[] {
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */
@@ -325,6 +342,19 @@ describe('manual', () => {
     const changes = onSubmit.mock.calls[0]?.[0] as Change[]
     expect(method(changes)).toBe('manual')
     expect(scored(changes, 'str')).toBe(17)
+  })
+
+  it('confirms manual scores with Enter from a score input', async () => {
+    const user = setupUser()
+    const onSubmit = vi.fn()
+    renderAt('desktop', form({ onSubmit, method: 'manual' }))
+
+    const strength = screen.getByLabelText('Strength')
+    await user.clear(strength)
+    await user.type(strength, '16{Enter}')
+
+    expect(onSubmit).toHaveBeenCalledOnce()
+    expect(scored(onSubmit.mock.calls[0]?.[0] as Change[], 'str')).toBe(16)
   })
 
   it('starts at ten rather than at whatever the last method had not decided', async () => {

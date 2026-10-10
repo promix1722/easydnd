@@ -3,11 +3,13 @@ import { useNavigate, useParams } from 'react-router'
 
 import type { GroupDetail, GroupMember } from '@/lib/api'
 import { fieldMessage, deleteGroup, getGroup, removeMember, renameGroup, setMemberRole } from '@/lib/api'
+import { listPacks } from '@/lib/api/packs'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import {
+  Avatar, playerAvatar,
   ACTION_ICON_SIZE,
   Alert,
   Badge,
@@ -30,6 +32,7 @@ import {
 } from '@/ui'
 
 import { TablePanel } from '../games'
+import { GroupPacks } from '../packs'
 
 import { InviteSheet } from './InviteSheet'
 import { atLeast, roleLabel } from './roles'
@@ -43,6 +46,11 @@ export function GroupScreen() {
   const { data, error, loading, reload, refresh } = useResource(`group:${id}`, (signal) =>
     getGroup(id, signal),
   )
+
+  // Only a superadmin is ever told a pack is shareable, so for everybody else
+  // this is an empty list and the tab below is never drawn.
+  const packs = useResource('packs', () => listPacks())
+  const canGrant = (packs.data?.packs ?? []).some((p) => p.shareable)
 
   const [tab, setTab] = useState('members')
   const [renaming, setRenaming] = useState(false)
@@ -162,15 +170,18 @@ export function GroupScreen() {
             tabs={[
               { value: 'members', label: t('group.members') },
               { value: 'characters', label: t('section.characters') },
+              ...(canGrant ? [{ value: 'packs', label: t('section.privatePacks') }] : []),
             ]}
             value={tab}
             onChange={setTab}
           >
             {tab === 'characters' && <TablePanel groupId={group.id} role={group.role} />}
+            {tab === 'packs' && <GroupPacks group={group.id} canManage={canManage} />}
             {tab === 'members' && (
           <DataList
             items={group.members}
             getKey={(member) => member.user_id}
+            leading={(member) => <Avatar image={member.image} fallback={playerAvatar(member.user_id)} />}
             badges={(member: GroupMember) => (
               <>
                 {member.user_id === me && (

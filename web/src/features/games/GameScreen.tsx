@@ -1,13 +1,11 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 
-import type { TableCharacter } from '@/lib/api'
 import {
   addToGame,
   deleteGame,
   getGame,
   listTable,
-  removeFromGame,
   renameGame,
   fieldMessage,
 } from '@/lib/api'
@@ -17,51 +15,45 @@ import { useResource } from '@/lib/useResource'
 import {
   ACTION_ICON_SIZE,
   Alert,
-  Anchor,
   Badge,
   Button,
-  DataList,
   Group,
   IconPencil,
-  IconPlus,
   IconTrash,
   ModalSheet,
   Page,
   Panel,
   Stack,
-  Text,
   TextInput,
   pageState,
 } from '@/ui'
 
 import { atLeast, roleLabel } from '../groups/roles'
-import { FolderTreeSheet } from './FolderTreeSheet'
 import { PickCharactersSheet } from './PickCharactersSheet'
 
-import { classLine } from '@/domain'
+import { GameTracker } from './GameTracker'
 
 /** One game: its name, and who is at it. */
 export function GameScreen() {
   const t = useT()
   const { id: gameId = '' } = useParams()
   const navigate = useNavigate()
-  const { data, error, loading, reload, refresh } = useResource(`game:${gameId}`, (signal) =>
+  const { data, error, loading, reload, refresh, refreshError } = useResource(`game:${gameId}`, (signal) =>
     getGame(gameId, signal),
+    { pollInterval: 3000, retainOnRefreshError: true },
   )
 
   const [renaming, setRenaming] = useState(false)
   const [name, setName] = useState('')
-  const [picking, setPicking] = useState<'group' | 'mine' | null>(null)
+  const [picking, setPicking] = useState(false)
   const add = useAction(addToGame)
 
   // The group's table is one flat list: a game is played at exactly one group,
-  // so there is nothing to branch on. Your own characters are a tree, and load
-  // themselves -- see FolderTreeSheet.
+  // so there is nothing to branch on.
   const table = useResource(
-    picking === 'group' && data !== null ? `table:${data.group_id}` : '',
+    picking && data !== null ? `table:${data.group_id}` : '',
     (signal) => listTable(data?.group_id ?? '', signal),
   )
-  const drop = useAction(removeFromGame)
   const rename = useAction(renameGame)
   const destroy = useAction(deleteGame)
 
@@ -76,7 +68,7 @@ export function GameScreen() {
 
   const game = data
   const canManage = atLeast(game.role, 'dm')
-  const failure = add.error ?? drop.error ?? rename.error ?? destroy.error
+  const failure = add.error ?? rename.error ?? destroy.error
 
   async function act(work: Promise<unknown | null>) {
     if ((await work) === null) return
@@ -145,104 +137,33 @@ export function GameScreen() {
     >
       <Panel>
         <Stack gap="md">
+          {refreshError !== null && (
+            <Alert color="yellow" title={t('game.refreshFailed')}>
+              {refreshError}
+              <Button variant="subtle" onClick={refresh}>{t('page.retry')}</Button>
+            </Alert>
+          )}
           {failure !== null && (
             <Alert color="red" title={t('group.actionFailed')}>
               {failure}
             </Alert>
           )}
 
-          <DataList
-            items={game.characters}
-            getKey={(character) => character.id}
-            actions={(character: TableCharacter) =>
-              canManage
-                ? [
-                    {
-                      key: 'remove',
-                      // Out of this game, not off the table: giving up a seat is
-                      // not taking the character back.
-                      label: t('common.remove'),
-                      color: 'red' as const,
-                      onClick: () => void act(drop.run(gameId, character.id)),
-                    },
-                  ]
-                : []
-            }
-            columns={[
-              {
-                key: 'name',
-                header: t('game.character'),
-                primary: true,
-                text: (character: TableCharacter) => character.name || t('common.unnamed'),
-                to: (character: TableCharacter) =>
-                  `/groups/${game.group_id}/characters/${character.id}`,
-                render: (character: TableCharacter) => (
-                  <Anchor component={Link} to={`/groups/${game.group_id}/characters/${character.id}`}>
-                    <Text size="sm">{character.name || t('common.unnamed')}</Text>
-                  </Anchor>
-                ),
-              },
-              {
-                key: 'classes',
-                header: t('game.class'),
-                render: (character: TableCharacter) => classLine(character.classes),
-              },
-              {
-                key: 'level',
-                header: t('game.level'),
-                render: (character: TableCharacter) => character.level || null,
-              },
-            ]}
-            empty={t('game.empty')}
-          />
-
-          {/* Under the table, on the left. Two ways in, because they are two
-              different questions: one picks from what a group already shares, the
-              other from your own characters, which land on this game's table by
-              being seated. */}
-          {canManage && (
-            <Group>
-              <Button
-                variant="light"
-                leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
-                onClick={() => setPicking('group')}
-              >
-                {t('game.addFromGroup')}
-              </Button>
-              <Button
-                variant="light"
-                leftSection={<IconPlus size={ACTION_ICON_SIZE} />}
-                onClick={() => setPicking('mine')}
-              >
-                {t('game.addMine')}
-              </Button>
-            </Group>
-          )}
+          <GameTracker game={game} onChange={refresh}
+            onAddFromGroup={() => setPicking(true)} />
 
           <PickCharactersSheet
-            key={picking === 'group' ? 'group' : 'group-closed'}
-            opened={picking === 'group'}
+            key={picking ? 'group' : 'group-closed'}
+            opened={picking}
             title={t('game.addFromGroupTitle')}
             description={t('game.pickShared')}
             empty={t('game.nothingShared')}
             characters={seatable}
             loading={table.loading}
             pending={add.pending}
-            onClose={() => setPicking(null)}
+            onClose={() => setPicking(false)}
             onAdd={(ids) => {
-              setPicking(null)
-              void act(add.run(gameId, ids))
-            }}
-          />
-
-          <FolderTreeSheet
-            key={picking === 'mine' ? 'mine' : 'mine-closed'}
-            opened={picking === 'mine'}
-            seated={seated}
-            pending={add.pending}
-            onClose={() => setPicking(null)}
-            onAdd={(ids) => {
-              setPicking(null)
+              setPicking(false)
               void act(add.run(gameId, ids))
             }}
           />

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -84,5 +85,57 @@ func TestParseCommand(t *testing.T) {
 	}
 	if _, err := ParseCommand("sideways"); err == nil {
 		t.Error("ParseCommand accepted an unknown command")
+	}
+}
+
+// Upgrade a populated old users table without touching the shared test schema.
+func TestAppearanceMigration(t *testing.T) {
+	ctx := context.Background()
+	pool, err := NewPool(ctx, testDBConfig(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE users (id text PRIMARY KEY); INSERT INTO users VALUES ('existing')`); err != nil {
+		t.Fatal(err)
+	}
+	body, err := fs.ReadFile(migrations.FS, "00005_appearance.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	up, down, ok := strings.Cut(string(body), "-- +goose Down")
+	if !ok {
+		t.Fatal("migration has no down section")
+	}
+	if _, err := tx.Exec(ctx, up); err != nil {
+		t.Fatal(err)
+	}
+	var palette, scheme string
+	if err := tx.QueryRow(ctx, `SELECT palette, color_scheme FROM users WHERE id = 'existing'`).Scan(&palette, &scheme); err != nil {
+		t.Fatal(err)
+	}
+	if palette != "dragon" || scheme != "auto" {
+		t.Fatalf("existing account defaults: %s/%s", palette, scheme)
+	}
+	for _, statement := range []string{`UPDATE users SET palette = 'unknown'`, `UPDATE users SET color_scheme = 'unknown'`} {
+		savepoint, err := tx.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, writeErr := savepoint.Exec(ctx, statement)
+		if err := savepoint.Rollback(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if writeErr == nil {
+			t.Fatalf("constraint accepted %s", statement)
+		}
+	}
+	if _, err := tx.Exec(ctx, down); err != nil {
+		t.Fatal(err)
 	}
 }

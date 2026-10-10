@@ -134,7 +134,7 @@ func (r *GroupRepository) ListFor(ctx context.Context, u user.ID) ([]domain.Memb
 // at once or in none.
 func (r *GroupRepository) Members(ctx context.Context, id domain.ID) ([]domain.Member, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT m.user_id, u.display_name, m.role, m.joined_at
+		`SELECT m.user_id, u.display_name, u.image, m.role, m.joined_at
 		   FROM group_members m
 		   JOIN users u ON u.id = m.user_id
 		  WHERE m.group_id = $1`+memberOrder, string(id))
@@ -146,7 +146,7 @@ func (r *GroupRepository) Members(ctx context.Context, id domain.ID) ([]domain.M
 	out := make([]domain.Member, 0)
 	for rows.Next() {
 		var m domain.Member
-		if err := rows.Scan(&m.UserID, &m.DisplayName, &m.Role, &m.JoinedAt); err != nil {
+		if err := rows.Scan(&m.UserID, &m.DisplayName, &m.Image, &m.Role, &m.JoinedAt); err != nil {
 			return nil, types.WrapServerError(err, "scan member")
 		}
 		out = append(out, m)

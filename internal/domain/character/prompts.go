@@ -3,6 +3,7 @@ package character
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -61,6 +62,9 @@ type PromptEvent struct {
 
 // Prompt is one question the character still has to answer.
 type Prompt struct {
+	Blocked []rules.Slug
+	Purpose string
+	UpTo    bool
 	// Choice is the question, in the same grammar the compendium uses for
 	// the prompts it poses itself. Prompts the catalogue does not pose --
 	// "which race?" -- are synthesised into the same shape rather than into
@@ -85,6 +89,11 @@ type Prompt struct {
 
 	// Event is what the answer must be posted as.
 	Event PromptEvent
+
+	// Recommended is the character's class's advice for the six scores: every
+	// ability, most important first. Set on the ability-score prompt only, and
+	// only once there is a class whose pack gives one.
+	Recommended []rules.Ability
 
 	// Held lists the options the character already has from another source.
 	//
@@ -157,6 +166,7 @@ func Complete(prompts []Prompt) bool {
 // it does not depend on the order the player answered in, which is what makes
 // a Back button safe.
 func Prompts(log Log, cat *catalog.Catalog) ([]Prompt, error) {
+	cat = WithCustomCatalog(log, cat)
 	state, err := Project(log, cat)
 	if err != nil {
 		return nil, err
@@ -179,7 +189,7 @@ func scoresWereSet(log Log) bool {
 	for _, e := range log.Events {
 		for _, ch := range e.Changes {
 			segments := ch.Path.Segments()
-			if len(segments) == 2 && segments[0] == "abilities" {
+			if len(segments) == 2 && (segments[0] == "abilities" || segments[0] == "finalAbilities") {
 				if _, ok := rules.ParseAbility(segments[1]); ok {
 					return true
 				}
@@ -195,6 +205,7 @@ type promptBuilder struct {
 	answers answers
 	scored  bool
 	empty   bool
+	all     bool
 
 	out []Prompt
 }
@@ -206,7 +217,11 @@ func (b *promptBuilder) build() []Prompt {
 	b.abilities()
 	b.race()
 	b.background()
+	b.personality()
 	b.classes()
+	b.packRules()
+	spells, _ := spellChoices(b.state, b.cat, b.answers, b.all)
+	b.out = append(b.out, spells...)
 	return b.out
 }
 
@@ -215,10 +230,14 @@ func (b *promptBuilder) add(p Prompt) {
 	if p.Choice.Prompt.IsZero() {
 		return
 	}
-	if b.answers.answered(p.Choice) {
+	if !b.all && b.answers.answered(p.Choice) {
 		return
 	}
 	p.Held = b.heldIn(p.Choice)
+	p.Blocked = b.blockedIn(p.Choice)
+	if p.HeldOnly {
+		p.Held = b.expertiseEligible(p.Choice, p.Held)
+	}
 	// HeldOnly is a statement about picking proficiencies, so it applies to
 	// the prompt that picks them and not to a branch selector above it.
 	// Expertise's outer prompt chooses between "two skills" and "one skill
@@ -251,6 +270,8 @@ func (b *promptBuilder) addChoice(c *rules.Choice, p Prompt) {
 	if c == nil {
 		return
 	}
+	resolved := b.cat.ResolveChoice(*c)
+	c = &resolved
 	p.Choice = *c
 	b.add(p)
 	if !b.answers.answered(*c) {
@@ -344,12 +365,34 @@ func (b *promptBuilder) abilities() {
 	b.out = append(b.out, Prompt{
 		Choice: rules.Choice{
 			Prompt: "character/abilities",
-			Choose: len(rules.Abilities()),
+			Choose: len(b.cat.AbilityIDs()),
 			Kind:   rules.ChooseAbilityScores,
 		},
-		Group: GroupAbilities,
-		Event: PromptEvent{Type: EventChange},
+		Group:       GroupAbilities,
+		Event:       PromptEvent{Type: EventChange},
+		Recommended: b.abilityPriority(),
 	})
+}
+
+// abilityPriority is the first class's advice, when it names every ability
+// exactly once. Anything else -- a pack that lists four, or one twice -- is
+// not an order the six scores can be dealt out by, so it is no advice at all.
+func (b *promptBuilder) abilityPriority() []rules.Ability {
+	if len(b.state.Identity.Classes) == 0 {
+		return nil
+	}
+	class, ok := b.cat.Classes.Get(b.state.Identity.Classes[0].Class)
+	if !ok || len(class.AbilityPriority) != len(b.cat.AbilityIDs()) {
+		return nil
+	}
+	seen := map[rules.Ability]bool{}
+	for _, ability := range class.AbilityPriority {
+		seen[ability] = true
+	}
+	if len(seen) != len(class.AbilityPriority) {
+		return nil
+	}
+	return class.AbilityPriority
 }
 
 func (b *promptBuilder) race() {
@@ -421,7 +464,8 @@ func (b *promptBuilder) race() {
 		if trait.Specific != nil {
 			b.addChoice(trait.Specific.SpellOptions, traitPrompt)
 			b.addChoice(trait.Specific.SubtraitOptions, traitPrompt)
-			b.addChoice(trait.Specific.BreathWeapon, traitPrompt)
+			// BreathWeapon describes the attack granted by ancestry. Its
+			// legacy choice-shaped payload is not a player decision.
 		}
 	}
 }
@@ -452,17 +496,13 @@ func (b *promptBuilder) background() {
 
 	optional := optionalPrompt(base)
 	b.addChoices(background.StartingEquipmentOptions, optional)
-
-	b.personality(background)
 }
 
 // personality poses who the character is: the four roleplaying questions and
 // an alignment.
 //
-// They are the background's questions -- it is the background that suggests
-// what an acolyte tends to believe -- but they are not answers about the
-// background, which is why they are a group of their own rather than four more
-// rows under it.
+// These are available from the start, independently of the background.
+// A background may suggest answers, but the player can write their own first.
 //
 // The four are asked as **text**, and the SRD's own d8 tables are not offered.
 // A trait is the one thing on a character sheet that is nobody's but the
@@ -476,9 +516,9 @@ func (b *promptBuilder) background() {
 // compare against an option set, so "answered" is a question about the sheet
 // rather than about the log -- which is the same rule the alignment follows,
 // and the reason neither of them goes through addChoice.
-func (b *promptBuilder) personality(background catalog.Background) {
-	written := func(choice rules.Choice, prompt rules.Slug, kind rules.ChoiceKind, set []string) {
-		if choice.Prompt.IsZero() || len(set) > 0 {
+func (b *promptBuilder) personality() {
+	written := func(prompt rules.Slug, kind rules.ChoiceKind, set []string) {
+		if len(set) > 0 {
 			return
 		}
 		b.out = append(b.out, Prompt{
@@ -501,10 +541,10 @@ func (b *promptBuilder) personality(background catalog.Background) {
 	}
 
 	id := b.state.Identity
-	written(background.PersonalityTraits, "character/personality-trait", rules.ChoosePersonality, id.PersonalityTraits)
-	written(background.Ideals, "character/ideal", rules.ChooseIdeal, id.Ideals)
-	written(background.Bonds, "character/bond", rules.ChooseBond, id.Bonds)
-	written(background.Flaws, "character/flaw", rules.ChooseFlaw, id.Flaws)
+	written("character/personality-trait", rules.ChoosePersonality, id.PersonalityTraits)
+	written("character/ideal", rules.ChooseIdeal, id.Ideals)
+	written("character/bond", rules.ChooseBond, id.Bonds)
+	written("character/flaw", rules.ChooseFlaw, id.Flaws)
 
 	if b.state.Identity.Alignment.IsZero() {
 		b.out = append(b.out, Prompt{
@@ -653,9 +693,9 @@ func (b *promptBuilder) abilityScoreImprovement(class rules.Slug, level int) {
 	prompt := asiPrompt(class, level)
 	scores := rules.Choice{
 		Prompt: prompt + "/0",
-		Choose: 2,
+		Choose: abilityScoreIncrease(b.cat),
 		Kind:   rules.ChooseAbilityBonus,
-		From:   rules.OptionSet{Kind: rules.OptionsExplicit, Options: abilityBonusOptions()},
+		From:   rules.OptionSet{Kind: rules.OptionsExplicit, Options: abilityBonusOptions(b.cat.AbilityIDs())},
 		// Two points rather than two scores: both may go into one ability,
 		// which is the "+2 to one" half of the rule. This is the only choice
 		// in the game that says so -- a half-elf's two look identical and are
@@ -696,8 +736,7 @@ func asiPrompt(class rules.Slug, level int) rules.Slug {
 // abilityBonusOptions is "+1 to any ability", once per ability. Picking the
 // same ability twice is the "+2 to one" half of the rule, which the choice
 // above allows by being Repeatable.
-func abilityBonusOptions() []rules.Option {
-	abilities := rules.Abilities()
+func abilityBonusOptions(abilities []rules.Ability) []rules.Option {
 	out := make([]rules.Option, 0, len(abilities))
 	for _, ability := range abilities {
 		out = append(out, rules.AbilityBonusOption{Ability: ability, Bonus: 1})
@@ -720,7 +759,8 @@ func refOptions(kind rules.RefKind, slugs []rules.Slug) rules.OptionSet {
 // heldIn reports which of a prompt's options the character already has.
 //
 // Only the cases where a duplicate is actually illegal are reported:
-// proficiencies and languages. Being offered a second rapier is fine.
+// proficiencies, languages, traits, feats, and features (including fighting
+// styles shared by different classes). A second rapier is fine.
 //
 // It looks inside branches as well as at the options themselves, because the
 // client answers a branch in the card that offered it -- so the options it
@@ -750,11 +790,62 @@ func (b *promptBuilder) heldIn(c rules.Choice) []rules.Slug {
 	if c.From.Kind == rules.OptionsFromCollection && c.From.Collection == rules.RefLanguage {
 		held = append(held, b.state.Base.Languages...)
 	}
+	if c.From.Kind == rules.OptionsFromCollection && c.From.Collection == rules.RefFeat {
+		held = append(held, b.state.Feats...)
+	}
 	return held
+}
+
+// Class-specific fighting-style entries describe the same non-repeatable benefit.
+func featureIdentity(slug rules.Slug) string {
+	s := slug.String()
+	if at := strings.Index(s, "fighting-style-"); at >= 0 {
+		return s[at:]
+	}
+	return s
+}
+
+func (b *promptBuilder) expertiseEligible(c rules.Choice, held []rules.Slug) []rules.Slug {
+	var out []rules.Slug
+	for _, slug := range held {
+		skill := slug
+		if def, ok := b.cat.Proficiencies.Get(slug); ok {
+			skill = def.Reference.Slug
+		}
+		if b.state.Skills.BySkill[skill].Proficiency == rules.Expertise {
+			continue
+		}
+		used := false
+		for _, feature := range b.state.Features {
+			def, ok := b.cat.Features.Get(feature)
+			if !ok || def.Specific == nil {
+				continue
+			}
+			ch := oneList(def.Specific.ExpertiseOptions)
+			if ch != nil && ch.Prompt != c.Prompt && slices.Contains(b.answers.slugs(ch), slug) {
+				used = true
+			}
+		}
+		if !used {
+			out = append(out, slug)
+		}
+	}
+	return out
 }
 
 func (b *promptBuilder) holds(ref rules.Ref) bool {
 	switch ref.Kind {
+	case rules.RefTrait:
+		return slices.Contains(b.state.Traits, ref.Slug)
+	case rules.RefFeat:
+		return slices.Contains(b.state.Feats, ref.Slug)
+	case rules.RefFeature:
+		for _, held := range b.state.Features {
+			if featureIdentity(held) == featureIdentity(ref.Slug) {
+				return true
+			}
+		}
+		return false
 	case rules.RefLanguage:
 		return slices.Contains(b.state.Base.Languages, ref.Slug)
 	case rules.RefProficiency:
@@ -775,4 +866,104 @@ func (b *promptBuilder) holds(ref rules.Ref) bool {
 		return known && state.Proficiency != rules.NotProficient
 	}
 	return false
+}
+
+func (b *promptBuilder) packRules() {
+	for _, r := range b.cat.Mechanics.Rules {
+		active, err := activeRule(b.state, b.cat, r)
+		if err != nil || !active {
+			continue
+		}
+		for _, ch := range r.Choices {
+			p := Prompt{Group: GroupClass, Source: r.Owner, Level: b.featLevel(r.Owner), Event: PromptEvent{Type: EventRule, Ref: rules.NewRef(rules.RefRule, r.ID)}}
+			b.addChoice(&ch, p)
+		}
+	}
+}
+
+// featLevel is the class level a feat was taken at, or zero when it was not
+// taken at one -- a rule owned by something else, or a feat a race gave.
+//
+// A feat's own question belongs to the level that brought the feat: Slasher's
+// "+1 to Strength or Dexterity" is part of what fourth level asked. Without a
+// level it reads as belonging to no level at all, and a build screen draws it
+// above first level, ahead of the improvement that opened it.
+func (b *promptBuilder) featLevel(owner rules.Ref) int {
+	if owner.Kind != rules.RefFeat {
+		return 0
+	}
+	for _, taken := range b.state.Identity.Classes {
+		for level := 1; level <= taken.Level; level++ {
+			if slices.Contains(b.answers.picks(asiPrompt(taken.Class, level)+"/1"), owner.Slug) {
+				return level
+			}
+		}
+	}
+	return 0
+}
+
+func abilityScoreIncrease(cat *catalog.Catalog) int {
+	if cat.Mechanics.Core.AbilityScoreIncrease > 0 {
+		return cat.Mechanics.Core.AbilityScoreIncrease
+	}
+	return 2
+}
+
+// ResolvedSelections reads answers through their original choice trees. Bundle
+// keys are identities, not display labels; flattening here preserves quantities
+// and fixed items beside nested choices.
+func ResolvedSelections(log Log, cat *catalog.Catalog) (map[rules.Slug]ResolvedChoice, error) {
+	state, err := Project(log, cat)
+	if err != nil {
+		return nil, err
+	}
+	b := promptBuilder{cat: cat, state: state, answers: foldAnswers(log), scored: scoresWereSet(log), all: true}
+	out := map[rules.Slug]ResolvedChoice{}
+	for _, prompt := range b.build() {
+		resolved := ResolvedChoice{Source: prompt.Source, Kind: prompt.Choice.Kind, Purpose: prompt.Purpose}
+		b.answers.chosen(prompt.Choice, func(option rules.Option) { resolved.Options = append(resolved.Options, option) })
+		out[prompt.Choice.Prompt] = resolved
+	}
+	return out, nil
+}
+
+func (b *promptBuilder) blockedIn(choice rules.Choice) []rules.Slug {
+	var blocked []rules.Slug
+	for _, requirement := range b.cat.Mechanics.ChoiceRequirements {
+		if requirement.Prompt != choice.Prompt {
+			continue
+		}
+		allowed := false
+		for _, proficiency := range requirement.AnyProficiency {
+			if b.holds(rules.NewRef(rules.RefProficiency, proficiency)) {
+				allowed = true
+			}
+		}
+		if !allowed {
+			blocked = append(blocked, requirement.Pick)
+		}
+	}
+	var walk func(rules.Option)
+	walk = func(option rules.Option) {
+		switch opt := option.(type) {
+		case rules.NestedOption:
+			blocked = append(blocked, b.blockedIn(opt.Choice)...)
+		case rules.BundleOption:
+			for _, item := range opt.Items {
+				walk(item)
+			}
+		}
+	}
+	for _, option := range choice.From.Options {
+		walk(option)
+	}
+	return blocked
+}
+
+// ResolvedChoice carries the semantics of a now-closed question alongside its picks.
+type ResolvedChoice struct {
+	Source  rules.Ref
+	Kind    rules.ChoiceKind
+	Purpose string
+	Options []rules.Option
 }

@@ -34,7 +34,7 @@ function deck(viewport: Viewport, value = 'class', onChange = vi.fn()) {
  *
  * Nothing below asserts which slide is *showing*. jsdom computes no layout and
  * embla measures the DOM, so a scroll position is not a claim this suite can
- * make -- the same bargain `SectionDeck.test.tsx` records. What is assertable
+ * make. What is assertable
  * is that the strip reads the `value` it was handed and reports the presses it
  * gets, and that is true at both widths.
  */
@@ -88,6 +88,17 @@ describe('TabDeck', () => {
         const slide = screen.getByRole('group', { name: panel.label })
         expect.soft(within(slide).getByText(INSIDE[panel.value] ?? '')).toBeInTheDocument()
       }
+    })
+
+    // The deck is as tall as the panel that is showing: every other slide has
+    // no height of its own, so it cannot hold the viewport open.
+    it('gives a height only to the slide that is showing', () => {
+      deck('mobile', 'class')
+
+      const height = (value: string) => screen.getByRole('group', { name: PANELS.find((panel) => panel.value === value)!.label }).style.height
+      expect.soft(height('class')).toBe('')
+      expect.soft(height('identity')).toBe('0px')
+      expect.soft(height('race')).toBe('0px')
     })
   })
 

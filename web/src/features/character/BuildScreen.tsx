@@ -1,8 +1,16 @@
+import { characterPath } from '@/lib/api/characters'
+import type { CustomOption } from '@/lib/api/characters'
+import { DEFAULT_BUILD_POLICY } from '@/lib/api/packPolicy'
+import { CatalogScope, RulesEdition, CharacterPolicy } from '@/lib/api/catalogScope'
+import { PackSelector } from '@/features/packs'
+import { type RulesLock } from '@/lib/api/packs'
 import { useState } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 
 import {
   appendEvents,
+  autoEquip,
+  reviseEvents,
   createCharacter,
   deleteEvent,
   getEvents,
@@ -14,17 +22,18 @@ import {
 import type {
   Answer,
   ApiFieldError,
+  Change,
   CharacterEvent,
   Dropped,
   Prompt,
   PromptsResponse,
   Sheet,
 } from '@/lib/api'
-import { useLocale, useT } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
-import { Alert, Badge, Button, Group, ModalSheet, Page, Panel, Stack, TabDeck, Text } from '@/ui'
+import { Avatar, characterAvatar, AvatarEditor, BlockList, Alert, Badge, Button, Group, ModalSheet, Page, Panel, Stack, TabDeck, Text } from '@/ui'
 import type { Crumb } from '@/ui'
 
 import {
@@ -32,16 +41,21 @@ import {
   blocksFor,
   inheritPlace,
   keyFor,
+  keyForRow,
   promptKey,
   reclaimPlace,
   settledKey,
 } from './blocks'
 import type { Asking, Block, BlockOrder } from './blocks'
+import { creationPrompt } from './creationPrompts'
 import { eventLabel, stageLabel } from './labels'
 import { resolveRefNames } from './refNames'
 import { settledByStage, settledPickName } from './settled'
 import type { SettledRow } from './settled'
+import { CustomOptionsPanel } from './CustomOptionsPanel'
 import { StagePanel } from './StagePanel'
+import { SpellStagePanel } from './SpellStagePanel'
+import type { SpellSubmission } from './SpellStagePanel'
 import type { Scores } from './AbilityScoresForm'
 
 import {
@@ -54,6 +68,7 @@ import type { Stage } from '@/domain'
 
 /** Everything one build screen reads, in one round of requests. */
 interface BuildView {
+ rules?: RulesLock | undefined
   prompts: PromptsResponse
   events: CharacterEvent[]
   sheet: Sheet | null
@@ -67,8 +82,15 @@ const EMPTY_VIEW: BuildView = {
   names: new Map(),
 }
 
+/** An answered choice's question, fetched to be put again in place. */
+interface Reposed {
+  seq: number
+  prompt: Prompt
+}
+
 /** A change, priced before it is paid for. */
 interface Preview {
+  spellBatch?: { submissions: SpellSubmission[]; next: Stage }
   row: SettledRow
   /** Null for a removal: there is nothing to put back. */
   event: CharacterEvent | null
@@ -87,9 +109,9 @@ interface Preview {
  * into existence -- so the number of steps is not knowable until the last one
  * is answered, and there is nothing to enumerate. What the tabs enumerate is
  * the server's own prompt *groups*, which are fixed: five categories a
- * question can belong to, not five steps to walk through. Every tab is
- * reachable at any time, and nothing on one can be answered before the server
- * asks it.
+ * question can belong to, not five steps to walk through. The UI splits these
+ * groups into tabs for personal details, rules, classes and their choices.
+ * Every tab is reachable, and a completed choice opens the next one there.
  *
  * Three requests, deliberately, because they answer three different questions.
  * `/prompts` says what is still open, `/events` says what was decided and in
@@ -104,7 +126,6 @@ interface Preview {
  */
 export function BuildScreen() {
   const t = useT()
-  const locale = useLocale()
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -115,7 +136,8 @@ export function BuildScreen() {
   const folder = search.get('folder') ?? undefined
   const isNew = id === ''
 
-  const build = useResource<BuildView>(`build:${locale}:${id}`, async (signal) => {
+  // useResource refreshes on translator changes without unmounting the active draft.
+  const build = useResource<BuildView>(`build:${id}`, async (signal) => {
     if (id === '') return EMPTY_VIEW
     const [prompts, log, sheet] = await Promise.all([
       getPrompts(id, signal),
@@ -124,25 +146,62 @@ export function BuildScreen() {
     ])
     return {
       prompts,
+      rules: log.rules,
       events: log.events,
       sheet,
-      names: await resolveRefNames([...log.events, ...prompts.prompts]),
+      names: await resolveRefNames([
+        ...log.events, ...prompts.prompts,
+        // An alignment is written as a value at a path, not as a reference,
+        // so nothing above asks for its name.
+        ...log.events.flatMap((event) => (event.changes ?? [])
+          .filter((change) => change.path === 'identity.alignment' && change.value.slug !== undefined)
+          .map((change) => ({ ref: `alignment:${change.value.slug}` }))),
+        ...(prompts.spellRules ?? []).flatMap((rule) => [{ source: rule.source }, ...(rule.automatic ?? []).map((slug) => ({ ref: `spell:${slug}` })), ...(rule.listClasses ?? []).map((slug) => ({ ref: `class:${slug}` }))]),
+        // An equipment card is titled by what it offers, so those items are
+        // named before any card is opened.
+        ...prompts.prompts.filter((prompt) => prompt.choice.kind === 'equipment')
+          .flatMap((prompt) => [
+            // The category a card or one of its options draws on, by its
+            // catalogue name: "Arcane Foci" in English is not a title in Russian.
+            ...(prompt.choice.from.category === undefined ? [] : [{ ref: `equipment-category:${prompt.choice.from.category}` }]),
+            ...(prompt.choice.from.options ?? []).flatMap((option) => [option, ...(option.items ?? [])]).flatMap((option) => [
+              ...(option.ref === undefined ? [] : [{ ref: option.ref }]),
+              ...(option.choice?.from.category === undefined ? [] : [{ ref: `equipment-category:${option.choice.from.category}` }]),
+            ]),
+          ]),
+        ...[...sheet.equipment.equipped, ...sheet.equipment.backpack, ...sheet.equipment.loot]
+          .flatMap((stack) => stack.item === undefined ? [] : [{ ref: `item:${stack.item}` }]),
+      ], `${characterPath(id)}/catalog`),
     }
   })
 
+  const [selectedRules, setSelectedRules] = useState<RulesLock | undefined>(undefined)
+  const [packError, setPackError] = useState('')
+  const [packDirty, setPackDirty] = useState(false)
   const create = useAction(createCharacter)
   const answer = useAction(appendEvents)
   const revise = useAction(replaceEvent)
+  const spellSave = useAction(reviseEvents)
   const remove = useAction(deleteEvent)
 
   const [chosenStage, setChosenStage] = useState<Stage | null>(landingStage(location.state))
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [seeded, setSeeded] = useState(false)
   const [askedOn, setAskedOn] = useState<Stage | null>(null)
+  const [kitSeen, setKitSeen] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
+  const [imageDraft, setImageDraft] = useState<string | undefined>(undefined)
+  const [draftRules, setDraftRules] = useState<Change[] | null>(null)
+  // The custom entry being written, opened from a picker's last option or
+  // from the entry's own block.
+  const [customDraft, setCustomDraft] = useState<CustomOption | null>(null)
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [preview, setPreview] = useState<Preview | null>(null)
+  const [reposed, setReposed] = useState<Reposed | null>(null)
   const [creating, setCreating] = useState(false)
+  const [advanceAfter, setAdvanceAfter] = useState<{ view: BuildView; stage: Stage } | null>(null)
+  const [openAfterCreation, setOpenAfterCreation] = useState<Stage | null>(null)
+  const [focusNextStage, setFocusNextStage] = useState<Stage | null>(null)
 
   /*
    * One order per tab, held once and mutated rather than replaced: see
@@ -182,6 +241,10 @@ export function BuildScreen() {
   const [shownId, setShownId] = useState(id)
   const arriving = shownId !== id
   if (arriving) {
+    setPackDirty(false)
+    setPackError('')
+    if (!creating) orders.clear()
+    if (!creating) setImageDraft(undefined)
     setShownId(id)
     setChosenStage(landingStage(location.state))
     setOpenKey(creating ? NEW_NAME_KEY : null)
@@ -203,31 +266,42 @@ export function BuildScreen() {
   if (creating && !arriving && !isNew && !build.loading) setCreating(false)
 
   const view = build.data ?? EMPTY_VIEW
-  const open = view.prompts.prompts
+  const open = view.prompts.prompts.flatMap((prompt) => {
+    const supported = creationPrompt(prompt)
+    return supported === null ? [] : [supported]
+  })
   // Until a tab is clicked the screen opens on the first thing left to do,
   // and moves on as things are answered. That is the loop, kept: a player who
   // never touches a tab is walked through the questions in order, and one who
   // does is pinned where they put themselves.
-  const stage = chosenStage ?? firstUnfinished(open)
+  const settled = settledByStage(t, view)
+  // Spell tabs only have work when the server offers a choice or the player
+  // has a saved selection to edit. A non-caster should never have to pass
+  // through empty Cantrips and Spells tabs.
+  //
+  // Equipment is stricter: only for a visit that was asked about a starting
+  // kit. The kit is asked once, by the first class at level 1, and it seeds
+  // the inventory; what the character carries after that is edited on the
+  // sheet, so Edit and a level-up never see the tab. Answering the kit does
+  // not take the tab away mid-creation, though: the answer stays changeable
+  // until the player leaves.
+  // ponytail: "creating" is "this visit saw a kit prompt" -- coming back to a
+  // half-built character with the kit answered hides the tab. A stored
+  // finished flag is the upgrade.
+  const asked = (each: Stage) => open.some((prompt) => stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each)
+  if (!kitSeen && asked('equipment')) setKitSeen(true)
+  const visibleStages = STAGES.filter((each) => each === 'equipment' ? kitSeen || asked(each) : each !== 'cantrips' && each !== 'spells' ||
+    asked(each) ||
+    (settled.get(each)?.length ?? 0) > 0 || view.sheet?.customOptions?.some((option) => option.kind === (each === 'cantrips' ? 'cantrip' : 'spell')))
+  const preferredStage = chosenStage ?? (isNew ? 'rules' : firstUnfinished(open))
+  const stage = visibleStages.includes(preferredStage) ? preferredStage : firstUnfinished(open)
 
-  // A different tab is a different question, so the block that was open is
-  // closed. During render rather than in an effect, so the new tab is never
-  // painted once with the old tab's question under it.
+  // A stage change driven by fresh prompts can leave a key from the previous
+  // tab. Explicit tab navigation sets its own first choice below.
   if (askedOn !== stage) {
     setAskedOn(stage)
     setOpenKey(null)
   }
-  // The one thing that opens itself, and it opens once. A character that does
-  // not exist has a single block on the page and nothing behind it, so there
-  // is no other question being pre-empted -- and a front door whose only row
-  // is shut reads as broken. Seeded rather than derived, so that closing it
-  // closes it. After the reset above, which fires on the very first render.
-  if (isNew && !seeded) {
-    setSeeded(true)
-    setOpenKey(NEW_NAME_KEY)
-  }
-
-  const settled = settledByStage(t, view)
   // While the character is being created there is no log to read yet, so the
   // question it is being created by is still the thing on screen.
   const posingName = isNew || creating
@@ -237,9 +311,8 @@ export function BuildScreen() {
    * arrive at it.
    *
    * Before there is a character there is no `/prompts` response, so the
-   * identity tab poses the first question itself: see NEW_NAME_PROMPT. The
-   * others have nothing on them until there is somebody to ask about, and say
-   * so.
+   * Personal poses the name itself: see NEW_NAME_PROMPT. Rules and Class
+   * show the other initial questions on their own tabs.
    *
    * The order is the screen's memory of where things are, and `blocksFor` both
    * reads it and writes to it: whatever is new keeps the place the level
@@ -250,17 +323,36 @@ export function BuildScreen() {
       each,
       blocksFor(
         settled.get(each) ?? [],
-        posingName
-          ? each === 'identity'
-            ? NEW_IDENTITY_PROMPTS
-            : []
-          : open.filter((prompt) => stageOf(prompt.group) === each),
+        (posingName ? NEW_INITIAL_PROMPTS : open).filter((prompt) =>
+          stageOf(prompt.group, prompt.choice.kind, prompt.choice.prompt, prompt.purpose) === each),
         orderFor(each),
       ),
     ]),
   )
   const blocks = blocksByStage.get(stage) ?? []
-  const opened = blocks.find((block) => block.key === openKey) ?? null
+  const firstChoice = (on: Stage) => blocksByStage.get(on)?.find((block) => block.kind === 'open')?.key ?? null
+  // The first tab on a loaded build is entered just like a clicked tab.
+  if (!seeded && !build.loading) {
+    setSeeded(true)
+    setOpenKey(firstChoice(stage))
+  }
+  if (openAfterCreation === stage && !creating && !build.loading) {
+    setOpenAfterCreation(null)
+    const next = firstChoice(stage)
+    setOpenKey(next)
+    if (next === null) setFocusNextStage(stage)
+  }
+  // Wait for the refreshed prompts: an answer can create new choices on this tab.
+  if (advanceAfter !== null && (advanceAfter.stage !== stage || advanceAfter.view !== view)) {
+    setAdvanceAfter(null)
+    if (advanceAfter.stage === stage) {
+      const next = firstChoice(stage)
+      setOpenKey(next)
+      if (next === null) setFocusNextStage(stage)
+    }
+  }
+  const activeKey = openKey
+  const opened = blocks.find((block) => block.key === activeKey) ?? null
   // What the open block is asking, which is a fact about the block rather than
   // a second piece of state. A settled block whose question cannot be put
   // again has none, and says so where its surface would have been.
@@ -269,7 +361,7 @@ export function BuildScreen() {
       ? null
       : opened.kind === 'open'
         ? { prompt: opened.prompt, replaces: null }
-        : askingFor(opened.row)
+        : askingFor(opened.row, reposed)
 
   /**
    * Closing the question, and opening whatever takes its place.
@@ -282,6 +374,8 @@ export function BuildScreen() {
    */
   const done = (open: string | null = null) => {
     setOpenKey(open)
+    setFocusNextStage(null)
+    setAdvanceAfter(open === null ? { view, stage } : null)
     setPreview(null)
     // Pinned to wherever the answer was given. The screen opens on the first
     // category with something to do, and that is the whole of the help it
@@ -295,7 +389,7 @@ export function BuildScreen() {
   }
 
   /**
-   * Creates the character the identity tab is describing.
+   * Creates the character the Personal tab is describing.
    *
    * `landOn` rides across the navigation in the route's state, because the
    * navigation is what loses it: a different URL is a different mount, and the
@@ -303,51 +397,66 @@ export function BuildScreen() {
    */
   const createCharacterFromDraft = async (landOn: Stage) => {
     if (create.pending) return
+    if (packDirty) { setPackError(t('packs.applyFirst')); return }
     if (nameDraft.trim() === '') {
       setNameError(t('build.nameRequired'))
       return
     }
     const created = await create.run({
       name: nameDraft.trim(),
+      ...(imageDraft ? { image: imageDraft } : {}),
+      ...(selectedRules ? { rules: selectedRules } : {}),
       ...(folder ? { folder } : {}),
     })
     // replace: true, because the URL of a character that does not exist is
     // not a place the Back button should return anyone to.
     if (created) {
-      // The entry the creation wrote belongs where the question that asked
-      // for it was: at the top of identity, above the two questions drawn
-      // under it. Without this the name is a key the order has never seen and
-      // goes to the end -- so confirming it would drop it below the rules and
-      // the level, which is the one row the player was looking at moving.
-      // The same thing `append` does for every other answer.
-      inheritPlace(orderFor('identity'), NEW_NAME_KEY, settledKey(created.seq))
+      // Rules were chosen before there was a character to write them to.
+      // Save that choice against the new character before showing its prompts.
+      const rulesSaved = draftRules === null || await answer.run(created.id, created.seq, [
+        { type: 'change', changes: draftRules },
+      ], created.seq) !== null
+      // Preserve the name question's position when its saved entry arrives.
+      inheritPlace(orderFor('personal'), NEW_NAME_KEY, settledKey(created.seq))
       // Set before the navigation, because the navigation is what changes the
       // resource key -- and the render that reads the new key is the one that
       // would otherwise blank the page.
       setCreating(true)
+      setOpenAfterCreation(rulesSaved ? landOn : 'rules')
       await navigate(`/characters/${created.id}/build`, {
         replace: true,
-        state: { stage: landOn },
+        state: { stage: rulesSaved ? landOn : 'rules' },
       })
     }
   }
 
   const goToStage = (next: Stage) => {
     if (next === stage) return
-    // Nothing else can be answered before the character exists, so a tab click
-    // is the same gesture as pressing Next: make it, then go -- to the tab that
-    // was pressed, which is the whole of what the gesture asked for.
+    setFocusNextStage(null)
+    // Rules and name can be visited before creation. Other tabs still need a
+    // character, so entering one of those creates it from the name draft.
     if (isNew) {
+      if (next === 'rules' || next === 'personal') {
+        setChosenStage(next)
+        setAskedOn(next)
+        setOpenKey(next === 'rules' ? NEW_RULES_KEY : NEW_NAME_KEY)
+        return
+      }
       void createCharacterFromDraft(next)
       return
     }
+    setAdvanceAfter(null)
     setChosenStage(next)
+    setAskedOn(next)
+    const first = firstChoice(next)
+    setOpenKey(first)
+    if (first === null) setFocusNextStage(next)
   }
 
   /** Sends one appended entry, then rereads everything. */
   const append = async (event: CharacterEvent, open: string | null) => {
     const answered = openKey
-    const written = await answer.run(id, view.prompts.seq, [event])
+    const written = await answer.run(id, view.prompts.seq, [event], view.prompts.revision ?? view.prompts.seq)
     if (written === null) return
     // The entry that just answered a question takes that question's place.
     // A single appended event is the log's new head, so the response's seq
@@ -372,15 +481,15 @@ export function BuildScreen() {
   const price = async (row: SettledRow, event: CharacterEvent | null, open: string | null) => {
     const result =
       event === null
-        ? await remove.run(id, row.seq, view.prompts.seq, true)
-        : await revise.run(id, row.seq, view.prompts.seq, event, true)
+        ? await remove.run(id, row.seq, view.prompts.seq, true, view.prompts.revision ?? view.prompts.seq)
+        : await revise.run(id, row.seq, view.prompts.seq, event, true, view.prompts.revision ?? view.prompts.seq)
     if (result === null) return
     const dropped = result.dropped ?? []
     if (dropped.length === 0) {
       await write(row, event, open)
       return
     }
-    setPreview({ row, event, dropped, names: await resolveRefNames(dropped), open })
+    setPreview({ row, event, dropped, names: await resolveRefNames(dropped, `${characterPath(id)}/catalog`), open })
   }
 
   /** Makes the change, whether it was asked about or not. */
@@ -390,19 +499,45 @@ export function BuildScreen() {
     // commit of a price that was quoted against a different log.
     const written =
       event === null
-        ? await remove.run(id, row.seq, view.prompts.seq, false)
-        : await revise.run(id, row.seq, view.prompts.seq, event, false)
+        ? await remove.run(id, row.seq, view.prompts.seq, false, view.prompts.revision ?? view.prompts.seq)
+        : await revise.run(id, row.seq, view.prompts.seq, event, false, view.prompts.revision ?? view.prompts.seq)
     if (written === null) return
     // A removal is how a question that cannot be re-posed gets asked again, so
     // the question that comes back takes the answer's place in the list -- and
     // opens there, because being asked again is what the press meant.
-    if (event === null) reclaimPlace(orderFor(row.stage), settledKey(row.seq))
+    if (event === null) reclaimPlace(orderFor(row.stage), keyForRow(row))
     done(open)
+  }
+
+  const saveSpells = async (submissions: SpellSubmission[], next: Stage, approved = false) => {
+    const replacements = submissions.flatMap((item) => {
+      if (item.replaces === undefined) return []
+      const choices = (item.replaces.event.choices ?? []).map((answer) => answer.prompt === item.prompt.choice.prompt ? { ...answer, picks: item.picks } : answer)
+      return [{ seq: item.replaces.seq, event: eventFor(item.prompt, choices) }]
+    })
+    const events = submissions.filter((item) => item.replaces === undefined).map((item) => item.changes === undefined ? eventFor(item.prompt, [{ prompt: item.prompt.choice.prompt, picks: item.picks }]) : { type: 'change', changes: item.changes })
+    const run = (dryRun: boolean) => replacements.length === 1 && events.length === 0
+      ? revise.run(id, replacements[0]!.seq, view.prompts.seq, replacements[0]!.event, dryRun, view.prompts.revision ?? view.prompts.seq)
+      : spellSave.run(id, view.prompts.seq, view.prompts.revision ?? view.prompts.seq, replacements, events, dryRun)
+    if (replacements.length > 0 && !approved) {
+      const preview = await run(true)
+      if (preview === null) return
+      if ((preview.dropped ?? []).length > 0) {
+        const row = submissions.find((item) => item.replaces !== undefined)!.replaces!
+        setPreview({ row, event: replacements[0]!.event, dropped: preview.dropped ?? [], names: await resolveRefNames(preview.dropped ?? [], `${characterPath(id)}/catalog`), open: null, spellBatch: { submissions, next } })
+        return
+      }
+    }
+    const written = replacements.length === 0
+      ? await answer.run(id, view.prompts.seq, events, view.prompts.revision ?? view.prompts.seq)
+      : await run(false)
+    if (written !== null) { done(); setChosenStage(next) }
   }
 
   const commit = async () => {
     if (preview === null) return
-    await write(preview.row, preview.event, preview.open)
+    if (preview.spellBatch !== undefined) await saveSpells(preview.spellBatch.submissions, preview.spellBatch.next, true)
+    else await write(preview.row, preview.event, preview.open)
   }
 
   /**
@@ -419,6 +554,27 @@ export function BuildScreen() {
   }
 
   /**
+   * Puts an answered choice's question again without touching the answer.
+   *
+   * The server stops sending a question once it is answered, but it will say
+   * what was being asked at an entry's position. The card then opens on the
+   * saved answer and a change replaces the entry in place. This used to drop
+   * the entry and wait for the question to come back -- so a player who opened
+   * a card to look at what they had picked saw nothing picked, and had in fact
+   * just unpicked it. The drop remains only for what cannot be found again: an
+   * entry bundling several questions, or a prompt the server no longer poses.
+   */
+  const repose = async (row: SettledRow) => {
+    const answers = row.event.choices ?? []
+    const first = answers[0]?.prompt
+    const whole = first !== undefined && answers.every((answer) => answer.prompt === first || answer.prompt.startsWith(`${first}/`))
+    const posed = whole ? await getPrompts(id, undefined, row.seq).then((response) => response.prompts, () => []) : []
+    const prompt = posed.find((each) => each.choice.prompt === first)
+    if (prompt === undefined) await price(row, null, reaskedKey(row))
+    else setReposed({ seq: row.seq, prompt })
+  }
+
+  /**
    * Opening a block, which for a settled one is putting its question again.
    *
    * Every decided block opens onto the question that decided it, and there is
@@ -431,20 +587,32 @@ export function BuildScreen() {
    */
   const openBlock = (key: string | null) => {
     setOpenKey(key)
+    setFocusNextStage(null)
     const block = key === null ? null : blocks.find((each) => each.key === key)
     if (block?.kind !== 'settled') return
+    if (isSpellChoice(block.row)) return
     const question = reask(block.row)
     if (question === null) {
-      void price(block.row, null, reaskedKey(block.row))
+      void repose(block.row)
       return
     }
     // A rename starts from the name it is changing rather than from nothing.
-    if (question.choice.kind === 'text') setNameDraft(block.row.value)
+    if (question.choice.kind === 'text') {
+      setNameDraft(block.row.value)
+    }
+  }
+
+  const savePortrait = async (image: string) => {
+    setImageDraft(image)
+    if (isNew) return
+    const written = await revise.run(id, 1, view.prompts.seq, {
+      type: 'init', changes: [{ path: 'identity.image', op: 'set', value: { kind: 'string', string: image } }],
+    }, false, view.prompts.revision ?? view.prompts.seq)
+    if (written) { setImageDraft(undefined); build.refresh() }
   }
 
   const submitEvent = (asked: Asking, event: CharacterEvent) => {
-    // No follow-up to open: a branch is answered in the card that offered it
-    // and arrives in this same event, so nothing new is about to appear.
+    // After saving, the refreshed prompts open the next choice on this tab.
     if (asked.replaces === null) void append(event, null)
     else void price(asked.replaces, event, null)
   }
@@ -466,6 +634,7 @@ export function BuildScreen() {
   if (build.loading && !creating) {
     return (
       <Page
+        mark={<Avatar image={isNew ? imageDraft : view.sheet?.identity.image} fallback={characterAvatar(isNew ? undefined : view.sheet?.identity.classes)} size={48} />}
         trail={buildTrail(t, isNew, null)}
         state={{ kind: 'loading', what: t('build.loading') }}
       />
@@ -474,6 +643,7 @@ export function BuildScreen() {
   if (build.error !== null) {
     return (
       <Page
+        mark={<Avatar image={isNew ? imageDraft : view.sheet?.identity.image} fallback={characterAvatar(isNew ? undefined : view.sheet?.identity.classes)} size={48} />}
         trail={buildTrail(t, isNew, null)}
         state={{
           kind: 'failed',
@@ -485,7 +655,7 @@ export function BuildScreen() {
     )
   }
 
-  const failure = create.error ?? answer.error ?? revise.error ?? remove.error
+  const failure = create.error ?? answer.error ?? revise.error ?? remove.error ?? spellSave.error
   const fields: readonly ApiFieldError[] =
     create.fields.length > 0
       ? create.fields
@@ -493,11 +663,20 @@ export function BuildScreen() {
         ? answer.fields
         : revise.fields
 
+  // Both ways out of the builder -- the header's Finish, and Next on the last
+  // tab once nothing required is open -- go through here. A build equips
+  // nothing, so this is where the character is dressed: wired to only one of
+  // the two, a character finished by the other arrived with a full backpack
+  // and nothing on. The sheet opens either way; a failure here costs an
+  // empty paperdoll, not the way out.
+  const finish = () => void autoEquip(id).catch(() => undefined).then(() => navigate(`/characters/${id}`))
+
   return (
-    <Page
+    <CharacterPolicy.Provider value={view.prompts.buildPolicy ?? DEFAULT_BUILD_POLICY}><RulesEdition.Provider value={(isNew ? selectedRules : view.rules)?.edition ?? '2014'}><CatalogScope.Provider value={id ? `${characterPath(id)}/catalog` : ''}><Page
       // The draft, while the character it names is being created: the sheet
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
+      mark={<Avatar image={isNew ? imageDraft : view.sheet?.identity.image} fallback={characterAvatar(isNew ? undefined : view.sheet?.identity.classes)} size={48} />}
       trail={buildTrail(t, isNew, creating ? nameDraft.trim() : title(view))}
       /*
        * On the heading line, against the right edge, and only once there is a
@@ -516,15 +695,12 @@ export function BuildScreen() {
             actions: (
               <Button
                 variant={view.prompts.complete ? 'filled' : 'light'}
-                onClick={() => void navigate(`/characters/${id}`)}
+                onClick={finish}
               >
                 {t('build.finish')}
               </Button>
             ),
           })}
-      {...(!posingName && view.prompts.complete
-        ? { subtitle: t('build.subtitleComplete') }
-        : {})}
     >
       <Panel>
         <Stack gap="lg">
@@ -557,15 +733,46 @@ export function BuildScreen() {
               snaps back is worse than one that never gives.
             */
             swipeable={!posingName}
-            panels={STAGES.map((each) => {
+            panels={visibleStages.map((each) => {
               // Where Next goes from *this* tab, which is a fact about the tab
               // and not about the one on screen -- every panel is mounted, so
               // every panel's button has to be its own.
-              const after = stageAfter(each, open)
+              // Custom entries are blocks of the tab they belong to, above its
+              // Next, not a section of their own under the deck.
+              const customs = (on: Stage) => !isNew && view.sheet !== null
+                ? <CustomOptionsPanel id={id} stage={on} modal={on === stage} sheet={view.sheet} revision={view.prompts.revision ?? view.prompts.seq} onSaved={() => build.refresh()} draft={customDraft} onDraft={setCustomDraft} />
+                : null
+              const after = each === 'rules' && isNew && draftRules !== null ? 'personal' : stageAfter(each, open)
+              // Next with nowhere left to go is Finish, once nothing required
+              // is open; until then there is no Next on the last tab.
+              const next = after !== null ? () => goToStage(after)
+                : !posingName && view.prompts.complete ? finish
+                : undefined
               return {
                 value: each,
                 label: stageLabel(t, each),
-                content: (
+                content: each === 'spells' || each === 'cantrips' ? (
+                  <SpellStagePanel
+                    cantripsOnly={each === 'cantrips'}
+                    rules={view.prompts.spellRules ?? []}
+                    blocks={blocksByStage.get(each) ?? []}
+                    active={each === stage}
+                    names={view.names}
+                    loadSavedPrompt={async (row) => {
+                      const response = await getPrompts(id, undefined, row.seq)
+                      const prompt = response.prompts.find((item) => item.choice.prompt === row.event.choices?.[0]?.prompt)
+                      if (prompt === undefined) throw new Error(t('prompt.nothingOffered'))
+                      return prompt
+                    }}
+                    // A save lands on the next tab with work, or stays put when
+                    // this was the last: Equipment is only there while a kit is chosen.
+                    onAnswers={(submissions) => void saveSpells(submissions, each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : after ?? each)}
+                    pending={answer.pending || revise.pending || spellSave.pending || remove.pending || build.loading}
+                    revision={view.prompts.revision ?? view.prompts.seq}
+                    {...(each === 'cantrips' && visibleStages.includes('spells') ? { onNext: () => goToStage('spells') } : next === undefined ? {} : { onNext: next })}
+                  >{customs(each)}</SpellStagePanel>
+                ) : (
+                  <Stack>
                   <StagePanel
                     blocks={blocksByStage.get(each) ?? []}
                     openKey={openKey}
@@ -580,17 +787,21 @@ export function BuildScreen() {
                       setNameError(undefined)
                     }}
                     onAnswerName={(asked, next) => {
-                      if (isNew) void createCharacterFromDraft('identity')
+                      if (isNew) void createCharacterFromDraft('personal')
                       else submitEvent(asked, initEventFor(next))
                     }}
-                    onAnswerChanges={(asked, changes) =>
-                      submitEvent(asked, { type: asked.prompt.event.type, changes })
-                    }
+                    onAnswerChanges={(asked, changes) => {
+                      if (isNew && asked.prompt.choice.prompt === 'character/ruleset') {
+                        setDraftRules(changes)
+                        setOpenKey(PACKS_KEY)
+                        setFocusNextStage(null)
+                      } else submitEvent(asked, { type: asked.prompt.event.type, changes })
+                    }}
                     pending={
                       creating || create.pending || answer.pending || revise.pending || remove.pending
                     }
                     fields={fields}
-                    {...(after === null ? {} : { onNext: () => goToStage(after) })}
+                    {...(next === undefined ? {} : { onNext: next })}
                     {...(posingName || asking?.prompt.choice.kind === 'text'
                       ? { name: nameDraft }
                       : {})}
@@ -598,7 +809,27 @@ export function BuildScreen() {
                     {...maybeLines(asking?.replaces ?? null)}
                     {...(view.sheet !== null ? { level: view.sheet.identity.level } : {})}
                     posing={posingName}
-                  />
+                    rulesSelected={draftRules !== null}
+                    focusNext={focusNextStage === each}
+                  >
+                  {each === 'rules' && <PackSelector key={id} disclosure={{ open: openKey === PACKS_KEY, onOpen: (open) => openBlock(open ? PACKS_KEY : null) }} onDirtyChange={setPackDirty} value={isNew ? selectedRules : view.rules} finalized={!isNew || selectedRules !== undefined} onChange={(rules) => {
+                    if (isNew) {
+                      setSelectedRules(rules)
+                      if (draftRules?.[0]?.value.slug !== rules.edition) { setDraftRules(null); setOpenKey(NEW_RULES_KEY) }
+                      else { setOpenKey(null); setFocusNextStage('rules') }
+                      return
+                    }
+                  }}>
+                  {packError && <Alert color="red">{packError}</Alert>}
+                  </PackSelector>}
+                  {each === 'personal' && <BlockList open={openKey} onOpen={openBlock} items={[{
+                    key: 'portrait',
+                    header: <Text size="sm">{t('avatar.portrait')}</Text>,
+                    body: <AvatarEditor fallback={characterAvatar(isNew ? undefined : view.sheet?.identity.classes)} image={imageDraft ?? view.sheet?.identity.image} pending={revise.pending || creating} error={revise.error} onSave={savePortrait} />,
+                  }]} />}
+                  {customs(each)}
+                  </StagePanel>
+                  </Stack>
                 ),
               }
             })}
@@ -675,7 +906,7 @@ export function BuildScreen() {
             </ModalSheet>
         </Stack>
       </Panel>
-    </Page>
+    </Page></CatalogScope.Provider></RulesEdition.Provider></CharacterPolicy.Provider>
   )
 }
 
@@ -735,7 +966,7 @@ function reasonLabel(t: Translate, reason: string): string {
  *
  * The server emits the real one -- `character/init` -- as soon as a character
  * exists to have an empty log. Before that there is no character to ask about
- * and no request to make, so the identity tab poses the same question itself
+ * and no request to make, so Personal poses the same question itself
  * and the answer is a creation rather than an append.
  */
 const NEW_NAME_PROMPT: Prompt = {
@@ -747,24 +978,22 @@ const NEW_NAME_PROMPT: Prompt = {
 }
 
 /**
- * The rest of what the identity tab will ask, shown before there is anybody to
- * ask it about.
+ * The initial questions, shown on Rules, Personal and Class before creation.
  *
- * The same three questions the server poses the moment the character exists,
- * in the same order, so the page does not grow two rows the instant a name is
- * confirmed. They are drawn without an answering surface until then -- see
- * `posing` in `StagePanel` -- because there is nothing to append an answer to:
- * a name is what creates the character, and these are answered against it.
+ * Rules can be chosen before creation and saved with the first character
+ * write. Level still needs an existing character to be answered.
  */
-const NEW_IDENTITY_PROMPTS: Prompt[] = [
+const NEW_RULES_PROMPT: Prompt = {
+  choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
+  group: 'identity',
+  optional: false,
+  event: { type: 'change' },
+  heldOnly: false,
+}
+
+const NEW_INITIAL_PROMPTS: Prompt[] = [
+  NEW_RULES_PROMPT,
   NEW_NAME_PROMPT,
-  {
-    choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
-    group: 'identity',
-    optional: false,
-      event: { type: 'change' },
-    heldOnly: false,
-  },
   {
     choice: {
       prompt: 'character/desired-level',
@@ -774,12 +1003,14 @@ const NEW_IDENTITY_PROMPTS: Prompt[] = [
     },
     group: 'identity',
     optional: false,
-      event: { type: 'change' },
+    event: { type: 'change' },
     heldOnly: false,
   },
 ]
 
 const NEW_NAME_KEY = keyFor({ prompt: NEW_NAME_PROMPT, replaces: null })
+const PACKS_KEY = 'rule-packs'
+const NEW_RULES_KEY = keyFor({ prompt: NEW_RULES_PROMPT, replaces: null })
 
 /**
  * The question behind a settled block, where there is one to put again.
@@ -787,8 +1018,12 @@ const NEW_NAME_KEY = keyFor({ prompt: NEW_NAME_PROMPT, replaces: null })
  * Null is an answer rather than a failure: a nested prompt cannot be re-posed
  * from here, and the block says so and offers the drop instead.
  */
-function askingFor(row: SettledRow): Asking | null {
-  const prompt = reask(row)
+function isSpellChoice(row: SettledRow): boolean {
+  return row.stage === 'spells' || row.stage === 'cantrips'
+}
+
+function askingFor(row: SettledRow, reposed: Reposed | null): Asking | null {
+  const prompt = reask(row) ?? (reposed?.seq === row.seq ? reposed.prompt : null)
   return prompt === null ? null : { prompt, replaces: row }
 }
 
@@ -801,32 +1036,37 @@ function title(view: BuildView): string {
 /**
  * The first category with something required still open.
  *
- * Optional prompts do not count. A finished character always has one -- the
- * offer of another level -- so counting them would mean no character was ever
- * anywhere but wherever that offer lives.
+ * Optional prompts do not count. A finished character always has some -- a
+ * custom spell is on offer to everybody -- so counting them would open Edit
+ * on wherever that offer lives. With nothing required it opens the first tab.
  */
 function firstUnfinished(prompts: readonly Prompt[]): Stage {
   const required = new Set(
-    prompts.filter((p) => !p.optional).flatMap((p) => [stageOf(p.group)].filter(isStage)),
+    prompts.filter((p) => !p.optional).flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)),
   )
-  const any = new Set(prompts.flatMap((p) => [stageOf(p.group)].filter(isStage)))
-  return STAGES.find((s) => required.has(s)) ?? STAGES.find((s) => any.has(s)) ?? 'identity'
+  return STAGES.find((s) => required.has(s)) ?? 'rules'
 }
 
 /**
  * The next category with something still open, wrapping round.
  *
- * Required questions first, and anything at all only if none is left: a
- * finished character always has an optional prompt somewhere, and a Next that
- * walked to it would never let anybody stop.
+ * Follow display order, including optional questions such as Personality.
+ * Only wrap to an earlier tab for required work that is still outstanding.
+ *
+ * The offer of a custom spell does not count: the server makes it to every
+ * character for ever, so following it walked a fighter through Cantrips and
+ * Spells on the way to anything else.
  */
 function stageAfter(stage: Stage, prompts: readonly Prompt[]): Stage | null {
-  const groups = (only: (p: Prompt) => boolean) =>
-    new Set(prompts.filter(only).flatMap((p) => [stageOf(p.group)].filter(isStage)))
+  const all = new Set(prompts.filter((p) => p.purpose !== 'custom').flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
+  const required = new Set(prompts.filter((p) => !p.optional)
+    .flatMap((p) => [stageOf(p.group, p.choice.kind, p.choice.prompt, p.purpose)].filter(isStage)))
+  // Someone who entered a name before choosing rules should see Rules next.
+  if (stage === 'personal' && required.has('rules')) return 'rules'
   const from = STAGES.indexOf(stage)
-  const order = [...STAGES.slice(from + 1), ...STAGES.slice(0, from)]
-  const required = groups((p) => !p.optional)
-  return order.find((s) => required.has(s)) ?? order.find((s) => groups(() => true).has(s)) ?? null
+  return STAGES.slice(from + 1).find((s) => all.has(s))
+    ?? STAGES.slice(0, from).find((s) => required.has(s))
+    ?? null
 }
 
 function isStage(stage: Stage | null): stage is Stage {
@@ -898,7 +1138,7 @@ function inputPrompt(input: (typeof INPUTS)[number], stage: Stage): Prompt {
           ? { kind: 'explicit' }
           : { kind: 'collection', collection: input.collection },
     },
-    group: stage,
+    group: stage === 'personal' || stage === 'rules' ? 'identity' : stage,
     optional: false,
       event: { type: 'change' },
     heldOnly: false,
@@ -1037,7 +1277,9 @@ function maybeLines(row: SettledRow | null): { lines?: readonly string[] } {
 function initEventFor(name: string): CharacterEvent {
   return {
     type: 'init',
-    changes: [{ path: 'identity.name', op: 'set', value: { kind: 'string', string: name } }],
+    changes: [
+      { path: 'identity.name', op: 'set', value: { kind: 'string', string: name } },
+    ],
   }
 }
 

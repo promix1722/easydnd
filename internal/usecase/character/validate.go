@@ -3,11 +3,13 @@ package character
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/types"
+	"github.com/promix1722/easydnd/internal/usecase/portrait"
 )
 
 // validateAndAttribute checks a batch of events against what the character
@@ -23,7 +25,7 @@ import (
 // the prompts open before the event. Splitting them would mean projecting the
 // log twice per event to reach the same answer, and would leave two places
 // where "which prompt is this?" is decided.
-func validateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.Event) error {
+func ValidateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.Event) error {
 	working := domain.Log{Events: slices.Clone(log.Events)}
 
 	for i := range events {
@@ -39,7 +41,7 @@ func validateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.
 			return err
 		}
 	}
-	return nil
+	return domain.ValidateSpellLimits(working, cat)
 }
 
 // validateEvent checks one event against the prompts open once its structural
@@ -62,18 +64,21 @@ func validateAndAttribute(log domain.Log, cat *catalog.Catalog, events []domain.
 func validateEvent(
 	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event, index int,
 ) error {
+	if event.Observed && !observedAssociation(log, cat, event) {
+		return types.NewValidationError("observed choice has a different parent")
+	}
 	if requiredRef(event) {
 		if err := validateRef(cat, event, index); err != nil {
 			return err
 		}
-		if _, ok := answersAnOpenPrompt(open, event); !ok {
+		if _, ok := answersAnOpenPrompt(open, event); !ok && !event.Observed {
 			return types.NewFieldValidationError("some answers are not valid", types.FieldError{
 				Field: fmt.Sprintf("events[%d].ref", index), Rule: "not-offered",
 				Reason: "field.answer.notAsked",
 			})
 		}
 	}
-	fields := validateChanges(cat, event, index)
+	fields := append(oneSelection(open, event, index), ValidateChanges(cat, event, index)...)
 
 	_, lost, err := surviving(log, cat, event, index)
 	if err != nil {
@@ -89,6 +94,51 @@ func validateEvent(
 		return types.NewFieldValidationError("some answers are not valid", fields...)
 	}
 	return nil
+}
+
+// oneSelection holds an entry to one selection: the rule the log is built on,
+// enforced rather than hoped for.
+//
+// "One entry per selection" is why a player can point at any decision and
+// change it, and why a build screen can draw a log at all -- a box is one
+// entry, and it belongs to one tab. An entry that picks a class *and* answers
+// that class's skills and three of its kit slots is five decisions nobody can
+// take apart: the editor drew it as one box under Class, and the tabs its
+// other answers belonged to were simply missing. Nothing refused such an
+// entry, so the development seeds wrote them for months.
+//
+// Two shapes are wrong, and both are refused here, for every writer:
+//
+//   - an entry that *selects* something -- a race, a class, a subclass, a
+//     background: an answer to "which one?" -- and also carries answers. What
+//     the selection opens is asked next, and answered in entries of its own;
+//   - an entry whose answers belong to more than one question. A branch and
+//     the picks made inside it are one question -- the improvement's "two
+//     scores" and which two -- so an answer whose prompt is nested under the
+//     first one's travels with it. Anything else is a second question.
+func oneSelection(open []domain.Prompt, event domain.Event, index int) []types.FieldError {
+	if len(event.Choices) == 0 {
+		return nil
+	}
+	refuse := func(prompt rules.Slug) types.FieldError {
+		return types.FieldError{
+			Field: fmt.Sprintf("events[%d].choices.%s", index, prompt), Rule: "one-selection",
+			Reason: "field.answer.oneSelection",
+		}
+	}
+	var fields []types.FieldError
+	// A prompt that names no entry of its own is asking which entry: the
+	// event answering it is the selection, and is the whole of the entry.
+	if asked, ok := answersAnOpenPrompt(open, event); ok && requiredRef(event) && asked.Event.Ref.IsZero() {
+		fields = append(fields, refuse(event.Choices[0].Prompt))
+	}
+	root := string(event.Choices[0].Prompt) + "/"
+	for _, answer := range event.Choices[1:] {
+		if !strings.HasPrefix(string(answer.Prompt), root) {
+			fields = append(fields, refuse(answer.Prompt))
+		}
+	}
+	return fields
 }
 
 // answerLoss is one answer that did not survive, and why.
@@ -233,6 +283,9 @@ func offers(from rules.OptionSet, ref rules.Ref) bool {
 func sourceOf(
 	log domain.Log, cat *catalog.Catalog, open []domain.Prompt, event domain.Event,
 ) domain.PromptGroup {
+	if event.Observed {
+		return ObservedGroup(event.Type, firstChangePath(event))
+	}
 	if event.Type == domain.EventInit {
 		return domain.GroupIdentity
 	}
@@ -285,7 +338,7 @@ func closedGroup(
 func requiredRef(event domain.Event) bool {
 	switch event.Type {
 	case domain.EventRace, domain.EventSubrace, domain.EventBackground,
-		domain.EventClass, domain.EventSubclass, domain.EventLevel, domain.EventFeat:
+		domain.EventClass, domain.EventSubclass, domain.EventLevel, domain.EventFeat, domain.EventRule:
 		return true
 	}
 	return false
@@ -311,6 +364,13 @@ func validateRef(cat *catalog.Catalog, event domain.Event, index int) error {
 
 func exists(cat *catalog.Catalog, ref rules.Ref) bool {
 	switch ref.Kind {
+	case rules.RefRule:
+		for _, r := range cat.Mechanics.Rules {
+			if r.ID == ref.Slug {
+				return true
+			}
+		}
+		return false
 	case rules.RefRace:
 		return cat.Races.Has(ref.Slug)
 	case rules.RefSubrace:
@@ -355,12 +415,18 @@ const (
 // and the ruleset must be the compendium's own -- which is what makes the
 // rules selection final: the only value a change can ever set is the one
 // already in effect.
-func validateChanges(cat *catalog.Catalog, event domain.Event, index int) []types.FieldError {
+func ValidateChanges(cat *catalog.Catalog, event domain.Event, index int) []types.FieldError {
 	var fields []types.FieldError
 	for i, change := range event.Changes {
+		if change.Path == "identity.image" {
+			if change.Op != domain.OpSet || change.Value.Kind != domain.ValueString || !portrait.Valid(change.Value.Str) {
+				fields = append(fields, portrait.FieldError())
+			}
+			continue
+		}
 		if change.Path == "identity.desiredLevel" {
 			if change.Value.Kind == domain.ValueInt &&
-				(change.Value.Int < 1 || change.Value.Int > domain.MaxCharacterLevel) {
+				(change.Value.Int < 1 || change.Value.Int > MaxLevel(cat)) {
 				fields = append(fields, types.FieldError{
 					Field:  fmt.Sprintf("events[%d].changes[%d].value", index, i),
 					Rule:   "range",
@@ -388,13 +454,22 @@ func validateChanges(cat *catalog.Catalog, event domain.Event, index int) []type
 		if len(segments) != 2 || segments[0] != "abilities" {
 			continue
 		}
-		if _, ok := rules.ParseAbility(segments[1]); !ok {
+		if segments[1] == "method" {
+			continue
+		}
+		ability, ok := rules.ParseAbility(segments[1])
+		if !ok || !slices.Contains(cat.AbilityIDs(), ability) {
+			fields = append(fields, types.FieldError{Field: fmt.Sprintf("events[%d].changes[%d].path", index, i), Rule: "unknown", Reason: "field.answer.notInCompendium"})
 			continue
 		}
 		if change.Op != domain.OpSet || change.Value.Kind != domain.ValueInt {
 			continue
 		}
-		if change.Value.Int < minScore || change.Value.Int > maxScore {
+		low, high := minScore, maxScore
+		if cat.Mechanics.Core.MaxScore > 0 {
+			low, high = cat.Mechanics.Core.MinScore, cat.Mechanics.Core.MaxScore
+		}
+		if change.Value.Int < low || change.Value.Int > high {
 			fields = append(fields, types.FieldError{
 				Field:  fmt.Sprintf("events[%d].changes[%d].value", index, i),
 				Rule:   "range",
@@ -408,6 +483,21 @@ func validateChanges(cat *catalog.Catalog, event domain.Event, index int) []type
 // validateAnswer checks one answer against the prompts currently open.
 func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []types.FieldError {
 	field := fmt.Sprintf("events[%d].choices.%s", index, answer.Prompt)
+
+	// The questions a character poses about itself are never answered by a
+	// pick. "Which race?" is answered by a race entry, an alignment by the
+	// change that sets it, and the projection reads each from there. A pick
+	// under one of those ids names a real option of a real open question, so
+	// everything below would accept it -- and it would settle nothing: the
+	// question stays open with an answer filed under it, for ever. That is
+	// what the AI Wizard wrote for an alignment, and the builder then drew a
+	// decided block and an undecided one under the same key.
+	if strings.HasPrefix(answer.Prompt.String(), selfPosed) {
+		return []types.FieldError{{
+			Field: field, Rule: "not-a-pick",
+			Reason: "field.answer.notAPick",
+		}}
+	}
 
 	prompt, found := findPrompt(open, answer.Prompt)
 	if !found {
@@ -429,11 +519,17 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 	legal := rules.OptionKeys(prompt.Choice.From)
 	seen := make(map[rules.Slug]bool, len(answer.Picks))
 	for _, pick := range answer.Picks {
+		// Every per-pick error names its pick. A prompt takes several, and
+		// "one of these is not an option" leaves the caller to guess which.
+		named := types.Args{"pick": pick.String()}
+		if slices.Contains(prompt.Blocked, pick) {
+			fields = append(fields, types.FieldError{Field: field, Rule: "not-held", Reason: "field.answer.requiresProficiency", Args: named})
+		}
 		// A set drawn from a collection has no inline options; the pick is
 		// the entry's own slug, and the reference check above covers it.
 		if legal != nil && !slices.Contains(legal, pick) {
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "option", Reason: "field.answer.notAnOption",
+				Field: field, Rule: "option", Reason: "field.answer.notAnOption", Args: named,
 			})
 			continue
 		}
@@ -447,7 +543,7 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 		// put both of theirs into one.
 		if seen[pick] && !prompt.Choice.Repeatable {
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "duplicate", Reason: "field.answer.duplicate",
+				Field: field, Rule: "duplicate", Reason: "field.answer.duplicate", Args: named,
 			})
 		}
 		seen[pick] = true
@@ -463,16 +559,21 @@ func validateAnswer(open []domain.Prompt, answer domain.Answer, index int) []typ
 		switch {
 		case prompt.HeldOnly && !held:
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "not-held", Reason: "field.answer.notProficient",
+				Field: field, Rule: "not-held", Reason: "field.answer.notProficient", Args: named,
 			})
 		case !prompt.HeldOnly && held:
 			fields = append(fields, types.FieldError{
-				Field: field, Rule: "held", Reason: "field.answer.alreadyHeld",
+				Field: field, Rule: "held", Reason: "field.answer.alreadyHeld", Args: named,
 			})
 		}
 	}
 	return fields
 }
+
+// selfPosed is the namespace of the questions the character asks about
+// itself, as against the ones a catalogue entry poses: see
+// domain.promptBuilder, which is the only thing that mints them.
+const selfPosed = "character/"
 
 func findPrompt(open []domain.Prompt, id rules.Slug) (domain.Prompt, bool) {
 	for _, p := range open {
@@ -481,4 +582,11 @@ func findPrompt(open []domain.Prompt, id rules.Slug) (domain.Prompt, bool) {
 		}
 	}
 	return domain.Prompt{}, false
+}
+
+func MaxLevel(cat *catalog.Catalog) int {
+	if cat.Mechanics.Core.MaxLevel > 0 {
+		return cat.Mechanics.Core.MaxLevel
+	}
+	return domain.MaxCharacterLevel
 }

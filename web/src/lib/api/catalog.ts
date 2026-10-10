@@ -1,5 +1,8 @@
+import type { Slot } from '@/domain'
+
 import { request } from './client'
 import { requestLocale } from './locale'
+import { bookSources } from '../bookSources'
 
 /**
  * The compendium.
@@ -9,7 +12,25 @@ import { requestLocale } from './locale'
  * and every option carries the key an answer names it by.
  */
 
+export interface Provenance {
+  packId: string
+  packTitle: string
+  version: string
+  digest: string
+  sources: { id: string; name: string }[]
+}
+export interface SourceOptions {
+  packs: { id: string; title: string; version: string; versions: string[] }[]
+  sources: { id: string; name: string; packId: string }[]
+}
+export interface SpellBrowseOptions extends SourceOptions {
+  schools: Entry[]
+  classes: Entry[]
+  unavailable: { id: string; version: string; reason: string }[]
+}
 export interface Entry {
+ manual?: boolean
+  provenance?: Provenance
   slug: string
   name: string
   desc?: string[]
@@ -72,6 +93,12 @@ export interface Choice {
    * two different scores.
    */
   repeatable?: boolean
+  /**
+   * What a starting-kit choice fills -- body, main-hand, off-hand, backup,
+   * pack, focus, instrument -- and so the card's title. The server writes it;
+   * the client never works out from the options what a question is about.
+   */
+  slot?: string
 }
 
 export interface CollectionInfo {
@@ -116,11 +143,15 @@ export interface Class extends Entry {
 }
 
 export interface Item extends Entry {
+  icon?: string
   category?: string
+  /** Where the item is worn or wielded; absent when it is only carried. */
+  slot?: Slot
   cost?: { amount: number; unit: string }
   weight?: number
-  armor?: { category?: string; baseAC: number }
-  weapon?: { category?: string; range?: string; damage?: { dice: string; type?: string } }
+  armor?: { category?: string; baseAC: number; addsDexBonus?: boolean; maxDexBonus?: number; strengthMinimum?: number; stealthDisadvantage?: boolean }
+  gear?: { gearCategory?: string; contents?: { item: string; count: number }[] }
+  weapon?: { category?: string; range?: string; damage?: { dice: string; type?: string }; normalRange?: number; longRange?: number; properties?: string[]; twoHandedDamage?: { dice: string; type?: string }; throwNormalRange?: number; throwLongRange?: number }
 }
 
 export interface Skill extends Entry {
@@ -172,6 +203,8 @@ export interface SpellComponents {
  * `level` is optional because the wire omits its zero value.
  */
 export interface Spell extends Entry {
+  icon?: string
+  catalogPacks?: string
   source?: string
   level: number
   school?: string
@@ -245,8 +278,22 @@ export function getManifest(): Promise<Manifest> {
   return cached(`manifest:${requestLocale()}`, () => request<Manifest>('/catalog'))
 }
 
-/** Fetches a whole collection, typed by the caller. */
-export function getCollection<T extends Entry>(collection: string): Promise<T[]> {
+export function catalogURL(collection: string, scope = ''): string {
+ const [base, query] = (scope || '/catalog').split('?')
+ return `${base}/${collection}${query ? `?${query}` : ''}`
+}
+function queryURL(path: string, query: string): string { return `${path}${path.includes('?') ? '&' : '?'}${query}` }
+
+/**
+ * Fetches a whole collection, typed by the caller.
+ *
+ * Not spells. Every spell carries its artwork, so the collection is megabytes
+ * and the server refuses to send it whole: name the spells (`getEntries`) or
+ * page through a search (`searchSpells`, `searchSpellOffer`), and ask
+ * `getSpellFilterOptions` what they can be filtered by.
+ */
+export function getCollection<T extends Entry>(collection: string, scope = ''): Promise<T[]> {
+  if (scope) return request<T[]>(catalogURL(collection, scope))
   return cached(`collection:${requestLocale()}:${collection}`, () =>
     request<T[]>(`/catalog/${collection}`),
   )
@@ -259,10 +306,16 @@ export function getCollection<T extends Entry>(collection: string): Promise<T[]>
  * would fill the map with near-duplicates. Callers wanting the whole thing
  * should ask for the whole thing.
  */
-export function getEntries<T extends Entry>(collection: string, slugs: string[]): Promise<T[]> {
+export function getEntries<T extends Entry>(collection: string, slugs: string[], scope = ''): Promise<T[]> {
   if (slugs.length === 0) return Promise.resolve([])
-  const query = encodeURIComponent(slugs.join(','))
-  return request<T[]>(`/catalog/${collection}?slugs=${query}`)
+  // High-level Magical Secrets can offer all 319 SRD spells. Keep each
+  // request below the server's 200-slug bound and ordinary URL size limits.
+  const chunks: string[][] = []
+  for (let start = 0; start < slugs.length; start += 100) chunks.push(slugs.slice(start, start + 100))
+  return Promise.all(chunks.map((chunk) => {
+    const query = encodeURIComponent(chunk.join(','))
+    return request<T[]>(queryURL(catalogURL(collection, scope), `slugs=${query}`))
+  })).then((loaded) => loaded.flat())
 }
 
 /** Indexes a collection by slug, for the lookups a sheet does constantly. */
@@ -272,6 +325,9 @@ export function bySlug<T extends Entry>(entries: T[]): Map<string, T> {
 
 /** One search over the spells collection. Every field optional; see search.go. */
 export interface SpellSearch {
+  pack?: string
+  source?: string
+  versions?: string
   q?: string
   level?: number
   school?: string
@@ -297,10 +353,80 @@ export interface SpellPage {
  * send `limit` -- otherwise the same route serves the bare array
  * `getCollection` expects.
  */
-export function searchSpells(search: SpellSearch, signal?: AbortSignal): Promise<SpellPage> {
+export function searchSpells(search: SpellSearch, signal?: AbortSignal, scope = ''): Promise<SpellPage> {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(search)) {
     if (value !== undefined && value !== '') params.set(key, String(value))
   }
-  return request<SpellPage>(`/catalog/spells?${params.toString()}`, signal ? { signal } : {})
+  return request<SpellPage>(queryURL(scope === 'browse' ? '/packs/spells' : catalogURL('spells', scope), params.toString()), signal ? { signal } : {})
+}
+
+/** One row of an items search: enough to pick by. The sheet asks for the rest once it is owned. */
+export interface ItemHit {
+  icon?: string
+  slug: string
+  name: string
+  category?: string
+  magic?: boolean
+}
+
+export interface ItemPage {
+  items: ItemHit[]
+  total: number
+}
+
+/**
+ * Searches equipment and magic items together by name, a page at a time.
+ *
+ * Like spells, `items` is never served whole: the one screen that reads it is
+ * the sheet's Add item picker, and a picker needs a page, not a download.
+ */
+export function searchItems(q: string, limit: number, offset: number, signal?: AbortSignal, scope = ''): Promise<ItemPage> {
+  const params = new URLSearchParams({ q, limit: String(limit), offset: String(offset) })
+  return request<ItemPage>(queryURL(catalogURL('items', scope), params.toString()), signal ? { signal } : {})
+}
+
+/**
+ * What a catalogue's spells can be filtered by: packs, books, schools and
+ * classes. Its own small request, so that nothing downloads the spells to
+ * find out.
+ */
+export const getSpellFilterOptions = (scope = '') => request<Omit<SpellBrowseOptions, 'unavailable'>>(catalogURL('spell-filters', scope))
+
+/** The spells of some levels on some classes' lists; no classes is every list. */
+export interface SpellLevels { minLevel: number; maxLevel: number; classes?: string[] }
+
+/**
+ * A search over an offer: the spells one character may pick, named or
+ * described, minus what is already chosen. See search.go's SpellSearch.
+ */
+export interface SpellOfferSearch extends Omit<SpellSearch, 'pack' | 'source' | 'versions'> {
+  packs?: string[]
+  sources?: string[]
+  only?: { slugs: string[]; fitting: SpellLevels[] }
+  exclude?: string[]
+  limit: number
+}
+
+/**
+ * Pages through an offer server-side. A POST because the offer may name every
+ * spell in the rules, which no URL holds; it changes nothing.
+ */
+export function searchSpellOffer(search: SpellOfferSearch, signal?: AbortSignal, scope = ''): Promise<SpellPage> {
+  const [base, query] = catalogURL('spells', scope).split('?')
+  return request<SpellPage>(`${base}/search${query ? `?${query}` : ''}`, { method: 'POST', body: search, ...(signal ? { signal } : {}) })
+}
+
+export const getSpellBrowseOptions = (versions = '') => request<SpellBrowseOptions>(`/packs/spell-filters?versions=${encodeURIComponent(versions)}`)
+
+export function sourceOptions(entries: readonly Entry[]): SourceOptions {
+ const packs = new Map<string, SourceOptions['packs'][number]>()
+ const sources = new Map<string, SourceOptions['sources'][number]>()
+ for (const entry of entries) {
+  const p = entry.provenance
+  if (!p) continue
+  packs.set(p.packId, { id: p.packId, title: p.packTitle, version: p.version, versions: [p.version] })
+  for (const s of bookSources(p)) sources.set(s.id, { ...s, packId: p.packId })
+ }
+ return { packs: [...packs.values()], sources: [...sources.values()] }
 }

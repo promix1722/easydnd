@@ -90,6 +90,79 @@ func everyChoice(c *catalog.Catalog, visit func(rules.Choice)) {
 	}
 }
 
+// A class kit is asked slot by slot, and the slot is the whole of what the
+// builder titles the card by -- so every kit choice must carry one the client
+// has a caption for, under the prompt id it names.
+func TestClassKitsAreAskedBySlot(t *testing.T) {
+	c := load(t, rules.LocaleEN)
+	known := map[rules.Slug]bool{"body": true, "main-hand": true, "off-hand": true, "backup": true, "pack": true, "focus": true, "instrument": true}
+	for _, cl := range c.Classes.All() {
+		if len(cl.StartingEquipmentOptions) == 0 {
+			t.Errorf("%s has no starting kit", cl.Slug)
+		}
+		for _, ch := range cl.StartingEquipmentOptions {
+			if !known[ch.Slot] {
+				t.Errorf("%s: slot %q is not one the builder can title", ch.Prompt, ch.Slot)
+			}
+			if want := cl.Slug + "/starting-equipment/" + ch.Slot; ch.Prompt != want {
+				t.Errorf("prompt %q, want %q", ch.Prompt, want)
+			}
+		}
+	}
+}
+
+func TestStartingEquipmentOptionsContainOneEquipmentType(t *testing.T) {
+	c := load(t, rules.LocaleEN)
+	var choices []rules.Choice
+	for _, class := range c.Classes.All() {
+		choices = append(choices, class.StartingEquipmentOptions...)
+	}
+	for _, background := range c.Backgrounds.All() {
+		choices = append(choices, background.StartingEquipmentOptions...)
+	}
+	for _, choice := range choices {
+		choice = c.ResolveChoice(choice)
+		for _, option := range choice.From.Options {
+			items := []rules.Option{option}
+			if bundle, ok := option.(rules.BundleOption); ok {
+				items = bundle.Items
+			}
+			primary := 0
+			for _, component := range items {
+				ref, ok := component.(rules.RefOption)
+				if !ok || ref.Ref.Kind != rules.RefItem {
+					t.Fatalf("%s: unexpected kit component %T", choice.Prompt, component)
+				}
+				item, ok := c.Items.Get(ref.Ref.Slug)
+				if !ok {
+					t.Fatalf("%s: unknown item %s", choice.Prompt, ref.Ref.Slug)
+				}
+				if item.Gear != nil && item.Gear.GearCategory == "ammunition" || item.Slug == "quiver" {
+					continue
+				}
+				primary++
+				var want catalog.Slot
+				switch choice.Slot {
+				case "body":
+					want = catalog.SlotBody
+				case "main-hand":
+					want = catalog.SlotMainHand
+				case "off-hand":
+					want = catalog.SlotOffHand
+				default:
+					continue
+				}
+				if ref.Count != 1 || item.Slot != want && !(want == catalog.SlotOffHand && item.Slot == catalog.SlotMainHand) {
+					t.Errorf("%s: %s ×%d does not fill exactly one %s slot", choice.Prompt, item.Slug, ref.Count, choice.Slot)
+				}
+			}
+			if primary != 1 {
+				t.Errorf("%s option %s contains %d equipment types, want one", choice.Prompt, rules.OptionKey(option), primary)
+			}
+		}
+	}
+}
+
 // OptionKey is only useful if it is total and injective over the real data:
 // total because an option with no key is an option a player cannot pick, and
 // injective within a prompt because two options sharing a key means an answer
@@ -141,16 +214,16 @@ func TestRogueBundleAndNestedPromptsAreAnswerable(t *testing.T) {
 	}
 	var kit rules.Choice
 	for _, ch := range rogue.StartingEquipmentOptions {
-		if ch.Prompt == "rogue/starting-equipment/1" {
+		if ch.Prompt == "rogue/starting-equipment/backup" {
 			kit = ch
 		}
 	}
 	if kit.Prompt.IsZero() {
-		t.Fatal("rogue/starting-equipment/1 not found")
+		t.Fatal("rogue/starting-equipment/backup not found")
 	}
 	keys := rules.OptionKeys(kit.From)
 	if len(keys) == 0 {
-		t.Fatal("rogue/starting-equipment/1 has no option keys")
+		t.Fatal("rogue/starting-equipment/backup has no option keys")
 	}
 	// The shortbow-and-arrows bundle has no slug of its own, so it is named
 	// by what is in it.
@@ -207,8 +280,8 @@ func TestPromptIDsAreGloballyUnique(t *testing.T) {
 		}
 		seen[choice.Prompt] = true
 	})
-	if total < 127 {
-		t.Fatalf("walked %d prompts, expected at least the 127 the compendium poses", total)
+	if total < 112 {
+		t.Fatalf("walked %d prompts, expected at least the 112 the compendium poses", total)
 	}
 	t.Logf("checked %d prompt ids", total)
 }

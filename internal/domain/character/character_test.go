@@ -11,14 +11,16 @@ import (
 func TestRogueLogValidates(t *testing.T) {
 	log := domain.RogueLog(t)
 
-	if log.Len() != 8 {
-		t.Fatalf("log length = %d, want 8", log.Len())
+	// Eight literals in the fixture, thirteen entries in the log: the ones
+	// that answer several questions are stored one question to an entry.
+	if log.Len() != 13 {
+		t.Fatalf("log length = %d, want 13", log.Len())
 	}
 	if err := log.Validate(); err != nil {
 		t.Errorf("Validate() error = %v, want nil", err)
 	}
-	if log.LastSeq() != 8 {
-		t.Errorf("LastSeq() = %d, want 8", log.LastSeq())
+	if log.LastSeq() != 13 {
+		t.Errorf("LastSeq() = %d, want 13", log.LastSeq())
 	}
 	for i, e := range log.Events {
 		if e.Seq != i+1 {
@@ -160,5 +162,34 @@ func TestAbilitiesDefaultToTen(t *testing.T) {
 	// -5 modifier to every ability the character has not rolled yet.
 	if got := a.Score(rules.Strength); got != 10 {
 		t.Errorf("Score(STR) = %d, want 10", got)
+	}
+}
+
+// A log holds one question to an entry, for every writer: an entry answering
+// two unrelated prompts is refused by the log itself, while a branch and the
+// picks made inside it travel together.
+func TestALogRefusesAnEntryThatAnswersTwoQuestions(t *testing.T) {
+	var log domain.Log
+	rogue := rules.NewRef(rules.RefClass, "rogue")
+	err := log.Append(domain.Event{Type: domain.EventInit}, domain.Event{Type: domain.EventClass, Ref: rogue, Level: 1, Choices: []domain.Answer{
+		{Prompt: "rogue/proficiency/0", Picks: []rules.Slug{"skill-stealth"}},
+		{Prompt: "rogue/starting-equipment/main-hand", Picks: []rules.Slug{"rapier"}},
+	}})
+	if err == nil {
+		err = log.Validate()
+	}
+	if err == nil {
+		t.Fatal("a log accepted one entry answering two questions")
+	}
+
+	var nested domain.Log
+	if err := nested.Append(domain.Event{Type: domain.EventInit}, domain.Event{Type: domain.EventLevel, Ref: rogue, Level: 4, Choices: []domain.Answer{
+		{Prompt: "rogue/ability-score-improvement/4", Picks: []rules.Slug{"rogue/ability-score-improvement/4/0"}},
+		{Prompt: "rogue/ability-score-improvement/4/0", Picks: []rules.Slug{"dex", "dex"}},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := nested.Validate(); err != nil {
+		t.Fatalf("a branch and its picks were refused: %v", err)
 	}
 }

@@ -15,7 +15,7 @@ export { Accordion, AppShell, Burger, NavLink, Tabs } from '@mantine/core'
 // Its own package, and the one component here that is not core's. Re-exported
 // plainly as well as wrapped: a carousel's two renderings are the same markup --
 // the same slides, a narrower viewport -- so `routes/LandingPage.tsx` draws one
-// directly. `SectionDeck` wraps it for the other reason a primitive exists here,
+// directly. `TabDeck` wraps it for the other reason a primitive exists here,
 // which is that its *desktop* rendering is not a carousel at all.
 // `Carousel.Slide` rides along as a static member.
 export { Carousel } from '@mantine/carousel'
@@ -45,6 +45,7 @@ export {
   IconLanguage,
   IconLogout,
   IconPencil,
+  IconPaperclip,
   IconPlus,
   IconShield,
   IconTrash,
@@ -63,6 +64,8 @@ export {
   Card,
   Center,
   Checkbox,
+  Grid,
+  MultiSelect,
   Code,
   Divider,
   Group,
@@ -88,6 +91,7 @@ export {
   ActionIcon,
   Button,
   FileInput,
+  FileButton,
   // Per-row actions -- a roster's members, a character list's rows. The
   // alternative is four buttons in every row, which DataList's mobile card
   // rendering cannot lay out legibly.
@@ -127,6 +131,8 @@ export type { ModalSheetProps } from './ModalSheet'
 export { UpdateGate } from './UpdateGate'
 export { UpdateRequired } from './UpdateRequired'
 export type { UpdateRequiredProps } from './UpdateRequired'
+export { Pips } from './Pips'
+export type { PipsProps } from './Pips'
 export { ProficiencyMark } from './ProficiencyMark'
 export type { ProficiencyLevel, ProficiencyMarkProps } from './ProficiencyMark'
 export { Page, PageBody } from './Page'
@@ -136,8 +142,6 @@ export type { PageState } from './pageState'
 export { NO_SWIPE } from './swipe'
 export { SECTIONS, sectionFor } from './sections'
 export type { Section } from './sections'
-export { SectionDeck } from './SectionDeck'
-export type { DeckSection, SectionDeckProps } from './SectionDeck'
 export { TabDeck } from './TabDeck'
 export type { DeckPanel, TabDeckProps } from './TabDeck'
 export { TabRow } from './TabRow'
@@ -157,3 +161,19 @@ export { CHROME_INSET, CONTENT_MAX_WIDTH, ROW_HEIGHT, TOUCH_TARGET } from '@/the
 // Theme + provider, so main.tsx never imports Mantine either.
 export { AppTheme } from './AppTheme'
 export { theme } from './theme'
+export { Markdown } from './Markdown'
+export { joinProse } from './prose'
+export { ChoiceDetails } from './ChoiceDetails'
+
+export { DevAccounts } from './DevAccounts'
+
+export { SourceTags } from './SourceTags'
+export { SummaryMultiSelect } from './SummaryMultiSelect'
+export { sourceAbbreviation } from './sourceAbbreviation'
+
+export { Avatar } from './Avatar'
+export { ITEM_ICON_SIZE, ItemIcon } from './ItemIcon'
+
+export { AvatarEditor } from './AvatarEditor'
+
+export { AVATAR_CLASSES, AVATAR_RANDOM, characterAvatar, playerAvatar } from './avatarDefaults'

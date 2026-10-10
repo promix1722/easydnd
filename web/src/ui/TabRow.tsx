@@ -1,4 +1,4 @@
-import { ScrollArea, Tabs } from '@mantine/core'
+import { Paper, ScrollArea, Tabs } from '@mantine/core'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
@@ -11,6 +11,11 @@ export interface TabRowProps {
   tabs: readonly TabRowTab[]
   value: string
   onChange: (value: string) => void
+  /**
+   * Draws the strip on a surface of its own, for a row that sits straight on
+   * the page's backdrop rather than inside a `Panel`.
+   */
+  bar?: boolean
   /** The active tab's contents. */
   children?: ReactNode
 }
@@ -32,7 +37,7 @@ export interface TabRowProps {
  * the way `ColumnsSection`'s `aside` did; see docs/web.md.
  *
  * It is a responsive primitive whose **two renderings are the same markup**.
- * `ModalSheet`, `Columns`, `SectionDeck` and `TabDeck` genuinely swap components at the
+ * `ModalSheet`, `Columns` and `TabDeck` genuinely swap components at the
  * breakpoint; this one does not need to. A `ScrollArea type="never"` is inert
  * at a width the content fits in, so the desktop rendering is the mobile one
  * with nothing to scroll -- which means there is no second tree to keep
@@ -70,11 +75,20 @@ export interface TabRowProps {
  *
  * That measurement is the one thing here the suite cannot press. jsdom computes
  * no layout, so `scrollWidth` and `clientWidth` are both 0 and the mask is
- * always absent -- the same bargain `SectionDeck.test.tsx` records about which
+ * always absent -- the same bargain `TabDeck.test.tsx` records about which
  * slide is showing. What the tests do hold is that the absence is identical at
  * both viewports.
+ *
+ * **`bar` is for a strip with no sheet under it.** The page's ground is a
+ * tiled drawing -- see `ui/backdrop.ts` -- and tab captions laid straight on
+ * it are words over doodles with a hairline for company. Build and Group never
+ * showed that, because their rows happen to sit inside a `Panel`; the
+ * character sheet's row is the page's own, so it brings its surface with it:
+ * the same bordered `Paper` a `Panel` is, with the list's grey rule dropped
+ * because the bar's border already draws that line. It is a flag rather than
+ * the default because a bar inside a `Panel` is a box in a box.
  */
-export function TabRow({ tabs, value, onChange, children }: TabRowProps) {
+export function TabRow({ tabs, value, onChange, bar = false, children }: TabRowProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef(new Map<string, HTMLButtonElement>())
   const [edges, setEdges] = useState<Edges>(NO_EDGES)
@@ -133,42 +147,48 @@ export function TabRow({ tabs, value, onChange, children }: TabRowProps) {
     // this would then run on every render and yank a finger's scroll back.
   }, [value, tabs.length, measure])
 
+  const strip = (
+    <ScrollArea
+      type="never"
+      viewportRef={viewportRef}
+      onScrollPositionChange={measure}
+      style={{ minWidth: 0, ...maskFor(edges) }}
+    >
+      {/*
+        `max-content`, because the rule under the tabs is the list's own and a
+        list is otherwise as wide as the box it is in. Inside a scroller that
+        is the *viewport* -- 369px against 657px of tabs -- so the tabs
+        overflowed their own list and the underline stopped a third of the way
+        along, which from a scrolled position reads as a stray dash beside the
+        first tab you can see.
+      */}
+      <Tabs.List style={{ flexWrap: 'nowrap', width: 'max-content' }}>
+        {tabs.map((tab) => (
+          <Tabs.Tab
+            key={tab.value}
+            value={tab.value}
+            ref={(element: HTMLButtonElement | null) => {
+              if (element === null) tabRefs.current.delete(tab.value)
+              else tabRefs.current.set(tab.value, element)
+            }}
+          >
+            {tab.label}
+          </Tabs.Tab>
+        ))}
+      </Tabs.List>
+    </ScrollArea>
+  )
+
   return (
     <Tabs
       value={value}
       onChange={(next) => {
         if (next !== null) onChange(next)
       }}
+      // Mantine draws the list's rule in this colour; see `bar` above.
+      {...(bar ? { style: { '--tab-border-color': 'transparent' } as CSSProperties } : {})}
     >
-      <ScrollArea
-        type="never"
-        viewportRef={viewportRef}
-        onScrollPositionChange={measure}
-        style={{ minWidth: 0, ...maskFor(edges) }}
-      >
-        {/*
-          `max-content`, because the rule under the tabs is the list's own and a
-          list is otherwise as wide as the box it is in. Inside a scroller that
-          is the *viewport* -- 369px against 657px of tabs -- so the tabs
-          overflowed their own list and the underline stopped a third of the way
-          along, which from a scrolled position reads as a stray dash beside the
-          first tab you can see.
-        */}
-        <Tabs.List style={{ flexWrap: 'nowrap', width: 'max-content' }}>
-          {tabs.map((tab) => (
-            <Tabs.Tab
-              key={tab.value}
-              value={tab.value}
-              ref={(element: HTMLButtonElement | null) => {
-                if (element === null) tabRefs.current.delete(tab.value)
-                else tabRefs.current.set(tab.value, element)
-              }}
-            >
-              {tab.label}
-            </Tabs.Tab>
-          ))}
-        </Tabs.List>
-      </ScrollArea>
+      {bar ? <Paper withBorder radius="md" px="xs">{strip}</Paper> : strip}
 
       <Tabs.Panel value={value} pt="md">
         {children}

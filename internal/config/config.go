@@ -41,20 +41,24 @@ const (
 const GoogleRedirectPath = "/v1/auth/sso/google/callback"
 
 // Config is the fully resolved runtime configuration.
+type AgentConfig struct {
+	APIKey, Model, ReasoningEffort string
+	Workers, MaxTurns, MaxSessions int
+	RequestTimeout                 time.Duration
+}
+
 type Config struct {
-	Env  string
-	HTTP HTTPConfig
-	Auth AuthConfig
-	Log  LogConfig
-	Data DataConfig
-	DB   DBConfig
+	Agent AgentConfig
+	Env   string
+	HTTP  HTTPConfig
+	Auth  AuthConfig
+	Log   LogConfig
+	Data  DataConfig
+	DB    DBConfig
 
 	// Source is the config file this was loaded from, logged at startup so the
 	// log stream answers "which config is this process running?".
 	Source string
-	// WorldReadable reports that Source is readable by every account on the
-	// host. It holds the session signing key, so the app warns about it.
-	WorldReadable bool
 }
 
 // DBConfig points at the Postgres instance holding accounts and passkeys.
@@ -90,7 +94,20 @@ type DataConfig struct {
 	// directory rather than an embedded blob so the data can be corrected
 	// without rebuilding the binary -- which also means deploy.sh must ship
 	// it alongside the binary.
-	SRDDir string
+	SRDDir    string
+	PackFiles []string
+	// PrivatePackFiles are restricted packs: installed, never a default root,
+	// and readable only by a superadmin and the groups one shares them with.
+	PrivatePackFiles []string
+	AutoloadPacks    []PackFolder
+	DefaultPacks     map[string]string
+	PackArchive      string
+}
+
+// PackFolder installs a public pack from a directory, optionally under a new ID.
+type PackFolder struct {
+	Path string `yaml:"path"`
+	ID   string `yaml:"id"`
 }
 
 // AuthConfig configures passkey sign-in.
@@ -108,6 +125,11 @@ type AuthConfig struct {
 	// SessionSecret signs the session and ceremony tokens. Rotating it is the
 	// only way to invalidate every outstanding session at once, because
 	// nothing server-side records that a session exists.
+	// Superadmins may read the restricted packs and grant them to a group.
+	// An entry is a verified Google email or an account id -- the second so a
+	// development account, which has no email, can be named too.
+	Superadmins []string
+
 	SessionSecret []byte
 	SessionTTL    time.Duration
 	// GuestSessionTTL bounds an anonymous session. Shorter than SessionTTL on
@@ -203,11 +225,19 @@ func Load(path string) (*Config, error) {
 		return nil, err
 	}
 
+	// The model sits in the committed config and the key arrives from the
+	// environment, so a model without a key is simply the feature left off.
+	if f.Agent.APIKey != "" && strings.TrimSpace(f.Agent.Model) == "" {
+		return nil, fmt.Errorf("agent.model is required when agent.api_key is set")
+	}
+	if f.Agent.Workers < 0 || f.Agent.Workers > 32 || f.Agent.MaxTurns < 0 || f.Agent.MaxTurns > 200 || f.Agent.MaxSessions < 0 || f.Agent.MaxSessions > 1000 {
+		return nil, fmt.Errorf("invalid agent limits")
+	}
 	cfg := &Config{
-		Env:           env,
-		Auth:          auth,
-		Source:        src.path,
-		WorldReadable: src.worldReadable,
+		Agent:  AgentConfig{APIKey: strings.TrimSpace(f.Agent.APIKey), Model: strings.TrimSpace(f.Agent.Model), ReasoningEffort: strings.TrimPrefix(p.str(strings.TrimSpace(f.Agent.ReasoningEffort), "low"), "default"), Workers: p.intVal(f.Agent.Workers, 4), MaxTurns: p.intVal(f.Agent.MaxTurns, 40), MaxSessions: p.intVal(f.Agent.MaxSessions, 100), RequestTimeout: p.duration("agent.request_timeout", f.Agent.RequestTimeout, 2*time.Minute)},
+		Env:    env,
+		Auth:   auth,
+		Source: src.path,
 		HTTP: HTTPConfig{
 			// Loopback on purpose: the reverse proxy terminates TLS and
 			// forwards here. Binding 0.0.0.0 would expose the API directly.
@@ -235,7 +265,10 @@ func Load(path string) (*Config, error) {
 		Data: DataConfig{
 			// Relative by default so `make run/server` works from the repo
 			// root; the deploy sets it to the release directory.
-			SRDDir: p.str(f.Data.SRDDir, "data/srd_5.1"),
+			SRDDir:    p.str(f.Data.SRDDir, "data/pack/srd-5.1"),
+			PackFiles: f.Data.PackFiles, DefaultPacks: f.Data.DefaultPacks, PackArchive: f.Data.PackArchive,
+			PrivatePackFiles: p.slice(f.Data.PrivatePackFiles, nil),
+			AutoloadPacks:    f.Data.AutoloadPacks,
 		},
 		DB: DBConfig{
 			URL:      p.str(f.DB.URL, ""),
@@ -264,6 +297,9 @@ func Load(path string) (*Config, error) {
 }
 
 func (c *Config) validate() error {
+	if c.Agent.RequestTimeout <= 0 || c.Agent.RequestTimeout > 10*time.Minute {
+		return fmt.Errorf("agent.request_timeout must be positive and at most 10m")
+	}
 	switch c.Env {
 	case EnvDevelopment, EnvProduction:
 	default:
@@ -288,6 +324,11 @@ func (c *Config) validate() error {
 	if c.Data.SRDDir == "" {
 		return fmt.Errorf("data.srd_dir must not be empty")
 	}
+	for i, folder := range c.Data.AutoloadPacks {
+		if strings.TrimSpace(folder.Path) == "" {
+			return fmt.Errorf("data.autoload_packs[%d].path must not be empty", i)
+		}
+	}
 
 	// The same shape as the auth.session_secret rule, and for the same reason:
 	// a production process that quietly forgot where accounts live is the exact
@@ -297,13 +338,13 @@ func (c *Config) validate() error {
 			"db.url is required in production; without it accounts live in memory " +
 				"and every restart destroys every registered passkey")
 	}
-	// A known-value password is worse than no password: deploy/config.example.yaml
+	// A known-value password is worse than no password: easydnd.example.env
 	// is published in this repository, so an operator who installed it and
 	// forgot to edit would be running production on credentials anyone can read.
 	// Rejected by name, exactly as the session secret is.
 	if c.DB.Enabled() && strings.Contains(c.DB.URL, placeholderDBPassword) {
 		return fmt.Errorf(
-			"db.url still contains the placeholder password from deploy/config.example.yaml")
+			"db.url still contains the placeholder password from easydnd.example.env")
 	}
 	if c.DB.Enabled() {
 		if c.DB.MaxConns < 1 {
@@ -337,6 +378,7 @@ func loadAuth(p *parser, f fileAuth, production bool) (AuthConfig, error) {
 		GuestSessionTTL: p.duration("auth.guest_session_ttl", f.GuestSessionTTL, 24*time.Hour),
 		CeremonyTTL:     p.duration("auth.ceremony_ttl", f.CeremonyTTL, 5*time.Minute),
 		SecureCookies:   production,
+		Superadmins:     p.slice(f.Superadmins, nil),
 	}
 
 	secret, err := sessionSecret(f.SessionSecret, production)
@@ -346,7 +388,7 @@ func loadAuth(p *parser, f fileAuth, production bool) (AuthConfig, error) {
 	cfg.SessionSecret = secret
 	cfg.EphemeralSecret = f.SessionSecret == ""
 
-	google, err := loadGoogle(p, f.Google, production)
+	google, err := loadGoogle(p, f.Google, cfg.RPOrigins[0])
 	if err != nil {
 		return AuthConfig{}, err
 	}
@@ -378,21 +420,21 @@ func loadAuth(p *parser, f fileAuth, production bool) (AuthConfig, error) {
 	return cfg, nil
 }
 
-// placeholderSecret is what deploy/config.example.yaml ships. It is 38 bytes of
+// placeholderSecret is what easydnd.example.env ships. It is 38 bytes of
 // non-base64 text, so it clears the length floor on its own -- meaning an
 // operator who installed the example and forgot to edit it would boot
 // production with a signing key published in this repository. Reject it by
 // name; a known-value key is worse than no key at all.
 const placeholderSecret = "REPLACE-ME-WITH-openssl-rand-base64-48"
 
-// placeholderDBPassword is what deploy/config.example.yaml ships in db.url.
+// placeholderDBPassword is what easydnd.example.env ships in db.url.
 // Same reasoning as placeholderSecret: a credential published in this
 // repository must never be able to reach production unedited.
 const placeholderDBPassword = "REPLACE-ME-WITH-THE-RDS-PASSWORD"
 
 // sessionSecret decodes auth.session_secret, or in development invents one.
 
-// placeholderGoogleSecret is what deploy/config.example.yaml would ship if the
+// placeholderGoogleSecret is what easydnd.example.env would ship if the
 // Google block were ever filled in. Same reasoning as the two above: a
 // credential published in this repository must not be able to reach production
 // unedited. It matters more here than it looks, because "configured" for this
@@ -408,16 +450,15 @@ const placeholderGoogleSecret = "REPLACE-ME-WITH-THE-GOOGLE-CLIENT-SECRET"
 // not have to supply credentials it will never use. What is an error is
 // supplying half of it -- a client id without its secret would pass startup and
 // then fail at the first click, which is the worst place to find out.
-func loadGoogle(p *parser, f fileGoogle, production bool) (GoogleConfig, error) {
-	defaultRedirect := "http://localhost:5173" + GoogleRedirectPath
-	if production {
-		defaultRedirect = "https://easydnd.org" + GoogleRedirectPath
-	}
-
+//
+// The redirect defaults to the callback on the first allowed origin: the
+// browser is sent back to the page it signed in from, which in development is
+// a different port for every worktree.
+func loadGoogle(p *parser, f fileGoogle, origin string) (GoogleConfig, error) {
 	cfg := GoogleConfig{
 		ClientID:     f.ClientID,
 		ClientSecret: f.ClientSecret,
-		RedirectURL:  p.str(f.RedirectURL, defaultRedirect),
+		RedirectURL:  p.str(f.RedirectURL, origin+GoogleRedirectPath),
 	}
 
 	if (cfg.ClientID == "") != (cfg.ClientSecret == "") {
@@ -464,7 +505,7 @@ func sessionSecret(raw string, production bool) ([]byte, error) {
 
 	if strings.Contains(raw, placeholderSecret) {
 		return nil, fmt.Errorf(
-			"auth.session_secret is still the placeholder from deploy/config.example.yaml; generate a real one with `openssl rand -base64 48`")
+			"auth.session_secret is still the placeholder from easydnd.example.env; generate a real one with `openssl rand -base64 48`")
 	}
 
 	secret, err := base64.StdEncoding.DecodeString(raw)

@@ -1,28 +1,36 @@
-import type { Sheet } from '@/lib/api'
+import { useState } from 'react'
+import type { ReactNode } from 'react'
+
+import { bySlug } from '@/lib/api'
+import type { Change, Item, Sheet } from '@/lib/api'
 import {
   Bullet,
   Card,
   Divider,
   Group,
+  Panel,
   ProficiencyMark,
-  SectionDeck,
   SimpleGrid,
   Stack,
+  TabDeck,
   Text,
-  useIsDesktop,
+  Title,
 } from '@/ui'
-import type { DeckSection } from '@/ui'
+import type { DeckPanel } from '@/ui'
 
-import type { Compendium } from './compendium'
 import { IdentityTable } from './IdentityTable'
 import { ProficienciesPanel } from './ProficienciesPanel'
+import { ResourcePools } from './ResourcePools'
+import { SheetActions } from './SheetActions'
+import { SheetEquipment, SheetItems } from './SheetEquipment'
 import { SkillsPanel } from './SkillsPanel'
 import { Vitals } from './Vitals'
+import { SheetSpells } from './SheetSpells'
 
 import { abilitiesInOrder, signed, titleCase } from '@/domain'
 import { useT } from '@/lib/i18n'
 
-import { abilityAbbr, abilityName, resourceName } from './labels'
+import { abilityAbbr, abilityName } from './labels'
 
 
 /**
@@ -30,180 +38,225 @@ import { abilityAbbr, abilityName, resourceName } from './labels'
  * looking at it.
  *
  * Its own component because two screens draw it: its owner's, and the one a
- * group member opens for a character shared with their table. The difference
- * between those two pages is entirely in what surrounds this -- the owner's
- * way in to the questions still open -- and none of it is inside. That is the
- * point: the table sees the same sheet the owner does, drawn by the same code,
- * so the two cannot drift into disagreeing about what the character is.
+ * group member opens for a character shared with their table. The table sees
+ * the same sheet the owner does, drawn by the same code, so the two cannot
+ * drift into disagreeing about what the character is. The one difference is
+ * `onEquipment`: only the owner's screen passes it, and without it nothing on
+ * the sheet can be pressed.
  *
- * The whole sheet is one list of sections now, handed to `ui/SectionDeck`. On a
- * wide screen that draws what it always drew: identity, the ability cards and
- * the vitals across the page, then the four panels two abreast. On a phone the
- * same seven become a deck -- a row of tabs under the character's name and one
- * section on screen, swiped between. Nothing there opens or closes any more.
- * The accordion it replaces asked a player to open a panel to read it, and let
- * them leave four open at once; a sheet is seven things you leaf between, not
- * one thing with six footnotes.
+ * The sheet is a handful of tabs at every width -- Overview, Actions, Spells,
+ * Resources, Equipment, Items -- handed to `ui/TabDeck`, which draws a tab row on a wide screen
+ * and the same row over a swiped deck on a phone. A handful rather than a tab per
+ * section: a sheet is read by what you are doing (looking someone up, taking a
+ * turn, casting, gearing up), not by which table of the rulebook a number is in.
  */
 export function SheetBody({
   sheet: s,
-  compendium,
+  onEquipment,
+  characterId,
+  onChanged,
+  pending = false,
 }: {
   sheet: Sheet
-  compendium: Compendium
+  /** Posts an inventory edit. Absent on a sheet that is only being read. */
+  onEquipment?: (changes: Change[]) => void
+  /** The character being edited; lets its owner prepare spells. Absent on a sheet only being read. */
+  characterId?: string
+  /** Called after the Spells tab wrote something, so the screen reloads the sheet. */
+  onChanged?: () => void
+  pending?: boolean
 }) {
-  const { names, skills, proficiencies } = compendium
+  // The sheet arrives with what its slugs mean: names in `catalogNames`, and
+  // in `catalog` the entries a panel reads more of. Nothing here asks the
+  // compendium for anything, and a sheet without them -- one a write echoed
+  // back -- draws title-cased slugs.
+  const catalog = s.catalog
+  const skills = catalog ? bySlug(catalog.skills) : null
+  const proficiencies = catalog ? bySlug(catalog.proficiencies ?? []) : null
+  const items = bySlug<Item>([...(catalog?.magicItems ?? []), ...(catalog?.equipment ?? [])])
+  const names = new Map(Object.entries(s.catalogNames ?? {}))
   const identity = s.identity
+  // A plain-number scaling value -- Extra Attacks: 1, Maneuvers: 3 -- is counted
+  // off at the table like any pool, so it is drawn as one: that many marks,
+  // spent in a game. A die, a fraction or a word has no number of uses and
+  // stays a line under Scaling values. The id is the one the game tracker
+  // spends it by.
+  const scaling = Object.entries(s.resources.parameters ?? {})
+  const countable = (value: (typeof scaling)[number][1]) =>
+    (value.number ?? 0) > 0 && !value.dice && !value.text && !value.rational && value.boolean === undefined
+  // Hit Dice are a vital, drawn there; everything else spendable is on Resources.
+  const pools = [
+    ...Object.values(s.resources.pools ?? {}).filter((pool) => pool.max > 0 && pool.group !== 'hit-dice')
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    ...scaling.filter(([, value]) => countable(value))
+      .map(([slug, value]) => ({ id: `scaling/${slug}`, name: value.name, group: 'scaling', max: value.number ?? 0, used: 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  ]
+  // What is left -- a die, a fraction, a word -- is not counted off, it is read:
+  // "Sneak Attack: 1d6". It is the size of a feature, so it is drawn with the
+  // features rather than in a box of its own.
+  const valued = new Map(scaling.map(([, value]) => value)
+    // A zero is a value the class has not reached yet -- Brutal Critical before
+    // ninth level -- and "0" on a sheet reads as a thing the character has.
+    .filter((value) => !countable(value) && value.boolean !== false && (value.number !== 0 || !!value.dice || !!value.text || !!value.rational || value.boolean === true))
+    .map((value) => {
+      const amount = value.dice || value.text || (value.rational ? `${value.rational.numerator}/${value.rational.denominator}` : value.boolean ? '' : String(value.number))
+      return [value.name, amount ? `${value.name}: ${amount}` : value.name] as const
+    }))
 
-  /*
-   * The one viewport question this file asks, and it is a question about
-   * reading order rather than about layout.
-   *
-   * On a wide screen the sheet opens with who the character is and then what
-   * everything about them is derived from, because there is room for both at
-   * once and that is the order a sheet is written in. On a phone the section is
-   * a slide you land on, and the first thing on it should be the thing reached
-   * for mid-turn: the six modifiers, not the background.
-   *
-   * Swapped in the document rather than with `column-reverse`, which would do
-   * it in CSS and leave the page saying one order and the screen showing
-   * another. Two static blocks would survive that; a habit of it does not.
-   */
   const t = useT()
-  const isDesktop = useIsDesktop()
+  const [tab, setTab] = useState('overview')
   const who = <IdentityTable identity={identity} names={names} />
   const abilities = <AbilityCards sheet={s} />
   const named = (collection: string, slug: string) =>
-    names?.get(`${collection}:${slug}`) ?? titleCase(slug)
+    names.get(`${collection}:${slug}`) ?? items.get(slug)?.name ?? titleCase(slug)
+  // A feature that has a value says it on its own line -- "Sneak Attack: 1d6"
+  // in place of "Sneak Attack" -- and a value no feature is named for follows them.
+  const featureNames = (s.features ?? []).map((slug) => named('features', slug))
+  const featureLines = [
+    ...featureNames.map((name) => valued.get(name) ?? name),
+    ...[...valued].filter(([name]) => !featureNames.includes(name)).map(([, line]) => line).sort(),
+  ]
+  const headed = (title: string, content: ReactNode) => (
+    <Panel>
+      <Stack gap="sm">
+        <Title order={4}>{title}</Title>
+        {content}
+      </Stack>
+    </Panel>
+  )
 
-  const sections: DeckSection[] = [
+  const panels: DeckPanel[] = [
     {
-      key: 'identity',
-      // One section rather than two, and the merge costs the wide screen
-      // nothing: a `full` section is drawn bare, so two of them stacked and one
-      // holding both are the same page. What it buys is the phone, where they
-      // were the two thinnest slides on the sheet -- eight one-word fields, and
-      // six cards -- and neither filled a screen on its own.
-      //
-      // Headed by nothing on a wide screen: the character's name is directly
-      // above it and a second heading would say it twice. The title is what
-      // names the tab on a phone, and `Main` is the one label here that names a
-      // place rather than its contents -- deliberately, because the section
-      // holds two things and a tab that named either would send a reader
-      // looking for the other one somewhere else.
-      title: t('sheet.main'),
-      desktop: 'full',
-      content: isDesktop ? (
-        <>
+      value: 'overview',
+      label: t('sheet.overview'),
+      content: (
+        <Stack gap="lg">
+          {/* Who the character is, then what everything about them is derived from: the order a sheet is written in, at every width. */}
           {who}
           {abilities}
-        </>
-      ) : (
-        <>
-          {abilities}
-          {who}
-        </>
-      ),
-    },
-    {
-      key: 'vitals',
-      title: t('sheet.vitals'),
-      desktop: 'full',
-      content: <Vitals sheet={s} />,
-    },
-    {
-      key: 'skills',
-      title: t('sheet.skills'),
-      desktop: 'panel',
-      content: <SkillsPanel skills={s.skills} catalog={skills} />,
-    },
-    {
-      key: 'proficiencies',
-      title: t('sheet.proficiencies'),
-      desktop: 'panel',
-      content: (
-        <ProficienciesPanel
-          proficiencies={s.proficiencies}
-          catalog={proficiencies}
-          proficiencyBonus={s.status.proficiencyBonus}
-        />
-      ),
-    },
-    {
-      key: 'traits',
-      title: t('sheet.traitsAndFeatures'),
-      desktop: 'panel',
-      content: (
-        <Stack gap="sm">
-          <ItemList
-            label={t('sheet.traits')}
-            items={(s.traits ?? []).map((slug) => named('traits', slug))}
-            empty={t('sheet.noTraits')}
-          />
-          <ItemList
-            label={t('sheet.features')}
-            items={(s.features ?? []).map((slug) => named('features', slug))}
-            empty={t('sheet.noFeatures')}
-          />
-          <ItemList
-            label={t('sheet.languages')}
-            items={(s.base.languages ?? []).map((slug) => named('languages', slug))}
-            empty={t('sheet.none')}
-          />
+          <Vitals sheet={s} />
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+            {headed(t('sheet.skills'), <SkillsPanel skills={s.skills} catalog={skills} />)}
+            {headed(t('sheet.proficiencies'), (
+              <ProficienciesPanel
+                proficiencies={s.proficiencies}
+                catalog={proficiencies}
+                proficiencyBonus={s.status.proficiencyBonus}
+              />
+            ))}
+            {headed(t('sheet.traitsAndFeatures'), (
+              <Stack gap="sm">
+                <ItemList
+                  label={t('sheet.traits')}
+                  items={(s.traits ?? []).map((slug) => named('traits', slug))}
+                  empty={t('sheet.noTraits')}
+                />
+                <ItemList
+                  label={t('sheet.features')}
+                  items={featureLines}
+                  empty={t('sheet.noFeatures')}
+                />
+                <ItemList
+                  label={t('sheet.languages')}
+                  items={(s.base.languages ?? []).map((slug) => named('languages', slug))}
+                  empty={t('sheet.none')}
+                />
+              </Stack>
+            ))}
+            {/* In the player's own words, so each answer is a line of prose rather than a list entry. */}
+            {headed(t('stage.personality'), (
+              <Stack gap="sm">
+                {([
+                  [t('written.personalityTrait'), identity.personalityTraits],
+                  [t('written.ideal'), identity.ideals],
+                  [t('written.bond'), identity.bonds],
+                  [t('written.flaw'), identity.flaws],
+                ] as const).map(([label, lines]) => (
+                  <Stack key={label} gap={4}>
+                    <Text size="xs" c="dimmed" tt="uppercase">{label}</Text>
+                    {lines?.length
+                      ? lines.map((line, at) => <Text key={at} size="sm" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{line}</Text>)
+                      : <Text size="sm" c="dimmed">{t('sheet.none')}</Text>}
+                  </Stack>
+                ))}
+              </Stack>
+            ))}
+          </SimpleGrid>
         </Stack>
       ),
     },
     {
-      key: 'resources',
-      title: t('sheet.resourcesAndGear'),
-      desktop: 'panel',
+      value: 'actions',
+      label: t('sheet.actions'),
       content: (
-        <Stack gap="sm">
-          {/*
-            The two pools are drawn only when the character has any, unlike the
-            two below them. A backpack with nothing in it is a fact about the
-            character; a rage counter on a character who cannot rage is not a
-            fact at all, it is a row about somebody else.
-          */}
-          {s.resources.class !== undefined && s.resources.class.length > 0 && (
-            <ItemList
-              label={t('sheet.resources')}
-              items={s.resources.class.map(
-                (pool) => `${resourceName(t, pool.key ?? '')}: ${pool.dice ?? pool.max}`,
-              )}
-            />
-          )}
-          {Object.entries(s.resources.spellSlots ?? {}).length > 0 && (
-            <ItemList
-              label={t('sheet.spellSlots')}
-              items={Object.entries(s.resources.spellSlots ?? {}).map(
-                ([level, pool]) => t('sheet.slotLevel', { level, max: pool.max }),
-              )}
-            />
-          )}
-          <ItemList
-            label={t('sheet.equipped')}
-            items={s.equipment.equipped.map((stack) => named('equipment', stack.item ?? ''))}
-            empty={t('sheet.nothingWorn')}
-          />
-          <ItemList
-            label={t('sheet.carried')}
-            items={s.equipment.backpack.map((stack) =>
-              stack.count > 1
-                ? `${named('equipment', stack.item ?? '')} ×${stack.count}`
-                : named('equipment', stack.item ?? ''),
-            )}
-            empty={t('sheet.empty')}
-          />
+        <Stack gap="md">
+          <Panel>
+            <Stack gap="md">
+              <SheetActions
+                actions={s.actions ?? []}
+                entries={bySlug(catalog?.actions ?? [])}
+                pools={s.resources.pools ?? {}}
+              />
+            </Stack>
+          </Panel>
         </Stack>
       ),
     },
   ]
+  if (s.spells.sources?.length) panels.push({
+    value: 'spells', label: t('sheet.spells'),
+    content: <SheetSpells sheet={s} characterId={characterId} onChanged={onChanged} />,
+  })
+  /*
+   * What a class hands out to spend, on a tab of its own so the action list is
+   * only actions: every pool, and every scaling value that is a plain number
+   * and so can be counted off. Drawn only for a character with any, because a
+   * tab about somebody else's class is not a fact at all.
+   */
+  if (pools.length > 0) panels.push({
+    value: 'resources',
+    label: t('sheet.resources'),
+    content: (
+      <Stack gap="md">
+        {headed(t('sheet.consumables'), <ResourcePools pools={pools} />)}
+      </Stack>
+    ),
+  })
+  panels.push({
+    value: 'equipment',
+    label: t('sheet.equipment'),
+    content: (
+      <SheetEquipment
+        equipment={s.equipment}
+        items={items}
+        actions={s.actions ?? []}
+        name={(slug) => named('equipment', slug)}
+        lookup={named}
+        disabled={pending}
+        {...(onEquipment ? { onChange: onEquipment } : {})}
+      />
+    ),
+  }, {
+    value: 'items',
+    label: t('sheet.items'),
+    content: (
+      <SheetItems
+        equipment={s.equipment}
+        items={items}
+        name={(slug) => named('equipment', slug)}
+        lookup={named}
+        disabled={pending}
+        {...(onEquipment ? { onChange: onEquipment } : {})}
+      />
+    ),
+  })
 
   // "Character sheet" rather than the character's name: the name is already the
   // heading above this, and a landmark whose name changed per character would
   // give a screen-reader user a different table of contents on every sheet.
-  return <SectionDeck label={t('sheet.label')} cols={2} sections={sections} />
+  const shown = panels.some((panel) => panel.value === tab) ? tab : 'overview'
+  return <TabDeck bar label={t('sheet.label')} panels={panels} value={shown} onChange={setTab} />
 }
 
 
@@ -302,10 +355,13 @@ function ItemList({
   label,
   items,
   empty,
+  mark,
 }: {
   label: string
   items: string[]
   empty?: string
+  /** Drawn in place of the bullet when it yields something: a spell's artwork. */
+  mark?: (at: number) => ReactNode
 }) {
   return (
     <Stack gap={4}>
@@ -320,7 +376,7 @@ function ItemList({
         <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md" verticalSpacing={4}>
           {items.map((item, at) => (
             <Group key={`${item}-${at}`} gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
-              <Bullet />
+              {mark?.(at) ?? <Bullet />}
               <Text size="sm">{item}</Text>
             </Group>
           ))}

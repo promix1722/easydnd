@@ -1,4 +1,4 @@
-# Development configuration, loaded by `make run/server`.
+# Development configuration, loaded by every `make` target that runs the API.
 #
 # Committed on purpose: the config file is mandatory in every environment, so
 # there has to be one in the repo. It contains no secret -- see auth below.
@@ -16,7 +16,15 @@ log:
 
 data:
   # Relative to the repo root, which is where `make run/server` runs.
-  srd_dir: data/srd_5.1
+  srd_dir: data/pack/srd-5.1
+  # Optional file-defined packs, for everybody; see docs/packs.md.
+  pack_files: []
+  # NO private_pack_files here: a private pack is a directory on one machine,
+  # so its path is EASYDND_PRIVATE_PACK_FILES in ~/config/easydnd/dev.env.
+  autoload_packs: []
+  default_packs: {}
+  # Set to .pack-archive when retaining released packs between runs.
+  pack_archive: ""
 
 auth:
   # Passkeys created against this config are bound to localhost and are
@@ -25,27 +33,24 @@ auth:
   rp_origins:
     - http://localhost:5173
 
+  # Who reads the private packs outright and may grant them to a group: a
+  # verified Google email, or an account id. dev:master is here because a
+  # seeded development account has no email to match.
+  superadmins:
+    - promix1722@gmail.com
+    - "dev:master"
+
   # NO session_secret here, deliberately. Development generates a random key per
   # process and logs a warning: every restart signs everyone out, which matches
   # the in-memory account store losing every account on the same restart.
   # Production refuses to start this way.
 
-  # NO google block here either. Sign in with Google needs a real client id and
-  # secret, which do not belong in a committed file, so this config leaves the
-  # provider off and the sign-in page simply does not draw the button. To work
-  # on it locally, copy this file to config.local.yaml (gitignored) and add:
-  #
-  #   auth:
-  #     google:
-  #       client_id: ....apps.googleusercontent.com
-  #       client_secret: "...."
-  #
-  # then `make run/db`, which prefers config.local.yaml over anything it would
-  # generate. The redirect URL defaults to
-  # http://localhost:5173/v1/auth/sso/google/callback, which is the Vite dev
-  # server rather than this process -- register that exact URI on the OAuth
-  # client. On a worktree holding a slot the port is not 5173; `make ports`
-  # says which it is, and config.local.yaml has to say so too.
+  # NO google block here either: the client id and secret do not belong in a
+  # committed file, so without them the sign-in page simply does not draw the
+  # button. To work on it, put EASYDND_GOOGLE_CLIENT_ID and
+  # EASYDND_GOOGLE_CLIENT_SECRET in ~/config/easydnd/dev.env. The redirect URL
+  # defaults to /v1/auth/sso/google/callback on this worktree's first origin --
+  # `make ports` says which that is -- so register that exact URI on the client.
 
 # NO db section here, deliberately. With db.url unset the server runs on the
 # in-memory account store and logs a warning -- which is what lets `make
@@ -53,7 +58,11 @@ auth:
 # Postgres at all. Production refuses to start this way.
 #
 # For durable accounts locally, `make dev` -- it claims this worktree's ports,
-# starts a Postgres of its own, and generates config.dev-run.yaml with the
-# db.url and the origins that slot implies. This file is what `make run/server`
-# loads on a worktree that has claimed nothing; see
-# docs/backend.md#running-more-than-one-worktree for the rest.
+# starts a Postgres of its own, and hands the API that slot's port, origins and
+# database URL through the environment. Nothing per-worktree is written to a
+# file; see docs/backend.md#running-more-than-one-worktree.
+
+# The AI Wizard. The key is EASYDND_AGENT_API_KEY in ~/config/easydnd/dev.env;
+# without it the feature is off. See docs/agent.md#which-model for the choice.
+agent:
+  model: gpt-6-luna

@@ -1,4 +1,6 @@
-import type { Choice } from './catalog'
+import type { BuildPolicy } from './packPolicy'
+import type { RulesLock } from './packs'
+import type { Choice, Entry, Item, Option, Proficiency, Skill as CatalogSkill, Spell } from './catalog'
 import { request } from './client'
 
 /**
@@ -16,6 +18,7 @@ export interface ClassLevel {
 }
 
 export interface Summary {
+  image?: string
   id: string
   /** The folder the character is filed in. Always set: a character is never
    * in no folder, so a listing can group by this without a fallback bucket. */
@@ -26,6 +29,7 @@ export interface Summary {
 }
 
 export interface Identity {
+  image?: string
   name: string
   alignment?: string
   race?: string
@@ -107,6 +111,8 @@ export interface Equipment {
   equipped: ItemStack[]
   backpack: ItemStack[]
   loot: ItemStack[]
+  /** The equipped item in the sheet's Custom slot, the one placement the server stores. */
+  custom?: string
   purse?: Record<string, number>
 }
 
@@ -118,13 +124,87 @@ export interface Pool {
   dice?: string
 }
 
+/** A spendable resource a pack declares; `used` on a sheet is always the log's. */
+export interface ResourcePool {
+  id: string
+  name: string
+  group?: string
+  max: number
+  used: number
+  dice?: string
+  slotLevel?: number
+}
+
+/** A scaling value that is read, never spent: a Sneak Attack die, an aura range. */
+export interface ResourceParameter {
+  name: string
+  number: number
+  dice?: string
+  text?: string
+  rational?: { numerator: number; denominator: number }
+  boolean?: boolean
+}
+
 export interface Resources {
+  pools?: Record<string, ResourcePool>
+  parameters?: Record<string, ResourceParameter>
+  /** Compatibility views of the same pools; nothing new should read them. */
   spellSlots?: Record<string, Pool>
   hitDice?: Pool[]
   class?: Pool[]
 }
 
+export interface SpellSource {
+  source: string
+  class?: string
+  ability?: string
+  cantrips?: string[]
+  known?: string[]
+  spellbook?: string[]
+  prepared?: string[]
+  arcanum?: string[]
+  mastery?: string[]
+  preparationLimit?: number
+}
+
+export interface CustomOption {
+ ref?: string
+ id?: string
+ kind: string
+ name: string
+ description: string
+ source: string
+ parent?: string
+ ability?: string
+ mode?: string
+ placement?: string
+ level?: number
+ hitDie?: number
+ speed?: number
+ count?: number
+ selected: boolean
+}
+export const upsertCustomOption = (id: string, revision: number, option: CustomOption) =>
+ request<WriteResponse>(`${characterPath(id)}/custom-options`, { method: 'POST', body: { revision, option } })
 export interface Sheet {
+ customOptions?: CustomOption[]
+ importSession?: string
+ catalogNames?: Record<string,string>
+  /**
+   * What the sheet's slugs mean, resolved by the server in the same response:
+   * the entries a panel reads more than a name from. Present on a sheet that
+   * was read, absent on the one a write echoes back.
+   */
+  catalog?: {
+    skills: CatalogSkill[]
+    proficiencies?: Proficiency[]
+    equipment?: Item[]
+    magicItems?: Item[]
+    /** The prose behind `actions`, each entry's `slug` being an action's `origin`. */
+    actions?: Entry[]
+    spells?: Spell[]
+  }
+ importedNotes?: string[]
   identity: Identity
   base: Base
   abilities: Abilities
@@ -133,13 +213,29 @@ export interface Sheet {
   status: Status
   equipment: Equipment
   resources: Resources
-  spells: { cantrips?: string[]; known?: string[]; prepared?: string[]; ability?: string }
-  actions: unknown[]
+  spells: { sources?: SpellSource[]; cantrips?: string[]; known?: string[]; prepared?: string[]; ability?: string }
+  actions?: SheetAction[]
   feats?: string[]
   traits?: string[]
   features?: string[]
   conditions?: string[]
   proficiencies?: string[]
+}
+
+/** Something the character can do on their turn, as the server derived it. */
+export interface SheetAction {
+  source: string
+  /** What produced it, as `kind:slug`; also the key of its prose in `catalog.actions`. */
+  origin?: string
+  kind: string
+  /** Why the character has it: `basic`, `equipment` or `feature`. */
+  category?: string
+  name: string
+  range?: number
+  toHit?: number
+  damage?: string
+  uses?: string
+  notes?: string
 }
 
 export interface Answer {
@@ -162,6 +258,13 @@ export interface Change {
 }
 
 export interface CharacterEvent {
+ observed?: boolean
+ evidence?: string
+  choiceSource?: string
+  choiceKind?: string
+  purpose?: string
+  id?: string
+  selections?: Option[]
   seq?: number
   type: string
   at?: string
@@ -190,6 +293,9 @@ export interface PromptEvent {
 }
 
 export interface Prompt {
+  blocked?: string[]
+  purpose?: string
+  upTo?: boolean
   choice: Choice
   /** The catalogue entry posing this prompt, as "kind:slug". */
   source?: string
@@ -207,9 +313,29 @@ export interface Prompt {
    * character already has.
    */
   heldOnly: boolean
+  /** The class's advice for the six scores: every ability, most important first. On the ability-score prompt only. */
+  recommended?: string[]
+}
+
+export interface SpellRule {
+  maxLevelCount?: number
+  id: string
+  source: string
+  class?: string
+  classLevel?: number
+  count: number
+  minLevel: number
+  maxLevel: number
+  purpose: string
+  optional: boolean
+  listClasses?: string[]
+  automatic?: string[]
 }
 
 export interface PromptsResponse {
+  buildPolicy?: BuildPolicy
+  spellRules?: SpellRule[]
+  revision?: number
   seq: number
   /** Nothing required is outstanding. Separate from the list being empty: a
    * finished character can still carry optional prompts. */
@@ -218,6 +344,7 @@ export interface PromptsResponse {
 }
 
 export interface WriteResponse {
+  revision?: number
   seq: number
   sheet: Sheet
 }
@@ -283,39 +410,12 @@ export interface CreateResponse {
  * now, answered from their own tabs and each written as its own entry.
  */
 export interface NewCharacter {
+  image?: string
+  rules?: RulesLock
   name: string
   alignment?: string
   /** Where to file it. Omitted means the account's default folder. */
   folder?: string
-}
-
-/** One line of an import report: a field of the export, and what became of it. */
-export interface ImportEntry {
-  field: string
-  detail: string
-}
-
-/**
- * Everything an import could not carry across.
- *
- * Not a failure list. SRD 5.1 publishes one background and one feat, so a
- * sheet from a tool with the full rules always leaves something behind; this
- * is what makes that visible instead of silent.
- */
-export interface ImportReport {
-  /** Named something SRD 5.1 does not publish. */
-  unresolved: ImportEntry[]
-  /** Real data the model has no home for. */
-  skipped: ImportEntry[]
-  /** Prompts the import left for the player to answer. */
-  open: string[]
-}
-
-export interface ImportResponse {
-  id: string
-  seq: number
-  sheet: Sheet
-  report: ImportReport
 }
 
 /**
@@ -336,61 +436,21 @@ export function createCharacter(body: NewCharacter): Promise<CreateResponse> {
   return request<CreateResponse>('/characters', { method: 'POST', body })
 }
 
-/**
- * Imports a character from a sheet exported by another tool.
- *
- * The file's bytes are the body: the route takes the export itself, not a
- * wrapper object, so rawBody sends it untouched rather than re-encoding JSON
- * that is already JSON.
- *
- * An imported character arrives with every choice unanswered, so callers
- * should send the player to the build screen rather than the sheet.
- */
-export async function importCharacter(file: File, folder?: string): Promise<ImportResponse> {
-  // The folder rides in the query because the body is the export itself.
-  const path = folder
-    ? `/characters/import?folder=${encodeURIComponent(folder)}`
-    : '/characters/import'
-  return request<ImportResponse>(path, {
-    method: 'POST',
-    rawBody: await file.text(),
-  })
-}
-
-/**
- * Creates the reference character in one call: a finished level-3 half-elf
- * rogue, ready to read.
- *
- * Development only. The route is registered only when the server is in
- * `development`, so this is a 405 against a production build -- which is why
- * the button reaching it is behind `import.meta.env.DEV` rather than behind a
- * check on anything the server says.
- *
- * There is no body. Unlike creating, a stub has no opening state for the
- * caller to state -- the server supplies all of it -- so the folder rides in
- * the query as it does for an import.
- */
-export function createStubCharacter(folder?: string): Promise<CreateResponse> {
-  const path = folder
-    ? `/characters/stub?folder=${encodeURIComponent(folder)}`
-    : '/characters/stub'
-  return request<CreateResponse>(path, { method: 'POST' })
-}
-
 export function getSheet(id: string, signal?: AbortSignal): Promise<Sheet> {
-  return request<Sheet>(`/characters/${id}/sheet`, signal ? { signal } : {})
+  return request<Sheet>(`${characterPath(id)}/sheet`, signal ? { signal } : {})
 }
 
-export function getPrompts(id: string, signal?: AbortSignal): Promise<PromptsResponse> {
-  return request<PromptsResponse>(`/characters/${id}/prompts`, signal ? { signal } : {})
+export function getPrompts(id: string, signal?: AbortSignal, before?: number): Promise<PromptsResponse> {
+  const query = before === undefined ? '' : `?before=${before}`
+  return request<PromptsResponse>(`${characterPath(id)}/prompts${query}`, signal ? { signal } : {})
 }
 
 export function getEvents(
   id: string,
   signal?: AbortSignal,
-): Promise<{ seq: number; events: CharacterEvent[] }> {
-  return request<{ seq: number; events: CharacterEvent[] }>(
-    `/characters/${id}/events`,
+): Promise<{ seq: number; revision?: number; rules?: RulesLock; events: CharacterEvent[] }> {
+  return request<{ seq: number; revision?: number; rules?: RulesLock; events: CharacterEvent[] }>(
+    `${characterPath(id)}/events`,
     signal ? { signal } : {},
   )
 }
@@ -406,10 +466,11 @@ export function appendEvents(
   id: string,
   expectedSeq: number,
   events: CharacterEvent[],
+  expectedRevision = expectedSeq,
 ): Promise<WriteResponse> {
-  return request<WriteResponse>(`/characters/${id}/events`, {
+  return request<WriteResponse>(`${characterPath(id)}/events`, {
     method: 'POST',
-    body: { expectedSeq, events },
+    body: { expectedSeq, expectedRevision, events },
   })
 }
 
@@ -435,10 +496,11 @@ export function replaceEvent(
   expectedSeq: number,
   event: CharacterEvent,
   dryRun = false,
+  expectedRevision = expectedSeq,
 ): Promise<ReviseResponse> {
-  return request<ReviseResponse>(`/characters/${id}/events/${seq}${dryRun ? '?dryRun=true' : ''}`, {
+  return request<ReviseResponse>(`${characterPath(id)}/events/${seq}${dryRun ? '?dryRun=true' : ''}`, {
     method: 'PUT',
-    body: { expectedSeq, event },
+    body: { expectedSeq, expectedRevision, event },
   })
 }
 
@@ -457,9 +519,10 @@ export function deleteEvent(
   seq: number,
   expectedSeq: number,
   dryRun = false,
+  expectedRevision = expectedSeq,
 ): Promise<ReviseResponse> {
   return request<ReviseResponse>(
-    `/characters/${id}/events/${seq}?expectedSeq=${expectedSeq}${dryRun ? '&dryRun=true' : ''}`,
+    `${characterPath(id)}/events/${seq}?expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}${dryRun ? '&dryRun=true' : ''}`,
     { method: 'DELETE' },
   )
 }
@@ -476,15 +539,16 @@ export function truncateEvents(
   id: string,
   expectedSeq: number,
   after: number,
+  expectedRevision = expectedSeq,
 ): Promise<WriteResponse> {
   return request<WriteResponse>(
-    `/characters/${id}/events?after=${after}&expectedSeq=${expectedSeq}`,
+    `${characterPath(id)}/events?after=${after}&expectedSeq=${expectedSeq}&expectedRevision=${expectedRevision}`,
     { method: 'DELETE' },
   )
 }
 
 export function deleteCharacter(id: string): Promise<void> {
-  return request<void>(`/characters/${id}`, { method: 'DELETE' })
+  return request<void>(`${characterPath(id)}`, { method: 'DELETE' })
 }
 
 /**
@@ -497,7 +561,7 @@ export function deleteCharacter(id: string): Promise<void> {
  * An empty folder means the account's default.
  */
 export function moveCharacter(id: string, folder: string): Promise<void> {
-  return request<void>(`/characters/${id}/folder`, { method: 'PUT', body: { folder } })
+  return request<void>(`${characterPath(id)}/folder`, { method: 'PUT', body: { folder } })
 }
 
 /**
@@ -507,8 +571,45 @@ export function moveCharacter(id: string, folder: string): Promise<void> {
  * beside it unless another folder is named.
  */
 export function copyCharacter(id: string, folder?: string): Promise<CreateResponse> {
-  return request<CreateResponse>(`/characters/${id}/copy`, {
+  return request<CreateResponse>(`${characterPath(id)}/copy`, {
     method: 'POST',
     body: { folder: folder ?? '' },
   })
+}
+
+/** Atomically save edits to several past choices together with new answers. */
+export function reviseEvents(id: string, expectedSeq: number, expectedRevision: number,
+  replacements: { seq: number; event: CharacterEvent }[], events: CharacterEvent[], dryRun = false,
+): Promise<ReviseResponse> {
+  return request<ReviseResponse>(`${characterPath(id)}/events/revise${dryRun ? '?dryRun=true' : ''}`, {
+    method: 'POST', body: { expectedSeq, expectedRevision, replacements, events },
+  })
+}
+
+/** Where one character's own routes live. */
+export function characterPath(id: string): string {
+  return `/characters/${encodeURIComponent(id)}`
+}
+
+/**
+ * Dresses a character who has nothing on: one suitable item from the backpack
+ * in each slot. The build screen calls it on Finish; a character already
+ * wearing anything is left as it is, so calling it again is harmless.
+ */
+export function autoEquip(id: string): Promise<void> {
+  return request<void>(`${characterPath(id)}/auto-equip`, { method: 'POST' })
+}
+
+/** Who may read a character besides its owner and the groups it is shared with. */
+export interface Visibility {
+  /** Open to anybody signed in who has its link: a read of the sheet, never a write. */
+  public: boolean
+}
+
+export function getVisibility(id: string, signal?: AbortSignal): Promise<Visibility> {
+  return request<Visibility>(`${characterPath(id)}/visibility`, signal ? { signal } : {})
+}
+
+export function setVisibility(id: string, visible: boolean): Promise<Visibility> {
+  return request<Visibility>(`${characterPath(id)}/visibility`, { method: 'PUT', body: { public: visible } })
 }

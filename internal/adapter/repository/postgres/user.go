@@ -77,8 +77,8 @@ func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx,
-		`INSERT INTO users (id, display_name, created_at) VALUES ($1, $2, $3)`,
-		string(u.ID), u.DisplayName, u.CreatedAt)
+		`INSERT INTO users (id, display_name, created_at, palette, color_scheme, image) VALUES ($1, $2, $3, $4, $5, $6)`,
+		string(u.ID), u.DisplayName, u.CreatedAt, u.Appearance.WithDefaults().Palette, u.Appearance.WithDefaults().ColorScheme, u.Image)
 	switch {
 	case isUniqueViolation(err, constraintUsersPK):
 		return types.NewValidationError("account %q already exists", u.ID)
@@ -106,7 +106,7 @@ func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 // ByID returns the account with the given id.
 func (r *UserRepository) ByID(ctx context.Context, id domain.ID) (domain.User, error) {
 	return r.load(ctx,
-		`SELECT id, display_name, created_at FROM users WHERE id = $1`,
+		`SELECT id, display_name, created_at, palette, color_scheme, image FROM users WHERE id = $1`,
 		"account not found", string(id))
 }
 
@@ -117,7 +117,7 @@ func (r *UserRepository) ByID(ctx context.Context, id domain.ID) (domain.User, e
 // of user_credentials.
 func (r *UserRepository) ByCredentialID(ctx context.Context, credentialID []byte) (domain.User, error) {
 	return r.load(ctx, `
-		SELECT u.id, u.display_name, u.created_at
+		SELECT u.id, u.display_name, u.created_at, u.palette, u.color_scheme, u.image
 		  FROM users u
 		  JOIN user_credentials c ON c.user_id = u.id
 		 WHERE c.id = $1`,
@@ -138,7 +138,7 @@ func (r *UserRepository) load(ctx context.Context, headerSQL, missMessage string
 
 	var u domain.User
 	var id string
-	err = tx.QueryRow(ctx, headerSQL, args...).Scan(&id, &u.DisplayName, &u.CreatedAt)
+	err = tx.QueryRow(ctx, headerSQL, args...).Scan(&id, &u.DisplayName, &u.CreatedAt, &u.Appearance.Palette, &u.Appearance.ColorScheme, &u.Image)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return domain.User{}, types.NewNotFoundError("%s", missMessage)
@@ -200,7 +200,7 @@ func (r *UserRepository) load(ctx context.Context, headerSQL, missMessage string
 // user_identities.
 func (r *UserRepository) ByIdentity(ctx context.Context, provider domain.Provider, subject string) (domain.User, error) {
 	return r.load(ctx, `
-		SELECT u.id, u.display_name, u.created_at
+		SELECT u.id, u.display_name, u.created_at, u.palette, u.color_scheme, u.image
 		  FROM users u
 		  JOIN user_identities i ON i.user_id = u.id
 		 WHERE i.provider = $1 AND i.subject = $2`,
@@ -487,3 +487,27 @@ func nilToEmpty[T any](s []T) []T {
 
 // Compile-time proof that this adapter satisfies the port.
 var _ domain.Repository = (*UserRepository)(nil)
+
+// SetAppearance updates only the personal appearance fields.
+func (r *UserRepository) SetAppearance(ctx context.Context, id domain.ID, a domain.Appearance) error {
+	tag, err := r.pool.Exec(ctx, `UPDATE users SET palette = $1, color_scheme = $2 WHERE id = $3`, a.Palette, a.ColorScheme, string(id))
+	if err != nil {
+		return types.WrapServerError(err, "save appearance")
+	}
+	if tag.RowsAffected() == 0 {
+		return types.NewNotFoundError("account not found").Because("account.notFound")
+	}
+	return nil
+}
+
+// SetImage replaces only the account portrait.
+func (r *UserRepository) SetImage(ctx context.Context, id domain.ID, image string) error {
+	tag, err := r.pool.Exec(ctx, `UPDATE users SET image = $1 WHERE id = $2`, image, string(id))
+	if err != nil {
+		return types.WrapServerError(err, "save portrait")
+	}
+	if tag.RowsAffected() == 0 {
+		return types.NewNotFoundError("account not found").Because("account.notFound")
+	}
+	return nil
+}

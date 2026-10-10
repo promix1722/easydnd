@@ -53,7 +53,9 @@ export function NameForm({
         error={error}
         onChange={(event) => onValueChange(event.currentTarget.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Enter' && !blank) onSubmit(value.trim())
+          if (event.key !== 'Enter' || event.nativeEvent.isComposing || blank || pending) return
+          event.preventDefault()
+          onSubmit(value.trim())
         }}
       />
       <Group>

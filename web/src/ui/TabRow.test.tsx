@@ -37,7 +37,7 @@ function structure(html: string): string {
 /**
  * One viewport, because this file proves it is enough: the last test in it
  * compares the two renderings byte for byte. `ModalSheet`, `Columns` and
- * `SectionDeck` swap components at the breakpoint and so need testing twice
+ * `TabDeck` swap components at the breakpoint and so need testing twice
  * over; this is one
  * rendering with a ScrollArea that is inert at a width the tabs fit in.
  */
@@ -93,12 +93,25 @@ describe('TabRow', () => {
 
     expect(screen.getByText('panel')).toBeInTheDocument()
   })
+
+  it('puts the strip, and only the strip, on a surface when asked for a bar', () => {
+    renderAt(
+      viewport,
+      <TabRow bar tabs={TABS} value="class" onChange={vi.fn()}>
+        <p>panel</p>
+      </TabRow>,
+    )
+
+    // The bar is navigation; what it selects brings its own surface.
+    expect(screen.getByRole('tablist').closest('.mantine-Paper-root')).not.toBeNull()
+    expect(screen.getByText('panel').closest('.mantine-Paper-root')).toBeNull()
+  })
 })
 
 describe('TabRow', () => {
   /**
    * The claim the primitive is built on. `ModalSheet`, `Columns` and
-   * `SectionDeck` swap components at the breakpoint and so need testing twice
+   * `TabDeck` swap components at the breakpoint and so need testing twice
    * over; this one is one rendering with a ScrollArea that is inert at a width the tabs fit in,
    * which is what makes a test at either width a test of both.
    */

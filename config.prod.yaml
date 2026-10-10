@@ -1,0 +1,122 @@
+# easydnd production configuration.
+#
+# Committed, and shipped inside every release: the deploy copies this file to
+# /opt/easydnd/releases/<sha>/config.yaml and the process reads it through
+# `current`, so it is versioned with the binary that parses it and rolled back
+# with it. Changing a setting here is an edit and a tag.
+#
+# NO SECRET BELONGS IN THIS FILE. The signing key, the database URL, the Google
+# client and the LLM key arrive from /etc/easydnd/prod.env, which supervisor
+# loads into the process environment -- see easydnd.example.env for the names
+# and docs/backend.md#configuration for which variable sets which key.
+#
+# Every key below is optional -- the loader has a default for each -- but an
+# UNKNOWN key is a startup error, so a typo fails loudly instead of silently
+# leaving production on a default nobody chose.
+
+env: production
+
+http:
+  host: 127.0.0.1
+  # Quoted because the port is a string. This must match the port
+  # deploy/deploy.sh health-checks and the one the nginx site proxies to;
+  # nothing links the three automatically.
+  port: "8080"
+
+  # Keep below supervisor's stopwaitsecs (10s), or the drain is cut short by
+  # SIGKILL and graceful shutdown never actually completes. Raise stopwaitsecs
+  # first if you raise this.
+  shutdown_timeout: 5s
+
+  # gin trusts 0.0.0.0/0 by default, which lets any client forge
+  # X-Forwarded-For and poison ClientIP. Only our own proxy is upstream.
+  trusted_proxies:
+    - 127.0.0.1
+    - "::1"
+
+log:
+  format: json
+  level: info
+
+data:
+  # ABSOLUTE, and through `current` rather than a release id so it follows the
+  # symlink swap. The API reads its compendium from disk at startup and exits if
+  # it cannot; the built-in default is the *relative* "data/pack/srd-5.1", which
+  # resolves against supervisor's `directory=` and not against the release.
+  # Leaving this unset once cost a deploy: the binary died on every restart, the
+  # health gate timed out, and the release rolled back.
+  srd_dir: /opt/easydnd/current/data/pack/srd-5.1
+  pack_files: []
+  # NO private_pack_files here: a private pack is copied to the server by hand
+  # (deploy/push-private-pack.sh), outside every release, and a path that does
+  # not exist is a startup error -- so it is EASYDND_PRIVATE_PACK_FILES in
+  # prod.env, added once the pack is there.
+  autoload_packs: []
+  default_packs: {}
+  # Optional persistent archive, outside current/; make writable by the service.
+  # pack_archive: /var/lib/easydnd/packs
+
+auth:
+  # A ONE-WAY DOOR. The RP id is burned into every passkey when the passkey is
+  # created, and changing it orphans all of them with no migration. It must stay
+  # the apex domain: a passkey made for easydnd.org keeps working on a future
+  # app.easydnd.org, and the reverse is impossible.
+  rp_id: easydnd.org
+
+  # What the operating system's passkey prompt calls us.
+  rp_name: easydnd
+
+  # The first origin is also where Google sends the browser back to:
+  # auth.google.redirect_url defaults to its /v1/auth/sso/google/callback.
+  rp_origins:
+    - https://easydnd.org
+
+  # Who reads the private packs outright and may grant them to a group. Matched
+  # against the VERIFIED email of a linked Google account, never a claimed one.
+  superadmins:
+    - promix1722@gmail.com
+
+  # NO session_secret here: EASYDND_SESSION_SECRET in prod.env. The process
+  # refuses to start without it, exactly as it refuses to start without its
+  # compendium -- a service that silently invented a key on every restart would
+  # sign everyone out and nobody would know why.
+
+  session_ttl: 168h
+  ceremony_ttl: 5m
+
+  # NO google block here either: EASYDND_GOOGLE_CLIENT_ID and
+  # EASYDND_GOOGLE_CLIENT_SECRET in prod.env, both or neither. Without them the
+  # app is passkeys only, which starts and runs perfectly well.
+
+db:
+  # NO url here: EASYDND_DB_URL in prod.env, because it carries the database
+  # password. REQUIRED in production -- a server that quietly fell back to
+  # in-memory accounts would destroy every registered passkey on the next
+  # restart.
+
+  # pgxpool size.
+  max_conns: 10
+
+  # Bounds the startup ping. deploy.sh's health gate allows 15 seconds for
+  # connect plus migrate plus listen, so a database that is not answering must
+  # give up well inside that budget.
+  connect_timeout: 5s
+
+  # Apply pending migrations before the listener binds, so a release is
+  # self-contained and there is no migration step for a deploy to forget. A
+  # failed migration fails startup, which deploy.sh turns into a rollback.
+  #
+  # Set false only to stage a risky migration by hand with `easydnd -migrate up`.
+  # Note the corollary of the rollback: it runs against the schema that was just
+  # applied, so migrations must be expand-only. See docs/backend.md.
+  migrate_on_start: true
+
+# The AI Wizard. The key is EASYDND_AGENT_API_KEY in prod.env; without it the
+# feature is off and everything below is inert. See docs/agent.md#which-model.
+agent:
+  model: gpt-6-luna
+  reasoning_effort: low
+  workers: 4
+  max_turns: 40
+  max_sessions: 100
+  request_timeout: 2m

@@ -22,39 +22,51 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	agentmodel "github.com/promix1722/easydnd/internal/adapter/agent/openai"
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	oidcadapter "github.com/promix1722/easydnd/internal/adapter/oidc"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
 	"github.com/promix1722/easydnd/internal/adapter/repository/postgres"
-	"github.com/promix1722/easydnd/internal/adapter/sheet/hexsheet"
 	"github.com/promix1722/easydnd/internal/adapter/token"
 	webauthnadapter "github.com/promix1722/easydnd/internal/adapter/webauthn"
 	httpapi "github.com/promix1722/easydnd/internal/api/http"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	appearanceapi "github.com/promix1722/easydnd/internal/api/http/v1/appearance"
 	authapi "github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	"github.com/promix1722/easydnd/internal/api/http/v1/development"
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
+	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
+	profileapi "github.com/promix1722/easydnd/internal/api/http/v1/profile"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/buildinfo"
 	"github.com/promix1722/easydnd/internal/config"
 	authdomain "github.com/promix1722/easydnd/internal/domain/auth"
+	"github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/game"
 	"github.com/promix1722/easydnd/internal/domain/group"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/domain/user"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
+	appearanceuc "github.com/promix1722/easydnd/internal/usecase/appearance"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
 	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
+	packuc "github.com/promix1722/easydnd/internal/usecase/pack"
+	profileuc "github.com/promix1722/easydnd/internal/usecase/profile"
 )
 
 // App owns the wired object graph and the HTTP server lifecycle.
 type App struct {
-	cfg *config.Config
-	log *slog.Logger
-	srv *http.Server
+	agent *agentuc.Agent
+	cfg   *config.Config
+	log   *slog.Logger
+	srv   *http.Server
 	// pool is nil when no db.url was configured, which only development
 	// permits. Close releases it.
 	pool *pgxpool.Pool
@@ -93,43 +105,22 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	if cfg.Auth.EphemeralSecret {
 		log.Warn("auth.session_secret is unset; signing sessions with a key generated for this process only -- every restart signs everyone out")
 	}
-	// The config file holds the session signing key. World-readable means every
-	// account on the box can forge a session cookie.
-	if cfg.WorldReadable {
-		log.Warn("config file is world-readable and holds the session signing key; chmod 640 it",
-			slog.String("config", cfg.Source))
-	}
 
-	// Outbound adapters. The assignments below are what type-check the adapters
-	// against the domain's ports, which is how the account store could move to
-	// Postgres without a line changing above this layer.
-	characterRepo := memory.NewCharacterRepository()
-	folderRepo := memory.NewFolderRepository()
-
-	// The characters a group's members have offered to each other, and the
-	// games played from them. In memory even when Postgres is configured, and
-	// for the reason 00003_groups.sql gives for refusing to name a character
-	// at all: every row here points at a character id, and a character id is
-	// the process-local counter above. A table of these would be full of ids
-	// naming nothing by morning. They die with the characters they name, all
-	// three together, which is the only self-consistent thing they can do
-	// until characters are durable.
-	sharedRepo := memory.NewSharedRepository()
-	gameRepo := memory.NewGameRepository()
-
-	// Accounts and groups are durable; characters, the folders they are filed
-	// in, the tables they are shared on and the games run from them are not.
-	// They still live in the process because a character id is a process-local
-	// counter, and a durable row that referred to one would be dangling after
-	// the next restart -- a schema written against an unfinished feature is a
-	// migration nobody can revise later. A restart therefore still costs a
-	// player everything they made, and moving them to Postgres is its own
-	// change: the assignments above are what a SQL sibling would have to
-	// satisfy.
-	userRepo, groupRepo, pool, err := newRepositories(ctx, cfg, log)
+	// Outbound adapters. The assignments in newRepositories are what
+	// type-check the adapters against the domain's ports: every store has an
+	// in-memory and a Postgres implementation, and which one runs is decided
+	// there, by db.url, in one place.
+	// ponytail: a guest's characters are rows nothing deletes once the guest
+	// session expires; see docs/known-caveats.md. Add a sweep beside the
+	// wizard's, keyed on the guest id prefix and the guest session TTL, when
+	// the table's size says so.
+	repos, err := newRepositories(ctx, cfg, log)
 	if err != nil {
 		return nil, err
 	}
+	userRepo, groupRepo, pool := repos.users, repos.groups, repos.pool
+	characterRepo, folderRepo := repos.characters, repos.folders
+	sharedRepo, gameRepo := repos.shared, repos.games
 
 	// Every failure from here on has to hand the pool back, or a failed start
 	// leaves connections open against RDS until the process is reaped.
@@ -173,10 +164,31 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	// than at the first request. Loading the default locale eagerly is what
 	// turns a missing or malformed data directory into a startup error --
 	// which deploy.sh's health gate then catches and rolls back.
-	catalogSource := catalogfile.NewSource(cfg.Data.SRDDir)
+	packPaths := append([]string{cfg.Data.SRDDir}, cfg.Data.PackFiles...)
+	var roots []catalogfile.Dependency
+	for id, version := range cfg.Data.DefaultPacks {
+		roots = append(roots, catalogfile.Dependency{ID: id, Version: version})
+	}
+	folders := make([]catalogfile.PackFolder, 0, len(cfg.Data.AutoloadPacks))
+	for _, folder := range cfg.Data.AutoloadPacks {
+		folders = append(folders, catalogfile.PackFolder{Path: folder.Path, ID: folder.ID})
+	}
+	// Folders rather than paths: a folder is installed and compiled but never
+	// becomes a default root, which is half of what makes a pack private.
+	for _, path := range cfg.Data.PrivatePackFiles {
+		folders = append(folders, catalogfile.PackFolder{Path: path, Restricted: true})
+	}
+	catalogSource, err := catalogfile.NewRegistry(packPaths, roots, cfg.Data.PackArchive, folders...)
+	if err != nil {
+		return fail(fmt.Errorf("load rule packs: %w", err))
+	}
 	if _, err := catalogSource.Load(ctx, rules.DefaultLocale); err != nil {
 		return fail(fmt.Errorf("load SRD data from %s: %w", cfg.Data.SRDDir, err))
 	}
+
+	packSource := catalogfile.NewAuthoring(catalogSource, repos.packs)
+	packService := packuc.NewService(repos.packs, packSource, groupRepo, userRepo)
+	packService.SetSuperadmins(cfg.Auth.Superadmins)
 
 	// Application layer. The game service is built first because the two
 	// services either side of it have to tell it when the things it refers to
@@ -191,11 +203,12 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	// the same hazard as the one account store, and it fails the same silent
 	// way.
 	gameService := gameuc.NewService(
-		gameRepo, sharedRepo, groupRepo, characterRepo, catalogSource,
+		gameRepo, sharedRepo, groupRepo, characterRepo, packSource,
 		log.With("usecase", "game"))
 	characterService := charuc.NewService(
-		characterRepo, folderRepo, catalogSource, hexsheet.NewImporter(), gameService,
+		characterRepo, folderRepo, packSource, gameService,
 		log.With("usecase", "character"))
+	characterService.SetPackAccess(packService)
 	authService := authuc.NewService(userRepo, ceremony, signer, federations, authuc.Config{
 		SessionTTL:      cfg.Auth.SessionTTL,
 		GuestSessionTTL: cfg.Auth.GuestSessionTTL,
@@ -207,35 +220,86 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 	groupService := groupuc.NewService(
 		groupRepo, userRepo, signer, gameService, log.With("usecase", "group"))
 
+	var devHandler *development.Handler
+	if cfg.Env == config.EnvDevelopment {
+		// Demo selections are authored against the base dataset. A different
+		// default pack must not change those choices or prevent startup.
+		basePack, err := catalogfile.LoadPack(cfg.Data.SRDDir)
+		if err != nil {
+			return fail(fmt.Errorf("load development seed rules: %w", err))
+		}
+		seedRules, err := catalogSource.Resolve([]catalogfile.Dependency{{ID: basePack.Manifest.ID, Version: basePack.Manifest.Version}})
+		if err != nil {
+			return fail(fmt.Errorf("resolve development seed rules: %w", err))
+		}
+		seed, err := seedDevelopment(ctx, userRepo, groupRepo, characterService, gameService, signer, cfg.Auth.SessionTTL, seedRules)
+		if err != nil {
+			return fail(fmt.Errorf("seed development game: %w", err))
+		}
+		devHandler = development.New(seed, helpers.NewCookieOptions(cfg), cfg.Auth.SessionTTL)
+		log.Info("development party seeded", "accounts", []string{"master", "player1", "player2"}, "group_id", devGroupID, "game_ids", seed.games)
+	}
+	var model agentuc.AgentModel
+	if cfg.Agent.APIKey != "" {
+		model = agentmodel.New(cfg.Agent.APIKey, cfg.Agent.Model, cfg.Agent.ReasoningEffort)
+	}
+	// The wizard's chats are in the database when there is one, so that a
+	// restart keeps them and a second process can answer for them. Without
+	// one they are in memory, like everything else in such a process.
+	var agentStore agentuc.Store
+	if pool != nil {
+		agentStore = postgres.NewAgentStore(pool)
+	}
+	agent := agentuc.NewAgent(characterService, model, agentuc.AgentConfig{Workers: cfg.Agent.Workers, MaxTurns: cfg.Agent.MaxTurns, MaxSessions: cfg.Agent.MaxSessions, Timeout: cfg.Agent.RequestTimeout, Store: agentStore})
+
 	// Inbound adapters. The character routes are declared behind
 	// RequireSession, and the handler reads the owner from the account that
 	// middleware resolved -- which is the honest source the comment that
 	// stood here was waiting for.
 	router, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
+		Development:   devHandler,
 		System:        system.New(buildinfo.Version),
 		Version:       buildinfo.Version,
 		WebDir:        opts.WebDir,
-		Auth:          authapi.New(authService, helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}),
+		Auth:          authapi.New(authService, helpers.NewCookieOptions(cfg)),
+		Appearance:    appearanceapi.New(appearanceuc.NewService(userRepo)),
+		Profile:       profileapi.New(profileuc.NewService(userRepo)),
 		Authenticator: authService,
-		Catalog:       catalogapi.New(catalogSource, log.With("handler", "catalog")),
-		Character:     characterapi.New(characterService, log.With("handler", "character")),
+		Pack:          packapi.New(packService, packSource),
+		Catalog:       catalogapi.New(packSource, log.With("handler", "catalog")),
+		Character:     characterapi.New(characterService, log.With("handler", "character")).WithAgent(agent),
 		Folder:        folderapi.New(characterService, log.With("handler", "folder")),
 		Game:          gameapi.New(gameService, log.With("handler", "game")),
 		Group:         groupapi.New(groupService, log.With("handler", "group")),
 	})
 	if err != nil {
+		agent.Close()
 		return fail(fmt.Errorf("build router: %w", err))
 	}
 
 	return &App{
-		cfg:  cfg,
-		log:  log,
-		srv:  httpapi.NewServer(cfg.HTTP, router),
-		pool: pool,
+		agent: agent,
+		cfg:   cfg,
+		log:   log,
+		srv:   httpapi.NewServer(cfg.HTTP, router),
+		pool:  pool,
 	}, nil
 }
 
-// newUserRepository picks the account store and, when it is the durable one,
+// repositories is every outbound store the graph is built from, and the pool
+// they share when they are the durable ones.
+type repositories struct {
+	users      user.Repository
+	groups     group.Repository
+	characters character.Repository
+	folders    character.FolderRepository
+	shared     game.SharedRepository
+	games      game.Repository
+	packs      pack.Repository
+	pool       *pgxpool.Pool
+}
+
+// newRepositories picks the stores and, when they are the durable ones,
 // brings the schema up to date before anything can read it.
 //
 // Migrating here -- before the pool the request path will use, before the
@@ -249,31 +313,48 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Options
 // work on it. Migrations must be expand-only.
 func newRepositories(
 	ctx context.Context, cfg *config.Config, log *slog.Logger,
-) (user.Repository, group.Repository, *pgxpool.Pool, error) {
+) (repositories, error) {
 	if !cfg.DB.Enabled() {
 		// config.validate refuses this in production, so it can only be a
 		// developer with no Postgres running.
-		log.Warn("db.url is unset; accounts and groups live in this process only -- every restart destroys every account, every registered passkey and every group",
+		log.Warn("db.url is unset; accounts, groups, characters, folders and games live in this process only -- every restart destroys all of them, every registered passkey included",
 			"config", cfg.Source)
 		// One user store, shared. The in-memory group store reads display
 		// names out of it, exactly as the Postgres one reads them with a
 		// join -- give it a second instance and every roster comes back
 		// nameless.
 		users := memory.NewUserRepository()
-		return users, memory.NewGroupRepository(users), nil, nil
+		return repositories{
+			users:      users,
+			groups:     memory.NewGroupRepository(users),
+			characters: memory.NewCharacterRepository(),
+			folders:    memory.NewFolderRepository(),
+			shared:     memory.NewSharedRepository(),
+			games:      memory.NewGameRepository(),
+			packs:      memory.NewPackRepository(),
+		}, nil
 	}
 
 	if cfg.DB.MigrateOnStart {
 		if err := postgres.Migrate(ctx, cfg.DB, log, postgres.CommandUp); err != nil {
-			return nil, nil, nil, fmt.Errorf("migrate database: %w", err)
+			return repositories{}, fmt.Errorf("migrate database: %w", err)
 		}
 	}
 
 	pool, err := postgres.NewPool(ctx, cfg.DB)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("connect to database: %w", err)
+		return repositories{}, fmt.Errorf("connect to database: %w", err)
 	}
-	return postgres.NewUserRepository(pool), postgres.NewGroupRepository(pool), pool, nil
+	return repositories{
+		users:      postgres.NewUserRepository(pool),
+		groups:     postgres.NewGroupRepository(pool),
+		characters: postgres.NewCharacterRepository(pool),
+		folders:    postgres.NewFolderRepository(pool),
+		shared:     postgres.NewSharedRepository(pool),
+		games:      postgres.NewGameRepository(pool),
+		packs:      postgres.NewPackRepository(pool),
+		pool:       pool,
+	}, nil
 }
 
 // Migrate runs one schema command and returns, without building the graph.
@@ -341,6 +422,9 @@ func (a *App) Run(ctx context.Context) error {
 // every connection is handed back, and the requests still draining in
 // Shutdown are holding some of them.
 func (a *App) Close() {
+	if a.agent != nil {
+		a.agent.Close()
+	}
 	if a.pool != nil {
 		a.pool.Close()
 	}

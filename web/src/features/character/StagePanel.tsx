@@ -1,27 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import { useCatalogScope } from '@/lib/api/catalogScope'
+import { slugOf } from '@/domain'
 
-import { bySlug, getCollection, getEntries , describeField } from '@/lib/api'
-import type { Answer, ApiFieldError, Change, Entry, OptionSet, Prompt } from '@/lib/api'
-import { useT } from '@/lib/i18n'
+import { describeField, describeError } from '@/lib/api'
+import type { Answer, ApiFieldError, Change, Entry, Prompt } from '@/lib/api'
+import { useT, useLocale } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
 import { Badge, BlockList, Button, Group, Loader, Stack, Text } from '@/ui'
 import type { BlockListItem } from '@/ui'
 
 import { AbilityScoresForm } from './AbilityScoresForm'
 import type { Scores } from './AbilityScoresForm'
-import { groupByLevel } from './blocks'
+import { groupByLevel, setsRuleset } from './blocks'
 import type { Asking, Block } from './blocks'
 import { DesiredLevelForm } from './DesiredLevelForm'
 import { NameForm } from './NameForm'
 import { RulesetForm } from './RulesetForm'
-import { offersOptions } from './options'
+import { equipmentTitle, offersOptions } from './options'
 import { PromptCard } from './PromptCard'
 import { choiceName, writtenAs } from './promptNames'
 import { refName } from './refNames'
 import type { SettledRow } from './settled'
 import { WrittenForm } from './WrittenForm'
 
-import { collectionOfKind, kindOf, slugOf } from '@/domain'
+import { loadEntries } from './choiceEntries'
 
 export interface StagePanelProps {
   /** Everything on this tab: what was decided, and what is still asked. */
@@ -39,12 +42,14 @@ export interface StagePanelProps {
   pending: boolean
   fields: readonly ApiFieldError[]
   /**
-   * Where to go when there is nothing left here.
+   * Where to go when required choices here are complete.
    *
    * Absent when there is nowhere to go, which is what makes the button the
    * end of the list rather than a fixture of it.
    */
   onNext?: () => void
+  /** Focus Next after the last answer on this tab has been saved. */
+  focusNext?: boolean
   /** What the character is called, so renaming starts from it. */
   name?: string
   /** The scores as the log stored them -- not as the sheet projects them. */
@@ -55,11 +60,13 @@ export interface StagePanelProps {
   /** The character's current level, for the desired-level form to start from. */
   level?: number
   /**
-   * There is no character yet, so the only question that can be answered is
-   * the one that creates it. The rest of the identity tab is drawn, so the
-   * page says up front what it will ask, and does not open.
+   * There is no character yet. Rules can be chosen as a draft and the name
+   * creates the character; level waits until it exists.
    */
   posing?: boolean
+  rulesSelected?: boolean
+  /** Additional choices on this stage, before its Next action. */
+  children?: ReactNode
 }
 
 /**
@@ -71,10 +78,9 @@ export interface StagePanelProps {
  * answering surface, and a decided choice is the same block with an answer in
  * it, which is what it always was.
  *
- * Nothing is open until it is pressed. The screen no longer picks a question
- * for the player, because it has no way of knowing which of five open choices
- * they came here to make -- and a surface that opens itself is one they have
- * to close.
+ * A block opens when pressed, or when the build screen advances to it after
+ * an answer. Its answering surface receives focus so keyboard users can
+ * continue without finding the next block themselves.
  *
  * No block names the tab it is on. The category's word appears exactly once in
  * the document -- in the tab itself -- so that looking for "race" on this page
@@ -99,34 +105,55 @@ export function StagePanel({
   pending,
   fields,
   onNext,
+  focusNext = false,
   name,
   scores,
   method,
   lines,
   level,
   posing = false,
+  rulesSelected = false,
+  children,
 }: StagePanelProps) {
   const t = useT()
+  const nextRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!focusNext) return
+    const next = nextRef.current
+    next?.focus({ preventScroll: true })
+    next?.scrollIntoView?.({ block: 'nearest' })
+  }, [focusNext])
   const surface = (asked: Asking) => (
-    <AnswerSurface
-      asking={asked}
-      pending={pending}
-      fields={fields}
-      {...(name !== undefined ? { name } : {})}
-      {...(scores !== undefined ? { scores } : {})}
-      {...(method !== undefined ? { method } : {})}
-      {...(lines !== undefined ? { lines } : {})}
-      {...(level !== undefined ? { level } : {})}
-      onPicks={(answers) => onAnswerPicks(asked, answers)}
-      onNameChange={onNameChange}
-      onName={(next) => onAnswerName(asked, next)}
-      onChanges={(changes) => onAnswerChanges(asked, changes)}
-    />
+    <FocusedAnswer label={choiceName(t, asked.prompt)}>
+      <AnswerSurface
+        asking={asked}
+        pending={pending}
+        fields={fields}
+        {...(name !== undefined ? { name } : {})}
+        {...(scores !== undefined ? { scores } : {})}
+        {...(method !== undefined ? { method } : {})}
+        {...(lines !== undefined ? { lines } : {})}
+        {...(level !== undefined ? { level } : {})}
+        rulesSelected={rulesSelected}
+        onPicks={(answers) => onAnswerPicks(asked, answers)}
+        onNameChange={onNameChange}
+        onName={(next) => onAnswerName(asked, next)}
+        onChanges={(changes) => onAnswerChanges(asked, changes)}
+      />
+    </FocusedAnswer>
   )
 
   const itemFor = (block: Block): BlockListItem => {
     const open = block.key === openKey
     if (block.kind === 'settled') {
+      // The ruleset is final, but it is drawn as the form it was chosen on,
+      // locked: Edit is the screen the character was created on, not a
+      // summary of it.
+      if (setsRuleset(block.row)) return {
+        key: block.key,
+        header: <Text size="sm" fw={600}>{t('choice.ruleset')}</Text>,
+        body: open ? <RulesetForm pending={false} selected onSubmit={() => undefined} /> : null,
+      }
       const header = <SettledHeader row={block.row} />
       if (!block.changeable) return { key: block.key, header }
       return {
@@ -137,20 +164,20 @@ export function StagePanel({
         body: open ? (asking === null ? <Reasking /> : surface(asking)) : null,
       }
     }
-    // Before the character exists only the question that creates it can be
-    // answered, so the other two are drawn as what they are: questions coming,
-    // with nothing to open. A block with no body is a statement -- the same
-    // rendering a level already taken gets.
-    const waiting = posing && block.prompt.choice.prompt !== 'character/init'
+    // Level needs a character, while rules and name can be chosen beforehand.
+    const waiting = posing && block.prompt.choice.prompt === 'character/desired-level'
     return {
       key: block.key,
       header: <OpenHeader prompt={block.prompt} names={names} />,
-      highlighted: !waiting,
+      // Optional work is offered, not called out: the accent border is for
+      // what still has to be answered.
+      highlighted: !waiting && !block.prompt.optional && !(rulesSelected && block.prompt.choice.prompt === 'character/ruleset'),
       ...(waiting ? {} : { body: open && asking !== null ? surface(asking) : null }),
     }
   }
 
-  const nothingOpen = blocks.every((block) => block.kind === 'settled')
+  const nothingRequired = blocks.every((block) => block.kind === 'settled' || block.prompt.optional ||
+    (rulesSelected && block.prompt.choice.prompt === 'character/ruleset'))
 
   return (
     <Stack gap="sm">
@@ -171,31 +198,74 @@ export function StagePanel({
           <BlockList items={group.blocks.map(itemFor)} open={openKey} onOpen={onOpen} />
         </Stack>
       ))}
+      {children}
       {blocks.length === 0 ? (
         <Text size="sm" c="dimmed">
           {t('stagePanel.nothingYet')}
         </Text>
       ) : null}
-      {/*
-        Under the list, and only once the list has nothing left to answer. It
-        is not navigation -- the tabs are, and they are always there -- it is
-        the end of a piece of work saying where the next piece is, at the
-        moment that is the only thing left to say. It names no category,
-        because the category's word belongs to its tab.
-      */}
-      {nothingOpen && onNext !== undefined && (
+      {/* Optional questions may remain open; Next still lets the player visit
+          the next tab without making those answers required. */}
+      {nothingRequired && onNext !== undefined && (
         // In a Group rather than aligned by the Stack: aligning the stack to
         // its start shrink-wraps every child, and the list is one of them --
         // so the whole panel would take its width from whichever block
         // happens to be open, and change width as blocks are opened and shut.
         <Group>
-          <Button variant="light" onClick={onNext}>
+          <Button ref={nextRef} variant="light" onClick={onNext}>
             {t('stagePanel.next')}
           </Button>
         </Group>
       )}
     </Stack>
   )
+}
+
+/** Focus when Mantine's expanding panel can actually receive keyboard input. */
+function FocusedAnswer({ label, children }: { label: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const surface = ref.current
+    if (surface === null) return
+    const panel = surface.closest('[role="region"]')
+    let frame = 0
+    let focused = false
+    let waitingOnOptions = false
+    const observer = new MutationObserver(() => {
+      if (!focused) {
+        cancelAnimationFrame(frame)
+        frame = requestAnimationFrame(focus)
+      }
+    })
+    const focus = () => {
+      if (focused || !surface.isConnected || surface.closest('[inert], [aria-hidden="true"]')) return
+      const field = surface.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled):not([data-custom-choice])')
+      if (waitingOnOptions && document.activeElement !== surface) {
+        // The player moved away while the choices loaded; leave their focus.
+        observer.disconnect()
+        return
+      }
+      if (field !== null && surface.contains(document.activeElement) && document.activeElement !== surface) {
+        focused = true
+        observer.disconnect()
+        return
+      }
+      const target = field ?? surface
+      target.focus({ preventScroll: true })
+      if (document.activeElement === target) {
+        if (field !== null) {
+          focused = true
+          observer.disconnect()
+        } else waitingOnOptions = true
+        surface.scrollIntoView?.({ block: 'nearest' })
+      }
+    }
+    if (panel !== null) observer.observe(panel, { attributes: true, attributeFilter: ['aria-hidden', 'inert', 'style'] })
+    observer.observe(surface, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled', 'style'] })
+    focus()
+    return () => { observer.disconnect(); cancelAnimationFrame(frame) }
+  }, [])
+  return <div ref={ref} tabIndex={-1} role="group" aria-label={label}>{children}</div>
 }
 
 /** What was decided, and what it was decided to be. The level it belongs to
@@ -226,11 +296,11 @@ function OpenHeader({ prompt, names }: { prompt: Prompt; names: ReadonlyMap<stri
   return (
     <Group gap={8} wrap="nowrap" justify="space-between" w="100%">
       <Text size="sm" fw={600} style={{ whiteSpace: 'normal', textAlign: 'left' }}>
-        {choiceName(t, prompt)}
+        {equipmentTitle(t, prompt, names) ?? choiceName(t, prompt)}
         {prompt.source !== undefined && (
           <Text span size="xs" c="dimmed" fw={400}>
             {' '}
-            · from {refName(prompt.source, names)}
+            {t('block.from', { name: refName(prompt.source, names) })}
           </Text>
         )}
       </Text>
@@ -294,6 +364,7 @@ function AnswerSurface({
   method,
   lines,
   level,
+  rulesSelected,
   onPicks,
   onNameChange,
   onName,
@@ -307,6 +378,7 @@ function AnswerSurface({
   method?: string
   lines?: readonly string[]
   level?: number
+  rulesSelected: boolean
   onPicks: (answers: Answer[]) => void
   onNameChange: (name: string) => void
   onName: (name: string) => void
@@ -332,7 +404,7 @@ function AnswerSurface({
     )
   }
   if (prompt.choice.prompt === 'character/ruleset') {
-    return <RulesetForm pending={pending} submitLabel={submitLabel} onSubmit={onChanges} />
+    return <RulesetForm pending={pending} selected={rulesSelected} onSubmit={onChanges} />
   }
 
   if (kind === 'text') {
@@ -367,6 +439,7 @@ function AnswerSurface({
       <AbilityScoresForm
         {...(scores !== undefined ? { scores } : {})}
         {...(method !== undefined ? { method } : {})}
+        {...(prompt.recommended !== undefined ? { recommended: prompt.recommended } : {})}
         pending={pending}
         fields={fields}
         submitLabel={submitLabel}
@@ -375,7 +448,11 @@ function AnswerSurface({
     )
   }
 
-  return <PromptWithOptions prompt={prompt} pending={pending} onAnswer={onPicks} />
+  // What the entry being changed already says. A structural entry -- a race,
+  // a class -- says it with its ref rather than with a recorded answer.
+  const ref = replaces?.event.ref
+  const given = [...(replaces?.event.choices ?? []), ...(ref !== undefined ? [{ prompt: prompt.choice.prompt, picks: [slugOf(ref)] }] : [])]
+  return <PromptWithOptions prompt={prompt} initialAnswers={given} pending={pending} onAnswer={onPicks} />
 }
 
 /** The level a settled declaration stated, read back for the form changing it. */
@@ -405,64 +482,53 @@ function maybeError(
  */
 function PromptWithOptions({
   prompt,
+  initialAnswers,
   pending,
   onAnswer,
 }: {
   prompt: Prompt
+  initialAnswers: readonly Answer[]
   pending: boolean
   onAnswer: (answers: Answer[]) => void
 }) {
+  const t = useT()
+  const scope = useCatalogScope()
+  const locale = useLocale()
   const [entries, setEntries] = useState<Map<string, Entry>>(new Map())
+  const [loading, setLoading] = useState(true)
+  const [drawn, setDrawn] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
+
+  const [request, setRequest] = useState({ prompt, locale, attempt })
+  if (request.prompt !== prompt || request.locale !== locale || request.attempt !== attempt) {
+    setRequest({ prompt, locale, attempt })
+    setLoading(true)
+    setError(null)
+  }
 
   useEffect(() => {
     let live = true
-    void loadEntries(prompt).then((loaded) => {
-      if (live) setEntries(loaded)
+    void loadEntries(prompt, scope).then((loaded) => {
+      if (live) { setEntries(loaded); setLoading(false); setDrawn(true) }
+    }).catch((cause: unknown) => {
+      if (live) { setError(describeError(t, cause)); setLoading(false); setDrawn(true) }
     })
     return () => {
       live = false
     }
-  }, [prompt])
+  }, [prompt, locale, attempt, t, scope])
 
-  return <PromptCard prompt={prompt} entries={entries} pending={pending} onAnswer={onAnswer} />
-}
-
-/**
- * Fetches the catalogue entries a prompt's options name.
- *
- * Branches included, because a branch is drawn in the same card as the
- * question that offered it -- so its options need names before anything is
- * posted, not after the server poses it as a prompt of its own. A branch
- * drawing on a whole collection, like the improvement's "or a feat", pulls
- * that collection in the same pass.
- */
-async function loadEntries(prompt: Prompt): Promise<Map<string, Entry>> {
-  const whole = new Set<string>()
-  const wanted = new Map<string, Set<string>>()
-
-  const visitSet = (set: OptionSet) => {
-    if (set.kind === 'collection' && set.collection !== undefined) {
-      const collection = collectionOfKind(set.collection)
-      if (collection !== null) whole.add(collection)
-      return
-    }
-    for (const option of set.options ?? []) {
-      if (option.kind === 'ref' && option.ref !== undefined) {
-        const collection = collectionOfKind(kindOf(option.ref))
-        if (collection === null) continue
-        const bucket = wanted.get(collection) ?? new Set<string>()
-        bucket.add(slugOf(option.ref))
-        wanted.set(collection, bucket)
-      }
-      if (option.items !== undefined) visitSet({ kind: 'explicit', options: option.items })
-      if (option.choice !== undefined) visitSet(option.choice.from)
-    }
-  }
-  visitSet(prompt.choice.from)
-
-  const loaded = await Promise.all([
-    ...[...whole].map((collection) => getCollection<Entry>(collection)),
-    ...[...wanted].map(([collection, slugs]) => getEntries<Entry>(collection, [...slugs])),
-  ])
-  return bySlug(loaded.flat())
+  return <Stack gap="sm">
+    {loading && <Text size="sm">{t('page.loadingEllipsis')}</Text>}
+    {error !== null && <><Text c="red">{error}</Text><Button onClick={() => setAttempt((n) => n + 1)}>{t('page.retry')}</Button></>}
+    {/*
+      Not before the first load: an option drawn without its entry is named by
+      its slug, and then renamed under the player's eyes -- "Scholars Pack"
+      becoming "Scholar's Pack" with its source tags. Once drawn it stays:
+      a later reload (a new language, a refreshed prompt) must not unmount the
+      card and drop the picks in hand.
+    */}
+    {drawn && <PromptCard prompt={prompt} initialAnswers={initialAnswers} entries={entries} pending={pending || loading || error !== null} onAnswer={onAnswer} />}
+  </Stack>
 }

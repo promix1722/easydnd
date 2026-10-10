@@ -31,6 +31,14 @@ type Authenticator interface {
 // what tells the SPA to show the landing page rather than an error.
 func RequireSession(auth Authenticator, cookies helpers.CookieOptions) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// ponytail: verifies every sibling on every request; gate on a
+		// count if a development server with many live tabs feels slow.
+		for name, sibling := range cookies.SiblingSessions(c) {
+			if _, err := auth.Session(c.Request.Context(), sibling); err != nil {
+				cookies.ClearSessionNamed(c, name)
+			}
+		}
+
 		token := cookies.Session(c)
 		if token == "" {
 			helpers.FormatError(c, types.NewUnauthenticatedError("no session").Because("auth.noSession"))

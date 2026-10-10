@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -10,17 +11,12 @@ import (
 	"github.com/promix1722/easydnd/internal/domain/character"
 	domain "github.com/promix1722/easydnd/internal/domain/game"
 	"github.com/promix1722/easydnd/internal/domain/group"
+	"github.com/promix1722/easydnd/internal/domain/rules"
 	"github.com/promix1722/easydnd/internal/types"
 )
 
 // SharedRepository is a concurrency-safe in-process store for the characters
 // groups have shared.
-//
-// In memory is not a placeholder here in the way it is for accounts, which
-// have a Postgres sibling. Every row points at a character id, and a character
-// id is the counter in CharacterRepository below -- so this store is exactly
-// as durable as the thing it refers to, on purpose. A SQL sibling arrives when
-// characters do, and not before.
 type SharedRepository struct {
 	mu sync.RWMutex
 	// Keyed by group, then character, which is the shape of every question
@@ -303,7 +299,7 @@ func (r *GameRepository) AddCharacters(
 			continue
 		}
 		seated[c] = struct{}{}
-		roster = append(roster, domain.Entry{Character: c, AddedAt: at})
+		roster = append(roster, domain.Entry{ID: "pc_" + string(c), Kind: "player", Character: c, AddedAt: at})
 	}
 	r.rosters[id] = roster
 	return nil
@@ -321,7 +317,7 @@ func (r *GameRepository) RemoveCharacter(
 	}
 	roster := r.rosters[id]
 	rest := slices.DeleteFunc(slices.Clone(roster), func(e domain.Entry) bool {
-		return e.Character == c
+		return e.Kind != "monster" && e.Character == c
 	})
 	if len(rest) == len(roster) {
 		return types.NewNotFoundError("character %q is not in this game", c)
@@ -338,7 +334,7 @@ func (r *GameRepository) Characters(_ context.Context, id domain.ID) ([]domain.E
 	if _, ok := r.items[id]; !ok {
 		return nil, types.NewNotFoundError("game %q", id).Because("game.notFound")
 	}
-	return slices.Clone(r.rosters[id]), nil
+	return cloneEntries(r.rosters[id]), nil
 }
 
 // RemoveFromGroupGames drops c from every game at g's table.
@@ -353,7 +349,7 @@ func (r *GameRepository) RemoveFromGroupGames(
 			continue
 		}
 		r.rosters[id] = slices.DeleteFunc(slices.Clone(r.rosters[id]), func(e domain.Entry) bool {
-			return e.Character == c
+			return e.Kind != "monster" && e.Character == c
 		})
 	}
 	return nil
@@ -363,3 +359,52 @@ var (
 	_ domain.SharedRepository = (*SharedRepository)(nil)
 	_ domain.Repository       = (*GameRepository)(nil)
 )
+
+// MutateEntries serializes authorization and edits with lock changes.
+func (r *GameRepository) MutateEntries(_ context.Context, id domain.ID, change func([]domain.Entry) ([]domain.Entry, error)) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.items[id]; !ok {
+		return types.NewNotFoundError("game %q", id).Because("game.notFound")
+	}
+	entries, err := change(cloneEntries(r.rosters[id]))
+	if err != nil {
+		return err
+	}
+	r.rosters[id] = cloneEntries(entries)
+	return nil
+}
+
+func cloneEntries(in []domain.Entry) []domain.Entry {
+	out := slices.Clone(in)
+	for i := range out {
+		e := &out[i]
+		e.Tags = slices.Clone(e.Tags)
+		e.Used = maps.Clone(e.Used)
+		if e.Initiative != nil {
+			value := *e.Initiative
+			e.Initiative = &value
+		}
+		if e.Monster != nil {
+			stats := *e.Monster
+			stats.Spellcasting = slices.Clone(stats.Spellcasting)
+			stats.Speeds = slices.Clone(stats.Speeds)
+			stats.Senses = slices.Clone(stats.Senses)
+			stats.Abilities.ModifierRule = cloneExpression(stats.Abilities.ModifierRule)
+			stats.Abilities.Scores = make(map[rules.Ability]int, len(stats.Abilities.Scores))
+			for ability, score := range e.Monster.Abilities.Scores {
+				stats.Abilities.Scores[ability] = score
+			}
+			e.Monster = &stats
+		}
+	}
+	return out
+}
+
+func cloneExpression(in rules.Expression) rules.Expression {
+	in.Args = slices.Clone(in.Args)
+	for i := range in.Args {
+		in.Args[i] = cloneExpression(in.Args[i])
+	}
+	return in
+}

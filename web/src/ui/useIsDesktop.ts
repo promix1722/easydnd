@@ -6,7 +6,7 @@ import { DESKTOP_MEDIA_QUERY } from '@/theme/tokens'
  * The one viewport decision in the app.
  *
  * Feature code should almost never call this -- reach for a responsive
- * primitive (`ModalSheet`, `DataList`, `Columns`, `SectionDeck`) or Mantine's
+ * primitive (`ModalSheet`, `DataList`, `Columns`) or Mantine's
  * responsive props instead. It is exported for the shell, which genuinely has
  * to pick between two different chromes, and for the rare component whose two
  * renderings share no markup at all.

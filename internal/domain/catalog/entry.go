@@ -14,8 +14,8 @@
 // isolation. References are always rules.Slug values, never Go pointers, so
 // the graph stays acyclic and a *Catalog can be shared immutably.
 //
-// The compendium is read-only at runtime. It is regenerated from the vendored
-// SRD dump by cmd/srdgen, never edited by the application.
+// The compendium is read-only at runtime: it is edited in the repository,
+// never by the application.
 package catalog
 
 import "github.com/promix1722/easydnd/internal/domain/rules"
@@ -27,6 +27,10 @@ import "github.com/promix1722/easydnd/internal/domain/rules"
 // adapter has to carry a locale or perform a fallback. Where a locale has no
 // translation for a key, these hold the English text.
 type Entry struct {
+	// Manual marks character-scoped content whose missing mechanics remain unknown.
+	Manual     bool
+	Provenance *Provenance
+
 	// Slug is the stable, language-neutral identity.
 	Slug rules.Slug
 
@@ -37,6 +41,23 @@ type Entry struct {
 	// is paragraph-split this way; joining it would lose list formatting that
 	// several entries depend on.
 	Desc []string
+
+	// Action is set when the pack tags this entry as something done on a
+	// turn. Nil for the great majority of entries, which are not.
+	Action *ActionTag
+}
+
+// ActionTag is a pack's statement that an entry belongs in the character's
+// action list. The entry's own name and prose describe the action, so the tag
+// carries only what the prose cannot be asked: which part of a turn it takes,
+// and which pool, if any, it spends.
+type ActionTag struct {
+	// Kind is the wire name of the part of a turn: "action", "bonus-action",
+	// "reaction" or "free-action".
+	Kind string
+
+	// Uses is the resource pool the action spends. Zero when it is unlimited.
+	Uses rules.Slug
 }
 
 // Prerequisite is a condition that must hold before an entry applies: a
@@ -72,3 +93,12 @@ const (
 	// PrerequisiteEntry is "the Extra Attack feature".
 	PrerequisiteEntry
 )
+
+// Provenance identifies the immutable owner and the publications describing an entry.
+type Provenance struct {
+	PackID, PackTitle, Version, Digest string
+	Sources                            []BookSource
+}
+
+// BookSource is a publication identifier scoped to its owning pack and its localized name.
+type BookSource struct{ ID, Name string }

@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 )
 
@@ -22,11 +23,20 @@ import (
 // and your own are produced by one code path and cannot drift into two shapes
 // the client would have to tell apart.
 func (h *Handler) Sheet(c *gin.Context) {
-	state, err := h.service.Sheet(
+	state, cat, err := h.service.SheetWithCatalog(
 		c.Request.Context(), h.actor(c), pathCharacterOf(c), helpers.Locale(c))
 	if err != nil {
 		helpers.FormatError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, characterapi.SheetOf(state))
+	c.JSON(http.StatusOK, characterapi.ResolvedSheetOf(state, cat))
+}
+
+func (h *Handler) Catalog(c *gin.Context) {
+	cat, err := h.service.CharacterCatalog(c.Request.Context(), h.actor(c), pathCharacterOf(c), helpers.Locale(c))
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	catalogapi.ServeCollection(c, cat)
 }

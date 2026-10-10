@@ -79,7 +79,7 @@ func TestPromptsAdvanceAsAnswersArrive(t *testing.T) {
 
 	mustAppend := func(events ...Event) {
 		t.Helper()
-		if err := log.Append(events...); err != nil {
+		if err := log.Append(oneQuestionEach(events...)...); err != nil {
 			t.Fatalf("Append() error = %v", err)
 		}
 	}
@@ -660,5 +660,39 @@ func TestChoosingABackgroundKeepsWhatWasWritten(t *testing.T) {
 	}
 	if got := state.Identity.Flaws; len(got) != 1 || got[0] != "I cannot let a bet go." {
 		t.Errorf("flaws = %v, want the one that was written", got)
+	}
+}
+
+func TestPersonalityIsAvailableBeforeBackground(t *testing.T) {
+	var log Log
+	if err := log.Append(Event{Type: EventInit}); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []rules.Slug{
+		"character/personality-trait", "character/ideal", "character/bond",
+		"character/flaw", "character/alignment",
+	} {
+		p := find(t, promptsFor(t, log), id)
+		if p.Group != GroupPersonality || !p.Optional {
+			t.Errorf("%s: expected an optional personality prompt, got %+v", id, p)
+		}
+	}
+	if err := log.Append(Event{Type: EventChange, Changes: []Change{
+		{Path: "identity.personalityTraits", Op: OpSet, Value: StringValue("I trust strangers.")},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if has(promptsFor(t, log), "character/personality-trait") {
+		t.Error("written trait was not settled before choosing a background")
+	}
+	if err := log.Append(Event{Type: EventBackground, Ref: rules.NewRef(rules.RefBackground, "acolyte")}); err != nil {
+		t.Fatal(err)
+	}
+	state, err := Project(log, LoadCatalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(state.Identity.PersonalityTraits, []string{"I trust strangers."}) {
+		t.Fatalf("background changed the written trait: %v", state.Identity.PersonalityTraits)
 	}
 }

@@ -4,15 +4,48 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-yaml"
 )
 
-// EnvConfigPath names the one and only environment variable this package reads.
-// Every other setting lives in the YAML file it points at: a single source of
-// truth beats a config file that any stray export can quietly override.
+// EnvConfigPath names the config file. The file is committed and carries no
+// secret; what it cannot carry arrives through the variables in applyEnv.
 const EnvConfigPath = "EASYDND_CONFIG"
+
+// applyEnv lays the environment over the parsed file. Two kinds of value come
+// this way and no others: secrets, which a committed config must not hold, and
+// what differs per machine or per worktree -- a development slot's port and
+// origins. The process reads only its environment; the env *file* is loaded by
+// whatever starts it, make in development and supervisor in production.
+//
+// A fixed list rather than a naming rule, so that a stray export cannot reach
+// a key nobody meant to open, and an unset or empty variable leaves the file's
+// value alone.
+func applyEnv(f *fileConfig) {
+	for name, dst := range map[string]*string{
+		"EASYDND_AGENT_API_KEY":        &f.Agent.APIKey,
+		"EASYDND_SESSION_SECRET":       &f.Auth.SessionSecret,
+		"EASYDND_DB_URL":               &f.DB.URL,
+		"EASYDND_GOOGLE_CLIENT_ID":     &f.Auth.Google.ClientID,
+		"EASYDND_GOOGLE_CLIENT_SECRET": &f.Auth.Google.ClientSecret,
+		"EASYDND_HTTP_PORT":            &f.HTTP.Port,
+		"EASYDND_RP_ID":                &f.Auth.RPID,
+	} {
+		if v := os.Getenv(name); v != "" {
+			*dst = v
+		}
+	}
+	if v := os.Getenv("EASYDND_RP_ORIGINS"); v != "" {
+		f.Auth.RPOrigins = strings.Split(v, ",")
+	}
+	// A path on this machine, not a secret -- but it is true of one host only,
+	// and a missing directory is a startup error, so it cannot be committed.
+	if v := os.Getenv("EASYDND_PRIVATE_PACK_FILES"); v != "" {
+		f.Data.PrivatePackFiles = strings.Split(v, ",")
+	}
+}
 
 // fileConfig mirrors Config with YAML tags. It exists as a separate type so
 // that "absent from the file" is distinguishable from "resolved value": every
@@ -22,12 +55,25 @@ const EnvConfigPath = "EASYDND_CONFIG"
 // Durations are strings ("10s") rather than time.Duration so that a malformed
 // value produces our own error naming the key, not a yaml type error.
 type fileConfig struct {
-	Env  string   `yaml:"env"`
-	HTTP fileHTTP `yaml:"http"`
-	Log  fileLog  `yaml:"log"`
-	Data fileData `yaml:"data"`
-	Auth fileAuth `yaml:"auth"`
-	DB   fileDB   `yaml:"db"`
+	Agent fileAgent `yaml:"agent"`
+	Env   string    `yaml:"env"`
+	HTTP  fileHTTP  `yaml:"http"`
+	Log   fileLog   `yaml:"log"`
+	Data  fileData  `yaml:"data"`
+	Auth  fileAuth  `yaml:"auth"`
+	DB    fileDB    `yaml:"db"`
+}
+
+type fileAgent struct {
+	APIKey string `yaml:"api_key"`
+	Model  string `yaml:"model"`
+	// ReasoningEffort is passed to the provider as written. Empty is "low";
+	// "default" sends nothing, for a model that takes no such setting.
+	ReasoningEffort string `yaml:"reasoning_effort"`
+	Workers         int    `yaml:"workers"`
+	MaxTurns        int    `yaml:"max_turns"`
+	MaxSessions     int    `yaml:"max_sessions"`
+	RequestTimeout  string `yaml:"request_timeout"`
 }
 
 type fileHTTP struct {
@@ -48,7 +94,14 @@ type fileLog struct {
 }
 
 type fileData struct {
-	SRDDir string `yaml:"srd_dir"`
+	SRDDir    string   `yaml:"srd_dir"`
+	PackFiles []string `yaml:"pack_files"`
+	// PrivatePackFiles are installed like pack_files but never join the
+	// default lock and are listed only for the accounts allowed to read them.
+	PrivatePackFiles []string          `yaml:"private_pack_files"`
+	AutoloadPacks    []PackFolder      `yaml:"autoload_packs"`
+	DefaultPacks     map[string]string `yaml:"default_packs"`
+	PackArchive      string            `yaml:"pack_archive"`
 }
 
 type fileDB struct {
@@ -69,7 +122,9 @@ type fileAuth struct {
 	RPName        string   `yaml:"rp_name"`
 	RPOrigins     []string `yaml:"rp_origins"`
 	SessionSecret string   `yaml:"session_secret"`
-	SessionTTL    string   `yaml:"session_ttl"`
+	// Superadmins names accounts by verified Google email or by account id.
+	Superadmins []string `yaml:"superadmins"`
+	SessionTTL  string   `yaml:"session_ttl"`
 	// GuestSessionTTL is the anonymous-session lifetime. It is a separate key
 	// from session_ttl because a guest token names nothing recoverable and
 	// cannot be revoked, so it wants a shorter life than an account's.
@@ -81,7 +136,6 @@ type fileAuth struct {
 	Google fileGoogle `yaml:"google"`
 }
 
-// fileSource is a parsed config file plus what we learned about the file itself.
 type fileGoogle struct {
 	ClientID     string `yaml:"client_id"`
 	ClientSecret string `yaml:"client_secret"`
@@ -96,9 +150,6 @@ type fileSource struct {
 	// path is echoed in logs so that "which config is this process running?"
 	// is answerable from the log stream alone.
 	path string
-	// worldReadable records that the file is readable by every account on the
-	// box. It holds the session signing key, so this is worth saying out loud.
-	worldReadable bool
 }
 
 // resolvePath picks the config path: an explicit flag value wins over
@@ -113,7 +164,7 @@ func resolvePath(flagPath string) (string, error) {
 		return v, nil
 	}
 	return "", fmt.Errorf(
-		"no config file: pass -config <path> or set %s (see deploy/config.example.yaml)",
+		"no config file: pass -config <path> or set %s (see config.prod.yaml)",
 		EnvConfigPath)
 }
 
@@ -134,13 +185,9 @@ func readFile(path string) (*fileSource, error) {
 		return nil, fmt.Errorf("parse config %s: %w", path, err)
 	}
 
-	src := &fileSource{cfg: cfg, path: path}
-	// A stat failure here is not fatal: we have already read the file, and
-	// losing the permission warning is not worth refusing to start over.
-	if info, err := os.Stat(path); err == nil {
-		src.worldReadable = info.Mode().Perm()&0o004 != 0
-	}
-	return src, nil
+	applyEnv(&cfg)
+
+	return &fileSource{cfg: cfg, path: path}, nil
 }
 
 // parser accumulates the first conversion error so that the mapping code below

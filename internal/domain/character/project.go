@@ -2,6 +2,7 @@ package character
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -23,17 +24,17 @@ import (
 //  3. compute the derived values -- proficiency bonus, then ability
 //     modifiers, then skills and saving throws, then armor class, initiative
 //     and the spellcasting summaries
-//  4. assemble actions, deriving from equipment and prepared spells before
-//     appending the ones stored manually
+//  4. assemble actions, deriving from equipment, tagged entries and the
+//     pack's standalone actions
 //
 // Step 3 is ordered because each stage feeds the next: proficiency bonus
 // depends on character level, saving throws depend on the proficiency bonus,
 // and the spell save DC depends on both.
 //
-// Step 4 is not implemented. Deriving an attack from an equipped weapon and a
-// casting from a prepared spell is the battle tracker's groundwork, not
-// character creation's, and State.Actions carries only what a change event
-// put there.
+// Step 4 happens after the build, in deriveActions: an equipped weapon gives
+// its attack, an entry the pack tagged gives its action, and the pack's
+// standalone actions give the rest. A casting from a prepared spell is not
+// derived; spells are listed on their own.
 //
 // # Base scores versus final scores
 //
@@ -43,22 +44,28 @@ import (
 // a different race changes the sheet, which is the entire point of projecting
 // rather than storing; the alternative would make the player re-enter six
 // numbers whenever they went back a step.
-func Project(log Log, cat *catalog.Catalog) (State, error) {
+func projectBuild(log Log, cat *catalog.Catalog) (State, error) {
 	if cat == nil {
 		return State{}, types.NewValidationError("projecting against a nil catalogue")
+	}
+	if lock := log.RulesLock(); !lock.IsZero() && !lock.Equal(cat.Lock) {
+		return State{}, types.NewValidationError("character rules lock does not match catalogue")
 	}
 	if err := log.Validate(); err != nil {
 		return State{}, err
 	}
 
+	cat = WithCustomCatalog(log, cat)
 	p := projector{cat: cat, answers: foldAnswers(log)}
+	p.state.Abilities.ModifierRule = cat.Mechanics.Core.AbilityModifier
 	return p.run(log)
 }
 
 // projector carries the working state of one projection.
 type projector struct {
-	cat     *catalog.Catalog
-	answers answers
+	finalAbilities map[rules.Ability]int
+	cat            *catalog.Catalog
+	answers        answers
 
 	state State
 
@@ -84,7 +91,9 @@ type projector struct {
 	proficiencies []rules.Slug
 
 	// expertise is the skills doubled by a feature.
-	expertise []rules.Slug
+	expertise   []rules.Slug
+	err         error
+	statEffects []pendingEffect
 }
 
 // seqChange is a change together with the event that carried it, so an error
@@ -105,6 +114,22 @@ func (p *projector) run(log Log) (State, error) {
 	// non-obvious one: deriveAbilities applies the improvement every fourth
 	// level grants, so a character who declared 4th level but had not been
 	// raised to it yet had their improvement silently do nothing.
+	// A source may describe a subclass before its parent class is imported.
+	for _, custom := range CustomOptions(log) {
+		if !custom.Selected {
+			continue
+		}
+		if custom.Kind == "subclass" {
+			for _, taken := range p.state.Identity.Classes {
+				if taken.Class.String() == custom.Parent && taken.Subclass.IsZero() {
+					p.customStructure(custom)
+				}
+			}
+		}
+		if custom.Kind == "subrace" && p.state.Identity.Subrace.IsZero() && p.state.Identity.Race.String() == custom.Parent {
+			p.customStructure(custom)
+		}
+	}
 	p.advanceToDesiredLevel()
 
 	// Ability scores are finalised before anything that reads them. The hit
@@ -112,36 +137,109 @@ func (p *projector) run(log Log) (State, error) {
 	// modifier per level, and a half-elf who put their +1 into Constitution
 	// would otherwise be three hit points short at 3rd level.
 	p.deriveAbilities()
+	for ability, score := range p.finalAbilities {
+		p.state.Abilities.Scores[ability] = score
+	}
 
 	p.applyRace()
 	p.applyBackground()
 	p.applyClasses()
+	p.state.Status.ProficiencyBonus = proficiencyBonus(p.state.Identity.Level())
+	if e := p.cat.Mechanics.Core.Proficiency; e.Op != "" {
+		n, err := e.Eval(rules.Variables{"level": p.state.Identity.Level()})
+		if err != nil {
+			return State{}, err
+		}
+		p.state.Status.ProficiencyBonus = n
+	}
+	// The starting kit comes first, into the backpack: the sheet's own
+	// equipment writes are counts of what it granted.
 	p.applyEquipmentChoices()
-
+	// Equipped items are explicit inputs to pack conditions as well as AC.
+	// Apply that independent list before rules; carried-item changes still
+	// follow rule grants.
+	var carriedChanges []seqChange
+	for _, change := range p.equipment {
+		if change.Change.Path == "equipment.equipped" {
+			if err := p.applyChanges([]seqChange{change}); err != nil {
+				return State{}, err
+			}
+		} else {
+			carriedChanges = append(carriedChanges, change)
+		}
+	}
+	p.equipment = carriedChanges
+	if err := p.applyPackRules(); err != nil {
+		return State{}, err
+	}
+	// Recompute HP from final modifiers, including per-level minimums.
+	p.state.Base.HitPoints.Max = 0
+	for i, taken := range p.state.Identity.Classes {
+		if class, ok := p.cat.Classes.Get(taken.Class); ok {
+			p.addHitPoints(class.HitDie, taken.Level, i == 0)
+		}
+	}
 	if err := p.applyChanges(p.equipment); err != nil {
 		return State{}, err
 	}
+	// The whole-list equipped writes ran before the rules and the Custom slot
+	// writes after, so a slot set between two list writes is checked only now,
+	// against the list as it finally stands.
+	p.clearCustomIfBare()
 
 	p.deriveProficiencies()
 	p.deriveStatus()
+	p.applySpells()
+	for _, e := range p.statEffects {
+		if err := p.applyEffect(e.rule, e.effect); err != nil {
+			return State{}, err
+		}
+	}
+	p.state.Base.HitPoints.Current = p.state.Base.HitPoints.Max
+	if !p.cat.Lock.IsZero() {
+		if err := p.resourceDefinitions(); err != nil {
+			return State{}, err
+		}
+	}
 
 	if err := p.applyChanges(p.overrides); err != nil {
 		return State{}, err
 	}
-	return p.state, nil
+	for i := range p.state.Contributions {
+		c := &p.state.Contributions[i]
+		for _, e := range log.Events {
+			if e.Ref == c.Owner {
+				c.EventID = e.ID
+			}
+		}
+	}
+	p.privateNames()
+	p.customDetails(log)
+	return p.state, p.err
 }
 
 // replay walks the log in order, recording what was chosen. Nothing is
 // derived here: this stage only says which catalogue entries the character
 // named and which changes were requested.
 func (p *projector) replay(log Log) {
+	custom := CustomOptions(log)
 	for _, e := range log.Events {
+		if e.Custom != nil {
+			// Only the latest definition applies, at its original selection position.
+			for i, c := range custom {
+				if c.ID == e.Custom.ID {
+					p.customStructure(c)
+					custom = append(custom[:i], custom[i+1:]...)
+					break
+				}
+			}
+		}
 		switch e.Type {
 		case EventInit, EventChange:
 			for _, ch := range e.Changes {
 				sc := seqChange{Seq: e.Seq, Change: ch}
 				switch {
-				case isInputPath(ch.Path):
+				case isInputPath(ch.Path) || strings.HasPrefix(string(ch.Path), "finalAbilities."):
 					p.inputs = append(p.inputs, sc)
 				case isEquipmentPath(ch.Path):
 					p.equipment = append(p.equipment, sc)
@@ -166,6 +264,13 @@ func (p *projector) replay(log Log) {
 				p.state.Feats = append(p.state.Feats, e.Ref.Slug)
 			}
 		case EventNote, EventNone:
+			if strings.HasPrefix(e.Note, "import.session:") {
+				p.state.ImportSession = strings.TrimPrefix(e.Note, "import.session:")
+			}
+			if strings.HasPrefix(e.Note, "import.manual:") {
+				_, body, _ := strings.Cut(e.Note, "\n")
+				p.state.ImportedNotes = append(p.state.ImportedNotes, body)
+			}
 		}
 	}
 }
@@ -237,7 +342,7 @@ func (p *projector) setSubclass(subclass rules.Slug) {
 // and the ruling would vanish.
 func isInputPath(path Path) bool {
 	switch path {
-	case "identity.name", "identity.alignment", "identity.desiredLevel",
+	case "identity.image", "identity.name", "identity.alignment", "identity.desiredLevel",
 		"identity.ruleset", "abilities.method":
 		return true
 	}
@@ -248,9 +353,15 @@ func isInputPath(path Path) bool {
 // isEquipmentPath reports whether a change moves items between the carried
 // lists, which has to happen between the starting kit being granted and armor
 // class being derived from what is worn.
+//
+// A stack set by count -- equipment.equipped.leather-armor -- is as much a
+// move as a list is, and has to land in the same place: left to the override
+// tier it arrives after armor class was derived, and the armor an imported
+// character is wearing protects nobody. The purse is not carried in a list
+// and stays an ordinary override.
 func isEquipmentPath(path Path) bool {
 	segments := path.Segments()
-	return len(segments) == 2 && segments[0] == "equipment"
+	return len(segments) >= 2 && segments[0] == "equipment" && segments[1] != "purse"
 }
 
 // applyRace resolves the race and subrace: bonuses, speed, size, languages,
@@ -287,8 +398,14 @@ func (p *projector) applyRace() {
 		}
 		p.proficiencies = append(p.proficiencies, trait.Proficiencies...)
 		p.proficiencies = append(p.proficiencies, p.answers.slugs(trait.ProficiencyOptions)...)
+		if trait.Specific != nil {
+			p.state.Traits = append(p.state.Traits, p.answers.slugs(trait.Specific.SubtraitOptions)...)
+		}
 	}
 	p.state.Base.Senses = sensesFor(p.state.Traits)
+	if len(p.cat.Mechanics.Core.Senses) > 0 {
+		p.state.Base.Senses = packSenses(p.state.Traits, p.cat)
+	}
 }
 
 // applyBackground resolves the background's proficiencies, languages,
@@ -339,7 +456,9 @@ func (p *projector) applyClasses() {
 			}
 		}
 
-		p.addHitPoints(class.HitDie, taken.Level, first)
+		if class.HitDie > 0 {
+			p.addHitPoints(class.HitDie, taken.Level, first)
+		}
 		p.addHitDice(class.HitDie, taken.Level)
 
 		features := featuresThrough(p.cat, taken.Class, taken.Level)
@@ -392,6 +511,26 @@ func (p *projector) addHitPoints(hitDie, level int, first bool) {
 	average := hitDie/2 + 1
 
 	gained := 0
+	if core := p.cat.Mechanics.Core; core.HitPointFirst.Op != "" {
+		vars := variables(p.state, p.cat)
+		vars["hitDie"] = hitDie
+		firstHP, err := core.HitPointFirst.Eval(vars)
+		if err != nil {
+			p.err = err
+			return
+		}
+		laterHP, err := core.HitPointLater.Eval(vars)
+		if err != nil {
+			p.err = err
+			return
+		}
+		gained = level * laterHP
+		if first {
+			gained += firstHP - laterHP
+		}
+		p.state.Base.HitPoints.Max += gained
+		return
+	}
 	if first {
 		gained += hitDie + conModifier
 		gained += (level - 1) * (average + conModifier)
@@ -426,10 +565,11 @@ func (p *projector) addClassResources(row catalog.ClassLevel) {
 
 // applyEquipmentChoices resolves the starting-equipment prompts into stacks.
 //
-// Everything lands in the backpack. Nothing in the catalogue says what a
-// character is wearing, and guessing -- strapping on the shield that came in
-// the same bundle as a two-handed weapon -- would produce an armor class with
-// no rule behind it. Equipping is an explicit change event.
+// Everything chosen lands in the backpack, whatever slot the question was
+// asked for. Putting it on is not this function's business and not a build's:
+// a kit choice "for the main hand" used to be worn, which read well for one
+// sword and badly for everything else -- see AutoEquip, which does it once,
+// at the end, one item to a slot.
 func (p *projector) applyEquipmentChoices() {
 	class, ok := p.cat.Classes.Get(p.firstClass())
 	if ok {
@@ -445,7 +585,7 @@ func (p *projector) applyEquipmentChoices() {
 }
 
 func (p *projector) addChosenEquipment(choice rules.Choice) {
-	p.answers.chosen(choice, func(o rules.Option) {
+	p.answers.chosen(p.cat.ResolveChoice(choice), func(o rules.Option) {
 		switch opt := o.(type) {
 		case rules.RefOption:
 			if opt.Ref.Kind == rules.RefItem || opt.Ref.Kind == rules.RefMagicItem {
@@ -470,7 +610,7 @@ func (p *projector) deriveAbilities() {
 	if p.state.Abilities.Scores == nil {
 		p.state.Abilities.Scores = make(map[rules.Ability]int)
 	}
-	for _, ability := range rules.Abilities() {
+	for _, ability := range p.cat.AbilityIDs() {
 		if _, ok := p.state.Abilities.Scores[ability]; !ok {
 			p.state.Abilities.Scores[ability] = 10
 		}
@@ -639,9 +779,19 @@ func (p *projector) addLanguages(languages ...rules.Slug) {
 	}
 }
 
+// addStacks carries stacks in the backpack. An equipment pack is carried as
+// what is in it -- a dungeoneer's pack is a backpack, a crowbar, ten torches
+// -- because that is what a player reaches for; the pack itself is only how
+// the book sells them together.
 func (p *projector) addStacks(stacks []catalog.ItemStack) {
 	for _, stack := range stacks {
 		if stack.Item.IsZero() {
+			continue
+		}
+		if it, ok := p.cat.Items.Get(stack.Item); ok && it.Gear != nil && len(it.Gear.Contents) > 0 {
+			for _, inside := range it.Gear.Contents {
+				p.addStacks([]catalog.ItemStack{{Item: inside.Item, Count: max(inside.Count, 1) * max(stack.Count, 1)}})
+			}
 			continue
 		}
 		p.state.Equipment.Backpack = append(p.state.Equipment.Backpack, ItemStack{
@@ -666,6 +816,13 @@ func (p *projector) addCoins(coins rules.Coins) {
 func (p *projector) deriveStatus() {
 	level := p.state.Identity.Level()
 	profBonus := proficiencyBonus(level)
+	if p.cat.Mechanics.Core.Proficiency.Op != "" {
+		if n, err := p.cat.Mechanics.Core.Proficiency.Eval(rules.Variables{"level": level}); err == nil {
+			profBonus = n
+		} else {
+			p.err = err
+		}
+	}
 	p.state.Status.ProficiencyBonus = profBonus
 
 	for skill, state := range p.state.Skills.BySkill {
@@ -676,7 +833,7 @@ func (p *projector) deriveStatus() {
 		state.Bonus = p.state.Abilities.Modifier(def.Ability) + state.Proficiency.Apply(profBonus)
 		p.state.Skills.BySkill[skill] = state
 	}
-	for _, ability := range rules.Abilities() {
+	for _, ability := range p.cat.AbilityIDs() {
 		state := p.state.SavingThrows.ByAbility[ability]
 		state.Bonus = p.state.Abilities.Modifier(ability)
 		if state.Proficient {
@@ -728,4 +885,66 @@ func proficiencyBonus(characterLevel int) int {
 		return 2
 	}
 	return 2 + (characterLevel-1)/4
+}
+
+// Private definitions travel in the locked projection, including shared and
+// copied sheets. The global compendium intentionally cannot resolve them.
+func (p *projector) privateNames() {
+	private := false
+	for _, release := range p.cat.Lock.Packs {
+		if strings.HasPrefix(release.ID, "import-") {
+			private = true
+			break
+		}
+	}
+	if !private {
+		return
+	}
+	p.state.CatalogNames = map[string]string{}
+	add := func(collection string, entry catalog.Entry) {
+		if strings.HasPrefix(entry.Slug.String(), "import-") {
+			p.state.CatalogNames[collection+":"+entry.Slug.String()] = entry.Name
+			body := entry.Name
+			if len(entry.Desc) > 0 {
+				body += "\n" + strings.Join(entry.Desc, "\n\n")
+			}
+			p.state.ImportedNotes = append(p.state.ImportedNotes, body)
+		}
+	}
+	for _, v := range p.cat.Spells.All() {
+		add("spells", v.Entry)
+	}
+	for _, v := range p.cat.Items.All() {
+		add("equipment", v.Entry)
+	}
+	for _, v := range p.cat.MagicItems.All() {
+		add("equipment", v.Entry)
+	}
+	for _, v := range p.cat.Races.All() {
+		add("races", v.Entry)
+	}
+	for _, v := range p.cat.Subraces.All() {
+		add("subraces", v.Entry)
+	}
+	for _, v := range p.cat.Classes.All() {
+		add("classes", v.Entry)
+	}
+	for _, v := range p.cat.Subclasses.All() {
+		add("subclasses", v.Entry)
+	}
+	for _, v := range p.cat.Backgrounds.All() {
+		add("backgrounds", v.Entry)
+	}
+	for _, v := range p.cat.Feats.All() {
+		add("feats", v.Entry)
+	}
+	for _, v := range p.cat.Features.All() {
+		add("features", v.Entry)
+	}
+	for _, v := range p.cat.Traits.All() {
+		add("traits", v.Entry)
+	}
+	for _, v := range p.cat.Languages.All() {
+		add("languages", v.Entry)
+	}
 }

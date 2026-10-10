@@ -1,14 +1,8 @@
 /**
  * The colour the app is wearing, as data.
  *
- * This is a **development tool, not a setting.** There is no picker, no
- * environment variable and nothing to strip from a production build: you change
- * one word in `./tokens.ts`, Vite repaints, and you are looking at the other
- * one. A user never chooses a palette, because a user was never the audience --
- * the point is to be able to try the app in four skins while designing it
- * without editing forty files, and to have exactly one answer to "what colour
- * is this app" when the question is asked by the favicon generator, the PWA
- * manifest and the browser's own chrome.
+ * Personal settings select one of these palettes at runtime. The default in
+ * tokens.ts still supplies generated icons, the manifest and brand artwork.
  *
  * Framework-free on purpose, like its neighbour: `scripts/gen-icons.mjs` reads
  * this file from plain Node to rasterise the icon set, and it could not if
@@ -18,8 +12,8 @@
  * run it at all -- see the generator's own comment.
  *
  * **A palette defines both colour schemes.** `ui/AppTheme.tsx` runs
- * `defaultColorScheme="auto"`, so the app never gets to choose which scheme a
- * visitor sees; one that defined only `light` would be a palette that is
+ * `defaultColorScheme="auto"`, so System mode can follow the device. One that defined only `light`
+ * would be a palette that is
  * unreadable to half the people who open it.
  */
 

@@ -23,8 +23,9 @@ const DryRunQueryParam = "dryRun"
 // is on an append: the log is one record, so a write against a sequence that
 // has moved has to be told rather than silently discarding whatever moved it.
 type ReplaceEventParams struct {
-	ExpectedSeq int   `json:"expectedSeq"`
-	Event       Event `json:"event"`
+	ExpectedRevision *int  `json:"expectedRevision"`
+	ExpectedSeq      int   `json:"expectedSeq"`
+	Event            Event `json:"event"`
 }
 
 // ReplaceEvent handles PUT /v1/characters/{id}/events/{seq}[?dryRun=true].
@@ -52,6 +53,11 @@ func (h *Handler) ReplaceEvent(c *gin.Context) {
 	// new recording of a new decision.
 	event.At = time.Now().UTC()
 
+	revision := params.ExpectedSeq
+	if params.ExpectedRevision != nil {
+		revision = *params.ExpectedRevision
+	}
+	c.Request = c.Request.WithContext(charuc.WithRevision(c.Request.Context(), revision))
 	h.revise(c, params.ExpectedSeq, &event)
 }
 
@@ -65,6 +71,10 @@ func (h *Handler) ReplaceEvent(c *gin.Context) {
 func (h *Handler) DeleteEvent(c *gin.Context) {
 	expected, err := intQuery(c, ExpectedSeqQueryParam)
 	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	if err := guardRevision(c, expected); err != nil {
 		helpers.FormatError(c, err)
 		return
 	}
@@ -94,9 +104,10 @@ func (h *Handler) revise(c *gin.Context, expectedSeq int, replacement *domain.Ev
 		return
 	}
 	c.JSON(http.StatusOK, WriteResponse{
-		Seq:     revision.Seq,
-		Sheet:   SheetOf(revision.Sheet),
-		Dropped: droppedOf(revision.Dropped),
+		Seq:      revision.Seq,
+		Revision: revision.Revision,
+		Sheet:    SheetOf(revision.Sheet),
+		Dropped:  droppedOf(revision.Dropped),
 	})
 }
 

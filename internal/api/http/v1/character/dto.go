@@ -5,6 +5,11 @@
 // sheet, an event, a prompt -- live here.
 package character
 
+import (
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
+)
+
 // Summary is one row of a character listing.
 type Summary struct {
 	ID string `json:"id"`
@@ -14,6 +19,7 @@ type Summary struct {
 	// a fallback bucket.
 	Folder  string       `json:"folder"`
 	Name    string       `json:"name"`
+	Image   string       `json:"image,omitempty"`
 	Level   int          `json:"level"`
 	Classes []ClassLevel `json:"classes,omitempty"`
 }
@@ -27,7 +33,10 @@ type ClassLevel struct {
 
 // Character is a character and its log.
 type Character struct {
-	ID string `json:"id"`
+	Revision    int               `json:"revision"`
+	Rules       helpers.RulesLock `json:"rules"`
+	Checkpoints []Checkpoint      `json:"checkpoints,omitempty"`
+	ID          string            `json:"id"`
 
 	// Seq is the sequence the log currently ends at. It is the token an
 	// append or a truncation must state, so it is returned everywhere a
@@ -38,8 +47,20 @@ type Character struct {
 
 // Event is one entry in a character's log.
 type Event struct {
-	Seq  int    `json:"seq,omitempty"`
-	Type string `json:"type"`
+	Evidence      string              `json:"evidence,omitempty"`
+	Observed      bool                `json:"observed,omitempty"`
+	ChoiceSource  string              `json:"choiceSource,omitempty"`
+	ChoiceKind    string              `json:"choiceKind,omitempty"`
+	Purpose       string              `json:"purpose,omitempty"`
+	Selections    []catalogapi.Option `json:"selections,omitempty"`
+	ID            string              `json:"id,omitempty"`
+	SchemaVersion int                 `json:"schemaVersion,omitempty"`
+	Resource      string              `json:"resource,omitempty"`
+	Amount        int                 `json:"amount,omitempty"`
+	Trigger       string              `json:"trigger,omitempty"`
+	Allocations   map[string]int      `json:"allocations,omitempty"`
+	Seq           int                 `json:"seq,omitempty"`
+	Type          string              `json:"type"`
 
 	// Source is the group of the prompt this entry answers: identity, class,
 	// race, background, abilities or advance. It is what lets a client group
@@ -95,20 +116,30 @@ type Value struct {
 
 // Sheet is the projected character.
 type Sheet struct {
-	Identity     Identity               `json:"identity"`
-	Base         Base                   `json:"base"`
-	Abilities    Abilities              `json:"abilities"`
-	Skills       map[string]Skill       `json:"skills"`
-	SavingThrows map[string]SavingThrow `json:"savingThrows"`
-	Status       Status                 `json:"status"`
-	Equipment    Equipment              `json:"equipment"`
-	Resources    Resources              `json:"resources"`
-	Spells       Spellbook              `json:"spells"`
-	Actions      []Action               `json:"actions"`
-	Feats        []string               `json:"feats,omitempty"`
-	Traits       []string               `json:"traits,omitempty"`
-	Features     []string               `json:"features,omitempty"`
-	Conditions   []string               `json:"conditions,omitempty"`
+	CustomOptions []CustomOption    `json:"customOptions,omitempty"`
+	ImportSession string            `json:"importSession,omitempty"`
+	CatalogNames  map[string]string `json:"catalogNames,omitempty"`
+	// Catalog is what the sheet's slugs mean, sent with them. Only the two
+	// sheet reads fill it; a write's echo of the sheet does not.
+	Catalog       *catalogapi.Resolved   `json:"catalog,omitempty"`
+	ImportedNotes []string               `json:"importedNotes,omitempty"`
+	Contributions []Contribution         `json:"contributions,omitempty"`
+	PackActions   []ActionOffer          `json:"packActions,omitempty"`
+	ManualRules   []string               `json:"manualRules,omitempty"`
+	Identity      Identity               `json:"identity"`
+	Base          Base                   `json:"base"`
+	Abilities     Abilities              `json:"abilities"`
+	Skills        map[string]Skill       `json:"skills"`
+	SavingThrows  map[string]SavingThrow `json:"savingThrows"`
+	Status        Status                 `json:"status"`
+	Equipment     Equipment              `json:"equipment"`
+	Resources     Resources              `json:"resources"`
+	Spells        Spellbook              `json:"spells"`
+	Actions       []Action               `json:"actions"`
+	Feats         []string               `json:"feats,omitempty"`
+	Traits        []string               `json:"traits,omitempty"`
+	Features      []string               `json:"features,omitempty"`
+	Conditions    []string               `json:"conditions,omitempty"`
 
 	// Proficiencies are the armor, weapon and tool proficiencies. Skills and
 	// saving throws have their own typed homes above, where a bonus is
@@ -120,6 +151,7 @@ type Sheet struct {
 // Identity is who the character is.
 type Identity struct {
 	Name              string       `json:"name"`
+	Image             string       `json:"image,omitempty"`
 	Alignment         string       `json:"alignment,omitempty"`
 	Race              string       `json:"race,omitempty"`
 	Subrace           string       `json:"subrace,omitempty"`
@@ -231,6 +263,7 @@ type Equipment struct {
 	Equipped []ItemStack    `json:"equipped"`
 	Backpack []ItemStack    `json:"backpack"`
 	Loot     []ItemStack    `json:"loot"`
+	Custom   string         `json:"custom,omitempty"`
 	Purse    map[string]int `json:"purse,omitempty"`
 }
 
@@ -245,6 +278,8 @@ type Pool struct {
 
 // Resources is everything the character spends and regains.
 type Resources struct {
+	Pools      map[string]ResourcePool      `json:"pools,omitempty"`
+	Parameters map[string]ResourceParameter `json:"parameters,omitempty"`
 	// SpellSlots is keyed by spell level. Pact Magic is deliberately not
 	// here: it is a separate pool at overlapping levels that recovers on a
 	// short rest, so it lives among the class resources.
@@ -254,11 +289,25 @@ type Resources struct {
 }
 
 // Spellbook is what the character knows and has ready.
+type SpellSource struct {
+	Source           string   `json:"source"`
+	Class            string   `json:"class,omitempty"`
+	Ability          string   `json:"ability,omitempty"`
+	Cantrips         []string `json:"cantrips,omitempty"`
+	Known            []string `json:"known,omitempty"`
+	Spellbook        []string `json:"spellbook,omitempty"`
+	Prepared         []string `json:"prepared,omitempty"`
+	Arcanum          []string `json:"arcanum,omitempty"`
+	Mastery          []string `json:"mastery,omitempty"`
+	PreparationLimit int      `json:"preparationLimit,omitempty"`
+}
+
 type Spellbook struct {
-	Cantrips []string `json:"cantrips,omitempty"`
-	Known    []string `json:"known,omitempty"`
-	Prepared []string `json:"prepared,omitempty"`
-	Ability  string   `json:"ability,omitempty"`
+	Sources  []SpellSource `json:"sources,omitempty"`
+	Cantrips []string      `json:"cantrips,omitempty"`
+	Known    []string      `json:"known,omitempty"`
+	Prepared []string      `json:"prepared,omitempty"`
+	Ability  string        `json:"ability,omitempty"`
 }
 
 // Action is something the character can do on their turn.
@@ -266,10 +315,60 @@ type Action struct {
 	Source string `json:"source"`
 	Origin string `json:"origin,omitempty"`
 	Kind   string `json:"kind"`
-	Name   string `json:"name"`
-	Range  int    `json:"range,omitempty"`
-	ToHit  *int   `json:"toHit,omitempty"`
-	Damage string `json:"damage,omitempty"`
-	Uses   string `json:"uses,omitempty"`
-	Notes  string `json:"notes,omitempty"`
+	// Category is why the character has it: basic, equipment or feature.
+	Category string `json:"category,omitempty"`
+	Name     string `json:"name"`
+	Range    int    `json:"range,omitempty"`
+	ToHit    *int   `json:"toHit,omitempty"`
+	Damage   string `json:"damage,omitempty"`
+	Uses     string `json:"uses,omitempty"`
+	Notes    string `json:"notes,omitempty"`
+}
+
+type ResourcePool struct {
+	ID         string   `json:"id"`
+	Definition string   `json:"definition"`
+	Owner      string   `json:"owner"`
+	Name       string   `json:"name"`
+	Group      string   `json:"group,omitempty"`
+	Max        int      `json:"max"`
+	Used       int      `json:"used"`
+	Available  int      `json:"available"`
+	Dice       string   `json:"dice,omitempty"`
+	SlotLevel  int      `json:"slotLevel,omitempty"`
+	Recovery   []string `json:"recovery,omitempty"`
+}
+type Rational struct {
+	Numerator   int `json:"numerator"`
+	Denominator int `json:"denominator"`
+}
+type ResourceParameter struct {
+	Rational *Rational `json:"rational,omitempty"`
+	Boolean  *bool     `json:"boolean,omitempty"`
+	Name     string    `json:"name"`
+	Number   int       `json:"number"`
+	Dice     string    `json:"dice,omitempty"`
+	Text     string    `json:"text,omitempty"`
+}
+type Checkpoint struct {
+	Index    int               `json:"index"`
+	Revision int               `json:"revision"`
+	Reason   string            `json:"reason"`
+	Rules    helpers.RulesLock `json:"rules"`
+}
+
+type Contribution struct {
+	EventID string `json:"eventId,omitempty"`
+	Rule    string `json:"rule"`
+	Owner   string `json:"owner"`
+	Target  string `json:"target"`
+	Amount  int    `json:"amount"`
+}
+type ActionOffer struct {
+	ID        string         `json:"id"`
+	Owner     string         `json:"owner"`
+	Name      string         `json:"name"`
+	Manual    bool           `json:"manual"`
+	Available bool           `json:"available"`
+	Costs     map[string]int `json:"costs"`
 }

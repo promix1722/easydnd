@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth'
 import { useResource } from '@/lib/useResource'
 import { useT } from '@/lib/i18n'
 import {
+  Avatar, characterAvatar,
   ACTION_ICON_SIZE,
   Alert,
   Anchor,
@@ -25,6 +26,7 @@ import {
 import { atLeast } from '../groups/roles'
 
 import { classLine } from '@/domain'
+import { sheetPath } from './sheetPath'
 
 /**
  * The characters a group's members have put on its table.
@@ -87,6 +89,7 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
       <DataList
         items={characters}
         getKey={(character) => character.id}
+        leading={(character) => <Avatar image={character.image} fallback={characterAvatar(character.classes)} />}
         // "Yours" is a mark on the name rather than a column: no table here
         // ever gave it a header, and it used to be hand-built inside the name
         // cell -- which is what put a `div` inside a `<Text>`'s paragraph.
@@ -120,9 +123,9 @@ export function TablePanel({ groupId, role }: { groupId: string; role: GroupRole
             text: (character: TableCharacter) => character.name || t('common.unnamed'),
             // The sheet, and only the sheet. The event log is the record of its
             // owner's decisions and is not the table's business.
-            to: (character: TableCharacter) => `/groups/${groupId}/characters/${character.id}`,
+            to: (character: TableCharacter) => sheetPath(groupId, character, me),
             render: (character: TableCharacter) => (
-              <Anchor component={Link} to={`/groups/${groupId}/characters/${character.id}`}>
+              <Anchor component={Link} to={sheetPath(groupId, character, me)}>
                 <Text size="sm">{character.name || t('common.unnamed')}</Text>
               </Anchor>
             ),
@@ -203,12 +206,15 @@ function ShareSheet({
           const shared = already.includes(character.id)
           return (
             <Group key={character.id} justify="space-between">
-              <div>
-                <Text size="sm">{character.name || t('common.unnamed')}</Text>
-                <Text size="xs" c="dimmed">
-                  {classLine(character.classes)}
-                </Text>
-              </div>
+              <Group gap="sm" wrap="nowrap">
+                <Avatar image={character.image} fallback={characterAvatar(character.classes)} />
+                <div>
+                  <Text size="sm">{character.name || t('common.unnamed')}</Text>
+                  <Text size="xs" c="dimmed">
+                    {classLine(character.classes)}
+                  </Text>
+                </div>
+              </Group>
               <Button
                 variant="light"
                 disabled={shared}

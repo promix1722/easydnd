@@ -3,17 +3,17 @@
 // It exists so the service compiles, runs and deploys with zero
 // infrastructure. State is per-process and lost on restart.
 //
-// For accounts that is now only the development fallback: production stores
-// them in internal/adapter/repository/postgres, and the two adapters are held
-// to one contract by internal/adapter/repository/repotest. For characters and
-// the folders they are filed in it is still the whole story: both are reachable
-// over the API and both are lost on restart. A SQL sibling replaces either one
-// without any change above this layer, exactly as the account store did.
+// It is the development fallback: with no db.url the server runs on these,
+// and in production every store here has a sibling in
+// internal/adapter/repository/postgres. The two are held to one contract by
+// internal/adapter/repository/repotest, and the rules a write applies live in
+// the domain so that neither adapter can carry its own version of them.
 package memory
 
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -114,6 +114,20 @@ func (r *CharacterRepository) SetFolder(
 	return nil
 }
 
+// SetPublic opens or hides a character.
+func (r *CharacterRepository) SetPublic(_ context.Context, id domain.ID, public bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	c, ok := r.items[id]
+	if !ok {
+		return types.NewNotFoundError("character %q", id).Because("character.notFound")
+	}
+	c.Public = public
+	r.items[id] = c
+	return nil
+}
+
 // Append adds events to a character's log, rejecting a stale expectedSeq.
 func (r *CharacterRepository) Append(_ context.Context, id domain.ID, expectedSeq int, events ...domain.Event) error {
 	r.mu.Lock()
@@ -123,8 +137,8 @@ func (r *CharacterRepository) Append(_ context.Context, id domain.ID, expectedSe
 	if !ok {
 		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
-	if got := c.Log.LastSeq(); got != expectedSeq {
-		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
+	if err := c.ExpectSeq(expectedSeq); err != nil {
+		return err
 	}
 	// Append to a copy, so a rejected batch cannot leave the stored log
 	// half-written.
@@ -132,7 +146,8 @@ func (r *CharacterRepository) Append(_ context.Context, id domain.ID, expectedSe
 	if err := updated.Append(events...); err != nil {
 		return err
 	}
-	c.Log = updated
+	c.Log = updated.Clone()
+	c.Revision += max(1, len(events))
 	r.items[id] = c
 	return nil
 }
@@ -151,8 +166,8 @@ func (r *CharacterRepository) Truncate(_ context.Context, id domain.ID, expected
 	if !ok {
 		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
-	if got := c.Log.LastSeq(); got != expectedSeq {
-		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
+	if err := c.ExpectSeq(expectedSeq); err != nil {
+		return err
 	}
 	// Truncate a copy, so a rejected request cannot leave the stored log
 	// half-trimmed.
@@ -160,7 +175,8 @@ func (r *CharacterRepository) Truncate(_ context.Context, id domain.ID, expected
 	if err := updated.Truncate(afterSeq); err != nil {
 		return err
 	}
-	c.Log = updated
+	c.Log = updated.Clone()
+	c.Revision++
 	r.items[id] = c
 	return nil
 }
@@ -181,15 +197,16 @@ func (r *CharacterRepository) Rewrite(_ context.Context, id domain.ID, expectedS
 	if !ok {
 		return types.NewNotFoundError("character %q", id).Because("character.notFound")
 	}
-	if got := c.Log.LastSeq(); got != expectedSeq {
-		return types.NewValidationError("character %q is at sequence %d, not %d", id, got, expectedSeq)
+	if err := c.ExpectSeq(expectedSeq); err != nil {
+		return err
 	}
 	if err := log.Validate(); err != nil {
 		return err
 	}
 	// Cloned on the way in for the same reason it is cloned on the way out:
 	// the caller must not keep a handle on our backing array.
-	c.Log = domain.Log{Events: slices.Clone(log.Events)}
+	c.Log = log.Clone()
+	c.Revision++
 	r.items[id] = c
 	return nil
 }
@@ -209,6 +226,40 @@ func (r *CharacterRepository) Delete(_ context.Context, id domain.ID) error {
 // clone deep-copies the parts of a Character that a caller could otherwise
 // mutate through a shared backing array.
 func clone(c domain.Character) domain.Character {
-	c.Log.Events = slices.Clone(c.Log.Events)
+	c.Log = c.Log.Clone()
+	c.Commands = maps.Clone(c.Commands)
+	c.Checkpoints = slices.Clone(c.Checkpoints)
+	for i := range c.Checkpoints {
+		c.Checkpoints[i].Log = c.Checkpoints[i].Log.Clone()
+	}
 	return c
+}
+
+// Commit is the atomic write boundary for all application log mutations.
+func (r *CharacterRepository) Commit(_ context.Context, id domain.ID, expectedRevision int, log domain.Log, command string, checkpoint *domain.Checkpoint) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	c, ok := r.items[id]
+	if !ok {
+		return types.NewNotFoundError("character %q", id).Because("character.notFound")
+	}
+	if err := c.Commit(expectedRevision, log, command, checkpoint); err != nil {
+		return err
+	}
+	r.items[id] = c
+	return nil
+}
+
+// CreateWithLog publishes an imported draft in one critical section.
+func (r *CharacterRepository) CreateWithLog(_ context.Context, owner domain.OwnerID, folder domain.FolderID, log domain.Log) (domain.Character, error) {
+	c, err := domain.NewWithLog(owner, folder, log)
+	if err != nil {
+		return domain.Character{}, err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.nextID++
+	c.ID = domain.ID(fmt.Sprintf("chr_%06d", r.nextID))
+	r.items[c.ID] = c
+	return clone(c), nil
 }

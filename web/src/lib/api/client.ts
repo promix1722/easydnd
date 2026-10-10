@@ -6,6 +6,7 @@ import { noteReleaseHeader } from '@/lib/version/state'
 
 import { ApiError, TransportError, isApiErrorEnvelope } from './errors'
 import { requestLocale } from './locale'
+import { developmentSession } from './devSession'
 
 /**
  * Same-origin by design. nginx routes /v1/ to the Go process and / to this
@@ -17,12 +18,28 @@ const BASE_URL = '/v1'
 /** Header name and semantics come from internal/api/http/middleware/requestid.go. */
 const HEADER_REQUEST_ID = 'X-Request-Id'
 
+const unauthorized = new Set<() => void>()
+
+/**
+ * Calls `listener` whenever the API answers 401, to anything. Returns the
+ * unsubscribe. `AuthProvider` is the one listener: a 401 means nobody is
+ * signed in any more, and that is a fact about the whole app rather than
+ * about the screen whose request happened to find it out.
+ */
+export function onUnauthorized(listener: () => void): () => void {
+  unauthorized.add(listener)
+  return () => { unauthorized.delete(listener) }
+}
+
 export interface RequestOptions {
+  formData?: FormData
   method?: string
   body?: unknown
   signal?: AbortSignal
   /** Override the generated correlation id. Mostly useful in tests. */
   requestId?: string
+  /** Development cookie selector; never a credential. */
+  developmentSession?: string
   /**
    * Send the raw value as the body instead of JSON-encoding it.
    *
@@ -30,7 +47,8 @@ export interface RequestOptions {
    * parses, and the signature covers those bytes -- re-encoding it here would
    * risk changing them.
    */
-  rawBody?: string
+  rawBody?: string | Blob
+  contentType?: string
 }
 
 function newRequestId(): string {
@@ -77,6 +95,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     [HEADER_REQUEST_ID]: requestId,
   }
 
+  if (import.meta.env.DEV) {
+    const scope = options.developmentSession ?? developmentSession()
+    if (scope) headers['X-EasyDnD-Dev-Session'] = scope
+  }
+
   const init: RequestInit = {
     method: options.method ?? 'GET',
     headers,
@@ -87,11 +110,13 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     ...(options.signal ? { signal: options.signal } : {}),
   }
 
-  if (options.rawBody !== undefined) {
-    headers['Content-Type'] = 'application/json'
+  if (options.formData !== undefined) {
+    init.body = options.formData
+  } else if (options.rawBody !== undefined) {
+    headers['Content-Type'] = options.contentType ?? 'application/json'
     init.body = options.rawBody
   } else if (options.body !== undefined) {
-    headers['Content-Type'] = 'application/json'
+    headers['Content-Type'] = options.contentType ?? 'application/json'
     init.body = JSON.stringify(options.body)
   }
 
@@ -118,6 +143,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const payload: unknown = text === '' ? undefined : safeParse(text)
 
   if (!response.ok) {
+    // The session this tab was using is no longer one the server accepts --
+    // it expired, or the server restarted with a new signing key. Said here,
+    // once, rather than left to each screen to report as its own failure.
+    if (response.status === 401) for (const listener of unauthorized) listener()
     if (isApiErrorEnvelope(payload)) {
       throw new ApiError(response.status, payload.error)
     }

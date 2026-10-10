@@ -1,7 +1,7 @@
 # Compiled binaries
 /easydnd
-/srdgen
 /devslot
+/llm
 /bin/
 
 # Frontend release tarball (`make web/release`). The bundle's own build output
@@ -14,21 +14,21 @@ coverage.out
 coverage.html
 
 # Local environment overrides
-# Nothing reads these -- configuration lives in a YAML file now -- but they stay
-# ignored so a stray one can never be committed.
+# Nothing reads these -- secrets live in ~/config/easydnd/dev.env, outside every
+# worktree -- but they stay ignored so a stray one can never be committed.
 .env
 .env.local
 
-# Local config override: copy config.dev.yaml and point -config at it.
+# No longer read or written: these three used to hold a worktree's ports and
+# its LLM key. Still ignored, so one left over from before cannot be committed
+# with the key inside it.
 config.local.yaml
+config.dev-run.yaml
+config.preview.yaml
 
 # Written by `make dev`: this worktree's port slot. Per-worktree by design --
 # it is the whole mechanism that stops two worktrees claiming the same ports.
 .dev-slot
-
-# Written by `make config/dev`: a whole development config for this worktree's
-# slot. Generated, never edited by hand.
-config.dev-run.yaml
 
 # Optional Make overrides for this machine or this worktree (PUBLIC_HOST,
 # SLOT). The machine-wide one lives at ~/.config/easydnd/dev.mk.
@@ -39,5 +39,5 @@ local.mk
 .vscode/
 .DS_Store
 
-# Written by `make config/preview`; see the preview target.
-config.preview.yaml
+# Optional local immutable pack archive
+.pack-archive/

@@ -3,7 +3,10 @@ package catalog
 import (
 	"context"
 	"encoding/json"
+	"github.com/gin-gonic/gin"
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"log/slog"
+	"strings"
 	"sync"
 
 	domain "github.com/promix1722/easydnd/internal/domain/catalog"
@@ -41,8 +44,8 @@ type renderKey struct {
 
 // The collection names.
 //
-// They are the names of the generated files without their extension, which is
-// the vocabulary manifest.json and data/srd_5.1/ already use. Inventing a
+// They are the names of the pack's collection files without their extension, which is
+// the vocabulary manifest.json and data/pack/srd-5.1/ already use. Inventing a
 // third spelling of "the collections" is how a manifest and a router drift
 // apart.
 const (
@@ -69,6 +72,11 @@ const (
 	CollectionMagicItems          = "magic-items"
 	CollectionSpells              = "spells"
 	CollectionTerms               = "terms"
+	// CollectionItems is not a collection of its own: it is equipment and magic
+	// items searched together, by name, a page at a time. It is served only with
+	// search parameters, for the same reason spells are never served whole --
+	// the one screen that reads it is a picker, and a picker needs a page.
+	CollectionItems = "items"
 )
 
 // Collections lists every collection, in the order the manifest does.
@@ -128,7 +136,7 @@ func entries(c converter, collection string) (any, bool) {
 	case CollectionFeatures:
 		return mapAll(cat.Features.All(), c.feature), true
 	case CollectionBackgrounds:
-		return mapAll(cat.Backgrounds.All(), c.background), true
+		return mapAll(customLast(cat.Backgrounds.All()), c.background), true
 	case CollectionFeats:
 		return mapAll(cat.Feats.All(), c.feat), true
 	case CollectionEquipment:
@@ -157,6 +165,33 @@ func (c converter) allClassLevels() []ClassLevel {
 		}
 	}
 	return out
+}
+
+// customBackground is "make your own": not one more background in the list
+// but the way out of it, so it is offered after the ones a player can simply
+// take rather than between Criminal and Entertainer, where its slug sorts it.
+//
+// ponytail: one slug, named here. If packs grow more "build your own" entries
+// this wants a field on the entry rather than a second constant.
+const customBackground = "custom-background"
+
+// customLast moves the custom background to the end and keeps the rest in
+// the collection's own order. A pack's namespaced copy counts too.
+func customLast(all []domain.Background) []domain.Background {
+	isCustom := func(b domain.Background) bool {
+		slug := string(b.Slug)
+		return slug == customBackground || strings.HasSuffix(slug, "/"+customBackground)
+	}
+	out := make([]domain.Background, 0, len(all))
+	var last []domain.Background
+	for _, b := range all {
+		if isCustom(b) {
+			last = append(last, b)
+		} else {
+			out = append(out, b)
+		}
+	}
+	return append(out, last...)
 }
 
 func mapAll[In, Out any](in []In, f func(In) Out) []Out {
@@ -189,4 +224,12 @@ func (h *Handler) collectionBytes(ctx context.Context, locale rules.Locale, coll
 	}
 	h.rendered.Store(key, raw)
 	return raw, nil
+}
+
+func (h *Handler) ContentLocales(ctx context.Context) (gin.HandlerFunc, error) {
+	locales, err := h.source.Locales(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.ContentLocales(locales), nil
 }

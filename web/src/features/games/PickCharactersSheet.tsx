@@ -2,12 +2,13 @@ import { useState } from 'react'
 
 import type { ClassLevel } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Button, Checkbox, Group, Loader, ModalSheet, Stack, Text } from '@/ui'
+import { Avatar, characterAvatar, Button, Checkbox, Group, Loader, ModalSheet, Stack, Text } from '@/ui'
 
 import { classLine } from '@/domain'
 
 /** The least a row needs to be shown and picked. */
 export interface Pickable {
+  image?: string
   id: string
   name: string
   classes?: ClassLevel[]
@@ -72,12 +73,15 @@ export function PickCharactersSheet({
               )
             }
             label={
-              <div>
-                <Text size="sm">{character.name || 'Unnamed'}</Text>
-                <Text size="xs" c="dimmed">
-                  {classLine(character.classes)}
-                </Text>
-              </div>
+              <Group gap="sm" wrap="nowrap">
+                <Avatar image={character.image} fallback={characterAvatar(character.classes)} />
+                <div>
+                  <Text size="sm">{character.name || 'Unnamed'}</Text>
+                  <Text size="xs" c="dimmed">
+                    {classLine(character.classes)}
+                  </Text>
+                </div>
+              </Group>
             }
           />
         ))}

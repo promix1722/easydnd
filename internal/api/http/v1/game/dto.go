@@ -18,6 +18,7 @@ type Game struct {
 	Role string `json:"role"`
 
 	Characters []Character `json:"characters"`
+	Entries    []GameEntry `json:"entries"`
 }
 
 // Summary is one row of the games list. It carries no roster: the list draws
@@ -45,6 +46,7 @@ type Summary struct {
 type Character struct {
 	ID      string `json:"id"`
 	OwnerID string `json:"owner_id"`
+	Image   string `json:"image,omitempty"`
 	Name    string `json:"name"`
 	Level   int    `json:"level"`
 

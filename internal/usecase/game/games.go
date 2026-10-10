@@ -248,7 +248,7 @@ func (s *Service) AddCharacters(
 			"group_id", string(g.Group), "character_id", string(c), "actor_id", string(actor))
 	}
 
-	if err := s.games.AddCharacters(ctx, id, cs, s.now()); err != nil {
+	if err := s.seatEntries(ctx, id, cs); err != nil {
 		return err
 	}
 	s.log.Info("characters added to game",

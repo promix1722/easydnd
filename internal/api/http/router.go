@@ -10,6 +10,7 @@
 package httpapi
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -18,12 +19,16 @@ import (
 
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"github.com/promix1722/easydnd/internal/api/http/middleware"
+	appearanceapi "github.com/promix1722/easydnd/internal/api/http/v1/appearance"
 	"github.com/promix1722/easydnd/internal/api/http/v1/auth"
 	catalogapi "github.com/promix1722/easydnd/internal/api/http/v1/catalog"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
+	"github.com/promix1722/easydnd/internal/api/http/v1/development"
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
+	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
+	profileapi "github.com/promix1722/easydnd/internal/api/http/v1/profile"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	"github.com/promix1722/easydnd/internal/types"
@@ -32,13 +37,17 @@ import (
 // Handlers is the set of inbound adapters the router needs. internal/app
 // builds it.
 type Handlers struct {
-	System    *system.Handler
-	Auth      *auth.Handler
-	Catalog   *catalogapi.Handler
-	Character *characterapi.Handler
-	Folder    *folderapi.Handler
-	Game      *gameapi.Handler
-	Group     *groupapi.Handler
+	Development *development.Handler
+	System      *system.Handler
+	Auth        *auth.Handler
+	Appearance  *appearanceapi.Handler
+	Profile     *profileapi.Handler
+	Catalog     *catalogapi.Handler
+	Character   *characterapi.Handler
+	Folder      *folderapi.Handler
+	Game        *gameapi.Handler
+	Group       *groupapi.Handler
+	Pack        *packapi.Handler
 	// Authenticator resolves the session cookie for the guarded routes. It is
 	// the same object Auth is built over; the router takes it separately
 	// because middleware and handler need different halves of it.
@@ -59,8 +68,15 @@ type Handlers struct {
 // NewRouter builds the engine and declares the complete route table. Keeping
 // every route visible in one file is deliberate: it is the API's index.
 func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, error) {
-	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
+	cookies := helpers.NewCookieOptions(cfg)
 	r := gin.New()
+	if h.Catalog != nil {
+		locales, err := h.Catalog.ContentLocales(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		r.Use(locales)
+	}
 
 	// gin defaults to trusting 0.0.0.0/0 with ForwardedByClientIP on, which
 	// lets any client forge X-Forwarded-For and poison ClientIP in the access
@@ -122,6 +138,9 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// nginx happens to have no proxy_cache configured.
 		v1.GET("/version", middleware.NoStore(), h.System.Version)
 		v1.GET("/health", h.System.Health)
+		if cfg.Env == config.EnvDevelopment && h.Development != nil {
+			v1.POST("/dev/login", middleware.NoStore(), h.Development.Login)
+		}
 
 		// Sign-in. NoStore because these bodies say who someone is.
 		authRoutes := v1.Group("/auth", middleware.NoStore())
@@ -188,40 +207,69 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 		// in a comment that it is deliberate.
 		authed := v1.Group("", middleware.RequireSession(h.Authenticator, cookies))
 		{
+			if h.Profile != nil {
+				authed.PUT("/profile/image", middleware.NoStore(), h.Profile.PutImage)
+			}
+			if h.Appearance != nil {
+				resource := authed.Group("/appearance", middleware.NoStore())
+				resource.GET("", h.Appearance.Get)
+				resource.PUT("", h.Appearance.Put)
+			}
+			if h.Pack != nil {
+				packs := authed.Group("/packs", middleware.NoStore())
+				packs.GET("", h.Pack.List)
+				packs.POST("", h.Pack.Create)
+				packs.GET("/spells", h.Pack.Spells)
+				packs.GET("/spell-filters", h.Pack.SpellFilters)
+				packs.GET("/schema", h.Pack.Schema)
+				packs.POST("/import", h.Pack.Import)
+				packs.POST("/resolve", h.Pack.Resolve)
+				packs.GET("/catalog", h.Pack.Catalog)
+				packs.GET("/catalog/:collection", h.Pack.Catalog)
+				packs.GET("/:id", h.Pack.Get)
+				packs.PUT("/:id/draft", h.Pack.Save)
+				packs.POST("/:id/validate", h.Pack.Validate)
+				packs.POST("/:id/publish", h.Pack.Publish)
+				packs.POST("/:id/archive", h.Pack.Archive)
+				packs.GET("/:id/export", h.Pack.Export)
+				authed.GET("/groups/:id/packs", middleware.NoStore(), h.Pack.GroupList)
+				authed.POST("/groups/:id/packs", middleware.NoStore(), h.Pack.Share)
+				authed.DELETE("/groups/:id/packs", middleware.NoStore(), h.Pack.Unshare)
+			}
 			authed.GET("/catalog", h.Catalog.Manifest)
 			authed.GET("/catalog/:collection", h.Catalog.Collection)
+			authed.POST("/catalog/spells/search", h.Catalog.SpellSearch)
 
 			// Characters. Every route is at most one level deep: a
 			// sub-resource under an addressed parent, and never a
 			// sub-resource of that.
+			authed.GET("/agent-capabilities", h.Character.AgentCapabilities)
+			authed.POST("/agent-sessions", h.Character.AgentCreate)
+			authed.GET("/agent-sessions", h.Character.AgentList)
+			authed.GET("/agent-sessions/:id", h.Character.AgentGet)
+			authed.POST("/agent-sessions/:id/files", h.Character.AgentFiles)
+			authed.POST("/agent-sessions/:id/control", h.Character.AgentControl)
 			authed.GET("/characters", h.Character.List)
 			authed.POST("/characters", h.Character.Create)
-			// Import is a sibling of create, not a sub-resource of a
-			// character: it is what makes one.
-			authed.POST("/characters/import", h.Character.Import)
-			// So is the stub, and it exists only in development. It builds
-			// the reference character in one call so that working on the
-			// sheet, the log or this list does not start with a walk through
-			// the build screen -- a development convenience with nothing to
-			// offer easydnd.org, so the route is simply not there in
-			// production rather than there and refusing. Gated on the
-			// environment the config already carries; no new key, which
-			// matters because unknown keys are fatal and a new one would have
-			// to stage across two releases.
-			if cfg.Env == config.EnvDevelopment {
-				authed.POST("/characters/stub", h.Character.Stub)
-			}
 			authed.GET("/characters/:id", h.Character.Get)
 			authed.DELETE("/characters/:id", h.Character.Delete)
 			authed.GET("/characters/:id/sheet", h.Character.Sheet)
 			authed.GET("/characters/:id/prompts", h.Character.Prompts)
 			authed.GET("/characters/:id/events", h.Character.Events)
+			authed.GET("/characters/:id/custom-options", h.Character.CustomOptions)
+			authed.POST("/characters/:id/custom-options", h.Character.UpsertCustomOption)
+			authed.GET("/characters/:id/catalog/:collection", h.Character.Catalog)
+			authed.POST("/characters/:id/catalog/spells/search", h.Character.SpellSearch)
+			authed.POST("/characters/:id/rules", h.Character.MigrateRules)
+			authed.POST("/characters/:id/rules/restore", h.Character.RestoreRules)
 			authed.POST("/characters/:id/events", h.Character.AppendEvents)
 			authed.DELETE("/characters/:id/events", h.Character.TruncateEvents)
+			authed.POST("/characters/:id/auto-equip", h.Character.AutoEquip)
 			// One entry of that log, addressed by position -- which is what
 			// Seq means. Addressing a member of a sub-resource collection is
 			// not a third level: there is no route below these two, and
 			// there will not be one.
+			authed.POST("/characters/:id/events/revise", h.Character.ReviseEvents)
 			authed.PUT("/characters/:id/events/:seq", h.Character.ReplaceEvent)
 			authed.DELETE("/characters/:id/events/:seq", h.Character.DeleteEvent)
 
@@ -231,6 +279,8 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// invitation to patch a name or a level, and those only the
 			// log can change.
 			authed.PUT("/characters/:id/folder", h.Character.SetFolder)
+			authed.GET("/characters/:id/visibility", h.Character.GetVisibility)
+			authed.PUT("/characters/:id/visibility", h.Character.SetVisibility)
 			authed.POST("/characters/:id/copy", h.Character.Copy)
 
 			// Folders: where one account files its own characters. The
@@ -304,6 +354,11 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			authed.DELETE("/games/:id", h.Game.Delete)
 			authed.POST("/games/:id/characters", h.Game.AddCharacters)
 			authed.DELETE("/games/:id/characters", h.Game.RemoveCharacter)
+			authed.PATCH("/games/:id/entries/:entry", h.Game.PatchEntry)
+			authed.DELETE("/games/:id/entries/:entry", h.Game.DeleteEntry)
+			authed.POST("/games/:id/monsters", h.Game.AddMonster)
+			authed.POST("/games/:id/order", h.Game.OrderEntries)
+			authed.POST("/games/:id/rest", h.Game.Rest)
 
 			// One shared character's sheet, and only ever the sheet. It hangs
 			// off nothing because what grants the read is "some group we are
@@ -312,6 +367,7 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 			// the record of its owner's decisions and none of the table's
 			// business.
 			authed.GET("/shared/:id/sheet", h.Game.Sheet)
+			authed.GET("/shared/:id/catalog/:collection", middleware.NoStore(), h.Game.Catalog)
 		}
 	}
 

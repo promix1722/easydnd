@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { clearDevelopmentSession } from '@/lib/api/devSession'
 
 import {
   ApiError,
@@ -12,6 +13,7 @@ import {
   finishRegistration,
   getSession,
   listProviders,
+  onUnauthorized,
   signOut as signOutRequest,
   ssoLinkUrl,
   ssoStartUrl,
@@ -115,6 +117,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('anonymous')
     }
   }, [adopt])
+
+  // A session can end while the page is open -- it expires, or the server is
+  // restarted with a new signing key -- and the first anybody hears of it is a
+  // 401 on whatever the screen asked for next. Without this every screen
+  // reported that as its own failure ("Could not load your folders") and left
+  // the player on a private page they could no longer use. Only a signed-in
+  // tab reacts: an anonymous one getting a 401 is being told what it knows.
+  const signedIn = status === 'authenticated'
+  useEffect(() => {
+    if (!signedIn) return
+    return onUnauthorized(() => {
+      if (!mounted.current) return
+      clearDevelopmentSession()
+      setUser(null)
+      setStatus('anonymous')
+      setError(t('authError.sessionExpired'))
+    })
+    // `t` is stable for the life of an instance; see the note further down.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedIn])
 
   useEffect(() => {
     // Synchronising with an external system -- the server is the only thing
@@ -227,6 +249,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const signInWith = useCallback((provider: string) => {
     setError(null)
+    // OAuth navigations use the ordinary browser session, without fetch headers.
+    clearDevelopmentSession()
     window.location.assign(ssoStartUrl(provider, currentPath()))
   }, [])
 

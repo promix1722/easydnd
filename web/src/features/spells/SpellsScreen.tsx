@@ -1,29 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
-import type { Entry, Spell, SpellPage, SpellSearch } from '@/lib/api'
-import { bySlug, getCollection, searchSpells } from '@/lib/api'
+import type { Spell, SpellPage, SpellSearch } from '@/lib/api'
+import { bySlug, getSpellBrowseOptions, getSpellFilterOptions, searchSpells } from '@/lib/api'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
 import {
+  Alert,
   Anchor,
   Badge,
   Box,
   Button,
-  Checkbox,
   DataList,
   Group,
   Page,
   PageBody,
   Panel,
-  Select,
   Stack,
   Text,
-  TextInput,
   pageState,
-  useIsDesktop,
 } from '@/ui'
 
+import { SpellFilters } from './SpellFilters'
+import type { SpellFilterValues } from './filterSpells'
+import { SpellTags } from './SpellTags'
 import { SpellIcon } from './spellIcon'
 import { castingTimeText, componentsAbbrev, levelText } from './spellText'
 
@@ -53,28 +53,37 @@ import { castingTimeText, componentsAbbrev, levelText } from './spellText'
  */
 
 const PAGE_SIZE = 50
-const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-const CASTING_TIMES = ['action', 'bonus-action', 'reaction', 'over-time']
 
 export function SpellsScreen() {
   const t = useT()
   const [params, setParams] = useSearchParams()
-  // A 390px card cannot host a name and two word-length badges, so the phone
-  // gets one-letter marks with the full word as the accessible name.
-  const isDesktop = useIsDesktop()
+  const pendingParams = useRef(params)
+  useEffect(() => { pendingParams.current = params }, [params])
 
-  function setParam(key: string, value: string | null) {
-    setParams(
-      (previous) => {
-        const next = new URLSearchParams(previous)
-        if (value === null || value === '') next.delete(key)
-        else next.set(key, value)
-        return next
-      },
-      { replace: true },
-    )
+  function changeParams(update: (next: URLSearchParams) => void) {
+    // useSearchParams does not queue functional updates. Keep the latest
+    // requested URL until navigation commits so quick edits accumulate.
+    const next = new URLSearchParams(pendingParams.current)
+    update(next)
+    pendingParams.current = next
+    setParams(next, { replace: true })
+  }
+  const packQuery = params.get('packs') ?? ''
+  const scope = packQuery ? `/packs/catalog?packs=${encodeURIComponent(packQuery)}` : 'browse'
+  const versions = params.get('versions') ?? ''
+  const packIds = params.get('pack')?.split(',').filter(Boolean) ?? []
+  const sources = params.get('source')?.split(',').filter(Boolean) ?? []
+  const spellURL = (spell: Spell) => {
+    const context = spell.catalogPacks ?? packQuery
+    return `/spells/${encodeURIComponent(spell.slug)}${context ? `?packs=${encodeURIComponent(context)}` : ''}`
   }
 
+  function setParam(key: string, value: string | null) {
+    changeParams((next) => {
+      if (value === null || value === '') next.delete(key)
+      else next.set(key, value)
+    })
+  }
   const query = (params.get('q') ?? '').trim()
   const level = params.get('level')
   const school = params.get('school')
@@ -97,6 +106,34 @@ export function SpellsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, query])
 
+  function updateFilters(value: SpellFilterValues) {
+    setDraft(value.query)
+    // Router navigation may still be pending when another control changes.
+    // Only write fields changed by this interaction so it cannot overwrite
+    // another control's newer URL value with a previous render's value.
+    const current = {
+      pack: packIds.join(',') || null, source: sources.join(',') || null,
+      level, school, class: casterClass, time,
+      conc: concentration ? '1' : null,
+      ritual: ritual ? '1' : null,
+      nomat: noMaterial ? '1' : null,
+    }
+    changeParams((next) => {
+      const fields = {
+        pack: value.packIds?.join(',') || null, source: value.sources?.join(',') || null,
+        level: value.level, school: value.school, class: value.casterClass, time: value.time,
+        conc: value.concentration ? '1' : null,
+        ritual: value.ritual ? '1' : null,
+        nomat: value.noMaterial ? '1' : null,
+      }
+      for (const [key, field] of Object.entries(fields)) {
+        if (field === current[key as keyof typeof current]) continue
+        if (field === null) next.delete(key)
+        else next.set(key, field)
+      }
+    })
+  }
+
   const search: SpellSearch = {
     ...(query === '' ? {} : { q: query }),
     ...(level === null ? {} : { level: Number(level) }),
@@ -106,23 +143,32 @@ export function SpellsScreen() {
     ...(concentration ? { concentration: true } : {}),
     ...(ritual ? { ritual: true } : {}),
     ...(noMaterial ? { material: false } : {}),
+    ...(packIds.length ? { pack: packIds.join(',') } : {}),
+    ...(sources.length ? { source: sources.join(',') } : {}),
+    ...(scope === 'browse' && versions ? { versions } : {}),
     limit: PAGE_SIZE,
   }
-  const searchKey = JSON.stringify(search)
+  const searchKey = JSON.stringify([scope, search])
+  const activeSearch = useRef(searchKey)
+  useEffect(() => { activeSearch.current = searchKey }, [searchKey])
 
   // What fills the Selects. Keyed on nothing, because it answers to nothing:
   // the list of schools and the list of classes are the same whatever is being
-  // searched for. Both are served from the catalogue cache after the first
-  // visit, so this is usually not a request at all.
-  const options = useResource('spells:options', async () => {
-    const [schools, classes] = await Promise.all([
-      getCollection<Entry>('magic-schools'),
-      getCollection<Entry>('classes'),
-    ])
-    return { schools, classes }
+  // searched for. One small request, which is what the server computes them
+  // into: reading them off the spells would mean downloading the spells.
+  const options = useResource(`spells:options:${scope}:${versions}`, async () => {
+    if (scope === 'browse') return getSpellBrowseOptions(versions)
+    return { ...await getSpellFilterOptions(scope), unavailable: [] }
   })
+  useEffect(() => {
+    if (!options.data) return
+    const valid = sources.filter((id) => options.data?.sources.some((s) => s.id === id && (!packIds.length || packIds.includes(s.packId))))
+    if (valid.length !== sources.length) setParam('source', valid.join(','))
+    // Source options follow the requested release; keep unrelated URL filters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.data, params.get('pack'), params.get('source')])
 
-  const found = useResource(`spells:${searchKey}`, (signal) => searchSpells(search, signal))
+  const found = useResource(`spells:${searchKey}`, (signal) => searchSpells(search, signal, scope))
 
   // The last page that arrived, held across the gap while the next one is in
   // flight. Without it the table would empty itself on every keystroke pause
@@ -130,6 +176,8 @@ export function SpellsScreen() {
   // confined to the table. With it the old rows stay under a dimmed panel and
   // are replaced when the new ones land.
   const [lastPage, setLastPage] = useState<SpellPage | null>(null)
+  const [lastScope, setLastScope] = useState(scope)
+  if (lastScope !== scope) { setLastScope(scope); setLastPage(null) }
   if (found.data !== null && found.data !== lastPage) setLastPage(found.data)
 
   // Appended pages, reset during render when the search changes -- the same
@@ -149,7 +197,7 @@ export function SpellsScreen() {
     onRetry: options.reload,
   })
   if (state.kind !== 'ready' || options.data === null) {
-    return <Page trail={[]} state={state} />
+    return <Page trail={[]}><PageBody state={state}>{null}</PageBody></Page>
   }
 
   const { schools, classes } = options.data
@@ -168,8 +216,10 @@ export function SpellsScreen() {
   async function loadMore() {
     setLoadingMore(true)
     try {
-      const next = await searchSpells({ ...search, offset: rows.length })
-      setExtra((previous) => [...previous, ...next.spells])
+      const next = await searchSpells({ ...search, offset: rows.length }, undefined, scope)
+      if (activeSearch.current === searchKey) setExtra((previous) => [...previous, ...next.spells])
+    } catch {
+      if (activeSearch.current === searchKey) found.reload()
     } finally {
       setLoadingMore(false)
     }
@@ -177,72 +227,23 @@ export function SpellsScreen() {
 
   return (
     <Page trail={[]}>
+
       <Panel>
         <Stack gap="md">
-          <TextInput
-            aria-label={t('spells.search')}
-            placeholder={t('spells.search')}
-            value={draft}
-            onChange={(event) => setDraft(event.currentTarget.value)}
+          <SpellFilters
+            value={{ query: draft, level, school, casterClass, time, concentration, ritual, noMaterial, packIds, sources }}
+            sourceOptions={options.data}
+            {...(scope === 'browse' ? { onVersionChange: (pack: string, version: string) => {
+              const selected = new Map(versions.split(',').filter(Boolean).map((s) => s.split('@') as [string, string]))
+              selected.set(pack, version)
+              setParam('versions', [...selected].map(([id, v]) => `${id}@${v}`).join(','))
+            } } : {})}
+            onChange={updateFilters}
+            schools={schools}
+            classes={classes}
           />
-          <Group gap="sm">
-            <Select
-              aria-label={t('spells.filter.level')}
-              placeholder={t('spells.filter.allLevels')}
-              data={LEVELS.map((value) => ({ value: String(value), label: levelText(t, value) }))}
-              value={level}
-              onChange={(value) => setParam('level', value)}
-              clearable
-            />
-            <Select
-              aria-label={t('spells.filter.school')}
-              placeholder={t('spells.filter.allSchools')}
-              data={schools.map((entry) => ({ value: entry.slug, label: entry.name }))}
-              value={school}
-              onChange={(value) => setParam('school', value)}
-              clearable
-            />
-            <Select
-              aria-label={t('spells.filter.class')}
-              placeholder={t('spells.filter.allClasses')}
-              data={classes.map((entry) => ({ value: entry.slug, label: entry.name }))}
-              value={casterClass}
-              onChange={(value) => setParam('class', value)}
-              clearable
-            />
-            <Select
-              aria-label={t('spells.filter.castingTime')}
-              placeholder={t('spells.filter.anyTime')}
-              data={CASTING_TIMES.map((kind) => ({
-                value: kind,
-                label:
-                  kind === 'over-time'
-                    ? t('spells.filter.overTime')
-                    : castingTimeText(t, { kind }),
-              }))}
-              value={time}
-              onChange={(value) => setParam('time', value)}
-              clearable
-            />
-          </Group>
-          <Group gap="md">
-            <Checkbox
-              label={t('spells.filter.concentration')}
-              checked={concentration}
-              onChange={(event) => setParam('conc', event.currentTarget.checked ? '1' : null)}
-            />
-            <Checkbox
-              label={t('spells.filter.ritual')}
-              checked={ritual}
-              onChange={(event) => setParam('ritual', event.currentTarget.checked ? '1' : null)}
-            />
-            <Checkbox
-              label={t('spells.filter.noMaterial')}
-              checked={noMaterial}
-              onChange={(event) => setParam('nomat', event.currentTarget.checked ? '1' : null)}
-            />
-          </Group>
 
+          {options.data.unavailable.length > 0 && <Alert color="orange">{t('spells.unavailablePacks')} {options.data.unavailable.map((p) => `${p.id}@${p.version}`).join(', ')}</Alert>}
           {/* Everything below here, and nothing above it, answers to the
               search. `found.loading` dims it rather than replacing it: the
               rows on screen are the previous answer, not a wrong one, and a
@@ -261,31 +262,18 @@ export function SpellsScreen() {
 
                   <DataList
                     items={rows}
-                    getKey={(spell) => spell.slug}
-                    leading={(spell) => <SpellIcon slug={spell.slug} size={32} />}
-                    badges={(spell) => (
-                      <>
-                        {spell.concentration === true && (
-                          <Badge size="sm" variant="light" aria-label={t('spell.concentration')}>
-                            {isDesktop ? t('spell.concentration') : t('spell.concentrationShort')}
-                          </Badge>
-                        )}
-                        {spell.ritual === true && (
-                          <Badge size="sm" variant="light" color="grape" aria-label={t('spell.ritual')}>
-                            {isDesktop ? t('spell.ritual') : t('spell.ritualShort')}
-                          </Badge>
-                        )}
-                      </>
-                    )}
+                    getKey={(spell) => `${spell.provenance?.packId}@${spell.provenance?.version}/${spell.slug}`}
+                    leading={(spell) => <SpellIcon icon={spell.icon} />}
+                    badges={(spell) => <SpellTags spell={spell} />}
                     columns={[
                       {
                         key: 'name',
                         header: t('spells.name'),
                         primary: true,
                         text: (spell) => spell.name,
-                        to: (spell) => `/spells/${spell.slug}`,
+                        to: (spell) => spellURL(spell),
                         render: (spell) => (
-                          <Anchor component={Link} to={`/spells/${spell.slug}`}>
+                          <Anchor component={Link} to={spellURL(spell)}>
                             <Text size="sm">{spell.name}</Text>
                           </Anchor>
                         ),

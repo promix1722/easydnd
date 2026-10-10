@@ -22,8 +22,10 @@ import (
 // character/abilities outstanding, answered with its own entry, and the
 // method travels with that answer rather than with creation.
 type CreateParams struct {
-	Name      string `json:"name"`
-	Alignment string `json:"alignment"`
+	Rules     helpers.RulesLock `json:"rules"`
+	Name      string            `json:"name"`
+	Image     string            `json:"image"`
+	Alignment string            `json:"alignment"`
 
 	// Folder files the character. Empty means the caller's default folder,
 	// which is created on the spot if this is their first character.
@@ -32,9 +34,10 @@ type CreateParams struct {
 
 // CreateResponse is what a newly created character looks like.
 type CreateResponse struct {
-	ID    string `json:"id"`
-	Seq   int    `json:"seq"`
-	Sheet Sheet  `json:"sheet"`
+	Revision int    `json:"revision"`
+	ID       string `json:"id"`
+	Seq      int    `json:"seq"`
+	Sheet    Sheet  `json:"sheet"`
 }
 
 // Create handles POST /v1/characters.
@@ -49,6 +52,8 @@ func (h *Handler) Create(c *gin.Context) {
 	locale := helpers.Locale(c)
 	created, err := h.service.Create(ctx, h.owner(c), domain.FolderID(params.Folder), charuc.NewCharacter{
 		Name:      params.Name,
+		Image:     params.Image,
+		Rules:     params.Rules.Domain(),
 		Alignment: rules.Slug(params.Alignment),
 	})
 	if err != nil {
@@ -62,8 +67,9 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, CreateResponse{
-		ID:    created.ID.String(),
-		Seq:   created.Log.LastSeq(),
-		Sheet: SheetOf(sheet),
+		ID:       created.ID.String(),
+		Seq:      created.Log.LastSeq(),
+		Revision: created.Revision,
+		Sheet:    SheetOf(sheet),
 	})
 }

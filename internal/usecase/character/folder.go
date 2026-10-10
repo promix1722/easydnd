@@ -6,7 +6,9 @@ import (
 	"unicode/utf8"
 
 	domain "github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
 )
 
@@ -129,7 +131,9 @@ func (s *Service) DeleteFolder(ctx context.Context, owner domain.OwnerID, id dom
 		if c.Folder != id {
 			continue
 		}
-		if err := s.repo.Delete(ctx, c.ID); err != nil {
+		// Through Delete rather than the store, so a character that was
+		// shared with a group or seated at a game comes off those too.
+		if err := s.Delete(ctx, owner, c.ID); err != nil {
 			return err
 		}
 	}
@@ -146,7 +150,7 @@ func (s *Service) MoveCharacter(
 	// Both ends are checked. Without the second, a caller could file their
 	// own character into a folder belonging to somebody else and make it
 	// vanish from their own listing.
-	folder, err := s.resolveFolder(ctx, owner, folder)
+	folder, err := s.ResolveFolder(ctx, owner, folder)
 	if err != nil {
 		return err
 	}
@@ -175,10 +179,21 @@ func (s *Service) CopyCharacter(
 	if err != nil {
 		return domain.Character{}, err
 	}
+	if s.packAccess != nil {
+		retained := pack.Lock{}
+		if private, ok := s.catalog.(interface {
+			PrivateReleases(context.Context, pack.Lock) pack.Lock
+		}); ok {
+			retained = private.PrivateReleases(ctx, source.Log.RulesLock())
+		}
+		if err := s.packAccess.AuthorizeLock(ctx, user.ID(owner), source.Log.RulesLock(), retained); err != nil {
+			return domain.Character{}, err
+		}
+	}
 	if target.IsZero() {
 		target = source.Folder
 	}
-	target, err = s.resolveFolder(ctx, owner, target)
+	target, err = s.ResolveFolder(ctx, owner, target)
 	if err != nil {
 		return domain.Character{}, err
 	}
@@ -207,7 +222,11 @@ func (s *Service) CopyCharacter(
 		})
 	}
 
-	if err := s.repo.Append(ctx, created.ID, 0, events...); err != nil {
+	copied, err := domain.Rebuild(events)
+	if err != nil {
+		return domain.Character{}, err
+	}
+	if err := s.repo.Commit(ctx, created.ID, 0, copied, "", nil); err != nil {
 		return domain.Character{}, err
 	}
 	return s.repo.Get(ctx, created.ID)
@@ -215,7 +234,7 @@ func (s *Service) CopyCharacter(
 
 // resolveFolder turns a caller's folder into one owner definitely has: the
 // zero value becomes their default, and anything else must be theirs.
-func (s *Service) resolveFolder(
+func (s *Service) ResolveFolder(
 	ctx context.Context, owner domain.OwnerID, folder domain.FolderID,
 ) (domain.FolderID, error) {
 	if folder.IsZero() {
@@ -268,4 +287,13 @@ func validateFolderName(name string) (string, error) {
 			})
 	}
 	return name, nil
+}
+
+// SetPublic opens a character to anybody signed in who has its link, or hides
+// it again. Only its owner may: an unowned id is not found, as everywhere.
+func (s *Service) SetPublic(ctx context.Context, owner domain.OwnerID, id domain.ID, public bool) error {
+	if _, err := s.owned(ctx, owner, id); err != nil {
+		return err
+	}
+	return s.repo.SetPublic(ctx, id, public)
 }

@@ -2,11 +2,13 @@
 
 D&D 5e character creation, level-up and battle tracker. Go HTTP API plus a
 responsive React client, deployed to [easydnd.org](https://easydnd.org) via
-GitHub Actions. Targets the **2014 rules** and **SRD 5.1**.
+GitHub Actions. Targets the **2014 rules** on **SRD 5.1 extended**: the SRD
+plus the mechanics and names of the other 2014 books, with their text kept
+out -- see [docs/dnd.md](docs/dnd.md#the-catalogue).
 
 Status: **character creation and level-up work end to end.** The architecture,
-deploy path, entity model, SRD compendium, sign-in, the rules math and the
-browser client are built and tested. Levelling up is declaring the level a
+deploy path, entity model, the compendium in `data/pack/srd-5.1/`, sign-in,
+the rules math and the browser client are built and tested. Levelling up is declaring the level a
 character is built towards -- at creation, or later from the sheet's Level up
 button -- and answering the choices each level opens; see
 [docs/web.md](docs/web.md#level-up-is-the-desired-level). The battle tracker
@@ -22,10 +24,12 @@ is passkeys only. Accounts, their passkeys and their linked accounts are
 stored in PostgreSQL, with the schema migrating itself at startup, so a restart
 no longer costs anybody their account. There is also a **guest session**: one
 click, no account, nothing stored beyond the group roster a guest asks to be
-named in, and nothing that survives it. **Characters and the folders they are
-filed in still live in memory** and are wiped by a restart. See
-[Authentication](docs/backend.md#authentication) and
-[Folders](docs/backend.md#folders).
+named in and the characters they make. **Characters and the folders they are
+filed in are in PostgreSQL too**, and survive a restart with everything else.
+See [Authentication](docs/backend.md#authentication) and
+[Folders](docs/backend.md#folders). **AI Wizard chats are in PostgreSQL**,
+kept for a day after they were last used; see
+[Session lifetime](docs/agent.md#session-lifetime).
 
 **Groups** are the second main section: a table of people with three ranks --
 owner, DM, player -- who invite each other with a link that works for 24 hours.
@@ -39,10 +43,8 @@ owner can ever change it.
 one sitting run by a DM, played at one group's table, with a roster of the
 characters that group has shared. They are listed together across every table
 you sit at rather than being reached through a group -- the group is a fact
-about a game, not the way in to one. Note the split, which is surprising: the
-group and its members are in PostgreSQL, while the characters shared with it and
-the games run from them are **in memory and die with the characters they name**,
-because a character id does not outlive the process. See
+about a game, not the way in to one. The characters shared with a group and
+the games run from them are in PostgreSQL beside it. See
 [Ownership, and membership](docs/backend.md#ownership-and-membership).
 
 A **group**, a **game** and a **folder** are different things and the words are
@@ -51,12 +53,26 @@ sitting at that group's table, with the characters a DM seats at it -- never
 called a *session*, which here means being signed in. A folder is one account's
 private shelf for its own characters, shared with nobody.
 
+For development, `make dev` seeds **master**, **player1**, and **player2**,
+a shared group, two games, first-level characters and two fifth-level casters. Open `/login` and choose
+an account; use the account icon in the header to switch roles. See
+[Seeded development party](docs/backend.md#seeded-development-party).
+
 ## Documentation
 
 | Doc | Covers |
 | --- | --- |
 | [docs/dnd.md](docs/dnd.md) | The game model: catalogue entities, the event-sourced character, and the SRD terminology the code follows |
+| [docs/packs.md](docs/packs.md) | JSON packs, version locks, extensible resources, configuration and migration APIs |
+| [docs/packs-plan.md](docs/packs-plan.md) | Original design and later milestones |
+| [docs/agent.md](docs/agent.md) | Character import tools, chat workspace, private content, configuration and resumability |
+| [docs/polling.md](docs/polling.md) | How the AI Wizard page follows a running import: one request a second, answered at once |
+| [docs/known-caveats.md](docs/known-caveats.md) | Limits that are known and deliberate |
 | [docs/backend.md](docs/backend.md) | The Go service: layout, layer rules, configuration, deployment |
 | [docs/web.md](docs/web.md) | The browser client: layout, layer rules, how it ships |
 | [docs/seo.md](docs/seo.md) | Search-engine and answer-engine discovery, submission, and monitoring |
 | [docs/licensing.md](docs/licensing.md) | MIT for the project's own code, and the SRD 5.1 attribution the data carries |
+
+Homebrew packs can be authored visually, shared with groups, and imported/exported
+as JSON. See [rule packs](docs/packs.md#homebrew-authoring) for versions,
+dependencies, storage, and character selection.

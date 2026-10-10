@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
 
@@ -41,20 +42,30 @@ const (
 	EventFeat
 	// EventNote records a player's annotation and changes nothing.
 	EventNote
+	EventResourceSpent
+	EventResourceRecovered
+	EventRest
+	EventRule
+	EventAction
 )
 
 var eventTypeNames = map[EventType]string{
-	EventNone:       "none",
-	EventInit:       "init",
-	EventChange:     "change",
-	EventRace:       "race",
-	EventSubrace:    "subrace",
-	EventBackground: "background",
-	EventClass:      "class",
-	EventSubclass:   "subclass",
-	EventLevel:      "level",
-	EventFeat:       "feat",
-	EventNote:       "note",
+	EventNone:              "none",
+	EventInit:              "init",
+	EventChange:            "change",
+	EventRace:              "race",
+	EventSubrace:           "subrace",
+	EventBackground:        "background",
+	EventClass:             "class",
+	EventSubclass:          "subclass",
+	EventLevel:             "level",
+	EventFeat:              "feat",
+	EventNote:              "note",
+	EventResourceSpent:     "resource.spent",
+	EventResourceRecovered: "resource.recovered",
+	EventRest:              "rest.completed",
+	EventRule:              "rule.applied",
+	EventAction:            "action.used",
 }
 
 // String returns the type's wire name, or "unknown" outside the enumeration.
@@ -83,10 +94,20 @@ func ParseEventType(s string) (EventType, bool) {
 // a given type are zero. That uniformity is what lets the whole log be one
 // JSON array in one database record.
 type Event struct {
-	// Seq is the event's 1-based position in the log. It doubles as the
-	// optimistic-concurrency token: an append states the sequence it expects
-	// to follow, so two clients editing the same character cannot silently
-	// interleave.
+	Evidence string
+	Custom   *CustomOption
+	// Observed is assigned by import, never accepted from an ordinary event request.
+	Observed      bool
+	ID            string
+	SchemaVersion int
+	RulesLock     pack.Lock
+	Resource      rules.Slug
+	Amount        int
+	Trigger       string
+	Allocations   map[rules.Slug]int
+
+	// Seq is the event's current 1-based position. Character.Revision is the
+	// concurrency token; same-length rewrites can leave every position intact.
 	Seq int
 
 	Type EventType

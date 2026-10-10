@@ -1,0 +1,274 @@
+{
+  "manifest": {
+    "schemaVersion": 1,
+    "id": "example",
+    "version": "2.0.0",
+    "edition": "2014",
+    "semantics": "1",
+    "requires": [
+      "resources.v1",
+      "effects.v1",
+      "actions.v1"
+    ],
+    "dependencies": [
+      {
+        "id": "srd-2014",
+        "version": ">=2.0.0 <3.0.0"
+      }
+    ],
+    "defaultLocale": "en"
+  },
+  "entities": {
+    "subclasses": [
+      {
+        "slug": "tactician",
+        "class": "srd-2014:class:fighter",
+        "levels": [
+          3,
+          7,
+          10,
+          15,
+          18
+        ]
+      }
+    ],
+    "features": [
+      {
+        "slug": "combat-training",
+        "class": "srd-2014:class:fighter",
+        "subclass": "tactician",
+        "level": 3,
+        "action": {
+          "kind": "reaction",
+          "uses": "combat-dice"
+        }
+      }
+    ],
+    "class-levels": [
+      {
+        "class": "srd-2014:class:fighter",
+        "subclass": "tactician",
+        "level": 3,
+        "proficiencyBonus": 2,
+        "features": [
+          "combat-training"
+        ]
+      }
+    ],
+    "races": [
+      {
+        "slug": "wanderer",
+        "speed": 30,
+        "size": "medium",
+        "abilityBonuses": [
+          {
+            "ability": "srd-2014:ability:wis",
+            "bonus": 1
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "slug": "survey-tools",
+        "category": "srd-2014:equipment-category:tools",
+        "cost": {
+          "amount": 5,
+          "unit": "gp"
+        },
+        "tool": {
+          "toolCategory": "Artisan’s Tools"
+        }
+      }
+    ],
+    "spells": [
+      {
+        "slug": "guiding-mark",
+        "level": 0,
+        "school": "srd-2014:magic-school:divination",
+        "range": {
+          "kind": "touch"
+        },
+        "castingTime": {
+          "kind": "action",
+          "amount": 1
+        },
+        "duration": {
+          "kind": "timed",
+          "amount": 1,
+          "unit": "minute"
+        },
+        "components": {
+          "verbal": true
+        },
+        "classes": [
+          "srd-2014:class:wizard"
+        ]
+      }
+    ]
+  },
+  "mechanics": {
+    "resources": [
+      {
+        "id": "combat-dice",
+        "owner": "subclass:tactician",
+        "minimumLevel": 3,
+        "kind": "pool",
+        "input": "srd-2014:class:fighter",
+        "rows": [
+          {
+            "from": 3,
+            "capacity": 4,
+            "dice": "1d8"
+          },
+          {
+            "from": 7,
+            "capacity": 5,
+            "dice": "1d8"
+          },
+          {
+            "from": 10,
+            "capacity": 5,
+            "dice": "1d10"
+          },
+          {
+            "from": 15,
+            "capacity": 6,
+            "dice": "1d10"
+          },
+          {
+            "from": 18,
+            "capacity": 6,
+            "dice": "1d12"
+          }
+        ],
+        "recovery": [
+          {
+            "trigger": "short-rest",
+            "operation": "all"
+          },
+          {
+            "trigger": "long-rest",
+            "operation": "all"
+          }
+        ],
+        "group": "class"
+      }
+    ],
+    "rules": [
+      {
+        "id": "field-training",
+        "owner": "subclass:tactician",
+        "minimumLevel": 3,
+        "effects": [
+          {
+            "op": "grant",
+            "ref": "spell:guiding-mark"
+          },
+          {
+            "op": "add",
+            "target": "status.initiative",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "maneuver",
+        "kind": "bonus-action",
+        "owner": "subclass:tactician",
+        "minimumLevel": 3,
+        "costs": [
+          {
+            "resource": "combat-dice",
+            "amount": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "manual": true
+      }
+    ]
+  },
+  "locales": {
+    "en": {
+      "subclasses": {
+        "tactician": {
+          "name": "Tactician"
+        }
+      },
+      "features": {
+        "combat-training": {
+          "name": "Combat Training"
+        }
+      },
+      "races": {
+        "wanderer": {
+          "name": "Wanderer"
+        }
+      },
+      "equipment": {
+        "survey-tools": {
+          "name": "Survey Tools"
+        }
+      },
+      "resources": {
+        "combat-dice": {
+          "name": "Combat Dice"
+        }
+      },
+      "spells": {
+        "guiding-mark": {
+          "name": "Guiding Mark"
+        }
+      },
+      "actions": {
+        "maneuver": {
+          "name": "Maneuver"
+        }
+      }
+    },
+    "ru": {
+      "subclasses": {
+        "tactician": {
+          "name": "Тактик"
+        }
+      },
+      "features": {
+        "combat-training": {
+          "name": "Боевая подготовка"
+        }
+      },
+      "races": {
+        "wanderer": {
+          "name": "Странник"
+        }
+      },
+      "equipment": {
+        "survey-tools": {
+          "name": "Геодезические инструменты"
+        }
+      },
+      "resources": {
+        "combat-dice": {
+          "name": "Боевые кости"
+        }
+      },
+      "spells": {
+        "guiding-mark": {
+          "name": "Направляющая метка"
+        }
+      },
+      "actions": {
+        "maneuver": {
+          "name": "Манёвр"
+        }
+      }
+    }
+  }
+}

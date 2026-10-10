@@ -23,7 +23,7 @@ const testOwner domain.OwnerID = "test-owner"
 // for the reason the cache is: a Catalog is immutable, and Load is
 // mutex-guarded. The repositories stay per-service -- those are the state a
 // test is entitled to have to itself.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
 
 func newService(t *testing.T) *charuc.Service {
 	t.Helper()
@@ -31,7 +31,6 @@ func newService(t *testing.T) *charuc.Service {
 		memory.NewCharacterRepository(),
 		memory.NewFolderRepository(),
 		catalogSource,
-		nil,
 		nil,
 		slog.New(slog.DiscardHandler),
 	)
@@ -269,18 +268,19 @@ func TestApplyAdvancesTheCharacter(t *testing.T) {
 	s := newService(t)
 	c := mustCreateScored(t, s)
 
-	seq, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, 2, domain.Event{
-		Type: domain.EventRace,
-		Ref:  rules.NewRef(rules.RefRace, "half-elf"),
-		Choices: []domain.Answer{
+	// The race, and then what the race asked: two selections, two entries,
+	// which one request may carry as a batch.
+	halfElf := rules.NewRef(rules.RefRace, "half-elf")
+	seq, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, 2,
+		domain.Event{Type: domain.EventRace, Ref: halfElf},
+		domain.Event{Type: domain.EventRace, Ref: halfElf, Choices: []domain.Answer{
 			{Prompt: "half-elf/ability-bonus/0", Picks: []rules.Slug{"dex", "con"}},
-		},
-	})
+		}})
 	if err != nil {
 		t.Fatalf("Apply() error = %v", err)
 	}
-	if seq != 3 {
-		t.Errorf("sequence = %d, want 3", seq)
+	if seq != 4 {
+		t.Errorf("sequence = %d, want 4", seq)
 	}
 
 	sheet, err := s.Sheet(ctx, testOwner, c.ID, rules.DefaultLocale)
@@ -389,7 +389,7 @@ func TestApplyRejectsAnUnknownReference(t *testing.T) {
 	c := mustCreateScored(t, s)
 
 	_, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, 2,
-		domain.Event{Type: domain.EventBackground, Ref: rules.NewRef(rules.RefBackground, "urchin")})
+		domain.Event{Type: domain.EventBackground, Ref: rules.NewRef(rules.RefBackground, "no-such-background")})
 	var fieldErr *types.FieldValidationError
 	if !errors.As(err, &fieldErr) {
 		t.Fatalf("Apply() error = %v, want a FieldValidationError", err)
@@ -529,5 +529,57 @@ func TestAnotherOwnerCannotReachTheCharacter(t *testing.T) {
 	}
 	if after.Log.Len() != 1 {
 		t.Errorf("log length = %d, want 1", after.Log.Len())
+	}
+}
+
+// The ability-score prompt carries the class's advice once there is a class,
+// and none before: the builder's "Use recommended" deals the scores by it.
+func TestAbilityPromptCarriesTheClassPriority(t *testing.T) {
+	ctx := context.Background()
+	s := newService(t)
+	c, err := s.Create(ctx, testOwner, "", opening())
+	if err != nil {
+		t.Fatal(err)
+	}
+	recommended := func() []rules.Ability {
+		t.Helper()
+		prompts, err := s.Prompts(ctx, testOwner, c.ID, rules.DefaultLocale)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range prompts {
+			if p.Choice.Prompt == "character/abilities" {
+				return p.Recommended
+			}
+		}
+		t.Fatal("no ability-score prompt")
+		return nil
+	}
+	if got := recommended(); got != nil {
+		t.Fatalf("advice without a class: %v", got)
+	}
+	if _, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, c.Log.LastSeq(),
+		domain.Event{Type: domain.EventClass, Ref: rules.NewRef(rules.RefClass, "wizard"), Level: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if got := recommended(); len(got) != 6 || got[0] != "int" || got[5] != "str" {
+		t.Fatalf("wizard priority = %v", got)
+	}
+}
+
+// One entry is one selection, and the service refuses anything else -- so no
+// writer can produce the log the editor cannot draw: a race or a class chosen
+// *and* answered in the same entry.
+func TestApplyRefusesASelectionThatCarriesAnswers(t *testing.T) {
+	ctx := context.Background()
+	s := newService(t)
+	c := mustCreateScored(t, s)
+	_, err := s.Apply(ctx, testOwner, c.ID, rules.DefaultLocale, c.Log.LastSeq(), domain.Event{
+		Type: domain.EventRace, Ref: rules.NewRef(rules.RefRace, "half-elf"),
+		Choices: []domain.Answer{{Prompt: "half-elf/ability-bonus/0", Picks: []rules.Slug{"dex", "con"}}},
+	})
+	var fields *types.FieldValidationError
+	if !errors.As(err, &fields) || len(fields.Fields) == 0 || fields.Fields[0].Rule != "one-selection" {
+		t.Fatalf("Apply() error = %v, want a one-selection field error", err)
 	}
 }

@@ -10,6 +10,14 @@ import "github.com/promix1722/easydnd/internal/domain/rules"
 // two -- which is what DND.md means by "autocalculated", and why recomputing
 // it from scratch must always be safe.
 type State struct {
+	CustomOptions []CustomOption
+	ImportSession string
+	CatalogNames  map[string]string
+	ImportedNotes []string
+	Contributions []Contribution
+	PackActions   []ActionOffer
+	ManualRules   []rules.Slug
+
 	Identity     Identity
 	Base         Base
 	Abilities    Abilities
@@ -44,6 +52,7 @@ type State struct {
 
 // Identity is who the character is, as opposed to what they can do.
 type Identity struct {
+	Image      string
 	Name       string
 	Alignment  rules.Slug
 	Race       rules.Slug
@@ -182,6 +191,8 @@ type Base struct {
 // (see rules.Modifier), and storing a derived value is how a sheet ends up
 // internally inconsistent.
 type Abilities struct {
+	ModifierRule rules.Expression
+
 	// Scores are the base scores as generated -- point buy, standard array
 	// or rolled -- with every racial and Ability Score Improvement bonus
 	// already folded in by Project. An init event records the base; the
@@ -208,6 +219,11 @@ func (a Abilities) Score(ability rules.Ability) int {
 
 // Modifier returns the ability's modifier.
 func (a Abilities) Modifier(ability rules.Ability) int {
+	if a.ModifierRule.Op != "" {
+		if v, err := a.ModifierRule.Eval(rules.Variables{"score": a.Score(ability)}); err == nil {
+			return v
+		}
+	}
 	return rules.Modifier(a.Score(ability))
 }
 
@@ -308,6 +324,12 @@ type Equipment struct {
 	Backpack []ItemStack
 	Loot     []ItemStack
 
+	// Custom is the one equipped item worn in the sheet's Custom slot, the
+	// slot that takes any wearable. Every other slot is derived from the item's
+	// own shape, so this is the only placement the character has to record.
+	// It names something in Equipped, or nothing.
+	Custom rules.Slug
+
 	Purse rules.Purse
 }
 
@@ -356,6 +378,9 @@ const MaxSpellLevel = 9
 // superiority dice, so this uses the neutral word and keeps SpellSlots as one
 // named member.
 type Resources struct {
+	Pools      map[rules.Slug]ResourcePool
+	Parameters map[rules.Slug]Parameter
+
 	// SpellSlots is indexed by spell level, 1..MaxSpellLevel. Index 0 is
 	// unused so that SpellSlots[3] means third-level slots.
 	SpellSlots [MaxSpellLevel + 1]Pool
@@ -371,6 +396,8 @@ type Resources struct {
 
 // Spellbook is what the character knows and has ready.
 type Spellbook struct {
+	ExtraKnown, ExtraCantrips int
+	Sources                   []SpellSource
 	// Cantrips are always available and cost no slot.
 	Cantrips []rules.Slug
 
@@ -421,6 +448,20 @@ const (
 	Manual
 )
 
+// ActionCategory groups actions by why the character has them.
+type ActionCategory uint8
+
+// The categories of action.
+const (
+	ActionCategoryNone ActionCategory = iota
+	// BasicAction is open to every character: Dash, Hide, Help.
+	BasicAction
+	// ActionFromEquipment comes from something worn or wielded.
+	ActionFromEquipment
+	// ActionFromFeature comes from a class, race, feat or other grant.
+	ActionFromFeature
+)
+
 // Action is something the character can do on their turn.
 type Action struct {
 	Source ActionSource
@@ -430,6 +471,10 @@ type Action struct {
 	Origin rules.Ref
 
 	Kind ActionKind
+
+	// Category is the broad reason the action is on the list, which is what a
+	// player filters by.
+	Category ActionCategory
 
 	// Name is display text. For a derived action it is copied from the
 	// origin entry and is therefore already in the catalogue's locale; for a

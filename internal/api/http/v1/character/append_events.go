@@ -1,6 +1,7 @@
 package character
 
 import (
+	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	"net/http"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 // AppendEventsParams is the body of POST /v1/characters/{id}/events.
 type AppendEventsParams struct {
+	ExpectedRevision *int `json:"expectedRevision"`
 	// ExpectedSeq is the sequence the client believes the log ends at.
 	//
 	// It is required rather than optional. The whole log is one record, so
@@ -30,8 +32,9 @@ type AppendEventsParams struct {
 // rather than two. It is also the reason this application needs no cache
 // invalidation on the client: the response *is* the invalidation.
 type WriteResponse struct {
-	Seq   int   `json:"seq"`
-	Sheet Sheet `json:"sheet"`
+	Revision int   `json:"revision"`
+	Seq      int   `json:"seq"`
+	Sheet    Sheet `json:"sheet"`
 
 	// Dropped is what a replacement cost, and is present only on the routes
 	// that can cost anything. An append and a truncation never populate it:
@@ -92,7 +95,11 @@ func (h *Handler) AppendEvents(c *gin.Context) {
 		events[i].At = now
 	}
 
-	ctx := c.Request.Context()
+	revision := params.ExpectedSeq
+	if params.ExpectedRevision != nil {
+		revision = *params.ExpectedRevision
+	}
+	ctx := charuc.WithRevision(c.Request.Context(), revision)
 	id := idOf(c)
 	locale := helpers.Locale(c)
 
@@ -108,10 +115,10 @@ func (h *Handler) AppendEvents(c *gin.Context) {
 func (h *Handler) writeResponse(
 	c *gin.Context, id domain.ID, locale rules.Locale, seq int,
 ) {
-	sheet, err := h.service.Sheet(c.Request.Context(), h.owner(c), id, locale)
+	record, sheet, err := h.service.View(c.Request.Context(), h.owner(c), id, locale)
 	if err != nil {
 		helpers.FormatError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, WriteResponse{Seq: seq, Sheet: SheetOf(sheet)})
+	c.JSON(http.StatusOK, WriteResponse{Seq: record.Log.LastSeq(), Revision: record.Revision, Sheet: SheetOf(sheet)})
 }

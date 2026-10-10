@@ -1,4 +1,4 @@
-export { request } from './client'
+export { onUnauthorized, request } from './client'
 export type { RequestOptions } from './client'
 export {
   ApiError,
@@ -24,6 +24,7 @@ export {
   ssoStartUrl,
   startGuestSession,
   unlinkProvider,
+  setProfileImage,
 } from './auth'
 export type { AuthProviderInfo, SessionCredential, SessionIdentity, SessionUser } from './auth'
 
@@ -34,7 +35,10 @@ export {
   getEntries,
   getManifest,
   resetCatalogCache,
+  searchItems,
   searchSpells,
+  searchSpellOffer,
+  getSpellFilterOptions,
 } from './catalog'
 export type {
   Choice,
@@ -42,6 +46,8 @@ export type {
   CollectionInfo,
   Entry,
   Item,
+  ItemHit,
+  ItemPage,
   Manifest,
   Option,
   OptionSet,
@@ -53,6 +59,8 @@ export type {
   SpellComponents,
   SpellPage,
   SpellSearch,
+  SpellLevels,
+  SpellOfferSearch,
 } from './catalog'
 
 // Folders: where an account files its characters. Not a group of players.
@@ -62,18 +70,20 @@ export type { Folder } from './folders'
 // Characters.
 export {
   appendEvents,
+  autoEquip,
+  getVisibility,
+  setVisibility,
   copyCharacter,
   createCharacter,
-  createStubCharacter,
   deleteCharacter,
   deleteEvent,
   getEvents,
   getPrompts,
   getSheet,
-  importCharacter,
   listCharacters,
   moveCharacter,
   replaceEvent,
+  reviseEvents,
   truncateEvents,
 } from './characters'
 export type {
@@ -86,17 +96,17 @@ export type {
   DropReason,
   Dropped,
   Equipment,
-  ImportEntry,
-  ImportReport,
-  ImportResponse,
   Identity,
   LostAnswer,
   NewCharacter,
   Prompt,
   PromptEvent,
   PromptsResponse,
+  SpellRule,
   ReviseResponse,
+  ResourcePool,
   Sheet,
+  SheetAction,
   Skill,
   Status,
   Summary,
@@ -130,9 +140,15 @@ export type {
 // "session", which in this barrel means signing in.
 export {
   addToGame,
+  patchGameEntry,
+  restGame,
+  deleteGameEntry,
+  addGameMonster,
+  orderGameEntries,
   createGame,
   deleteGame,
   getGame,
+  getSharedOwner,
   getSharedSheet,
   listGames,
   listTable,
@@ -141,4 +157,13 @@ export {
   shareCharacter,
   unshareCharacter,
 } from './games'
-export type { GameDetail, GameSummary, TableCharacter } from './games'
+export type { GameDetail, GameSummary, TableCharacter, GameEntry, EntryPool, EntryStats, EntryPatch } from './games'
+
+// Seeded identities, available only on the development server.
+export { loginDevelopmentAccount } from './development'
+export type { DevelopmentAccount } from './development'
+
+export { getSpellBrowseOptions, sourceOptions } from './catalog'
+export type { Provenance, SourceOptions, SpellBrowseOptions } from './catalog'
+
+export { getAppearance, saveAppearance } from './appearance'

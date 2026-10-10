@@ -4,10 +4,11 @@
 // The domain forbids them, so the shapes below mirror the domain types with
 // their enums flattened to strings and their optional fields made pointers.
 //
-// The wire types are exported because cmd/srdgen builds them and marshals
-// them, while this package unmarshals them. Sharing one definition is what
-// guarantees the generator and the loader cannot drift: a change to the format
-// is a compile error in both, not a runtime surprise in one.
+// The wire types are exported because the tools that write a pack -- cmd/pack,
+// the homebrew editor, the private repository's exporter -- produce them,
+// while this package unmarshals them. One definition is the contract: a change
+// to the format is a compile error for every Go writer, not a runtime surprise
+// in the loader.
 //
 // # Layout
 //
@@ -15,7 +16,7 @@
 // under i18n/<locale>/ keyed by the same slug, so adding a translation never
 // touches a mechanics file and a partial locale falls back per key.
 //
-//	data/srd_5.1/
+//	data/pack/srd-5.1/
 //	  manifest.json
 //	  spells.json  races.json  classes.json  ...
 //	  i18n/en/spells.json  i18n/ru/spells.json  ...
@@ -31,11 +32,6 @@ type Manifest struct {
 
 	// Locales lists the locale directories present under i18n/.
 	Locales []string `json:"locales"`
-
-	// Counts maps each mechanics file to its entry count. It exists so a
-	// truncated write is caught at load rather than showing up as a spell
-	// that mysteriously does not exist.
-	Counts map[string]int `json:"counts"`
 }
 
 // Ref is a typed reference to another entry, written as "kind:slug".
@@ -75,6 +71,9 @@ type Choice struct {
 	Choose int       `json:"choose"`
 	Kind   string    `json:"kind"`
 	From   OptionSet `json:"from"`
+	// Slot is what a starting-kit choice fills: body, main-hand, off-hand,
+	// backup, pack, focus or instrument. See rules.Choice.
+	Slot string `json:"slot,omitempty"`
 }
 
 // OptionSet is the pool a Choice draws from.
@@ -194,6 +193,8 @@ type Trait struct {
 	SpellOptions     *Choice  `json:"spellOptions,omitempty"`
 	SubtraitOptions  *Choice  `json:"subtraitOptions,omitempty"`
 	DamageResistance []string `json:"damageResistance,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Class is a character class.
@@ -201,6 +202,7 @@ type Class struct {
 	Slug                     string      `json:"slug"`
 	HitDie                   int         `json:"hitDie"`
 	SavingThrows             []string    `json:"savingThrows,omitempty"`
+	AbilityPriority          []string    `json:"abilityPriority,omitempty"`
 	Proficiencies            []string    `json:"proficiencies,omitempty"`
 	ProficiencyOptions       []Choice    `json:"proficiencyOptions,omitempty"`
 	StartingEquipment        []ItemStack `json:"startingEquipment,omitempty"`
@@ -272,6 +274,8 @@ type Feature struct {
 	EnemyTypeOptions   *Choice  `json:"enemyTypeOptions,omitempty"`
 	TerrainTypeOptions *Choice  `json:"terrainTypeOptions,omitempty"`
 	Invocations        []string `json:"invocations,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Background is where a character came from before adventuring.
@@ -290,24 +294,40 @@ type Background struct {
 	Flaws             *Choice `json:"flaws,omitempty"`
 }
 
+// ActionTag is the "action" object an entity carries to appear in the action
+// list: the part of a turn it takes and, optionally, the pool it spends.
+type ActionTag struct {
+	Kind string `json:"kind"`
+	Uses string `json:"uses,omitempty"`
+}
+
 // Feat is an optional talent.
 type Feat struct {
 	Slug          string         `json:"slug"`
 	Prerequisites []Prerequisite `json:"prerequisites,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Item is a piece of mundane equipment.
 type Item struct {
 	Slug     string  `json:"slug"`
+	Icon     string  `json:"icon,omitempty"`
 	Category string  `json:"category"`
 	Cost     Cost    `json:"cost"`
 	Weight   float64 `json:"weight,omitempty"`
+	// Slot is where the item is worn or wielded. Left empty, it is derived
+	// from what the item is -- armor, a shield, a weapon, a focus -- and
+	// anything else is only carried.
+	Slot string `json:"slot,omitempty"`
 
 	Weapon  *Weapon  `json:"weapon,omitempty"`
 	Armor   *Armor   `json:"armor,omitempty"`
 	Gear    *Gear    `json:"gear,omitempty"`
 	Tool    *Tool    `json:"tool,omitempty"`
 	Vehicle *Vehicle `json:"vehicle,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Weapon is the weapon-specific part of an Item.
@@ -362,10 +382,17 @@ type Vehicle struct {
 // MagicItem is an enchanted item.
 type MagicItem struct {
 	Slug      string   `json:"slug"`
+	Icon      string   `json:"icon,omitempty"`
 	Category  string   `json:"category,omitempty"`
 	Rarity    string   `json:"rarity,omitempty"`
 	Variants  []string `json:"variants,omitempty"`
 	IsVariant bool     `json:"isVariant,omitempty"`
+	// Slot as on Item. Left empty, armor, weapons, rings, wands, staffs and
+	// rods are placed by their category; a wondrous item without one is
+	// only carried.
+	Slot string `json:"slot,omitempty"`
+	// Action tags the entry into the character's action list.
+	Action *ActionTag `json:"action,omitempty"`
 }
 
 // Spell is a spell or cantrip.

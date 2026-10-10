@@ -19,6 +19,10 @@ package character
 
 import (
 	"context"
+	"github.com/promix1722/easydnd/internal/domain/pack"
+	"maps"
+	"slices"
+	"strings"
 
 	"github.com/promix1722/easydnd/internal/types"
 )
@@ -51,10 +55,21 @@ func (o OwnerID) String() string { return string(o) }
 // that happened to the character in the fiction, and it has no business
 // appearing in their history.
 type Character struct {
+	Revision    int
+	Checkpoints []Checkpoint
+	Commands    map[string]int
+
 	ID     ID
 	Owner  OwnerID
 	Folder FolderID
 	Log    Log
+
+	// Public opens the character to anybody signed in who has its link: a
+	// read of the sheet, never a write. False -- the default -- leaves it to
+	// its owner and to the groups it is shared with. It is the owner's switch
+	// and not part of the log: who may look at a character is not a fact
+	// about the character.
+	Public bool
 }
 
 // Summary is the short form used for listings, where projecting every
@@ -63,6 +78,7 @@ type Summary struct {
 	ID     ID
 	Owner  OwnerID
 	Folder FolderID
+	Image  string
 	Name   string
 	Level  int
 
@@ -188,7 +204,25 @@ func Rebuild(events []Event) (Log, error) {
 // without gaps, and an init event appears exactly once, first.
 func (l Log) Validate() error {
 	initSeen := false
+	ids := map[string]bool{}
 	for i, e := range l.Events {
+		if e.ID != "" {
+			if ids[e.ID] {
+				return types.NewValidationError("duplicate event identity")
+			}
+			ids[e.ID] = true
+		}
+		if !e.RulesLock.IsZero() {
+			if err := e.RulesLock.Validate(); err != nil {
+				return err
+			}
+		}
+		if e.SchemaVersion < 0 || e.SchemaVersion > 1 {
+			return types.NewValidationError("unsupported event schema %d", e.SchemaVersion)
+		}
+		if i > 0 && !e.RulesLock.IsZero() {
+			return types.NewValidationError("rules lock belongs to init event")
+		}
 		if e.Seq != i+1 {
 			return types.NewValidationError("event at index %d has sequence %d, expected %d", i, e.Seq, i+1)
 		}
@@ -197,6 +231,19 @@ func (l Log) Validate() error {
 				return types.NewValidationError("init event must be first, found at sequence %d", e.Seq)
 			}
 			initSeen = true
+		}
+		// One entry, one question. A branch and the picks made inside it are
+		// one question -- the nested prompt's id is under its parent's -- and
+		// anything else in the same entry is a second decision nobody can
+		// point at or change apart from the first. The service refuses such
+		// an entry with a field error (see oneSelection there); this is the
+		// same rule for every writer that does not go through it -- an
+		// import, a migration, a repository handed a whole log -- so that no
+		// stored log can hold one.
+		for at := 1; at < len(e.Choices); at++ {
+			if !strings.HasPrefix(string(e.Choices[at].Prompt), string(e.Choices[0].Prompt)+"/") {
+				return types.NewValidationError("event %d answers both %s and %s: one entry answers one question", e.Seq, e.Choices[0].Prompt, e.Choices[at].Prompt)
+			}
 		}
 	}
 	if len(l.Events) > 0 && !initSeen {
@@ -209,6 +256,19 @@ func (l Log) Validate() error {
 // under internal/adapter/repository; internal/app picks the concrete one, and
 // that assignment is what proves conformance at compile time.
 type Repository interface {
+	// Commit replaces a character's whole log under its revision, which is
+	// the write every application mutation goes through. See
+	// Character.Commit for what it checks and how the revision advances.
+	// command, when not empty, is an idempotency key: a second Commit
+	// carrying the same one is a *types.ValidationError. checkpoint, when
+	// not nil, is kept alongside the log.
+	Commit(context.Context, ID, int, Log, string, *Checkpoint) error
+
+	// CreateWithLog stores a new character together with its first log in
+	// one write, so that a failure cannot leave an empty character behind
+	// the way Create followed by Commit can. See NewWithLog.
+	CreateWithLog(ctx context.Context, owner OwnerID, folder FolderID, log Log) (Character, error)
+
 	// Create stores a new character owned by owner, filed in folder, and
 	// returns it with its assigned ID and an empty log.
 	//
@@ -238,6 +298,10 @@ type Repository interface {
 	// caller owns it are authorization questions, and those are settled in
 	// the application layer where every other one is.
 	SetFolder(ctx context.Context, id ID, folder FolderID) error
+
+	// SetPublic opens or hides a character. Like SetFolder it changes
+	// nothing in the log and verifies nothing about the caller.
+	SetPublic(ctx context.Context, id ID, public bool) error
 
 	// Append adds events to a character's log, but only if the stored log
 	// still ends at expectedSeq. Implementations report a
@@ -276,4 +340,52 @@ type Repository interface {
 	// Delete removes a character. Implementations report a
 	// *types.NotFoundError when it does not exist.
 	Delete(ctx context.Context, id ID) error
+}
+
+// Checkpoint retains the complete pre-migration build and its exact lock.
+type Checkpoint struct {
+	Revision int
+	Log      Log
+	Reason   string
+}
+
+func (l Log) RulesLock() pack.Lock {
+	if len(l.Events) == 0 {
+		return pack.Lock{}
+	}
+	return l.Events[0].RulesLock.Clone()
+}
+func (l Log) Clone() Log {
+	out := Log{Events: slices.Clone(l.Events)}
+	for i := range out.Events {
+		e := &out.Events[i]
+		if e.Custom != nil {
+			c := *e.Custom
+			if c.Level != nil {
+				n := *c.Level
+				c.Level = &n
+			}
+			if c.HitDie != nil {
+				n := *c.HitDie
+				c.HitDie = &n
+			}
+			if c.Speed != nil {
+				n := *c.Speed
+				c.Speed = &n
+			}
+			e.Custom = &c
+		}
+		e.RulesLock = e.RulesLock.Clone()
+		e.Allocations = maps.Clone(e.Allocations)
+		e.Choices = slices.Clone(e.Choices)
+		for j := range e.Choices {
+			e.Choices[j].Picks = slices.Clone(e.Choices[j].Picks)
+		}
+		e.Changes = slices.Clone(e.Changes)
+		for j := range e.Changes {
+			e.Changes[j].Value.Slugs = slices.Clone(e.Changes[j].Value.Slugs)
+			e.Changes[j].Value.Dice.Terms = slices.Clone(e.Changes[j].Value.Dice.Terms)
+		}
+	}
+	return out
 }

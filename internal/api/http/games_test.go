@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,7 @@ import (
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	characterapi "github.com/promix1722/easydnd/internal/api/http/v1/character"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
+	"github.com/promix1722/easydnd/internal/config"
 )
 
 // makeCharacter creates one and returns its id.
@@ -370,5 +372,178 @@ func TestAnotherTablesGamesAreNotYours(t *testing.T) {
 	rec = send(t, r, stranger, http.MethodGet, "/v1/games/"+game.ID, nil)
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("a stranger naming a game = %d, want 404", rec.Code)
+	}
+}
+
+// Monster privacy is enforced in JSON, including responses to rejected writes.
+func TestTrackerHTTPPermissionsAndMonsterRedaction(t *testing.T) {
+	r, owner, ceremony := newFullRouterWithCeremony(t)
+	group := createGroup(t, r, owner, "Table")
+	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
+	pc := makeCharacter(t, r, player, "Hero")
+	source := makeCharacter(t, r, owner, "Secret monster")
+	shareCharacter(t, r, player, group.ID, pc)
+	rec := send(t, r, owner, http.MethodPost, "/v1/games", map[string]any{"group_id": group.ID, "name": "Fight"})
+	game := decode[gameapi.Game](t, rec)
+	root := "/v1/games/" + game.ID
+	rec = send(t, r, owner, http.MethodPost, root+"/characters", map[string]any{"character_ids": []string{pc}})
+	entry := decode[gameapi.Game](t, rec).Entries[0]
+	if !entry.CanEdit || entry.Locked == nil || *entry.Locked || entry.Initiative != nil {
+		t.Fatalf("new entry: %+v", entry)
+	}
+	path := root + "/entries/" + entry.ID
+	rec = send(t, r, player, http.MethodPatch, path, map[string]any{"hp": 7, "temp_hp": 3, "initiative": 17, "tags": []string{"prone"}})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("owner edit: %d %s", rec.Code, rec.Body.String())
+	}
+	for _, body := range []map[string]any{{"hp": -1}, {"initiative": 1.5}, {"tags": []string{" "}}, {"unknown": true}} {
+		rec = send(t, r, player, http.MethodPatch, path, body)
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("invalid patch: %d %s", rec.Code, rec.Body.String())
+		}
+	}
+	rec = send(t, r, owner, http.MethodPatch, path, map[string]any{"locked": true})
+	if rec.Code != http.StatusOK {
+		t.Fatal(rec.Body.String())
+	}
+	rec = send(t, r, player, http.MethodPatch, path, map[string]any{"hp": 1})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("locked edit: %d", rec.Code)
+	}
+	rec = send(t, r, owner, http.MethodPatch, path, map[string]any{"locked": false})
+	if rec.Code != http.StatusOK {
+		t.Fatal(rec.Body.String())
+	}
+	rec = send(t, r, player, http.MethodPatch, path, map[string]any{"initiative": nil})
+	if rec.Code != http.StatusOK || decode[gameapi.Game](t, rec).Entries[0].Initiative != nil {
+		t.Fatal("cannot clear initiative")
+	}
+	for range 2 {
+		rec = send(t, r, owner, http.MethodPost, root+"/monsters", map[string]any{"character_id": source})
+		if rec.Code != http.StatusCreated {
+			t.Fatal(rec.Body.String())
+		}
+	}
+	rec = send(t, r, owner, http.MethodPost, root+"/monsters", map[string]any{})
+	if rec.Code != http.StatusCreated {
+		t.Fatal(rec.Body.String())
+	}
+	monsters := decode[gameapi.Game](t, rec).Entries
+	if len(monsters) != 4 || monsters[3].Stats.Name != "NPC" || *monsters[3].HP != 10 || monsters[3].Stats.MaxHP != 10 || monsters[3].Stats.ArmorClass != 10 {
+		t.Fatalf("monsters: %+v", monsters)
+	}
+	if monsters[3].Stats.Abilities.Scores["str"] != 10 || len(monsters[3].Stats.Abilities.Scores) != 6 {
+		t.Fatal("stub needs six default ability scores")
+	}
+	privateID := monsters[1].ID
+	rec = send(t, r, owner, http.MethodPost, root+"/order", map[string]any{"entry_id": monsters[3].ID, "before_id": entry.ID})
+	if rec.Code != http.StatusOK || decode[gameapi.Game](t, rec).Entries[0].ID != monsters[3].ID {
+		t.Fatal("drag move failed")
+	}
+	rec = send(t, r, owner, http.MethodPost, root+"/order", map[string]any{"entry_id": monsters[3].ID, "before_id": ""})
+	if rec.Code != http.StatusOK || decode[gameapi.Game](t, rec).Entries[3].ID != monsters[3].ID {
+		t.Fatal("drag to end failed")
+	}
+	rec = send(t, r, player, http.MethodPost, root+"/order", map[string]any{"entry_id": privateID, "before_id": entry.ID})
+	if rec.Code != http.StatusForbidden {
+		t.Fatal("player drag succeeded")
+	}
+	rec = send(t, r, owner, http.MethodPost, root+"/order", map[string]any{"entry_id": privateID, "before_id": "", "by_initiative": true})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatal("ambiguous order accepted")
+	}
+	rec = send(t, r, owner, http.MethodPatch, root+"/entries/"+privateID, map[string]any{"stats": map[string]any{"name": "Beast", "armor_class": 21}})
+	if rec.Code != http.StatusOK {
+		t.Fatal(rec.Body.String())
+	}
+	patched := decode[gameapi.Game](t, rec).Entries[1]
+	if patched.Stats.ArmorClass != 21 || patched.Stats.Name != "Beast" || patched.Stats.MaxHP != monsters[1].Stats.MaxHP {
+		t.Fatal("partial monster stats overwrote unrelated values")
+	}
+	for _, stats := range []map[string]any{
+		{"armor_class": -1}, {"abilities": map[string]any{"scores": map[string]int{"str": 31}}}, {"speeds": []map[string]any{{"kind": "unknown", "distance": 5}}},
+	} {
+		rec = send(t, r, owner, http.MethodPatch, root+"/entries/"+privateID, map[string]any{"stats": stats})
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("invalid monster stats: %d %s", rec.Code, rec.Body.String())
+		}
+	}
+	rec = send(t, r, player, http.MethodGet, root, nil)
+	public := decode[map[string]any](t, rec)
+	for _, raw := range public["entries"].([]any) {
+		e := raw.(map[string]any)
+		if e["kind"] != "monster" {
+			continue
+		}
+		for key := range e {
+			if key != "id" && key != "kind" && key != "name" && key != "can_edit" {
+				t.Errorf("private field leaked: %s", key)
+			}
+		}
+	}
+	for _, request := range []struct {
+		method, path string
+		body         any
+	}{
+		{http.MethodPatch, root + "/entries/" + privateID, map[string]any{"hp": 1}},
+		{http.MethodDelete, root + "/entries/" + privateID, nil},
+		{http.MethodPost, root + "/monsters", map[string]any{}},
+		{http.MethodPost, root + "/order", map[string]any{"by_initiative": true}},
+	} {
+		rec = send(t, r, player, request.method, request.path, request.body)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("player %s %s: %d", request.method, request.path, rec.Code)
+		}
+	}
+	rec = send(t, r, player, http.MethodGet, "/v1/shared/"+source+"/sheet", nil)
+	if rec.Code != http.StatusNotFound {
+		t.Fatal("monster source became readable")
+	}
+	rec = send(t, r, player, http.MethodGet, "/v1/groups/"+group.ID+"/characters", nil)
+	if len(decode[gameapi.TableResponse](t, rec).Characters) != 1 {
+		t.Fatal("monster source joined shared table")
+	}
+}
+
+func TestSpentUsesOverHTTP(t *testing.T) {
+	// Packs on, as in the running app: only a locked catalogue has resource pools.
+	r, owner, ceremony, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
+	group := createGroup(t, r, owner, "Table")
+	player := seatSecondAccount(t, r, owner, ceremony, group.ID)
+	pc := makeCharacter(t, r, player, "Hero")
+	rec := send(t, r, player, http.MethodPost, "/v1/characters/"+pc+"/events", map[string]any{
+		"expectedSeq": 1, "events": []map[string]any{{"type": "class", "ref": "class:fighter", "level": 1}}})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("class: %d %s", rec.Code, rec.Body.String())
+	}
+	shareCharacter(t, r, player, group.ID, pc)
+	rec = send(t, r, owner, http.MethodPost, "/v1/games", map[string]any{"group_id": group.ID, "name": "Fight"})
+	root := "/v1/games/" + decode[gameapi.Game](t, rec).ID
+	rec = send(t, r, owner, http.MethodPost, root+"/characters", map[string]any{"character_ids": []string{pc}})
+	entry := decode[gameapi.Game](t, rec).Entries[0]
+	used := func(rec *httptest.ResponseRecorder) map[string]int {
+		t.Helper()
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%d %s", rec.Code, rec.Body.String())
+		}
+		out := map[string]int{}
+		for _, pool := range decode[gameapi.Game](t, rec).Entries[0].Resources {
+			out[pool.ID] = pool.Used
+		}
+		return out
+	}
+	path := root + "/entries/" + entry.ID
+	got := used(send(t, r, player, http.MethodPatch, path, map[string]any{"used": map[string]int{"second-wind": 1}}))
+	if got["second-wind"] != 1 || got["hit-dice/fighter"] != 0 {
+		t.Fatalf("spent: %+v", got)
+	}
+	if rec = send(t, r, player, http.MethodPatch, path, map[string]any{"used": map[string]int{"second-wind": 2}}); rec.Code != http.StatusBadRequest {
+		t.Fatalf("overspend: %d", rec.Code)
+	}
+	if rec = send(t, r, player, http.MethodPost, root+"/rest", nil); rec.Code != http.StatusForbidden {
+		t.Fatalf("player rest: %d", rec.Code)
+	}
+	if got = used(send(t, r, owner, http.MethodPost, root+"/rest", nil)); got["second-wind"] != 0 {
+		t.Fatalf("after rest: %+v", got)
 	}
 }

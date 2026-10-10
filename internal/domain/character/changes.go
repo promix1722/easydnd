@@ -37,6 +37,39 @@ func (p *projector) applyChange(sc seqChange) error {
 	}
 
 	switch segments[0] {
+	case "finalAbilities":
+		if len(segments) != 2 || ch.Op != OpSet || ch.Value.Kind != ValueInt {
+			return p.unresolved(sc)
+		}
+		ability, ok := rules.ParseAbility(segments[1])
+		if !ok || ch.Value.Int < 1 || ch.Value.Int > 30 {
+			return p.unresolved(sc)
+		}
+		if p.finalAbilities == nil {
+			p.finalAbilities = map[rules.Ability]int{}
+		}
+		p.finalAbilities[ability] = ch.Value.Int
+		return nil
+	case "spellLimits":
+		if len(segments) != 2 {
+			return p.unresolved(sc)
+		}
+		var target *int
+		switch segments[1] {
+		case "known":
+			target = &p.state.Spells.ExtraKnown
+		case "cantrip":
+			target = &p.state.Spells.ExtraCantrips
+		default:
+			return p.unresolved(sc)
+		}
+		if err := changeInt(p, sc, target); err != nil {
+			return err
+		}
+		if *target < 0 || *target > 1000 {
+			return types.NewValidationError("spell limit adjustment out of range")
+		}
+		return nil
 	case "identity":
 		return p.changeIdentity(sc, segments[1:])
 	case "abilities":
@@ -80,6 +113,8 @@ func (p *projector) changeIdentity(sc seqChange, rest []string) error {
 		return p.unresolved(sc)
 	}
 	switch rest[0] {
+	case "image":
+		return setString(p, sc, &p.state.Identity.Image)
 	case "name":
 		return setString(p, sc, &p.state.Identity.Name)
 	case "alignment":
@@ -122,6 +157,7 @@ func (p *projector) changeAbilities(sc seqChange, rest []string) error {
 	}
 	switch sc.Change.Op {
 	case OpSet:
+		delete(p.finalAbilities, ability)
 		p.state.Abilities.Scores[ability] = value
 	case OpIncrement:
 		p.state.Abilities.Scores[ability] += value
@@ -138,10 +174,38 @@ func (p *projector) changeBase(sc seqChange, rest []string) error {
 	if rest[0] == "hitPoints" {
 		return p.changeHitPoints(sc, rest[1:])
 	}
+	if len(rest) == 2 && (rest[0] == "speeds" && rest[1] == "walking" || rest[0] == "senses" && rest[1] == "darkvision") || len(rest) == 1 && rest[0] == "speed" {
+		value, err := p.intValue(sc)
+		if err != nil {
+			return err
+		}
+		if sc.Change.Op != OpSet || value < 0 || value > 1000 {
+			return p.badOp(sc)
+		}
+		if rest[0] == "senses" {
+			p.state.Base.Senses = slices.DeleteFunc(p.state.Base.Senses, func(s Sense) bool { return s.Kind == Darkvision })
+			p.state.Base.Senses = append(p.state.Base.Senses, Sense{Kind: Darkvision, Distance: rules.Feet(value)})
+		} else {
+			p.state.Base.Speeds = slices.DeleteFunc(p.state.Base.Speeds, func(s Speed) bool { return s.Kind == Walking })
+			p.state.Base.Speeds = append(p.state.Base.Speeds, Speed{Kind: Walking, Distance: rules.Feet(value)})
+		}
+		return nil
+	}
 	if len(rest) != 1 {
 		return p.unresolved(sc)
 	}
 	switch rest[0] {
+	case "size":
+		name := sc.Change.Value.Str
+		if sc.Change.Value.Kind == ValueSlug {
+			name = sc.Change.Value.Slug.String()
+		}
+		size, ok := rules.ParseSize(name)
+		if !ok || size == rules.SizeNone || sc.Change.Op != OpSet {
+			return p.unresolved(sc)
+		}
+		p.state.Base.Size = size
+		return nil
 	case "exhaustion":
 		return changeInt(p, sc, &p.state.Base.Exhaustion)
 	case "inspiration":
@@ -187,6 +251,8 @@ func (p *projector) changeStatus(sc seqChange, rest []string) error {
 		return changeInt(p, sc, &p.state.Status.Initiative)
 	case "passivePerception":
 		return changeInt(p, sc, &p.state.Status.PassivePerception)
+	case "proficiencyBonus":
+		return changeInt(p, sc, &p.state.Status.ProficiencyBonus)
 	}
 	return p.unresolved(sc)
 }
@@ -197,9 +263,44 @@ func (p *projector) changeStatus(sc seqChange, rest []string) error {
 // from Equipped, and nothing in the catalogue says what a character wears, so
 // "put on the leather armor" is necessarily an explicit event.
 func (p *projector) changeEquipment(sc seqChange, rest []string) error {
-	if len(rest) != 1 {
+	if len(rest) == 2 && rest[0] == "purse" {
+		unit, err := rules.ParseCoinUnit(rest[1])
+		if err != nil {
+			return p.unresolved(sc)
+		}
+		value, err := p.intValue(sc)
+		if err != nil {
+			return err
+		}
+		if sc.Change.Op != OpSet || value < 0 {
+			return p.badOp(sc)
+		}
+		if p.state.Equipment.Purse == nil {
+			p.state.Equipment.Purse = rules.Purse{}
+		}
+		p.state.Equipment.Purse[unit] = value
+		return nil
+	}
+	if len(rest) == 1 && rest[0] == "custom" {
+		slugs := valueSlugs(sc.Change.Value)
+		if sc.Change.Op != OpSet || len(slugs) > 1 {
+			return p.badOp(sc)
+		}
+		if len(slugs) == 1 && !p.cat.Items.Has(slugs[0]) && !p.cat.MagicItems.Has(slugs[0]) {
+			return p.unresolved(sc)
+		}
+		p.state.Equipment.Custom = ""
+		if len(slugs) == 1 {
+			p.state.Equipment.Custom = slugs[0]
+		}
+		return nil
+	}
+	if len(rest) != 1 && len(rest) != 2 {
 		return p.unresolved(sc)
 	}
+	// Whatever the equipped list becomes, the Custom slot cannot hold what
+	// the character no longer wears.
+	defer p.clearCustomIfBare()
 	var list *[]ItemStack
 	switch rest[0] {
 	case "equipped":
@@ -210,6 +311,37 @@ func (p *projector) changeEquipment(sc seqChange, rest []string) error {
 		list = &p.state.Equipment.Loot
 	default:
 		return p.unresolved(sc)
+	}
+
+	if len(rest) == 2 {
+		slug := rules.Slug(rest[1])
+		if !p.cat.Items.Has(slug) && !p.cat.MagicItems.Has(slug) {
+			return p.unresolved(sc)
+		}
+		count, err := p.intValue(sc)
+		if err != nil {
+			return err
+		}
+		if sc.Change.Op != OpSet || count < 0 || count > 100000 {
+			return p.badOp(sc)
+		}
+		// In place: a count edit is "one fewer torch", not "a new torch at
+		// the end", so the row stays where the player left it. A second
+		// stack of the slug further down is folded into the first.
+		at := slices.IndexFunc(*list, func(stack ItemStack) bool { return stack.Item == slug })
+		if at < 0 {
+			if count > 0 {
+				*list = append(*list, ItemStack{Item: slug, Count: count})
+			}
+			return nil
+		}
+		tail := slices.DeleteFunc(slices.Clone((*list)[at+1:]), func(stack ItemStack) bool { return stack.Item == slug })
+		head := (*list)[:at]
+		if count > 0 {
+			head = append(head, ItemStack{Item: slug, Count: count})
+		}
+		*list = append(head, tail...)
+		return nil
 	}
 
 	value := sc.Change.Value
@@ -248,6 +380,30 @@ func (p *projector) changeEquipment(sc seqChange, rest []string) error {
 // plain proficiency. Recomputing here keeps the two consistent, and passive
 // Perception with them, since it reads the Perception bonus.
 func (p *projector) changeSkill(sc seqChange, rest []string) error {
+	if len(rest) == 2 && rest[1] == "bonus" {
+		slug := rules.Slug(rest[0])
+		if !p.cat.Skills.Has(slug) {
+			return p.unresolved(sc)
+		}
+		value, err := p.intValue(sc)
+		if err != nil {
+			return err
+		}
+		if sc.Change.Op != OpSet {
+			return p.badOp(sc)
+		}
+		if p.state.Skills.BySkill == nil {
+			p.state.Skills.BySkill = map[rules.Slug]SkillState{}
+		}
+		skill := p.state.Skills.BySkill[slug]
+		skill.Bonus = value
+		p.state.Skills.BySkill[slug] = skill
+		p.state.Status.PassivePerception = 10 + p.state.Skills.BySkill[perceptionSkill].Bonus
+		return nil
+	}
+	if len(rest) == 2 && rest[1] == "proficiency" {
+		rest = rest[:1]
+	}
 	if len(rest) != 1 {
 		return p.unresolved(sc)
 	}
@@ -285,6 +441,29 @@ func (p *projector) changeSkill(sc seqChange, rest []string) error {
 // "savingThrows.dex" set to true. It recomputes the bonus for the same reason
 // changeSkill does.
 func (p *projector) changeSavingThrow(sc seqChange, rest []string) error {
+	if len(rest) == 2 && rest[1] == "bonus" {
+		ability, ok := rules.ParseAbility(rest[0])
+		if !ok {
+			return p.unresolved(sc)
+		}
+		value, err := p.intValue(sc)
+		if err != nil {
+			return err
+		}
+		if sc.Change.Op != OpSet {
+			return p.badOp(sc)
+		}
+		if p.state.SavingThrows.ByAbility == nil {
+			p.state.SavingThrows.ByAbility = map[rules.Ability]SavingThrowState{}
+		}
+		save := p.state.SavingThrows.ByAbility[ability]
+		save.Bonus = value
+		p.state.SavingThrows.ByAbility[ability] = save
+		return nil
+	}
+	if len(rest) == 2 && rest[1] == "proficient" {
+		rest = rest[:1]
+	}
 	if len(rest) != 1 {
 		return p.unresolved(sc)
 	}
@@ -341,6 +520,15 @@ func (p *projector) changeSlugList(sc seqChange, list *[]rules.Slug, rest []stri
 
 // valueSlugs reads a Value as a list of slugs, accepting either spelling so a
 // caller adding one condition need not wrap it in a list.
+// clearCustomIfBare forgets the Custom slot's occupant once it has left the
+// equipped list, by a counted write or a whole one.
+func (p *projector) clearCustomIfBare() {
+	e := &p.state.Equipment
+	if e.Custom != "" && !slices.ContainsFunc(e.Equipped, func(s ItemStack) bool { return s.Item == e.Custom }) {
+		e.Custom = ""
+	}
+}
+
 func valueSlugs(v Value) []rules.Slug {
 	switch v.Kind {
 	case ValueSlug:
@@ -426,6 +614,22 @@ func setBool(p *projector, sc seqChange, target *bool) error {
 }
 
 func changeStrings(p *projector, sc seqChange, target *[]string) error {
+	if sc.Change.Value.Kind == ValueSlugList {
+		values := make([]string, len(sc.Change.Value.Slugs))
+		for i, value := range sc.Change.Value.Slugs {
+			values[i] = value.String()
+		}
+		switch sc.Change.Op {
+		case OpSet:
+			*target = values
+		case OpAdd:
+			*target = append(*target, values...)
+		default:
+			return p.badOp(sc)
+		}
+		return nil
+	}
+
 	if sc.Change.Value.Kind != ValueString {
 		return types.NewValidationError("event %d: %q needs a string", sc.Seq, sc.Change.Path)
 	}

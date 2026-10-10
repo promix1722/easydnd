@@ -35,20 +35,20 @@ const (
 const maxPageSize = 200
 
 var searchParams = []string{
-	ParamQuery, ParamLevel, ParamSchool, ParamClass, ParamCastingTime,
+	"pack", "source", ParamQuery, ParamLevel, ParamSchool, ParamClass, ParamCastingTime,
 	ParamConcentration, ParamRitual, ParamMaterial, ParamLimit, ParamOffset,
 }
 
 // spellSearch is a parsed search request: what to match, and which page.
 type spellSearch struct {
 	filter domain.SpellFilter
-	limit  int // 0 means everything
+	limit  int // 0 means every match, which only the query-string search allows
 	offset int
 }
 
 // hasSpellSearch reports whether the request carries any search parameter.
-// Their absence keeps the whole-collection path -- and its byte cache --
-// exactly as it was.
+// Without one, and without ?slugs=, a request for spells is refused: see
+// Collection.
 func hasSpellSearch(c *gin.Context) bool {
 	for _, param := range searchParams {
 		if _, ok := c.GetQuery(param); ok {
@@ -60,6 +60,12 @@ func hasSpellSearch(c *gin.Context) bool {
 
 func parseSpellSearch(c *gin.Context) (spellSearch, error) {
 	var s spellSearch
+	if v := c.Query("pack"); v != "" {
+		s.filter.PackIDs = strings.Split(v, ",")
+	}
+	if v := c.Query("source"); v != "" {
+		s.filter.Sources = strings.Split(v, ",")
+	}
 	s.filter.Name = strings.TrimSpace(c.Query(ParamQuery))
 	s.filter.School = rules.Slug(c.Query(ParamSchool))
 	s.filter.Class = rules.Slug(c.Query(ParamClass))
@@ -153,4 +159,47 @@ func (h *Handler) searchSpells(c *gin.Context, search spellSearch) {
 		out.Spells = append(out.Spells, conv.spellSummary(spell))
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// searchItems answers CollectionItems: equipment and magic items whose name
+// contains ?q=, sorted by name and paged like spells. Only q, limit and offset
+// are read; the spell filters a shared parser also accepts are ignored.
+func (h *Handler) searchItems(c *gin.Context, search spellSearch) {
+	cat, err := h.source.Load(c.Request.Context(), helpers.Locale(c))
+	if err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	q := strings.ToLower(search.filter.Name)
+	matches := make([]ItemHit, 0)
+	for _, item := range cat.Items.All() {
+		if strings.Contains(strings.ToLower(item.Name), q) {
+			matches = append(matches, ItemHit{Slug: item.Slug.String(), Icon: item.Icon, Name: item.Name, Category: item.Category.String()})
+		}
+	}
+	for _, item := range cat.MagicItems.All() {
+		if strings.Contains(strings.ToLower(item.Name), q) {
+			matches = append(matches, ItemHit{Slug: item.Slug.String(), Icon: item.Icon, Name: item.Name, Category: item.Category.String(), Magic: true})
+		}
+	}
+	slices.SortFunc(matches, func(a, b ItemHit) int {
+		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+	})
+
+	total := len(matches)
+	if search.offset < len(matches) {
+		matches = matches[search.offset:]
+	} else {
+		matches = nil
+	}
+	if search.limit > 0 && search.limit < len(matches) {
+		matches = matches[:search.limit]
+	}
+	c.JSON(http.StatusOK, ItemSearchResult{Items: append([]ItemHit{}, matches...), Total: total})
+}
+
+// ParseSpellSearch shares validation between scoped and aggregate catalogue searches.
+func ParseSpellSearch(c *gin.Context) (domain.SpellFilter, int, int, error) {
+	s, err := parseSpellSearch(c)
+	return s.filter, s.limit, s.offset, err
 }

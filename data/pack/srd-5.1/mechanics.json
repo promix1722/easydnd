@@ -1,0 +1,4475 @@
+{
+  "choiceRequirements": [
+    {
+      "prompt": "cleric/starting-equipment/main-hand",
+      "pick": "warhammer",
+      "anyProficiency": [
+        "warhammers",
+        "martial-weapons"
+      ]
+    },
+    {
+      "prompt": "cleric/starting-equipment/body",
+      "pick": "chain-mail",
+      "anyProficiency": [
+        "heavy-armor",
+        "all-armor"
+      ]
+    }
+  ],
+  "spellBenefits": [
+    {
+      "id": "magical-secrets-1",
+      "owner": "feature:magical-secrets-1",
+      "class": "bard",
+      "level": 10,
+      "count": 2,
+      "spellLevel": -1,
+      "mode": "known",
+      "from": "any",
+      "countsKnown": true
+    },
+    {
+      "id": "magical-secrets-2",
+      "owner": "feature:magical-secrets-2",
+      "class": "bard",
+      "level": 14,
+      "count": 2,
+      "spellLevel": -1,
+      "mode": "known",
+      "from": "any",
+      "countsKnown": true
+    },
+    {
+      "id": "magical-secrets-3",
+      "owner": "feature:magical-secrets-3",
+      "class": "bard",
+      "level": 18,
+      "count": 2,
+      "spellLevel": -1,
+      "mode": "known",
+      "from": "any",
+      "countsKnown": true
+    },
+    {
+      "id": "additional-magical-secrets",
+      "owner": "feature:additional-magical-secrets",
+      "class": "bard",
+      "level": 6,
+      "count": 2,
+      "spellLevel": -1,
+      "mode": "known",
+      "from": "any"
+    },
+    {
+      "id": "bonus-cantrip",
+      "owner": "feature:bonus-cantrip",
+      "class": "druid",
+      "level": 2,
+      "count": 1,
+      "spellLevel": 0,
+      "mode": "cantrip",
+      "from": "class"
+    },
+    {
+      "id": "pact-tome",
+      "owner": "feature:pact-of-the-tome",
+      "class": "warlock",
+      "level": 3,
+      "count": 3,
+      "spellLevel": 0,
+      "mode": "cantrip",
+      "from": "any"
+    },
+    {
+      "id": "pact-chain",
+      "owner": "feature:pact-of-the-chain",
+      "class": "warlock",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "known",
+      "spells": [
+        "find-familiar"
+      ]
+    },
+    {
+      "id": "mystic-arcanum-6th-level",
+      "owner": "feature:mystic-arcanum-6th-level",
+      "class": "warlock",
+      "level": 11,
+      "count": 1,
+      "spellLevel": 6,
+      "mode": "arcanum",
+      "from": "class"
+    },
+    {
+      "id": "mystic-arcanum-7th-level",
+      "owner": "feature:mystic-arcanum-7th-level",
+      "class": "warlock",
+      "level": 13,
+      "count": 1,
+      "spellLevel": 7,
+      "mode": "arcanum",
+      "from": "class"
+    },
+    {
+      "id": "mystic-arcanum-8th-level",
+      "owner": "feature:mystic-arcanum-8th-level",
+      "class": "warlock",
+      "level": 15,
+      "count": 1,
+      "spellLevel": 8,
+      "mode": "arcanum",
+      "from": "class"
+    },
+    {
+      "id": "mystic-arcanum-9th-level",
+      "owner": "feature:mystic-arcanum-9th-level",
+      "class": "warlock",
+      "level": 17,
+      "count": 1,
+      "spellLevel": 9,
+      "mode": "arcanum",
+      "from": "class"
+    },
+    {
+      "id": "spell-mastery-1",
+      "owner": "feature:spell-mastery",
+      "class": "wizard",
+      "level": 18,
+      "count": 1,
+      "spellLevel": 1,
+      "mode": "mastery",
+      "from": "book"
+    },
+    {
+      "id": "spell-mastery-2",
+      "owner": "feature:spell-mastery",
+      "class": "wizard",
+      "level": 18,
+      "count": 1,
+      "spellLevel": 2,
+      "mode": "mastery",
+      "from": "book"
+    },
+    {
+      "id": "signature-spell",
+      "owner": "feature:signature-spell",
+      "class": "wizard",
+      "level": 20,
+      "count": 2,
+      "spellLevel": 3,
+      "mode": "prepared",
+      "from": "book"
+    },
+    {
+      "ability": "cha",
+      "id": "infernal-legacy-1",
+      "owner": "trait:infernal-legacy",
+      "level": 1,
+      "spellLevel": -1,
+      "mode": "known",
+      "spells": [
+        "thaumaturgy"
+      ]
+    },
+    {
+      "ability": "cha",
+      "id": "infernal-legacy-3",
+      "owner": "trait:infernal-legacy",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "known",
+      "spells": [
+        "hellish-rebuke"
+      ]
+    },
+    {
+      "ability": "cha",
+      "id": "infernal-legacy-5",
+      "owner": "trait:infernal-legacy",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "known",
+      "spells": [
+        "darkness"
+      ]
+    },
+    {
+      "id": "life-1",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 1,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "bless",
+        "cure-wounds"
+      ]
+    },
+    {
+      "id": "life-3",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "lesser-restoration",
+        "spiritual-weapon"
+      ]
+    },
+    {
+      "id": "life-5",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "beacon-of-hope",
+        "revivify"
+      ]
+    },
+    {
+      "id": "life-7",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "death-ward",
+        "guardian-of-faith"
+      ]
+    },
+    {
+      "id": "life-9",
+      "owner": "subclass:life",
+      "class": "cleric",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "mass-cure-wounds",
+        "raise-dead"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-arctic-3",
+      "owner": "feature:circle-of-the-land-arctic",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "hold-person",
+        "spike-growth"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-arctic-5",
+      "owner": "feature:circle-of-the-land-arctic",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "sleet-storm",
+        "slow"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-arctic-7",
+      "owner": "feature:circle-of-the-land-arctic",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "freedom-of-movement",
+        "ice-storm"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-arctic-9",
+      "owner": "feature:circle-of-the-land-arctic",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "commune-with-nature",
+        "cone-of-cold"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-coast-3",
+      "owner": "feature:circle-of-the-land-coast",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "mirror-image",
+        "misty-step"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-coast-5",
+      "owner": "feature:circle-of-the-land-coast",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "water-breathing",
+        "water-walk"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-coast-7",
+      "owner": "feature:circle-of-the-land-coast",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "control-water",
+        "freedom-of-movement"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-coast-9",
+      "owner": "feature:circle-of-the-land-coast",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "conjure-elemental",
+        "scrying"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-desert-3",
+      "owner": "feature:circle-of-the-land-desert",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "blur",
+        "silence"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-desert-5",
+      "owner": "feature:circle-of-the-land-desert",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "create-food-and-water",
+        "protection-from-energy"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-desert-7",
+      "owner": "feature:circle-of-the-land-desert",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "blight",
+        "hallucinatory-terrain"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-desert-9",
+      "owner": "feature:circle-of-the-land-desert",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "insect-plague",
+        "wall-of-stone"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-forest-3",
+      "owner": "feature:circle-of-the-land-forest",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "barkskin",
+        "spider-climb"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-forest-5",
+      "owner": "feature:circle-of-the-land-forest",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "call-lightning",
+        "plant-growth"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-forest-7",
+      "owner": "feature:circle-of-the-land-forest",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "divination",
+        "freedom-of-movement"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-forest-9",
+      "owner": "feature:circle-of-the-land-forest",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "commune-with-nature",
+        "tree-stride"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-grassland-3",
+      "owner": "feature:circle-of-the-land-grassland",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "invisibility",
+        "pass-without-trace"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-grassland-5",
+      "owner": "feature:circle-of-the-land-grassland",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "daylight",
+        "haste"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-grassland-7",
+      "owner": "feature:circle-of-the-land-grassland",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "divination",
+        "freedom-of-movement"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-grassland-9",
+      "owner": "feature:circle-of-the-land-grassland",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "dream",
+        "insect-plague"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-mountain-3",
+      "owner": "feature:circle-of-the-land-mountain",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "spider-climb",
+        "spike-growth"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-mountain-5",
+      "owner": "feature:circle-of-the-land-mountain",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "lightning-bolt",
+        "meld-into-stone"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-mountain-7",
+      "owner": "feature:circle-of-the-land-mountain",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "stone-shape",
+        "stoneskin"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-mountain-9",
+      "owner": "feature:circle-of-the-land-mountain",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "passwall",
+        "wall-of-stone"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-swamp-3",
+      "owner": "feature:circle-of-the-land-swamp",
+      "class": "druid",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "acid-arrow",
+        "darkness"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-swamp-5",
+      "owner": "feature:circle-of-the-land-swamp",
+      "class": "druid",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "water-walk",
+        "stinking-cloud"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-swamp-7",
+      "owner": "feature:circle-of-the-land-swamp",
+      "class": "druid",
+      "level": 7,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "freedom-of-movement",
+        "locate-creature"
+      ]
+    },
+    {
+      "id": "circle-of-the-land-swamp-9",
+      "owner": "feature:circle-of-the-land-swamp",
+      "class": "druid",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "insect-plague",
+        "scrying"
+      ]
+    },
+    {
+      "id": "devotion-3",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 3,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "protection-from-evil-and-good",
+        "sanctuary"
+      ]
+    },
+    {
+      "id": "devotion-5",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 5,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "lesser-restoration",
+        "zone-of-truth"
+      ]
+    },
+    {
+      "id": "devotion-9",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 9,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "beacon-of-hope",
+        "dispel-magic"
+      ]
+    },
+    {
+      "id": "devotion-13",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 13,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "freedom-of-movement",
+        "guardian-of-faith"
+      ]
+    },
+    {
+      "id": "devotion-17",
+      "owner": "subclass:devotion",
+      "class": "paladin",
+      "level": 17,
+      "spellLevel": -1,
+      "mode": "prepared",
+      "spells": [
+        "commune",
+        "flame-strike"
+      ]
+    },
+    {
+      "ability": "int",
+      "id": "high-elf-casting",
+      "owner": "trait:high-elf-cantrip",
+      "level": 1,
+      "spellLevel": 0,
+      "mode": "cantrip"
+    },
+    {
+      "id": "arcane-trickster-mage-hand",
+      "owner": "subclass:arcane-trickster",
+      "class": "rogue",
+      "level": 3,
+      "mode": "known",
+      "spells": [
+        "mage-hand"
+      ]
+    },
+    {
+      "id": "drow-dancing-lights",
+      "owner": "trait:drow-magic",
+      "level": 1,
+      "spellLevel": -1,
+      "ability": "cha",
+      "mode": "known",
+      "spells": [
+        "dancing-lights"
+      ]
+    },
+    {
+      "id": "drow-faerie-fire",
+      "owner": "trait:drow-magic",
+      "level": 3,
+      "spellLevel": -1,
+      "ability": "cha",
+      "mode": "known",
+      "spells": [
+        "faerie-fire"
+      ]
+    },
+    {
+      "id": "drow-darkness",
+      "owner": "trait:drow-magic",
+      "level": 5,
+      "spellLevel": -1,
+      "ability": "cha",
+      "mode": "known",
+      "spells": [
+        "darkness"
+      ]
+    },
+    {
+      "id": "forest-gnome-minor-illusion",
+      "owner": "trait:natural-illusionist",
+      "level": 1,
+      "spellLevel": -1,
+      "ability": "int",
+      "mode": "known",
+      "spells": [
+        "minor-illusion"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "attack",
+      "manual": true
+    },
+    {
+      "id": "cast-a-spell",
+      "manual": true
+    },
+    {
+      "id": "dash",
+      "manual": true
+    },
+    {
+      "id": "disengage",
+      "manual": true
+    },
+    {
+      "id": "dodge",
+      "manual": true
+    },
+    {
+      "id": "help",
+      "manual": true
+    },
+    {
+      "id": "hide",
+      "manual": true
+    },
+    {
+      "id": "ready",
+      "manual": true
+    },
+    {
+      "id": "search",
+      "manual": true
+    },
+    {
+      "id": "use-an-object",
+      "manual": true
+    },
+    {
+      "id": "grapple",
+      "manual": true
+    },
+    {
+      "id": "shove",
+      "manual": true
+    },
+    {
+      "id": "two-weapon-fighting",
+      "kind": "bonus-action",
+      "manual": true
+    },
+    {
+      "id": "opportunity-attack",
+      "kind": "reaction",
+      "manual": true
+    }
+  ],
+  "core": {
+    "minScore": 1,
+    "maxScore": 30,
+    "abilityScoreIncrease": 2,
+    "baseArmorClass": 10,
+    "spellSaveBase": 8,
+    "hitPointFirst": {
+      "op": "add",
+      "args": [
+        {
+          "op": "read",
+          "ref": "hitDie"
+        },
+        {
+          "op": "read",
+          "ref": "modifier:con"
+        }
+      ]
+    },
+    "hitPointLater": {
+      "op": "max",
+      "args": [
+        {
+          "op": "constant",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "args": [
+            {
+              "op": "floor-div",
+              "args": [
+                {
+                  "op": "read",
+                  "ref": "hitDie"
+                },
+                {
+                  "op": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "constant",
+              "value": 1
+            },
+            {
+              "op": "read",
+              "ref": "modifier:con"
+            }
+          ]
+        }
+      ]
+    },
+    "hitDiceRecovery": [
+      {
+        "trigger": "long-rest",
+        "operation": "budget",
+        "amount": {
+          "op": "max",
+          "args": [
+            {
+              "op": "constant",
+              "value": 1
+            },
+            {
+              "op": "floor-div",
+              "args": [
+                {
+                  "op": "read",
+                  "ref": "level"
+                },
+                {
+                  "op": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        },
+        "budget": "hit-dice"
+      }
+    ],
+    "spellSlotRecovery": [
+      {
+        "trigger": "long-rest",
+        "operation": "all",
+        "amount": {
+          "op": ""
+        }
+      }
+    ],
+    "maxLevel": 20,
+    "proficiency": {
+      "op": "add",
+      "args": [
+        {
+          "op": "constant",
+          "value": 2
+        },
+        {
+          "op": "floor-div",
+          "args": [
+            {
+              "op": "max",
+              "args": [
+                {
+                  "op": "constant"
+                },
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "op": "read",
+                      "ref": "level"
+                    },
+                    {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "constant",
+              "value": 4
+            }
+          ]
+        }
+      ]
+    },
+    "abilityModifier": {
+      "op": "floor-div",
+      "args": [
+        {
+          "op": "subtract",
+          "args": [
+            {
+              "op": "read",
+              "ref": "score"
+            },
+            {
+              "op": "constant",
+              "value": 10
+            }
+          ]
+        },
+        {
+          "op": "constant",
+          "value": 2
+        }
+      ]
+    },
+    "standardArray": [
+      15,
+      14,
+      13,
+      12,
+      10,
+      8
+    ],
+    "pointBuyBudget": 27,
+    "pointCosts": {
+      "10": 2,
+      "11": 3,
+      "12": 4,
+      "13": 5,
+      "14": 7,
+      "15": 9,
+      "8": 0,
+      "9": 1
+    },
+    "multiclassSlots": {
+      "1": {
+        "1": 2
+      },
+      "10": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2
+      },
+      "11": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1
+      },
+      "12": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1
+      },
+      "13": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1
+      },
+      "14": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1
+      },
+      "15": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1,
+        "8": 1
+      },
+      "16": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1,
+        "8": 1
+      },
+      "17": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 2,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1
+      },
+      "18": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 3,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1
+      },
+      "19": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 3,
+        "6": 2,
+        "7": 1,
+        "8": 1,
+        "9": 1
+      },
+      "2": {
+        "1": 3
+      },
+      "20": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 3,
+        "6": 2,
+        "7": 2,
+        "8": 1,
+        "9": 1
+      },
+      "3": {
+        "1": 4,
+        "2": 2
+      },
+      "4": {
+        "1": 4,
+        "2": 3
+      },
+      "5": {
+        "1": 4,
+        "2": 3,
+        "3": 2
+      },
+      "6": {
+        "1": 4,
+        "2": 3,
+        "3": 3
+      },
+      "7": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 1
+      },
+      "8": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 2
+      },
+      "9": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 1
+      }
+    },
+    "senses": {
+      "darkvision": {
+        "kind": "darkvision",
+        "distance": 60
+      },
+      "superior-darkvision": {
+        "kind": "darkvision",
+        "distance": 120
+      }
+    }
+  },
+  "resources": [
+    {
+      "id": "brutal-critical-dice",
+      "owner": "class:barbarian",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:barbarian",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 9,
+          "capacity": 1
+        },
+        {
+          "from": 13,
+          "capacity": 2
+        },
+        {
+          "from": 17,
+          "capacity": 3
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "rage-count",
+      "owner": "class:barbarian",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:barbarian",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 2
+        },
+        {
+          "from": 3,
+          "capacity": 3
+        },
+        {
+          "from": 6,
+          "capacity": 4
+        },
+        {
+          "from": 12,
+          "capacity": 5
+        },
+        {
+          "from": 17,
+          "capacity": 6
+        },
+        {
+          "from": 20,
+          "capacity": 9999
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "rage-damage-bonus",
+      "owner": "class:barbarian",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:barbarian",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 2
+        },
+        {
+          "from": 9,
+          "capacity": 3
+        },
+        {
+          "from": 16,
+          "capacity": 4
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "bardic-inspiration-die",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 6
+        },
+        {
+          "from": 5,
+          "capacity": 8
+        },
+        {
+          "from": 10,
+          "capacity": 10
+        },
+        {
+          "from": 15,
+          "capacity": 12
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "magical-secrets-max-5",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 10,
+          "capacity": 2
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "magical-secrets-max-7",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 14,
+          "capacity": 2
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "magical-secrets-max-9",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 18,
+          "capacity": 2
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "song-of-rest-die",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 6
+        },
+        {
+          "from": 9,
+          "capacity": 8
+        },
+        {
+          "from": 13,
+          "capacity": 10
+        },
+        {
+          "from": 17,
+          "capacity": 12
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "channel-divinity-charges",
+      "owner": "class:cleric",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:cleric",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 1
+        },
+        {
+          "from": 6,
+          "capacity": 2
+        },
+        {
+          "from": 18,
+          "capacity": 3
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "sharedKey": "channel-divinity",
+      "combine": "max",
+      "group": "class"
+    },
+    {
+      "id": "destroy-undead-cr",
+      "owner": "class:cleric",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:cleric",
+      "rows": [
+        {
+          "rational": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "rational": {
+            "numerator": 1,
+            "denominator": 2
+          },
+          "from": 5,
+          "capacity": 0,
+          "text": "1/2"
+        },
+        {
+          "rational": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "from": 8,
+          "capacity": 1
+        },
+        {
+          "rational": {
+            "numerator": 2,
+            "denominator": 1
+          },
+          "from": 11,
+          "capacity": 2
+        },
+        {
+          "rational": {
+            "numerator": 3,
+            "denominator": 1
+          },
+          "from": 14,
+          "capacity": 3
+        },
+        {
+          "rational": {
+            "numerator": 4,
+            "denominator": 1
+          },
+          "from": 17,
+          "capacity": 4
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "wild-shape-fly",
+      "owner": "class:druid",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:druid",
+      "rows": [
+        {
+          "boolean": false,
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "boolean": true,
+          "from": 8,
+          "capacity": 1
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "wild-shape-max-cr",
+      "owner": "class:druid",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:druid",
+      "rows": [
+        {
+          "rational": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "rational": {
+            "numerator": 1,
+            "denominator": 4
+          },
+          "from": 2,
+          "capacity": 0,
+          "text": "1/4"
+        },
+        {
+          "rational": {
+            "numerator": 1,
+            "denominator": 2
+          },
+          "from": 4,
+          "capacity": 0,
+          "text": "1/2"
+        },
+        {
+          "rational": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "from": 7,
+          "capacity": 1
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "wild-shape-swim",
+      "owner": "class:druid",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:druid",
+      "rows": [
+        {
+          "boolean": false,
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "boolean": true,
+          "from": 4,
+          "capacity": 1
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "action-surges",
+      "owner": "class:fighter",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 1
+        },
+        {
+          "from": 17,
+          "capacity": 2
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "extra-attacks",
+      "owner": "class:fighter",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 5,
+          "capacity": 1
+        },
+        {
+          "from": 11,
+          "capacity": 2
+        },
+        {
+          "from": 20,
+          "capacity": 3
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "indomitable-uses",
+      "owner": "class:fighter",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 9,
+          "capacity": 1
+        },
+        {
+          "from": 13,
+          "capacity": 2
+        },
+        {
+          "from": 17,
+          "capacity": 3
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "ki-points",
+      "owner": "class:monk",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:monk",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 2
+        },
+        {
+          "from": 3,
+          "capacity": 3
+        },
+        {
+          "from": 4,
+          "capacity": 4
+        },
+        {
+          "from": 5,
+          "capacity": 5
+        },
+        {
+          "from": 6,
+          "capacity": 6
+        },
+        {
+          "from": 7,
+          "capacity": 7
+        },
+        {
+          "from": 8,
+          "capacity": 8
+        },
+        {
+          "from": 9,
+          "capacity": 9
+        },
+        {
+          "from": 10,
+          "capacity": 10
+        },
+        {
+          "from": 11,
+          "capacity": 11
+        },
+        {
+          "from": 12,
+          "capacity": 12
+        },
+        {
+          "from": 13,
+          "capacity": 13
+        },
+        {
+          "from": 14,
+          "capacity": 14
+        },
+        {
+          "from": 15,
+          "capacity": 15
+        },
+        {
+          "from": 16,
+          "capacity": 16
+        },
+        {
+          "from": 17,
+          "capacity": 17
+        },
+        {
+          "from": 18,
+          "capacity": 18
+        },
+        {
+          "from": 19,
+          "capacity": 19
+        },
+        {
+          "from": 20,
+          "capacity": 20
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "martial-arts",
+      "owner": "class:monk",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:monk",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1,
+          "dice": "1d4"
+        },
+        {
+          "from": 5,
+          "capacity": 1,
+          "dice": "1d6"
+        },
+        {
+          "from": 11,
+          "capacity": 1,
+          "dice": "1d8"
+        },
+        {
+          "from": 17,
+          "capacity": 1,
+          "dice": "1d10"
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "unarmored-movement",
+      "owner": "class:monk",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:monk",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 10
+        },
+        {
+          "from": 6,
+          "capacity": 15
+        },
+        {
+          "from": 10,
+          "capacity": 20
+        },
+        {
+          "from": 14,
+          "capacity": 25
+        },
+        {
+          "from": 18,
+          "capacity": 30
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "aura-range",
+      "owner": "class:paladin",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:paladin",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 6,
+          "capacity": 10
+        },
+        {
+          "from": 18,
+          "capacity": 30
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "favored-enemies",
+      "owner": "class:ranger",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:ranger",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        },
+        {
+          "from": 6,
+          "capacity": 2
+        },
+        {
+          "from": 14,
+          "capacity": 3
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "favored-terrain",
+      "owner": "class:ranger",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:ranger",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        },
+        {
+          "from": 6,
+          "capacity": 2
+        },
+        {
+          "from": 10,
+          "capacity": 3
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "sneak-attack",
+      "owner": "class:rogue",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:rogue",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1,
+          "dice": "1d6"
+        },
+        {
+          "from": 3,
+          "capacity": 2,
+          "dice": "2d6"
+        },
+        {
+          "from": 5,
+          "capacity": 3,
+          "dice": "3d6"
+        },
+        {
+          "from": 7,
+          "capacity": 4,
+          "dice": "4d6"
+        },
+        {
+          "from": 9,
+          "capacity": 5,
+          "dice": "5d6"
+        },
+        {
+          "from": 11,
+          "capacity": 6,
+          "dice": "6d6"
+        },
+        {
+          "from": 13,
+          "capacity": 7,
+          "dice": "7d6"
+        },
+        {
+          "from": 15,
+          "capacity": 8,
+          "dice": "8d6"
+        },
+        {
+          "from": 17,
+          "capacity": 9,
+          "dice": "9d6"
+        },
+        {
+          "from": 19,
+          "capacity": 10,
+          "dice": "10d6"
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "metamagic-known",
+      "owner": "class:sorcerer",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:sorcerer",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 3,
+          "capacity": 2
+        },
+        {
+          "from": 10,
+          "capacity": 3
+        },
+        {
+          "from": 16,
+          "capacity": 4
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "sorcery-points",
+      "owner": "class:sorcerer",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:sorcerer",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 2
+        },
+        {
+          "from": 3,
+          "capacity": 3
+        },
+        {
+          "from": 4,
+          "capacity": 4
+        },
+        {
+          "from": 5,
+          "capacity": 5
+        },
+        {
+          "from": 6,
+          "capacity": 6
+        },
+        {
+          "from": 7,
+          "capacity": 7
+        },
+        {
+          "from": 8,
+          "capacity": 8
+        },
+        {
+          "from": 9,
+          "capacity": 9
+        },
+        {
+          "from": 10,
+          "capacity": 10
+        },
+        {
+          "from": 11,
+          "capacity": 11
+        },
+        {
+          "from": 12,
+          "capacity": 12
+        },
+        {
+          "from": 13,
+          "capacity": 13
+        },
+        {
+          "from": 14,
+          "capacity": 14
+        },
+        {
+          "from": 15,
+          "capacity": 15
+        },
+        {
+          "from": 16,
+          "capacity": 16
+        },
+        {
+          "from": 17,
+          "capacity": 17
+        },
+        {
+          "from": 18,
+          "capacity": 18
+        },
+        {
+          "from": 19,
+          "capacity": 19
+        },
+        {
+          "from": 20,
+          "capacity": 20
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "invocations-known",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 2
+        },
+        {
+          "from": 4,
+          "capacity": 3
+        },
+        {
+          "from": 6,
+          "capacity": 4
+        },
+        {
+          "from": 9,
+          "capacity": 5
+        },
+        {
+          "from": 12,
+          "capacity": 6
+        },
+        {
+          "from": 15,
+          "capacity": 7
+        },
+        {
+          "from": 18,
+          "capacity": 8
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "mystic-arcanum-level-6",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 11,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "mystic-arcanum-level-7",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 13,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "mystic-arcanum-level-8",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 15,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "mystic-arcanum-level-9",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 17,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "arcane-recovery-levels",
+      "owner": "class:wizard",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:wizard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        },
+        {
+          "from": 3,
+          "capacity": 2
+        },
+        {
+          "from": 5,
+          "capacity": 3
+        },
+        {
+          "from": 7,
+          "capacity": 4
+        },
+        {
+          "from": 9,
+          "capacity": 5
+        },
+        {
+          "from": 11,
+          "capacity": 6
+        },
+        {
+          "from": 13,
+          "capacity": 7
+        },
+        {
+          "from": 15,
+          "capacity": 8
+        },
+        {
+          "from": 17,
+          "capacity": 9
+        },
+        {
+          "from": 19,
+          "capacity": 10
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "requiresSubclass": true,
+      "id": "paladin-channel-divinity",
+      "owner": "class:paladin",
+      "minimumLevel": 3,
+      "kind": "pool",
+      "input": "class:paladin",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "sharedKey": "channel-divinity",
+      "combine": "max",
+      "group": "class"
+    },
+    {
+      "id": "pact-magic",
+      "owner": "class:warlock",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1,
+          "slotLevel": 1
+        },
+        {
+          "from": 2,
+          "capacity": 2,
+          "slotLevel": 1
+        },
+        {
+          "from": 3,
+          "capacity": 2,
+          "slotLevel": 2
+        },
+        {
+          "from": 5,
+          "capacity": 2,
+          "slotLevel": 3
+        },
+        {
+          "from": 7,
+          "capacity": 2,
+          "slotLevel": 4
+        },
+        {
+          "from": 9,
+          "capacity": 2,
+          "slotLevel": 5
+        },
+        {
+          "from": 11,
+          "capacity": 3,
+          "slotLevel": 5
+        },
+        {
+          "from": 17,
+          "capacity": 4,
+          "slotLevel": 5
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "spell-slots"
+    },
+    {
+      "id": "bardic-inspiration",
+      "owner": "class:bard",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0,
+          "dice": "1d6"
+        },
+        {
+          "from": 5,
+          "capacity": 0,
+          "dice": "1d8"
+        },
+        {
+          "from": 10,
+          "capacity": 0,
+          "dice": "1d10"
+        },
+        {
+          "from": 15,
+          "capacity": 0,
+          "dice": "1d12"
+        }
+      ],
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "modifier:cha"
+          }
+        ]
+      },
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "when": {
+            "op": "gte",
+            "args": [
+              {
+                "op": "read",
+                "ref": "class:bard"
+              },
+              {
+                "op": "constant",
+                "value": 5
+              }
+            ]
+          },
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "second-wind",
+      "owner": "class:fighter",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "wild-shape-uses",
+      "owner": "class:druid",
+      "minimumLevel": 2,
+      "kind": "pool",
+      "input": "class:druid",
+      "rows": [
+        {
+          "from": 2,
+          "capacity": 2
+        },
+        {
+          "from": 20,
+          "capacity": 9999
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "lay-on-hands",
+      "owner": "class:paladin",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:paladin",
+      "capacity": {
+        "op": "multiply",
+        "args": [
+          {
+            "op": "read",
+            "ref": "class:paladin"
+          },
+          {
+            "op": "constant",
+            "value": 5
+          }
+        ]
+      },
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "divine-sense",
+      "owner": "class:paladin",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:paladin",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "args": [
+              {
+                "op": "constant",
+                "value": 1
+              },
+              {
+                "op": "read",
+                "ref": "modifier:cha"
+              }
+            ]
+          }
+        ]
+      },
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "cleansing-touch",
+      "owner": "class:paladin",
+      "minimumLevel": 14,
+      "kind": "pool",
+      "input": "class:paladin",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "modifier:cha"
+          }
+        ]
+      },
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "arcane-recovery",
+      "owner": "class:wizard",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:wizard",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "signature-spells",
+      "owner": "class:wizard",
+      "minimumLevel": 20,
+      "kind": "pool",
+      "input": "class:wizard",
+      "rows": [
+        {
+          "from": 20,
+          "capacity": 2
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "divine-intervention",
+      "owner": "class:cleric",
+      "minimumLevel": 10,
+      "kind": "pool",
+      "input": "class:cleric",
+      "rows": [
+        {
+          "from": 10,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "stroke-of-luck",
+      "owner": "class:rogue",
+      "minimumLevel": 20,
+      "kind": "pool",
+      "input": "class:rogue",
+      "rows": [
+        {
+          "from": 20,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "eldritch-master",
+      "owner": "class:warlock",
+      "minimumLevel": 20,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 20,
+          "capacity": 1
+        }
+      ],
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "natural-recovery",
+      "owner": "subclass:land",
+      "minimumLevel": 2,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "wholeness-of-body",
+      "owner": "subclass:open-hand",
+      "minimumLevel": 6,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "dark-ones-own-luck",
+      "owner": "subclass:fiend",
+      "minimumLevel": 6,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "hurl-through-hell",
+      "owner": "subclass:fiend",
+      "minimumLevel": 14,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "breath-weapon",
+      "owner": "trait:breath-weapon",
+      "minimumLevel": 0,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "relentless-endurance",
+      "owner": "trait:relentless-endurance",
+      "minimumLevel": 0,
+      "kind": "pool",
+      "input": "level",
+      "capacity": {
+        "op": "constant",
+        "value": 1
+      },
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all",
+          "amount": {
+            "op": ""
+          }
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "infusions-known",
+      "owner": "class:artificer",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:artificer",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 0
+        },
+        {
+          "from": 2,
+          "capacity": 4
+        },
+        {
+          "from": 6,
+          "capacity": 6
+        },
+        {
+          "from": 10,
+          "capacity": 8
+        },
+        {
+          "from": 14,
+          "capacity": 10
+        },
+        {
+          "from": 18,
+          "capacity": 12
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "fighting-style-known",
+      "owner": "subclass:swords",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:bard",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 1
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "maneuvers-known",
+      "owner": "subclass:battle-master",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 3
+        },
+        {
+          "from": 7,
+          "capacity": 5
+        },
+        {
+          "from": 10,
+          "capacity": 7
+        },
+        {
+          "from": 15,
+          "capacity": 9
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "arcane-shots-known",
+      "owner": "subclass:arcane-archer",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 2
+        },
+        {
+          "from": 7,
+          "capacity": 3
+        },
+        {
+          "from": 10,
+          "capacity": 4
+        },
+        {
+          "from": 15,
+          "capacity": 5
+        },
+        {
+          "from": 18,
+          "capacity": 6
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "runes-known",
+      "owner": "subclass:rune-knight",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 2
+        },
+        {
+          "from": 7,
+          "capacity": 3
+        },
+        {
+          "from": 10,
+          "capacity": 4
+        },
+        {
+          "from": 15,
+          "capacity": 5
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "elemental-disciplines-known",
+      "owner": "subclass:four-elements",
+      "minimumLevel": 1,
+      "kind": "parameter",
+      "input": "class:monk",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 2
+        },
+        {
+          "from": 6,
+          "capacity": 3
+        },
+        {
+          "from": 11,
+          "capacity": 4
+        },
+        {
+          "from": 17,
+          "capacity": 5
+        }
+      ],
+      "group": "class"
+    },
+    {
+      "id": "superiority-dice",
+      "owner": "subclass:battle-master",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 4,
+          "dice": "1d8"
+        },
+        {
+          "from": 7,
+          "capacity": 5,
+          "dice": "1d8"
+        },
+        {
+          "from": 10,
+          "capacity": 5,
+          "dice": "1d10"
+        },
+        {
+          "from": 15,
+          "capacity": 6,
+          "dice": "1d10"
+        },
+        {
+          "from": 18,
+          "capacity": 6,
+          "dice": "1d12"
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "arcane-shot-uses",
+      "owner": "subclass:arcane-archer",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 2
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "fighting-spirit",
+      "owner": "subclass:samurai",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "rows": [
+        {
+          "from": 3,
+          "capacity": 3
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "giants-might",
+      "owner": "subclass:rune-knight",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:fighter",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "proficiency"
+          }
+        ]
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "flash-of-genius",
+      "owner": "class:artificer",
+      "minimumLevel": 7,
+      "kind": "pool",
+      "input": "class:artificer",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "modifier:int"
+          }
+        ]
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "tides-of-chaos",
+      "owner": "subclass:wild-magic",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:sorcerer",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "favored-by-the-gods",
+      "owner": "subclass:divine-soul",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:sorcerer",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "fey-presence",
+      "owner": "subclass:archfey",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "hexblades-curse",
+      "owner": "subclass:hexblade",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:warlock",
+      "rows": [
+        {
+          "from": 1,
+          "capacity": 1
+        }
+      ],
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "short-rest",
+          "operation": "all"
+        },
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "war-priest",
+      "owner": "subclass:war",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:cleric",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "modifier:wis"
+          }
+        ]
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "wrath-of-the-storm",
+      "owner": "subclass:tempest",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:cleric",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "modifier:wis"
+          }
+        ]
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "warding-flare",
+      "owner": "subclass:light",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:cleric",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "modifier:wis"
+          }
+        ]
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    },
+    {
+      "id": "bladesong",
+      "owner": "subclass:bladesinging",
+      "minimumLevel": 1,
+      "kind": "pool",
+      "input": "class:wizard",
+      "capacity": {
+        "op": "max",
+        "args": [
+          {
+            "op": "constant",
+            "value": 1
+          },
+          {
+            "op": "read",
+            "ref": "proficiency"
+          }
+        ]
+      },
+      "group": "class",
+      "recovery": [
+        {
+          "trigger": "long-rest",
+          "operation": "all"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "barbarian-unarmored-defense",
+      "owner": "feature:barbarian-unarmored-defense",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "status.armorClass",
+          "value": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "not",
+                "args": [
+                  {
+                    "op": "read",
+                    "ref": "equipped:armor"
+                  }
+                ]
+              },
+              {
+                "op": "max",
+                "args": [
+                  {
+                    "op": "constant"
+                  },
+                  {
+                    "op": "read",
+                    "ref": "modifier:con"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "monk-unarmored-defense",
+      "owner": "feature:monk-unarmored-defense",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "status.armorClass",
+          "value": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "not",
+                "args": [
+                  {
+                    "op": "or",
+                    "args": [
+                      {
+                        "op": "read",
+                        "ref": "equipped:armor"
+                      },
+                      {
+                        "op": "read",
+                        "ref": "equipped:shield"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "max",
+                "args": [
+                  {
+                    "op": "constant"
+                  },
+                  {
+                    "op": "read",
+                    "ref": "modifier:wis"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "draconic-resilience",
+      "owner": "feature:draconic-resilience",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "base.hitPoints.max",
+          "value": {
+            "op": "read",
+            "ref": "level"
+          }
+        },
+        {
+          "op": "add",
+          "target": "status.armorClass",
+          "value": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "not",
+                "args": [
+                  {
+                    "op": "read",
+                    "ref": "equipped:armor"
+                  }
+                ]
+              },
+              {
+                "op": "constant",
+                "value": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "dwarven-toughness",
+      "owner": "trait:dwarven-toughness",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "base.hitPoints.max",
+          "value": {
+            "op": "read",
+            "ref": "level"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor-asi",
+      "owner": "feat:actor",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "abilities.cha",
+          "value": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "athlete-asi",
+      "owner": "feat:athlete",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "athlete/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "chef-asi",
+      "owner": "feat:chef",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "chef/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "con",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "wis",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "crusher-asi",
+      "owner": "feat:crusher",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "crusher/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "con",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "dragon-fear-asi",
+      "owner": "feat:dragon-fear",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "dragon-fear/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "con",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "dragon-hide-asi",
+      "owner": "feat:dragon-hide",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "dragon-hide/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "con",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "durable-asi",
+      "owner": "feat:durable",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "abilities.con",
+          "value": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dwarven-fortitude-asi",
+      "owner": "feat:dwarven-fortitude",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "abilities.con",
+          "value": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "elven-accuracy-asi",
+      "owner": "feat:elven-accuracy",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "elven-accuracy/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "wis",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fade-away-asi",
+      "owner": "feat:fade-away",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "fade-away/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fey-teleportation-asi",
+      "owner": "feat:fey-teleportation",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "fey-teleportation/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fey-touched-asi",
+      "owner": "feat:fey-touched",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "fey-touched/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "wis",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "flames-of-phlegethos-asi",
+      "owner": "feat:flames-of-phlegethos",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "flames-of-phlegethos/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "gunner-asi",
+      "owner": "feat:gunner",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "abilities.dex",
+          "value": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "heavily-armored-asi",
+      "owner": "feat:heavily-armored",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "abilities.str",
+          "value": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "heavy-armor-master-asi",
+      "owner": "feat:heavy-armor-master",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "abilities.str",
+          "value": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "infernal-constitution-asi",
+      "owner": "feat:infernal-constitution",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "abilities.con",
+          "value": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "keen-mind-asi",
+      "owner": "feat:keen-mind",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "abilities.int",
+          "value": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "lightly-armored-asi",
+      "owner": "feat:lightly-armored",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "lightly-armored/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "linguist-asi",
+      "owner": "feat:linguist",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "add",
+          "target": "abilities.int",
+          "value": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "moderately-armored-asi",
+      "owner": "feat:moderately-armored",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "moderately-armored/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "observant-asi",
+      "owner": "feat:observant",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "observant/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "wis",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "orcish-fury-asi",
+      "owner": "feat:orcish-fury",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "orcish-fury/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "con",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "piercer-asi",
+      "owner": "feat:piercer",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "piercer/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "resilient-asi",
+      "owner": "feat:resilient",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "resilient/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "con",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "wis",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "second-chance-asi",
+      "owner": "feat:second-chance",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "second-chance/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "con",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "shadow-touched-asi",
+      "owner": "feat:shadow-touched",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "shadow-touched/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "wis",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "skill-expert-asi",
+      "owner": "feat:skill-expert",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "skill-expert/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "con",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "wis",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "slasher-asi",
+      "owner": "feat:slasher",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "slasher/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "squat-nimbleness-asi",
+      "owner": "feat:squat-nimbleness",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "squat-nimbleness/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "tavern-brawler-asi",
+      "owner": "feat:tavern-brawler",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "tavern-brawler/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "con",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "telekinetic-asi",
+      "owner": "feat:telekinetic",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "telekinetic/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "wis",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "telekinetic-spell-mage-hand",
+      "owner": "feat:telekinetic",
+      "minimumLevel": 1,
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "spell:mage-hand"
+        }
+      ]
+    },
+    {
+      "id": "telepathic-asi",
+      "owner": "feat:telepathic",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "telepathic/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "int",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "wis",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "cha",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "weapon-master-asi",
+      "owner": "feat:weapon-master",
+      "minimumLevel": 1,
+      "choices": [
+        {
+          "prompt": "weapon-master/ability/0",
+          "choose": 1,
+          "kind": "ability-bonus",
+          "from": {
+            "kind": "explicit",
+            "options": [
+              {
+                "kind": "ability-bonus",
+                "ability": "str",
+                "bonus": 1
+              },
+              {
+                "kind": "ability-bonus",
+                "ability": "dex",
+                "bonus": 1
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "casting": {
+    "bard": {
+      "selection": "known",
+      "replaceKnown": true,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "cleric": {
+      "selection": "prepared",
+      "prepareDivisor": 1,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "druid": {
+      "selection": "prepared",
+      "prepareDivisor": 1,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "paladin": {
+      "selection": "prepared",
+      "prepareDivisor": 2,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 2,
+      "rounding": "floor",
+      "startsAt": 2
+    },
+    "ranger": {
+      "selection": "known",
+      "replaceKnown": true,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 2,
+      "rounding": "floor",
+      "startsAt": 2
+    },
+    "sorcerer": {
+      "selection": "known",
+      "replaceKnown": true,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "warlock": {
+      "selection": "known",
+      "replaceKnown": true,
+      "expandedSubclass": true,
+      "kind": "independent",
+      "numerator": 0,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1,
+      "resource": "pact-magic"
+    },
+    "wizard": {
+      "selection": "spellbook",
+      "prepareDivisor": 1,
+      "bookStart": 6,
+      "bookPerLevel": 2,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 1,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "artificer": {
+      "selection": "prepared",
+      "prepareDivisor": 2,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 2,
+      "rounding": "floor",
+      "startsAt": 1
+    },
+    "eldritch-knight": {
+      "selection": "known",
+      "replaceKnown": true,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 3,
+      "rounding": "floor",
+      "startsAt": 3,
+      "list": "wizard",
+      "ability": "int"
+    },
+    "arcane-trickster": {
+      "selection": "known",
+      "replaceKnown": true,
+      "kind": "shared",
+      "numerator": 1,
+      "denominator": 3,
+      "rounding": "floor",
+      "startsAt": 3,
+      "list": "wizard",
+      "ability": "int"
+    }
+  }
+}

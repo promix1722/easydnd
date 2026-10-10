@@ -1,7 +1,10 @@
-import { MantineProvider } from '@mantine/core'
-import type { ReactNode } from 'react'
+import { MantineProvider, type MantineColorSchemeManager } from '@mantine/core'
+import { useEffect, useMemo, type ReactNode } from 'react'
 
-import { cssVariables, theme } from './theme'
+import { useAppearance } from '@/lib/appearance'
+import { PALETTES } from '@/theme/palettes'
+
+import { variablesForPalette, themeForPalette } from './theme'
 
 // The *layered* build of Mantine's stylesheet, rather than the plain one, and
 // the reason is `./app.css` below. `styles.layer.css` wraps every rule in
@@ -21,18 +24,31 @@ import '@mantine/carousel/styles.layer.css'
 // rather than expressed as theme values.
 import './app.css'
 
+// Account/browser preference storage belongs to lib/appearance, so Mantine
+// must not independently restore a legacy localStorage color scheme.
+const colorSchemeManager: MantineColorSchemeManager = {
+  get: () => 'auto', set: () => {}, subscribe: () => {}, unsubscribe: () => {}, clear: () => {},
+}
+
 /**
  * Wraps the app in the design system. Exists so that `main.tsx` -- which sits
  * outside `src/ui` -- does not have to import Mantine to bootstrap it.
  *
  * `env` is Mantine's own escape hatch for jsdom, and the test render helper is
- * the only caller that sets it. Without it a popover-backed control -- Select,
+ * a caller that sets it. Without it a popover-backed control -- Select,
  * Menu -- opens and then hides itself again: Mantine hides a dropdown whose
  * anchor is not visible, and in a environment that lays nothing out no anchor
  * ever is. It is a prop rather than a check on import.meta.env so that the
  * production bundle cannot reach the branch at all.
  */
 export function AppTheme({ children, env }: { children: ReactNode; env?: 'test' }) {
+  const { appearance } = useAppearance()
+  const palette = PALETTES[appearance.palette]
+  const theme = useMemo(() => themeForPalette(palette), [palette])
+  const cssVariables = useMemo(() => variablesForPalette(palette), [palette])
+  useEffect(() => {
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', palette.brand)
+  }, [palette])
   return (
     // Spread rather than pass through: exactOptionalPropertyTypes means
     // `env={undefined}` is not the same as omitting it.
@@ -40,6 +56,8 @@ export function AppTheme({ children, env }: { children: ReactNode; env?: 'test' 
       theme={theme}
       cssVariablesResolver={cssVariables}
       defaultColorScheme="auto"
+      colorSchemeManager={colorSchemeManager}
+      {...(appearance.color_scheme === 'auto' ? {} : { forceColorScheme: appearance.color_scheme })}
       {...(env ? { env } : {})}
     >
       {children}

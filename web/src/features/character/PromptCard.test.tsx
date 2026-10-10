@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Entry, Prompt } from '@/lib/api'
@@ -40,12 +40,35 @@ function skillPrompt(overrides: Partial<Prompt> = {}): Prompt {
 
 /**
  * One viewport, not two. Only `Columns`, `DataList`, `ModalSheet`,
- * `SectionDeck`, `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
+ * `TabDeck`, `SheetBody` and `RootShell` branch on width, and the suite runs without CSS, so a responsive
  * prop cannot move the DOM either -- nothing in this tree reaches any of them,
  * so a test at one width is a test of both. See docs/web.md.
  */
 describe('PromptCard', () => {
   const viewport = 'desktop'
+
+  // Writing an entry of your own is not offered while building: an entry the
+  // player (or an import) already has is still listed, marked, and nothing
+  // in the list makes a new one.
+  it('lists an existing custom entry and offers no way to write another', () => {
+    const race = skillPrompt({ choice: { prompt: 'character/race', choose: 1, kind: 'race', from: { kind: 'collection', collection: 'race' } } })
+    const races = new Map<string, Entry>([['elf', { slug: 'elf', name: 'Elf' }], ['custom-xxx', { slug: 'custom-xxx', name: 'Xxx', manual: true }]])
+    renderAt(viewport, <PromptCard prompt={race} entries={races} pending={false} onAnswer={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /Xxx/ })).toHaveTextContent('Custom')
+    expect(screen.queryByRole('button', { name: 'Custom…' })).not.toBeInTheDocument()
+  })
+
+  // Opening a decided question to change it shows what was decided: the
+  // chosen entry is the pressed one, and Confirm is ready without re-picking.
+  it('opens a reopened question on the answer it already has', () => {
+    const race = skillPrompt({ choice: { prompt: 'character/race', choose: 1, kind: 'race', from: { kind: 'collection', collection: 'race' } } })
+    const races = new Map<string, Entry>([['elf', { slug: 'elf', name: 'Elf' }], ['dwarf', { slug: 'dwarf', name: 'Dwarf' }]])
+    renderAt(viewport, <PromptCard prompt={race} entries={races} pending={false} onAnswer={vi.fn()}
+      initialAnswers={[{ prompt: 'character/race', picks: ['dwarf'] }]} />)
+    expect(screen.getByRole('button', { name: /Dwarf/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Elf/ })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled()
+  })
 
   it('will not confirm until the right number is picked', async () => {
     const user = setupUser()
@@ -66,6 +89,26 @@ describe('PromptCard', () => {
     expect(onAnswer).toHaveBeenCalledWith([
       { prompt: 'rogue/proficiency/0', picks: ['acrobatics', 'stealth'] },
     ])
+  })
+
+  // A pick keeps what was picked in view and jumps nowhere else: scrolling to
+  // Confirm threw a long list to its foot on every click.
+  it('keeps a picked option in view and does not jump to the confirmation', async () => {
+    const user = setupUser()
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
+    try {
+      renderAt(viewport, <PromptCard prompt={skillPrompt()} entries={entries} pending={false} onAnswer={vi.fn()} />)
+      const lower = screen.getByRole('button', { name: /Deception/ })
+      await user.click(lower)
+      await waitFor(() => expect(scroll.mock.contexts).toContain(lower))
+
+      await user.click(screen.getByRole('button', { name: /Acrobatics/ }))
+      const confirm = screen.getByRole('button', { name: 'Confirm' })
+      expect(confirm).toBeEnabled()
+      expect(scroll.mock.contexts).not.toContain(confirm)
+    } finally {
+      scroll.mockRestore()
+    }
   })
 
   it('answers with the server option keys, not with labels', async () => {
@@ -205,7 +248,7 @@ describe('PromptCard', () => {
     expect(stealth).toBeEnabled()
     await user.click(stealth)
 
-    expect(stealth).toHaveAttribute('data-variant', 'filled')
+    expect(stealth).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /Acrobatics/ })).toHaveAttribute(
       'data-variant',
       'default',
@@ -437,4 +480,40 @@ describe('PromptCard with a branch', () => {
     expect(screen.getByRole('button', { name: /Strength \+1/ })).toBeEnabled()
     expect(screen.getByRole('button', { name: /Dexterity \+1/ })).toBeEnabled()
   })
+})
+
+it('searches spell options without losing picks and permits partial preparation', async () => {
+  const user = setupUser()
+  const onAnswer = vi.fn()
+  const prompt = skillPrompt({ upTo: true, purpose: 'prepared', choice: {
+    prompt: 'wizard/spell/prepared/1', choose: 3, kind: 'spell', from: { kind: 'explicit', options: [
+      { kind: 'ref', key: 'light', ref: 'spell:light' }, { kind: 'ref', key: 'mage-hand', ref: 'spell:mage-hand' },
+    ] },
+  } })
+  renderAt('desktop', <PromptCard prompt={prompt} entries={new Map([['light', { slug: 'light', name: 'Light' }], ['mage-hand', { slug: 'mage-hand', name: 'Mage Hand' }]])} pending={false} onAnswer={onAnswer} />)
+  await user.click(screen.getByRole('button', { name: 'Light' }))
+  await user.click(screen.getByRole('button', { name: 'Add Light' }))
+  await user.type(screen.getByRole('textbox', { name: 'Search spells' }), 'mage')
+  expect(screen.getByRole('button', { name: 'Remove Light' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Finish selection' }))
+  expect(onAnswer).toHaveBeenCalledWith([{ prompt: 'wizard/spell/prepared/1', picks: ['light'] }])
+})
+
+it('keeps selected option order and picks when localized entries are refreshed', async () => {
+  const user = setupUser()
+  const onAnswer = vi.fn()
+  const prompt = skillPrompt()
+  const view = renderAt('desktop', <PromptCard prompt={prompt} entries={entries} pending={false} onAnswer={onAnswer} />)
+  await user.click(screen.getByRole('button', { name: 'Stealth' }))
+  const translated = new Map<string, Entry>([
+    ['acrobatics', { slug: 'acrobatics', name: 'Акробатика' }],
+    ['stealth', { slug: 'stealth', name: 'Скрытность' }],
+    ['deception', { slug: 'deception', name: 'Обман' }],
+  ])
+  view.rerender(<PromptCard prompt={{ ...prompt }} entries={translated} pending={false} onAnswer={onAnswer} />)
+  const labels = screen.getAllByRole('button').map((button) => button.textContent)
+  expect(labels.slice(0, 3)).toEqual(['Акробатика', 'Скрытность', 'Обман'])
+  await user.click(screen.getByRole('button', { name: 'Акробатика' }))
+  await user.click(screen.getByRole('button', { name: /^confirm$/i }))
+  expect(onAnswer).toHaveBeenCalledWith([{ prompt: prompt.choice.prompt, picks: ['stealth', 'acrobatics'] }])
 })

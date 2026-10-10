@@ -19,6 +19,7 @@ export type InvitableRole = Extract<GroupRole, 'dm' | 'player'>
 
 export interface GroupMember {
   user_id: string
+  image?: string
   display_name: string
   role: GroupRole
   joined_at: string

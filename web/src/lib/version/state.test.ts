@@ -1,14 +1,32 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { isStale, noteRelease, noteReleaseHeader, resetReleaseWatch, subscribeToRelease } from './state'
 
 /**
- * Both sides of the comparison are stated explicitly. The bundle under test
- * reports "dev" -- vitest never sets VITE_APP_VERSION -- and "dev" is the one
- * value the watch is required to ignore, so a test that leaned on the default
- * would pass no matter what the code did.
+ * Tests select the build mode and both release versions explicitly. The
+ * default test bundle reports "dev", which would hide version regressions.
  */
 describe('the release watch', () => {
+  beforeEach(() => { vi.stubEnv('DEV', false) })
+  afterEach(() => { vi.unstubAllEnvs() })
+
+  it('never blocks a versioned Vite dev tab, including after repeated reloads', () => {
+    vi.stubEnv('DEV', true)
+    for (let reload = 0; reload < 3; reload++) {
+      resetReleaseWatch()
+      const listener = vi.fn()
+      subscribeToRelease(listener)
+      noteRelease('b4a4f57', 'b51d414')
+      expect(isStale()).toBe(false)
+      expect(listener).not.toHaveBeenCalled()
+    }
+  })
+
+  it('still checks commit-versioned production bundles', () => {
+    noteRelease('b4a4f57', 'b51d414')
+    expect(isStale()).toBe(true)
+  })
+
   it('stays current while the server reports the release this bundle is', () => {
     noteRelease('v1.0.4', 'v1.0.4')
     expect(isStale()).toBe(false)
@@ -69,9 +87,8 @@ describe('the release watch', () => {
     // internal/api/http/middleware/version.go.
     const response = new Response(null, { headers: { 'X-App-Version': 'v1.0.5' } })
     noteReleaseHeader(response)
-    // The bundle under test reports "dev", so this must not latch -- which is
-    // also the guarantee that `make dev` does not open the dialog on its first
-    // request against a real API.
+    // This covers the unversioned-bundle fallback. The development-mode test
+    // above separately covers make web/dev, which reports a commit hash.
     expect(isStale()).toBe(false)
   })
 

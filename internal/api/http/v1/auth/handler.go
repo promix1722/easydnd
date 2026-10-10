@@ -62,6 +62,7 @@ func New(svc Service, cookies helpers.CookieOptions) *Handler {
 type User struct {
 	ID          string       `json:"id"`
 	DisplayName string       `json:"display_name"`
+	Image       string       `json:"image,omitempty"`
 	CreatedAt   string       `json:"created_at"`
 	Credentials []Credential `json:"credentials"`
 	Identities  []Identity   `json:"identities"`
@@ -173,6 +174,7 @@ func toWire(u user.User) User {
 	return User{
 		ID:          string(u.ID),
 		DisplayName: u.DisplayName,
+		Image:       u.Image,
 		CreatedAt:   u.CreatedAt.UTC().Format(time.RFC3339),
 		Credentials: credentials,
 		Identities:  identities,

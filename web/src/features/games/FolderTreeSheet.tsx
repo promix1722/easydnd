@@ -4,7 +4,7 @@ import type { Folder, Summary } from '@/lib/api'
 import { listCharacters, listFolders } from '@/lib/api'
 import { useResource } from '@/lib/useResource'
 import { useT } from '@/lib/i18n'
-import { Accordion, Button, Checkbox, Group, Loader, ModalSheet, Stack, Text } from '@/ui'
+import { Avatar, characterAvatar, Accordion, Button, Checkbox, Group, Loader, ModalSheet, Stack, Text } from '@/ui'
 
 import { classLine } from '@/domain'
 
@@ -26,7 +26,11 @@ export function FolderTreeSheet({
   pending,
   onClose,
   onAdd,
+  title,
+  description,
 }: {
+  title?: string
+  description?: string
   opened: boolean
   seated: Set<string>
   pending: boolean
@@ -54,10 +58,10 @@ export function FolderTreeSheet({
   }
 
   return (
-    <ModalSheet opened={opened} onClose={onClose} title={t('folderTree.title')}>
+    <ModalSheet opened={opened} onClose={onClose} title={title ?? t('folderTree.title')}>
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
-          {t('folderTree.hint')}
+          {description ?? t('folderTree.hint')}
         </Text>
 
         {loading && <Loader size="sm" />}
@@ -91,12 +95,15 @@ export function FolderTreeSheet({
                         checked={picked.includes(character.id)}
                         onChange={() => toggle(character.id)}
                         label={
-                          <div>
-                            <Text size="sm">{character.name || 'Unnamed'}</Text>
-                            <Text size="xs" c="dimmed">
-                              {classLine(character.classes)}
-                            </Text>
-                          </div>
+                          <Group gap="sm" wrap="nowrap">
+                            <Avatar image={character.image} fallback={characterAvatar(character.classes)} />
+                            <div>
+                              <Text size="sm">{character.name || 'Unnamed'}</Text>
+                              <Text size="xs" c="dimmed">
+                                {classLine(character.classes)}
+                              </Text>
+                            </div>
+                          </Group>
                         }
                       />
                     ))}

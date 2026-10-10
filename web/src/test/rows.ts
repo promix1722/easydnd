@@ -59,9 +59,9 @@ export async function pressRowAction(
  * anybody else's, so a row either offers everything or offers no control.
  */
 export function rowsOffering(viewport: Viewport, label: string): number {
-  if (viewport === 'desktop') {
-    return screen.queryAllByRole('button', { name: new RegExp(`^${label} `) }).length
-  }
+  // The same at both widths now: every row's actions are behind its menu.
+  void viewport
+  void label
   return screen.queryAllByRole('button', { name: /^Actions for / }).length
 }
 
@@ -79,15 +79,7 @@ export function rowsOffering(viewport: Viewport, label: string): number {
  * declared them.
  */
 export async function rowActionLabels(viewport: Viewport, row: string): Promise<string[]> {
-  if (viewport === 'desktop') {
-    const suffix = ` ${row}`
-    return screen
-      .queryAllByRole('button')
-      .map((button) => button.getAttribute('aria-label') ?? '')
-      .filter((name) => name.endsWith(suffix))
-      .map((name) => name.slice(0, -suffix.length))
-  }
-
+  void viewport
   const trigger = screen.queryByRole('button', { name: `Actions for ${row}` })
   if (trigger === null) return []
   const user = setupUser()

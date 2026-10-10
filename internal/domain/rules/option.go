@@ -10,7 +10,7 @@ import (
 //
 // It exists because Option is a sealed interface of ten implementations and
 // only two of them -- RefOption and TextOption -- carry anything slug-shaped.
-// The rogue's own starting kit proves the gap: rogue/starting-equipment/1 is
+// The rogue's own starting kit proves the gap: rogue/starting-equipment/backup is
 // "choose 1" between a BundleOption of a shortbow and twenty arrows and a
 // RefOption naming a shortsword, and nothing in the bundle names the bundle.
 // Without a total function over Option, half the SRD's prompts would be
@@ -55,10 +55,13 @@ func OptionKey(o Option) Slug {
 		// What the branch draws from, which is the only thing about a nested
 		// choice a player could recognise: "martial-weapons", "skills",
 		// "feat". Its prompt id would do as an identifier and did, but a
-		// prompt id is a path -- "fighter/starting-equipment/1/0/0" -- and a
+		// prompt id is a path -- "fighter/starting-equipment/off-hand/martial-weapons" -- and a
 		// path in an answer is the same unreadable thing as a position.
 		return nestedKey(opt.Choice)
 	case BundleOption:
+		if !opt.Key.IsZero() {
+			return opt.Key
+		}
 		return bundleKey(opt)
 	case SizeOption:
 		return Slug(opt.Size.String())

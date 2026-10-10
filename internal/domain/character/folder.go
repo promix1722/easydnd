@@ -2,6 +2,8 @@ package character
 
 import (
 	"context"
+
+	"github.com/promix1722/easydnd/internal/types"
 )
 
 // FolderID identifies a folder.
@@ -111,4 +113,32 @@ type FolderRepository interface {
 	// and a *types.ValidationError for the default folder, which is the one
 	// an account is guaranteed to have.
 	Delete(ctx context.Context, id FolderID) error
+}
+
+// CheckReorder is the set comparison behind FolderRepository.Reorder: ids
+// must be exactly the non-default folders among have, each once. Both
+// adapters call it so that they refuse the same requests with the same words.
+func CheckReorder(have []Folder, ids []FolderID) error {
+	movable := make(map[FolderID]struct{}, len(have))
+	for _, f := range have {
+		if !f.Default {
+			movable[f.ID] = struct{}{}
+		}
+	}
+	if len(ids) != len(movable) {
+		return types.NewValidationError(
+			"the order must name all %d of your folders, and it names %d",
+			len(movable), len(ids))
+	}
+	for _, id := range ids {
+		if _, ok := movable[id]; !ok {
+			return types.NewValidationError(
+				"folder %q is not one of yours to order, or is named twice", id)
+		}
+		// Removed as it is seen, so a repeat fails the check above on its
+		// second appearance rather than silently displacing a folder that
+		// the caller left out.
+		delete(movable, id)
+	}
+	return nil
 }

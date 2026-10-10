@@ -30,11 +30,15 @@ const maxSlugFilter = 200
 // what a sheet uses to render the four spells a character has prepared
 // without pulling all 319.
 //
-// Spells and magic items are served in summary at collection level -- slug,
-// name, level, school, classes -- and in full only when named. That is the
-// one place where asking for everything and asking for something return
-// different shapes, and it is worth it: the full spell list is an order of
-// magnitude larger than anything a build flow reads.
+// Magic items are served in summary at collection level and in full only
+// when named.
+//
+// **Spells are never served whole.** Every spell carries its artwork inline,
+// so "all of them" is megabytes, and nothing a screen does needs all of them:
+// a spell is asked for by name (?slugs=) or a page at a time (the search
+// parameters, or POST .../spells/search for an offer too long for a URL). A
+// request for the bare collection is refused rather than answered, so that a
+// client cannot drift back into downloading it.
 func (h *Handler) Collection(c *gin.Context) {
 	ctx := c.Request.Context()
 	locale := helpers.Locale(c)
@@ -43,6 +47,11 @@ func (h *Handler) Collection(c *gin.Context) {
 	filter, err := parseSlugs(c.Query(SlugsQueryParam))
 	if err != nil {
 		helpers.FormatError(c, err)
+		return
+	}
+
+	if name == CollectionSpellFilters {
+		h.spellFilters(c)
 		return
 	}
 
@@ -57,6 +66,21 @@ func (h *Handler) Collection(c *gin.Context) {
 				return
 			}
 			h.searchSpells(c, search)
+			return
+		}
+		if name == CollectionItems && hasSpellSearch(c) {
+			search, err := parseSpellSearch(c)
+			if err != nil {
+				helpers.FormatError(c, err)
+				return
+			}
+			h.searchItems(c, search)
+			return
+		}
+		if name == CollectionSpells || name == CollectionItems {
+			helpers.FormatError(c, types.NewFieldValidationError("the "+name+" collection is not served whole", types.FieldError{
+				Field: ParamLimit, Rule: "required", Reason: "field.limit.required",
+			}))
 			return
 		}
 		raw, err := h.collectionBytes(ctx, locale, name)

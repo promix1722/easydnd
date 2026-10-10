@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +19,6 @@ import (
 
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
-	"github.com/promix1722/easydnd/internal/adapter/sheet/hexsheet"
 	"github.com/promix1722/easydnd/internal/adapter/token"
 	httpapi "github.com/promix1722/easydnd/internal/api/http"
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
@@ -27,14 +28,17 @@ import (
 	folderapi "github.com/promix1722/easydnd/internal/api/http/v1/folder"
 	gameapi "github.com/promix1722/easydnd/internal/api/http/v1/game"
 	groupapi "github.com/promix1722/easydnd/internal/api/http/v1/group"
+	packapi "github.com/promix1722/easydnd/internal/api/http/v1/pack"
 	"github.com/promix1722/easydnd/internal/api/http/v1/system"
 	"github.com/promix1722/easydnd/internal/config"
 	domain "github.com/promix1722/easydnd/internal/domain/auth"
+	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	authuc "github.com/promix1722/easydnd/internal/usecase/auth"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 	gameuc "github.com/promix1722/easydnd/internal/usecase/game"
 	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
+	packuc "github.com/promix1722/easydnd/internal/usecase/pack"
 )
 
 // newFullRouter builds the whole route table over the real compendium, an
@@ -77,7 +81,7 @@ func newFullRouterWithFederation(t *testing.T) (*gin.Engine, *http.Cookie, *stub
 // that touched a catalogue route. Everything else here stays per-router:
 // each test gets its own account store, its own characters and its own
 // ceremony, which is what keeps them independent.
-var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "srd_5.1"))
+var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data", "pack", "srd-5.1"))
 
 // newFullRouterInEnv is the same table built for a named environment.
 //
@@ -86,7 +90,7 @@ var catalogSource = catalogfile.NewSource(filepath.Join("..", "..", "..", "data"
 // only in development, and the test that matters for it is the one asserting
 // the route is absent from a production table.
 func newFullRouterInEnv(
-	t *testing.T, env string,
+	t *testing.T, env string, withPacks ...bool,
 ) (*gin.Engine, *http.Cookie, *stubCeremony, *stubFederation) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -126,12 +130,25 @@ func newFullRouterInEnv(
 		},
 		log,
 	)
-	cookies := helpers.CookieOptions{Secure: cfg.Auth.SecureCookies}
+	cookies := helpers.NewCookieOptions(cfg)
 
 	// dev's shared, cached catalogue source -- building a second one here is
 	// what the verify-speedup commit removed.
-	source := catalogSource
+	var source catalog.Source = catalogSource
+	var packs *packuc.Service
+	var packHandler *packapi.Handler
 	groupRepo := memory.NewGroupRepository(users)
+	if len(withPacks) > 0 && withPacks[0] {
+		base, err := catalogfile.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		repo := memory.NewPackRepository()
+		engine := catalogfile.NewAuthoring(base, repo)
+		packs = packuc.NewService(repo, engine, groupRepo, users)
+		source = engine
+		packHandler = packapi.New(packs, engine)
+	}
 	// One character store, hoisted out of the constructor because the game
 	// service reads out of the same map this one writes into. A second
 	// instance would make every shared character a 404, with nothing in the
@@ -142,12 +159,16 @@ func newFullRouterInEnv(
 		memory.NewGameRepository(), memory.NewSharedRepository(),
 		groupRepo, characterRepo, source, log)
 	characterService := charuc.NewService(characterRepo,
-		memory.NewFolderRepository(), source, hexsheet.NewImporter(), gameService, log)
+		memory.NewFolderRepository(), source, gameService, log)
+	if packs != nil {
+		characterService.SetPackAccess(packs)
+	}
 	// The same signer mints invite links; the kind claim is what keeps them
 	// from being interchangeable with the session cookie beside them.
 	groupService := groupuc.NewService(groupRepo, users, signer, gameService, log)
 
 	r, err := httpapi.NewRouter(cfg, log, httpapi.Handlers{
+		Pack:          packHandler,
 		System:        system.New(testVersion),
 		Auth:          authapi.New(authService, cookies),
 		Authenticator: authService,
@@ -315,9 +336,15 @@ func TestCatalogManifestIndexesEveryCollection(t *testing.T) {
 		if collection.Count == 0 {
 			t.Errorf("collection %q is empty", collection.Name)
 		}
-		rec := send(t, r, session, http.MethodGet, "/v1/catalog/"+collection.Name, nil)
+		// Spells are the one collection reached a page at a time: the bare
+		// URL is refused. See TestSpellSearchFiltersSortsAndPages.
+		path := "/v1/catalog/" + collection.Name
+		if collection.Name == catalogapi.CollectionSpells {
+			path += "?limit=1"
+		}
+		rec := send(t, r, session, http.MethodGet, path, nil)
 		if rec.Code != http.StatusOK {
-			t.Errorf("GET /v1/catalog/%s = %d, want 200", collection.Name, rec.Code)
+			t.Errorf("GET %s = %d, want 200", path, rec.Code)
 		}
 	}
 }
@@ -363,8 +390,8 @@ func TestUnknownCollectionIsNotFound(t *testing.T) {
 }
 
 // The spells collection answers search parameters with a filtered, sorted,
-// paged envelope, while the plain path keeps serving the bare array -- the
-// build flow reads that one and must not notice the search existing.
+// paged envelope, and is never served whole: every spell carries its artwork,
+// so the bare collection is megabytes nobody needs.
 func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 	r, session := newFullRouter(t)
 
@@ -385,12 +412,12 @@ func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 
 	// A page carries the total behind it, and offsets walk the same order.
 	page := search("limit=50")
-	if page.Total != 319 || len(page.Spells) != 50 {
-		t.Errorf("first page = %d of %d, want 50 of 319", len(page.Spells), page.Total)
+	if page.Total != 477 || len(page.Spells) != 50 {
+		t.Errorf("first page = %d of %d, want 50 of 477", len(page.Spells), page.Total)
 	}
-	last := search("limit=50&offset=300")
-	if page.Total != last.Total || len(last.Spells) != 19 {
-		t.Errorf("last page = %d of %d, want 19 of %d", len(last.Spells), last.Total, page.Total)
+	last := search("limit=50&offset=450")
+	if page.Total != last.Total || len(last.Spells) != 27 {
+		t.Errorf("last page = %d of %d, want 27 of %d", len(last.Spells), last.Total, page.Total)
 	}
 
 	// Sorted by level then name: the cantrips lead, alphabetically.
@@ -411,10 +438,117 @@ func TestSpellSearchFiltersSortsAndPages(t *testing.T) {
 		t.Errorf("level=ten status = %d, want 400", rec.Code)
 	}
 
-	// The plain path is untouched by the search existing: still a bare array.
+	// The bare collection is refused, not answered.
 	rec = send(t, r, session, http.MethodGet, "/v1/catalog/spells", nil)
-	if body := rec.Body.String(); rec.Code != http.StatusOK || body == "" || body[0] != '[' {
-		t.Errorf("plain collection = %d %q..., want a 200 array", rec.Code, body[:min(len(body), 20)])
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("plain collection = %d, want 400", rec.Code)
+	}
+	// Naming spells still works, and the filter options come without them.
+	rec = send(t, r, session, http.MethodGet, "/v1/catalog/spells?slugs=fireball", nil)
+	if named := decode[[]catalogapi.Spell](t, rec); rec.Code != http.StatusOK || len(named) != 1 {
+		t.Errorf("?slugs=fireball = %d, %d spells", rec.Code, len(named))
+	}
+	rec = send(t, r, session, http.MethodGet, "/v1/catalog/spell-filters", nil)
+	if options := decode[catalogapi.SpellFilterOptions](t, rec); rec.Code != http.StatusOK ||
+		len(options.Schools) != 8 || len(options.Classes) != 13 || options.Classes[0].Name != "Artificer" {
+		t.Errorf("spell-filters = %d %+v", rec.Code, options)
+	}
+}
+
+// The sheet's item picker searches equipment and magic items together, by
+// name, a page at a time -- and like spells the bare list is refused.
+func TestItemSearchPagesEquipmentAndMagicItems(t *testing.T) {
+	r, session, _, _ := newFullRouterInEnv(t, config.EnvDevelopment, true)
+
+	search := func(query string) catalogapi.ItemSearchResult {
+		t.Helper()
+		rec := send(t, r, session, http.MethodGet, "/v1/catalog/items?"+query, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET ?%s = %d, want 200: %s", query, rec.Code, rec.Body)
+		}
+		return decode[catalogapi.ItemSearchResult](t, rec)
+	}
+
+	page := search("q=sword&limit=2")
+	if page.Total <= 2 || len(page.Items) != 2 {
+		t.Fatalf("q=sword&limit=2 = %d of %d, want 2 of more", len(page.Items), page.Total)
+	}
+	rest := search("q=sword&limit=200&offset=2")
+	if rest.Total != page.Total || len(rest.Items) != page.Total-2 {
+		t.Errorf("offset=2 = %d of %d, want %d", len(rest.Items), rest.Total, page.Total-2)
+	}
+	// Sorted by name across both collections, and a magic item says so.
+	var magic, mundane bool
+	for _, hit := range append(page.Items, rest.Items...) {
+		if !strings.HasPrefix(hit.Icon, "data:image/webp;base64,") {
+			t.Errorf("%s has no item artwork", hit.Slug)
+		}
+		if !strings.Contains(strings.ToLower(hit.Name), "sword") {
+			t.Errorf("%s does not match", hit.Name)
+		}
+		if hit.Magic {
+			magic = true
+		} else {
+			mundane = true
+		}
+	}
+	if !magic || !mundane {
+		t.Errorf("sword search = magic %v, mundane %v, want both", magic, mundane)
+	}
+	if page.Items[0].Slug != "dancing-sword" || page.Items[1].Slug != "greatsword" {
+		t.Errorf("first hits = %+v, want dancing-sword then greatsword", page.Items)
+	}
+
+	// The bare collection is refused, not answered.
+	if rec := send(t, r, session, http.MethodGet, "/v1/catalog/items", nil); rec.Code != http.StatusBadRequest {
+		t.Errorf("plain collection = %d, want 400", rec.Code)
+	}
+}
+
+// A build screen pages through what one character may pick. The offer goes in
+// a body because it can name every spell in the rules; what comes back is one
+// page of it.
+func TestSpellSearchOverAnOffer(t *testing.T) {
+	r, session := newFullRouter(t)
+	search := func(body map[string]any) catalogapi.SpellSearchResult {
+		t.Helper()
+		rec := send(t, r, session, http.MethodPost, "/v1/catalog/spells/search", body)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("POST %v = %d: %s", body, rec.Code, rec.Body)
+		}
+		return decode[catalogapi.SpellSearchResult](t, rec)
+	}
+	slugs := func(got catalogapi.SpellSearchResult) []string {
+		out := []string{}
+		for _, spell := range got.Spells {
+			out = append(out, spell.Slug)
+		}
+		return out
+	}
+
+	named := map[string]any{"slugs": []string{"fireball", "shield", "light"}}
+	if got := slugs(search(map[string]any{"limit": 20, "only": named})); !slices.Equal(got, []string{"light", "shield", "fireball"}) {
+		t.Errorf("named offer = %v, want it sorted by level", got)
+	}
+	// What is already chosen is left out, and the other filters still apply.
+	if got := slugs(search(map[string]any{"limit": 20, "only": named, "exclude": []string{"shield"}, "school": "evocation"})); !slices.Equal(got, []string{"light", "fireball"}) {
+		t.Errorf("excluded and filtered = %v", got)
+	}
+	// An offer also takes "whatever fits": a level range on a class's list.
+	fitting := search(map[string]any{"limit": 200, "only": map[string]any{"slugs": []string{"fireball"},
+		"fitting": []map[string]any{{"minLevel": 0, "maxLevel": 0, "classes": []string{"cleric"}}}}})
+	if fitting.Total != 10 || fitting.Spells[len(fitting.Spells)-1].Slug != "fireball" {
+		t.Errorf("fitting = %d %v, want the nine cleric cantrips and fireball", fitting.Total, slugs(fitting))
+	}
+	// An offer of nothing is nothing, not everything; and a page is bounded.
+	if got := search(map[string]any{"limit": 20, "only": map[string]any{}}); got.Total != 0 {
+		t.Errorf("empty offer matched %d", got.Total)
+	}
+	if got := search(map[string]any{"limit": 20}); got.Total != 477 || len(got.Spells) != 20 {
+		t.Errorf("no offer = %d of %d", len(got.Spells), got.Total)
+	}
+	if rec := send(t, r, session, http.MethodPost, "/v1/catalog/spells/search", map[string]any{}); rec.Code != http.StatusBadRequest {
+		t.Errorf("no limit = %d, want 400", rec.Code)
 	}
 }
 
@@ -496,7 +630,8 @@ func TestCharacterBuildFlow(t *testing.T) {
 
 	rec = send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
 		"expectedSeq": 3,
-		"events": []map[string]any{{
+		// The race, then what the race asked: one entry per selection.
+		"events": []map[string]any{{"type": "race", "ref": "race:half-elf"}, {
 			"type": "race",
 			"ref":  "race:half-elf",
 			"choices": []map[string]any{
@@ -508,8 +643,8 @@ func TestCharacterBuildFlow(t *testing.T) {
 		t.Fatalf("append = %d, want 200: %s", rec.Code, rec.Body)
 	}
 	written := decode[characterapi.WriteResponse](t, rec)
-	if written.Seq != 4 {
-		t.Errorf("seq = %d, want 4", written.Seq)
+	if written.Seq != 5 {
+		t.Errorf("seq = %d, want 5", written.Seq)
 	}
 	// The write returns the new sheet, which is why the client needs no
 	// cache invalidation: the response is the invalidation.
@@ -543,6 +678,10 @@ func TestEventsReturnsTheLog(t *testing.T) {
 			// A source the server must not repeat: it writes its own, from
 			// the prompt the event turns out to answer.
 			"source": "background",
+		}, {
+			// What the race asked, as an entry of its own.
+			"type": "race",
+			"ref":  "race:half-elf",
 			"choices": []map[string]any{
 				{"prompt": "half-elf/ability-bonus/0", "picks": []string{"dex", "con"}},
 			},
@@ -553,11 +692,11 @@ func TestEventsReturnsTheLog(t *testing.T) {
 	}
 
 	got := decode[characterapi.EventsResponse](t, readLog(t, r, session, id))
-	if got.Seq != 3 {
-		t.Errorf("seq = %d, want 3", got.Seq)
+	if got.Seq != 4 {
+		t.Errorf("seq = %d, want 4", got.Seq)
 	}
-	if len(got.Events) != 3 {
-		t.Fatalf("events = %d, want 3", len(got.Events))
+	if len(got.Events) != 4 {
+		t.Fatalf("events = %d, want 4", len(got.Events))
 	}
 
 	// Creation seeds the log, and what it seeds is the name -- one entry, one
@@ -591,8 +730,12 @@ func TestEventsReturnsTheLog(t *testing.T) {
 	if third.At == "" {
 		t.Error("an appended event has no At, so the log cannot say when it happened")
 	}
-	if len(third.Choices) != 1 || third.Choices[0].Prompt != "half-elf/ability-bonus/0" {
-		t.Errorf("choices = %+v, want the answer as it was posted", third.Choices)
+	if len(third.Choices) != 0 {
+		t.Errorf("choices = %+v, want none: the race is the whole of its entry", third.Choices)
+	}
+	fourth := got.Events[3]
+	if len(fourth.Choices) != 1 || fourth.Choices[0].Prompt != "half-elf/ability-bonus/0" || fourth.Source != "race" {
+		t.Errorf("fourth event = %+v, want the race's answer as it was posted", fourth)
 	}
 }
 
@@ -633,7 +776,7 @@ func TestBadAnswerIsAFieldError(t *testing.T) {
 
 	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
 		"expectedSeq": 1,
-		"events": []map[string]any{{
+		"events": []map[string]any{{"type": "race", "ref": "race:half-elf"}, {
 			"type": "race",
 			"ref":  "race:half-elf",
 			// Charisma is the half-elf's fixed +2 and is not on offer.
@@ -768,7 +911,7 @@ func TestReplaceAndDeleteAnEntry(t *testing.T) {
 
 	// And the same log, addressed the same way, with nothing to put back.
 	rec = send(t, r, session, http.MethodDelete,
-		"/v1/characters/"+id+"/events/3?expectedSeq=3", nil)
+		"/v1/characters/"+id+"/events/3?expectedSeq=3&expectedRevision="+strconv.Itoa(written.Revision), nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("delete = %d, want 200: %s", rec.Code, rec.Body)
 	}
@@ -1084,5 +1227,108 @@ func TestGuestsDoNotSeeEachOthersCharacters(t *testing.T) {
 	}
 	if len(body.Characters) != 0 {
 		t.Errorf("second guest sees %d characters belonging to the first", len(body.Characters))
+	}
+}
+
+func TestSavedEquipmentSelectionsPreserveBundleQuantities(t *testing.T) {
+	r, session := newFullRouter(t)
+	id := createCharacter(t, r, session)
+	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1,
+		"events": []map[string]any{{"type": "class", "ref": "class:fighter", "level": 1}, {"type": "class", "ref": "class:fighter", "level": 1,
+			"choices":    []map[string]any{{"prompt": "fighter/starting-equipment/backup", "picks": []string{"crossbow-light+crossbow-bolt"}}},
+			"selections": []map[string]any{{"kind": "ref", "key": "plate", "ref": "item:plate-armor", "count": 999}},
+		}},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("append: %d %s", rec.Code, rec.Body)
+	}
+	for _, locale := range []string{"en", "ru"} {
+		rec = send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/events?locale="+locale, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("events: %d %s", rec.Code, rec.Body)
+		}
+		events := decode[characterapi.EventsResponse](t, rec).Events
+		selected := events[len(events)-1].Selections
+		if len(selected) != 2 || selected[0].Ref != "item:crossbow-light" || selected[1].Ref != "item:crossbow-bolt" || selected[1].Count != 20 {
+			t.Fatalf("resolved selection: %+v", selected)
+		}
+	}
+}
+
+func TestPromptEditPreviewDoesNotWrite(t *testing.T) {
+	r, session := newFullRouter(t)
+	id := createCharacter(t, r, session)
+	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1, "events": []map[string]any{{"type": "race", "ref": "race:elf"}},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("append: %d %s", rec.Code, rec.Body)
+	}
+	before := readLog(t, r, session, id).Body.String()
+	rec = send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts?before=2", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("preview: %d %s", rec.Code, rec.Body)
+	}
+	preview := decode[characterapi.PromptsResponse](t, rec)
+	if preview.Seq != 2 || !hasPrompt(preview, "character/race") {
+		t.Fatalf("preview: %+v", preview)
+	}
+	if after := readLog(t, r, session, id).Body.String(); before != after {
+		t.Fatal("preview changed events")
+	}
+	for _, value := range []string{"", "bad", "0", "1", "3"} {
+		rec = send(t, r, session, http.MethodGet, "/v1/characters/"+id+"/prompts?before="+value, nil)
+		if rec.Code < 400 {
+			t.Fatalf("accepted before=%q", value)
+		}
+	}
+}
+
+func TestReviseEventsAtomically(t *testing.T) {
+	r, session := newFullRouter(t)
+	id := createCharacter(t, r, session)
+	rec := send(t, r, session, http.MethodPost, "/v1/characters/"+id+"/events", map[string]any{
+		"expectedSeq": 1, "events": []map[string]any{scoresEvent(), {"type": "race", "ref": "race:dwarf"}, {"type": "subrace", "ref": "subrace:hill-dwarf"}},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("build: %s", rec.Body)
+	}
+	head := decode[characterapi.WriteResponse](t, rec)
+	payload := map[string]any{"expectedSeq": head.Seq, "expectedRevision": head.Revision,
+		"replacements": []map[string]any{
+			{"seq": 3, "event": map[string]any{"type": "race", "ref": "race:elf"}},
+			{"seq": 4, "event": map[string]any{"type": "subrace", "ref": "subrace:high-elf"}},
+		},
+		"events": []map[string]any{{"type": "background", "ref": "background:acolyte"}},
+	}
+	path := "/v1/characters/" + id + "/events/revise"
+	rec = send(t, r, session, http.MethodPost, path+"?dryRun=true", payload)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("preview: %d %s", rec.Code, rec.Body)
+	}
+	preview := decode[characterapi.WriteResponse](t, rec)
+	if preview.Seq != 5 || len(preview.Dropped) != 0 {
+		t.Fatalf("preview = %+v", preview)
+	}
+	stored := decode[characterapi.EventsResponse](t, readLog(t, r, session, id))
+	if stored.Events[2].Ref != "race:dwarf" || stored.Seq != 4 {
+		t.Fatal("preview wrote changes")
+	}
+	rec = send(t, r, session, http.MethodPost, path, payload)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("commit: %d %s", rec.Code, rec.Body)
+	}
+	stored = decode[characterapi.EventsResponse](t, readLog(t, r, session, id))
+	if stored.Seq != 5 || stored.Events[2].Ref != "race:elf" || stored.Events[3].Ref != "subrace:high-elf" || stored.Events[4].Ref != "background:acolyte" {
+		t.Fatalf("not all changes saved: %+v", stored)
+	}
+	rec = send(t, r, session, http.MethodPost, path, payload)
+	if rec.Code == http.StatusOK {
+		t.Fatal("accepted stale draft")
+	}
+	rec = send(t, r, nil, http.MethodPost, path, payload)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated = %d", rec.Code)
 	}
 }

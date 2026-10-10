@@ -133,7 +133,7 @@ func TestOmittedKeysFallBackToDefaults(t *testing.T) {
 	if cfg.Log.Format != FormatJSON {
 		t.Errorf("Log.Format = %q, want %q", cfg.Log.Format, FormatJSON)
 	}
-	if cfg.Data.SRDDir != "data/srd_5.1" {
+	if cfg.Data.SRDDir != "data/pack/srd-5.1" {
 		t.Errorf("SRDDir = %q, want the repo-relative default", cfg.Data.SRDDir)
 	}
 }
@@ -162,6 +162,9 @@ log:
   format: text
 data:
   srd_dir: /srv/srd
+  autoload_packs:
+    - path: /srv/dnd
+      id: dnd-2014
 auth:
   rp_id: example.test
   rp_name: Example
@@ -189,6 +192,9 @@ auth:
 	}
 	if cfg.Data.SRDDir != "/srv/srd" {
 		t.Errorf("SRDDir = %q", cfg.Data.SRDDir)
+	}
+	if len(cfg.Data.AutoloadPacks) != 1 || cfg.Data.AutoloadPacks[0] != (PackFolder{Path: "/srv/dnd", ID: "dnd-2014"}) {
+		t.Errorf("AutoloadPacks = %+v", cfg.Data.AutoloadPacks)
 	}
 	if cfg.Auth.RPID != "example.test" || cfg.Auth.RPDisplayName != "Example" {
 		t.Errorf("RP = %q/%q", cfg.Auth.RPID, cfg.Auth.RPDisplayName)
@@ -338,33 +344,6 @@ func TestOriginsMustCarryAScheme(t *testing.T) {
 func TestAuthTTLsMustBePositive(t *testing.T) {
 	loadErr(t, "env: development\nauth:\n  session_ttl: -1h\n", "with a negative session TTL")
 	loadErr(t, "env: development\nauth:\n  ceremony_ttl: 0s\n", "with a zero ceremony TTL")
-}
-
-// --- permissions ------------------------------------------------------------
-
-// The config file holds the session signing key, so a world-readable one means
-// every account on the host can forge a session cookie. internal/app warns.
-func TestWorldReadableConfigIsFlagged(t *testing.T) {
-	path := writeConfig(t, "env: development\n")
-
-	cfg, err := Load(path)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if cfg.WorldReadable {
-		t.Error("WorldReadable is true for a 0600 file")
-	}
-
-	if err := os.Chmod(path, 0o644); err != nil {
-		t.Fatalf("chmod: %v", err)
-	}
-	cfg, err = Load(path)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if !cfg.WorldReadable {
-		t.Error("WorldReadable is false for a 0644 file; internal/app would not warn")
-	}
 }
 
 // --- database ---------------------------------------------------------------
@@ -581,4 +560,60 @@ func TestGooglePlaceholderSecretIsRejected(t *testing.T) {
 func TestGoogleRejectsAnUnknownKey(t *testing.T) {
 	loadErr(t, "env: development\nauth:\n  google:\n    clientid: an-id\n",
 		"with a misspelt key inside auth.google")
+}
+
+func TestAgentConfigurationIsOptionalAndBounded(t *testing.T) {
+	cfg := loadOK(t, "env: development\n")
+	if cfg.Agent.APIKey != "" || cfg.Agent.Workers != 4 || cfg.Agent.RequestTimeout != 2*time.Minute {
+		t.Fatalf("unexpected agent defaults: %+v", cfg.Agent)
+	}
+	cfg = loadOK(t, "env: development\nagent:\n  api_key: example\n  model: configured-model\n  workers: 2\n  max_turns: 15\n  request_timeout: 30s\n")
+	if cfg.Agent.Workers != 2 || cfg.Agent.RequestTimeout != 30*time.Second || cfg.Agent.Model != "configured-model" {
+		t.Fatal("agent configuration ignored")
+	}
+	for _, body := range []string{"api_key: example", "workers: 33", "request_timeout: 0s", "request_timeout: 11m", "max_turns: -1"} {
+		loadErr(t, "env: development\nagent:\n  "+body+"\n", "invalid agent setting")
+	}
+}
+
+// --- the environment over the file --------------------------------------------
+
+// Secrets and a development slot arrive from the environment and win over the
+// file; everything else stays what the file said.
+func TestEnvironmentOverridesTheFile(t *testing.T) {
+	t.Setenv("EASYDND_HTTP_PORT", "18083")
+	t.Setenv("EASYDND_RP_ID", "dev.example.com")
+	t.Setenv("EASYDND_RP_ORIGINS", "http://dev.example.com:8883,http://localhost:8083")
+	t.Setenv("EASYDND_DB_URL", "postgres://u:p@127.0.0.1:5443/easydnd?sslmode=disable")
+	t.Setenv("EASYDND_AGENT_API_KEY", "sk-test")
+	t.Setenv("EASYDND_GOOGLE_CLIENT_ID", "id.apps.googleusercontent.com")
+	t.Setenv("EASYDND_GOOGLE_CLIENT_SECRET", "shh")
+
+	cfg := loadOK(t, "env: development\nhttp:\n  port: \"8080\"\nagent:\n  model: some-model\nlog:\n  format: text\n")
+
+	if cfg.HTTP.Port != "18083" {
+		t.Errorf("Port = %q, want the environment's", cfg.HTTP.Port)
+	}
+	if cfg.Auth.RPID != "dev.example.com" || len(cfg.Auth.RPOrigins) != 2 {
+		t.Errorf("RPID %q origins %v, want the slot's", cfg.Auth.RPID, cfg.Auth.RPOrigins)
+	}
+	if !cfg.DB.Enabled() || cfg.Agent.APIKey != "sk-test" || cfg.Agent.Model != "some-model" {
+		t.Errorf("db %q agent %q/%q", cfg.DB.URL, cfg.Agent.APIKey, cfg.Agent.Model)
+	}
+	// The browser goes back to the origin it signed in from, which is the
+	// first one -- a different port in every worktree.
+	if want := "http://dev.example.com:8883" + GoogleRedirectPath; cfg.Auth.Google.RedirectURL != want {
+		t.Errorf("RedirectURL = %q, want %q", cfg.Auth.Google.RedirectURL, want)
+	}
+	if cfg.Log.Format != FormatText {
+		t.Errorf("log.format = %q, want the file's value untouched", cfg.Log.Format)
+	}
+}
+
+// A model with no key is the AI Wizard left off, not a mistake: the model is
+// committed and the key is not.
+func TestAgentModelWithoutAKeyIsOff(t *testing.T) {
+	if cfg := loadOK(t, "env: development\nagent:\n  model: some-model\n"); cfg.Agent.APIKey != "" {
+		t.Errorf("APIKey = %q, want none", cfg.Agent.APIKey)
+	}
 }

@@ -42,6 +42,7 @@ import { offersOptions } from './options'
  */
 export function choiceName(t: Translate, prompt: Prompt): string {
   const { choose, kind } = prompt.choice
+  if (prompt.purpose !== undefined) return spellChoiceName(t, prompt.purpose, choose)
   // The two questions the character poses about itself, named by their own
   // slugs before the kind is consulted, because the ruleset shares `text`
   // with the name and neither is a choice of something in the compendium.
@@ -131,4 +132,20 @@ export function writtenAs(prompt: Prompt): { path: string; noun: MessageKey } | 
  */
 export function writtenLabel(path: string): MessageKey | undefined {
   return Object.values(WRITTEN).find((each) => each.path === path)?.noun
+}
+
+/** Purpose comes from the rules engine, including preparation versus learning. */
+export function spellChoiceName(t: Translate, purpose: string, count: number): string {
+ switch (purpose) {
+ case 'custom': return t('spellRules.custom')
+ case 'cantrip': return t('choice.cantrip', { count })
+ case 'known': return t('choice.knownSpell', { count })
+ case 'spellbook': return t('choice.spellbook', { count })
+ case 'prepared': return t('choice.preparedSpell', { count })
+ case 'forget': return t('choice.forgetSpell')
+ case 'replace': return t('choice.replaceSpell')
+ case 'arcanum': return t('choice.arcanum')
+ case 'mastery': return t('choice.mastery')
+ default: return t('choice.spell', { count })
+ }
 }

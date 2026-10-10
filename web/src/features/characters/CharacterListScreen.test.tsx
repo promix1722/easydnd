@@ -23,10 +23,9 @@ const CAMPAIGN = { id: 'fld_000002', name: 'Campaign', default: false }
 // order at all: with one there is nothing to move it past.
 const RETIRED = { id: 'fld_000003', name: 'Retired', default: false }
 
-const STUB_ID = 'chr_000009'
 
-const ADA = { id: 'chr_000001', folder: DEFAULT_FOLDER.id, name: 'Ada', level: 3, classes: [] }
-const BRAM = { id: 'chr_000002', folder: CAMPAIGN.id, name: 'Bram', level: 1, classes: [] }
+const ADA = { id: 'chr_000001', folder: DEFAULT_FOLDER.id, name: 'Ada', image: 'data:image/webp;base64,cG9ydHJhaXQ=', level: 3, classes: [] }
+const BRAM = { id: 'chr_000002', folder: CAMPAIGN.id, name: 'Bram', level: 1, classes: [{ class: 'wizard', level: 1 }] }
 
 interface Call {
   url: string
@@ -58,9 +57,6 @@ function mockApi() {
         return json(null, 204)
       }
       if (url.includes('/copy')) return json({ id: 'chr_000003', seq: 2, sheet: {} }, 201)
-      // Ahead of the catch-all below: the stub answers with a character, not
-      // the 204 every other write on this screen returns.
-      if (url.includes('/v1/characters/stub')) return json({ id: STUB_ID, seq: 9, sheet: {} }, 201)
       if (method !== 'GET') return json(null, 204)
       return json({ characters: [ADA, BRAM] })
     }),
@@ -85,7 +81,7 @@ function renderList(viewport: 'mobile' | 'desktop') {
       <Routes>
         <Route path="/" element={<CharacterListScreen />} />
         <Route path="/characters/new" element={<Landed label="new character screen" />} />
-        <Route path="/characters/import" element={<Landed label="import screen" />} />
+        <Route path="/ai-wizard" element={<Landed label="import screen" />} />
         <Route path="/characters/:id" element={<div>character sheet</div>} />
       </Routes>
     </MemoryRouter>,
@@ -144,11 +140,13 @@ describe.each(['mobile', 'desktop'] as const)('CharacterListScreen (%s)', (viewp
     renderList(viewport)
 
     expect(await screen.findByText('Ada')).toBeInTheDocument()
+    expect(screen.getAllByAltText('').find((avatar) => avatar.getAttribute('src') === ADA.image)).toBeInTheDocument()
 
     // Not "Ada is on the page and says Default beside her" -- Ada is *inside*
     // the Default folder's panel, which is the claim the layout now makes.
     expect(within(folderBody(DEFAULT_FOLDER.id)).getByText('Ada')).toBeInTheDocument()
     expect(within(folderBody(CAMPAIGN.id)).getByText('Bram')).toBeInTheDocument()
+    expect(within(folderBody(CAMPAIGN.id)).getByAltText('')).toHaveAttribute('src', '/avatars/wizard.webp')
     expect(within(folderBody(CAMPAIGN.id)).queryByText('Ada')).not.toBeInTheDocument()
 
     // An empty folder still draws, and says so.
@@ -322,37 +320,6 @@ describe('CharacterListScreen', () => {
     expect(
       screen.getByRole('button', { name: 'Collapse Default' }).closest('[draggable="true"]'),
     ).toBeNull()
-  })
-
-  // The stub is a development convenience, and these two say it behaves like
-  // the buttons beside it rather than like a special case. It renders here
-  // because Vitest runs with import.meta.env.DEV set; that a production bundle
-  // omits it is not something a test in this environment can observe.
-  it('creates a stub character and opens its sheet', async () => {
-    const user = setupUser()
-    renderList(viewport)
-    await screen.findByText('Ada')
-
-    await user.click(screen.getByRole('button', { name: 'Stub in Default' }))
-
-    // No body: what the stub makes is the server's to decide.
-    const request = onlyRequestTo('/v1/characters/stub', 'POST')
-    expect(request.body).toBe('')
-    // The sheet, not the build screen -- unlike an import, this character is
-    // finished, so there is nothing to send the player back to answer.
-    expect(await screen.findByText('character sheet')).toBeInTheDocument()
-  })
-
-  it('files the stub into the folder whose button was pressed', async () => {
-    const user = setupUser()
-    renderList(viewport)
-    await screen.findByText('Ada')
-
-    await user.click(screen.getByRole('button', { name: 'Stub in Campaign' }))
-
-    await waitFor(() => {
-      onlyRequestTo(`/v1/characters/stub?folder=${CAMPAIGN.id}`, 'POST')
-    })
   })
 
   it('creates a folder', async () => {

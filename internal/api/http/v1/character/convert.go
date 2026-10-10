@@ -1,6 +1,7 @@
 package character
 
 import (
+	"github.com/promix1722/easydnd/internal/api/http/helpers"
 	"strconv"
 	"time"
 
@@ -58,6 +59,7 @@ func summaryOf(s domain.Summary) Summary {
 		ID:      s.ID.String(),
 		Folder:  s.Folder.String(),
 		Name:    s.Name,
+		Image:   s.Image,
 		Level:   s.Level,
 		Classes: classLevels(s.Classes),
 	}
@@ -68,17 +70,30 @@ func characterOf(c domain.Character) Character {
 	for _, e := range c.Log.Events {
 		events = append(events, eventOf(e))
 	}
-	return Character{ID: c.ID.String(), Seq: c.Log.LastSeq(), Events: events}
+	out := Character{ID: c.ID.String(), Seq: c.Log.LastSeq(), Revision: c.Revision, Rules: helpers.RulesLockOf(c.Log.RulesLock()), Events: events}
+	for i, cp := range c.Checkpoints {
+		out.Checkpoints = append(out.Checkpoints, Checkpoint{Index: i, Revision: cp.Revision, Reason: cp.Reason, Rules: helpers.RulesLockOf(cp.Log.RulesLock())})
+	}
+	return out
 }
 
 func eventOf(e domain.Event) Event {
 	out := Event{
+		Observed: e.Observed,
+		Evidence: e.Evidence,
+		ID:       e.ID, SchemaVersion: e.SchemaVersion, Resource: e.Resource.String(), Amount: e.Amount, Trigger: e.Trigger,
 		Seq:    e.Seq,
 		Type:   e.Type.String(),
 		Source: sourceString(e.Source),
 		Ref:    refString(e.Ref),
 		Level:  e.Level,
 		Note:   e.Note,
+	}
+	if len(e.Allocations) > 0 {
+		out.Allocations = map[string]int{}
+		for k, v := range e.Allocations {
+			out.Allocations[k.String()] = v
+		}
 	}
 	if !e.At.IsZero() {
 		out.At = e.At.UTC().Format(time.RFC3339)
@@ -141,7 +156,13 @@ func valueKindName(k domain.ValueKind) string {
 // apart -- the same argument the write handlers make for reading a record back
 // through its own detail path.
 func SheetOf(s domain.State) Sheet {
+	customs := []CustomOption{}
+	for _, c := range s.CustomOptions {
+		customs = append(customs, customOf(c))
+	}
 	out := Sheet{
+		CustomOptions: customs, ImportSession: s.ImportSession, CatalogNames: s.CatalogNames,
+		ImportedNotes: s.ImportedNotes,
 		Identity:      identityOf(s.Identity),
 		Base:          baseOf(s.Base),
 		Abilities:     abilitiesOf(s.Abilities),
@@ -158,12 +179,24 @@ func SheetOf(s domain.State) Sheet {
 		Conditions:    slugStrings(s.Conditions),
 		Proficiencies: slugStrings(s.Proficiencies),
 	}
+	for _, c := range s.Contributions {
+		out.Contributions = append(out.Contributions, Contribution{EventID: c.EventID, Rule: c.Rule.String(), Owner: refString(c.Owner), Target: c.Target, Amount: c.Amount})
+	}
+	out.ManualRules = slugStrings(s.ManualRules)
+	for _, a := range s.PackActions {
+		costs := map[string]int{}
+		for id, n := range a.Costs {
+			costs[id.String()] = n
+		}
+		out.PackActions = append(out.PackActions, ActionOffer{ID: a.ID.String(), Owner: refString(a.Owner), Name: a.Name, Manual: a.Manual, Available: a.Available, Costs: costs})
+	}
 	return out
 }
 
 func identityOf(i domain.Identity) Identity {
 	return Identity{
 		Name:              i.Name,
+		Image:             i.Image,
 		Alignment:         i.Alignment.String(),
 		Race:              i.Race.String(),
 		Subrace:           i.Subrace.String(),
@@ -207,7 +240,7 @@ func baseOf(b domain.Base) Base {
 func abilitiesOf(a domain.Abilities) Abilities {
 	scores := make(map[string]int, len(rules.Abilities()))
 	modifiers := make(map[string]int, len(rules.Abilities()))
-	for _, ability := range rules.Abilities() {
+	for ability := range a.Scores {
 		key := ability.Slug().String()
 		scores[key] = a.Score(ability)
 		modifiers[key] = a.Modifier(ability)
@@ -225,8 +258,7 @@ func skillsOf(s domain.Skills) map[string]Skill {
 
 func savesOf(s domain.SavingThrows) map[string]SavingThrow {
 	out := make(map[string]SavingThrow, len(rules.Abilities()))
-	for _, ability := range rules.Abilities() {
-		state := s.ByAbility[ability]
+	for ability, state := range s.ByAbility {
 		out[ability.Slug().String()] = SavingThrow{Proficient: state.Proficient, Bonus: state.Bonus}
 	}
 	return out
@@ -255,11 +287,12 @@ func equipmentOf(e domain.Equipment) Equipment {
 		Equipped: stacksOf(e.Equipped),
 		Backpack: stacksOf(e.Backpack),
 		Loot:     stacksOf(e.Loot),
+		Custom:   e.Custom.String(),
 	}
 	if len(e.Purse) > 0 {
 		out.Purse = make(map[string]int, len(e.Purse))
 		for unit, amount := range e.Purse {
-			out.Purse[string(unit)] = amount
+			out.Purse[unit.String()] = amount
 		}
 	}
 	return out
@@ -295,6 +328,22 @@ func resourcesOf(r domain.Resources) Resources {
 	for _, p := range r.Class {
 		out.Class = append(out.Class, poolOf(p))
 	}
+	out.Pools = map[string]ResourcePool{}
+	for id, p := range r.Pools {
+		v := ResourcePool{ID: id.String(), Definition: p.Definition.String(), Owner: p.Owner.Canonical(), Name: p.Name, Group: p.Group, Max: p.Max, Used: p.Used, Available: p.Available(), Dice: p.Dice, SlotLevel: p.SlotLevel}
+		for _, recovery := range p.Recovery {
+			v.Recovery = append(v.Recovery, recovery.Trigger)
+		}
+		out.Pools[id.String()] = v
+	}
+	out.Parameters = map[string]ResourceParameter{}
+	for id, p := range r.Parameters {
+		value := ResourceParameter{Name: p.Name, Number: p.Number, Dice: p.Dice, Text: p.Text, Boolean: p.Boolean}
+		if p.Rational != nil {
+			value.Rational = &Rational{Numerator: p.Rational.Numerator, Denominator: p.Rational.Denominator}
+		}
+		out.Parameters[id.String()] = value
+	}
 	return out
 }
 
@@ -312,6 +361,9 @@ func spellbookOf(s domain.Spellbook) Spellbook {
 		Known:    slugStrings(s.Known),
 		Prepared: slugStrings(s.Prepared),
 	}
+	for _, source := range s.Sources {
+		out.Sources = append(out.Sources, SpellSource{Source: refString(source.Source), Class: source.Class.String(), Ability: source.Ability.Slug().String(), Cantrips: slugStrings(source.Cantrips), Known: slugStrings(source.Known), Spellbook: slugStrings(source.Spellbook), Prepared: slugStrings(source.Prepared), Arcanum: slugStrings(source.Arcanum), Mastery: slugStrings(source.Mastery), PreparationLimit: source.PreparationLimit})
+	}
 	if s.Ability != rules.AbilityNone {
 		out.Ability = s.Ability.Slug().String()
 	}
@@ -322,14 +374,15 @@ func actionsOf(actions []domain.Action) []Action {
 	out := make([]Action, 0, len(actions))
 	for _, a := range actions {
 		action := Action{
-			Source: a.Source.String(),
-			Origin: refString(a.Origin),
-			Kind:   a.Kind.String(),
-			Name:   a.Name,
-			Range:  int(a.Range),
-			ToHit:  a.ToHit,
-			Uses:   a.Uses.String(),
-			Notes:  a.Notes,
+			Source:   a.Source.String(),
+			Origin:   refString(a.Origin),
+			Kind:     a.Kind.String(),
+			Category: a.Category.String(),
+			Name:     a.Name,
+			Range:    int(a.Range),
+			ToHit:    a.ToHit,
+			Uses:     a.Uses.String(),
+			Notes:    a.Notes,
 		}
 		if a.Damage != nil {
 			action.Damage = a.Damage.Dice.String()
@@ -375,7 +428,13 @@ func toEvent(p Event, index int) (domain.Event, []types.FieldError) {
 	// Source is deliberately not read. The server writes it, from the prompt
 	// the event turns out to answer; taking it from the body would let a
 	// client file its own answer under whatever category suited it.
-	out := domain.Event{Type: eventType, Level: p.Level, Note: p.Note}
+	out := domain.Event{Type: eventType, Level: p.Level, Note: p.Note, SchemaVersion: p.SchemaVersion, Resource: rules.Slug(p.Resource), Amount: p.Amount, Trigger: p.Trigger}
+	if len(p.Allocations) > 0 {
+		out.Allocations = map[rules.Slug]int{}
+		for k, v := range p.Allocations {
+			out.Allocations[rules.Slug(k)] = v
+		}
+	}
 	if p.Ref != "" {
 		ref, ok := rules.ParseRef(p.Ref)
 		if !ok {

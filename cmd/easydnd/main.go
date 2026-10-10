@@ -87,7 +87,7 @@ func run() error {
 // migrate runs one schema command and returns without starting the server.
 //
 // The normal path needs none of this: a release migrates itself at startup.
-// This exists for the operator who set DB_MIGRATE_ON_START=false to stage a
+// This exists for the operator who set db.migrate_on_start: false to stage a
 // risky change, and for reading the current state of a database without
 // guessing from the logs.
 func migrate(ctx context.Context, cfg *config.Config, log *slog.Logger, name string, force bool) error {

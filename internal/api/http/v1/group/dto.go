@@ -31,6 +31,7 @@ type Summary struct {
 type Member struct {
 	UserID      string `json:"user_id"`
 	DisplayName string `json:"display_name"`
+	Image       string `json:"image,omitempty"`
 	Role        string `json:"role"`
 	JoinedAt    string `json:"joined_at"`
 

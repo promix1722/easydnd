@@ -1,12 +1,16 @@
 import { useState } from 'react'
 
+import { useAppearance } from '@/lib/appearance'
+import { isAppearance } from '@/lib/appearance/preferences'
 import { useAuth } from '@/lib/auth'
+import { setProfileImage } from '@/lib/api'
+import { useAction } from '@/lib/useAction'
 import { formatDate, useLocale, useT } from '@/lib/i18n'
 import type { Translate } from '@/lib/i18n'
-import { Alert, Badge, Button, Card, Group, Page, Stack, Text, Title } from '@/ui'
+import { AvatarEditor, playerAvatar, Alert, Badge, Button, Card, Group, Page, Select, Stack, Text, Title } from '@/ui'
 
 /**
- * Everything about how this account is reached.
+ * Personal appearance and the ways this account is reached.
  *
  * It exists because linking needs somewhere to live: connecting and
  * disconnecting a provider is an inventory of the ways in, and an inventory
@@ -40,22 +44,20 @@ import { Alert, Badge, Button, Card, Group, Page, Stack, Text, Title } from '@/u
 export function AccountScreen() {
   const t = useT()
   const locale = useLocale()
-  const { user, providers, linkProvider, unlinkProvider, busy, error } = useAuth()
+  const { user, providers, linkProvider, unlinkProvider, busy, error, refresh } = useAuth()
+  const avatar = useAction(setProfileImage)
+  const [imageDraft, setImageDraft] = useState<string | undefined>(undefined)
   const [confirming, setConfirming] = useState<string | null>(null)
 
   if (!user) return null
 
-  // A guest has no account: nothing to inventory, nothing to connect, and
-  // nothing that would survive the session anyway. Offering "Connect Google"
-  // here would be offering to link a provider to a record that does not exist,
-  // and the server would refuse it -- so the page draws none of it.
-  //
-  // What it does not do any more is explain itself. The subtitle says what this
-  // session is, and an alert under it spelling out what a guest session lacks
-  // was a page scolding somebody for the way they chose to come in, on the one
-  // screen where there is nothing they can do about it.
+  // Guests still have personal appearance settings, but no ways-in inventory.
   if (user.anonymous) {
-    return <Page trail={trail(t)} namedByChrome subtitle={t('account.asGuest')} />
+    return (
+      <Page trail={trail(t)} namedByChrome subtitle={t('account.asGuest')}>
+        <AppearanceCard />
+      </Page>
+    )
   }
 
   const methods = user.credentials.length + user.identities.length
@@ -66,6 +68,18 @@ export function AccountScreen() {
   return (
     <Page trail={trail(t)} namedByChrome>
       <Stack gap="lg">
+        <Card withBorder padding="md">
+          <Stack gap="sm">
+            <Title order={4}>{t('account.profile')}</Title>
+            <Text size="sm">{user.display_name}</Text>
+            <AvatarEditor fallback={playerAvatar(user.id)} image={imageDraft ?? user.image} pending={avatar.pending} error={avatar.error} onSave={async (image) => {
+              setImageDraft(image)
+              const saved = await avatar.run(image)
+              if (saved !== null) { await refresh(); setImageDraft(undefined) }
+            }} />
+          </Stack>
+        </Card>
+        <AppearanceCard />
         {error ? (
           <Alert color="red" title={t('group.actionFailed')}>
             {error}
@@ -208,4 +222,51 @@ function trail(t: Translate) {
 function added(locale: string, value: string, t: Translate): string {
   const at = new Date(value)
   return Number.isNaN(at.getTime()) ? t('account.recently') : formatDate(value, locale)
+}
+
+/** Personal appearance is available even when the session has no account. */
+function AppearanceCard() {
+  const t = useT()
+  const { appearance, change, loading, loadFailed, reload, saving, failed } = useAppearance()
+  function select(field: 'palette' | 'color_scheme', value: string | null) {
+    const next = { ...appearance, [field]: value }
+    if (isAppearance(next)) void change(next)
+  }
+  return (
+    <Card withBorder padding="md">
+      <Stack gap="sm">
+        <Title order={4}>{t('appearance.title')}</Title>
+        <Select
+          label={t('appearance.palette')}
+          value={appearance.palette}
+          disabled={loading || saving}
+          allowDeselect={false}
+          data={[
+            { value: 'dragon', label: t('appearance.dragon') },
+            { value: 'parchment', label: t('appearance.parchment') },
+            { value: 'midnight', label: t('appearance.midnight') },
+            { value: 'moss', label: t('appearance.moss') },
+          ]}
+          onChange={(value) => select('palette', value)}
+        />
+        <Select
+          label={t('appearance.mode')}
+          value={appearance.color_scheme}
+          disabled={loading || saving}
+          allowDeselect={false}
+          data={[
+            { value: 'auto', label: t('appearance.system') },
+            { value: 'light', label: t('appearance.light') },
+            { value: 'dark', label: t('appearance.dark') },
+          ]}
+          onChange={(value) => select('color_scheme', value)}
+        />
+        {loadFailed ? <Alert color="red">
+          {t('appearance.loadFailed')}
+          <Button variant="subtle" onClick={reload} disabled={saving}>{t('page.retry')}</Button>
+        </Alert> : null}
+        {failed ? <Alert color="red">{t('appearance.saveFailed')}</Alert> : null}
+      </Stack>
+    </Card>
+  )
 }

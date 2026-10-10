@@ -99,7 +99,9 @@ type Trait struct {
 // Every field is optional; a nil or zero field means the trait does not use
 // that mechanism.
 type TraitSpecific struct {
-	// BreathWeapon is the dragonborn's, keyed by draconic ancestry.
+	// BreathWeapon describes the dragonborn attack granted automatically by
+	// draconic ancestry. The legacy catalogue encodes it as a single-option
+	// Choice, but it must never be offered as a character-building prompt.
 	BreathWeapon *rules.Choice
 
 	// SpellOptions is a prompt to learn a spell, e.g. the high elf's cantrip.

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor } from '@testing-library/react'
 
 import { useReleaseWatch } from './useReleaseWatch'
@@ -10,9 +10,8 @@ import { useReleaseWatch } from './useReleaseWatch'
  * none of them make a request until someone does something, so without this
  * they would sit on deleted code indefinitely.
  *
- * `own` is passed explicitly throughout. A test bundle reports "dev", and "dev"
- * is the one value the watch must ignore, so leaning on the default would make
- * every assertion below pass for the wrong reason.
+ * Tests select the build mode and pass `own` explicitly. The default test
+ * bundle reports "dev", which would hide version regressions.
  */
 function Probe({ own }: { own: string }) {
   return <span>{useReleaseWatch(own) ? 'stale' : 'current'}</span>
@@ -43,6 +42,21 @@ async function becomeVisible(): Promise<void> {
 }
 
 describe('useReleaseWatch', () => {
+  beforeEach(() => { vi.stubEnv('DEV', false) })
+  afterEach(() => { vi.unstubAllEnvs() })
+
+  it('does not check on visibility changes in a commit-versioned Vite dev tab', async () => {
+    vi.stubEnv('DEV', true)
+    serving('b4a4f57')
+    render(<Probe own="b51d414" />)
+
+    await becomeVisible()
+    await becomeVisible()
+
+    expect(fetch).not.toHaveBeenCalled()
+    expect(screen.getByText('current')).toBeInTheDocument()
+  })
+
   it('asks when the tab becomes visible, and reports a release it is behind', async () => {
     serving('v1.0.5')
     render(<Probe own="v1.0.4" />)

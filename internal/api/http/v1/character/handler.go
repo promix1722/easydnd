@@ -7,11 +7,13 @@ import (
 
 	"github.com/promix1722/easydnd/internal/api/http/middleware"
 	domain "github.com/promix1722/easydnd/internal/domain/character"
+	agentuc "github.com/promix1722/easydnd/internal/usecase/agent"
 	charuc "github.com/promix1722/easydnd/internal/usecase/character"
 )
 
 // Handler serves the character resource.
 type Handler struct {
+	agent   *agentuc.Agent
 	service *charuc.Service
 	log     *slog.Logger
 }
@@ -56,3 +58,6 @@ const FolderQueryParam = "folder"
 func folderOf(c *gin.Context) domain.FolderID {
 	return domain.FolderID(c.Query(FolderQueryParam))
 }
+
+// WithAgent installs the optional import coordinator.
+func (h *Handler) WithAgent(a *agentuc.Agent) *Handler { h.agent = a; return h }

@@ -7,8 +7,8 @@ import (
 
 // The wire vocabulary: every enum the on-disk format spells as a string.
 //
-// These constants are exported because cmd/srdgen writes them and this
-// package reads them. Sharing the spelling is what stops the generator and
+// These constants are exported because the tools that write a pack use them
+// and this package reads them. Sharing the spelling is what stops a writer and
 // the loader from disagreeing about, say, whether a two-handed weapon's
 // category is "martial" or "Martial" -- a mismatch that would surface as a
 // silently uncategorised weapon rather than as an error.
@@ -97,6 +97,10 @@ const (
 	AreaSphere   = "sphere"
 )
 
+// ActionKinds are the parts of a turn an action tag or a standalone action
+// may name.
+var ActionKinds = []string{"action", "bonus-action", "reaction", "free-action"}
+
 // Weapon categories and ranges.
 const (
 	WeaponSimple  = "simple"
@@ -111,6 +115,20 @@ const (
 	ArmorMedium = "medium"
 	ArmorHeavy  = "heavy"
 	ArmorShield = "shield"
+)
+
+// Equipment slots: where an item is worn or wielded.
+const (
+	SlotHead     = "head"
+	SlotNeck     = "neck"
+	SlotBack     = "back"
+	SlotBody     = "body"
+	SlotArms     = "arms"
+	SlotWaist    = "waist"
+	SlotFeet     = "feet"
+	SlotRing     = "ring"
+	SlotMainHand = "main-hand"
+	SlotOffHand  = "off-hand"
 )
 
 // Magic item rarities.
@@ -219,6 +237,22 @@ var armorCategories = map[string]catalog.ArmorCategory{
 	ArmorMedium: catalog.MediumArmor,
 	ArmorHeavy:  catalog.HeavyArmor,
 	ArmorShield: catalog.Shield,
+}
+
+var slots = map[string]catalog.Slot{
+	SlotHead: catalog.SlotHead,
+	SlotNeck: catalog.SlotNeck,
+	SlotBack: catalog.SlotBack,
+	SlotBody: catalog.SlotBody,
+	SlotArms: catalog.SlotArms,
+	// "hands" was its own slot once. Archived SRD releases and the private
+	// 2014 pack still write it, so it stays readable, as arms.
+	"hands":      catalog.SlotArms,
+	SlotWaist:    catalog.SlotWaist,
+	SlotFeet:     catalog.SlotFeet,
+	SlotRing:     catalog.SlotRing,
+	SlotMainHand: catalog.SlotMainHand,
+	SlotOffHand:  catalog.SlotOffHand,
 }
 
 var rarities = map[string]catalog.Rarity{

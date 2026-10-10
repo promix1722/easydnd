@@ -135,9 +135,8 @@ function jsonResponse(body: unknown, status = 200): Response {
 /**
  * The prompts a character still has outstanding.
  *
- * Two groups on purpose: what the sheet reads off this response is only
- * whether it is empty, so a fixture with one prompt in one group would pass
- * against a screen that had gone looking at the group.
+ * What the sheet reads off this response is only `complete`: required
+ * prompts here, and the optional-only case has its own test below.
  */
 const OPEN = {
   seq: 3,
@@ -176,9 +175,12 @@ function mockApi(sheet: Sheet, prompts: unknown = { seq: 3, complete: true, prom
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url.includes('/sheet')) return jsonResponse(sheet)
+      // The sheet arrives with what its slugs mean. A request to the
+      // catalogue from this screen is the regression: it used to make
+      // fourteen, the whole spell list among them.
+      if (url.includes('/catalog')) throw new Error(`the sheet asked the catalogue: ${url}`)
+      if (url.includes('/sheet')) return jsonResponse({ catalog: { skills: SKILL_CATALOG }, ...sheet })
       if (url.includes('/prompts')) return jsonResponse(prompts)
-      if (url.includes('/catalog/skills')) return jsonResponse(SKILL_CATALOG)
       return jsonResponse([])
     }),
   )
@@ -259,9 +261,9 @@ beforeEach(() => {
  *
  * They used to be four tests at two viewports -- eight mounts of the whole
  * sheet for assertions that never touch it twice. This whole file now runs at
- * desktop: what branches on width is `ui/SectionDeck`, which draws the six
- * sections `SheetBody` builds, and `SheetBody` itself, which orders the first
- * of them two ways. Both are tested where they live -- `SectionDeck.test.tsx`
+ * desktop: what branches on width is `ui/TabDeck`, which draws the tabs
+ * `SheetBody` builds, and `SheetBody` itself, which orders the head of the
+ * overview two ways. Both are tested where they live -- `TabDeck.test.tsx`
  * and `SheetBody.test.tsx`. What is left here is the seam: that the screen
  * fetches the projection, the prompts and the compendium and hands all three
  * on.
@@ -472,8 +474,8 @@ describe('the skills panel', () => {
  * The panel inside the sheet.
  *
  * Everything above renders SkillsPanel on its own, so this is what still proves
- * it is wired into the page: that a failed compendium request reaches it as a
- * null catalogue rather than as a blank sheet.
+ * it is wired into the page: that a sheet which arrives without its resolved
+ * entries reaches it as a null catalogue rather than as a blank sheet.
  *
  * The phone rendering used to be here too, as the one mobile test in the file.
  * It has moved to `SheetBody.test.tsx`, which mounts the body from props rather
@@ -491,16 +493,15 @@ describe('the skills panel, in the sheet', () => {
     return within(panel).getAllByRole('img', { name: /proficien|Expertise/i })
   }
 
-  it('still draws the panel when the compendium could not be fetched', async () => {
-    // A second request failing costs the ability tags and the proper names.
-    // It is not a reason for the sheet to refuse to draw.
+  it('still draws the panel when the sheet resolved nothing', async () => {
+    // Missing entries cost the ability tags and the proper names. They are not
+    // a reason for the sheet to refuse to draw.
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input)
         if (url.includes('/sheet')) return jsonResponse(SHEET)
         if (url.includes('/prompts')) return jsonResponse({ seq: 3, complete: true, prompts: [] })
-        if (url.includes('/catalog/skills')) return jsonResponse({ error: { code: 'boom' } }, 500)
         return jsonResponse([])
       }),
     )
@@ -525,6 +526,15 @@ describe('an unfinished character', () => {
     expect(answer).toHaveAttribute('href', '/characters/chr_000001/build')
     expect(screen.queryByText(/A background/)).not.toBeInTheDocument()
     expect(screen.queryByText(/1 more language/)).not.toBeInTheDocument()
+  })
+
+  it('is not marked unfinished by optional prompts alone', async () => {
+    // An alignment or a custom spell is on offer for ever; the server says
+    // `complete` and the sheet believes it rather than counting what is open.
+    mockApi(SHEET, { seq: 3, complete: true, prompts: OPEN.prompts.map((prompt) => ({ ...prompt, optional: true })) })
+    await renderSheet('desktop')
+
+    expect(screen.queryByText('Unfinished')).not.toBeInTheDocument()
   })
 
   it('still draws the sheet when the prompts could not be fetched', async () => {

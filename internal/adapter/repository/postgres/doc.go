@@ -1,10 +1,10 @@
-// Package postgres is the durable account store.
+// Package postgres is the durable store.
 //
-// It implements internal/domain/user.Repository against PostgreSQL, which in
-// production means an AWS RDS instance. Accounts and their passkeys are the
-// only aggregate kept here: characters and the folders they are filed in still
-// live in internal/adapter/repository/memory, and a restart still costs a
-// player every character they made.
+// It implements every repository port -- accounts, groups, characters,
+// folders, shared pools, games, rule packs and AI Wizard chats -- against
+// PostgreSQL, which in production means an AWS RDS instance. Its in-memory
+// sibling, internal/adapter/repository/memory, is the development fallback
+// and nothing else.
 //
 // This is an outbound adapter, so it depends inward and never sideways. It
 // imports the domain, internal/types and internal/config, and it does not

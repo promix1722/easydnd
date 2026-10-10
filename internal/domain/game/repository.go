@@ -66,6 +66,10 @@ type SharedRepository interface {
 // the table" is a single thing a DM does and must not be a loop of writes that
 // can half succeed.
 type Repository interface {
+	// MutateEntries runs one roster operation atomically against a private copy.
+	// Returning an error leaves the stored roster unchanged.
+	MutateEntries(ctx context.Context, id ID, change func([]Entry) ([]Entry, error)) error
+
 	// Create stores g, reporting a *types.ValidationError if the id is taken.
 	Create(ctx context.Context, g Game) error
 

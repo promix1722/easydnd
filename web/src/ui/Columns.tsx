@@ -26,7 +26,7 @@ export interface ColumnsProps {
  * usually what was come for, and the rest are detail worth having but not worth
  * scrolling past.
  *
- * `SectionDeck` is the other answer, for the case where the sections are peers
+ * `TabDeck` is the other answer, for the case where the sections are peers
  * and a reader moves between them rather than down them. The character sheet
  * used to be here and is there now; see docs/web.md.
  */

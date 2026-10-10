@@ -4,7 +4,9 @@ import (
 	"context"
 	"slices"
 
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/rules"
+	"github.com/promix1722/easydnd/internal/types"
 )
 
 // Key returns the entry's slug, satisfying Keyed for every entity that embeds
@@ -84,6 +86,9 @@ func (c Collection[T]) Len() int { return len(c.items) }
 //
 // A Catalog is safe for concurrent use and must be treated as read-only.
 type Catalog struct {
+	Lock      pack.Lock
+	Mechanics Mechanics
+
 	locale rules.Locale
 
 	// Ruleset is the rules edition the compendium was generated for, e.g.
@@ -187,3 +192,30 @@ type Source interface {
 	// *types.NotFoundError for a locale they do not carry.
 	Load(ctx context.Context, locale rules.Locale) (*Catalog, error)
 }
+
+// LockedSource resolves an exact rules context; it must never substitute latest.
+type LockedSource interface {
+	Source
+	LoadLocked(context.Context, rules.Locale, pack.Lock) (*Catalog, error)
+}
+
+func LoadLocked(ctx context.Context, source Source, locale rules.Locale, lock pack.Lock) (*Catalog, error) {
+	if lock.IsZero() {
+		return source.Load(ctx, locale)
+	}
+	if s, ok := source.(LockedSource); ok {
+		return s.LoadLocked(ctx, locale, lock)
+	}
+	c, err := source.Load(ctx, locale)
+	if err != nil {
+		return nil, err
+	}
+	if !c.Lock.Equal(lock) {
+		return nil, types.NewValidationError("pinned rules context unavailable")
+	}
+	return c, nil
+}
+
+// AbilityIDs is the fixed set of six character ability scores. Packs can
+// grant bonuses and features, but cannot introduce new characteristics.
+func (c *Catalog) AbilityIDs() []rules.Ability { return rules.Abilities() }

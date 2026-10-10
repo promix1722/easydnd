@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router'
 
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
-import { ActionIcon, Group, IconLogout, InstallButton, Tooltip } from '@/ui'
+import { ActionIcon, DevAccounts, Group, IconLogout, InstallButton, Tooltip } from '@/ui'
 
 import { LocaleActions } from './LocaleActions'
 
@@ -69,6 +69,7 @@ export function AccountActions() {
           two are the ones that are not about this session -- somebody signed
           out needs both, which is why SignInActions draws them as well.
           Usually nothing is drawn for the install: see ui/InstallAction.tsx. */}
+      {import.meta.env.DEV && <DevAccounts compact currentName={user?.display_name ?? ''} />}
       <InstallButton />
       <LocaleActions />
       <Tooltip label={signOutLabel} withArrow>

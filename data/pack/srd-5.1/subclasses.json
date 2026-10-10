@@ -1,0 +1,2014 @@
+[
+  {
+    "slug": "berserker",
+    "class": "barbarian"
+  },
+  {
+    "slug": "champion",
+    "class": "fighter"
+  },
+  {
+    "slug": "devotion",
+    "class": "paladin",
+    "spells": [
+      {
+        "spell": "protection-from-evil-and-good",
+        "level": 3
+      },
+      {
+        "spell": "sanctuary",
+        "level": 3
+      },
+      {
+        "spell": "lesser-restoration",
+        "level": 5
+      },
+      {
+        "spell": "zone-of-truth",
+        "level": 5
+      },
+      {
+        "spell": "beacon-of-hope",
+        "level": 9
+      },
+      {
+        "spell": "dispel-magic",
+        "level": 9
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 13
+      },
+      {
+        "spell": "guardian-of-faith",
+        "level": 13
+      },
+      {
+        "spell": "commune",
+        "level": 17
+      },
+      {
+        "spell": "flame-strike",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "draconic",
+    "class": "sorcerer"
+  },
+  {
+    "slug": "evocation",
+    "class": "wizard"
+  },
+  {
+    "slug": "fiend",
+    "class": "warlock",
+    "spells": [
+      {
+        "spell": "burning-hands",
+        "level": 1
+      },
+      {
+        "spell": "command",
+        "level": 1
+      },
+      {
+        "spell": "blindness-deafness",
+        "level": 3
+      },
+      {
+        "spell": "scorching-ray",
+        "level": 3
+      },
+      {
+        "spell": "fireball",
+        "level": 5
+      },
+      {
+        "spell": "stinking-cloud",
+        "level": 5
+      },
+      {
+        "spell": "fire-shield",
+        "level": 7
+      },
+      {
+        "spell": "wall-of-fire",
+        "level": 7
+      },
+      {
+        "spell": "flame-strike",
+        "level": 9
+      },
+      {
+        "spell": "hallow",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "hunter",
+    "class": "ranger"
+  },
+  {
+    "slug": "land",
+    "class": "druid",
+    "spells": [
+      {
+        "spell": "hold-person",
+        "level": 3
+      },
+      {
+        "spell": "spike-growth",
+        "level": 3
+      },
+      {
+        "spell": "sleet-storm",
+        "level": 5
+      },
+      {
+        "spell": "slow",
+        "level": 5
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "ice-storm",
+        "level": 7
+      },
+      {
+        "spell": "commune-with-nature",
+        "level": 9
+      },
+      {
+        "spell": "cone-of-cold",
+        "level": 9
+      },
+      {
+        "spell": "mirror-image",
+        "level": 3
+      },
+      {
+        "spell": "misty-step",
+        "level": 3
+      },
+      {
+        "spell": "water-breathing",
+        "level": 5
+      },
+      {
+        "spell": "water-walk",
+        "level": 5
+      },
+      {
+        "spell": "control-water",
+        "level": 7
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "conjure-elemental",
+        "level": 9
+      },
+      {
+        "spell": "scrying",
+        "level": 9
+      },
+      {
+        "spell": "blur",
+        "level": 3
+      },
+      {
+        "spell": "silence",
+        "level": 3
+      },
+      {
+        "spell": "create-food-and-water",
+        "level": 5
+      },
+      {
+        "spell": "protection-from-energy",
+        "level": 5
+      },
+      {
+        "spell": "blight",
+        "level": 7
+      },
+      {
+        "spell": "hallucinatory-terrain",
+        "level": 7
+      },
+      {
+        "spell": "insect-plague",
+        "level": 9
+      },
+      {
+        "spell": "wall-of-stone",
+        "level": 9
+      },
+      {
+        "spell": "barkskin",
+        "level": 3
+      },
+      {
+        "spell": "spider-climb",
+        "level": 3
+      },
+      {
+        "spell": "call-lightning",
+        "level": 5
+      },
+      {
+        "spell": "plant-growth",
+        "level": 5
+      },
+      {
+        "spell": "divination",
+        "level": 7
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "commune-with-nature",
+        "level": 9
+      },
+      {
+        "spell": "tree-stride",
+        "level": 9
+      },
+      {
+        "spell": "invisibility",
+        "level": 3
+      },
+      {
+        "spell": "pass-without-trace",
+        "level": 3
+      },
+      {
+        "spell": "daylight",
+        "level": 5
+      },
+      {
+        "spell": "haste",
+        "level": 5
+      },
+      {
+        "spell": "divination",
+        "level": 7
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "dream",
+        "level": 9
+      },
+      {
+        "spell": "insect-plague",
+        "level": 9
+      },
+      {
+        "spell": "spider-climb",
+        "level": 3
+      },
+      {
+        "spell": "spike-growth",
+        "level": 3
+      },
+      {
+        "spell": "lightning-bolt",
+        "level": 5
+      },
+      {
+        "spell": "meld-into-stone",
+        "level": 5
+      },
+      {
+        "spell": "stone-shape",
+        "level": 7
+      },
+      {
+        "spell": "stoneskin",
+        "level": 7
+      },
+      {
+        "spell": "passwall",
+        "level": 9
+      },
+      {
+        "spell": "wall-of-stone",
+        "level": 9
+      },
+      {
+        "spell": "acid-arrow",
+        "level": 3
+      },
+      {
+        "spell": "darkness",
+        "level": 3
+      },
+      {
+        "spell": "water-walk",
+        "level": 5
+      },
+      {
+        "spell": "stinking-cloud",
+        "level": 5
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "locate-creature",
+        "level": 7
+      },
+      {
+        "spell": "insect-plague",
+        "level": 9
+      },
+      {
+        "spell": "scrying",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "life",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "bless",
+        "level": 1
+      },
+      {
+        "spell": "cure-wounds",
+        "level": 1
+      },
+      {
+        "spell": "lesser-restoration",
+        "level": 3
+      },
+      {
+        "spell": "spiritual-weapon",
+        "level": 3
+      },
+      {
+        "spell": "beacon-of-hope",
+        "level": 5
+      },
+      {
+        "spell": "revivify",
+        "level": 5
+      },
+      {
+        "spell": "death-ward",
+        "level": 7
+      },
+      {
+        "spell": "mass-cure-wounds",
+        "level": 9
+      },
+      {
+        "spell": "raise-dead",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "lore",
+    "class": "bard"
+  },
+  {
+    "slug": "open-hand",
+    "class": "monk"
+  },
+  {
+    "slug": "thief",
+    "class": "rogue"
+  },
+  {
+    "slug": "aberrant-mind",
+    "class": "sorcerer",
+    "spells": [
+      {
+        "spell": "mind-sliver",
+        "level": 1
+      },
+      {
+        "spell": "arms-of-hadar",
+        "level": 1
+      },
+      {
+        "spell": "dissonant-whispers",
+        "level": 1
+      },
+      {
+        "spell": "calm-emotions",
+        "level": 3
+      },
+      {
+        "spell": "detect-thoughts",
+        "level": 3
+      },
+      {
+        "spell": "hunger-of-hadar",
+        "level": 5
+      },
+      {
+        "spell": "sending",
+        "level": 5
+      },
+      {
+        "spell": "black-tentacles",
+        "level": 7
+      },
+      {
+        "spell": "summon-aberration",
+        "level": 7
+      },
+      {
+        "spell": "telepathic-bond",
+        "level": 9
+      },
+      {
+        "spell": "telekinesis",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "abjuration",
+    "class": "wizard"
+  },
+  {
+    "slug": "alchemist",
+    "class": "artificer",
+    "spells": [
+      {
+        "spell": "healing-word",
+        "level": 3
+      },
+      {
+        "spell": "ray-of-sickness",
+        "level": 3
+      },
+      {
+        "spell": "flaming-sphere",
+        "level": 5
+      },
+      {
+        "spell": "acid-arrow",
+        "level": 5
+      },
+      {
+        "spell": "gaseous-form",
+        "level": 9
+      },
+      {
+        "spell": "mass-healing-word",
+        "level": 9
+      },
+      {
+        "spell": "blight",
+        "level": 13
+      },
+      {
+        "spell": "death-ward",
+        "level": 13
+      },
+      {
+        "spell": "cloudkill",
+        "level": 17
+      },
+      {
+        "spell": "raise-dead",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "ancestral-guardian",
+    "class": "barbarian"
+  },
+  {
+    "slug": "ancients",
+    "class": "paladin",
+    "spells": [
+      {
+        "spell": "ensnaring-strike",
+        "level": 3
+      },
+      {
+        "spell": "speak-with-animals",
+        "level": 3
+      },
+      {
+        "spell": "moonbeam",
+        "level": 5
+      },
+      {
+        "spell": "misty-step",
+        "level": 5
+      },
+      {
+        "spell": "plant-growth",
+        "level": 9
+      },
+      {
+        "spell": "protection-from-energy",
+        "level": 9
+      },
+      {
+        "spell": "ice-storm",
+        "level": 13
+      },
+      {
+        "spell": "stoneskin",
+        "level": 13
+      },
+      {
+        "spell": "commune-with-nature",
+        "level": 17
+      },
+      {
+        "spell": "tree-stride",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "arcane-archer",
+    "class": "fighter",
+    "spells": [
+      {
+        "spell": "prestidigitation",
+        "level": 3
+      },
+      {
+        "spell": "druidcraft",
+        "level": 3
+      }
+    ]
+  },
+  {
+    "slug": "arcane-trickster",
+    "class": "rogue",
+    "spells": [
+      {
+        "spell": "mage-hand",
+        "level": 3
+      }
+    ]
+  },
+  {
+    "slug": "archfey",
+    "class": "warlock"
+  },
+  {
+    "slug": "armorer",
+    "class": "artificer",
+    "spells": [
+      {
+        "spell": "magic-missile",
+        "level": 3
+      },
+      {
+        "spell": "thunderwave",
+        "level": 3
+      },
+      {
+        "spell": "mirror-image",
+        "level": 5
+      },
+      {
+        "spell": "shatter",
+        "level": 5
+      },
+      {
+        "spell": "hypnotic-pattern",
+        "level": 9
+      },
+      {
+        "spell": "lightning-bolt",
+        "level": 9
+      },
+      {
+        "spell": "fire-shield",
+        "level": 13
+      },
+      {
+        "spell": "greater-invisibility",
+        "level": 13
+      },
+      {
+        "spell": "passwall",
+        "level": 17
+      },
+      {
+        "spell": "wall-of-force",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "artillerist",
+    "class": "artificer",
+    "spells": [
+      {
+        "spell": "shield",
+        "level": 3
+      },
+      {
+        "spell": "thunderwave",
+        "level": 3
+      },
+      {
+        "spell": "scorching-ray",
+        "level": 5
+      },
+      {
+        "spell": "shatter",
+        "level": 5
+      },
+      {
+        "spell": "fireball",
+        "level": 9
+      },
+      {
+        "spell": "wind-wall",
+        "level": 9
+      },
+      {
+        "spell": "ice-storm",
+        "level": 13
+      },
+      {
+        "spell": "wall-of-fire",
+        "level": 13
+      },
+      {
+        "spell": "cone-of-cold",
+        "level": 17
+      },
+      {
+        "spell": "wall-of-force",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "assassin",
+    "class": "rogue"
+  },
+  {
+    "slug": "astral-self",
+    "class": "monk"
+  },
+  {
+    "slug": "battle-master",
+    "class": "fighter"
+  },
+  {
+    "slug": "battle-smith",
+    "class": "artificer",
+    "spells": [
+      {
+        "spell": "heroism",
+        "level": 3
+      },
+      {
+        "spell": "shield",
+        "level": 3
+      },
+      {
+        "spell": "branding-smite",
+        "level": 5
+      },
+      {
+        "spell": "warding-bond",
+        "level": 5
+      },
+      {
+        "spell": "aura-of-vitality",
+        "level": 9
+      },
+      {
+        "spell": "conjure-barrage",
+        "level": 9
+      },
+      {
+        "spell": "aura-of-purity",
+        "level": 13
+      },
+      {
+        "spell": "fire-shield",
+        "level": 13
+      },
+      {
+        "spell": "banishing-smite",
+        "level": 17
+      },
+      {
+        "spell": "mass-cure-wounds",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "beast",
+    "class": "barbarian"
+  },
+  {
+    "slug": "beast-master",
+    "class": "ranger"
+  },
+  {
+    "slug": "bladesinging",
+    "class": "wizard"
+  },
+  {
+    "slug": "cavalier",
+    "class": "fighter"
+  },
+  {
+    "slug": "celestial",
+    "class": "warlock",
+    "spells": [
+      {
+        "spell": "sacred-flame",
+        "level": 1
+      },
+      {
+        "spell": "light",
+        "level": 1
+      }
+    ]
+  },
+  {
+    "slug": "clockwork-soul",
+    "class": "sorcerer",
+    "spells": [
+      {
+        "spell": "alarm",
+        "level": 1
+      },
+      {
+        "spell": "protection-from-evil-and-good",
+        "level": 1
+      },
+      {
+        "spell": "aid",
+        "level": 3
+      },
+      {
+        "spell": "lesser-restoration",
+        "level": 3
+      },
+      {
+        "spell": "dispel-magic",
+        "level": 5
+      },
+      {
+        "spell": "protection-from-energy",
+        "level": 5
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "summon-construct",
+        "level": 7
+      },
+      {
+        "spell": "greater-restoration",
+        "level": 9
+      },
+      {
+        "spell": "wall-of-force",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "conjuration",
+    "class": "wizard"
+  },
+  {
+    "slug": "conquest",
+    "class": "paladin",
+    "spells": [
+      {
+        "spell": "armor-of-agathys",
+        "level": 3
+      },
+      {
+        "spell": "command",
+        "level": 3
+      },
+      {
+        "spell": "hold-person",
+        "level": 5
+      },
+      {
+        "spell": "spiritual-weapon",
+        "level": 5
+      },
+      {
+        "spell": "bestow-curse",
+        "level": 9
+      },
+      {
+        "spell": "fear",
+        "level": 9
+      },
+      {
+        "spell": "dominate-beast",
+        "level": 13
+      },
+      {
+        "spell": "stoneskin",
+        "level": 13
+      },
+      {
+        "spell": "cloudkill",
+        "level": 17
+      },
+      {
+        "spell": "dominate-person",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "creation",
+    "class": "bard"
+  },
+  {
+    "slug": "divination",
+    "class": "wizard"
+  },
+  {
+    "slug": "divine-soul",
+    "class": "sorcerer",
+    "spells": [
+      {
+        "spell": "cure-wounds",
+        "level": 1
+      },
+      {
+        "spell": "inflict-wounds",
+        "level": 1
+      },
+      {
+        "spell": "bless",
+        "level": 1
+      },
+      {
+        "spell": "bane",
+        "level": 1
+      },
+      {
+        "spell": "protection-from-evil-and-good",
+        "level": 1
+      }
+    ]
+  },
+  {
+    "slug": "dreams",
+    "class": "druid"
+  },
+  {
+    "slug": "drunken-master",
+    "class": "monk"
+  },
+  {
+    "slug": "eldritch-knight",
+    "class": "fighter"
+  },
+  {
+    "slug": "eloquence",
+    "class": "bard"
+  },
+  {
+    "slug": "enchantment",
+    "class": "wizard"
+  },
+  {
+    "slug": "fathomless",
+    "class": "warlock",
+    "spells": [
+      {
+        "spell": "black-tentacles",
+        "level": 10
+      }
+    ]
+  },
+  {
+    "slug": "fey-wanderer",
+    "class": "ranger",
+    "spells": [
+      {
+        "spell": "charm-person",
+        "level": 3
+      },
+      {
+        "spell": "misty-step",
+        "level": 5
+      },
+      {
+        "spell": "dispel-magic",
+        "level": 9
+      },
+      {
+        "spell": "dimension-door",
+        "level": 13
+      },
+      {
+        "spell": "mislead",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "forge",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "identify",
+        "level": 1
+      },
+      {
+        "spell": "searing-smite",
+        "level": 1
+      },
+      {
+        "spell": "heat-metal",
+        "level": 3
+      },
+      {
+        "spell": "magic-weapon",
+        "level": 3
+      },
+      {
+        "spell": "elemental-weapon",
+        "level": 5
+      },
+      {
+        "spell": "protection-from-energy",
+        "level": 5
+      },
+      {
+        "spell": "fabricate",
+        "level": 7
+      },
+      {
+        "spell": "wall-of-fire",
+        "level": 7
+      },
+      {
+        "spell": "animate-objects",
+        "level": 9
+      },
+      {
+        "spell": "creation",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "four-elements",
+    "class": "monk"
+  },
+  {
+    "slug": "genie",
+    "class": "warlock"
+  },
+  {
+    "slug": "glamour",
+    "class": "bard"
+  },
+  {
+    "slug": "gloom-stalker",
+    "class": "ranger",
+    "spells": [
+      {
+        "spell": "disguise-self",
+        "level": 3
+      },
+      {
+        "spell": "rope-trick",
+        "level": 5
+      },
+      {
+        "spell": "fear",
+        "level": 9
+      },
+      {
+        "spell": "greater-invisibility",
+        "level": 13
+      },
+      {
+        "spell": "seeming",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "glory",
+    "class": "paladin",
+    "spells": [
+      {
+        "spell": "guiding-bolt",
+        "level": 3
+      },
+      {
+        "spell": "heroism",
+        "level": 3
+      },
+      {
+        "spell": "enhance-ability",
+        "level": 5
+      },
+      {
+        "spell": "magic-weapon",
+        "level": 5
+      },
+      {
+        "spell": "haste",
+        "level": 9
+      },
+      {
+        "spell": "protection-from-energy",
+        "level": 9
+      },
+      {
+        "spell": "compulsion",
+        "level": 13
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 13
+      },
+      {
+        "spell": "commune",
+        "level": 17
+      },
+      {
+        "spell": "flame-strike",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "grave",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "bane",
+        "level": 1
+      },
+      {
+        "spell": "false-life",
+        "level": 1
+      },
+      {
+        "spell": "gentle-repose",
+        "level": 3
+      },
+      {
+        "spell": "ray-of-enfeeblement",
+        "level": 3
+      },
+      {
+        "spell": "revivify",
+        "level": 5
+      },
+      {
+        "spell": "vampiric-touch",
+        "level": 5
+      },
+      {
+        "spell": "blight",
+        "level": 7
+      },
+      {
+        "spell": "death-ward",
+        "level": 7
+      },
+      {
+        "spell": "antilife-shell",
+        "level": 9
+      },
+      {
+        "spell": "raise-dead",
+        "level": 9
+      },
+      {
+        "spell": "spare-the-dying",
+        "level": 1
+      }
+    ]
+  },
+  {
+    "slug": "great-old-one",
+    "class": "warlock"
+  },
+  {
+    "slug": "hexblade",
+    "class": "warlock"
+  },
+  {
+    "slug": "horizon-walker",
+    "class": "ranger",
+    "spells": [
+      {
+        "spell": "protection-from-evil-and-good",
+        "level": 3
+      },
+      {
+        "spell": "misty-step",
+        "level": 5
+      },
+      {
+        "spell": "haste",
+        "level": 9
+      },
+      {
+        "spell": "banishment",
+        "level": 13
+      },
+      {
+        "spell": "teleportation-circle",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "illusion",
+    "class": "wizard",
+    "spells": [
+      {
+        "spell": "minor-illusion",
+        "level": 1
+      }
+    ]
+  },
+  {
+    "slug": "inquisitive",
+    "class": "rogue"
+  },
+  {
+    "slug": "kensei",
+    "class": "monk"
+  },
+  {
+    "slug": "knowledge",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "command",
+        "level": 1
+      },
+      {
+        "spell": "identify",
+        "level": 1
+      },
+      {
+        "spell": "augury",
+        "level": 3
+      },
+      {
+        "spell": "suggestion",
+        "level": 3
+      },
+      {
+        "spell": "nondetection",
+        "level": 5
+      },
+      {
+        "spell": "speak-with-dead",
+        "level": 5
+      },
+      {
+        "spell": "arcane-eye",
+        "level": 7
+      },
+      {
+        "spell": "confusion",
+        "level": 7
+      },
+      {
+        "spell": "legend-lore",
+        "level": 9
+      },
+      {
+        "spell": "scrying",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "light",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "burning-hands",
+        "level": 1
+      },
+      {
+        "spell": "faerie-fire",
+        "level": 1
+      },
+      {
+        "spell": "flaming-sphere",
+        "level": 3
+      },
+      {
+        "spell": "scorching-ray",
+        "level": 3
+      },
+      {
+        "spell": "daylight",
+        "level": 5
+      },
+      {
+        "spell": "fireball",
+        "level": 5
+      },
+      {
+        "spell": "guardian-of-faith",
+        "level": 7
+      },
+      {
+        "spell": "wall-of-fire",
+        "level": 7
+      },
+      {
+        "spell": "flame-strike",
+        "level": 9
+      },
+      {
+        "spell": "scrying",
+        "level": 9
+      },
+      {
+        "spell": "light",
+        "level": 1
+      }
+    ]
+  },
+  {
+    "slug": "mastermind",
+    "class": "rogue"
+  },
+  {
+    "slug": "mercy",
+    "class": "monk"
+  },
+  {
+    "slug": "monster-slayer",
+    "class": "ranger",
+    "spells": [
+      {
+        "spell": "protection-from-evil-and-good",
+        "level": 3
+      },
+      {
+        "spell": "zone-of-truth",
+        "level": 5
+      },
+      {
+        "spell": "magic-circle",
+        "level": 9
+      },
+      {
+        "spell": "banishment",
+        "level": 13
+      },
+      {
+        "spell": "hold-monster",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "moon",
+    "class": "druid",
+    "spells": [
+      {
+        "spell": "alter-self",
+        "level": 14
+      }
+    ]
+  },
+  {
+    "slug": "nature",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "animal-friendship",
+        "level": 1
+      },
+      {
+        "spell": "speak-with-animals",
+        "level": 1
+      },
+      {
+        "spell": "barkskin",
+        "level": 3
+      },
+      {
+        "spell": "spike-growth",
+        "level": 3
+      },
+      {
+        "spell": "plant-growth",
+        "level": 5
+      },
+      {
+        "spell": "wind-wall",
+        "level": 5
+      },
+      {
+        "spell": "dominate-beast",
+        "level": 7
+      },
+      {
+        "spell": "grasping-vine",
+        "level": 7
+      },
+      {
+        "spell": "insect-plague",
+        "level": 9
+      },
+      {
+        "spell": "tree-stride",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "necromancy",
+    "class": "wizard"
+  },
+  {
+    "slug": "order",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "command",
+        "level": 1
+      },
+      {
+        "spell": "heroism",
+        "level": 1
+      },
+      {
+        "spell": "hold-person",
+        "level": 3
+      },
+      {
+        "spell": "zone-of-truth",
+        "level": 3
+      },
+      {
+        "spell": "mass-healing-word",
+        "level": 5
+      },
+      {
+        "spell": "slow",
+        "level": 5
+      },
+      {
+        "spell": "compulsion",
+        "level": 7
+      },
+      {
+        "spell": "locate-creature",
+        "level": 7
+      },
+      {
+        "spell": "commune",
+        "level": 9
+      },
+      {
+        "spell": "dominate-person",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "peace",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "heroism",
+        "level": 1
+      },
+      {
+        "spell": "sanctuary",
+        "level": 1
+      },
+      {
+        "spell": "aid",
+        "level": 3
+      },
+      {
+        "spell": "warding-bond",
+        "level": 3
+      },
+      {
+        "spell": "beacon-of-hope",
+        "level": 5
+      },
+      {
+        "spell": "sending",
+        "level": 5
+      },
+      {
+        "spell": "aura-of-purity",
+        "level": 7
+      },
+      {
+        "spell": "resilient-sphere",
+        "level": 7
+      },
+      {
+        "spell": "greater-restoration",
+        "level": 9
+      },
+      {
+        "spell": "telepathic-bond",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "phantom",
+    "class": "rogue"
+  },
+  {
+    "slug": "psi-warrior",
+    "class": "fighter"
+  },
+  {
+    "slug": "redemption",
+    "class": "paladin",
+    "spells": [
+      {
+        "spell": "sanctuary",
+        "level": 3
+      },
+      {
+        "spell": "sleep",
+        "level": 3
+      },
+      {
+        "spell": "calm-emotions",
+        "level": 5
+      },
+      {
+        "spell": "hold-person",
+        "level": 5
+      },
+      {
+        "spell": "counterspell",
+        "level": 9
+      },
+      {
+        "spell": "hypnotic-pattern",
+        "level": 9
+      },
+      {
+        "spell": "resilient-sphere",
+        "level": 13
+      },
+      {
+        "spell": "stoneskin",
+        "level": 13
+      },
+      {
+        "spell": "hold-monster",
+        "level": 17
+      },
+      {
+        "spell": "wall-of-force",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "rune-knight",
+    "class": "fighter"
+  },
+  {
+    "slug": "samurai",
+    "class": "fighter"
+  },
+  {
+    "slug": "scout",
+    "class": "rogue"
+  },
+  {
+    "slug": "scribes",
+    "class": "wizard"
+  },
+  {
+    "slug": "shadow",
+    "class": "monk",
+    "spells": [
+      {
+        "spell": "minor-illusion",
+        "level": 3
+      }
+    ]
+  },
+  {
+    "slug": "shadow-magic",
+    "class": "sorcerer",
+    "spells": [
+      {
+        "spell": "darkness",
+        "level": 3
+      }
+    ]
+  },
+  {
+    "slug": "shepherd",
+    "class": "druid"
+  },
+  {
+    "slug": "soulknife",
+    "class": "rogue"
+  },
+  {
+    "slug": "spores",
+    "class": "druid",
+    "spells": [
+      {
+        "spell": "blindness-deafness",
+        "level": 3
+      },
+      {
+        "spell": "gentle-repose",
+        "level": 3
+      },
+      {
+        "spell": "animate-dead",
+        "level": 5
+      },
+      {
+        "spell": "gaseous-form",
+        "level": 5
+      },
+      {
+        "spell": "blight",
+        "level": 7
+      },
+      {
+        "spell": "confusion",
+        "level": 7
+      },
+      {
+        "spell": "cloudkill",
+        "level": 9
+      },
+      {
+        "spell": "contagion",
+        "level": 9
+      },
+      {
+        "spell": "chill-touch",
+        "level": 2
+      }
+    ]
+  },
+  {
+    "slug": "stars",
+    "class": "druid",
+    "spells": [
+      {
+        "spell": "guiding-bolt",
+        "level": 2
+      },
+      {
+        "spell": "guidance",
+        "level": 2
+      }
+    ]
+  },
+  {
+    "slug": "storm",
+    "class": "sorcerer"
+  },
+  {
+    "slug": "storm-herald",
+    "class": "barbarian"
+  },
+  {
+    "slug": "sun-soul",
+    "class": "monk"
+  },
+  {
+    "slug": "swarmkeeper",
+    "class": "ranger",
+    "spells": [
+      {
+        "spell": "mage-hand",
+        "level": 3
+      },
+      {
+        "spell": "faerie-fire",
+        "level": 3
+      },
+      {
+        "spell": "web",
+        "level": 5
+      },
+      {
+        "spell": "gaseous-form",
+        "level": 9
+      },
+      {
+        "spell": "arcane-eye",
+        "level": 13
+      },
+      {
+        "spell": "insect-plague",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "swashbuckler",
+    "class": "rogue"
+  },
+  {
+    "slug": "swords",
+    "class": "bard"
+  },
+  {
+    "slug": "tempest",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "fog-cloud",
+        "level": 1
+      },
+      {
+        "spell": "thunderwave",
+        "level": 1
+      },
+      {
+        "spell": "gust-of-wind",
+        "level": 3
+      },
+      {
+        "spell": "shatter",
+        "level": 3
+      },
+      {
+        "spell": "call-lightning",
+        "level": 5
+      },
+      {
+        "spell": "sleet-storm",
+        "level": 5
+      },
+      {
+        "spell": "control-water",
+        "level": 7
+      },
+      {
+        "spell": "ice-storm",
+        "level": 7
+      },
+      {
+        "spell": "destructive-wave",
+        "level": 9
+      },
+      {
+        "spell": "insect-plague",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "totem-warrior",
+    "class": "barbarian"
+  },
+  {
+    "slug": "transmutation",
+    "class": "wizard"
+  },
+  {
+    "slug": "trickery",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "charm-person",
+        "level": 1
+      },
+      {
+        "spell": "disguise-self",
+        "level": 1
+      },
+      {
+        "spell": "mirror-image",
+        "level": 3
+      },
+      {
+        "spell": "pass-without-trace",
+        "level": 3
+      },
+      {
+        "spell": "blink",
+        "level": 5
+      },
+      {
+        "spell": "dispel-magic",
+        "level": 5
+      },
+      {
+        "spell": "dimension-door",
+        "level": 7
+      },
+      {
+        "spell": "polymorph",
+        "level": 7
+      },
+      {
+        "spell": "dominate-person",
+        "level": 9
+      },
+      {
+        "spell": "modify-memory",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "twilight",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "faerie-fire",
+        "level": 1
+      },
+      {
+        "spell": "sleep",
+        "level": 1
+      },
+      {
+        "spell": "moonbeam",
+        "level": 3
+      },
+      {
+        "spell": "see-invisibility",
+        "level": 3
+      },
+      {
+        "spell": "aura-of-vitality",
+        "level": 5
+      },
+      {
+        "spell": "tiny-hut",
+        "level": 5
+      },
+      {
+        "spell": "aura-of-life",
+        "level": 7
+      },
+      {
+        "spell": "greater-invisibility",
+        "level": 7
+      },
+      {
+        "spell": "circle-of-power",
+        "level": 9
+      },
+      {
+        "spell": "mislead",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "valor",
+    "class": "bard"
+  },
+  {
+    "slug": "vengeance",
+    "class": "paladin",
+    "spells": [
+      {
+        "spell": "bane",
+        "level": 3
+      },
+      {
+        "spell": "hunters-mark",
+        "level": 3
+      },
+      {
+        "spell": "hold-person",
+        "level": 5
+      },
+      {
+        "spell": "misty-step",
+        "level": 5
+      },
+      {
+        "spell": "haste",
+        "level": 9
+      },
+      {
+        "spell": "protection-from-energy",
+        "level": 9
+      },
+      {
+        "spell": "banishment",
+        "level": 13
+      },
+      {
+        "spell": "dimension-door",
+        "level": 13
+      },
+      {
+        "spell": "hold-monster",
+        "level": 17
+      },
+      {
+        "spell": "scrying",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "war",
+    "class": "cleric",
+    "spells": [
+      {
+        "spell": "divine-favor",
+        "level": 1
+      },
+      {
+        "spell": "shield-of-faith",
+        "level": 1
+      },
+      {
+        "spell": "magic-weapon",
+        "level": 3
+      },
+      {
+        "spell": "spiritual-weapon",
+        "level": 3
+      },
+      {
+        "spell": "crusaders-mantle",
+        "level": 5
+      },
+      {
+        "spell": "spirit-guardians",
+        "level": 5
+      },
+      {
+        "spell": "freedom-of-movement",
+        "level": 7
+      },
+      {
+        "spell": "stoneskin",
+        "level": 7
+      },
+      {
+        "spell": "flame-strike",
+        "level": 9
+      },
+      {
+        "spell": "hold-monster",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "war-magic",
+    "class": "wizard"
+  },
+  {
+    "slug": "watchers",
+    "class": "paladin",
+    "spells": [
+      {
+        "spell": "alarm",
+        "level": 3
+      },
+      {
+        "spell": "detect-magic",
+        "level": 3
+      },
+      {
+        "spell": "moonbeam",
+        "level": 5
+      },
+      {
+        "spell": "see-invisibility",
+        "level": 5
+      },
+      {
+        "spell": "counterspell",
+        "level": 9
+      },
+      {
+        "spell": "nondetection",
+        "level": 9
+      },
+      {
+        "spell": "aura-of-purity",
+        "level": 13
+      },
+      {
+        "spell": "banishment",
+        "level": 13
+      },
+      {
+        "spell": "hold-monster",
+        "level": 17
+      },
+      {
+        "spell": "scrying",
+        "level": 17
+      }
+    ]
+  },
+  {
+    "slug": "whispers",
+    "class": "bard"
+  },
+  {
+    "slug": "wild",
+    "class": "sorcerer"
+  },
+  {
+    "slug": "wild-magic",
+    "class": "barbarian"
+  },
+  {
+    "slug": "wildfire",
+    "class": "druid",
+    "spells": [
+      {
+        "spell": "burning-hands",
+        "level": 2
+      },
+      {
+        "spell": "cure-wounds",
+        "level": 2
+      },
+      {
+        "spell": "flaming-sphere",
+        "level": 3
+      },
+      {
+        "spell": "scorching-ray",
+        "level": 3
+      },
+      {
+        "spell": "plant-growth",
+        "level": 5
+      },
+      {
+        "spell": "revivify",
+        "level": 5
+      },
+      {
+        "spell": "aura-of-life",
+        "level": 7
+      },
+      {
+        "spell": "fire-shield",
+        "level": 7
+      },
+      {
+        "spell": "flame-strike",
+        "level": 9
+      },
+      {
+        "spell": "mass-cure-wounds",
+        "level": 9
+      }
+    ]
+  },
+  {
+    "slug": "zealot",
+    "class": "barbarian"
+  }
+]

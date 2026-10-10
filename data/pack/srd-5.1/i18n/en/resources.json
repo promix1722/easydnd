@@ -1,0 +1,209 @@
+{
+  "action-surges": {
+    "name": "Action Surges"
+  },
+  "arcane-recovery": {
+    "name": "Arcane Recovery"
+  },
+  "arcane-recovery-levels": {
+    "name": "Arcane Recovery Levels"
+  },
+  "aura-range": {
+    "name": "Aura Range"
+  },
+  "bardic-inspiration": {
+    "name": "Bardic Inspiration"
+  },
+  "bardic-inspiration-die": {
+    "name": "Bardic Inspiration Die"
+  },
+  "breath-weapon": {
+    "name": "Breath Weapon"
+  },
+  "brutal-critical-dice": {
+    "name": "Brutal Critical Dice"
+  },
+  "channel-divinity-charges": {
+    "name": "Channel Divinity Uses"
+  },
+  "cleansing-touch": {
+    "name": "Cleansing Touch"
+  },
+  "dark-ones-own-luck": {
+    "name": "Dark One's Own Luck"
+  },
+  "destroy-undead-cr": {
+    "name": "Destroy Undead CR"
+  },
+  "divine-intervention": {
+    "name": "Divine Intervention"
+  },
+  "divine-sense": {
+    "name": "Divine Sense"
+  },
+  "eldritch-master": {
+    "name": "Eldritch Master"
+  },
+  "extra-attacks": {
+    "name": "Extra Attacks"
+  },
+  "favored-enemies": {
+    "name": "Favored Enemies"
+  },
+  "favored-terrain": {
+    "name": "Favored Terrain"
+  },
+  "hurl-through-hell": {
+    "name": "Hurl Through Hell"
+  },
+  "indomitable-uses": {
+    "name": "Indomitable Uses"
+  },
+  "invocations-known": {
+    "name": "Invocations Known"
+  },
+  "ki-points": {
+    "name": "Ki Points"
+  },
+  "lay-on-hands": {
+    "name": "Lay on Hands"
+  },
+  "magical-secrets-max-5": {
+    "name": "Magical Secrets (max 5th level)"
+  },
+  "magical-secrets-max-7": {
+    "name": "Magical Secrets (max 7th level)"
+  },
+  "magical-secrets-max-9": {
+    "name": "Magical Secrets (max 9th level)"
+  },
+  "martial-arts": {
+    "name": "Martial Arts"
+  },
+  "metamagic-known": {
+    "name": "Metamagic Options Known"
+  },
+  "mystic-arcanum-level-6": {
+    "name": "Mystic Arcanum (6th level)"
+  },
+  "mystic-arcanum-level-7": {
+    "name": "Mystic Arcanum (7th level)"
+  },
+  "mystic-arcanum-level-8": {
+    "name": "Mystic Arcanum (8th level)"
+  },
+  "mystic-arcanum-level-9": {
+    "name": "Mystic Arcanum (9th level)"
+  },
+  "natural-recovery": {
+    "name": "Natural Recovery"
+  },
+  "pact-magic": {
+    "name": "Pact Magic"
+  },
+  "paladin-channel-divinity": {
+    "name": "Channel Divinity Uses"
+  },
+  "rage-count": {
+    "name": "Rage Uses"
+  },
+  "rage-damage-bonus": {
+    "name": "Rage Damage Bonus"
+  },
+  "relentless-endurance": {
+    "name": "Relentless Endurance"
+  },
+  "second-wind": {
+    "name": "Second Wind"
+  },
+  "signature-spells": {
+    "name": "Signature Spells"
+  },
+  "sneak-attack": {
+    "name": "Sneak Attack"
+  },
+  "song-of-rest-die": {
+    "name": "Song of Rest Die"
+  },
+  "sorcery-points": {
+    "name": "Sorcery Points"
+  },
+  "stroke-of-luck": {
+    "name": "Stroke of Luck"
+  },
+  "unarmored-movement": {
+    "name": "Unarmored Movement"
+  },
+  "wholeness-of-body": {
+    "name": "Wholeness of Body"
+  },
+  "wild-shape-fly": {
+    "name": "Wild Shape Flight"
+  },
+  "wild-shape-max-cr": {
+    "name": "Wild Shape Max CR"
+  },
+  "wild-shape-swim": {
+    "name": "Wild Shape Swimming"
+  },
+  "wild-shape-uses": {
+    "name": "Wild Shape Uses"
+  },
+  "infusions-known": {
+    "name": "Infusions"
+  },
+  "fighting-style-known": {
+    "name": "Fighting Style"
+  },
+  "maneuvers-known": {
+    "name": "Maneuvers"
+  },
+  "arcane-shots-known": {
+    "name": "Arcane Shots"
+  },
+  "runes-known": {
+    "name": "Runes"
+  },
+  "elemental-disciplines-known": {
+    "name": "Elemental Disciplines"
+  },
+  "superiority-dice": {
+    "name": "Superiority Dice"
+  },
+  "arcane-shot-uses": {
+    "name": "Arcane Shot"
+  },
+  "fighting-spirit": {
+    "name": "Fighting Spirit"
+  },
+  "giants-might": {
+    "name": "Giant's Might"
+  },
+  "flash-of-genius": {
+    "name": "Flash of Genius"
+  },
+  "tides-of-chaos": {
+    "name": "Tides of Chaos"
+  },
+  "favored-by-the-gods": {
+    "name": "Favored by the Gods"
+  },
+  "fey-presence": {
+    "name": "Fey Presence"
+  },
+  "hexblades-curse": {
+    "name": "Hexblade's Curse"
+  },
+  "war-priest": {
+    "name": "War Priest"
+  },
+  "wrath-of-the-storm": {
+    "name": "Wrath of the Storm"
+  },
+  "warding-flare": {
+    "name": "Warding Flare"
+  },
+  "bladesong": {
+    "name": "Bladesong"
+  }
+}

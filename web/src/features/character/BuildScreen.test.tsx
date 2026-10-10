@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,7 +7,9 @@ import { setupUser } from '@/test/user'
 
 import { BuildScreen } from './BuildScreen'
 
+import type { Spell } from '@/lib/api'
 import type { Stage } from '@/domain'
+import { spellCatalog } from '@/test/spells'
 import { apiPath } from '@/test/api'
 import { testT } from '@/test/i18n'
 
@@ -387,6 +389,8 @@ const SHEET = {
 interface Wire {
   sheet?: unknown
   prompts?: unknown
+  editPrompts?: unknown
+  spellEntries?: unknown[]
   /** What `/prompts` answers once something has been written. */
   then?: unknown
   events?: unknown
@@ -418,6 +422,8 @@ let read: string[] = []
 function mockApi({
   sheet,
   prompts = RACE_PROMPT,
+  editPrompts,
+  spellEntries,
   then,
   events = LOG_JUST_CREATED,
   thenEvents,
@@ -430,6 +436,13 @@ function mockApi({
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
+      const baseRelease = { id: 'srd-2014', version: '1.0.0', digest: 'base' }
+      const defaultRules = { edition: '2014', semantics: '1', packs: [baseRelease] }
+      if (apiPath(url) === '/v1/packs') return jsonResponse({ packs: [{ id: baseRelease.id, title: 'SRD 5.1', releases: [baseRelease] }], defaultRules })
+      // Before the write branch: a spell search is a POST that changes nothing.
+      const spellReply = spellCatalog((spellEntries ?? []) as Spell[], input, init)
+      if (spellReply !== undefined) return spellReply
+      if (apiPath(url) === '/v1/packs/resolve') return jsonResponse(defaultRules)
       if (method !== 'GET') {
         posted.push({ url, method, body: JSON.parse(String(init?.body ?? '{}')) })
         if (apiPath(url) === '/v1/characters') {
@@ -442,6 +455,7 @@ function mockApi({
       }
       if (url.includes('/prompts')) {
         read.push(url)
+        if (url.includes('before=') && editPrompts !== undefined) return jsonResponse(editPrompts)
         if (until !== undefined && posted.length > 0) await until
         return jsonResponse(then !== undefined && posted.length > 0 ? then : prompts)
       }
@@ -514,7 +528,7 @@ const current = () =>
  * passing after the screen stops filtering anything at all.
  *
  * A slide is a `role="group"` named by its tab, which is the same handle
- * `SectionDeck.test.tsx` uses on the sheet's own deck.
+ * `SheetBody.test.tsx` uses on the sheet's own deck.
  */
 const panel = (name: string) =>
   within(screen.getByRole('group', { name: stageLabel(testT, name as Stage) }))
@@ -556,20 +570,28 @@ beforeEach(() => {
 describe('BuildScreen', () => {
   const viewport = 'mobile'
 
-  it('names the question the server said was next, and opens it when pressed', async () => {
-    const user = setupUser()
+  it('opens and focuses the first choice on the initial tab', async () => {
     renderBuild(viewport)
 
-    // Named rather than asked, and shut until somebody asks for it: the screen
-    // does not know which of the open choices anybody came here to make.
     const race = await screen.findByRole('button', { name: /A race/ })
-    expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
-
-    await user.click(race)
-
-    // Options come from the collection the prompt named.
-    expect(await screen.findByRole('button', { name: 'Half-Elf' })).toBeInTheDocument()
+    expect(race).toHaveAttribute('aria-expanded', 'true')
+    const halfElf = await screen.findByRole('button', { name: 'Half-Elf' })
+    await waitFor(() => expect(halfElf).toHaveFocus())
     expect(screen.getByRole('button', { name: 'Dwarf' })).toBeInTheDocument()
+  })
+
+  it('opens the first choice on a clicked tab even when that tab has several choices', async () => {
+    const user = setupUser()
+    mockApi({ prompts: { seq: 2, complete: false, prompts: [SUBRACE_PROMPT, LANGUAGE_PROMPT] }, events: RACE_LOG })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Race' })
+    await user.click(tab('personal'))
+    await user.click(tab('race'))
+
+    expect(panel('race').getByRole('button', { name: 'A subrace' })).toHaveAttribute('aria-expanded', 'true')
+    const first = await panel('race').findByRole('button', { name: 'Hill Dwarf' })
+    await waitFor(() => expect(first).toHaveFocus())
   })
 
   /*
@@ -626,7 +648,6 @@ describe('BuildScreen', () => {
     const user = setupUser()
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /A race/ }))
     await user.click(await screen.findByRole('button', { name: 'Half-Elf' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
@@ -663,7 +684,9 @@ describe('BuildScreen', () => {
     expect(before.indexOf('1 more language')).toBeLessThan(before.indexOf('A subrace'))
 
     await user.click(screen.getByRole('button', { name: /A subrace/ }))
-    await user.click(await screen.findByRole('button', { name: 'Hill Dwarf' }))
+    // The only option there is arrives picked: the card is drawn once its
+    // entries are known, and a question with one answer answers itself.
+    expect(await screen.findByRole('button', { name: 'Hill Dwarf' })).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
     await waitFor(() => {
@@ -688,55 +711,246 @@ describe('BuildScreen', () => {
     expect(panel('class').queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
 
     // The identity tab is finished: the name is settled and nothing is open.
-    await user.click(tab('identity'))
-    await user.click(await panel('identity').findByRole('button', { name: 'Next' }))
+    await user.click(tab('personal'))
+    await user.click(await panel('personal').findByRole('button', { name: 'Next' }))
 
     // On to the next category with something required outstanding, which is
     // the class -- identity is where we were and abilities has nothing open.
     expect(tab('class')).toHaveAttribute('aria-selected', 'true')
+    expect(panel('class').getByRole('button', { name: 'A class' })).toHaveAttribute('aria-expanded', 'true')
+    expect(await screen.findByRole('group', { name: 'A class' })).toHaveFocus()
   })
 
-  it('leaves nothing open once an answer has landed', async () => {
+  it('offers the 2014 rules selected and confirms them like another choice', async () => {
+    const user = setupUser()
+    mockApi({ prompts: { seq: 1, complete: false, prompts: [{
+      choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
+      group: 'identity', optional: false, event: { type: 'change' }, heldOnly: false,
+    }] } })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Rules' })
+    expect(panel('rules').queryByRole('combobox')).not.toBeInTheDocument()
+    const option = await panel('rules').findByRole('button', { name: 'D&D 2014' })
+    expect(option).toHaveAttribute('aria-pressed', 'true')
+    await user.click(option)
+    await user.tab()
+    const confirm = panel('rules').getByRole('button', { name: 'Confirm' })
+    expect(confirm).toHaveFocus()
+    expect(writes()).toHaveLength(0)
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(writes()).toHaveLength(1))
+    expect(writes()[0]?.body).toMatchObject({ events: [{ type: 'change', changes: [
+      { path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } },
+    ] }] })
+  })
+
+  it('focuses Next after confirming Rules with the mouse', async () => {
+    const user = setupUser()
+    mockApi({
+      prompts: { seq: 1, complete: false, prompts: [{
+        choice: { prompt: 'character/ruleset', choose: 1, kind: 'text', from: { kind: 'explicit' } },
+        group: 'identity', optional: false, event: { type: 'change' }, heldOnly: false,
+      }] },
+      then: { seq: 2, complete: false, prompts: [{
+        choice: { prompt: 'character/class', choose: 1, kind: 'class', from: { kind: 'explicit', options: [
+          { key: 'fighter', kind: 'text', text: 'Fighter' },
+        ] } },
+        group: 'class', optional: false, event: { type: 'class', level: 1 }, heldOnly: false,
+      }] },
+      thenEvents: { seq: 2, events: [INIT, {
+        seq: 2, type: 'change', source: 'identity',
+        changes: [{ path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } }],
+      }] },
+    })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Rules' })
+    await user.click(await panel('rules').findByRole('button', { name: 'D&D 2014' }))
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
+    const next = await panel('rules').findByRole('button', { name: 'Next' })
+    await waitFor(() => expect(next).toHaveFocus())
+    expect(current()).toBe('Rules')
+    await user.keyboard('{Enter}')
+    expect(current()).toBe('Class')
+    await waitFor(() => expect(panel('class').getByRole('button', { name: 'Fighter' })).toHaveFocus())
+  })
+
+  it('visits Personality even while required work remains, and can continue past its optional questions', async () => {
+    const user = setupUser()
+    mockApi({
+      prompts: { seq: 2, complete: false, prompts: [PARTWAY.prompts[2], TRAITS_OPEN.prompts[0]] },
+      events: BACKGROUND_LOG,
+    })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Background' })
+    await user.click(tab('background'))
+    await user.click(await panel('background').findByRole('button', { name: 'Next' }))
+
+    expect(current()).toBe('Personality')
+    expect(await screen.findByLabelText('Personality trait')).toHaveFocus()
+    await user.click(panel('personality').getByRole('button', { name: 'Next' }))
+    expect(current()).toBe('Class')
+    expect(panel('class').getByRole('button', { name: 'A class' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('closes the completed choice when nothing remains on its tab', async () => {
     const user = setupUser()
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('button', { name: /A race/ }))
     await user.click(await screen.findByRole('button', { name: 'Half-Elf' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
-    // Answering is finishing with a question, not moving to the next one: the
-    // list comes back shut, and the player says what they want to do next.
+    // No new choices were returned for this tab, so the completed form closes.
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
     })
   })
 
-  it('closes what was open when the tab changes', async () => {
+  it('opens and focuses a new choice on the same tab after the refreshed prompts arrive', async () => {
+    const user = setupUser()
+    let arrive = () => {}
+    const until = new Promise<void>((resolve) => { arrive = resolve })
+    mockApi({ then: { seq: 2, complete: false, prompts: [SUBRACE_PROMPT] }, thenEvents: RACE_LOG, until })
+    renderBuild(viewport)
+
+    await user.click(await screen.findByRole('button', { name: 'Dwarf' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+    await waitFor(() => expect(writes()).toHaveLength(1))
+    expect(screen.queryByRole('button', { name: 'Hill Dwarf' })).not.toBeInTheDocument()
+
+    arrive()
+    expect(await screen.findByRole('button', { name: 'Hill Dwarf' })).toBeInTheDocument()
+    expect(current()).toBe('Race')
+    expect(screen.getByRole('button', { name: 'A subrace' })).toHaveAttribute('aria-expanded', 'true')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Hill Dwarf' })).toHaveFocus())
+  })
+
+  it('edits personality before a background and focuses the next written answer', async () => {
+    const user = setupUser()
+    const ideal = {
+      ...TRAITS_OPEN.prompts[0]!,
+      choice: { ...TRAITS_OPEN.prompts[0]!.choice, prompt: 'character/ideal', kind: 'ideal' },
+    }
+    mockApi({
+      prompts: { ...TRAITS_OPEN, seq: 1 }, events: LOG_JUST_CREATED,
+      then: { seq: 2, complete: false, prompts: [ideal] },
+      thenEvents: { seq: 2, events: [INIT, {
+        seq: 2, type: 'change', source: 'personality',
+        changes: [{ path: 'identity.personalityTraits', op: 'set', value: { kind: 'string', string: 'I trust strangers.' } }],
+      }] },
+    })
+    renderBuild(viewport)
+    // Nothing here is required, so the screen opens on the first tab.
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
+
+    await user.type(await screen.findByLabelText('Personality trait'), 'I trust strangers.')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    expect(await screen.findByLabelText('Ideal')).toHaveFocus()
+    expect(current()).toBe('Personality')
+    expect(panel('personality').getByText('I trust strangers.')).toBeInTheDocument()
+  })
+
+  it('keeps the keyboard in the next personality field after Tab and Enter', async () => {
+    const user = setupUser()
+    // jsdom focuses descendants of inert accordion panels, while browsers
+    // refuse that focus until the opening transition makes them interactive.
+    const originalFocus = HTMLTextAreaElement.prototype.focus
+    const focusSpy = vi.spyOn(HTMLTextAreaElement.prototype, 'focus').mockImplementation(function (this: HTMLTextAreaElement, options?: FocusOptions) {
+      if (this.closest('[inert], [aria-hidden="true"]')) return
+      originalFocus.call(this, options)
+    })
+    const written = (prompt: string, kind: string) => ({
+      ...TRAITS_OPEN.prompts[0]!,
+      choice: { ...TRAITS_OPEN.prompts[0]!.choice, prompt, kind },
+    })
+    mockApi({
+      prompts: { seq: 1, complete: true, prompts: [written('character/bond', 'bond'), written('character/flaw', 'flaw')] },
+      events: LOG_JUST_CREATED,
+      then: { seq: 2, complete: true, prompts: [written('character/flaw', 'flaw')] },
+      thenEvents: { seq: 2, events: [INIT, {
+        seq: 2, type: 'change', source: 'personality',
+        changes: [{ path: 'identity.bonds', op: 'set', value: { kind: 'string', string: 'asdfda' } }],
+      }] },
+    })
+    try {
+      renderBuild(viewport)
+
+      // Nothing here is required, so the screen opens on the first tab.
+      const personality = await screen.findByRole('tab', { name: 'Personality' })
+      expect(current()).toBe('Rules')
+      await user.click(personality)
+      const bond = await screen.findByLabelText('Bond')
+      await waitFor(() => expect(bond).toHaveFocus())
+      await user.type(bond, 'asdfda')
+      await user.tab()
+      expect(screen.getByRole('button', { name: 'Confirm' })).toHaveFocus()
+      await user.keyboard('{Enter}')
+
+      const flaw = await screen.findByLabelText('Flaw')
+      await waitFor(() => expect(flaw).toHaveFocus())
+      await user.type(flaw, 'I rush into danger.')
+      expect(flaw).toHaveValue('I rush into danger.')
+    } finally {
+      focusSpy.mockRestore()
+    }
+  })
+
+  it('opens the first choice again when returning to a tab', async () => {
     const user = setupUser()
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG })
     renderBuild(viewport)
 
     await user.click(await screen.findByRole('tab', { name: 'Race' }))
-    await user.click(block(/2 to be proficient in/))
     expect(await screen.findByRole('button', { name: /Acrobatics/ })).toBeInTheDocument()
 
-    // A different tab is a different question, so the one in hand is dropped
-    // rather than waiting underneath for a return that may never come.
     await user.click(tab('background'))
     await user.click(tab('race'))
-    expect(screen.queryByRole('button', { name: /Acrobatics/ })).not.toBeInTheDocument()
+    const first = await screen.findByRole('button', { name: /Acrobatics/ })
+    await waitFor(() => expect(first).toHaveFocus())
   })
 
-  it('offers every category as a tab, in order, and disables none', async () => {
+  it('keeps non-spell categories available but hides spell tabs without choices', async () => {
     renderBuild(viewport)
     await screen.findByText('A race')
 
-    // Class first after the name -- it is the choice the most other choices
-    // hang off -- and the scores straight after it, because they are what the
-    // class was picked for. Nothing is disabled, because a tab is a place to
-    // look as well as a place to answer.
-    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
+    // The spell tabs appear when a choice is available; the remaining tabs
+    // remain places the player can visit before choosing a class.
+    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
     for (const each of screen.getAllByRole('tab')) expect(each).not.toBeDisabled()
+  })
+
+  it('reveals Cantrips and Spells when the chosen class grants those choices', async () => {
+    const user = setupUser()
+    const spell = (purpose: string) => ({
+      choice: { prompt: `wizard/spell/${purpose}/1`, choose: 1, kind: 'spell', from: { kind: 'explicit', options: [
+        { key: purpose, kind: 'ref', ref: `spell:${purpose}` },
+      ] } },
+      group: 'class', source: 'class:wizard', purpose, optional: false, heldOnly: false,
+      event: { type: 'level', ref: 'class:wizard', level: 1 },
+    })
+    mockApi({
+      prompts: { seq: 1, complete: false, prompts: [{
+        choice: { prompt: 'character/class', choose: 1, kind: 'class', from: { kind: 'explicit', options: [
+          { key: 'wizard', kind: 'text', text: 'Wizard' },
+        ] } },
+        group: 'class', optional: false, event: { type: 'class', level: 1 }, heldOnly: false,
+      }] },
+      then: { seq: 2, complete: false, prompts: [spell('cantrip'), spell('known')] },
+      thenEvents: { seq: 2, events: [INIT, { seq: 2, type: 'class', source: 'class', ref: 'class:wizard', level: 1 }] },
+    })
+    renderBuild(viewport)
+
+    await screen.findByRole('tab', { name: 'Class' })
+    expect(screen.queryByRole('tab', { name: 'Cantrips' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Spells' })).not.toBeInTheDocument()
+    await user.click(await panel('class').findByRole('button', { name: 'Confirm' }))
+
+    await screen.findByRole('tab', { name: 'Cantrips' })
+    expect(tabs().slice(-3)).toEqual(['Cantrips', 'Spells', 'Personality'])
   })
 
   // One mount, walked across three tabs: each shows only what belongs to it,
@@ -761,8 +975,8 @@ describe('BuildScreen', () => {
     expect.soft(panel('race').getByText(/2 to be proficient in/)).toBeInTheDocument()
     expect.soft(panel('race').queryByText('A class')).not.toBeInTheDocument()
 
-    await user.click(tab('identity'))
-    expect.soft(panel('identity').getByText('Name')).toBeInTheDocument()
+    await user.click(tab('personal'))
+    expect.soft(panel('personal').getByText('Name')).toBeInTheDocument()
 
     expect.soft(posted).toHaveLength(0)
   })
@@ -773,7 +987,6 @@ describe('BuildScreen', () => {
     renderBuild(viewport)
 
     await user.click(await screen.findByRole('tab', { name: 'Race' }))
-    await user.click(screen.getByRole('button', { name: /2 to be proficient in/ }))
     await user.click(await screen.findByRole('button', { name: /Acrobatics/ }))
     await user.click(screen.getByRole('button', { name: /Insight/ }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
@@ -806,7 +1019,6 @@ describe('BuildScreen', () => {
       'aria-selected',
       'true',
     )
-    await user.click(await screen.findByRole('button', { name: /A race/ }))
     await user.click(await screen.findByRole('button', { name: 'Half-Elf' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
@@ -826,6 +1038,7 @@ describe('BuildScreen', () => {
     expect(tab('race')).toHaveAttribute('aria-selected', 'true')
     expect(panel('race').queryByText('A background')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Half-Elf' })).not.toBeInTheDocument()
+    await waitFor(() => expect(panel('race').getByRole('button', { name: 'Next' })).toHaveFocus())
   })
 
   it('finishes to the sheet', async () => {
@@ -834,6 +1047,17 @@ describe('BuildScreen', () => {
 
     await screen.findByText('A race')
     await user.click(screen.getByRole('button', { name: 'Finish' }))
+
+    expect(await screen.findByText('sheet')).toBeInTheDocument()
+  })
+
+  it('finishes from Next when there is no tab left to go to', async () => {
+    const user = setupUser()
+    mockApi({ prompts: FINISHED, events: LEVELLED_LOG })
+    renderBuild(viewport)
+
+    await screen.findByRole('button', { name: 'Finish' })
+    await user.click(panel('rules').getByRole('button', { name: 'Next' }))
 
     expect(await screen.findByText('sheet')).toBeInTheDocument()
   })
@@ -847,12 +1071,12 @@ describe('BuildScreen', () => {
     mockApi({ prompts: FINISHED, events: LEVELLED_LOG })
     renderBuild(viewport)
 
-    // Finish is the only control on the row: there is no Next, because the
-    // order to answer things in is the player's and the tabs already say what
-    // the categories are.
+    // A finished character opens on the first tab, and with nowhere left to
+    // send anybody its Next is a second Finish.
     const finish = await screen.findByRole('button', { name: 'Finish' })
     expect.soft(finish).toHaveAttribute('data-variant', 'filled')
-    expect.soft(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
+    expect.soft(current()).toBe('Rules')
+    expect.soft(panel('rules').getByRole('button', { name: 'Next' })).toBeInTheDocument()
 
     // Advancement is the class story continued, so a level that was taken
     // sits on the class tab rather than under a tab of its own.
@@ -906,7 +1130,7 @@ describe('BuildScreen', () => {
     mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [] })
     renderBuild(viewport)
 
-    await user.click(await screen.findByRole('tab', { name: 'Identity' }))
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
     await user.click(block(/Name/))
 
     // The field starts from the name it is changing rather than from nothing.
@@ -932,12 +1156,49 @@ describe('BuildScreen', () => {
     })
   })
 
+  it('edits the portrait as a separate choice without opening the name form', async () => {
+    const user = setupUser()
+    const image = 'data:image/webp;base64,cG9ydHJhaXQ='
+    mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [], sheet: { ...SHEET, identity: { ...SHEET.identity, image } } })
+    renderBuild(viewport)
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+    await user.click(block(/Portrait/))
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
+    expect(panel('personal').getByAltText('')).toHaveAttribute('src', image)
+    await user.click(screen.getByRole('button', { name: 'Remove image' }))
+    await waitFor(() => expect(writes()).toHaveLength(1))
+    expect(writes()[0]?.body).toMatchObject({ event: { changes: [
+      { path: 'identity.image', op: 'set', value: { kind: 'string', string: '' } },
+    ] } })
+  })
+
+  it('keeps the portrait-removal draft after a failed save', async () => {
+    const user = setupUser()
+    const image = 'data:image/webp;base64,cG9ydHJhaXQ='
+    mockApi({ prompts: PARTWAY, events: PARTWAY_LOG, dropped: [], sheet: { ...SHEET, identity: { ...SHEET.identity, image } } })
+    const api = fetch
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'PUT') return new Response(JSON.stringify({ error: { code: 'validation_error', fields: [
+        { field: 'image', reason: 'field.character.image.invalid' },
+      ] } }), { status: 422 })
+      return api(input, init)
+    })
+    renderBuild(viewport)
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+    await user.click(block(/Portrait/))
+    await user.click(screen.getByRole('button', { name: 'Remove image' }))
+    await screen.findAllByText('Choose a valid JPEG, PNG or WebP image up to 5 MB.')
+    expect(panel('personal').queryByAltText('')).not.toBeInTheDocument()
+    expect(screen.getAllByAltText('').filter((avatar) => avatar.getAttribute('src') === image)).toHaveLength(1)
+  })
+
   it('settles an alignment as the change that settles it, not as a reference', async () => {
     const user = setupUser()
     mockApi({ prompts: ALIGNMENT, events: BACKGROUND_LOG })
     renderBuild(viewport)
+    // Nothing here is required, so the screen opens on the first tab.
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
 
-    await user.click(await screen.findByRole('button', { name: /An alignment/ }))
     await user.click(await screen.findByRole('button', { name: 'Neutral' }))
     await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
@@ -950,6 +1211,7 @@ describe('BuildScreen', () => {
     // event that named an alignment was accepted, attributed to no prompt and
     // silently changed nothing.
     expect(posted[0]?.body).toEqual({
+      expectedRevision: 2,
       expectedSeq: 2,
       events: [
         {
@@ -992,8 +1254,9 @@ describe('BuildScreen', () => {
     const user = setupUser()
     mockApi({ prompts: TRAITS_OPEN, events: BACKGROUND_LOG })
     renderBuild(viewport)
+    // Nothing here is required, so the screen opens on the first tab.
+    await user.click(await screen.findByRole('tab', { name: 'Personality' }))
 
-    await user.click(await screen.findByRole('button', { name: /1 personality trait/ }))
     await user.type(
       await screen.findByLabelText('Personality trait'),
       'I quote sacred texts at every turn.',
@@ -1007,6 +1270,7 @@ describe('BuildScreen', () => {
     // records it is the change that puts it on the sheet -- the same shape the
     // alignment above travels in.
     expect(posted[0]?.body).toEqual({
+      expectedRevision: 2,
       expectedSeq: 2,
       events: [
         {
@@ -1063,8 +1327,7 @@ describe('BuildScreen', () => {
 
     // The scores are an ordinary open choice now, not a field on a create
     // form, which is what gives them an entry to point at and change.
-    await user.click(await screen.findByRole('button', { name: /6 ability scores/ }))
-    expect(tab('abilities')).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('tab', { name: 'Abilities' })).toHaveAttribute('aria-selected', 'true')
 
     // The array is dealt out rather than typed: six printed numbers, and the
     // decision is which ability gets which. Nothing can be confirmed until
@@ -1089,6 +1352,7 @@ describe('BuildScreen', () => {
     // The array as it was dealt out, and the method travels with the answer
     // rather than with creation.
     expect(posted[0]?.body).toEqual({
+      expectedRevision: 1,
       expectedSeq: 1,
       events: [
         {
@@ -1105,7 +1369,7 @@ describe('BuildScreen', () => {
         },
       ],
     })
-  })
+  }, 10_000)
 })
 
 /**
@@ -1117,33 +1381,150 @@ describe('a new character', () => {
   // The phone's, for the reason the block above records.
   const viewport = 'mobile'
 
-  it('shows the whole of identity, and answers only the question that creates', async () => {
+  it('opens Rules first on a new character', async () => {
     renderNew(viewport)
 
     // All three, in the order they are asked, so the page says up front what
     // it wants rather than growing two rows the moment a name is confirmed.
     expect(await screen.findByText('A name')).toBeInTheDocument()
-    expect(screen.getByText('The rules to play by')).toBeInTheDocument()
-    expect(screen.getByText('Level')).toBeInTheDocument()
+    expect(panel('personal').queryByText('The rules to play by')).not.toBeInTheDocument()
+    expect(panel('personal').queryByText('Level')).not.toBeInTheDocument()
+    expect(panel('rules').getByText('The rules to play by')).toBeInTheDocument()
+    expect(panel('rules').getByText('Rule packs')).toBeInTheDocument()
+    const rulesHeader = panel('rules').getByRole('button', { name: 'The rules to play by' })
+    const packsHeader = panel('rules').getByRole('button', { name: 'Rule packs' })
+    expect(rulesHeader.compareDocumentPosition(packsHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(packsHeader).toHaveAttribute('aria-expanded', 'false')
+    expect(panel('personal').queryByText('Rule packs')).not.toBeInTheDocument()
+    expect(panel('class').getByText('Level')).toBeInTheDocument()
 
-    // The one block that opens itself: there is nothing behind it, and a front
-    // door whose only row is shut reads as broken.
-    expect(screen.getByLabelText('Name')).toBeInTheDocument()
+    expect(current()).toBe('Rules')
+    expect(panel('rules').getByRole('button', { name: /The rules to play by/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(await panel('rules').findByRole('button', { name: 'D&D 2014' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
     // Named once. The block says what the choice is, and the surface under it
     // used to say it twice more -- a heading and a field label.
     expect(screen.getAllByText(/^A name$/)).toHaveLength(1)
     expect(screen.queryByText('What are they called?')).not.toBeInTheDocument()
 
-    // The other two have nothing to open: there is no character to answer
-    // them against until the name creates one, so they are statements of what
-    // is coming rather than controls that would fail.
-    expect(screen.queryByRole('button', { name: /The rules to play by/ })).not.toBeInTheDocument()
+    // Level still needs a character; the rules choice is a draft until the
+    // name creates one.
     expect(screen.queryByRole('button', { name: /^Level$/ })).not.toBeInTheDocument()
 
     // The scores are a question asked of a character that exists, not a field
     // on the form that creates one.
     expect(screen.queryByText(/ability scores/)).not.toBeInTheDocument()
-    expect(tabs()).toEqual(['Identity', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
+    expect(tabs()).toEqual(['Rules', 'Personal', 'Class', 'Abilities', 'Race', 'Background', 'Personality'])
+  })
+
+  it('chooses 2014 rules before the name and saves them when the character is created', async () => {
+    const user = setupUser()
+    renderNew(viewport)
+
+    const rules = await screen.findByRole('button', { name: 'D&D 2014' })
+    await waitFor(() => expect(rules).toHaveFocus())
+    expect(rules).toHaveAttribute('aria-pressed', 'true')
+    await user.tab()
+    expect(panel('rules').getByRole('button', { name: 'Confirm' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    expect(current()).toBe('Rules')
+    expect(panel('rules').getByRole('button', { name: 'Rule packs' })).toHaveAttribute('aria-expanded', 'true')
+    expect(panel('rules').getByRole('button', { name: 'The rules to play by' }).closest('[data-highlighted="true"]')).toBeNull()
+    const pack = await panel('rules').findByRole('button', { name: /SRD 5.1/ })
+    await waitFor(() => expect(pack).toHaveFocus())
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
+    const next = await panel('rules').findByRole('button', { name: 'Next' })
+    await waitFor(() => expect(next).toHaveFocus())
+    expect(panel('rules').getByRole('button', { name: 'Rule packs' }).closest('[data-highlighted="true"]')).toBeNull()
+    await user.keyboard('{Enter}')
+
+    expect(current()).toBe('Personal')
+    const name = await screen.findByLabelText('Name')
+    await waitFor(() => expect(name).toHaveFocus())
+    await user.type(name, 'Zephyr')
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Confirm' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(writes()).toHaveLength(2))
+    expect(writes()[0]?.body).toMatchObject({ name: 'Zephyr', rules: { edition: '2014', packs: [{ id: 'srd-2014' }] } })
+    expect(writes()[1]?.body).toMatchObject({
+      expectedSeq: 1,
+      events: [{ type: 'change', changes: [
+        { path: 'identity.ruleset', op: 'set', value: { kind: 'slug', slug: '2014' } },
+      ] }],
+    })
+  })
+
+  it('creates a character with its uploaded portrait', async () => {
+    const user = setupUser()
+    const image = 'data:image/webp;base64,cG9ydHJhaXQ='
+    vi.stubGlobal('Image', class { src = ''; naturalWidth = 256; naturalHeight = 256; decode = async () => {} })
+    vi.stubGlobal('URL', class extends URL {
+      static override createObjectURL = () => 'blob:portrait'
+      static override revokeObjectURL = () => {}
+    })
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: () => {} } as unknown as CanvasRenderingContext2D)
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(image)
+    try {
+      renderNew(viewport)
+      await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+      await user.type(await screen.findByLabelText('Name'), 'Portrait hero')
+      await user.click(block(/Portrait/))
+      const input = document.querySelector('input[type=file]')!
+      fireEvent.change(input, { target: { files: [new File(['image'], 'hero.png', { type: 'image/png' })] } })
+      await user.click(await screen.findByRole('button', { name: 'Use image' }))
+      await user.click(block(/A name/))
+      await user.click(screen.getByRole('button', { name: 'Confirm' }))
+      await waitFor(() => expect(writes()).toHaveLength(1))
+      expect(writes()[0]?.body).toMatchObject({ name: 'Portrait hero', image })
+    } finally {
+      vi.restoreAllMocks()
+    }
+  })
+
+  it('keeps the rules choice selected while the name is still a draft', async () => {
+    const user = setupUser()
+    renderNew(viewport)
+
+    await user.click(await screen.findByRole('button', { name: 'D&D 2014' }))
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
+    expect(panel('rules').getByRole('button', { name: 'Rule packs' })).toHaveAttribute('aria-expanded', 'true')
+    const pack = await panel('rules').findByRole('button', { name: /SRD 5.1/ })
+    await waitFor(() => expect(pack).toHaveFocus())
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
+    const next = await panel('rules').findByRole('button', { name: 'Next' })
+    await waitFor(() => expect(next).toHaveFocus())
+    expect(current()).toBe('Rules')
+    await user.click(next)
+    expect(current()).toBe('Personal')
+    await user.click(tab('rules'))
+
+    expect(panel('rules').getByRole('button', { name: 'D&D 2014' })).toHaveAttribute('aria-pressed', 'true')
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('opens and focuses the first class choice after creation from that tab', async () => {
+    const user = setupUser()
+    mockApi({ then: { seq: 2, complete: false, prompts: [{
+      choice: { prompt: 'character/class', choose: 1, kind: 'class', from: { kind: 'explicit', options: [
+        { key: 'fighter', kind: 'text', text: 'Fighter' },
+      ] } },
+      group: 'class', optional: false, event: { type: 'class', level: 1 }, heldOnly: false,
+    }] } })
+    renderNew(viewport)
+
+    await user.click(await screen.findByRole('button', { name: 'D&D 2014' }))
+    await user.click(panel('rules').getByRole('button', { name: 'Confirm' }))
+    await user.click(panel('rules').getByRole('button', { name: 'Next' }))
+    await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Zephyr')
+    await user.click(tab('class'))
+
+    await waitFor(() => expect(current()).toBe('Class'))
+    const first = await screen.findByRole('button', { name: 'Fighter' })
+    await waitFor(() => expect(first).toHaveFocus())
+    expect(writes()).toHaveLength(2)
   })
 
   it('keeps the name where its question was when the character is created', async () => {
@@ -1184,6 +1565,7 @@ describe('a new character', () => {
     })
     renderNew(viewport)
 
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
     await user.type(await screen.findByLabelText('Name'), 'Zephyr')
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
@@ -1192,20 +1574,29 @@ describe('a new character', () => {
     // question's place it would go to the end of the list, and confirming a
     // name would drop the one row the player was looking at below two others.
     await waitFor(() => {
-      expect(panel('identity').getByText('Zephyr')).toBeInTheDocument()
+      expect(panel('personal').getByText('Zephyr')).toBeInTheDocument()
     })
-    const rows = panel('identity')
+    const rows = panel('personal')
       .getAllByRole('button')
       .map((each) => each.textContent ?? '')
+      .filter((text) => text !== 'Apply selection')
     expect(rows[0]).toMatch(/Zephyr/)
-    expect(rows[1]).toMatch(/The rules to play by/)
+    expect(panel('rules').getByRole('button', { name: /The rules to play by/ })).toBeInTheDocument()
+    expect(panel('class').getByRole('button', { name: /^Level$/ })).toBeInTheDocument()
+
+    await user.click(panel('personal').getByRole('button', { name: 'Next' }))
+    expect(current()).toBe('Rules')
+    expect(await panel('rules').findByRole('button', { name: 'D&D 2014' })).toBeInTheDocument()
   })
 
   it('creates the character once, with the name alone, and lands on the tab that was pressed', async () => {
     const user = setupUser()
     renderNew(viewport)
 
-    await user.type(await screen.findByLabelText('Name'), 'Rurik')
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+    const name = await screen.findByLabelText('Name')
+    await waitFor(() => expect(name).toHaveFocus())
+    await user.type(name, 'Rurik')
     await user.click(tab('class'))
 
     const creates = posted.filter((write) => apiPath(write.url) === '/v1/characters')
@@ -1220,7 +1611,7 @@ describe('a new character', () => {
     await waitFor(() => {
       expect(current()).toBe('Class')
     })
-    expect(screen.queryByText('A race')).not.toBeInTheDocument()
+    expect(panel('class').queryByText('A race')).not.toBeInTheDocument()
 
     // The URL was replaced, so nothing on the built screen creates a second one.
     await user.click(tab('background'))
@@ -1238,7 +1629,10 @@ describe('a new character', () => {
     mockApi({ until })
     renderNew(viewport)
 
-    await user.type(await screen.findByLabelText('Name'), 'Rurik')
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
+    const name = await screen.findByLabelText('Name')
+    await waitFor(() => expect(name).toHaveFocus())
+    await user.type(name, 'Rurik')
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
     // Not "the write landed" -- the write lands before the navigation does, and
@@ -1256,7 +1650,7 @@ describe('a new character', () => {
     // that had already succeeded. It read as a reload because it looked like
     // one. The tabs never go, and neither does the block being answered.
     expect(screen.queryByText('Working out what is next...')).not.toBeInTheDocument()
-    expect(tabs()).toHaveLength(6)
+    expect(tabs()).toHaveLength(7)
     expect(screen.getByText('A name')).toBeInTheDocument()
 
     // And what replaces the block being answered is that block with an answer
@@ -1272,6 +1666,7 @@ describe('a new character', () => {
     const user = setupUser()
     renderNew(viewport)
 
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
     await user.type(await screen.findByLabelText('Name'), 'Rurik')
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
@@ -1283,13 +1678,14 @@ describe('a new character', () => {
     await waitFor(() => {
       expect(screen.getByText('Name')).toBeInTheDocument()
     })
-    expect(current()).toBe('Identity')
+    expect(current()).toBe('Personal')
   })
 
   it('posts nothing for a blank name, and says why', async () => {
     const user = setupUser()
     renderNew(viewport)
 
+    await user.click(await screen.findByRole('tab', { name: 'Personal' }))
     await screen.findByLabelText('Name')
     await user.click(tab('abilities'))
 
@@ -1367,7 +1763,7 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     })
     expect(posted[0]?.method).toBe('DELETE')
     // expectedSeq travels in the query, not in a body.
-    expect(posted[0]?.url).toContain('/events/3?expectedSeq=3&dryRun=true')
+    expect(posted[0]?.url).toContain('/events/3?expectedSeq=3&expectedRevision=3&dryRun=true')
     expect(posted[0]?.body).toEqual({})
 
     // This one costs another answer, so it is asked about before it is made.
@@ -1386,4 +1782,232 @@ describe.each(['mobile', 'desktop'] as const)('pricing a change at %s', (viewpor
     const asked = await screen.findByRole('button', { name: /points to raise your scores/ })
     expect(asked).toHaveAttribute('aria-expanded', 'true')
   })
+})
+
+
+it('edits saved spells from the existing picks without deleting them on open or close', async () => {
+  const user = setupUser()
+  const choice = { prompt: 'wizard/spell/cantrip/1', choose: 2, kind: 'spell', from: {
+    kind: 'explicit', options: ['light', 'mage-hand', 'fire-bolt'].map((slug) => ({ kind: 'ref', key: slug, ref: `spell:${slug}` })),
+  } }
+  const spellPrompt = { choice, group: 'class', source: 'class:wizard', purpose: 'cantrip', optional: false, heldOnly: false, event: { type: 'level', ref: 'class:wizard', level: 1 } }
+  const events = { seq: 3, revision: 5, events: [INIT,
+    { seq: 2, type: 'class', ref: 'class:wizard', source: 'class', level: 1 },
+    { seq: 3, type: 'level', ref: 'class:wizard', source: 'class', level: 1, choiceKind: 'spell', purpose: 'cantrip',
+      choices: [{ prompt: choice.prompt, picks: ['light', 'mage-hand'] }] },
+  ] }
+  mockApi({
+    prompts: { seq: 3, revision: 5, complete: true, prompts: [] }, events,
+    editPrompts: { seq: 3, revision: 5, complete: false, prompts: [spellPrompt] },
+    spellEntries: [
+      { slug: 'light', name: 'Light', level: 0 },
+      { slug: 'mage-hand', name: 'Mage Hand', level: 0 },
+      { slug: 'fire-bolt', name: 'Fire Bolt', level: 0 },
+    ],
+  })
+  renderBuild('desktop')
+  await user.click(await screen.findByRole('tab', { name: 'Cantrips' }))
+  expect(screen.queryByRole('tab', { name: 'Spells' })).not.toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: 'Remove Light' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Remove Mage Hand' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+  expect(posted).toHaveLength(0)
+  await user.click(screen.getByRole('button', { name: 'Remove Light' }))
+  await waitFor(() => expect(read.some((url) => url.includes('/prompts?before=3'))).toBe(true))
+  await user.click(tab('class'))
+  expect(posted).toHaveLength(0)
+  await user.click(tab('cantrips'))
+  expect(await screen.findByRole('button', { name: 'Remove Light' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Remove Light' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Fire Bolt' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Fire Bolt' }))
+  await user.click(screen.getByRole('button', { name: 'Add Fire Bolt' }))
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(writes()).toHaveLength(1))
+  // The last tab with work: a save there stays put rather than landing on an
+  // Equipment tab that is only drawn while a starting kit is being chosen.
+  expect(current()).toBe('Cantrips')
+  expect(posted.every((request) => request.method === 'PUT')).toBe(true)
+  expect(writes()[0]).toMatchObject({ method: 'PUT', body: {
+    expectedSeq: 3, expectedRevision: 5,
+    event: { choices: [{ prompt: choice.prompt, picks: ['mage-hand', 'fire-bolt'] }] },
+  } })
+})
+
+
+it('places spell and equipment questions in their own tabs', async () => {
+  const user = setupUser()
+  const question = (kind: string, group: string, owner: string) => ({
+    choice: { prompt: `${owner}/${kind}/0`, kind, choose: 1, from: { kind: 'explicit', options: [] } },
+    source: `${group}:${owner}`, group, optional: false, heldOnly: false, event: { type: group },
+  })
+  mockApi({
+    prompts: { seq: 1, complete: false, prompts: [
+      question('equipment', 'class', 'fighter'), question('equipment', 'background', 'acolyte'),
+      question('spell', 'race', 'elf'),
+    ] },
+    sheet: { ...SHEET, equipment: { equipped: [], backpack: [{ item: 'dagger', count: 2 }], loot: [], purse: { gp: 15 } } },
+  })
+  renderBuild('mobile')
+  await screen.findByRole('tab', { name: 'Spells' })
+  expect(tabs().slice(-3)).toEqual(['Spells', 'Equipment', 'Personality'])
+  expect(current()).toBe('Spells')
+  expect(panel('spells').queryByRole('combobox', { name: 'Spell selection' })).not.toBeInTheDocument()
+  expect(panel('equipment').getAllByRole('button', { name: /Starting equipment/ })).toHaveLength(2)
+  // The tab is its questions and nothing else: what they grant is on the sheet.
+  expect(panel('equipment').queryByText('Dagger')).not.toBeInTheDocument()
+  for (const name of ['class', 'race', 'background']) {
+    expect(panel(name).queryByRole('button', { name: /Starting equipment|1 spell/ })).not.toBeInTheDocument()
+  }
+  await user.click(tab('equipment'))
+  expect(current()).toBe('Equipment')
+})
+
+// An answered choice used to be reopened by deleting its entry and waiting for
+// the question to come back: a player who opened a card to look at what they
+// had picked saw nothing picked, and had just unpicked it.
+/**
+ * The starting kit is asked once and seeds the inventory; after that the
+ * character's things are edited on the sheet. So a visit that opens with the
+ * kit already answered -- Edit -- draws no Equipment tab.
+ */
+it('draws no Equipment tab when the starting kit was answered before this visit', async () => {
+  const weapon = {
+    choice: { prompt: 'wizard/starting-equipment/0', kind: 'equipment', choose: 1, from: { kind: 'explicit', options: [
+      { key: 'quarterstaff', kind: 'ref', ref: 'item:quarterstaff', count: 1 },
+      { key: 'dagger', kind: 'ref', ref: 'item:dagger', count: 1 },
+    ] } },
+    source: 'class:wizard', group: 'class', optional: true, heldOnly: false, event: { type: 'class', ref: 'class:wizard', level: 1 },
+  }
+  mockApi({
+    prompts: { seq: 3, complete: true, prompts: [] },
+    editPrompts: { seq: 3, complete: false, prompts: [weapon] },
+    events: { seq: 3, events: [INIT, { seq: 2, type: 'class', source: 'class', ref: 'class:wizard', level: 1 }, {
+      seq: 3, type: 'class', source: 'class', choiceKind: 'equipment', ref: 'class:wizard', level: 1,
+      choices: [{ prompt: 'wizard/starting-equipment/0', picks: ['dagger'] }],
+      selections: [{ key: 'dagger', kind: 'ref', ref: 'item:dagger', count: 1 }],
+    }] },
+  })
+  renderBuild('desktop')
+  await screen.findByRole('tab', { name: 'Class' })
+
+  expect(screen.queryByRole('tab', { name: 'Equipment' })).not.toBeInTheDocument()
+  expect(screen.queryByText(/Starting equipment/i)).not.toBeInTheDocument()
+  expect(posted).toHaveLength(0)
+})
+
+it('keeps the Equipment tab for the rest of a visit that was asked about the kit', async () => {
+  const user = setupUser()
+  const kit = {
+    choice: { prompt: 'wizard/starting-equipment/0', kind: 'equipment', choose: 1, from: { kind: 'explicit', options: [
+      { key: 'dagger', kind: 'ref', ref: 'item:dagger', count: 1 },
+    ] } },
+    source: 'class:wizard', group: 'class', optional: true, heldOnly: false, event: { type: 'class', ref: 'class:wizard', level: 1 },
+  }
+  // Any write stands in for the kit's own answer: what matters is that the
+  // prompts come back without an equipment question.
+  mockApi({
+    prompts: { seq: 1, complete: false, prompts: [kit, {
+      choice: { prompt: 'character/class', choose: 1, kind: 'class', from: { kind: 'explicit', options: [
+        { key: 'wizard', kind: 'text', text: 'Wizard' },
+      ] } },
+      group: 'class', optional: false, event: { type: 'class', level: 1 }, heldOnly: false,
+    }] },
+    then: { seq: 2, complete: true, prompts: [] },
+    thenEvents: { seq: 2, events: [INIT, { seq: 2, type: 'class', source: 'class', ref: 'class:wizard', level: 1 }] },
+  })
+  renderBuild('mobile')
+  await screen.findByRole('tab', { name: 'Equipment' })
+  await user.click(await panel('class').findByRole('button', { name: 'Confirm' }))
+
+  await waitFor(() => expect(writes()).toHaveLength(1))
+  await waitFor(() => expect(panel('equipment').queryByRole('button', { name: /Starting equipment/ })).not.toBeInTheDocument())
+  expect(screen.getByRole('tab', { name: 'Equipment' })).toBeInTheDocument()
+})
+
+it('does not send Next to a spell tab that only offers a custom spell', async () => {
+  const user = setupUser()
+  const custom = (mode: string) => ({
+    choice: { prompt: `custom/spell/${mode}`, kind: 'spell', choose: 1, from: { kind: 'explicit', options: [] } },
+    source: 'rule:custom-spells', group: 'class', purpose: 'custom', optional: true, upTo: true, heldOnly: false, event: { type: 'change' },
+  })
+  mockApi({ prompts: { seq: 1, complete: true, prompts: [custom('cantrip'), custom('known')] } })
+  renderBuild('mobile')
+  await screen.findByRole('tab', { name: 'Cantrips' })
+
+  await user.click(panel('rules').getByRole('button', { name: 'Next' }))
+
+  expect(await screen.findByText('sheet')).toBeInTheDocument()
+})
+
+it('saves the merged spell picker as a batch of legal per-level answers', async () => {
+  const user = setupUser()
+  const spellPrompt = (level: number, slugs: string[]) => ({
+    group: 'class', source: 'class:warlock', purpose: 'known', level, optional: false, heldOnly: false,
+    event: { type: 'level', ref: 'class:warlock', level },
+    choice: { prompt: `warlock/spell/known/${level}`, kind: 'spell', choose: 1,
+      from: { kind: 'explicit', options: slugs.map((slug) => ({ key: slug, kind: 'ref', ref: `spell:${slug}` })) } },
+  })
+  mockApi({ prompts: { seq: 2, revision: 4, complete: false, prompts: [spellPrompt(1, ['alarm']), spellPrompt(3, ['alarm', 'darkness'])] },
+    spellEntries: [{ slug: 'alarm', name: 'Alarm', level: 1 }, { slug: 'darkness', name: 'Darkness', level: 2 }],
+  })
+  renderBuild('desktop')
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add Darkness' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Add Darkness' }))
+  await user.click(screen.getByRole('button', { name: 'Add Alarm' }))
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(writes()).toHaveLength(1))
+  expect(writes()[0]).toMatchObject({ method: 'POST', body: {
+    expectedSeq: 2, expectedRevision: 4,
+    events: [
+      { type: 'level', ref: 'class:warlock', level: 1, choices: [{ prompt: 'warlock/spell/known/1', picks: ['alarm'] }] },
+      { type: 'level', ref: 'class:warlock', level: 3, choices: [{ prompt: 'warlock/spell/known/3', picks: ['darkness'] }] },
+    ],
+  } })
+})
+
+it('saves multiple previous spell edits and a new acquisition atomically before advancing', async () => {
+  const user = setupUser()
+  const question = (level: number, slugs: string[]) => ({
+    group: 'class', source: 'class:wizard', purpose: 'spellbook', level, optional: false, heldOnly: false,
+    event: { type: 'level', ref: 'class:wizard', level },
+    choice: { prompt: `wizard/spell/spellbook/${level}`, kind: 'spell', choose: 1,
+      from: { kind: 'explicit', options: slugs.map((slug) => ({ key: slug, kind: 'ref', ref: `spell:${slug}` })) } },
+  })
+  const first = question(1, ['alarm', 'burning-hands'])
+  const second = question(2, ['shield', 'magic-missile'])
+  const third = question(3, ['darkness'])
+  mockApi({
+    prompts: { seq: 4, revision: 6, complete: false, prompts: [third] },
+    events: { seq: 4, revision: 6, events: [INIT,
+      { seq: 2, type: 'class', ref: 'class:wizard', source: 'class', level: 1 },
+      { seq: 3, type: 'level', ref: 'class:wizard', source: 'class', choiceKind: 'spell', purpose: 'spellbook', level: 1, choices: [{ prompt: first.choice.prompt, picks: ['alarm'] }] },
+      { seq: 4, type: 'level', ref: 'class:wizard', source: 'class', choiceKind: 'spell', purpose: 'spellbook', level: 2, choices: [{ prompt: second.choice.prompt, picks: ['shield'] }] },
+    ] },
+    editPrompts: { seq: 4, revision: 6, complete: false, prompts: [first, second] },
+    spellEntries: ['alarm', 'burning-hands', 'shield', 'magic-missile', 'darkness'].map((slug) => ({ slug, name: slug, level: slug === 'darkness' ? 2 : 1 })),
+  })
+  renderBuild('desktop')
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add darkness' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Add darkness' }))
+  await user.click(screen.getByRole('button', { name: 'Remove alarm' }))
+  await user.click(screen.getByRole('button', { name: 'Remove shield' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add burning-hands' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Add burning-hands' }))
+  await user.click(screen.getByRole('button', { name: 'Add magic-missile' }))
+  expect(posted).toHaveLength(0)
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(writes()).toHaveLength(1))
+  expect(posted).toHaveLength(2)
+  expect(posted[0]?.url).toContain('/events/revise?dryRun=true')
+  expect(writes()[0]).toMatchObject({ method: 'POST', body: {
+    expectedSeq: 4, expectedRevision: 6,
+    replacements: [
+      { seq: 3, event: { choices: [{ prompt: first.choice.prompt, picks: ['burning-hands'] }] } },
+      { seq: 4, event: { choices: [{ prompt: second.choice.prompt, picks: ['magic-missile'] }] } },
+    ],
+    events: [{ choices: [{ prompt: third.choice.prompt, picks: ['darkness'] }] }],
+  } })
+  // Nothing after Spells has work, so the save stays where it was made.
+  await waitFor(() => expect(screen.getByRole('tab', { name: 'Spells' })).toHaveAttribute('aria-selected', 'true'))
 })

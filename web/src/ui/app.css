@@ -36,3 +36,46 @@
     font-size: var(--mantine-font-size-md);
   }
 }
+
+/* Catalogue Markdown keeps its block structure at every reading width. */
+.markdown-body {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.markdown-body > :first-child { margin-top: 0; }
+.markdown-body > :last-child { margin-bottom: 0; }
+.markdown-body p, .markdown-body ul, .markdown-body ol { margin-block: 0.75em; }
+.markdown-body table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.markdown-body th, .markdown-body td { border: 1px solid var(--mantine-color-default-border); padding: 0.4em 0.6em; text-align: left; }
+.markdown-body img { max-width: 100%; }
+.markdown-body pre { overflow-x: auto; }
+.markdown-body a { color: var(--mantine-color-anchor); }
+
+/* The AI Wizard's chat: a bubble arrives rather than appears, and three dots
+ * stand for the assistant while it works. `useReveal` decides when; this is
+ * only how. */
+.chat-bubble { animation: chat-in 180ms ease-out; }
+@keyframes chat-in { from { opacity: 0; transform: translateY(6px); } }
+.chat-typing { display: inline-flex; gap: 4px; padding-block: 6px; }
+.chat-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mantine-color-dimmed);
+  animation: chat-dot 1.2s ease-in-out infinite;
+}
+.chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes chat-dot { 0%, 60%, 100% { opacity: 0.3; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
+/* Reduced motion keeps the fades and drops the movement. */
+@keyframes chat-fade { from { opacity: 0; } }
+@keyframes chat-pulse { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .chat-bubble { animation-name: chat-fade; }
+  .chat-typing span { animation-name: chat-pulse; }
+}
+
+/* A picked option and its description are one box, so the focus ring is drawn
+ * round the box rather than round the button inside it. */
+.picked-option:has(:focus-visible) { outline: 2px solid var(--mantine-primary-color-filled); outline-offset: 2px; }
+.picked-option > button:focus-visible { outline: none; }

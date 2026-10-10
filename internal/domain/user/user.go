@@ -16,6 +16,7 @@ package user
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -44,7 +45,9 @@ const AnonymousIDPrefix = "anon:"
 type User struct {
 	ID          ID
 	DisplayName string
+	Image       string
 	CreatedAt   time.Time
+	Appearance  Appearance
 	// Credentials holds every passkey registered to this account. It is a
 	// slice rather than a single value because the only defence against a
 	// lost device is a second registered authenticator.
@@ -111,6 +114,23 @@ type Credential struct {
 // migration.
 type Provider string
 
+// Superadmin reports whether the account is named in list, by its id or by an
+// email a provider has verified. An unverified email proves nothing about who
+// holds it, so it never matches.
+func (u User) Superadmin(list []string) bool {
+	for _, entry := range list {
+		if entry == string(u.ID) {
+			return true
+		}
+		for _, i := range u.Identities {
+			if i.EmailVerified && strings.EqualFold(i.Email, entry) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // ProviderGoogle is the only provider implemented today.
 const ProviderGoogle Provider = "google"
 
@@ -134,6 +154,7 @@ type Identity struct {
 	// account keeps its own DisplayName; this is only ever informational, so
 	// that a later rename upstream cannot silently rewrite what we show.
 	DisplayName string
+	Image       string
 
 	CreatedAt  time.Time
 	LastUsedAt time.Time
@@ -143,6 +164,9 @@ type Identity struct {
 // internal/adapter/repository; internal/app picks the concrete one, and that
 // assignment is what proves conformance at compile time.
 type Repository interface {
+	SetImage(ctx context.Context, id ID, image string) error
+	SetAppearance(ctx context.Context, id ID, appearance Appearance) error
+
 	// Create stores u together with its initial credentials. Implementations
 	// report a *types.ValidationError if the id or any credential id is
 	// already taken.

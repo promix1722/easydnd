@@ -18,6 +18,13 @@ type Class struct {
 	// SavingThrows are the two abilities this class is proficient in.
 	SavingThrows []rules.Ability
 
+	// AbilityPriority is every ability, most important first: where this
+	// class's best score goes, then its second best, down to the one it can
+	// spare. It is advice, not a rule -- the builder's "Use recommended" deals
+	// the scores out by it -- so nothing is derived from it and a pack may
+	// leave it out.
+	AbilityPriority []rules.Ability
+
 	// Proficiencies are granted unconditionally; ProficiencyOptions holds the
 	// prompts, e.g. "choose two skills from this list".
 	Proficiencies      []rules.Slug

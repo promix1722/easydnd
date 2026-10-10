@@ -1,0 +1,119 @@
+{
+  "adventuring-gear": {
+    "name": "Приключенческое снаряжение"
+  },
+  "ammunition": {
+    "name": "Боеприпасы"
+  },
+  "arcane-foci": {
+    "name": "Магические фокусировки"
+  },
+  "armor": {
+    "name": "Доспехи"
+  },
+  "artisans-tools": {
+    "name": "Инструменты ремесленника"
+  },
+  "druidic-foci": {
+    "name": "Фокусировки друида"
+  },
+  "equipment-packs": {
+    "name": "Комплекты снаряжения"
+  },
+  "gaming-sets": {
+    "name": "Игровые наборы"
+  },
+  "heavy-armor": {
+    "name": "Тяжёлые доспехи"
+  },
+  "holy-symbols": {
+    "name": "Священные символы"
+  },
+  "kits": {
+    "name": "Наборы"
+  },
+  "land-vehicles": {
+    "name": "Наземные транспортные средства"
+  },
+  "light-armor": {
+    "name": "Лёгкие доспехи"
+  },
+  "martial-melee-weapons": {
+    "name": "Воинское рукопашное оружие"
+  },
+  "martial-ranged-weapons": {
+    "name": "Воинское дальнобойное оружие"
+  },
+  "martial-weapons": {
+    "name": "Воинское оружие"
+  },
+  "medium-armor": {
+    "name": "Средние доспехи"
+  },
+  "melee-weapons": {
+    "name": "Рукопашное оружие"
+  },
+  "mounts-and-other-animals": {
+    "name": "Скакуны и другие животные"
+  },
+  "mounts-and-vehicles": {
+    "name": "Скакуны и транспортные средства"
+  },
+  "musical-instruments": {
+    "name": "Музыкальные инструменты"
+  },
+  "other-tools": {
+    "name": "Другие инструменты"
+  },
+  "potion": {
+    "name": "Зелье"
+  },
+  "ranged-weapons": {
+    "name": "Дальнобойное оружие"
+  },
+  "ring": {
+    "name": "Кольцо"
+  },
+  "rod": {
+    "name": "Жезл"
+  },
+  "scroll": {
+    "name": "Свиток"
+  },
+  "shields": {
+    "name": "Щиты"
+  },
+  "simple-melee-weapons": {
+    "name": "Простое рукопашное оружие"
+  },
+  "simple-ranged-weapons": {
+    "name": "Простое дальнобойное оружие"
+  },
+  "simple-weapons": {
+    "name": "Простое оружие"
+  },
+  "staff": {
+    "name": "Посох"
+  },
+  "standard-gear": {
+    "name": "Стандартное снаряжение"
+  },
+  "tack-harness-and-drawn-vehicles": {
+    "name": "Сбруя, упряжь и гужевой транспорт"
+  },
+  "tools": {
+    "name": "Инструменты"
+  },
+  "wand": {
+    "name": "Волшебная палочка"
+  },
+  "waterborne-vehicles": {
+    "name": "Водные транспортные средства"
+  },
+  "weapon": {
+    "name": "Оружие"
+  },
+  "wondrous-items": {
+    "name": "Чудесные предметы"
+  }
+}

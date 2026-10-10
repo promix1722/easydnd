@@ -1,18 +1,16 @@
 /**
  * The SRD 5.1 notice, as the browser client says it.
  *
- * This is a *copy*. The canonical wording is the `attribution` constant in
- * `cmd/srdgen/main.go`, because that is the only one CI checks: `make
- * data/srd/check` regenerates `data/srd_5.1/` from the generator and fails on
- * any difference. A second copy of a licence notice that could silently drift
- * from the first is precisely the failure `docs/licensing.md` warns about, so
- * `attribution.test.ts` reads the generated file off disk and fails when these
- * two part company. Change the Go constant first and let the generator
- * propagate; this follows.
+ * This is a *copy*. The canonical wording is the `## SRD 5.1` section of
+ * `data/pack/srd-5.1/ATTRIBUTION.md`, the file that travels with the data it
+ * covers. A second copy of a licence notice that could silently drift from
+ * the first is precisely the failure `docs/licensing.md` warns about, so
+ * `attribution.test.ts` reads that file off disk and fails when these two
+ * part company. Change the markdown first; this follows.
  *
- * Straight quotes around "SRD 5.1", following srdgen. The copies under
- * `docs/reference_srd_5.1/` are quoted from upstream and use curly ones; they
- * are not this project's wording and must not be pasted in here.
+ * Straight quotes around "SRD 5.1", following that file. The copy under
+ * `docs/reference_srd_5.1/` is quoted from upstream and uses curly ones; it
+ * is not this project's wording and must not be pasted in here.
  *
  * The two URLs are pulled out so `LegalScreen` can render them as links rather
  * than as bare text a reader has to retype -- the licence asks for the notice,

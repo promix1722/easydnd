@@ -36,12 +36,9 @@ export function useReleaseWatch(own: string = WEB_VERSION): boolean {
   const stale = useSyncExternalStore(subscribeToRelease, isStale, isStale)
 
   useEffect(() => {
-    // Nothing left to learn once it has latched, and nothing to compare
-    // against in a dev-server bundle. `own` is a parameter for the same reason
-    // it is one on noteRelease: a test has to be able to state both sides,
-    // because a test bundle always reports "dev" and "dev" is the one value
-    // this is required to ignore.
-    if (stale || own === 'dev') return
+    // A dev server may report a commit hash; its HMR lifecycle is independent
+    // of API restarts. Do not start production release checks in development.
+    if (import.meta.env.DEV || stale || own === 'dev') return
 
     const check = (): void => {
       if (document.visibilityState !== 'visible') return

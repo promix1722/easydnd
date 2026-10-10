@@ -35,7 +35,14 @@ func NewConverter(cat *domain.Catalog) Converter {
 func (c Converter) ChoiceValue(ch rules.Choice) Choice { return c.inner.choiceValue(ch) }
 
 func entryOf(e domain.Entry) Entry {
-	return Entry{Slug: e.Slug.String(), Name: e.Name, Desc: e.Desc}
+	out := Entry{Manual: e.Manual, Slug: e.Slug.String(), Name: e.Name, Desc: e.Desc}
+	if p := e.Provenance; p != nil {
+		out.Provenance = &Provenance{PackID: p.PackID, PackTitle: p.PackTitle, Version: p.Version, Digest: p.Digest, Sources: []BookSource{}}
+		for _, source := range p.Sources {
+			out.Provenance.Sources = append(out.Provenance.Sources, BookSource{ID: source.ID, Name: source.Name})
+		}
+	}
+	return out
 }
 
 func slugStrings(slugs []rules.Slug) []string {
@@ -60,7 +67,7 @@ func costOf(c rules.Coins) *Cost {
 	if c.Amount == 0 {
 		return nil
 	}
-	return &Cost{Amount: c.Amount, Unit: string(c.Unit)}
+	return &Cost{Amount: c.Amount, Unit: c.Unit.String()}
 }
 
 func damageOf(d *rules.Damage) *Damage {
@@ -125,6 +132,7 @@ func (c converter) choiceValue(ch rules.Choice) Choice {
 		Kind:       ch.Kind.String(),
 		From:       c.optionSet(ch.From),
 		Repeatable: ch.Repeatable,
+		Slot:       ch.Slot.String(),
 	}
 }
 
@@ -140,7 +148,10 @@ func (c converter) choices(chs []rules.Choice) []Choice {
 }
 
 func (c converter) optionSet(set rules.OptionSet) OptionSet {
-	out := OptionSet{Kind: optionSetKindName(set.Kind)}
+	out := OptionSet{Kind: optionSetKindName(set.Kind), Category: set.Category.String()}
+	if set.Collection != rules.RefNone {
+		out.Collection = set.Collection.String()
+	}
 	switch set.Kind {
 	case rules.OptionsFromEquipmentCategory:
 		out.Category = set.Category.String()
@@ -450,7 +461,9 @@ func (c converter) feat(f domain.Feat) Feat {
 func (c converter) item(i domain.Item) Item {
 	out := Item{
 		Entry:    entryOf(i.Entry),
+		Icon:     i.Icon,
 		Category: i.Category.String(),
+		Slot:     i.Slot.String(),
 		Cost:     costOf(i.Cost),
 		Weight:   i.Weight,
 	}
@@ -501,8 +514,10 @@ func (c converter) item(i domain.Item) Item {
 func (c converter) magicItem(m domain.MagicItem) MagicItem {
 	return MagicItem{
 		Entry:    entryOf(m.Entry),
+		Icon:     m.Icon,
 		Category: m.Category.String(),
 		Rarity:   m.Rarity.String(),
+		Slot:     m.Slot.String(),
 		Variant:  m.IsVariant,
 		Variants: slugStrings(m.Variants),
 	}
@@ -514,8 +529,11 @@ func (c converter) magicItem(m domain.MagicItem) MagicItem {
 // ?slugs= returns the rest. The material component's text is prose and stays
 // with the detail.
 func (c converter) spellSummary(s domain.Spell) Spell {
+	summary := entryOf(s.Entry)
+	summary.Desc = nil
 	return Spell{
-		Entry:         Entry{Slug: s.Slug.String(), Name: s.Name},
+		Entry:         summary,
+		Icon:          s.Icon,
 		Source:        s.Source.String(),
 		Level:         s.Level,
 		School:        s.School.String(),
@@ -594,3 +612,12 @@ func scalingOf(table map[int]rules.Dice) map[string]string {
 }
 
 func (c converter) termEntry(t domain.Term) Term { return Term{Entry: entryOf(t.Entry)} }
+
+// OptionValue exposes resolved selections without duplicating the choice wire grammar.
+func (c Converter) OptionValue(option rules.Option) Option { return c.inner.option(option) }
+
+// SpellSummary exposes the same wire representation to the aggregate browser.
+func (c Converter) SpellSummary(s domain.Spell) Spell { return c.inner.spellSummary(s) }
+
+// Entry exposes localized names and provenance to the aggregate browser.
+func (c Converter) Entry(e domain.Entry) Entry { return entryOf(e) }

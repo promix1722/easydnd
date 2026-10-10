@@ -1,3 +1,4 @@
+import { AppearanceProvider, type AppearanceClient } from '@/lib/appearance'
 import { describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
@@ -40,10 +41,15 @@ function accountWith(ways: Partial<SessionUser>): SessionUser {
  * rendering at the real path is what proves the heading arrives without a
  * breadcrumb above it.
  */
+const appearanceClient: AppearanceClient = {
+  get: async () => ({ palette: 'dragon', color_scheme: 'auto' }),
+  put: async (next) => next,
+}
+
 function accountAt(state: Partial<AuthState> = {}) {
   return renderAt(
     'desktop',
-    <MemoryRouter initialEntries={['/account']}>{withAuth(state, <AccountScreen />)}</MemoryRouter>,
+    <MemoryRouter initialEntries={['/account']}>{withAuth(state, <AppearanceProvider client={appearanceClient}><AccountScreen /></AppearanceProvider>)}</MemoryRouter>,
   )
 }
 
@@ -59,15 +65,34 @@ describe('AccountScreen', () => {
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument()
   })
 
-  // A guest has no account, so the page has no inventory to draw: the subtitle
-  // saying what this session is is the whole screen.
-  it('tells a guest there is nothing to manage', () => {
+  // A guest can change appearance without gaining account management.
+  it('offers appearance settings to a guest', () => {
     accountAt({ user: testGuest })
 
     expect(screen.getByText('You are playing as a guest.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Profile' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Upload image' })).not.toBeInTheDocument()
     expect(screen.queryByText('Passkeys')).not.toBeInTheDocument()
     expect(screen.queryByText('Connected accounts')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Color theme' })).toHaveValue('Dragon')
+    expect(screen.getByRole('combobox', { name: 'Display mode' })).toHaveValue('System')
+  })
+
+  it('shows the shared avatar editor in Profile and saves removal to the current account', async () => {
+    const user = setupUser()
+    const refresh = vi.fn(async () => {})
+    const calls: unknown[] = []
+    vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(JSON.parse(String(init?.body)))
+      return new Response(null, { status: 204 })
+    }))
+    accountAt({ user: accountWith({ image: 'data:image/webp;base64,cG9ydHJhaXQ=' }), refresh })
+    expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Upload image' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Remove image' }))
+    expect(calls).toEqual([{ image: '' }])
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/v1/profile/image'), expect.objectContaining({ method: 'PUT' }))
   })
 
   it('lists both ways in when the account has both', () => {

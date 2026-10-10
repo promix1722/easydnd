@@ -1,8 +1,10 @@
+import { PacksScreen, PackEditorScreen } from '@/features/packs'
 import { createBrowserRouter } from 'react-router'
 
+import { AvatarGalleryScreen } from '@/features/avatars'
 import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
-import { BuildScreen, CharacterLogScreen, CharacterSheetScreen } from '@/features/character'
+import { BuildScreen, CharacterLogScreen, CharacterSheetScreen, ItemScreen } from '@/features/character'
 import { ImportCharacterScreen } from '@/features/characters'
 import { DiceScreen } from '@/features/dice'
 import { GameScreen, GamesScreen, SharedSheetScreen } from '@/features/games'
@@ -17,6 +19,7 @@ import { HomeRoute } from './HomeRoute'
 import { JoinRoute } from './JoinRoute'
 import { NotFoundPage } from './NotFoundPage'
 import { Private } from './Private'
+import { LegacyImportRedirect } from './LegacyImportRedirect'
 
 /**
  * The complete route table -- one tree for both viewports and for both sides
@@ -39,6 +42,9 @@ export const router = createBrowserRouter([
     element: <RootGate />,
     children: [
       { index: true, element: <HomeRoute /> },
+      { path: 'avatar-gallery', element: <AvatarGalleryScreen /> },
+      { path: 'homebrew', element: <Private><PacksScreen /></Private> },
+      { path: 'homebrew/:id', element: <Private><PackEditorScreen /></Private> },
 
       // A character is somebody's, so these render the landing page to a
       // signed-out visitor rather than redirecting: the URL survives being
@@ -59,13 +65,19 @@ export const router = createBrowserRouter([
       },
       // Ahead of characters/:id so the literal wins over the parameter.
       {
-        path: 'characters/import',
+        path: 'ai-wizard',
         element: (
           <Private>
             <ImportCharacterScreen />
           </Private>
         ),
       },
+      {
+        path: 'ai-wizard/:sessionId',
+        element: <Private><ImportCharacterScreen /></Private>,
+      },
+      { path: 'characters/import', element: <LegacyImportRedirect /> },
+      { path: 'characters/import/:sessionId/:importView?', element: <LegacyImportRedirect /> },
       {
         path: 'characters/:id',
         element: (
@@ -86,6 +98,10 @@ export const router = createBrowserRouter([
       // The log rather than the sheet: same character, the record instead of
       // what the record means. Not a NAV_ITEMS entry -- it hangs off a
       // character, not off the app.
+      {
+        path: 'characters/:id/items/:slug',
+        element: <Private><ItemScreen /></Private>,
+      },
       {
         path: 'characters/:id/log',
         element: (
@@ -127,6 +143,20 @@ export const router = createBrowserRouter([
 
       // A shared character's sheet stays under its group, because sharing is a
       // group's doing and the group is what grants the read.
+      // A character its owner opened, read by its link: no group in the path,
+      // because no group grants this read.
+      {
+        path: 'shared/:character',
+        element: <Private><SharedSheetScreen /></Private>,
+      },
+      {
+        path: 'shared/:character/items/:slug',
+        element: <Private><ItemScreen /></Private>,
+      },
+      {
+        path: 'groups/:id/characters/:character/items/:slug',
+        element: <Private><ItemScreen /></Private>,
+      },
       {
         path: 'groups/:id/characters/:character',
         element: (
