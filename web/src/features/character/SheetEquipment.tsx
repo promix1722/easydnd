@@ -1,8 +1,8 @@
-import { CUSTOM, ELSEWHERE, discard, groupOf, mergeStacks, setCoin, slotted, unequip } from '@/domain'
+import { CUSTOM, ELSEWHERE, discard, equip, groupOf, mergeStacks, setCoin, slotsFor, slotted, unequip } from '@/domain'
 import type { InventoryRow, ItemGroup, Slot } from '@/domain'
 import type { Change, Equipment, Item, SheetAction } from '@/lib/api'
 import { useT } from '@/lib/i18n'
-import { Badge, Box, Grid, ITEM_ICON_SIZE, Menu, Panel, Paper, Stack, Text } from '@/ui'
+import { Badge, Box, Grid, Group, ITEM_ICON_SIZE, Menu, Panel, Paper, Stack, Text } from '@/ui'
 
 import { InventoryRows, ItemCard, ItemDetails, ItemMenu, NAME_LINE, Purse } from './Inventory'
 import { AddItems } from './ItemPicker'
@@ -35,10 +35,10 @@ const rowName = (name: (slug: string) => string) => (row: InventoryRow) => row.c
 /**
  * The sheet's Equipment tab: what is worn where, then everything that could be.
  *
- * A card is never pressed and an empty one does nothing: an item is put on
- * from its row's menu below. With `onChange`, a worn item has the same menu on
- * its card, to take it off or drop it, and Add equipment under the rows
- * searches the catalogue's wearable half in place.
+ * A card is never pressed. With `onChange`, each has a menu: a worn item's
+ * takes it off or drops it, and an empty slot's lists by name what is carried
+ * that could go there -- the same put-on its row's menu below offers. Add
+ * equipment under the rows searches the catalogue's wearable half in place.
  */
 export function SheetEquipment({ equipment, items, name, lookup, actions = [], disabled = false, onChange }: InventoryProps) {
   const t = useT()
@@ -59,14 +59,30 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
     // A card is a name line over one icon's height whether or not anything
     // is in it, so wearing something never moves the cards below -- where
     // there are cards beside it to move; on a phone they are one column, and
-    // an empty one is as short as its two words. It is an outline, so that
-    // what is worn is what the eye lands on.
-    if (worn.length === 0) return <Paper key={each} withBorder p="xs" radius="md" style={{ borderStyle: 'dashed' }}>
-      <Stack gap={4} align="center" justify="center" mih={{ base: 0, sm: NAME_LINE + ITEM_ICON_SIZE }}>
-        <Text size="sm" c="dimmed">{t('equipment.slotEmpty')}</Text>
-        {slotName}
-      </Stack>
-    </Paper>
+    // an empty one is as short as its two lines. The slot and the menu sit
+    // where a worn item's do, so the dots are in one place down a column.
+    if (worn.length === 0) {
+      const slot = slotOfCard(each)
+      const fits = slot === ELSEWHERE ? [] : rows.filter((row) =>
+        row.count > row.equipped && slotsFor(equipment, items, items.get(row.item ?? '')).includes(slot))
+      return <Paper key={each} withBorder p="xs" radius="md">
+        <Stack gap={6}>
+          <Group gap={6} wrap="nowrap" justify="flex-end" mih={NAME_LINE - 6}>
+            {slotName}
+            {onChange && slot !== ELSEWHERE && <ItemMenu name={labels[each]} disabled={disabled || fits.length === 0}>
+              {fits.map((row) => (
+                <Menu.Item key={row.key} onClick={() => onChange(equip(equipment, items, row.item ?? '', slot))}>
+                  {name(row.item ?? '')}
+                </Menu.Item>
+              ))}
+            </ItemMenu>}
+          </Group>
+          <Group justify="center" mih={{ base: 0, sm: ITEM_ICON_SIZE }}>
+            <Text size="sm" c="dimmed">{t('equipment.slotEmpty')}</Text>
+          </Group>
+        </Stack>
+      </Paper>
+    }
     return <Paper key={each} withBorder p="xs" radius="md">
       <Stack gap="xs">
         {worn.map((slug, at) => {

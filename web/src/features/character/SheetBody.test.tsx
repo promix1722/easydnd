@@ -436,14 +436,30 @@ describe('the panels that were sentences', () => {
     ])
   })
 
-  // A card is not a button and an empty one offers nothing: the only thing
-  // to press on the doll is the menu of an item that is worn. What is worn is
-  // on its card only, so it has no row below. No row has a stepper.
-  it('presses nothing on the doll but a worn item\'s menu, and lists only what is carried', () => {
-    renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={vi.fn()} />)
+  // A card is not a button: what is pressed on the doll is a menu, a worn
+  // item's or an empty slot's. An empty slot's is live only where something
+  // carried fits it -- here the spare armor, which the taken body slot cannot
+  // have and Custom can. What is worn is on its card only, so it has no row
+  // below. No row has a stepper.
+  it('presses nothing on the doll but menus, and lists only what is carried', async () => {
+    const onEquipment = vi.fn()
+    const user = setupUser()
+    renderAt('mobile', <SheetBody sheet={PACKED} onEquipment={onEquipment} />)
 
     const slots = within(screen.getByRole('region', { name: 'Worn and wielded' }))
-    expect.soft(slots.getAllByRole('button').map((each) => each.getAttribute('aria-label'))).toEqual(['Actions for Leather Armor'])
+    const live = slots.getAllByRole('button').filter((each) => !(each as HTMLButtonElement).disabled)
+    expect.soft(live.map((each) => each.getAttribute('aria-label'))).toEqual(['Actions for Custom', 'Actions for Leather Armor'])
+    expect.soft(slots.getByRole('button', { name: 'Actions for Head' })).toBeDisabled()
+
+    // Names only, and pressing one puts it on.
+    await user.click(slots.getByRole('button', { name: 'Actions for Custom' }))
+    const offered = within(await screen.findByRole('menu')).getAllByRole('menuitem')
+    expect.soft(offered.map((each) => each.textContent)).toEqual(['Chain Mail'])
+    await user.click(offered[0] as HTMLElement)
+    expect.soft(onEquipment).toHaveBeenCalledWith(expect.arrayContaining([
+      { path: 'equipment.backpack.chain-mail', op: 'set', value: { kind: 'int', int: 0 } },
+    ]))
+
     expect.soft(slots.getAllByText('Empty')).toHaveLength(11)
     expect.soft(screen.getAllByRole('button', { name: 'Actions for Leather Armor' })).toHaveLength(1)
     expect.soft(screen.getByRole('button', { name: 'Actions for Chain Mail' })).toBeInTheDocument()

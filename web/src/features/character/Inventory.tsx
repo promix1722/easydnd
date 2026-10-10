@@ -83,7 +83,8 @@ export function ItemMenu({ name, disabled = false, children }: { name: string; d
   return <Menu position="bottom-end">
     <Menu.Target>
       {/* Its own padding pulled back, so the dots end where the badges do. */}
-      <ActionIcon variant="subtle" color="gray" mr={-6} aria-label={t('list.actions', { name })} disabled={disabled} style={{ flexShrink: 0 }}>
+      {/* No fill when there is nothing to open: a disabled one is otherwise a grey block. */}
+      <ActionIcon variant="subtle" color="gray" mr={-6} {...(disabled ? { bg: 'transparent' } : {})} aria-label={t('list.actions', { name })} disabled={disabled} style={{ flexShrink: 0 }}>
         <IconDotsVertical size={ACTION_ICON_SIZE} />
       </ActionIcon>
     </Menu.Target>

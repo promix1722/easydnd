@@ -2090,9 +2090,10 @@ Strength it asks (`armorStats`; a shield's class is written as the `+2` it
 adds), with a disadvantage on Stealth as one line beneath. None of the other
 facts are there, and nothing worn says what it weighs -- weight is a fact about
 carrying a thing. Properties, weight and the rest are one press away. An empty
-slot is a dashed outline holding the word and the slot's badge, so what is
-worn is what the eye lands on; it keeps a full card's height where cards sit
-side by side and is as short as its two lines on a phone, where they do not.
+slot is the same card with nothing in it: the slot's badge and the menu on the
+name line, where a worn item's are, over the word. It keeps a full card's
+height where cards sit side by side and is as short as its two lines on a
+phone, where they do not.
 
 **What could be worn is drawn as what is worn.** The Equipment tab's list
 under the slots is the same card (`ItemCard` in `features/character/
@@ -2130,9 +2131,12 @@ the owner's `CharacterSheetScreen` passes it; `SharedSheetScreen` does not, so
 a sheet shared with a table has nothing to press. With it, every row has a
 **menu** on the right, and so does every worn item on its card -- the same
 three dots, so there is one way to act on an item wherever it is drawn. A
-card itself is never pressed and an empty one does nothing: it used to open a
-sheet listing what in the backpack fits, which made an empty rectangle a
-button and gave equipping two different controls. A wearable's row menu has
+card itself is never pressed: an empty one used to open a sheet listing what
+in the backpack fits, which made an empty rectangle a button. It has the three
+dots instead, opening the **names of what is carried that fits that slot** --
+nothing but names, since each has its card below -- and disabled when nothing
+does. That is the row menu's Equip reached from the other end, through the
+same `slotsFor` and `equip`, so the two cannot disagree about what goes where. A wearable's row menu has
 **one Equip entry per slot it could go in** -- its own, Custom, and the off
 hand for a held thing once the main hand is taken (`slotsFor` in
 `domain/equipment.ts`; alone, a held item is seated in the main hand whatever
