@@ -19,12 +19,22 @@ import (
 // the way it would make it unprojectable.
 func Summarize(id ID, owner OwnerID, folder FolderID, log Log, cat *catalog.Catalog) Summary {
 	s := Summary{ID: id, Owner: owner, Folder: folder}
+	desired := 0
 	for _, e := range log.Events {
 		switch e.Type {
 		case EventInit, EventChange:
 			for _, ch := range e.Changes {
 				if ch.Path == "identity.image" && ch.Op == OpSet && ch.Value.Kind == ValueString {
 					s.Image = ch.Value.Str
+				}
+				if ch.Path == "identity.desiredLevel" && ch.Value.Kind == ValueInt {
+					switch ch.Op {
+					case OpSet:
+						desired = ch.Value.Int
+					case OpIncrement:
+						desired += ch.Value.Int
+					case OpNone, OpAdd, OpRemove:
+					}
 				}
 				if ch.Path == "identity.name" && ch.Op == OpSet {
 					if ch.Value.Kind == ValueString {
@@ -40,6 +50,13 @@ func Summarize(id ID, owner OwnerID, folder FolderID, log Log, cat *catalog.Cata
 			s.Classes = attachSubclass(s.Classes, e.Ref.Slug, cat)
 		case EventRace, EventSubrace, EventBackground, EventFeat, EventNote, EventNone:
 		}
+	}
+	// The declared level is the level of a single-class character, exactly as
+	// projector.advanceToDesiredLevel has it: an import declares third level
+	// and records one class event, and a listing that read only the events
+	// showed "Fighter 1" beside a sheet that said "Fighter 3".
+	if len(s.Classes) == 1 && desired > s.Classes[0].Level {
+		s.Classes[0].Level = desired
 	}
 	for _, c := range s.Classes {
 		s.Level += c.Level
