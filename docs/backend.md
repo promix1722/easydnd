@@ -1962,7 +1962,7 @@ chats are kept there too, and are described with their own features:
 | `groups` | a group's id, name and who made it |
 | `group_members` | one row per seat: who, in which group, at which rank |
 | `folders` | one account's shelves; one is flagged the default |
-| `characters` | one row per character: owner, folder, revision, and the whole log as `json`. Two columns are left over and no code reads or writes them: `commands`, from an idempotency key nothing ever set, and `checkpoints`, from a rules migration that had no client |
+| `characters` | one row per character: owner, folder, revision, and the whole log as `json` |
 | `shared_characters` | one row per character a member has put on a group's table |
 | `games` | a game and, as one `json` column, its whole roster |
 | `private_releases` | the rule packs an AI Wizard import compiled, pinned by a character's lock and never listed |
