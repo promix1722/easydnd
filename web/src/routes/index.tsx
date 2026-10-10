@@ -17,8 +17,7 @@ import { LandingShell } from '@/shell/LandingShell'
 import { RootGate } from '@/shell/RootGate'
 
 import { HomeRoute } from './HomeRoute'
-import { JoinRoute } from './JoinRoute'
-import { ReceiveRoute } from './ReceiveRoute'
+import { InvitationLink, InvitationRoute } from './InvitationRoute'
 import { AdminOnly } from './AdminOnly'
 import { NotFoundPage } from './NotFoundPage'
 import { Private } from './Private'
@@ -83,7 +82,7 @@ export const router = createBrowserRouter([
       { path: 'characters/import/:sessionId/:importView?', element: <LegacyImportRedirect /> },
       // Not `Private`, and ahead of `characters/:id`, for the reasons
       // `groups/join` is both.
-      { path: 'characters/receive', element: <ReceiveRoute /> },
+      { path: 'characters/receive', element: <InvitationLink kind="character" /> },
       {
         path: 'characters/:id',
         element: (
@@ -136,8 +135,10 @@ export const router = createBrowserRouter([
       // Not wrapped in Private, and that is the point: this is the one deep
       // link that routinely arrives at somebody with no account at all, so
       // the token has to be saved before the branch rather than inside the
-      // screen that a signed-out visitor never reaches. JoinRoute does both.
-      { path: 'groups/join', element: <JoinRoute /> },
+      // screen that a signed-out visitor never reaches. InvitationRoute does both.
+      { path: 'groups/join', element: <InvitationLink kind="group" /> },
+      // The same page from the menu, with a field to paste either kind of link into.
+      { path: 'invitations', element: <InvitationRoute /> },
       {
         path: 'groups/:id',
         element: (

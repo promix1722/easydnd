@@ -2,12 +2,13 @@ import { screen, waitFor } from '@testing-library/react'
 import { RouterProvider, createMemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { readInviteToken } from '@/features/groups'
+import { kindOfLink, readInviteToken } from '@/features/groups'
 import type { AuthState } from '@/lib/auth'
 import { withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 
-import { JoinRoute } from './JoinRoute'
+import { InvitationLink, InvitationRoute } from './InvitationRoute'
 
 const TOKEN = 'an-invitation'
 
@@ -35,13 +36,15 @@ function stubPreview() {
   )
 }
 
-function renderJoin(state: Partial<AuthState>) {
+function renderJoin(state: Partial<AuthState>, at = '/groups/join') {
   const router = createMemoryRouter(
     [
-      { path: '/groups/join', element: <JoinRoute /> },
+      { path: '/groups/join', element: <InvitationLink kind="group" /> },
+      { path: '/characters/receive', element: <InvitationLink kind="character" /> },
+      { path: '/invitations', element: <><p>the invitations page</p><InvitationRoute /></> },
       { path: '/login', element: <p>the login page</p> },
     ],
-    { initialEntries: ['/groups/join'] },
+    { initialEntries: [at] },
   )
   return renderAt('desktop', withAuth(state, <RouterProvider router={router} />))
 }
@@ -113,5 +116,43 @@ describe('coming back signed in', () => {
 
     await waitFor(() => expect(screen.getByText('Wednesday Night')).toBeInTheDocument())
     expect(screen.getByText(/Olive invited you/)).toBeInTheDocument()
+  })
+})
+
+// One page for every invitation: a link lands on it, and the menu opens it
+// empty with a field, which is the only way in for an installed app.
+describe('the invitations page', () => {
+  const asked = () => vi.mocked(fetch).mock.calls.map(([url]) => String(url))
+
+  it('is where a link moves to, whichever of the two addresses it was sent as', async () => {
+    setHash(TOKEN)
+    renderJoin({}, '/characters/receive')
+
+    expect(await screen.findByText('the invitations page')).toBeInTheDocument()
+    await waitFor(() => expect(asked().some((url) => url.includes('/copy-links/preview'))).toBe(true))
+    expect(asked().some((url) => url.includes('/invites/preview'))).toBe(false)
+  })
+
+  it('takes a pasted link of either kind, and can be asked for another', async () => {
+    renderJoin({}, '/invitations')
+    const user = setupUser()
+
+    expect(screen.getByRole('button', { name: 'Open invitation' })).toBeDisabled()
+    await user.type(screen.getByRole('textbox', { name: 'Invitation link' }), ' https://easydnd.org/groups/join#pasted ')
+    await user.click(screen.getByRole('button', { name: 'Open invitation' }))
+    expect(await screen.findByRole('button', { name: 'Join group' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Paste another link' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Invitation link' }))
+    await user.type(screen.getByRole('textbox', { name: 'Invitation link' }), 'https://easydnd.org/characters/receive#other')
+    await user.click(screen.getByRole('button', { name: 'Open invitation' }))
+    await waitFor(() => expect(asked().some((url) => url.includes('/copy-links/preview'))).toBe(true))
+  })
+
+  it('reads the kind out of a bare token', () => {
+    const token = (knd: string) => `h.${btoa(JSON.stringify({ knd })).replace(/=+$/, '')}.s`
+    expect(kindOfLink(token('copylink'))).toBe('character')
+    expect(kindOfLink(token('invite'))).toBe('group')
+    expect(kindOfLink('not-a-token')).toBe('group')
   })
 })

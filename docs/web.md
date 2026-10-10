@@ -2665,7 +2665,7 @@ carry it and the least durable one, and three things used to lose it:
 1. **`<Private>` branches, so the screen never mounts.** Whatever `JoinScreen`
    did to save the token ran only for visitors who were already signed in --
    precisely the ones who did not need it. `/groups/join` is therefore *not*
-   wrapped in `Private`: `routes/JoinRoute.tsx` captures the token first and
+   wrapped in `Private`: `routes/InvitationRoute.tsx` captures the token first and
    branches afterwards, the way `HomeRoute` does for `/`.
 2. **`/login` is a different URL.** Returning to `from.pathname` dropped the
    search and the fragment, so an invitation link came back as a bare
@@ -2688,12 +2688,34 @@ does not tell them the thing they came for is one button away. It cannot name
 the group -- previewing needs a session, and opening that up so a stranger
 could read a group's name off a link is not a trade worth one sentence.
 
+**Every invitation is accepted on one page, `/invitations`**, which is a
+section in the menu at both widths -- drawn under the menu's rule, directly
+above the account (`belowRule` in `ui/sections.ts`): it has a trail of its own
+like any section, but it is an errand rather than a place. The two addresses links are sent as,
+`/groups/join#<token>` and `/characters/receive#<token>`, are
+`InvitationLink`: it saves the token under its kind's key and replaces itself
+with `/invitations`, carrying the fragment and, in router state, the kind the
+address named. `InvitationRoute` then draws `JoinScreen` or `ReceiveScreen`
+unchanged. Reached from the menu with nothing waiting, it draws a field to
+paste a link into instead. An installed app has no address bar and is not what
+a link in a messenger opens -- the link opens the browser, signed in as nobody
+or as somebody else -- so following an invitation from the app meant not using
+the app. `tokenOfLink` takes what follows the pasted text's last `#`, or the
+text itself when only the token was copied; `kindOfLink` reads the kind from
+the address in the pasted text, and failing that from the token's own `knd`
+claim, which the server checks and the client reads only to choose which
+preview to ask for. Under either screen is "Paste another link", which forgets
+the invitation and returns to the field, and is the only way on from a link
+that was refused -- the alerts no longer carry a "Your groups" or "Your
+characters" button, which led away from the page the menu had just opened: without it an invitation saved by an
+earlier visit would sit on the menu's page for the rest of the session.
+
 **A copy link is the second such link**, and it takes the same road rather
-than a parallel one: `/characters/receive#<token>` is `routes/ReceiveRoute.tsx`,
+than a parallel one: `/characters/receive#<token>` lands on the same `routes/InvitationRoute.tsx`,
 the token is stashed by the same `inviteToken.ts` under a key of its own (so it
 and a pending group invitation cannot overwrite each other), and the signed-out
 visitor gets `InvitePrompt` with its `character` wording. `ReceiveScreen` shows
-the character's name and class line, and accepting lands on the new sheet.
+the character's name, and accepting lands on the new sheet.
 
 ### Copying the invite link
 

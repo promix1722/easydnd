@@ -65,3 +65,32 @@ export function clearInviteToken(key = STASH_KEY): void {
     // Nothing was stored, so there is nothing to forget.
   }
 }
+
+/** The token in a pasted invitation: what follows the link's '#', or the text itself when only the token was copied. */
+export function tokenOfLink(pasted: string): string {
+  const text = pasted.trim()
+  return text.slice(text.lastIndexOf('#') + 1).trim()
+}
+
+/** What a link offers: a seat in a group, or a copy of a character. */
+export type InvitationKind = 'group' | 'character'
+
+/**
+ * Which of the two a link is, from the link and then from the token.
+ *
+ * The path says it when there is one: the two kinds are sent as two addresses.
+ * A bare token says it itself -- it is a signed token whose `knd` claim the
+ * server checks, read here only to choose which preview to ask for. Reading it
+ * wrong costs a refused preview, never a wrong grant.
+ */
+export function kindOfLink(link: string): InvitationKind {
+  if (link.includes('/characters/receive')) return 'character'
+  if (link.includes('/groups/join')) return 'group'
+  try {
+    const payload = tokenOfLink(link).split('.')[1] ?? ''
+    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { knd?: string }
+    return claims.knd === 'copylink' ? 'character' : 'group'
+  } catch {
+    return 'group'
+  }
+}

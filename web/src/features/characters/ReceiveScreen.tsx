@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router'
 
-import { classLine } from '@/domain'
 import { clearInviteToken, COPY_LINK_STASH_KEY } from '@/features/groups'
 import { acceptCopyLink, previewCopyLink } from '@/lib/api'
 import { useT } from '@/lib/i18n'
@@ -11,9 +10,9 @@ import { Alert, Button, Group, Loader, Stack, Text, Title } from '@/ui'
 const forget = () => clearInviteToken(COPY_LINK_STASH_KEY)
 
 /**
- * The screen a signed-in visitor sees on a copy link: which character, and one
+ * The screen a signed-in visitor sees on a copy link: the character's name, and one
  * button that makes a copy of it theirs. The token arrives as a prop for the
- * reason JoinScreen's does -- see routes/ReceiveRoute.tsx.
+ * reason JoinScreen's does -- see routes/InvitationRoute.tsx.
  */
 export function ReceiveScreen({ token }: { token: string }) {
   const t = useT()
@@ -35,7 +34,7 @@ export function ReceiveScreen({ token }: { token: string }) {
 
   async function decline() {
     forget()
-    await navigate('/characters')
+    await navigate('/')
   }
 
   if (token === '') {
@@ -43,9 +42,6 @@ export function ReceiveScreen({ token }: { token: string }) {
       <Alert color="red" title={t('join.missing.title')}>
         <Stack gap="xs" align="flex-start">
           <Text size="sm">{t('join.missing.detail')}</Text>
-          <Button variant="light" onClick={() => void navigate('/characters')}>
-            {t('receive.yourCharacters')}
-          </Button>
         </Stack>
       </Alert>
     )
@@ -67,9 +63,6 @@ export function ReceiveScreen({ token }: { token: string }) {
       <Alert color="red" title={t('receive.unusable.title')}>
         <Stack gap="xs" align="flex-start">
           <Text size="sm">{error ?? t('join.unusable.detail')}</Text>
-          <Button variant="light" onClick={() => void decline()}>
-            {t('receive.yourCharacters')}
-          </Button>
         </Stack>
       </Alert>
     )
@@ -79,9 +72,6 @@ export function ReceiveScreen({ token }: { token: string }) {
     <Stack gap="md">
       <div>
         <Title order={2}>{data.name || t('characters.thisCharacter')}</Title>
-        <Text c="dimmed" size="sm">
-          {classLine(data.classes)}
-        </Text>
         <Text size="sm" mt="xs">{t('receive.offer')}</Text>
       </div>
       {accept.error !== null && (

@@ -99,7 +99,6 @@ describe('a stale link', () => {
     // The words are the client's now -- the server sent only `invite.invalid`.
     expect(screen.getByText(/not valid, or it has expired/)).toBeInTheDocument()
     // Still signed in, so the way back into the app is offered.
-    expect(screen.getByRole('button', { name: 'Your groups' })).toBeInTheDocument()
   })
 })
 

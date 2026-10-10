@@ -32,7 +32,7 @@ function renderReceive(token = 'a-token') {
         <Routes>
           <Route path="/characters/receive" element={<ReceiveScreen token={token} />} />
           <Route path="/characters/:id" element={<div>the new sheet</div>} />
-          <Route path="/characters" element={<div>the character list</div>} />
+          <Route path="/" element={<div>the character list</div>} />
         </Routes>
       </MemoryRouter>,
     ),
@@ -50,7 +50,7 @@ describe('ReceiveScreen', () => {
     renderReceive()
 
     await waitFor(() => expect(screen.getByText('Ada')).toBeInTheDocument())
-    expect(screen.getByText('Wizard 3')).toBeInTheDocument()
+    expect(screen.queryByText('Wizard 3')).not.toBeInTheDocument()
 
     await setupUser().click(screen.getByRole('button', { name: 'Add to my characters' }))
 
@@ -75,6 +75,5 @@ describe('ReceiveScreen', () => {
 
     await waitFor(() => expect(screen.getByText('That link is not usable')).toBeInTheDocument())
     expect(screen.getByText(/not valid, or it has expired/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Your characters' })).toBeInTheDocument()
   })
 })

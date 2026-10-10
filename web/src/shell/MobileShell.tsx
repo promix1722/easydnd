@@ -104,6 +104,31 @@ export function MobileShell() {
    */
   const label = current ? t(current.label) : t('nav.menu')
 
+  const item = (section: Section) => (
+                <Menu.Item
+                  key={section.to}
+                  component={Link}
+                  to={section.to}
+                  aria-current={active?.to === section.to ? 'page' : undefined}
+                  leftSection={<section.icon size={16} />}
+                  // The tick moved to the right when the sections got glyphs.
+                  // It used to sit on the left, drawn but invisible on every
+                  // inactive row, purely to stop the labels shuffling sideways
+                  // as you moved between sections -- a job the section's own
+                  // glyph now does, on every row, while also saying something.
+                  // Still hidden rather than absent, for the same alignment
+                  // reason it was before.
+                  rightSection={
+                    <IconCheck
+                      size={16}
+                      style={{ visibility: active?.to === section.to ? 'visible' : 'hidden' }}
+                    />
+                  }
+                >
+                  {t(section.label)}
+                </Menu.Item>
+  )
+
   return (
     <AppShell
       header={{ height: HEADER_BOX }}
@@ -149,30 +174,7 @@ export function MobileShell() {
                 navbar's entries are links, and a section should be the same
                 kind of thing to a browser on both. */}
             <Menu.Dropdown>
-              {SECTIONS.filter((section) => !section.desktopOnly).map((section) => (
-                <Menu.Item
-                  key={section.to}
-                  component={Link}
-                  to={section.to}
-                  aria-current={active?.to === section.to ? 'page' : undefined}
-                  leftSection={<section.icon size={16} />}
-                  // The tick moved to the right when the sections got glyphs.
-                  // It used to sit on the left, drawn but invisible on every
-                  // inactive row, purely to stop the labels shuffling sideways
-                  // as you moved between sections -- a job the section's own
-                  // glyph now does, on every row, while also saying something.
-                  // Still hidden rather than absent, for the same alignment
-                  // reason it was before.
-                  rightSection={
-                    <IconCheck
-                      size={16}
-                      style={{ visibility: active?.to === section.to ? 'visible' : 'hidden' }}
-                    />
-                  }
-                >
-                  {t(section.label)}
-                </Menu.Item>
-              ))}
+              {SECTIONS.filter((section) => !section.desktopOnly && !section.belowRule).map(item)}
 
               {/* Below the divider because it is not a section. It has a page
                   of its own -- `/roll` -- but it owns no other paths, lights
@@ -199,6 +201,7 @@ export function MobileShell() {
                   account is who is looking rather than a part of the app, so it
                   is in this menu but not in the list above it. Ticked like its
                   neighbour, since being on it is the same kind of fact. */}
+              {SECTIONS.filter((section) => section.belowRule).map(item)}
               <Menu.Item
                 component={Link}
                 to={ACCOUNT.to}
