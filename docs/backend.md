@@ -50,6 +50,35 @@ child; an optional ID override gives replacement datasets their own namespace.
 `auth.superadmins` and the groups one of them grants a pack to; see
 [packs.md](packs.md#common-and-private-disk-packs).
 Missing or invalid configured packs fail startup. Changes require a restart.
+### What the process holds
+
+A release is read from disk once, and three things are kept for the life of
+the process: the decoded document, its encoded JSON (what `export` and
+resolution hand around), and its artwork as data URLs. Every catalogue
+compiled from it *shares* those -- which matters, because the SRD pack is 19 MB
+and 13 MB of that is spell icons.
+
+- **A request copies none of it.** `Authoring.Builtins` hands out the same
+  immutable bytes every time; nothing may write into a `Document.Data`.
+  v1.1.0 cloned them on each call -- 22 MB per pack listing, three listings
+  per spell-browser request -- and re-encoded the icons into each compiled
+  catalogue, 19 MB apiece.
+- **A lock of disk packs is compiled once**, at startup, by the base
+  registry, and kept: one catalogue per lock and locale, bounded by what is
+  installed.
+- **A lock with a database pack in it** -- homebrew, a share, an import -- is
+  compiled on first use and kept in a least-recently-used cache of
+  `maxCompiledCatalogues` (8). An evicted one recompiles when next opened.
+  Without the bound there is one catalogue per lock and locale anybody ever
+  opened, forever.
+
+Measured with the base pack and one private overlay: about 75 MB of live heap,
+225 MB resident, and the same after 600 requests as after none.
+`TestMemoryPackRequestsDoNotCopyOrLeak` holds the first two points and logs
+the figures under `-v`; `TestCompiledCataloguesAreBounded...` holds the third.
+Decoded documents of database packs (`Authoring.decoded`) are still kept
+without a bound, one per published release.
+
 The authoring service separately manages private drafts, published releases,
 imports and group sharing.
 
@@ -2033,7 +2062,7 @@ Everything below is set up once, by hand, and no tag changes it:
 | sudoers | `deploy` may run `/usr/bin/supervisorctl restart easydnd` without a password |
 | `/etc/supervisor/conf.d/easydnd.conf` | from `deploy/supervisor/easydnd.conf`, **after** `prod.env` exists |
 | `/var/log/easydnd/` | exists; supervisor writes `out.log` and `err.log` there |
-| memory | a swap file (2 GB on the 1 GB host), and `GOMEMLIMIT` in the supervisor conf. The compiled catalogues are a few hundred MB of live heap -- about 110 MB more per private pack -- and without the limit Go lets that double: v1.1.0 was OOM-killed a minute after its first sign-in |
+| memory | a swap file (2 GB on the 1 GB host), and `GOMEMLIMIT` in the supervisor conf as a ceiling. v1.1.0 was OOM-killed a minute after its first sign-in; see [What the process holds](#what-the-process-holds) for why and for what it costs now |
 | nginx and certbot | `deploy/nginx/easydnd.conf`, the `$connection_upgrade` map, the certificate |
 | Postgres | the steps above |
 | `/opt/easydnd/private-packs/` | optional: private rule packs, pushed by hand with `deploy/push-private-pack.sh` and named in `prod.env` |

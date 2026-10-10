@@ -369,6 +369,19 @@ func (r *Registry) Locales(context.Context) ([]rules.Locale, error) {
 func (r *Registry) Load(ctx context.Context, locale rules.Locale) (*catalog.Catalog, error) {
 	return r.LoadLocked(ctx, locale, r.defaultLock)
 }
+
+// installed reports whether every release in the lock is one this registry
+// holds. Read-only after NewRegistry, so it needs no lock.
+func (r *Registry) installed(lock pack.Lock) bool {
+	for _, p := range lock.Packs {
+		doc := r.releases[p.ID][p.Version]
+		if doc == nil || r.identities[doc] != p {
+			return false
+		}
+	}
+	return len(lock.Packs) > 0
+}
+
 func (r *Registry) LoadLocked(_ context.Context, locale rules.Locale, lock pack.Lock) (*catalog.Catalog, error) {
 	if _, err := language.Parse(locale.String()); err != nil {
 		return nil, fmt.Errorf("invalid locale")

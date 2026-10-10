@@ -18,6 +18,35 @@ import (
 type PackIcons struct {
 	Spells map[string][]byte `json:"spells,omitempty"`
 	Items  map[string][]byte `json:"items,omitempty"`
+
+	// urls is the artwork as data URLs, built on first use. A pointer, set
+	// under iconURLMu, so that copying a PackIcons shares it.
+	urls *iconURLs
+}
+
+// iconURLs is one pack's artwork in the form a catalogue serves it.
+type iconURLs struct{ spells, items map[string]string }
+
+var iconURLMu sync.Mutex
+
+// dataURLs encodes the pack's artwork once. Every catalogue compiled from the
+// document shares these strings: a release is immutable once installed, and
+// encoding 13 MB of icons again for each lock and locale was most of what the
+// server held -- 19 MB a catalogue, six catalogues at startup.
+func (i *PackIcons) dataURLs() *iconURLs {
+	iconURLMu.Lock()
+	defer iconURLMu.Unlock()
+	if i.urls == nil {
+		u := &iconURLs{spells: make(map[string]string, len(i.Spells)), items: make(map[string]string, len(i.Items))}
+		for id, data := range i.Spells {
+			u.spells[id] = "data:image/webp;base64," + base64.StdEncoding.EncodeToString(data)
+		}
+		for label, data := range i.Items {
+			u.items[label] = "data:image/webp;base64," + base64.StdEncoding.EncodeToString(data)
+		}
+		i.urls = u
+	}
+	return i.urls
 }
 
 // Releases are repeatedly validated during resolution. Cache successful image
@@ -120,13 +149,11 @@ func applyIcons(c *catalog.Catalog, docs []*PackDocument) error {
 		if p.Icons == nil {
 			continue
 		}
-		for id, data := range p.Icons.Spells {
-			icons[normalizeID(p.Manifest.ID, id)] = "data:image/webp;base64," + base64.StdEncoding.EncodeToString(data)
+		urls := p.Icons.dataURLs()
+		for id, url := range urls.spells {
+			icons[normalizeID(p.Manifest.ID, id)] = url
 		}
-		assets := map[string]string{}
-		for label, data := range p.Icons.Items {
-			assets[label] = "data:image/webp;base64," + base64.StdEncoding.EncodeToString(data)
-		}
+		assets := urls.items
 		for collection, resolved := range itemIcons {
 			rows, err := p.itemIconRows(collection)
 			if err != nil {

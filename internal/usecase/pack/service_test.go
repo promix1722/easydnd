@@ -161,11 +161,10 @@ func TestInvalidDraftCanSaveButNotPublish(t *testing.T) {
 	}
 }
 
-// restrictedFixture installs a descriptions-only overlay as a private pack and
-// names root as the superadmin, by verified email.
-func restrictedFixture(t *testing.T) (context.Context, *uc.Service, *memory.GroupRepository, pack.Release) {
+// overlayDir writes a descriptions-only overlay pack where a private folder
+// can be pointed at it.
+func overlayDir(t *testing.T) string {
 	t.Helper()
-	ctx := context.Background()
 	doc, err := file.EncodePack(&file.PackDocument{
 		Manifest: file.PackManifest{SchemaVersion: 1, ID: "overlay", Version: "1.0.0", Edition: "2014", Semantics: "1", DefaultLocale: "en",
 			Dependencies: []file.Dependency{{ID: "srd-2014", Version: ">=1.0.0"}}},
@@ -179,6 +178,15 @@ func restrictedFixture(t *testing.T) (context.Context, *uc.Service, *memory.Grou
 	if err = os.WriteFile(filepath.Join(dir, "pack"), doc, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	return dir
+}
+
+// restrictedFixture installs a descriptions-only overlay as a private pack and
+// names root as the superadmin, by verified email.
+func restrictedFixture(t *testing.T) (context.Context, *uc.Service, *memory.GroupRepository, pack.Release) {
+	t.Helper()
+	ctx := context.Background()
+	dir := overlayDir(t)
 	base, err := file.NewRegistry([]string{"../../../data/pack/srd-5.1"}, nil, "", file.PackFolder{Path: dir, Restricted: true})
 	if err != nil {
 		t.Fatal(err)
