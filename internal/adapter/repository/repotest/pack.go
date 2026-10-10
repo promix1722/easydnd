@@ -71,6 +71,14 @@ func RunPackRepository(t *testing.T, factory func(*testing.T) pack.Repository) {
 	if err != nil || string(got.Releases[0].Data) != string(original.Releases[0].Data) {
 		t.Fatal("unsharing damaged release", err)
 	}
+	// A disk pack is shared without ever having been stored here.
+	disk := pack.Share{Group: "test-table", Pack: "disk-pack", Contributor: original.Owner, Lock: pack.Lock{Edition: "2014", Semantics: "1", Packs: []pack.Release{{ID: "disk-pack", Version: "1.0.0", Digest: "d0"}}}}
+	if err = r.PutShare(ctx, disk); err != nil {
+		t.Fatal("share a pack with no stored record: ", err)
+	}
+	if err = r.DeleteShare(ctx, disk.Group, disk.Pack); err != nil {
+		t.Fatal(err)
+	}
 
 	private := pack.Document{Release: pack.Release{ID: "import-s1", Version: "0.0.0-abc", Digest: "d1"}, Data: []byte(`{"private":true}`)}
 	if _, err := r.GetPrivate(ctx, private.Release); !types.IsNotFound(err) {

@@ -2510,7 +2510,9 @@ membership or sharing changes. Existing checkpoint restore stays character-scope
 
 Migration 00004 adds `rule_packs` and `group_rule_packs`. Pack records store portable
 release bytes and draft metadata together, with revision compare-and-swap writes.
-Group shares store an exact dependency closure. Deleting a group removes shares;
+Group shares store an exact dependency closure. Migration 00010 drops the
+share's foreign key to `rule_packs`: a restricted disk pack is shared the same
+way and has no row there. Deleting a group removes shares;
 no release garbage collection is performed. Memory and PostgreSQL repositories
 share concurrency and round-trip contract tests. Guest rows are materialized on
 first pack creation using the same account repository operation as groups.
