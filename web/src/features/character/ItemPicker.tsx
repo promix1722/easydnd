@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import type { ReactNode } from 'react'
 
@@ -7,7 +7,7 @@ import type { Entry, Item, ItemFilters, ItemHit, ItemPage } from '@/lib/api'
 import { useCatalogScope } from '@/lib/api/catalogScope'
 import { useT } from '@/lib/i18n'
 import { useResource } from '@/lib/useResource'
-import { Badge, Box, Button, ChoiceDetails, Group, ItemIcon, PageBody, Paper, Select, Stack, Text, TextInput, pageState, useDebouncedValue } from '@/ui'
+import { Badge, Box, Button, ChoiceDetails, Group, ItemIcon, PageBody, Paper, Select, Stack, Text, Notification, TextInput, pageState, useDebouncedValue } from '@/ui'
 
 import { ItemBody } from './ItemScreen'
 
@@ -25,10 +25,14 @@ const FILTER_WIDTH = { w: { base: '100%', sm: 220 }, miw: 0, maw: '100%' } as co
  * `wearable` is the tab's half of the catalogue and is not the player's to
  * change: Equipment adds what has a slot, Items what has none, so a thing
  * added here turns up in the list above. A row opens to the item's full
- * description; each Add is one more in the backpack and one write, and the
- * search stays open for the next.
+ * description; each Add is one more in the backpack and one write.
+ *
+ * With `added`, an Add closes the search and says what was added, the way
+ * giving an item at a game does: one thing, then back to the sheet. The notice
+ * waits for `owned` to show the item, so it is never said of a write that
+ * failed.
  */
-export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabled = false, onAdd, detailsTo, beside, children }: {
+export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabled = false, onAdd, added, detailsTo, beside, children }: {
   label: string
   /** Drawn on the button's line while the search is closed: the other way to add something. */
   beside?: ReactNode
@@ -38,6 +42,8 @@ export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabl
   owned?: ReadonlyMap<string, number>
   disabled?: boolean
   onAdd: (hit: ItemHit) => void
+  /** What to say once an added item is in `owned`. With it, an Add closes the search. */
+  added?: (hit: ItemHit) => string
   /** Where a hit's own page is. With it a row is a link there and nothing opens in place. */
   detailsTo?: (hit: ItemHit) => string
   /** Drawn above the search once it is open: a game asks who the item is for. */
@@ -50,6 +56,19 @@ export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabl
   const [category, setCategory] = useState<string | null>(null)
   const [kind, setKind] = useState<string | null>(null)
   const [reading, setReading] = useState<string | null>(null)
+  const [last, setLast] = useState<{ slug: string; had: number; text: string } | null>(null)
+  const arrived = last !== null && (owned.get(last.slug) ?? 0) > last.had
+  useEffect(() => {
+    if (!arrived) return
+    const timer = setTimeout(() => setLast(null), 4000)
+    return () => clearTimeout(timer)
+  }, [arrived])
+  function add(hit: ItemHit) {
+    onAdd(hit)
+    if (added === undefined) return
+    setLast({ slug: hit.slug, had: owned.get(hit.slug) ?? 0, text: added(hit) })
+    setOpened(false)
+  }
   // The box follows the keys; the search follows the pause after them. A hit
   // carries its artwork, so a request per letter is megabytes nobody reads.
   const [asked] = useDebouncedValue(q, 300)
@@ -72,7 +91,10 @@ export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabl
   }
 
   if (!opened) {
-    return <Group gap="sm"><Button variant="light" disabled={disabled} onClick={() => setOpened(true)}>{label}</Button>{beside}</Group>
+    return <Stack gap="sm">
+      {arrived && <Notification withBorder role="status" color="green" title={t('game.added')} onClose={() => setLast(null)}>{last.text}</Notification>}
+      <Group gap="sm"><Button variant="light" disabled={disabled} onClick={() => { setLast(null); setOpened(true) }}>{label}</Button>{beside}</Group>
+    </Stack>
   }
   return (
     <Stack component="section" aria-label={label} gap="md">
@@ -99,7 +121,7 @@ export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabl
             {loaded.length === 0 && <Text size="sm" c="dimmed">{t('equipment.noItemsFound')}</Text>}
             {loaded.map((hit) => (
               <ItemRow key={hit.slug} hit={hit} owned={owned.get(hit.slug) ?? 0} disabled={disabled}
-                opened={reading === hit.slug} onOpen={(open) => setReading(open ? hit.slug : null)} onAdd={() => onAdd(hit)}
+                opened={reading === hit.slug} onOpen={(open) => setReading(open ? hit.slug : null)} onAdd={() => add(hit)}
                 {...(detailsTo ? { to: detailsTo(hit) } : {})} />
             ))}
             {loaded.length < page.total && (

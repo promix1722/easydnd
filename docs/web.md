@@ -2068,9 +2068,14 @@ button back.
   (`getEntries` by slug): a search hit carries a row's worth and no prose.
 - **One Add is one more in the backpack and one write** --
   `setTotal(equipment, slug, owned + 1)` through the same `onChange` every row
-  menu uses -- and the search stays open for the next. A row shows `×n` for
-  what the character already has, read from the sheet, so it counts up as the
-  writes land.
+  menu uses -- and the search closes, as it does when a DM gives an item at a
+  game: one thing, then back to the sheet. It used to stay open for the next,
+  which left a player scrolling back up past a page of results to see whether
+  anything had happened. Now an "Added" notice says so above the button and
+  leaves after four seconds. It is shown when the sheet's own count of that
+  item goes up, not when the button is pressed, so a write that failed is
+  never announced as an addition. A row shows `×n` for what the character
+  already has, read from the sheet.
 - The buttons exist only with `onChange`, which is how a sheet says it is
   editable: the shared, read-only sheet has neither.
 

@@ -1281,6 +1281,7 @@
   "admin.characters.loadFailed": "Could not load the characters",
   "equipment.addEquipment": "Add equipment",
   "equipment.addItem": "Add item",
+  "equipment.added": "{{item}} is in the inventory.",
   "equipment.searchItems": "Search by name",
   "equipment.filter.category": "Category",
   "equipment.filter.allCategories": "All categories",

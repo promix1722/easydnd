@@ -1337,6 +1337,7 @@
   "admin.characters.loadFailed": "Не удалось загрузить персонажей",
   "equipment.addEquipment": "Добавить снаряжение",
   "equipment.addItem": "Добавить предмет",
+  "equipment.added": "{{item}}: теперь в инвентаре.",
   "equipment.searchItems": "Поиск по названию",
   "equipment.filter.category": "Категория",
   "equipment.filter.allCategories": "Все категории",

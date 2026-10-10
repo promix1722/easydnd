@@ -372,7 +372,7 @@ describe('the panels that were sentences', () => {
     }))
     const onEquipment = vi.fn()
     const user = setupUser()
-    renderAt('desktop', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
+    const { rerender } = renderAt('desktop', <SheetBody sheet={ITEMS} onEquipment={onEquipment} />)
     const last = () => searches.at(-1)
 
     // Nothing is fetched until a search is opened, and nothing opens a dialog.
@@ -386,7 +386,7 @@ describe('the panels that were sentences', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Items' }))
     await user.click(screen.getByRole('button', { name: 'Add item' }))
-    const search = within(screen.getByRole('region', { name: 'Add item' }))
+    let search = within(screen.getByRole('region', { name: 'Add item' }))
     await search.findByText('Potion of Healing')
     expect(last()?.get('wearable')).toBe('false')
     // What a row shows came resolved: the category's name, a price, a weight,
@@ -403,11 +403,25 @@ describe('the panels that were sentences', () => {
     expect(onEquipment).toHaveBeenLastCalledWith([
       { path: 'equipment.backpack.crossbow-bolt', op: 'set', value: { kind: 'int', int: 21 } },
     ])
-    await user.click(search.getByRole('button', { name: 'Add Potion of Healing' }))
+    // An Add closes the search, as giving an item at a game does, and says
+    // nothing until the sheet shows the item: a write that failed added nothing.
+    expect(screen.queryByRole('region', { name: 'Add item' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    const arrived = ITEMS.equipment.backpack.map((stack) => stack.item === 'crossbow-bolt' ? { ...stack, count: 21 } : stack)
+    rerender(<MemoryRouter><SheetBody sheet={{ ...ITEMS, equipment: { ...ITEMS.equipment, backpack: arrived } }} onEquipment={onEquipment} /></MemoryRouter>)
+    expect(await screen.findByRole('status')).toHaveTextContent('Crossbow Bolt is in the inventory.')
+    rerender(<MemoryRouter><SheetBody sheet={ITEMS} onEquipment={onEquipment} /></MemoryRouter>)
+
+    await user.click(screen.getByRole('button', { name: 'Add item' }))
+    search = within(screen.getByRole('region', { name: 'Add item' }))
+    await user.click(await search.findByRole('button', { name: 'Add Potion of Healing' }))
     expect(onEquipment).toHaveBeenLastCalledWith([
       { path: 'equipment.backpack.potion-of-healing', op: 'set', value: { kind: 'int', int: 1 } },
     ])
 
+    await user.click(screen.getByRole('button', { name: 'Add item' }))
+    search = within(screen.getByRole('region', { name: 'Add item' }))
+    await search.findByText('Potion of Healing')
     await user.click(search.getByRole('button', { name: 'Load more' }))
     await search.findByText('Rope')
     expect(last()?.get('offset')).toBe('2')

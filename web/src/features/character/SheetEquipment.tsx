@@ -136,7 +136,7 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
         <Text size="xs" c="dimmed">{t('equipment.group.wearable')}</Text>
         <InventoryRows cards rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup}
           empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
-        {onChange && <AddItems label={t('equipment.addEquipment')} wearable owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} beside={<AddCustomItem tab="equipment" />} />}
+        {onChange && <AddItems label={t('equipment.addEquipment')} wearable owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} added={(hit) => t('equipment.added', { item: hit.name })} beside={<AddCustomItem tab="equipment" />} />}
       </Stack>
     </Panel>
   </Stack>
@@ -171,7 +171,7 @@ export function SheetItems({ equipment, items, name, lookup, disabled = false, o
     {section('consumable', t('equipment.group.consumable'))}
     {section('gear', t('equipment.group.gear'))}
     {onChange && <Panel>
-      <AddItems label={t('equipment.addItem')} wearable={false} owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} beside={<AddCustomItem tab="items" />} />
+      <AddItems label={t('equipment.addItem')} wearable={false} owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} added={(hit) => t('equipment.added', { item: hit.name })} beside={<AddCustomItem tab="items" />} />
     </Panel>}
   </Stack>
 }
