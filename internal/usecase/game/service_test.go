@@ -12,6 +12,7 @@ import (
 
 	catalogfile "github.com/promix1722/easydnd/internal/adapter/catalog/file"
 	"github.com/promix1722/easydnd/internal/adapter/repository/memory"
+	"github.com/promix1722/easydnd/internal/adapter/repository/repotest"
 	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/group"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -524,7 +525,7 @@ func TestAnOpenedCharacterIsReadableByLinkUntilHidden(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	bobs := f.character(t, "bob")
-	if err := f.characters.Append(ctx, bobs, 0, character.Event{Type: character.EventInit}); err != nil {
+	if err := repotest.Append(ctx, f.characters, bobs, character.Event{Type: character.EventInit}); err != nil {
 		t.Fatal(err)
 	}
 	read := func() error {
@@ -554,7 +555,7 @@ func TestASuperadminReadsAPrivateSheet(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	bobs := f.character(t, "bob")
-	if err := f.characters.Append(ctx, bobs, 0, character.Event{Type: character.EventInit}); err != nil {
+	if err := repotest.Append(ctx, f.characters, bobs, character.Event{Type: character.EventInit}); err != nil {
 		t.Fatal(err)
 	}
 	f.svc.SetSuperadmin(func(_ context.Context, id user.ID) bool { return id == "alice" })

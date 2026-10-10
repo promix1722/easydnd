@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/promix1722/easydnd/internal/adapter/repository/repotest"
 	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/group"
 	"github.com/promix1722/easydnd/internal/domain/rules"
@@ -85,7 +86,7 @@ func TestTrackerPermissionsAndIndependentValues(t *testing.T) {
 		t.Fatal("values leaked between games")
 	}
 	// Base stats still follow the original sheet, while tracker HP stays put.
-	if err := f.characters.Append(ctx, cid, after.Log.LastSeq(), character.Event{Type: character.EventInit}, character.Event{Type: character.EventChange,
+	if err := repotest.Append(ctx, f.characters, cid, character.Event{Type: character.EventInit}, character.Event{Type: character.EventChange,
 		Changes: []character.Change{{Path: "status.armorClass", Op: character.OpSet, Value: character.IntValue(18)}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +101,7 @@ func TestPrivateMonstersAndStableOrdering(t *testing.T) {
 	ctx := context.Background()
 	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer})
 	source := f.character(t, "alice")
-	if err := f.characters.Append(ctx, source, 0, character.Event{Type: character.EventInit},
+	if err := repotest.Append(ctx, f.characters, source, character.Event{Type: character.EventInit},
 		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 1}); err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +239,7 @@ func TestAShortRestReturnsOnlyShortRestPools(t *testing.T) {
 	ctx := context.Background()
 	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer})
 	cid := f.character(t, "bob")
-	if err := f.characters.Append(ctx, cid, 0, character.Event{Type: character.EventInit},
+	if err := repotest.Append(ctx, f.characters, cid, character.Event{Type: character.EventInit},
 		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "fighter"), Level: 5}); err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +319,7 @@ func TestSpentUsesBelongToTheGameAndALongRestReturnsThem(t *testing.T) {
 	ctx := context.Background()
 	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer, "carol": group.RolePlayer})
 	cid := f.character(t, "bob")
-	if err := f.characters.Append(ctx, cid, 0, character.Event{Type: character.EventInit},
+	if err := repotest.Append(ctx, f.characters, cid, character.Event{Type: character.EventInit},
 		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "paladin"), Level: 3}); err != nil {
 		t.Fatal(err)
 	}

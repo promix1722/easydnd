@@ -103,72 +103,6 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 			},
 		},
 		{
-			name: "append numbers events from one",
-			run: func(t *testing.T, repo domain.Repository) {
-				ctx := context.Background()
-				c, err := repo.Create(ctx, charOwner, charFolder)
-				if err != nil {
-					t.Fatalf("Create() error = %v", err)
-				}
-				err = repo.Append(ctx, c.ID, 0,
-					domain.Event{Type: domain.EventInit},
-					domain.Event{Type: domain.EventRace},
-				)
-				if err != nil {
-					t.Fatalf("Append() error = %v", err)
-				}
-				stored, err := repo.Get(ctx, c.ID)
-				if err != nil {
-					t.Fatalf("Get() error = %v", err)
-				}
-				if stored.Log.Len() != 2 {
-					t.Fatalf("log length = %d, want 2", stored.Log.Len())
-				}
-				for i, e := range stored.Log.Events {
-					if e.Seq != i+1 {
-						t.Errorf("event %d sequence = %d, want %d", i, e.Seq, i+1)
-					}
-				}
-				if err := stored.Log.Validate(); err != nil {
-					t.Errorf("Validate() error = %v, want nil", err)
-				}
-				if stored.Revision != 2 {
-					t.Errorf("revision = %d, want 2 after appending two events", stored.Revision)
-				}
-			},
-		},
-		{
-			// A stale expectedSeq is the exact case that makes a
-			// whole-log-in-one-record store lose writes.
-			name: "append rejects a stale sequence",
-			run: func(t *testing.T, repo domain.Repository) {
-				ctx := context.Background()
-				c, err := repo.Create(ctx, charOwner, charFolder)
-				if err != nil {
-					t.Fatalf("Create() error = %v", err)
-				}
-				if err := repo.Append(ctx, c.ID, 0, domain.Event{Type: domain.EventInit}); err != nil {
-					t.Fatalf("Append() error = %v", err)
-				}
-				// A second writer still believes the log is empty.
-				err = repo.Append(ctx, c.ID, 0, domain.Event{Type: domain.EventRace})
-				var invalid *types.ValidationError
-				if !errors.As(err, &invalid) {
-					t.Fatalf("Append() with a stale sequence error = %v, want a ValidationError", err)
-				}
-				stored, err := repo.Get(ctx, c.ID)
-				if err != nil {
-					t.Fatalf("Get() error = %v", err)
-				}
-				if stored.Log.Len() != 1 {
-					t.Errorf("log length = %d, want 1: the rejected batch must not be written", stored.Log.Len())
-				}
-				if err := repo.Append(ctx, "chr_missing", 0, domain.Event{Type: domain.EventInit}); !types.IsNotFound(err) {
-					t.Errorf("Append() error = %v, want a NotFoundError", err)
-				}
-			},
-		},
-		{
 			name: "get returns a copy",
 			run: func(t *testing.T, repo domain.Repository) {
 				ctx := context.Background()
@@ -176,7 +110,7 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 				if err != nil {
 					t.Fatalf("Create() error = %v", err)
 				}
-				if err := repo.Append(ctx, c.ID, 0, domain.Event{Type: domain.EventInit, Note: "original"}); err != nil {
+				if err := Append(ctx, repo, c.ID, domain.Event{Type: domain.EventInit, Note: "original"}); err != nil {
 					t.Fatalf("Append() error = %v", err)
 				}
 				got, err := repo.Get(ctx, c.ID)
@@ -227,7 +161,7 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 						if err != nil {
 							return
 						}
-						_ = repo.Append(ctx, c.ID, 0, domain.Event{Type: domain.EventInit})
+						_ = Append(ctx, repo, c.ID, domain.Event{Type: domain.EventInit})
 						_, _ = repo.Get(ctx, c.ID)
 						_, _ = repo.List(ctx, charOwner)
 					}()
@@ -239,122 +173,6 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 				}
 				if len(got) != 8 {
 					t.Errorf("List() length = %d, want 8", len(got))
-				}
-			},
-		},
-		{
-			// Truncate is the undo primitive. The invariant it enforces is
-			// not "append-only" but "append, or drop a suffix; never edit
-			// the middle".
-			name: "truncate drops a suffix",
-			run: func(t *testing.T, repo domain.Repository) {
-				ctx := context.Background()
-				c := seeded(t, repo, domain.EventInit, domain.EventRace, domain.EventClass)
-				if err := repo.Truncate(ctx, c.ID, 3, 1); err != nil {
-					t.Fatalf("Truncate() error = %v", err)
-				}
-				got, err := repo.Get(ctx, c.ID)
-				if err != nil {
-					t.Fatalf("Get() error = %v", err)
-				}
-				if got.Log.Len() != 1 || got.Log.Events[0].Type != domain.EventInit {
-					t.Errorf("log = %+v, want just the init event", got.Log.Events)
-				}
-				if got.Revision != 4 {
-					t.Errorf("revision = %d, want 4: three appended, then one truncation", got.Revision)
-				}
-			},
-		},
-		{
-			name: "truncate rejects stale and impossible requests",
-			run: func(t *testing.T, repo domain.Repository) {
-				ctx := context.Background()
-				c := seeded(t, repo, domain.EventInit, domain.EventRace)
-				// A stale expected sequence means another client has written
-				// since this one read.
-				if err := repo.Truncate(ctx, c.ID, 1, 1); err == nil {
-					t.Error("Truncate() accepted a stale sequence")
-				}
-				// The init event is not a step you can go back past.
-				if err := repo.Truncate(ctx, c.ID, 2, 0); err == nil {
-					t.Error("Truncate() dropped the init event")
-				}
-				// Truncating to the future is a client bug, not a no-op.
-				if err := repo.Truncate(ctx, c.ID, 2, 5); err == nil {
-					t.Error("Truncate() accepted a sequence past the end of the log")
-				}
-				got, err := repo.Get(ctx, c.ID)
-				if err != nil {
-					t.Fatalf("Get() error = %v", err)
-				}
-				if got.Log.Len() != 2 {
-					t.Errorf("log length = %d, want 2 after three rejected truncations", got.Log.Len())
-				}
-				if err := repo.Truncate(ctx, "no-such-character", 1, 1); !types.IsNotFound(err) {
-					t.Errorf("Truncate() error = %v, want a NotFoundError", err)
-				}
-			},
-		},
-		{
-			// Rewrite is the write behind a replacement: neither an append
-			// nor a truncation, because the stored slice comes back a
-			// different length in either direction.
-			name: "rewrite replaces the whole log",
-			run: func(t *testing.T, repo domain.Repository) {
-				ctx := context.Background()
-				c := seeded(t, repo, domain.EventInit, domain.EventRace, domain.EventClass)
-				shorter, err := domain.Rebuild([]domain.Event{
-					{Type: domain.EventInit},
-					{Type: domain.EventBackground},
-				})
-				if err != nil {
-					t.Fatalf("Rebuild() error = %v", err)
-				}
-				if err := repo.Rewrite(ctx, c.ID, 3, shorter); err != nil {
-					t.Fatalf("Rewrite() error = %v", err)
-				}
-				got, err := repo.Get(ctx, c.ID)
-				if err != nil {
-					t.Fatalf("Get() error = %v", err)
-				}
-				if got.Log.Len() != 2 || got.Log.Events[1].Type != domain.EventBackground {
-					t.Errorf("log = %+v, want the rewritten two entries", got.Log.Events)
-				}
-				// The caller keeps no handle on the store's slice.
-				shorter.Events[1].Note = "mutated after the write"
-				again, err := repo.Get(ctx, c.ID)
-				if err != nil {
-					t.Fatalf("Get() error = %v", err)
-				}
-				if again.Log.Events[1].Note != "" {
-					t.Error("Rewrite() stored the caller's own backing array")
-				}
-			},
-		},
-		{
-			name: "rewrite rejects stale and malformed writes",
-			run: func(t *testing.T, repo domain.Repository) {
-				ctx := context.Background()
-				c := seeded(t, repo, domain.EventInit, domain.EventRace)
-				good := domain.Log{Events: []domain.Event{{Seq: 1, Type: domain.EventInit}}}
-				if err := repo.Rewrite(ctx, c.ID, 1, good); err == nil {
-					t.Error("Rewrite() accepted a stale sequence")
-				}
-				// A store that accepts a malformed log is a store that hands
-				// one back.
-				bad := domain.Log{Events: []domain.Event{{Seq: 4, Type: domain.EventInit}}}
-				if err := repo.Rewrite(ctx, c.ID, 2, bad); err == nil {
-					t.Error("Rewrite() accepted a log whose sequence numbers do not run 1..n")
-				}
-				if err := repo.Rewrite(ctx, "no-such-character", 0, good); !types.IsNotFound(err) {
-					t.Errorf("Rewrite() error = %v, want a NotFoundError", err)
-				}
-				got, err := repo.Get(ctx, c.ID)
-				if err != nil {
-					t.Fatalf("Get() error = %v", err)
-				}
-				if got.Log.Len() != 2 {
-					t.Errorf("log length = %d, want 2 after two rejected rewrites", got.Log.Len())
 				}
 			},
 		},
@@ -420,7 +238,7 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 					t.Fatalf("Create() error = %v", err)
 				}
 				two := logOf(t, domain.EventInit, domain.EventRace)
-				if err := repo.Commit(ctx, c.ID, 0, two, "", nil); err != nil {
+				if err := repo.Commit(ctx, c.ID, 0, two, nil); err != nil {
 					t.Fatalf("Commit() error = %v", err)
 				}
 				got, err := repo.Get(ctx, c.ID)
@@ -437,12 +255,12 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 				}
 				// Same length: still a change, still one revision.
 				same := logOf(t, domain.EventInit, domain.EventBackground)
-				if err := repo.Commit(ctx, c.ID, 2, same, "", nil); err != nil {
+				if err := repo.Commit(ctx, c.ID, 2, same, nil); err != nil {
 					t.Fatalf("Commit() error = %v", err)
 				}
 				// Shorter: one revision, not a negative one.
 				one := logOf(t, domain.EventInit)
-				if err := repo.Commit(ctx, c.ID, 3, one, "", nil); err != nil {
+				if err := repo.Commit(ctx, c.ID, 3, one, nil); err != nil {
 					t.Fatalf("Commit() error = %v", err)
 				}
 				got, err = repo.Get(ctx, c.ID)
@@ -463,29 +281,26 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 					t.Fatalf("Create() error = %v", err)
 				}
 				log := logOf(t, domain.EventInit)
-				if err := repo.Commit(ctx, c.ID, 0, log, "cmd-1", nil); err != nil {
+				if err := repo.Commit(ctx, c.ID, 0, log, nil); err != nil {
 					t.Fatalf("Commit() error = %v", err)
 				}
 				var invalid *types.ValidationError
-				if err := repo.Commit(ctx, c.ID, 0, log, "", nil); !errors.As(err, &invalid) {
+				if err := repo.Commit(ctx, c.ID, 0, log, nil); !errors.As(err, &invalid) {
 					t.Errorf("Commit() at a stale revision error = %v, want a ValidationError", err)
 				}
-				if err := repo.Commit(ctx, c.ID, 1, log, "cmd-1", nil); !errors.As(err, &invalid) {
-					t.Errorf("Commit() repeating a command error = %v, want a ValidationError", err)
-				}
 				bad := domain.Log{Events: []domain.Event{{Seq: 4, Type: domain.EventInit}}}
-				if err := repo.Commit(ctx, c.ID, 1, bad, "", nil); !errors.As(err, &invalid) {
+				if err := repo.Commit(ctx, c.ID, 1, bad, nil); !errors.As(err, &invalid) {
 					t.Errorf("Commit() of a malformed log error = %v, want a ValidationError", err)
 				}
-				if err := repo.Commit(ctx, "chr_missing", 0, log, "", nil); !types.IsNotFound(err) {
+				if err := repo.Commit(ctx, "chr_missing", 0, log, nil); !types.IsNotFound(err) {
 					t.Errorf("Commit() error = %v, want a NotFoundError", err)
 				}
 				got, err := repo.Get(ctx, c.ID)
 				if err != nil {
 					t.Fatalf("Get() error = %v", err)
 				}
-				if got.Revision != 1 || got.Commands["cmd-1"] != 1 {
-					t.Errorf("revision = %d, commands = %v; want 1 and cmd-1 at 1 after three refusals", got.Revision, got.Commands)
+				if got.Revision != 1 {
+					t.Errorf("revision = %d, want 1 after three refusals", got.Revision)
 				}
 			},
 		},
@@ -499,7 +314,7 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 					t.Fatalf("Get() error = %v", err)
 				}
 				cp := domain.Checkpoint{Revision: before.Revision, Log: before.Log, Reason: "rules-migration"}
-				if err := repo.Commit(ctx, c.ID, before.Revision, logOf(t, domain.EventInit), "", &cp); err != nil {
+				if err := repo.Commit(ctx, c.ID, before.Revision, logOf(t, domain.EventInit), &cp); err != nil {
 					t.Fatalf("Commit() error = %v", err)
 				}
 				got, err := repo.Get(ctx, c.ID)
@@ -683,6 +498,20 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 
 // seeded creates a character and appends one event of each type, or fails
 // the test.
+// Append adds events to a stored character's log through Commit, the one
+// write the port has for a log. It is how a test seeds a character.
+func Append(ctx context.Context, repo domain.Repository, id domain.ID, events ...domain.Event) error {
+	c, err := repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	log := c.Log.Clone()
+	if err := log.Append(events...); err != nil {
+		return err
+	}
+	return repo.Commit(ctx, id, c.Revision, log, nil)
+}
+
 func seeded(t *testing.T, repo domain.Repository, types ...domain.EventType) domain.Character {
 	t.Helper()
 	ctx := context.Background()
@@ -694,7 +523,7 @@ func seeded(t *testing.T, repo domain.Repository, types ...domain.EventType) dom
 	for _, typ := range types {
 		events = append(events, domain.Event{Type: typ})
 	}
-	if err := repo.Append(ctx, c.ID, 0, events...); err != nil {
+	if err := Append(ctx, repo, c.ID, events...); err != nil {
 		t.Fatalf("Append() error = %v", err)
 	}
 	return c

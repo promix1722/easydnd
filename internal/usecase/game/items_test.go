@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/promix1722/easydnd/internal/adapter/repository/repotest"
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/group"
@@ -20,7 +21,7 @@ func TestTheTableHandsOverItemsAndCoins(t *testing.T) {
 	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer, "carol": group.RolePlayer})
 	bobs, carols := f.character(t, "bob"), f.character(t, "carol")
 	for owner, cid := range map[user.ID]character.ID{"bob": bobs, "carol": carols} {
-		if err := f.characters.Append(ctx, cid, 0, character.Event{Type: character.EventInit}); err != nil {
+		if err := repotest.Append(ctx, f.characters, cid, character.Event{Type: character.EventInit}); err != nil {
 			t.Fatal(err)
 		}
 		if err := f.svc.Share(ctx, owner, "table", cid); err != nil {
@@ -108,7 +109,7 @@ func TestOnlyTheTableGrantsACustomItem(t *testing.T) {
 	ctx := context.Background()
 	f.table(t, "table", "alice", map[user.ID]group.Role{"bob": group.RolePlayer})
 	seated := f.character(t, "bob")
-	if err := f.characters.Append(ctx, seated, 0, character.Event{Type: character.EventInit},
+	if err := repotest.Append(ctx, f.characters, seated, character.Event{Type: character.EventInit},
 		character.Event{Type: character.EventClass, Ref: rules.NewRef(rules.RefClass, "fighter"), Level: 1}); err != nil {
 		t.Fatal(err)
 	}

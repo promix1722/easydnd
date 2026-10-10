@@ -154,28 +154,6 @@ func (d Dice) String() string {
 	return b.String()
 }
 
-// Average returns the mean result, with each die averaging (faces+1)/2.
-//
-// PlusAbility contributes nothing: the modifier belongs to a character, and
-// this type does not know one. Use it for estimates and sorting, never in
-// place of an actual roll.
-func (d Dice) Average() float64 {
-	total := float64(d.Bonus)
-	for _, t := range d.Terms {
-		total += float64(t.Count) * (float64(t.Faces) + 1) / 2
-	}
-	return total
-}
-
-// Min returns the lowest possible result: every die rolls a 1.
-func (d Dice) Min() int {
-	total := d.Bonus
-	for _, t := range d.Terms {
-		total += t.Count
-	}
-	return total
-}
-
 // Max returns the highest possible result: every die rolls its top face.
 func (d Dice) Max() int {
 	total := d.Bonus

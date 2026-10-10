@@ -112,7 +112,4 @@ func TestPredicates(t *testing.T) {
 	if types.IsNotFound(types.NewServerError("x")) {
 		t.Errorf("IsNotFound matched a *ServerError")
 	}
-	if !types.IsNotImplemented(types.NewNotImplementedError("x")) {
-		t.Errorf("IsNotImplemented missed a *NotImplementedError")
-	}
 }

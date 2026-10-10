@@ -3,7 +3,6 @@
 The server runs characters against immutable, versioned packs. `pack` and
 `addon` mean the same artifact. The generated SRD is the base pack; configured
 addons pass through the same decoder, dependency resolver and compiler.
-The original design discussion is in [packs-plan.md](packs-plan.md).
 
 This delivery covers files, the core evaluator, character locks, revisions,
 resource events and migration APIs. Pack editing, JSON uploads, publishing,
@@ -35,12 +34,8 @@ rejects a label with no file behind it. A row without a label has no icon --
 the non-SRD items reuse an existing label where one fits and go without where
 none does. New artwork and assignments require a new release.
 
-To convert approved PNGs from `output/imagegen/item-samples/` and
-`output/imagegen/item-icons/`, run `node web/scripts/item-icons.mjs` after
-installing the web dependencies. This uses nearest-neighbor resizing and
-lossless WebP, checks dimensions and transparency, and preserves source PNGs.
-Then run `make pack/check`: the loader finds the files by name, so a new WebP
-under `item-icons/` is in the pack the moment a row names it.
+After adding artwork run `make pack/check`: the loader finds the files by name,
+so a new WebP under `item-icons/` is in the pack the moment a row names it.
 
 Item detail, collection, and search responses expose an optional `icon` data
 URL, just as spells do. The UI displays item artwork at 88×88 alongside its
@@ -795,8 +790,7 @@ arrays of source IDs. A directory references it as `files.provenance`:
 This is an excerpt, not a complete pack. The SRD pack itself keeps its sources
 to bare ids -- `{"srd-5.1": "SRD 5.1", "phb": "PHB", "xge": "XGE", "tce": "TCE"}`
 -- and ships no `sources` bundle: a tag, not a title, is all a row needs to
-say where it came from (`web/src/ui/sourceAbbreviation.ts` renders the
-abbreviation). Source mappings must name existing entities and declared
+say where it came from. Source mappings must name existing entities and declared
 sources. Membership ordering is not semantic. Provenance
 is part of the immutable release digest, survives JSON/directory/ZIP round trips,
 and requires a version bump when changed. Importing a copy retains book

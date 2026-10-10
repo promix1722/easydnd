@@ -71,7 +71,6 @@ export {
   Center,
   Checkbox,
   Grid,
-  MultiSelect,
   Code,
   Divider,
   Group,
@@ -84,13 +83,12 @@ export {
   ScrollArea,
   SimpleGrid,
   Skeleton,
-  Space,
   Stack,
   Text,
   Title,
   VisuallyHidden,
 } from '@mantine/core'
-export type { MantineColor, MantineSize } from '@mantine/core'
+export type { MantineColor } from '@mantine/core'
 
 // Controls.
 export {
@@ -102,8 +100,8 @@ export {
   // alternative is four buttons in every row, which DataList's mobile card
   // rendering cannot lay out legibly.
   Menu,
+  MultiSelect,
   NumberInput,
-  Popover,
   Select,
   Switch,
   Textarea,
@@ -164,7 +162,6 @@ export { CHROME_INSET, CONTENT_MAX_WIDTH, ROW_HEIGHT, TOUCH_TARGET } from '@/the
 
 // Theme + provider, so main.tsx never imports Mantine either.
 export { AppTheme } from './AppTheme'
-export { theme } from './theme'
 export { Markdown } from './Markdown'
 export { joinProse } from './prose'
 export { ChoiceDetails } from './ChoiceDetails'
@@ -173,7 +170,6 @@ export { DevAccounts } from './DevAccounts'
 
 export { SourceTags } from './SourceTags'
 export { SummaryMultiSelect } from './SummaryMultiSelect'
-export { sourceAbbreviation } from './sourceAbbreviation'
 
 export { Avatar } from './Avatar'
 export { ITEM_ICON_SIZE, ItemIcon } from './ItemIcon'

@@ -352,20 +352,6 @@ func readSource[T any](s *Source, file string) ([]T, error) {
 	return out, nil
 }
 
-// ReadManifest returns the data directory's manifest.
-func ReadManifest(dir string) (Manifest, error) {
-	path := filepath.Join(dir, FileManifest)
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return Manifest{}, types.WrapServerError(err, "reading %s", path)
-	}
-	var m Manifest
-	if err := json.Unmarshal(raw, &m); err != nil {
-		return Manifest{}, types.NewValidationError("%s: %v", path, err)
-	}
-	return m, nil
-}
-
 // mapEach applies f to every element.
 func mapEach[In, Out any](in []In, f func(In) Out) []Out {
 	out := make([]Out, 0, len(in))

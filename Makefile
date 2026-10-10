@@ -3,7 +3,6 @@
 BINARY      := easydnd
 MODULE      := github.com/promix1722/easydnd
 CMD         := ./cmd/$(BINARY)
-BIN_DIR     := bin
 SRD_DIR     := data/pack/srd-5.1
 DEV_CONFIG  := config.dev.yaml
 
@@ -124,10 +123,6 @@ PREVIEW_URL         := $(if $(PUBLIC_HOST),https://$(PUBLIC_HOST):$(PREVIEW_PUBL
 # grep prefixes every match with the file it came from once it has more than one.
 help:
 	@grep -hE '^## ' $(MAKEFILE_LIST) | sed 's/^## /  /'
-
-## build/server: build the API binary into bin/
-build/server:
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY) $(CMD)
 
 ## build/release: build exactly what CI ships (linux/amd64, static)
 build/release:
@@ -286,11 +281,6 @@ ports:
 	@echo "slot $(if $(SLOT),$(SLOT),<unclaimed>)  web $(WEB_PORT)  api $(API_PORT)  pg $(PG_PORT)  compose $(COMPOSE_PROJECT)"
 	@echo "open $(if $(WEB_PUBLIC_URL),$(WEB_PUBLIC_URL),http://127.0.0.1:$(WEB_PORT))"
 
-## test/cover: run tests and summarise coverage
-test/cover:
-	go test -coverprofile=coverage.out ./...
-	go tool cover -func=coverage.out | tail -1
-
 ## pack/check: load the hand-maintained SRD pack through the real loader
 # The pack is edited by hand, so there is nothing to regenerate and diff; the
 # gate is the same validation the server runs at startup -- schema, every
@@ -368,7 +358,7 @@ web/icons:
 	cd web && npm run icons
 
 ## web/icons/check: fail if the committed icons differ from the generator
-# Not a `diff -rq` like pack/check, and for a specific reason: the PNG
+# Not a `diff -rq`, and for a specific reason: the PNG
 # encoder's zlib output is deterministic for a given zlib but is not promised
 # to be stable across Node versions, so a byte diff would go red on a machine
 # whose Node differs from CI's -- failing for a reason that has nothing to do
@@ -495,9 +485,9 @@ verify:
 clean:
 # Not .dev-slot: that is this worktree's identity, and deleting it would move
 # the address you reach it on.
-	rm -rf $(BIN_DIR) $(BINARY) coverage.out web.tar.gz web/dist web/dev-dist
+	rm -rf $(BINARY) web.tar.gz web/dist web/dev-dist
 
-.PHONY: help build/server build/release run/server run/db test/unit test/race test/cover \
+.PHONY: help build/release run/server run/db test/unit test/race \
         dev dev/up dev/down slots ports \
         preview preview/up \
         db/up db/down db/psql test/db \

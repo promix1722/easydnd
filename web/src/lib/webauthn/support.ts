@@ -13,18 +13,3 @@ export function isPasskeySupported(): boolean {
   // throw instead of answering the question.
   return typeof (globalThis as { PublicKeyCredential?: unknown }).PublicKeyCredential === 'function'
 }
-
-/**
- * True when the device has a built-in authenticator -- Touch ID, Windows
- * Hello, an Android screen lock. Only used to choose the wording: a security
- * key works either way.
- */
-export async function hasPlatformAuthenticator(): Promise<boolean> {
-  if (!isPasskeySupported()) return false
-  try {
-    return await globalThis.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-  } catch {
-    // Some embedded webviews expose the constructor and then throw here.
-    return false
-  }
-}

@@ -61,7 +61,7 @@ func (s *Service) changeCharacter(
 	if _, err := character.Project(working, cat); err != nil {
 		return err
 	}
-	return s.characters.Commit(ctx, id, c.Revision, working, "", nil)
+	return s.characters.Commit(ctx, id, c.Revision, working, nil)
 }
 
 // seat finds one entry of a game's roster.
@@ -248,5 +248,5 @@ func (s *Service) GrantCustomItem(ctx context.Context, actor user.ID, id domain.
 	if err = charuc.CheckSheet(c.Log, log, cat, s.limits); err != nil {
 		return err
 	}
-	return s.characters.Commit(ctx, c.ID, c.Revision, log, "", nil)
+	return s.characters.Commit(ctx, c.ID, c.Revision, log, nil)
 }

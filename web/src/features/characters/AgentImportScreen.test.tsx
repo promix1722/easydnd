@@ -6,7 +6,7 @@ import { pacing } from './useReveal'
 import { setupUser } from '@/test/user'
 import { polling } from '@/lib/api/agent'
 import type { AgentView } from '@/lib/api/agent'
-import { ImportCharacterScreen } from './ImportCharacterScreen'
+import { AgentImportScreen } from './AgentImportScreen'
 
 const RULES = { edition: '2014', semantics: '1', packs: [{ id: 'srd-2014', version: '1.0.0', digest: 'a'.repeat(64) }] }
 const VIEW: AgentView = {
@@ -129,7 +129,7 @@ for (const viewport of ['desktop', 'mobile'] as const)
         viewport,
         <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
           <Routes>
-            <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
+            <Route path="/ai-wizard" element={<AgentImportScreen />} />
             <Route path="/characters/chr1" element={<p>sheet of chr1</p>} />
             <Route path="/characters/chr1/build" element={<p>builder of chr1</p>} />
           </Routes>
@@ -150,10 +150,10 @@ it('deduplicates replayed events and restores a coherent snapshot', async () => 
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
       <Routes>
-        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<AgentImportScreen />} />
         <Route
           path="/ai-wizard/:sessionId"
-          element={<ImportCharacterScreen />}
+          element={<AgentImportScreen />}
         />
       </Routes>
     </MemoryRouter>,
@@ -197,10 +197,10 @@ it('opens a chat, answers its rules and sends the sheet with the first message',
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard?folder=folder1']}>
       <Routes>
-        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<AgentImportScreen />} />
         <Route
           path="/ai-wizard/:sessionId"
-          element={<ImportCharacterScreen />}
+          element={<AgentImportScreen />}
         />
       </Routes>
     </MemoryRouter>,
@@ -259,7 +259,7 @@ it('takes the rules written into the message box as the answer to the opening qu
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard']}>
       <Routes>
-        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<AgentImportScreen />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -280,8 +280,8 @@ it('starts from a first message that came before the rules, and says which it to
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard']}>
       <Routes>
-        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
-        <Route path="/ai-wizard/:sessionId" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<AgentImportScreen />} />
+        <Route path="/ai-wizard/:sessionId" element={<AgentImportScreen />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -311,7 +311,7 @@ it('lets a message be sent only on the player\'s turn, and keeps the opening in 
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard?session=session1']}>
       <Routes>
-        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<AgentImportScreen />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -389,7 +389,7 @@ it('renders activity inline, combines attachments with the user message and answ
       <Routes>
         <Route
           path="/ai-wizard/:sessionId"
-          element={<ImportCharacterScreen />}
+          element={<AgentImportScreen />}
         />
       </Routes>
     </MemoryRouter>,
@@ -451,7 +451,7 @@ it('takes the end of a turn from the poll so the next reply can be sent', async 
       <Routes>
         <Route
           path="/ai-wizard/:sessionId"
-          element={<ImportCharacterScreen />}
+          element={<AgentImportScreen />}
         />
       </Routes>
     </MemoryRouter>,
@@ -483,7 +483,7 @@ it('gives every import its own message and keeps answered choices', async () => 
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard/session1']}>
       <Routes>
-        <Route path="/ai-wizard/:sessionId" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard/:sessionId" element={<AgentImportScreen />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -531,8 +531,8 @@ it('opens on the latest unfinished chat, and on a new one when every chat is fin
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard']}>
       <Routes>
-        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
-        <Route path="/ai-wizard/:sessionId" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<AgentImportScreen />} />
+        <Route path="/ai-wizard/:sessionId" element={<AgentImportScreen />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -543,8 +543,8 @@ it('opens on the latest unfinished chat, and on a new one when every chat is fin
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard']}>
       <Routes>
-        <Route path="/ai-wizard" element={<ImportCharacterScreen />} />
-        <Route path="/ai-wizard/:sessionId" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard" element={<AgentImportScreen />} />
+        <Route path="/ai-wizard/:sessionId" element={<AgentImportScreen />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -557,7 +557,7 @@ it('offers view, edit, finish and delete under the last message once the charact
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard/session1']}>
       <Routes>
-        <Route path="/ai-wizard/:sessionId" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard/:sessionId" element={<AgentImportScreen />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -581,7 +581,7 @@ it('shows a finished chat as a record: nothing to type, finish or delete', async
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard/session1']}>
       <Routes>
-        <Route path="/ai-wizard/:sessionId" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard/:sessionId" element={<AgentImportScreen />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -598,7 +598,7 @@ it('shows what arrives in one answer a message at a time, and its answers after 
     'desktop',
     <MemoryRouter initialEntries={['/ai-wizard/session1']}>
       <Routes>
-        <Route path="/ai-wizard/:sessionId" element={<ImportCharacterScreen />} />
+        <Route path="/ai-wizard/:sessionId" element={<AgentImportScreen />} />
       </Routes>
     </MemoryRouter>,
   )

@@ -134,8 +134,8 @@ asks about groups -- and, last of all, yes for a superadmin, whatever the
 switch says. Nothing about writing changes -- every write goes through
 the character service, which asks who owns the character and nothing else. A
 hidden character and a missing one both answer 404, so a link says nothing
-about a character it does not open. Like the folder, the switch lives with the
-in-memory character and is gone when the process is.
+about a character it does not open. Like the folder, the switch is a column
+beside the log (`characters.public`), not an event in it.
 
 ### Seeded development party
 
@@ -441,20 +441,25 @@ cmd/pack/             loads, validates and exports packs; `make pack/check` is t
 cmd/packlint/         reads the pack's prose the way a player would and reports what is off
 cmd/devslot/          hands each worktree its own development ports
 cmd/llm/              dev-machine OpenAI tool: batch image generation, JSON translation
+cmd/spellicon/        generates spell icons through internal/usecase/spellicon
 internal/
   app/                composition root -- the only package that knows every layer
   buildinfo/          Version, stamped by the linker
-  config/             env-driven configuration
+  config/             a committed YAML per environment, with a fixed env overlay
   logging/            slog constructor + request-scoped logger on context
   types/              transport-agnostic error vocabulary
   domain/rules/       shared value objects: slugs, dice, coins, choices  (layer 1)
   domain/catalog/     the SRD compendium and its Source port             (layer 1)
   domain/character/   the event-sourced character aggregate              (layer 1)
   domain/user/        the account aggregate and its passkeys             (layer 1)
+  domain/group/       a table of people and their ranks                  (layer 1)
+  domain/game/        one sitting at a group's table                     (layer 1)
+  domain/pack/        rule packs, releases and locks                     (layer 1)
   domain/auth/        the ceremony and token-signing ports               (layer 1)
   usecase/            application services                              (layer 2)
   adapter/catalog/    reads the compendium off disk                     (layer 3)
-  adapter/repository/ outbound adapters: memory, and postgres for accounts (layer 3)
+  adapter/repository/ outbound adapters: memory and postgres, one contract suite (layer 3)
+  adapter/agent/      the AI Wizard's model client                       (layer 3)
   adapter/webauthn/   runs the WebAuthn ceremonies                       (layer 3)
   adapter/oidc/       exchanges authorization codes with Google          (layer 3)
   adapter/token/      signs the session and ceremony cookies             (layer 3)
@@ -939,9 +944,9 @@ extra: the commit re-runs the replay, and if the log moved in between,
 
 `Repository.Commit` is the port method behind it -- neither an append nor a
 truncation, because replacing one entry can drop entries after it and the
-stored log comes back a different length. The in-memory adapter is the only
-implementation; the Postgres adapter holds accounts only, so there is no
-migration and no backfill for `source` either.
+stored log comes back a different length. It is the only write the port has
+for a log: the in-memory and Postgres adapters both implement it, and `source`
+needed no migration or backfill because the log is one `json` column.
 
 #### Saving several spell edits together
 
@@ -2027,7 +2032,7 @@ chats are kept there too, and are described with their own features:
 | `groups` | a group's id, name and who made it |
 | `group_members` | one row per seat: who, in which group, at which rank |
 | `folders` | one account's shelves; one is flagged the default |
-| `characters` | one row per character: owner, folder, revision, and the whole log, its checkpoints and command keys as `json` |
+| `characters` | one row per character: owner, folder, revision, and the whole log and its checkpoints as `json`. A `commands` column is left over from an idempotency key nothing ever set; no code reads or writes it |
 | `shared_characters` | one row per character a member has put on a group's table |
 | `games` | a game and, as one `json` column, its whole roster |
 | `private_releases` | the rule packs an AI Wizard import compiled, pinned by a character's lock and never listed |
@@ -2045,9 +2050,8 @@ be named in a group.
 
 A character's log is `json` rather than `jsonb`, as the wizard's document is:
 it is never queried, and `jsonb` refuses the `\u0000` a transcribed source can
-carry. The rules a write applies -- the revision guard, the sequence guard,
-event stamping -- are the domain's (`Character.Commit`, `ExpectSeq`,
-`Log.Stamp`), so the SQL adapter is load-under-`FOR UPDATE`, call, store, and
+carry. The rules a write applies -- the revision guard and event stamping --
+are the domain's (`Character.Commit`, `Log.Stamp`), so the SQL adapter is load-under-`FOR UPDATE`, call, store, and
 cannot drift from the in-memory one; `repotest` runs both.
 
 `users` is the only place a display name is stored, and a roster is a join

@@ -5,7 +5,7 @@ import { AvatarGalleryScreen } from '@/features/avatars'
 import { AccountScreen } from '@/features/account'
 import { LoginScreen } from '@/features/auth'
 import { BuildScreen, CharacterLogScreen, CharacterSheetScreen, CustomItemScreen, ItemScreen } from '@/features/character'
-import { ImportCharacterScreen } from '@/features/characters'
+import { AgentImportScreen } from '@/features/characters'
 import { DiceScreen } from '@/features/dice'
 import { AdminScreen } from '@/features/admin'
 import { GameScreen, GamesScreen, SharedSheetScreen } from '@/features/games'
@@ -70,13 +70,13 @@ export const router = createBrowserRouter([
         path: 'ai-wizard',
         element: (
           <Private>
-            <ImportCharacterScreen />
+            <AgentImportScreen />
           </Private>
         ),
       },
       {
         path: 'ai-wizard/:sessionId',
-        element: <Private><ImportCharacterScreen /></Private>,
+        element: <Private><AgentImportScreen /></Private>,
       },
       { path: 'characters/import', element: <LegacyImportRedirect /> },
       { path: 'characters/import/:sessionId/:importView?', element: <LegacyImportRedirect /> },

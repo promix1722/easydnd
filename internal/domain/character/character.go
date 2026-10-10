@@ -57,7 +57,6 @@ func (o OwnerID) String() string { return string(o) }
 type Character struct {
 	Revision    int
 	Checkpoints []Checkpoint
-	Commands    map[string]int
 
 	ID     ID
 	Owner  OwnerID
@@ -102,7 +101,7 @@ type Summary struct {
 //
 // DND.md fixes the storage shape: a character's log is small, so it is stored
 // as a single database record holding a JSON array. That is what makes the
-// optimistic-concurrency check in Repository.Append both necessary and cheap.
+// optimistic-concurrency check in Repository.Commit both necessary and cheap.
 type Log struct {
 	Events []Event
 }
@@ -111,8 +110,7 @@ type Log struct {
 func (l Log) Len() int { return len(l.Events) }
 
 // LastSeq returns the sequence number of the final event, or 0 for an empty
-// log. It is the value a caller passes to Repository.Append as the expected
-// sequence.
+// log.
 func (l Log) LastSeq() int {
 	if len(l.Events) == 0 {
 		return 0
@@ -274,10 +272,8 @@ type Repository interface {
 	// Commit replaces a character's whole log under its revision, which is
 	// the write every application mutation goes through. See
 	// Character.Commit for what it checks and how the revision advances.
-	// command, when not empty, is an idempotency key: a second Commit
-	// carrying the same one is a *types.ValidationError. checkpoint, when
-	// not nil, is kept alongside the log.
-	Commit(context.Context, ID, int, Log, string, *Checkpoint) error
+	// checkpoint, when not nil, is kept alongside the log.
+	Commit(context.Context, ID, int, Log, *Checkpoint) error
 
 	// CreateWithLog stores a new character together with its first log in
 	// one write, so that a failure cannot leave an empty character behind
@@ -322,40 +318,6 @@ type Repository interface {
 	// SetPublic opens or hides a character. Like SetFolder it changes
 	// nothing in the log and verifies nothing about the caller.
 	SetPublic(ctx context.Context, id ID, public bool) error
-
-	// Append adds events to a character's log, but only if the stored log
-	// still ends at expectedSeq. Implementations report a
-	// *types.ValidationError when it does not.
-	//
-	// The check is what makes a whole-log-in-one-record store safe: two
-	// clients editing the same character would otherwise read, modify and
-	// write the same blob, and the later write would silently discard the
-	// earlier one.
-	Append(ctx context.Context, id ID, expectedSeq int, events ...Event) error
-
-	// Truncate drops every event after afterSeq, but only if the stored log
-	// still ends at expectedSeq. It is the undo primitive: a build flow's
-	// Back button, and un-taking a level.
-	//
-	// Implementations report a *types.ValidationError for a stale
-	// expectedSeq, exactly as Append does, and for an afterSeq that would
-	// drop the init event or that is not actually in the past.
-	Truncate(ctx context.Context, id ID, expectedSeq, afterSeq int) error
-
-	// Rewrite replaces a character's whole log, but only if the stored log
-	// still ends at expectedSeq.
-	//
-	// It exists because replacing one entry can change every entry after it
-	// -- an answer the new prefix no longer offers is dropped, and the
-	// sequence numbers close up behind it -- so the write is not an append
-	// and not a truncation. The caller has already rebuilt and validated the
-	// log; implementations check the sequence, check Validate, and store.
-	//
-	// The concurrency check matters more here than anywhere else, because
-	// the write being discarded by a stale one is the entire history.
-	// Implementations report a *types.ValidationError for a stale
-	// expectedSeq or a log that does not validate.
-	Rewrite(ctx context.Context, id ID, expectedSeq int, log Log) error
 
 	// Delete removes a character. Implementations report a
 	// *types.NotFoundError when it does not exist.

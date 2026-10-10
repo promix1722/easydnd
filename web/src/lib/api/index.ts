@@ -162,7 +162,6 @@ export {
   getSharedSheet,
   listGames,
   listTable,
-  removeFromGame,
   renameGame,
   shareCharacter,
   unshareCharacter,

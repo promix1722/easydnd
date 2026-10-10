@@ -159,7 +159,7 @@ func (s *Service) Create(
 	if err := log.Append(event); err != nil {
 		return domain.Character{}, err
 	}
-	if err := s.repo.Commit(ctx, created.ID, 0, log, "", nil); err != nil {
+	if err := s.repo.Commit(ctx, created.ID, 0, log, nil); err != nil {
 		return domain.Character{}, err
 	}
 	return s.repo.Get(ctx, created.ID)
@@ -362,7 +362,7 @@ func (s *Service) Apply(
 	if err := CheckSheet(character.Log, working, cat, s.limits); err != nil {
 		return 0, err
 	}
-	if err := s.repo.Commit(ctx, id, character.Revision, working, commandID(ctx), nil); err != nil {
+	if err := s.repo.Commit(ctx, id, character.Revision, working, nil); err != nil {
 		return 0, err
 	}
 	return expectedSeq + len(events), nil
@@ -387,7 +387,7 @@ func (s *Service) Truncate(
 	if err = log.Truncate(afterSeq); err != nil {
 		return err
 	}
-	return s.repo.Commit(ctx, id, character.Revision, log, commandID(ctx), nil)
+	return s.repo.Commit(ctx, id, character.Revision, log, nil)
 }
 
 // Delete removes a character.
@@ -447,15 +447,10 @@ func (s *Service) CharacterCatalog(ctx context.Context, owner domain.OwnerID, id
 }
 
 type revisionKey struct{}
-type commandKey struct{}
 
 func WithRevision(ctx context.Context, revision int) context.Context {
 	return context.WithValue(ctx, revisionKey{}, revision)
 }
-func WithCommand(ctx context.Context, id string) context.Context {
-	return context.WithValue(ctx, commandKey{}, id)
-}
-func commandID(ctx context.Context) string { id, _ := ctx.Value(commandKey{}).(string); return id }
 func checkRevision(ctx context.Context, c domain.Character) error {
 	if expected, ok := ctx.Value(revisionKey{}).(int); ok && expected != c.Revision {
 		return types.NewValidationError("stale character revision: got %d, expected %d", expected, c.Revision)

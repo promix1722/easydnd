@@ -122,8 +122,8 @@ func TestSpellRuleStringsAreStructured(t *testing.T) {
 	if !ok {
 		t.Fatal("fire-bolt not found")
 	}
-	if !fireBolt.IsCantrip() {
-		t.Error("fire-bolt IsCantrip() = false, want true")
+	if fireBolt.Level != 0 {
+		t.Errorf("fire-bolt level = %d, want 0", fireBolt.Level)
 	}
 	if fireBolt.Damage == nil || len(fireBolt.Damage.Scaling.AtCharacterLevel) == 0 {
 		t.Error("fire-bolt has no character-level scaling")

@@ -139,7 +139,7 @@ func (s *Service) Migrate(ctx context.Context, owner domain.OwnerID, id domain.I
 	result.Changed = changedSections(before, after)
 	if commit {
 		cp := domain.Checkpoint{Revision: c.Revision, Log: c.Log.Clone(), Reason: "rules-migration"}
-		if err := s.repo.Commit(ctx, id, c.Revision, candidate, commandID(ctx), &cp); err != nil {
+		if err := s.repo.Commit(ctx, id, c.Revision, candidate, &cp); err != nil {
 			return Migration{}, err
 		}
 		result.Revision++
@@ -189,7 +189,7 @@ func (s *Service) RestoreCheckpoint(ctx context.Context, owner domain.OwnerID, i
 	result := Migration{Revision: c.Revision, Before: before, After: after, Changed: changedSections(before, after), Lock: log.RulesLock()}
 	if commit {
 		cp := domain.Checkpoint{Revision: c.Revision, Log: c.Log.Clone(), Reason: "rollback"}
-		if err := s.repo.Commit(ctx, id, c.Revision, log, commandID(ctx), &cp); err != nil {
+		if err := s.repo.Commit(ctx, id, c.Revision, log, &cp); err != nil {
 			return Migration{}, err
 		}
 		result.Revision += max(1, log.Len()-c.Log.Len())

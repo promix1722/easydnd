@@ -171,13 +171,6 @@ export function addToGame(id: string, characters: string[]): Promise<GameDetail>
   })
 }
 
-export function removeFromGame(id: string, character: string): Promise<GameDetail> {
-  return request<GameDetail>(
-    `/games/${encodeURIComponent(id)}/characters?character=${encodeURIComponent(character)}`,
-    { method: 'DELETE' },
-  )
-}
-
 /** Base stats follow the player sheet, or belong to a private monster copy. */
 export interface EntryStats {
   name: string

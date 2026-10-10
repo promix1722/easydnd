@@ -700,7 +700,7 @@ func (a *Agent) made(s *AgentSession, c domain.Character) bool {
 
 // push writes the working copy back, refusing if the player got there first.
 func (a *Agent) push(ctx context.Context, s *AgentSession) error {
-	if err := a.service.Repository().Commit(ctx, s.CharacterID, s.characterRevision, s.Log, "", nil); err != nil {
+	if err := a.service.Repository().Commit(ctx, s.CharacterID, s.characterRevision, s.Log, nil); err != nil {
 		return err
 	}
 	c, err := a.service.Repository().Get(ctx, s.CharacterID)

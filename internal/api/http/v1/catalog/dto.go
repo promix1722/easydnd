@@ -338,16 +338,15 @@ type Feat struct {
 
 // Weapon is the weapon part of an item.
 type Weapon struct {
-	Category            string   `json:"category,omitempty"`
-	Range               string   `json:"range,omitempty"`
-	Damage              *Damage  `json:"damage,omitempty"`
-	TwoHandedDamage     *Damage  `json:"twoHandedDamage,omitempty"`
-	NormalRange         int      `json:"normalRange,omitempty"`
-	LongRange           int      `json:"longRange,omitempty"`
-	ThrowNormalRange    int      `json:"throwNormalRange,omitempty"`
-	ThrowLongRange      int      `json:"throwLongRange,omitempty"`
-	Properties          []string `json:"properties,omitempty"`
-	CategoryDescription string   `json:"categoryDescription,omitempty"`
+	Category         string   `json:"category,omitempty"`
+	Range            string   `json:"range,omitempty"`
+	Damage           *Damage  `json:"damage,omitempty"`
+	TwoHandedDamage  *Damage  `json:"twoHandedDamage,omitempty"`
+	NormalRange      int      `json:"normalRange,omitempty"`
+	LongRange        int      `json:"longRange,omitempty"`
+	ThrowNormalRange int      `json:"throwNormalRange,omitempty"`
+	ThrowLongRange   int      `json:"throwLongRange,omitempty"`
+	Properties       []string `json:"properties,omitempty"`
 }
 
 // Armor is the armor part of an item.
@@ -497,7 +496,6 @@ type Components struct {
 	Verbal   bool   `json:"verbal,omitempty"`
 	Somatic  bool   `json:"somatic,omitempty"`
 	Material bool   `json:"material,omitempty"`
-	Consumed bool   `json:"consumed,omitempty"`
 	Text     string `json:"text,omitempty"`
 }
 

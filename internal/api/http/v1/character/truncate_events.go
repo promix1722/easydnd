@@ -58,7 +58,7 @@ func (h *Handler) TruncateEvents(c *gin.Context) {
 		helpers.FormatError(c, err)
 		return
 	}
-	h.writeResponse(c, id, locale, after)
+	h.writeResponse(c, id, locale)
 }
 
 func intQuery(c *gin.Context, name string) (int, error) {

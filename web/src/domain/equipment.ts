@@ -39,7 +39,6 @@ export interface EquipmentChange {
 }
 
 export type ItemGroup = 'wearable' | 'consumable' | 'gear'
-export const ITEM_GROUPS: readonly ItemGroup[] = ['wearable', 'consumable', 'gear']
 
 /**
  * The DMG's "Wearing and Wielding Items" set, as the catalogue spells it:

@@ -35,7 +35,7 @@ func NewCharacterRepository(pool *pgxpool.Pool) *CharacterRepository {
 
 var _ domain.Repository = (*CharacterRepository)(nil)
 
-const characterColumns = `id, owner_id, folder_id, public, revision, log, checkpoints, commands`
+const characterColumns = `id, owner_id, folder_id, public, revision, log, checkpoints`
 
 func characterNotFound(id domain.ID) error {
 	return types.NewNotFoundError("character %q", id).Because("character.notFound")
@@ -44,8 +44,8 @@ func characterNotFound(id domain.ID) error {
 // scanCharacter reads one row in characterColumns order.
 func scanCharacter(row pgx.Row) (domain.Character, error) {
 	var c domain.Character
-	var log, checkpoints, commands []byte
-	if err := row.Scan(&c.ID, &c.Owner, &c.Folder, &c.Public, &c.Revision, &log, &checkpoints, &commands); err != nil {
+	var log, checkpoints []byte
+	if err := row.Scan(&c.ID, &c.Owner, &c.Folder, &c.Public, &c.Revision, &log, &checkpoints); err != nil {
 		return domain.Character{}, err
 	}
 	if err := json.Unmarshal(log, &c.Log); err != nil {
@@ -56,32 +56,22 @@ func scanCharacter(row pgx.Row) (domain.Character, error) {
 			return domain.Character{}, types.WrapServerError(err, "decode character checkpoints")
 		}
 	}
-	if commands != nil {
-		if err := json.Unmarshal(commands, &c.Commands); err != nil {
-			return domain.Character{}, types.WrapServerError(err, "decode character commands")
-		}
-	}
 	return c, nil
 }
 
-// encode renders the three JSON columns. Empty checkpoints and commands are
-// NULL rather than "[]" and "{}", so a character that never had either reads
-// back with the nil the in-memory store returns.
-func encode(c domain.Character) (log, checkpoints, commands []byte, err error) {
+// encode renders the two JSON columns. Empty checkpoints are NULL rather than
+// "[]", so a character that never had any reads back with the nil the
+// in-memory store returns.
+func encode(c domain.Character) (log, checkpoints []byte, err error) {
 	if log, err = json.Marshal(c.Log); err != nil {
-		return nil, nil, nil, types.WrapServerError(err, "encode character log")
+		return nil, nil, types.WrapServerError(err, "encode character log")
 	}
 	if len(c.Checkpoints) > 0 {
 		if checkpoints, err = json.Marshal(c.Checkpoints); err != nil {
-			return nil, nil, nil, types.WrapServerError(err, "encode character checkpoints")
+			return nil, nil, types.WrapServerError(err, "encode character checkpoints")
 		}
 	}
-	if len(c.Commands) > 0 {
-		if commands, err = json.Marshal(c.Commands); err != nil {
-			return nil, nil, nil, types.WrapServerError(err, "encode character commands")
-		}
-	}
-	return log, checkpoints, commands, nil
+	return log, checkpoints, nil
 }
 
 // Create stores a new empty character for owner, filed in folder.
@@ -100,14 +90,14 @@ func (r *CharacterRepository) CreateWithLog(ctx context.Context, owner domain.Ow
 }
 
 func (r *CharacterRepository) insert(ctx context.Context, c domain.Character) (domain.Character, error) {
-	log, checkpoints, commands, err := encode(c)
+	log, checkpoints, err := encode(c)
 	if err != nil {
 		return domain.Character{}, err
 	}
 	err = r.pool.QueryRow(ctx,
-		`INSERT INTO characters (owner_id, folder_id, public, revision, log, checkpoints, commands)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-		string(c.Owner), string(c.Folder), c.Public, c.Revision, log, checkpoints, commands,
+		`INSERT INTO characters (owner_id, folder_id, public, revision, log, checkpoints)
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+		string(c.Owner), string(c.Folder), c.Public, c.Revision, log, checkpoints,
 	).Scan(&c.ID)
 	if err != nil {
 		return domain.Character{}, types.WrapServerError(err, "insert character")
@@ -174,13 +164,13 @@ func (r *CharacterRepository) update(ctx context.Context, id domain.ID, fn func(
 	if err := fn(&c); err != nil {
 		return err
 	}
-	log, checkpoints, commands, err := encode(c)
+	log, checkpoints, err := encode(c)
 	if err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx,
-		`UPDATE characters SET folder_id = $2, public = $3, revision = $4, log = $5, checkpoints = $6, commands = $7 WHERE id = $1`,
-		string(id), string(c.Folder), c.Public, c.Revision, log, checkpoints, commands)
+		`UPDATE characters SET folder_id = $2, public = $3, revision = $4, log = $5, checkpoints = $6 WHERE id = $1`,
+		string(id), string(c.Folder), c.Public, c.Revision, log, checkpoints)
 	if err != nil {
 		return types.WrapServerError(err, "update character")
 	}
@@ -206,53 +196,10 @@ func (r *CharacterRepository) SetPublic(ctx context.Context, id domain.ID, publi
 	})
 }
 
-// Append adds events to a character's log, rejecting a stale expectedSeq.
-func (r *CharacterRepository) Append(ctx context.Context, id domain.ID, expectedSeq int, events ...domain.Event) error {
-	return r.update(ctx, id, func(c *domain.Character) error {
-		if err := c.ExpectSeq(expectedSeq); err != nil {
-			return err
-		}
-		if err := c.Log.Append(events...); err != nil {
-			return err
-		}
-		c.Revision += max(1, len(events))
-		return nil
-	})
-}
-
-// Truncate drops every event after afterSeq, rejecting a stale expectedSeq.
-func (r *CharacterRepository) Truncate(ctx context.Context, id domain.ID, expectedSeq, afterSeq int) error {
-	return r.update(ctx, id, func(c *domain.Character) error {
-		if err := c.ExpectSeq(expectedSeq); err != nil {
-			return err
-		}
-		if err := c.Log.Truncate(afterSeq); err != nil {
-			return err
-		}
-		c.Revision++
-		return nil
-	})
-}
-
-// Rewrite replaces a character's whole log, rejecting a stale expectedSeq.
-func (r *CharacterRepository) Rewrite(ctx context.Context, id domain.ID, expectedSeq int, log domain.Log) error {
-	return r.update(ctx, id, func(c *domain.Character) error {
-		if err := c.ExpectSeq(expectedSeq); err != nil {
-			return err
-		}
-		if err := log.Validate(); err != nil {
-			return err
-		}
-		c.Log = log.Clone()
-		c.Revision++
-		return nil
-	})
-}
-
 // Commit is the atomic write boundary for all application log mutations.
-func (r *CharacterRepository) Commit(ctx context.Context, id domain.ID, expectedRevision int, log domain.Log, command string, checkpoint *domain.Checkpoint) error {
+func (r *CharacterRepository) Commit(ctx context.Context, id domain.ID, expectedRevision int, log domain.Log, checkpoint *domain.Checkpoint) error {
 	return r.update(ctx, id, func(c *domain.Character) error {
-		return c.Commit(expectedRevision, log, command, checkpoint)
+		return c.Commit(expectedRevision, log, checkpoint)
 	})
 }
 

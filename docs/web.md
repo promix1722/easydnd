@@ -654,7 +654,7 @@ nothing to do.
 
 Every folder is now a bordered `FolderPanel` -- a heading you can collapse, its
 own table under it, and its own **New character** beneath that. (**Import** sat
-beside it and is withheld for now; `ImportCharacterScreen` and its route are
+beside it and is withheld for now; `AgentImportScreen` and its route are
 untouched, so putting the button back is one line in `FolderAdditions`.)
 That change is worth four consequences:
 

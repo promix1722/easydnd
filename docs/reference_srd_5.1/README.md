@@ -194,11 +194,3 @@ wrong when a field happens to be present in every sampled record.
 * **What the SRD does *not* include** — most subclasses, most feats, most backgrounds, most
   races, and any named settings/monsters. A "complete" character builder is not possible from
   SRD alone; plan for user-supplied homebrew content.
-
-## Refreshing
-
-```bash
-bash docs/reference_srd_5.1/fetch-srd.sh
-```
-
-Sources are pinned to each repo's default branch, so re-running picks up upstream fixes.

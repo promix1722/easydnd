@@ -259,7 +259,7 @@ func (s *Service) copyTo(
 	if err != nil {
 		return domain.Character{}, err
 	}
-	if err := s.repo.Commit(ctx, created.ID, 0, copied, "", nil); err != nil {
+	if err := s.repo.Commit(ctx, created.ID, 0, copied, nil); err != nil {
 		return domain.Character{}, err
 	}
 	return s.repo.Get(ctx, created.ID)

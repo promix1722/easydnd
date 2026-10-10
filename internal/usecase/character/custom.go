@@ -51,7 +51,7 @@ func (s *Service) RemoveCustomOption(ctx context.Context, owner domain.OwnerID, 
 	if err != nil {
 		return Revision{}, err
 	}
-	if err = s.repo.Commit(ctx, id, character.Revision, log, commandID(ctx), nil); err != nil {
+	if err = s.repo.Commit(ctx, id, character.Revision, log, nil); err != nil {
 		return Revision{}, err
 	}
 	return Revision{Revision: character.Revision + 1, Seq: log.LastSeq(), Sheet: sheet}, nil
@@ -80,7 +80,7 @@ func (s *Service) UpsertCustomOption(ctx context.Context, owner domain.OwnerID, 
 	if err != nil {
 		return Revision{}, err
 	}
-	if err = s.repo.Commit(ctx, id, character.Revision, log, commandID(ctx), nil); err != nil {
+	if err = s.repo.Commit(ctx, id, character.Revision, log, nil); err != nil {
 		return Revision{}, err
 	}
 	return Revision{Revision: character.Revision + max(1, log.Len()-character.Log.Len()), Seq: log.LastSeq(), Sheet: sheet}, nil
