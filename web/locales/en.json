@@ -732,7 +732,6 @@
   "game.unlock": "Unlock",
   "game.spellDc": "Spell DC",
   "game.tempHp": "Temp HP",
-  "game.orderChanged": "The order changed during the move. Try moving the entry again.",
   "agent.lead": "Hi! I’ll build your character with you. Which rules should I use?",
   "agent.askStart": "Do you have a character sheet to attach, or would you rather describe the character?",
   "agent.rulesAssumed": "I’ll use {{rules}}.",

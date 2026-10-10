@@ -211,17 +211,12 @@ Tags are managed directly in each row: adding or removing a tag immediately
 patches only tags, outside the stat editor. Read-only entries show badges;
 editable entries show removable tags and a small inline add field. Failed
 writes retain the draft, and refreshed locks disable its controls.
-For an older running API that still creates 1/1 stubs, the client records the
-existing roster and initializes only a uniquely identified new stub to 10/10.
-On older APIs, a uniquely identified new stub named Monster also receives the
-default NPC name. Character copies and existing NPCs keep their names and HP.
+A new NPC stub arrives from the server named NPC with 10/10 hit points;
+character copies and existing NPCs keep their names and HP.
 
-Dragging first uses the atomic `before_id` operation. If an older running API
-rejects that operation with a validation error, the client falls back to its
-existing adjacent moves, using each confirmed response to check stable IDs and
-the destination. Only the dragged entry moves; retries are bounded, missing
-entries abort, and permission failures do not trigger fallback. This permits
-frontend updates to run against an older API.
+Dragging is one atomic `before_id` request: only the dragged entry moves. The
+client and the API ship as one release, so neither call carries a fallback for
+an older server.
 
 The game resource polls every three seconds while visible and refreshes on
 focus, visibility return, and successful writes. `useResource` aborts superseded
