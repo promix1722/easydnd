@@ -97,7 +97,7 @@ export function GameScreen() {
    *
    * A game is played at a table but is not reached through one: games are
    * their own section, which is the whole argument in
-   * docs/web.md#games-are-a-section. A trail reading
+   * docs/web.md#games-are-a-section-not-a-corner-of-a-group. A trail reading
    * `Groups / Wednesday Night / Thursday night` would say the opposite and
    * would disagree with the navbar, which lights Games. The "Back to the
    * group" link that used to sit under the title was the same claim in a

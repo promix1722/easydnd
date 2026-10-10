@@ -317,7 +317,7 @@ export function AgentImportScreen() {
   async function control(kind: string) {
     if (!session) return
     const result = await action.run(() => controlAgent(session.id, session.revision, kind))
-    if (result && kind === 'discard') void navigate('/characters')
+    if (result && kind === 'discard') void navigate('/')
   }
   // Named once the chat has said when it was opened: a name that began as a
   // piece of the id and grew a date a moment later would be two names.

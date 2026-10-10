@@ -78,7 +78,7 @@ export function SharedSheetScreen() {
   return (
     <Page
       mark={<Avatar image={identity.image} fallback={characterAvatar(identity.classes)} size={48} />}
-      trail={[...player, { label: identity.name || 'Unnamed' }]}
+      trail={[...player, { label: identity.name || t('common.unnamed') }]}
       badge={<Badge variant="light">{t('sharedSheet.readOnly')}</Badge>}
     >
       {/* The way back is the trail now. The "Back to the group" button that

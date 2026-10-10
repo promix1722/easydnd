@@ -15,8 +15,8 @@ import {
   type PackValidation,
   type PackValue,
 } from '@/lib/api/packs'
-import { describeError } from '@/lib/api'
 import { useT, type MessageKey } from '@/lib/i18n'
+import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import { Alert, Button, Group, Page, Panel, Select, Stack, Text, TextInput } from '@/ui'
 import { PackForm } from './PackForm'
@@ -70,8 +70,6 @@ export function PackEditorScreen() {
   const [pack, setPack] = useState<PackRecord | null>(null)
   const [doc, setDoc] = useState<PackDocument | null>(null)
   const [version, setVersion] = useState('')
-  const [error, setError] = useState('')
-  const [pending, setPending] = useState(false)
   const [validation, setValidation] = useState<PackValidation | null>(null)
   const [dirty, setDirty] = useState(false)
   const [references, setReferences] = useState<string[]>([])
@@ -114,17 +112,10 @@ export function PackEditorScreen() {
       current = false
     }
   }, [doc?.manifest.dependencies, loaded.data?.available])
-  async function act(work: () => Promise<void>) {
-    setError('')
-    setPending(true)
-    try {
-      await work()
-    } catch (e) {
-      setError(describeError(t, e))
-    } finally {
-      setPending(false)
-    }
-  }
+  const action = useAction((work: () => Promise<void>) => work())
+  const act = action.run
+  const pending = action.pending
+  const error = action.error ?? loaded.error
   async function persist() {
     if (!pack || !doc) return null
     const saved = await savePack(pack, doc, mappings)
@@ -151,9 +142,7 @@ export function PackEditorScreen() {
   return (
     <Page trail={[{ label: pack?.title ?? null }]}>
       <Stack>
-        {(error || loaded.error) && (
-          <Alert color="red">{error || describeError(t, loaded.error)}</Alert>
-        )}
+        {error && <Alert color="red">{error}</Alert>}
         {pack && (
           <Panel>
             <Stack>

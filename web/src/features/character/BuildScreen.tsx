@@ -679,7 +679,7 @@ export function BuildScreen() {
       // that would say so is the thing still in flight, and a trail that read
       // "Unnamed" for a moment would be naming the one fact just supplied.
       mark={<Avatar image={isNew ? imageDraft : view.sheet?.identity.image} fallback={characterAvatar(isNew ? undefined : view.sheet?.identity.classes)} size={48} />}
-      trail={buildTrail(t, isNew, creating ? nameDraft.trim() : title(view))}
+      trail={buildTrail(t, isNew, creating ? nameDraft.trim() : title(view) || t('common.unnamed'))}
       /*
        * On the heading line, against the right edge, and only once there is a
        * character to finish.
@@ -1036,10 +1036,9 @@ function askingFor(row: SettledRow, reposed: Reposed | null): Asking | null {
   return prompt === null ? null : { prompt, replaces: row }
 }
 
-/** The header's subject: what the character is called, or that it is not. */
+/** The header's subject: what the character is called, or '' when it is not. */
 function title(view: BuildView): string {
-  const name = view.sheet?.identity.name ?? ''
-  return name === '' ? 'Unnamed' : name
+  return view.sheet?.identity.name ?? ''
 }
 
 /**

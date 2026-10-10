@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { createPack, importPack, listPacks } from '@/lib/api/packs'
-import { describeError } from '@/lib/api'
 import { useT } from '@/lib/i18n'
+import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import { Alert, Anchor, Badge, Button, FileInput, Group, Page, Panel, Stack, TextInput } from '@/ui'
 
@@ -11,20 +11,11 @@ export function PacksScreen() {
   const navigate = useNavigate()
   const list = useResource('packs', listPacks)
   const [title, setTitle] = useState('')
-  const [error, setError] = useState('')
-  const [pending, setPending] = useState(false)
-  async function create(file?: File) {
-    setPending(true)
-    setError('')
-    try {
-      const p = file ? await importPack(file) : await createPack(title)
-      await navigate(`/homebrew/${p.id}`)
-    } catch (e) {
-      setError(describeError(t, e))
-    } finally {
-      setPending(false)
-    }
-  }
+  const create = useAction(async (file?: File) => {
+    const p = file ? await importPack(file) : await createPack(title)
+    await navigate(`/homebrew/${p.id}`)
+  })
+  const error = create.error ?? list.error
   return (
     <Page trail={[]}>
       <Stack>
@@ -35,22 +26,20 @@ export function PacksScreen() {
               value={title}
               onChange={(e) => setTitle(e.currentTarget.value)}
             />
-            <Button disabled={!title.trim()} loading={pending} onClick={() => void create()}>
+            <Button disabled={!title.trim()} loading={create.pending} onClick={() => void create.run()}>
               {t('packs.create')}
             </Button>
             <FileInput
               label={t('packs.import')}
               accept="application/json,application/zip,.json,.zip"
-              disabled={pending}
+              disabled={create.pending}
               onChange={(file) => {
-                if (file) void create(file)
+                if (file) void create.run(file)
               }}
             />
           </Group>
         </Panel>
-        {(error || list.error) && (
-          <Alert color="red">{error || describeError(t, list.error)}</Alert>
-        )}
+        {error && <Alert color="red">{error}</Alert>}
         {(list.data?.packs ?? []).map((p) => (
           <Panel key={p.id}>
             <Group justify="space-between">

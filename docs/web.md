@@ -4527,7 +4527,7 @@ displayed capacity.
 Leaving preparation open does not prevent finishing. The saved events retain the class level that grants each selection,
 including intermediate levels of a character created above level one. Cantrip
 purposes and legacy cantrip prompt IDs route to Cantrips; other spell choices
-route to Spells. Both saved choices and outstanding prompts use that mapping. The sheet displays spell ownership per source, and lets a preparing class change its prepared list without the builder; see [the sheet's spells](#the-sheet-arrives-resolved).
+route to Spells. Both saved choices and outstanding prompts use that mapping. The sheet displays spell ownership per source, and lets a preparing class change its prepared list without the builder; see [the sheet's spells](backend.md#the-sheet-arrives-resolved).
 
 Editing saved spells reads the question at the original event's
 position through `GET /characters/:id/prompts?before=:seq`, with the current

@@ -107,7 +107,7 @@ export function CharacterSheetScreen() {
   return (
     <Page
       mark={<Avatar image={identity.image} fallback={characterAvatar(identity.classes)} size={48} />}
-      trail={[{ label: identity.name || 'Unnamed' }]}
+      trail={[{ label: identity.name || t('common.unnamed') }]}
       /*
        * A mark, and only while the character is unfinished.
        *

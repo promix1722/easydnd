@@ -769,7 +769,7 @@ arrive as level events carrying answers.
 **Multiclassing is not offered.** Nothing poses a question that would give a
 character a second class, so `canMulticlassInto` and the `multiclassing`
 constant that gated it are gone -- git has them, and
-[dnd.md](dnd.md#characters-are-event-sourced) says what the rule was. What
+[dnd.md](dnd.md#log-and-events) says what the rule was. What
 stays is everything that *reads* a multiclassed character: `Identity.Classes`
 is a slice, `applyClasses` walks it, `classGrant` still knows a later class
 grants no starting equipment, and the spellcasting summary is still one block
@@ -1688,7 +1688,7 @@ rather than quietly defaulted.
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
 | `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The template's placeholder is rejected by name |
-| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups or to single accounts, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes nothing](#a-superadmin-reads-everything-and-writes-nothing)): a **verified** Google email, or an account id |
+| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups or to single accounts, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes nothing](#a-superadmin-reads-everything-and-writes-one-thing)): a **verified** Google email, or an account id |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
 | `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. The first is where Google sign-in returns to. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |
@@ -1698,7 +1698,7 @@ rather than quietly defaulted.
 | `auth.google.client_id` | *(none)* | omitting the whole `auth.google` block means Google sign-in is **not offered**, which is a supported deployment |
 | `auth.google.client_secret` | *(none)* | must be set together with the id; half a configuration is a startup error. The template's placeholder is rejected by name |
 | `auth.google.redirect_url` | `/v1/auth/sso/google/callback` on the first of `auth.rp_origins` | must match a URI registered with Google byte for byte. In development that origin is the **Vite dev server**, not this process, and differs per worktree |
-| `agent.model` | *(none)* | the AI Wizard's model; inert without `agent.api_key`. The other `agent.*` keys are in [agent.md](agent.md#configuration) |
+| `agent.model` | *(none)* | the AI Wizard's model; inert without `agent.api_key`. The other `agent.*` keys are in [agent.md](agent.md#configuration-and-deployment) |
 | `agent.api_key` | *(none)* | **never in a committed file** -- `EASYDND_AGENT_API_KEY`. Unset means the AI Wizard is off |
 
 Cookie `Secure` and the `__Host-` / `__Secure-` name prefixes are derived from
