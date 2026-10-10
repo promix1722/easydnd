@@ -2064,6 +2064,8 @@ Drop on anything, offered as *Drop one* and *Drop all* once there is more than
 one. No count stepper: a dozen torches is still one row with one menu. The
 purse is five fields, labelled with the coins' full names -- Copper, Gold --
 because "cp" and "зм" are rulebook shorthand a new player does not read.
+A reader of somebody else's sheet gets the same five fields, read-only: it
+used to be a line of text ("Gold: 15"), a second drawing of one fact.
 Every edit is one `change` event on `equipment.*` paths, appended to the log.
 Equipping writes the equipped list both whole and per slug -- see the comment
 on `equippedChanges` for why the server needs both -- and into Custom, the

@@ -130,7 +130,10 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, act
   </Stack>
 }
 
-/** The coins a character carries, by their full names: text to read, or five fields to edit. */
+/**
+ * The coins a character carries, by their full names: five fields, the same
+ * for a reader as for the owner, and locked without `onChange`.
+ */
 export function Purse({ purse, disabled = false, onChange }: {
   purse: Record<string, number> | undefined
   disabled?: boolean
@@ -141,22 +144,15 @@ export function Purse({ purse, disabled = false, onChange }: {
     cp: t('equipment.coin.cp'), sp: t('equipment.coin.sp'), ep: t('equipment.coin.ep'),
     gp: t('equipment.coin.gp'), pp: t('equipment.coin.pp'),
   }
-  if (onChange === undefined) {
-    return <Group gap="sm">
-      {Object.entries(purse ?? {}).filter(([, amount]) => amount !== 0).map(([unit, amount]) => (
-        <Text key={unit} size="sm">{coins[unit] ?? unit}: {amount}</Text>
-      ))}
-    </Group>
-  }
   return <Group gap="xs">
     {COINS.map((unit) => (
       <NumberInput key={`${unit}:${purse?.[unit] ?? 0}`} w={84} size="xs" min={0} allowDecimal={false} disabled={disabled}
-        label={coins[unit]} defaultValue={purse?.[unit] ?? 0}
+        readOnly={onChange === undefined} label={coins[unit]} defaultValue={purse?.[unit] ?? 0}
         // Written when the field is left, not per keystroke: every write is an
         // entry in the character's log.
         onBlur={(event) => {
           const amount = Number(event.currentTarget.value)
-          if (Number.isInteger(amount) && amount >= 0 && amount !== (purse?.[unit] ?? 0)) onChange(unit, amount)
+          if (Number.isInteger(amount) && amount >= 0 && amount !== (purse?.[unit] ?? 0)) onChange?.(unit, amount)
         }} />
     ))}
   </Group>
