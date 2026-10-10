@@ -8,7 +8,6 @@ import { useResource } from '@/lib/useResource'
 import { useLocale, useT } from '@/lib/i18n'
 import { Avatar, characterAvatar, Badge, Page, pageState } from '@/ui'
 
-import { titleCase } from '@/domain'
 
 import { SheetBody } from '../character/SheetBody'
 
@@ -76,30 +75,11 @@ export function SharedSheetScreen() {
   }
 
   const identity = data.sheet.identity
-  const named = (collection: string, slug: string | undefined) =>
-    slug === undefined
-      ? null
-      : (data.sheet.catalogNames?.[`${collection}:${slug}`] ?? titleCase(slug))
-  const classes = (identity.classes ?? [])
-    .map(({ class: slug, level }) => `${named('classes', slug) ?? slug} ${level}`)
-    .join(' / ')
-
   return (
     <Page
       mark={<Avatar image={identity.image} fallback={characterAvatar(identity.classes)} size={48} />}
       trail={[...player, { label: identity.name || 'Unnamed' }]}
       badge={<Badge variant="light">{t('sharedSheet.readOnly')}</Badge>}
-      subtitle={
-        <>
-          {[
-            named('races', identity.race),
-            named('backgrounds', identity.background),
-            classes,
-          ]
-            .filter((part) => part !== null && part !== '--')
-            .join(' · ')}
-        </>
-      }
     >
       {/* The way back is the trail now. The "Back to the group" button that
           used to sit here said the same thing in a second place. */}
