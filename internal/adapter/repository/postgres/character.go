@@ -35,7 +35,7 @@ func NewCharacterRepository(pool *pgxpool.Pool) *CharacterRepository {
 
 var _ domain.Repository = (*CharacterRepository)(nil)
 
-const characterColumns = `id, owner_id, folder_id, revision, log, checkpoints, commands`
+const characterColumns = `id, owner_id, folder_id, public, revision, log, checkpoints, commands`
 
 func characterNotFound(id domain.ID) error {
 	return types.NewNotFoundError("character %q", id).Because("character.notFound")
@@ -45,7 +45,7 @@ func characterNotFound(id domain.ID) error {
 func scanCharacter(row pgx.Row) (domain.Character, error) {
 	var c domain.Character
 	var log, checkpoints, commands []byte
-	if err := row.Scan(&c.ID, &c.Owner, &c.Folder, &c.Revision, &log, &checkpoints, &commands); err != nil {
+	if err := row.Scan(&c.ID, &c.Owner, &c.Folder, &c.Public, &c.Revision, &log, &checkpoints, &commands); err != nil {
 		return domain.Character{}, err
 	}
 	if err := json.Unmarshal(log, &c.Log); err != nil {
@@ -105,9 +105,9 @@ func (r *CharacterRepository) insert(ctx context.Context, c domain.Character) (d
 		return domain.Character{}, err
 	}
 	err = r.pool.QueryRow(ctx,
-		`INSERT INTO characters (owner_id, folder_id, revision, log, checkpoints, commands)
-		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-		string(c.Owner), string(c.Folder), c.Revision, log, checkpoints, commands,
+		`INSERT INTO characters (owner_id, folder_id, public, revision, log, checkpoints, commands)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+		string(c.Owner), string(c.Folder), c.Public, c.Revision, log, checkpoints, commands,
 	).Scan(&c.ID)
 	if err != nil {
 		return domain.Character{}, types.WrapServerError(err, "insert character")
@@ -179,8 +179,8 @@ func (r *CharacterRepository) update(ctx context.Context, id domain.ID, fn func(
 		return err
 	}
 	_, err = tx.Exec(ctx,
-		`UPDATE characters SET folder_id = $2, revision = $3, log = $4, checkpoints = $5, commands = $6 WHERE id = $1`,
-		string(id), string(c.Folder), c.Revision, log, checkpoints, commands)
+		`UPDATE characters SET folder_id = $2, public = $3, revision = $4, log = $5, checkpoints = $6, commands = $7 WHERE id = $1`,
+		string(id), string(c.Folder), c.Public, c.Revision, log, checkpoints, commands)
 	if err != nil {
 		return types.WrapServerError(err, "update character")
 	}
@@ -194,6 +194,14 @@ func (r *CharacterRepository) update(ctx context.Context, id domain.ID, fn func(
 func (r *CharacterRepository) SetFolder(ctx context.Context, id domain.ID, folder domain.FolderID) error {
 	return r.update(ctx, id, func(c *domain.Character) error {
 		c.Folder = folder
+		return nil
+	})
+}
+
+// SetPublic opens or hides a character.
+func (r *CharacterRepository) SetPublic(ctx context.Context, id domain.ID, public bool) error {
+	return r.update(ctx, id, func(c *domain.Character) error {
+		c.Public = public
 		return nil
 	})
 }

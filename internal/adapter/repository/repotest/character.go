@@ -381,6 +381,32 @@ func RunCharacterRepository(t *testing.T, newRepo NewCharacterRepository) {
 			},
 		},
 		{
+			name: "set public opens a character and nothing else",
+			run: func(t *testing.T, repo domain.Repository) {
+				ctx := context.Background()
+				c := seeded(t, repo, domain.EventInit)
+				if c.Public {
+					t.Fatal("a new character is public")
+				}
+				if err := repo.SetPublic(ctx, c.ID, true); err != nil {
+					t.Fatalf("SetPublic() error = %v", err)
+				}
+				got, err := repo.Get(ctx, c.ID)
+				if err != nil {
+					t.Fatalf("Get() error = %v", err)
+				}
+				if !got.Public {
+					t.Error("Get() public = false after SetPublic(true)")
+				}
+				if got.Log.Len() != 1 || got.Revision != 1 {
+					t.Errorf("SetPublic() changed the log to %d events at revision %d, want 1 and 1", got.Log.Len(), got.Revision)
+				}
+				if err := repo.SetPublic(ctx, "chr_missing", true); !types.IsNotFound(err) {
+					t.Errorf("SetPublic() error = %v, want a NotFoundError", err)
+				}
+			},
+		},
+		{
 			// Commit is the write every application mutation goes through.
 			// The revision formula is repeated by usecases that compute the
 			// revision they will answer with, so both adapters must land on
