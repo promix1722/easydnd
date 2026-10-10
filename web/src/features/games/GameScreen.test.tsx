@@ -206,14 +206,42 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
     const user = setupUser()
     await user.clear(screen.getByLabelText('Hit points'))
     await user.type(screen.getByLabelText('Hit points'), '18')
-    await user.type(screen.getByLabelText('Initiative'), '17')
+    // Initiative has an entry of its own in the menu; this dialog is what a hit changes.
+    expect(within(screen.getByRole('dialog')).queryByLabelText('Initiative')).not.toBeInTheDocument()
     expect(within(screen.getByRole('dialog')).queryByRole('textbox', { name: 'Tags' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Apply' }))
     await waitFor(() => expect(fetch).toHaveBeenCalled())
     const request = fetch.mock.calls.find(([, options]) => options?.method === 'PATCH')!
     expect(String(request[0])).toMatch(/\/games\/gam_1\/entries\/pc_chr_1\?locale=en$/)
-    expect(JSON.parse(request[1]!.body as string)).toEqual({ hp: 18, initiative: 17 })
+    expect(JSON.parse(request[1]!.body as string)).toEqual({ hp: 18 })
     await waitFor(() => expect(within(screen.getByRole('article', { name: 'Ada' })).getByText('HP').nextElementSibling).toHaveTextContent(shown(viewport, 18)))
+  })
+
+  it('sets initiative from its own menu entry, and clears it when emptied', async () => {
+    const game = gameAs('player')
+    game.entries[0]!.can_edit = true
+    renderGame(viewport, game)
+    await screen.findByText('Ada')
+    const fetch = vi.fn(async (_url: unknown, options?: RequestInit) => {
+      if (options?.method === 'PATCH') Object.assign(game.entries[0]!, JSON.parse(options.body as string))
+      return jsonResponse(game)
+    })
+    vi.stubGlobal('fetch', fetch)
+    const sent = () => fetch.mock.calls.filter(([, options]) => options?.method === 'PATCH').map(([, options]) => JSON.parse(options!.body as string))
+    const user = setupUser()
+
+    await pressRowAction(viewport, 'Ada', 'Initiative')
+    const dialog = within(screen.getByRole('dialog'))
+    expect(dialog.queryByLabelText('Hit points')).not.toBeInTheDocument()
+    await user.type(dialog.getByLabelText('Initiative'), '17')
+    await user.click(dialog.getByRole('button', { name: 'Apply' }))
+    await waitFor(() => expect(sent()).toEqual([{ initiative: 17 }]))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    await pressRowAction(viewport, 'Ada', 'Initiative')
+    await user.clear(screen.getByLabelText('Initiative'))
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+    await waitFor(() => expect(sent()).toEqual([{ initiative: 17 }, { initiative: null }]))
   })
 
   it('keeps typed drafts during refresh and disables saving when the master locks the entry', async () => {

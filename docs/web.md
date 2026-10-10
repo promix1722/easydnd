@@ -1166,7 +1166,11 @@ roster captions use «Вр. ОЗ» and «СЗ» to fit the compact grid. Initiat
 to sit in parentheses before the name in the mobile header; it moved onto the
 line so the header is the name alone. Unset initiative reads "—", and private NPC values are omitted. A
 chevron in the header expands movement, vision and abilities independently
-for that entry. **Items and coins** reach the page through the same "…" menu
+for that entry. **Initiative** has its own entry in the "…" menu and its own
+one-field dialog (`InitiativeSheet`), beside **HP**. It used to be a third box
+in the hit points dialog; it is set once, when a fight starts, and hit points
+change all through it, so the two were the wrong things to open together.
+Emptying the field clears it -- the entry has not rolled yet. **Items and coins** reach the page through the same "…" menu
 and never through the roster payload, which carries no inventory. They are
 three entries and three dialogs, because each does one thing and a player in a
 fight wants the one they pressed. **Coins** (`CoinsSheet`) is the purse and

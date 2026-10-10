@@ -52,6 +52,7 @@ export {
   IconPlus,
   IconSend,
   IconShield,
+  IconSwords,
   IconTrash,
   IconUserCircle,
   IconUserPlus,

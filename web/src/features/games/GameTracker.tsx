@@ -15,7 +15,7 @@ import {
   Avatar, characterAvatar, playerAvatar,
   ACTION_ICON_SIZE, ActionIcon, Affix, Alert, Anchor, Badge, Box, Button, Card, Divider,
   Group, IconArrowDown, IconArrowsExchange, IconArrowUp, IconBackpack, IconCoins, IconDice5, IconDotsVertical, IconGripVertical, IconPencil,
-  IconShield, IconTrash, IconPlus, IconChevronDown, ItemIcon, Menu, ModalSheet, Notification, NumberInput, Select, SHEET_COMBOBOX, SimpleGrid, Stack, Text, TextInput, useIsDesktop,
+  IconShield, IconSwords, IconTrash, IconPlus, IconChevronDown, ItemIcon, Menu, ModalSheet, Notification, NumberInput, Select, SHEET_COMBOBOX, SimpleGrid, Stack, Text, TextInput, useIsDesktop,
 } from '@/ui'
 import { ABILITY_ORDER, COINS, groupOf, mergeStacks, setCoin, setTotal, signed, titleCase } from '@/domain'
 import { abilityAbbr, senseName, speedName } from '../character/labels'
@@ -42,6 +42,7 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
   const gesture = useRef<{ id: string; pointer: number; x: number; y: number; moved: boolean } | null>(null)
   const [over, setOver] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
+  const [rolling, setRolling] = useState<string | null>(null)
   const [consuming, setConsuming] = useState<string | null>(null)
   const [carrying, setCarrying] = useState<{ id: string; mode: 'use' | 'give' } | null>(null)
   const [paying, setPaying] = useState<string | null>(null)
@@ -67,6 +68,7 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
   const [resting, setResting] = useState<'short' | 'long' | null>(null)
   const entries = game.entries
   const selected = entries.find((entry) => entry.id === editing)
+  const roller = entries.find((entry) => entry.id === rolling)
   const consumer = entries.find((entry) => entry.id === consuming)
   const carrier = entries.find((entry) => entry.id === carrying?.id)
   const payee = entries.find((entry) => entry.id === paying)
@@ -169,6 +171,9 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
             // A player's card edits what a fight changes, and says so; an NPC's also edits who it is.
             ...(entry.can_edit ? [{ label: entry.kind === 'player' ? t('game.hp') : t('common.edit'), icon: IconPencil,
               run: () => { patch.reset(); setEditing(entry.id) } }] : []),
+            // Its own entry and its own dialog: it is set once, when the fight starts, and hit points all through it.
+            ...(entry.can_edit ? [{ label: t('vitals.initiative'), icon: IconSwords,
+              run: () => { patch.reset(); setRolling(entry.id) } }] : []),
             // The server sends pools to the character's owner and to a DM only; a locked owner reads them and cannot spend.
             ...((entry.resources ?? []).length > 0 ? [{ label: t('sheet.consumables'), icon: IconDice5,
               run: () => setConsuming(entry.id) }] : []),
@@ -276,6 +281,12 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
         onClose={() => setEditing(null)} onSave={async (changes) => {
           if (await patch.run(game.id, selected.id, changes) === null) return
           setEditing(null)
+          onChange()
+        }} />}
+      {roller && <InitiativeSheet key={roller.id} entry={roller} pending={patch.pending} error={patch.error}
+        onClose={() => setRolling(null)} onSave={async (initiative) => {
+          if (await patch.run(game.id, roller.id, { initiative }) === null) return
+          setRolling(null)
           onChange()
         }} />}
       <ModalSheet opened={resting !== null} onClose={() => setResting(null)} title={resting === 'short' ? t('game.shortRest') : t('game.longRest')}
@@ -549,6 +560,29 @@ function EntryTags({ gameId, entry, onChange }: { gameId: string; entry: GameEnt
   </Stack>
 }
 
+/**
+ * One number, on its own: where an entry acts in the round. Emptied, it is
+ * cleared -- the entry has not rolled yet.
+ */
+function InitiativeSheet({ entry, pending, error, onClose, onSave }: {
+  entry: GameEntry; pending: boolean; error: string | null; onClose: () => void; onSave: (initiative: number | null) => Promise<void>
+}) {
+  const t = useT()
+  const [initiative, setInitiative] = useState<number | string>(entry.initiative ?? '')
+  const valid = initiative === '' || (typeof initiative === 'number' && Number.isInteger(initiative))
+  return <ModalSheet opened onClose={onClose} size="xs" title={entry.name || t('common.unnamed')}
+    onSubmit={() => { if (valid && entry.can_edit && !pending) void onSave(initiative === '' ? null : Number(initiative)) }}>
+    <Stack gap="sm">
+      {error && <Alert color="red">{error}</Alert>}
+      {!entry.can_edit && <Alert color="yellow">{t('game.editLocked')}</Alert>}
+      <NumberInput label={t('vitals.initiative')} allowDecimal={false} value={initiative} onChange={setInitiative} disabled={!entry.can_edit} data-autofocus />
+      <Group justify="flex-end">
+        <Button type="submit" loading={pending} disabled={!valid || !entry.can_edit}>{t('game.apply')}</Button>
+      </Group>
+    </Stack>
+  </ModalSheet>
+}
+
 /** Drafts belong to this editor; background refreshes never replace typed values. */
 function EntryEditor({ entry, pending, error, onClose, onSave }: {
   entry: GameEntry; pending: boolean; error: string | null; onClose: () => void; onSave: (patch: EntryPatch) => Promise<void>
@@ -558,21 +592,19 @@ function EntryEditor({ entry, pending, error, onClose, onSave }: {
   const [hp, setHP] = useState<number | string>(entry.hp ?? 0)
   const [tempHP, setTempHP] = useState<number | string>(entry.temp_hp ?? 0)
   const [damage, setDamage] = useState<number | string>('')
-  const [initiative, setInitiative] = useState<number | string>(entry.initiative ?? '')
   const [stats, setStats] = useState<EntryStats>(structuredClone(entry.stats!))
   const baseValid = typeof hp === 'number' && Number.isInteger(hp) && hp >= 0 && typeof tempHP === 'number' && Number.isInteger(tempHP) && tempHP >= 0
   const amount = damage === '' ? 0 : Number(damage)
   const damageValid = Number.isSafeInteger(amount) && amount >= 0
   const nextTempHP = baseValid && damageValid ? Math.max(0, Number(tempHP) - amount) : tempHP
   const nextHP = baseValid && damageValid ? Math.max(0, Number(hp) - Math.max(0, amount - Number(tempHP))) : hp
-  const valid = baseValid && damageValid && (initiative === '' || (typeof initiative === 'number' && Number.isInteger(initiative)))
+  const valid = baseValid && damageValid
   const monster = entry.kind === 'monster'
   async function submit() {
     if (!valid || !entry.can_edit || pending) return
     const patch: EntryPatch = {}
     if (nextHP !== original.hp) patch.hp = Number(nextHP)
     if (nextTempHP !== original.temp_hp) patch.temp_hp = Number(nextTempHP)
-    if ((initiative === '' ? null : initiative) !== (original.initiative ?? null)) patch.initiative = initiative === '' ? null : Number(initiative)
     if (monster && JSON.stringify(stats) !== JSON.stringify(original.stats)) {
       const changed: Partial<EntryStats> = {}
       for (const key of ['name', 'max_hp', 'armor_class', 'spellcasting', 'speeds', 'senses', 'abilities'] as const) {
@@ -588,10 +620,9 @@ function EntryEditor({ entry, pending, error, onClose, onSave }: {
       {!entry.can_edit && <Alert color="yellow">{t('game.editLocked')}</Alert>}
       {monster && <TextInput label={t('common.name')} value={stats.name} maxLength={64} disabled={!entry.can_edit}
         onChange={(event) => setStats({ ...stats, name: event.currentTarget.value })} />}
-      <SimpleGrid cols={{ base: 1, sm: 3 }}>
+      <SimpleGrid cols={{ base: 1, sm: 2 }}>
         <NumberInput label={t('vitals.hitPoints')} min={0} allowDecimal={false} value={nextHP} onChange={(value) => { setHP(value); setTempHP(nextTempHP); setDamage('') }} disabled={!entry.can_edit} />
         <NumberInput label={t('vitals.tempHp')} min={0} allowDecimal={false} value={nextTempHP} onChange={(value) => { setTempHP(value); setHP(nextHP); setDamage('') }} disabled={!entry.can_edit} />
-        <NumberInput label={t('vitals.initiative')} allowDecimal={false} value={initiative} onChange={setInitiative} disabled={!entry.can_edit} />
       </SimpleGrid>
       <NumberInput label={t('game.damage')} description={t('game.damageHint')} min={0} allowNegative={false}
         allowDecimal={false} value={damage} onChange={setDamage} disabled={!entry.can_edit || !baseValid} />
