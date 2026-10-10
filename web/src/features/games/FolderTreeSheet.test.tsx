@@ -64,8 +64,13 @@ describe.each(['mobile', 'desktop'] as const)('FolderTreeSheet (%s)', (viewport)
     render(viewport)
 
     await waitFor(() => expect(screen.getByText('Default')).toBeInTheDocument())
-    expect(screen.getByText('Curse of Strahd')).toBeInTheDocument()
-    expect(screen.queryByText('Ada')).not.toBeInTheDocument()
+    // Collapsed is asserted on each shelf's control, not by a character's
+    // absence. The suite shares one module graph across files, and whether a
+    // closed panel's contents are mounted depends on what ran before: CI
+    // found Ada in the document here, inside a panel that was shut.
+    for (const shelf of [/Default/, /Curse of Strahd/]) {
+      expect(screen.getByRole('button', { name: shelf })).toHaveAttribute('aria-expanded', 'false')
+    }
   })
 
   it('opens a folder to its characters', async () => {
