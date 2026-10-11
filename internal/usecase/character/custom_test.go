@@ -85,8 +85,8 @@ func TestCustomSpellPreservesCanonicalIdentityAndUnknownClassMechanics(t *testin
 	}
 }
 
-// A note is the player's own text: it is added, rewritten and deleted, and it
-// is the only custom entry that can be deleted at all.
+// A note is the player's own text: it is added, rewritten and deleted. Any
+// other custom entry is deleted too, unless another entry still names it.
 func TestCustomNotesAreAddedEditedAndDeleted(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -126,8 +126,24 @@ func TestCustomNotesAreAddedEditedAndDeleted(t *testing.T) {
 	if _, err = remove(built.Revision, "intruder", note.ID); err == nil {
 		t.Error("foreign delete accepted")
 	}
-	if _, err = remove(built.Revision, testOwner, "criminal"); err == nil {
-		t.Error("a background the character is built on was deleted")
+	for _, option := range []domain.CustomOption{
+		{ID: "moonfolk", Kind: "race", Name: "Moonfolk", Selected: true},
+		{ID: "pale", Kind: "subrace", Name: "Pale", Parent: "custom-moonfolk", Selected: true},
+	} {
+		if built, err = svc.UpsertCustomOption(at(built.Revision), testOwner, c.ID, rules.DefaultLocale, option); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err = remove(built.Revision, testOwner, "moonfolk"); err == nil {
+		t.Error("a race its subrace is filed under was deleted")
+	}
+	for _, option := range []string{"pale", "moonfolk"} {
+		if built, err = remove(built.Revision, testOwner, option); err != nil {
+			t.Fatalf("delete %s: %v", option, err)
+		}
+	}
+	if built.Sheet.Identity.Race == "custom-moonfolk" || len(built.Sheet.CustomOptions) != 2 {
+		t.Fatalf("after deleting the race = %q with %+v, want it gone", built.Sheet.Identity.Race, built.Sheet.CustomOptions)
 	}
 	if _, err = remove(built.Revision, testOwner, "no-such-note"); !types.IsNotFound(err) {
 		t.Errorf("unknown note = %v, want not found", err)

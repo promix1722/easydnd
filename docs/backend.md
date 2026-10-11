@@ -479,7 +479,7 @@ that.
 | `POST` | `/v1/characters/{id}/events` | append; returns the new sheet |
 | `GET` | `/v1/characters/{id}/custom-options` | the character's custom entries, `{revision, options}` |
 | `POST` | `/v1/characters/{id}/custom-options` | add or rewrite one, `{revision, option}`; an option without an `id` is new. Answers the new revision and sheet |
-| `DELETE` | `/v1/characters/{id}/custom-options/{option}?revision=` | erase a custom entry of kind `note`; any other kind is a 400 -- see [below](#a-note-is-the-one-custom-entry-that-can-be-deleted) |
+| `DELETE` | `/v1/characters/{id}/custom-options/{option}?revision=` | erase a custom entry; 400 while another entry still names it -- see [below](#a-custom-entry-is-deleted-unless-something-still-names-it) |
 | `POST` | `/v1/characters/{id}/auto-equip` | dress a character who has nothing on: one suitable backpack item per slot; 204, and a no-op once anything is equipped |
 | `GET` / `PUT` | `/v1/characters/{id}/visibility` | `{"public": bool}`: whether anybody signed in who has the character's link may read its sheet; owner only |
 | `PUT` | `/v1/characters/{id}/events/{seq}` | replace one entry: `{expectedSeq, event}`, `?dryRun=true` |
@@ -1273,21 +1273,29 @@ A shared sheet and its catalogue (`/v1/shared/{id}/...`) are projected against
 the character's custom overlay, as the owner's are, so a DM sees the item they
 gave with its icon and numbers.
 
-### A note is the one custom entry that can be deleted
+### A custom entry is deleted unless something still names it
 
 A custom entry lives in the log as a `note` event carrying the definition, and
-every kind but one may be something the character is built on: a custom class
-it has levels in, a custom spell it prepared. Those are switched off through
-their own `selected` flag and never removed, which is why
-`DELETE …/events/{seq}` refuses a custom event outright.
-
-Kind `note` is the exception because nothing can depend on it: it is a name
-and a description the server gives no meaning to -- the player's own titled
-text, drawn on the Custom tab of the sheet and the build screen. So
+most kinds may be something the character is built on: a custom class it has
+levels in, a custom race a subrace is filed under. `DELETE …/events/{seq}`
+therefore refuses a custom event outright, and the entry has its own route:
 `DELETE /v1/characters/{id}/custom-options/{option}?revision=` drops that one
 event and rebuilds the log, under the same ownership and revision checks as
-the POST; the revision is in the query because a DELETE carries no body. A
-non-note answers 400 `custom.notRemovable`, an unknown id 404. The AI Wizard's
+the POST; the revision is in the query because a DELETE carries no body.
+
+What the entry gave by being `selected` goes with it -- a custom background is
+no longer the character's background, and the catalogue's question is asked
+again. What it cannot take with it is another entry that names its slug
+(`custom-<id>`): a level, an answer, an inventory change, a subclass whose
+parent it is. While one exists the delete answers 400 `custom.notRemovable`
+and nothing is changed, because that entry would be left pointing at nothing;
+the check is a textual scan of the stored entries (`RemoveCustomOption`), not
+a walk of every field that can hold a slug. An unknown id answers 404.
+
+The build screen's entry dialog has the Delete button; the Custom tab deletes
+its notes through the same route. Kind `note` is a name and a description the
+server gives no meaning to -- the player's own titled text -- so nothing can
+depend on it and its delete never refuses. The AI Wizard's
 tools still may not write a note, so what is on that tab is what the player
 put there, plus whatever an older import left.
 

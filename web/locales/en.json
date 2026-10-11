@@ -758,7 +758,7 @@
   "error.agent.changed": "The draft changed. Wait for the latest version, then try again. Saved conversations cannot be edited.",
   "error.agent.limit": "This conversation has reached its limit. You can review and save the draft, or start a new import.",
   "error.agent.rulesRequired": "Choose the rules before starting the import.",
-  "error.custom.notRemovable": "Only a note can be deleted.",
+  "error.custom.notRemovable": "Something else on this character still depends on it. Remove that first.",
   "error.limit.characters": "Character limit reached ({{max}}). Delete a character to make another.",
   "error.limit.folders": "Folder limit reached ({{max}}). Delete a folder to make another.",
   "error.limit.groups": "You own the most groups one account can ({{max}}). Delete one or hand it on to open another.",
