@@ -100,6 +100,15 @@ describe('TabDeck', () => {
       expect.soft(height('identity')).toBe('0px')
       expect.soft(height('race')).toBe('0px')
     })
+
+    // `scrollIntoView` from a slide that is off screen scrolls an
+    // `overflow: hidden` viewport sideways, and embla never scrolls it back.
+    it('clips its viewport, so nothing but the carousel can move it', () => {
+      deck('mobile', 'class')
+
+      const viewport = screen.getByRole('group', { name: 'class' }).parentElement!.parentElement!
+      expect(viewport.style.overflow).toBe('clip')
+    })
   })
 
   // Embla owns the gesture in a browser and jsdom draws no carousel to press,

@@ -93,6 +93,17 @@ about what a tab holds has to say which tab -- `BuildScreen.test.tsx` scopes
 those queries to a slide, because a query against the whole document sees
 every category at once.
 
+**Only embla moves the deck.** Its viewport is `overflow: clip`, not the
+`overflow: hidden` a carousel usually has. A hidden box is still a scroll
+container, and `scrollIntoView` scrolls every one of those above its target --
+so a stage's Next button, focused the moment its tab is pressed and while its
+slide is still next door, had the browser scroll the viewport sideways by the
+button's width. Embla translates the container and never reads that offset, so
+it was never undone: every tab from then on sat shifted left with its
+neighbour showing down the right edge. A clipped box has no scroll position
+for anything to set, which closes it for every caller at once, the sheet's
+included.
+
 The deck does not swipe while the character does not exist. A tab press there
 *creates* one rather than moving anywhere, so a swipe would be a gesture the
 screen answers by refusing to move, and a deck that snaps back is worse than

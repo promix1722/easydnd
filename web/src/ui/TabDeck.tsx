@@ -169,7 +169,17 @@ export function TabDeck({
         // shrink below its content, so one wide row -- a weapon with three
         // figures beside its name -- widened its slide past the viewport, and
         // embla centred it with both edges cut off.
-        styles={{ container: { alignItems: 'flex-start' }, slide: { minWidth: 0 } }}
+        //
+        // And the viewport clips rather than hides. `overflow: hidden` is still
+        // a scroll container, only one without a scrollbar, so anything in a
+        // neighbouring slide that asks to be scrolled into view -- a stage's
+        // Next button, focused as its tab is pressed and before the carousel
+        // has got there -- had the browser scroll the viewport sideways to
+        // show it. Embla moves the container and knows nothing of that
+        // offset, so it stayed: every tab sat a button's width to the left,
+        // with the next one showing down the right edge. A clipped box cannot
+        // be scrolled by anybody.
+        styles={{ viewport: { overflow: 'clip' }, container: { alignItems: 'flex-start' }, slide: { minWidth: 0 } }}
         // Not looped. These are ordered -- a sheet and a build both decide what
         // order things come in -- so wrapping from the last back to the first
         // is a jump rather than a continuation.
