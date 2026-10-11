@@ -711,3 +711,29 @@ func TestPersonalityIsAvailableBeforeBackground(t *testing.T) {
 		t.Fatalf("background changed the written trait: %v", state.Identity.PersonalityTraits)
 	}
 }
+
+// An imported inventory is the whole inventory, so the starting kit stops
+// being a question.
+func TestAnImportedInventoryClosesTheKit(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, time.October, 11, 0, 0, 0, 0, time.UTC)
+	var log Log
+	if err := log.Append(
+		Event{Type: EventInit, At: at},
+		Event{Type: EventClass, At: at, Ref: rules.NewRef(rules.RefClass, "rogue"), Level: 1},
+	); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+	kit := func() bool {
+		return slices.ContainsFunc(promptsFor(t, log), func(p Prompt) bool { return p.Choice.Kind == rules.ChooseEquipment })
+	}
+	if !kit() {
+		t.Fatal("a new rogue is not asked about a kit")
+	}
+	if err := log.Append(Event{Type: EventChange, At: at, Observed: true, Changes: []Change{{Path: "equipment.backpack", Op: OpSet, Value: SlugListValue(nil)}}}); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+	if kit() {
+		t.Error("the kit is still asked after an import wrote the inventory")
+	}
+}

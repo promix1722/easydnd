@@ -1,6 +1,8 @@
 package character
 
 import (
+	"strings"
+
 	"github.com/promix1722/easydnd/internal/domain/catalog"
 	"github.com/promix1722/easydnd/internal/domain/rules"
 )
@@ -173,8 +175,23 @@ func Prompts(log Log, cat *catalog.Catalog) ([]Prompt, error) {
 		answers: foldAnswers(log),
 		scored:  scoresWereSet(log),
 		empty:   log.Len() == 0,
+		carried: inventoryWasObserved(log),
 	}
 	return b.build(), nil
+}
+
+// inventoryWasObserved reports whether an import wrote the character's
+// inventory. A sheet's inventory is the whole inventory -- the starting kit is
+// on it already, or was spent long ago -- so the kit is not asked about again.
+func inventoryWasObserved(log Log) bool {
+	for _, e := range log.Events {
+		for _, ch := range e.Changes {
+			if e.Observed && strings.HasPrefix(string(ch.Path), "equipment.") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // scoresWereSet reports whether the log has ever set an ability score.
@@ -201,6 +218,8 @@ type promptBuilder struct {
 	answers answers
 	scored  bool
 	empty   bool
+	// carried: the inventory came off a sheet, so no starting kit is offered.
+	carried bool
 	all     bool
 
 	out []Prompt

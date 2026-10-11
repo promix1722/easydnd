@@ -194,8 +194,9 @@ func (b *promptBuilder) background() {
 
 	b.addChoice(background.LanguageOptions, optionalPrompt(base))
 
-	optional := optionalPrompt(base)
-	b.addChoices(background.StartingEquipmentOptions, optional)
+	if !b.carried {
+		b.addChoices(background.StartingEquipmentOptions, optionalPrompt(base))
+	}
 }
 
 // personality poses who the character is: the four roleplaying questions and
