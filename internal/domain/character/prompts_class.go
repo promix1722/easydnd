@@ -45,7 +45,7 @@ func (b *promptBuilder) classes() {
 		g := classGrant(class, 1, i == 0)
 		b.addChoices(g.Choices, base)
 
-		if i == 0 {
+		if i == 0 && !b.carried {
 			optional := base
 			optional.Optional = true
 			b.addChoices(class.StartingEquipmentOptions, optional)

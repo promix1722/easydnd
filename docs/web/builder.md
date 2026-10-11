@@ -623,7 +623,11 @@ answering the kit would take the tab away mid-creation, and the answer with it. 
 asked once -- by the first class, at level 1 -- and its answers seed the
 inventory; after that the character's things are edited on the sheet's
 Equipment and Items tabs, so a visit that opens with the kit already answered
-draws no tab: Edit and Level up never show one. There is no stored "finished"
+draws no tab: Edit and Level up never show one. **Nor does a character the AI
+Wizard imported**: the server asks no kit question once an import has written
+the inventory (`inventoryWasObserved`, docs/dnd.md), because a sheet's
+inventory is the whole inventory -- the pack the wizard carried as its
+contents would otherwise stay an open question on every Edit. There is no stored "finished"
 flag, so "creating" is exactly "this visit saw a kit prompt"; leaving a
 half-built character and coming back with the kit answered hides the tab too.
 The spell tabs' Next and save land on the tab after them with work or stay put.

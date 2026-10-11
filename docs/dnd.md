@@ -581,6 +581,12 @@ or two fighting styles cannot duplicate the same benefit. Class-specific names
 for the same fighting style count as one style. Collection choices such as feats
 and languages are also validated against explicit catalogue membership.
 
+**A kit is not asked about once an import wrote the inventory.** An `Observed`
+change under `equipment.` means the things came off a sheet, where the kit is
+already listed or long spent, so `Prompts` poses neither the class's nor the
+background's `startingEquipmentOptions`. Answers already in the log still
+replay and still validate -- only the open question goes.
+
 **A class kit is asked slot by slot**, written by hand on each class row's
 `startingEquipmentOptions` rather than transcribed from the book's
 "(a) … or (b) …" pairs. The book pairs things the way it sells them; a player fills a sheet

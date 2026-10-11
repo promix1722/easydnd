@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -16,9 +17,11 @@ import (
 	"github.com/promix1722/easydnd/internal/types"
 )
 
-// RemoveCustomOption deletes a note: the one kind of custom entry nothing can
-// be built on. Every other kind may be the character's class or a spell it
-// knows, and is switched off through its own Selected flag instead.
+// RemoveCustomOption deletes a custom entry and whatever it alone gave the
+// character: a selected custom background goes with its definition. It is
+// refused while another entry still names it -- a level taken in a custom
+// class, a subclass filed under it, an item moved on the sheet -- because
+// that entry would be left pointing at nothing.
 func (s *Service) RemoveCustomOption(ctx context.Context, owner domain.OwnerID, id domain.ID, locale rules.Locale, optionID string) (Revision, error) {
 	character, cat, err := s.load(ctx, owner, id, locale)
 	if err != nil {
@@ -31,10 +34,13 @@ func (s *Service) RemoveCustomOption(ctx context.Context, owner domain.OwnerID, 
 	for _, e := range character.Log.Events {
 		if e.Custom == nil || e.Custom.ID != optionID {
 			kept = append(kept, e)
-			continue
 		}
-		if e.Custom.Kind != "note" {
-			return Revision{}, types.NewValidationError("only a note can be deleted").Because("custom.notRemovable")
+	}
+	// ponytail: a textual scan of the stored entries rather than a walk of
+	// every field that can hold a slug; a slug ends at the closing quote.
+	for _, e := range kept {
+		if raw, _ := json.Marshal(e); strings.Contains(string(raw), "custom-"+optionID+`"`) {
+			return Revision{}, types.NewValidationError("another entry depends on this custom option").Because("custom.notRemovable")
 		}
 	}
 	if len(kept) == character.Log.Len() {

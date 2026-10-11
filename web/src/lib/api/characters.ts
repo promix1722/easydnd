@@ -190,7 +190,7 @@ export interface CustomOption {
 export type CustomItem = Pick<Item, 'icon' | 'category' | 'slot' | 'cost' | 'weight' | 'weapon' | 'armor'>
 export const upsertCustomOption = (id: string, revision: number, option: CustomOption) =>
  request<WriteResponse>(`${characterPath(id)}/custom-options`, { method: 'POST', body: { revision, option } })
-/** Deletes a custom entry. The server allows it for a `note` only: any other kind may be something the character is built on. */
+/** Deletes a custom entry. The server refuses while another entry of the character still names it. */
 export const deleteCustomOption = (id: string, revision: number, option: string) =>
  request<WriteResponse>(`${characterPath(id)}/custom-options/${encodeURIComponent(option)}?revision=${revision}`, { method: 'DELETE' })
 export interface Sheet {

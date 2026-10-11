@@ -1,4 +1,4 @@
-import { upsertCustomOption } from '@/lib/api/characters'
+import { deleteCustomOption, upsertCustomOption } from '@/lib/api/characters'
 import type { CustomOption, Sheet } from '@/lib/api/characters'
 import { useAction } from '@/lib/useAction'
 import { useT } from '@/lib/i18n'
@@ -82,6 +82,8 @@ export function CustomOptionsPanel({
       onSaved()
     }
   }
+  const remove = useAction(deleteCustomOption)
+  const busy = action.pending || remove.pending
   if (items.length === 0 && !(modal && draft !== null)) return null
   return (
     <Stack gap="sm">
@@ -96,6 +98,7 @@ export function CustomOptionsPanel({
           const option = items.find((each) => each.id === key)
           if (option === undefined) return
           action.reset()
+          remove.reset()
           setDraft(option)
         }}
         items={items.map((option) => ({
@@ -119,7 +122,7 @@ export function CustomOptionsPanel({
       <ModalSheet
         opened={modal && draft !== null}
         onClose={() => {
-          if (!action.pending) setDraft(null)
+          if (!busy) setDraft(null)
         }}
         title={t('custom.edit')}
       >
@@ -159,7 +162,7 @@ export function CustomOptionsPanel({
                 label={t('custom.name')}
                 value={draft.name}
                 maxLength={300}
-                disabled={action.pending}
+                disabled={busy}
                 onChange={(e) => setDraft({ ...draft, name: e.currentTarget.value })}
               />
               <Textarea
@@ -168,14 +171,14 @@ export function CustomOptionsPanel({
                 maxLength={16000}
                 autosize
                 minRows={3}
-                disabled={action.pending}
+                disabled={busy}
                 onChange={(e) => setDraft({ ...draft, description: e.currentTarget.value })}
               />
               <TextInput
                 label={t('custom.source')}
                 value={draft.source}
                 maxLength={1000}
-                disabled={action.pending}
+                disabled={busy}
                 onChange={(e) => setDraft({ ...draft, source: e.currentTarget.value })}
               />
               {['subclass', 'subrace', 'feature', 'spell', 'cantrip'].includes(draft.kind) && (
@@ -312,21 +315,37 @@ export function CustomOptionsPanel({
                 checked={draft.selected}
                 onChange={(e) => setDraft({ ...draft, selected: e.currentTarget.checked })}
               />
-              {action.error && <Alert color="red">{action.error}</Alert>}
+              {(action.error ?? remove.error) && <Alert color="red">{action.error ?? remove.error}</Alert>}
               <Group>
-                <Button type="submit" loading={action.pending} disabled={!draft.name.trim()}>
+                <Button type="submit" loading={action.pending} disabled={remove.pending || !draft.name.trim()}>
                   {t('custom.save')}
                 </Button>
-                <Button variant="subtle" disabled={action.pending} onClick={() => setDraft(null)}>
+                <Button variant="subtle" disabled={busy} onClick={() => setDraft(null)}>
                   {t('custom.cancel')}
                 </Button>
+                {draft.id && (
+                  <Button
+                    variant="subtle"
+                    color="red"
+                    ml="auto"
+                    loading={remove.pending}
+                    disabled={action.pending}
+                    onClick={async () => {
+                      if ((await remove.run(id, revision, draft.id!)) === null) return
+                      setDraft(null)
+                      onSaved()
+                    }}
+                  >
+                    {t('common.delete')}
+                  </Button>
+                )}
               </Group>
               {draft.id &&
                 draft.selected &&
                 ['class', 'race', 'background', 'subclass', 'subrace'].includes(draft.kind) && (
                   <Button
                     variant="light"
-                    disabled={action.pending}
+                    disabled={busy}
                     onClick={() => void submit({ ...draft, selected: false })}
                   >
                     {t('custom.replace')}
