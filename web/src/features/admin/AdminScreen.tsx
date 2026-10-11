@@ -3,11 +3,11 @@ import { Link, useSearchParams } from 'react-router'
 import { classLine } from '@/domain'
 import { useState } from 'react'
 
-import { getAdminPlayerPacks, listAdminCharacters, listAdminPacks, listAdminPlayers, setAdminPlayerPacks } from '@/lib/api'
+import { deleteAdminCharacter, deleteAdminPlayer, getAdminPlayerPacks, listAdminCharacters, listAdminPacks, listAdminPlayers, setAdminPlayerPacks } from '@/lib/api'
 import { formatDate, formatDateTime, useLocale, useT } from '@/lib/i18n'
 import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
-import { Alert, Anchor, Badge, Button, Checkbox, Group, Loader, ModalSheet, Page, Panel, Stack, TabRow, Text } from '@/ui'
+import { ACTION_ICON_SIZE, Alert, Anchor, Badge, Button, Checkbox, Group, IconTrash, Loader, ModalSheet, Page, Panel, Stack, TabRow, Text } from '@/ui'
 
 import { AdminTable, FilterBox, FilterSelect } from './AdminTable'
 import { usePaged } from './usePaged'
@@ -63,7 +63,7 @@ export function AdminScreen() {
 function PlayersTab({ params, setFilter }: { params: URLSearchParams; setFilter: SetFilter }) {
   const t = useT()
   const locale = useLocale()
-  const filters = { q: params.get('q'), kind: params.get('kind') }
+  const filters = { q: params.get('q'), kind: params.get('kind'), sort: params.get('sort') }
   const paged = usePaged<AdminPlayer>(`admin:players:${JSON.stringify(filters)}`, async (offset, signal) => {
     const page = await listAdminPlayers(filters, offset, signal)
     return { rows: page.players, total: page.total }
@@ -73,14 +73,46 @@ function PlayersTab({ params, setFilter }: { params: URLSearchParams; setFilter:
   // row menu that opened onto nothing to tick would be a dead control.
   const packs = useResource('admin:packs', async (signal) => (await listAdminPacks(signal)).packs).data ?? []
   const [granting, setGranting] = useState<AdminPlayer | null>(null)
+  const [deleting, setDeleting] = useState<AdminPlayer | null>(null)
+  const remove = useAction(deleteAdminPlayer)
 
   return (
     <>
     {granting !== null && <PlayerPacksSheet player={granting} packs={packs} onClose={() => setGranting(null)} onSaved={paged.reload} />}
+    <ModalSheet
+      opened={deleting !== null}
+      onClose={() => setDeleting(null)}
+      title={t('characters.deleteNamedTitle', { name: deleting?.display_name || t('common.unnamed') })}
+    >
+      <Stack gap="md">
+        <Text size="sm">{t('admin.players.deleteWarning')}</Text>
+        {remove.error !== null && <Alert color="red">{remove.error}</Alert>}
+        <Group justify="flex-end">
+          <Button variant="subtle" onClick={() => setDeleting(null)}>{t('common.cancel')}</Button>
+          <Button
+            color="red"
+            loading={remove.pending}
+            onClick={() => {
+              if (deleting === null) return
+              void remove.run(deleting.id).then((ok) => { if (ok !== null) { setDeleting(null); paged.reload() } })
+            }}
+          >
+            {t('common.delete')}
+          </Button>
+        </Group>
+      </Stack>
+    </ModalSheet>
     <AdminTable
-      {...(packs.length > 0
-        ? { actions: (player: AdminPlayer) => [{ key: 'packs', label: t('admin.packs.action'), onClick: () => setGranting(player) }] }
-        : {})}
+      actions={(player: AdminPlayer) => [
+        ...(packs.length > 0 ? [{ key: 'packs', label: t('admin.packs.action'), onClick: () => setGranting(player) }] : []),
+        {
+          key: 'delete',
+          label: t('common.delete'),
+          color: 'red' as const,
+          icon: <IconTrash size={ACTION_ICON_SIZE} />,
+          onClick: () => { remove.reset(); setDeleting(player) },
+        },
+      ]}
       paged={paged}
       loadFailed={t('admin.players.loadFailed')}
       count={(count) => t('admin.players.count', { count })}
@@ -97,6 +129,17 @@ function PlayersTab({ params, setFilter }: { params: URLSearchParams; setFilter:
             ]}
             value={filters.kind}
             onChange={(value) => setFilter('kind', value)}
+          />
+          {/* Created is the default and is not in the URL; clearing returns to it. */}
+          <FilterSelect
+            label={t('admin.players.sort')}
+            placeholder={t('admin.players.sortCreated')}
+            options={[
+              { value: 'created', label: t('admin.players.sortCreated') },
+              { value: 'last_login', label: t('admin.players.sortLastSignIn') },
+            ]}
+            value={filters.sort ?? 'created'}
+            onChange={(value) => setFilter('sort', value === 'created' ? null : value)}
           />
         </>
       }
@@ -116,7 +159,6 @@ function PlayersTab({ params, setFilter }: { params: URLSearchParams; setFilter:
           ),
         },
         { key: 'email', header: t('admin.players.email'), render: (player) => player.email ?? '' },
-        { key: 'id', header: t('admin.id'), render: (player) => player.id },
         { key: 'created', header: t('admin.players.created'), render: (player) => formatDate(player.created_at, locale) },
         {
           key: 'lastSignIn',
@@ -189,16 +231,49 @@ function PlayerPacksSheet({ player, packs, onClose, onSaved }: {
 
 function CharactersTab({ params, setFilter }: { params: URLSearchParams; setFilter: SetFilter }) {
   const t = useT()
-  const filters = { owner: params.get('owner'), id: params.get('id'), public: params.get('public') }
+  const filters = { owner: params.get('owner'), public: params.get('public') }
   const paged = usePaged<AdminCharacter>(`admin:characters:${JSON.stringify(filters)}`, async (offset, signal) => {
     const page = await listAdminCharacters(filters, offset, signal)
     return { rows: page.characters, total: page.total }
   })
   // The shared-sheet route: a superadmin may read any sheet and change none.
   const sheetOf = (character: AdminCharacter) => `/shared/${encodeURIComponent(character.id)}`
+  const [deleting, setDeleting] = useState<AdminCharacter | null>(null)
+  const remove = useAction(deleteAdminCharacter)
 
   return (
+    <>
+    <ModalSheet
+      opened={deleting !== null}
+      onClose={() => setDeleting(null)}
+      title={t('characters.deleteNamedTitle', { name: deleting?.name || t('common.unnamed') })}
+    >
+      <Stack gap="md">
+        <Text size="sm">{t('characters.deleteWarning')}</Text>
+        {remove.error !== null && <Alert color="red">{remove.error}</Alert>}
+        <Group justify="flex-end">
+          <Button variant="subtle" onClick={() => setDeleting(null)}>{t('common.cancel')}</Button>
+          <Button
+            color="red"
+            loading={remove.pending}
+            onClick={() => {
+              if (deleting === null) return
+              void remove.run(deleting.id).then((ok) => { if (ok !== null) { setDeleting(null); paged.reload() } })
+            }}
+          >
+            {t('common.delete')}
+          </Button>
+        </Group>
+      </Stack>
+    </ModalSheet>
     <AdminTable
+      actions={(character: AdminCharacter) => [{
+        key: 'delete',
+        label: t('common.delete'),
+        color: 'red' as const,
+        icon: <IconTrash size={ACTION_ICON_SIZE} />,
+        onClick: () => { remove.reset(); setDeleting(character) },
+      }]}
       paged={paged}
       loadFailed={t('admin.characters.loadFailed')}
       count={(count) => t('admin.characters.count', { count })}
@@ -206,7 +281,6 @@ function CharactersTab({ params, setFilter }: { params: URLSearchParams; setFilt
       filters={
         <>
           <FilterBox label={t('admin.characters.owner')} value={filters.owner ?? ''} onCommit={(value) => setFilter('owner', value)} />
-          <FilterBox label={t('admin.characters.id')} value={filters.id ?? ''} onCommit={(value) => setFilter('id', value)} />
           <FilterSelect
             label={t('admin.characters.visibility')}
             placeholder={t('admin.characters.anyVisibility')}
@@ -236,9 +310,9 @@ function CharactersTab({ params, setFilter }: { params: URLSearchParams; setFilt
         },
         { key: 'classes', header: t('characters.classes'), render: (character) => classLine(character.classes) },
         { key: 'owner', header: t('admin.characters.ownerColumn'), render: (character) => character.owner_name || character.owner },
-        { key: 'id', header: t('admin.id'), render: (character) => character.id },
         { key: 'revision', header: t('admin.characters.revision'), render: (character) => character.revision },
       ]}
     />
+    </>
   )
 }

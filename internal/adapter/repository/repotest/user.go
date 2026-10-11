@@ -81,6 +81,7 @@ func RunUserRepository(t *testing.T, newRepo NewUserRepository) {
 		{"IdentityFieldsRoundTrip", testIdentityFieldsRoundTrip},
 
 		{"Search", testSearch},
+		{"Delete", testDelete},
 	}
 
 	for _, tc := range tests {
@@ -772,6 +773,27 @@ func testAvatar(t *testing.T, r domain.Repository) {
 	}
 }
 
+func testDelete(t *testing.T, r domain.Repository) {
+	ctx := context.Background()
+	alice := withIdentities(Account("alice", "cred-a"), Identity("sub-a"))
+	if err := r.Create(ctx, alice); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := r.Delete(ctx, "alice"); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if _, err := r.ByID(ctx, "alice"); !types.IsNotFound(err) {
+		t.Errorf("ByID after delete = %v, want not found", err)
+	}
+	if err := r.Delete(ctx, "alice"); !types.IsNotFound(err) {
+		t.Errorf("second Delete = %v, want not found", err)
+	}
+	// The passkey and the identity are free again: neither names a ghost.
+	if err := r.Create(ctx, alice); err != nil {
+		t.Errorf("Create after delete: %v", err)
+	}
+}
+
 func testSearch(t *testing.T, r domain.Repository) {
 	ctx := context.Background()
 	alice := Account("alice", "cred-a")
@@ -799,6 +821,7 @@ func testSearch(t *testing.T, r domain.Repository) {
 		total int
 	}{
 		{"newest first", domain.Query{Limit: 10}, []domain.ID{guest.ID, "bob", "alice"}, 3},
+		{"last sign-in first, never signed in last", domain.Query{ByLastUsed: true, Limit: 10}, []domain.ID{"alice", guest.ID, "bob"}, 3},
 		{"second page", domain.Query{Limit: 2, Offset: 2}, []domain.ID{"alice"}, 3},
 		{"past the end", domain.Query{Limit: 2, Offset: 5}, nil, 3},
 		{"by name, any case", domain.Query{Text: "ALI", Limit: 10}, []domain.ID{"alice"}, 1},

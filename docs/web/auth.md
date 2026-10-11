@@ -136,10 +136,23 @@ superadmin: two tabs in one `TabRow`, **Players** and **Characters**, each a
 - **A player row opens that player's characters** -- the Characters tab with
   `owner` set to their id. **A character row opens `/shared/:id`**, the
   read-only sheet a group member gets; the server lets a superadmin read any.
-- **Characters filter by owner, id and visibility only.** Name, level and class
+- **Characters filter by owner and visibility only**, newest first, and no
+  table shows an id: an id is what the URL of the row's link already carries.
+  The owner box still takes one. Name, level and class
   are shown but are folded from the log on the server for the rows on screen,
   so there is nothing to search them by; see
-  [backend.md](../backend.md#a-superadmin-reads-everything-and-writes-one-thing).
+  [backend.md](../backend.md#a-superadmin-reads-everything-and-writes-three-things).
+- **Players sort by created (the default, and absent from the URL) or by last
+  sign-in** -- `?sort=last_login`, a third select beside the filters. Accounts
+  nobody signed in to come last.
+- **Every player row has Delete**, behind a sheet that says what goes: the
+  account, its characters, its seats, and a group only they sit at. The server
+  refuses three cases and the sheet shows the reason in place -- the caller's
+  own account, an account that owns a group others are in, and one that
+  authored a homebrew pack.
+- **A character row has one action: Delete**, behind the same "Delete
+  *name*?" sheet the owner's own list asks with. It is the owner's delete done
+  by somebody else, so the character leaves every group and game too.
 - **A player row has one action where a private pack is installed: Private
   packs**, a sheet of one checkbox per installed pack, saved as the whole list.
   The action is not drawn on a server with none, rather than opening onto

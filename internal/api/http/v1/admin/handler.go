@@ -11,6 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/promix1722/easydnd/internal/api/http/helpers"
+	"github.com/promix1722/easydnd/internal/api/http/middleware"
+	"github.com/promix1722/easydnd/internal/domain/character"
 	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	"github.com/promix1722/easydnd/internal/types"
@@ -25,6 +27,8 @@ const (
 type Service interface {
 	Players(context.Context, user.Query) ([]user.Listed, int, error)
 	Characters(context.Context, adminuc.CharacterQuery) ([]adminuc.Character, int, error)
+	DeleteCharacter(context.Context, character.ID) error
+	DeletePlayer(ctx context.Context, actor, id user.ID) error
 }
 
 // Packs is what granting a private pack needs of the pack service.
@@ -76,7 +80,7 @@ func (h *Handler) PlayerPacks(c *gin.Context) {
 }
 
 // SetPlayerPacks handles PUT /v1/admin/players/{id}/packs. The list replaces
-// what the account had: the one write a superadmin has.
+// what the account had.
 func (h *Handler) SetPlayerPacks(c *gin.Context) {
 	var params PlayerPacks
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -134,6 +138,15 @@ func (h *Handler) Players(c *gin.Context) {
 			q.Guests = &guests
 		default:
 			err = invalidParam("kind")
+		}
+	}
+	if err == nil {
+		switch sort := c.Query("sort"); sort {
+		case "", "created":
+		case "last_login":
+			q.ByLastUsed = true
+		default:
+			err = invalidParam("sort")
 		}
 	}
 	if err != nil {
@@ -203,6 +216,28 @@ func (h *Handler) Characters(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"characters": characters, "total": total})
+}
+
+// DeleteCharacter handles DELETE /v1/admin/characters/{id}: any character,
+// with its log, off every group and game it was on.
+func (h *Handler) DeleteCharacter(c *gin.Context) {
+	if err := h.svc.DeleteCharacter(c.Request.Context(), character.ID(c.Param("id"))); err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// DeletePlayer handles DELETE /v1/admin/players/{id}: the account, its
+// characters and its seats. 400 with a reason where that would take something
+// from somebody else.
+func (h *Handler) DeletePlayer(c *gin.Context) {
+	actor, _ := middleware.UserFrom(c)
+	if err := h.svc.DeletePlayer(c.Request.Context(), actor.ID, user.ID(c.Param("id"))); err != nil {
+		helpers.FormatError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 // page reads ?limit= and ?offset=, the same contract the spell search has.
