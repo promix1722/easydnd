@@ -45,8 +45,13 @@ type AddParams struct {
 // No group in the path and none required as a filter. A player at three tables
 // wants one list, and making them name a table first would mean remembering
 // where a game lives in order to find it.
+//
+// `?character=C` narrows it to the games C is seated in.
 func (h *Handler) Mine(c *gin.Context) {
 	games, err := h.service.Mine(c.Request.Context(), h.actor(c))
+	if seated := c.Query("character"); seated != "" {
+		games, err = h.service.Seating(c.Request.Context(), h.actor(c), character.ID(seated))
+	}
 	if err != nil {
 		helpers.FormatError(c, err)
 		return

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 
-import { appendEvents, getEvents, getPrompts, getSheet, replaceEvent, writeChanges } from '@/lib/api'
+import { appendEvents, getEvents, getPrompts, getSheet, listGames, replaceEvent, writeChanges } from '@/lib/api'
 import { CatalogScope } from '@/lib/api/catalogScope'
 import { characterPath } from '@/lib/api/characters'
 import type { Change, Sheet } from '@/lib/api'
@@ -9,6 +9,7 @@ import { useAction } from '@/lib/useAction'
 import { useResource } from '@/lib/useResource'
 import { Avatar, characterAvatar, Badge, Button, Group, ModalSheet, NumberInput, Page, Stack, Text, pageState } from '@/ui'
 
+import { GameSeat } from '../games/GameSeat'
 import { desiredLevelChange } from './desiredLevel'
 import { SheetBody } from './SheetBody'
 import { VisibilityAction } from './VisibilityAction'
@@ -76,6 +77,11 @@ export function CharacterSheetScreen() {
     ])
     return { sheet: projected, complete: prompts?.complete ?? null, maxLevel: prompts?.buildPolicy?.maxLevel ?? MAX_LEVEL }
   })
+
+  // The games this character is seated in, each a tab ahead of the sheet's own.
+  // Asked beside the sheet and not with it: a sheet is not worth losing over
+  // them, and one that failed to load simply has no game tabs.
+  const seats = useResource(`seats:${id}`, (signal) => listGames(signal, id))
 
   const editEquipment = useAction(async (changes: Change[]) => {
     await writeChanges(id, changes)
@@ -183,6 +189,11 @@ export function CharacterSheetScreen() {
           sheet={s}
           characterId={id}
           onChanged={sheet.refresh}
+          lead={(seats.data?.games ?? []).map((game) => ({
+            value: `game-${game.id}`,
+            label: game.name,
+            content: <GameSeat gameId={game.id} characterId={id} onChanged={sheet.refresh} />,
+          }))}
           pending={editEquipment.pending}
           onEquipment={(changes) => void editEquipment.run(changes)}
         />

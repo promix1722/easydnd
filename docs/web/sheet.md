@@ -4,8 +4,10 @@ Part of the [web client documentation](../web.md).
 
 ## The sheet decides what order things come in
 
-Up to seven tabs, at every width: **Overview**, **Actions**, **Spells**,
-**Resources**, **Equipment**, **Items**, **Custom**. Spells and Resources are
+Up to seven tabs of its own, at every width: **Overview**, **Actions**, **Spells**,
+**Resources**, **Equipment**, **Items**, **Custom** -- and ahead of them, on
+its owner's screen, one per game the character is seated in (see "A game the
+character is seated in" below). Spells and Resources are
 there when the character has any; Custom is there for the owner always and
 for a reader when there is something in it.
 `features/character/SheetBody` builds them and `ui/TabDeck` draws them -- a tab
@@ -564,6 +566,34 @@ slots by level, Pact Magic, Channel Divinity, ki -- is drawn by
 the character has a pool. It is the same component the game page unfolds, here
 without `onChange`, so it is read-only and always full: what has been spent is
 a fact about one game.
+
+**A game the character is seated in is a tab ahead of Overview.** Hit points,
+initiative and spent uses belong to a game's roster entry and not to the
+character (docs/dnd.md), so the sheet's own tabs cannot say them. The owner's
+screen asks `GET /v1/games?character=` beside the sheet and hands `SheetBody`
+one `lead` panel per game, named for the game and drawn by
+`features/games/GameSeat`: the card the game's roster draws for the entry --
+`CompactStats` and `EntryTags`, unfolded at every width since there is one row
+and not a table of them -- then its "Consumable slots" as that game has spent
+them. The sheet's own Resources tab stays what it was, the full pools, which is
+the reference those marks are read against. Tags are edited in the card as
+they are on the roster; every other change is one of the entries the
+game's roster row has in its "…" menu, laid out here as a row of buttons since
+one entry needs nothing folded away -- one hook, `useEntryActions`, builds the
+list for both, so who may do what is decided once
+(docs/web/games.md). Three things follow from it being a game's tab rather than
+the sheet's:
+
+- **Overview still opens.** The games arrive after the sheet, and a sheet that
+  switched tab a moment after it drew would be a page that moves under the
+  reader. The game tabs are first in the row and one press away.
+- **It polls.** `GameSeat` follows the game every three seconds under the game
+  page's own resource key, because a DM changes these numbers while the player
+  is looking at them. The sheet itself still does not poll: it reloads after a
+  change made through these buttons, since coins and items are written to the
+  character.
+- **Only the owner's screen has it.** The read-only sheet a table opens passes
+  no `lead`. A request for the games that fails costs the tabs and nothing else.
 
 **"Traits and features" is a list of rows that open**, one column at every
 width, drawn by `ui/BlockList` as the Actions tab is. Not a grid: a grid row is

@@ -70,6 +70,16 @@ func TestTheTableHandsOverItemsAndCoins(t *testing.T) {
 	if got := carrying("bob", bobs, "dagger"); got != 3 {
 		t.Fatalf("bob carries %d daggers, want 3", got)
 	}
+	// A negative count is the DM striking one off, and never more than is carried.
+	if err := f.svc.GrantItem(ctx, "alice", g.ID, bob, "dagger", -4); err == nil {
+		t.Fatal("took more daggers than bob carries")
+	}
+	if err := f.svc.GrantItem(ctx, "alice", g.ID, bob, "dagger", -1); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.GrantItem(ctx, "alice", g.ID, bob, "dagger", 1); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := f.svc.AdjustCoins(ctx, "alice", g.ID, bob, rules.Gold, 10); err != nil {
 		t.Fatal(err)

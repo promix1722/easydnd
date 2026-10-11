@@ -487,6 +487,43 @@ func TestYourGamesSpanEveryTableYouSitAt(t *testing.T) {
 	}
 }
 
+func TestACharactersGamesAreTheOnesItIsSeatedIn(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	f.table(t, "grp_a", "alice", map[user.ID]group.Role{"bob": group.RolePlayer})
+	c := f.character(t, "bob")
+	if err := f.svc.Share(ctx, "bob", "grp_a", c); err != nil {
+		t.Fatalf("Share() error = %v", err)
+	}
+	seated, err := f.svc.Create(ctx, "alice", "grp_a", "Thursday")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if _, err := f.svc.Create(ctx, "alice", "grp_a", "Saturday"); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if err := f.svc.AddCharacters(ctx, "alice", seated.ID, []character.ID{c}); err != nil {
+		t.Fatalf("AddCharacters() error = %v", err)
+	}
+
+	// On the table of both games, seated in one.
+	got, err := f.svc.Seating(ctx, "bob", c)
+	if err != nil {
+		t.Fatalf("Seating() error = %v", err)
+	}
+	if len(got) != 1 || got[0].Game.ID != seated.ID {
+		t.Errorf("Seating() = %v, want only %q", got, seated.ID)
+	}
+	// Somebody who is not at the table learns nothing from a character id.
+	strangers, err := f.svc.Seating(ctx, "carol", c)
+	if err != nil {
+		t.Fatalf("Seating() error = %v", err)
+	}
+	if len(strangers) != 0 {
+		t.Errorf("a stranger's Seating() = %v, want none", strangers)
+	}
+}
+
 // A refused name has to say so on the field it was typed into.
 //
 // Without a Message the client renders a blank inline error and falls back to

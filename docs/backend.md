@@ -507,7 +507,7 @@ that.
 | `GET` | `/v1/groups/{id}/characters` | the group's table: what its members have shared |
 | `POST` | `/v1/groups/{id}/characters` | share one of your own: `{"character_id":"chr_x"}` |
 | `DELETE` | `/v1/groups/{id}/characters` | unshare: `?character=C`; **takes it out of every game too** |
-| `GET` | `/v1/games` | every game at every table you sit at, newest first |
+| `GET` | `/v1/games` | every game at every table you sit at, newest first. `?character=C` narrows it to the games C is seated in, which is how a character's own page finds them; it is the same list filtered, so it says nothing about a table you do not sit at |
 | `POST` | `/v1/games` | open one: `{"group_id":"grp_x","name":"..."}`. DM or owner |
 | `GET` | `/v1/games/{id}` | the game, your rank, and its roster |
 | `PATCH` | `/v1/games/{id}` | rename. DM or owner |
@@ -1099,7 +1099,7 @@ they write a backpack count, a coin or one new custom item and nothing else.
 
 | Route | Who | Does |
 | --- | --- | --- |
-| `POST /v1/games/{id}/entries/{entry}/items` `{item, count}` | DM or group owner | `count` more of `item` in the character's backpack |
+| `POST /v1/games/{id}/entries/{entry}/items` `{item, count}` | DM or group owner | `count` more of `item` in the character's backpack; a negative `count` takes that many away from what is carried (backpack, then loot), which is the DM using up a character's item |
 | `POST /v1/games/{id}/entries/{entry}/custom-items` `{name, description, item}` | DM or group owner | one new custom item in the character's backpack; see "A custom item" below |
 | `POST /v1/games/{id}/entries/{entry}/coins` `{unit, amount}` | DM or group owner | adds a signed `amount` to the purse; below zero is a 400 `coins.notEnough` |
 | `POST /v1/games/{id}/entries/{entry}/give` `{item, count, to}` | the owner of `entry`'s character | moves `count` of `item` to the player entry `to` |
