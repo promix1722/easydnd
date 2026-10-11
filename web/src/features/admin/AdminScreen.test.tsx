@@ -23,15 +23,21 @@ const character = (n: number) => ({
 /** Answers both listings two rows at a time out of five, and records every URL. */
 const json = (body: unknown) => jsonResponse(body)
 let puts: string[] = []
+let deletes: string[] = []
 
 function stubFetch(installed: { id: string; title: string }[] = []): URL[] {
   const calls: URL[] = []
   puts = []
+  deletes = []
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'http://test')
     calls.push(url)
     const offset = Number(url.searchParams.get('offset'))
     const path = apiPath(url.pathname)
+    if (init?.method === 'DELETE') {
+      deletes.push(path)
+      return new Response(null, { status: 204 })
+    }
     if (init?.method === 'PUT') {
       puts.push(String(init.body))
       return new Response(null, { status: 204 })
@@ -103,7 +109,50 @@ describe('AdminScreen', () => {
     expect(screen.getAllByText('Wizard 1')).toHaveLength(2)
   })
 
-  // The one write a superadmin has. Offered only where a private pack is
+  it('deletes a character after asking, and reads the table again', async () => {
+    const user = setupUser()
+    const calls = stubFetch()
+    renderAdmin(true, '/admin?tab=characters')
+
+    await screen.findByRole('link', { name: 'Hero 1' })
+    await pressRowAction('desktop', 'Hero 1', 'Delete')
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Hero 1?' })
+    expect(deletes).toEqual([])
+    const before = calls.length
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => expect(deletes).toEqual(['/v1/admin/characters/chr_1']))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() => expect(calls.length).toBeGreaterThan(before + 1))
+  })
+
+  it('deletes a player after asking', async () => {
+    const user = setupUser()
+    stubFetch()
+    renderAdmin(true)
+
+    await screen.findByText('Player 1')
+    await pressRowAction('desktop', 'Player 2', 'Delete')
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Player 2?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => expect(deletes).toEqual(['/v1/admin/players/usr_2']))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('sorts players by last sign-in through the URL', async () => {
+    const user = setupUser()
+    const calls = stubFetch()
+    renderAdmin(true)
+
+    await screen.findByText('Player 1')
+    expect(calls.at(-1)?.searchParams.get('sort')).toBeNull()
+    await user.click(screen.getByRole('combobox', { name: 'Sort by' }))
+    await user.click(screen.getByRole('option', { name: 'Sort: last sign-in' }))
+    await waitFor(() => expect(calls.at(-1)?.searchParams.get('sort')).toBe('last_login'))
+  })
+
+  // Offered only where a private pack is
   // installed: the default stub has none, and the tests above see no menu.
   it('hands a player a private pack, saving the whole list', async () => {
     stubFetch([{ id: 'dnd-2014', title: 'D&D 2014' }, { id: 'extra', title: 'Extra' }])

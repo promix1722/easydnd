@@ -3,9 +3,11 @@ package admin_test
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,18 +16,35 @@ import (
 	"github.com/promix1722/easydnd/internal/api/http/middleware"
 	adminapi "github.com/promix1722/easydnd/internal/api/http/v1/admin"
 	"github.com/promix1722/easydnd/internal/domain/character"
+	"github.com/promix1722/easydnd/internal/domain/group"
+	"github.com/promix1722/easydnd/internal/domain/pack"
 	"github.com/promix1722/easydnd/internal/domain/user"
 	adminuc "github.com/promix1722/easydnd/internal/usecase/admin"
+	groupuc "github.com/promix1722/easydnd/internal/usecase/group"
 )
 
-// newEngine mounts the two routes the way the router does -- behind
+// stores is the engine with the stores behind it, for a test that seeds more.
+type stores struct {
+	engine *gin.Engine
+	users  *memory.UserRepository
+	groups *memory.GroupRepository
+	packs  *memory.PackRepository
+}
+
+// newEngine mounts the routes the way the router does -- behind
 // RequireSuperadmin -- with actor standing in for RequireSession.
 func newEngine(t *testing.T, actor user.User) *gin.Engine {
+	return newStores(t, actor).engine
+}
+
+func newStores(t *testing.T, actor user.User) stores {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	ctx := context.Background()
 	users := memory.NewUserRepository()
 	characters := memory.NewCharacterRepository()
+	groups := memory.NewGroupRepository(users)
+	packs := memory.NewPackRepository()
 	for _, id := range []string{"alice", "bob"} {
 		if err := users.Create(ctx, repotest.Account(id)); err != nil {
 			t.Fatal(err)
@@ -37,7 +56,10 @@ func newEngine(t *testing.T, actor user.User) *gin.Engine {
 			t.Fatal(err)
 		}
 	}
-	handler := adminapi.New(adminuc.NewService(users, characters))
+	service := adminuc.NewService(users, characters, func(ctx context.Context, _ character.OwnerID, id character.ID) error {
+		return characters.Delete(ctx, id)
+	}).WithAccounts(groupuc.NewService(groups, users, nil, nil, slog.New(slog.DiscardHandler)), packs)
+	handler := adminapi.New(service)
 	engine := gin.New()
 	group := engine.Group("/v1/admin", func(c *gin.Context) {
 		if actor.ID != "" {
@@ -45,8 +67,10 @@ func newEngine(t *testing.T, actor user.User) *gin.Engine {
 		}
 	}, middleware.RequireSuperadmin([]string{"alice", "root@example.test"}))
 	group.GET("/players", handler.Players)
+	group.DELETE("/players/:id", handler.DeletePlayer)
 	group.GET("/characters", handler.Characters)
-	return engine
+	group.DELETE("/characters/:id", handler.DeleteCharacter)
+	return stores{engine: engine, users: users, groups: groups, packs: packs}
 }
 
 func get(engine *gin.Engine, path string) *httptest.ResponseRecorder {
@@ -93,6 +117,8 @@ func TestAdminListingsFilterAndPage(t *testing.T) {
 		{"/v1/admin/players?q=BO", http.StatusOK, 1, 1},
 		{"/v1/admin/players?kind=guest", http.StatusOK, 0, 0},
 		{"/v1/admin/players?limit=1&offset=1", http.StatusOK, 1, 2},
+		{"/v1/admin/players?sort=last_login", http.StatusOK, 2, 2},
+		{"/v1/admin/players?sort=name", http.StatusBadRequest, 0, 0},
 		{"/v1/admin/players?kind=robot", http.StatusBadRequest, 0, 0},
 		{"/v1/admin/players?limit=0", http.StatusBadRequest, 0, 0},
 		{"/v1/admin/characters", http.StatusOK, 3, 3},
@@ -129,5 +155,91 @@ func TestAdminListingsFilterAndPage(t *testing.T) {
 				t.Errorf("%s: owner %q named %q, want %q", test.path, c.Owner, c.OwnerName, want)
 			}
 		}
+	}
+}
+
+// A superadmin deletes anybody's character; nobody else finds the route.
+func TestASuperadminDeletesAnyCharacter(t *testing.T) {
+	remove := func(engine *gin.Engine, id string) int {
+		response := httptest.NewRecorder()
+		engine.ServeHTTP(response, httptest.NewRequest(http.MethodDelete, "/v1/admin/characters/"+id, nil))
+		return response.Code
+	}
+	engine := newEngine(t, user.User{ID: "alice"})
+	var body struct {
+		Characters []struct {
+			ID string `json:"id"`
+		} `json:"characters"`
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal(get(engine, "/v1/admin/characters?owner=bob").Body.Bytes(), &body); err != nil || len(body.Characters) != 2 {
+		t.Fatalf("bob's characters = %+v (err %v)", body, err)
+	}
+	id := body.Characters[0].ID
+	if code := remove(newEngine(t, user.User{ID: "bob"}), id); code != http.StatusNotFound {
+		t.Errorf("a plain account's delete = %d, want 404", code)
+	}
+	if code := remove(engine, id); code != http.StatusNoContent {
+		t.Fatalf("delete = %d, want 204", code)
+	}
+	if code := remove(engine, id); code != http.StatusNotFound {
+		t.Errorf("second delete = %d, want 404", code)
+	}
+	if err := json.Unmarshal(get(engine, "/v1/admin/characters").Body.Bytes(), &body); err != nil || body.Total != 2 {
+		t.Errorf("after delete: %d characters (err %v), want 2", body.Total, err)
+	}
+}
+
+// Deleting an account takes what is only theirs, and is refused where it
+// would take something from somebody else.
+func TestASuperadminDeletesAnAccount(t *testing.T) {
+	ctx := context.Background()
+	s := newStores(t, user.User{ID: "alice"})
+	for _, id := range []string{"carol", "erin"} {
+		if err := s.users.Create(ctx, repotest.Account(id)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// carol owns a table bob sits at; erin authored a pack.
+	if err := s.groups.Create(ctx, group.Group{ID: "table", Name: "Table", CreatedBy: "carol"}, "carol"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.groups.AddMember(ctx, "table", "bob", group.RolePlayer, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.packs.Save(ctx, pack.Record{ID: "brew", Title: "Brew", Owner: "erin", Revision: 1}, 0); err != nil {
+		t.Fatal(err)
+	}
+	remove := func(id string) int {
+		response := httptest.NewRecorder()
+		s.engine.ServeHTTP(response, httptest.NewRequest(http.MethodDelete, "/v1/admin/players/"+id, nil))
+		return response.Code
+	}
+	for _, test := range []struct {
+		name, id string
+		status   int
+	}{
+		{"their own account", "alice", http.StatusBadRequest},
+		{"the owner of a table others sit at", "carol", http.StatusBadRequest},
+		{"the author of a pack", "erin", http.StatusBadRequest},
+		{"nobody", "nobody", http.StatusNotFound},
+		{"a player", "bob", http.StatusNoContent},
+		// With bob gone carol sits alone, and her table goes with her.
+		{"the owner of an empty table", "carol", http.StatusNoContent},
+	} {
+		if code := remove(test.id); code != test.status {
+			t.Fatalf("deleting %s = %d, want %d", test.name, code, test.status)
+		}
+	}
+	var body struct {
+		Total int `json:"total"`
+	}
+	for path, want := range map[string]int{"/v1/admin/players": 2, "/v1/admin/characters?owner=bob": 0, "/v1/admin/characters": 1} {
+		if err := json.Unmarshal(get(s.engine, path).Body.Bytes(), &body); err != nil || body.Total != want {
+			t.Errorf("%s: total %d (err %v), want %d", path, body.Total, err, want)
+		}
+	}
+	if _, err := s.groups.ByID(ctx, "table"); err == nil {
+		t.Error("the emptied table outlived its owner")
 	}
 }

@@ -26,7 +26,7 @@ export {
   unlinkProvider,
   setProfileImage,
 } from './auth'
-export { getAdminPlayerPacks, listAdminCharacters, listAdminPacks, listAdminPlayers, setAdminPlayerPacks } from './admin'
+export { deleteAdminCharacter, deleteAdminPlayer, getAdminPlayerPacks, listAdminCharacters, listAdminPacks, listAdminPlayers, setAdminPlayerPacks } from './admin'
 export type { AdminCharacter, AdminFilters, AdminPack, AdminPlayer } from './admin'
 export type { AuthProviderInfo, SessionCredential, SessionIdentity, SessionUser } from './auth'
 

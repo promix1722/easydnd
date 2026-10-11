@@ -501,6 +501,19 @@ func (r *UserRepository) SetAppearance(ctx context.Context, id domain.ID, a doma
 	return nil
 }
 
+// Delete removes the account. Its credentials, identities, group seats and
+// pack grants go with it by foreign key.
+func (r *UserRepository) Delete(ctx context.Context, id domain.ID) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, string(id))
+	if err != nil {
+		return types.WrapServerError(err, "delete account")
+	}
+	if tag.RowsAffected() == 0 {
+		return types.NewNotFoundError("account not found").Because("account.notFound")
+	}
+	return nil
+}
+
 // SetImage replaces only the account portrait.
 func (r *UserRepository) SetImage(ctx context.Context, id domain.ID, image string) error {
 	tag, err := r.pool.Exec(ctx, `UPDATE users SET image = $1 WHERE id = $2`, image, string(id))
@@ -513,7 +526,8 @@ func (r *UserRepository) SetImage(ctx context.Context, id domain.ID, image strin
 	return nil
 }
 
-// Search lists accounts matching q, newest first.
+// Search lists accounts matching q, newest first -- by creation, or by last
+// sign-in when q.ByLastUsed.
 //
 // It never selects users.image -- a portrait is up to 256 KB inline, and a
 // page of fifty would be most of the response.
@@ -529,6 +543,11 @@ func (r *UserRepository) Search(ctx context.Context, q domain.Query) ([]domain.L
 		ids = append(ids, string(id))
 	}
 	text := strings.ToLower(q.Text)
+	order := `u.created_at DESC, u.id`
+	if q.ByLastUsed {
+		// 6 is the GREATEST(...) column below.
+		order = `6 DESC NULLS LAST, ` + order
+	}
 	var total int
 	if err := r.pool.QueryRow(ctx, `SELECT count(*)`+where, text, ids, q.Guests).Scan(&total); err != nil {
 		return nil, 0, types.WrapServerError(err, "count accounts")
@@ -540,7 +559,7 @@ func (r *UserRepository) Search(ctx context.Context, q domain.Query) ([]domain.L
 		       (SELECT count(*) FROM user_credentials c WHERE c.user_id = u.id),
 		       GREATEST((SELECT max(c.last_used_at) FROM user_credentials c WHERE c.user_id = u.id),
 		                (SELECT max(i.last_used_at) FROM user_identities i WHERE i.user_id = u.id))`+
-		where+` ORDER BY u.created_at DESC, u.id LIMIT $4 OFFSET $5`,
+		where+` ORDER BY `+order+` LIMIT $4 OFFSET $5`,
 		text, ids, q.Guests, max(q.Limit, 0), max(q.Offset, 0))
 	if err != nil {
 		return nil, 0, types.WrapServerError(err, "search accounts")

@@ -308,6 +308,24 @@ func (r *UserRepository) SetAppearance(_ context.Context, id domain.ID, a domain
 	return nil
 }
 
+// Delete removes the account and its index entries.
+func (r *UserRepository) Delete(_ context.Context, id domain.ID) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, ok := r.items[id]
+	if !ok {
+		return types.NewNotFoundError("account not found").Because("account.notFound")
+	}
+	for _, c := range u.Credentials {
+		delete(r.byCredential, string(c.ID))
+	}
+	for _, i := range u.Identities {
+		delete(r.byIdentity, keyOf(i.Provider, i.Subject))
+	}
+	delete(r.items, id)
+	return nil
+}
+
 // SetImage replaces only the account portrait.
 func (r *UserRepository) SetImage(_ context.Context, id domain.ID, image string) error {
 	r.mu.Lock()
@@ -321,7 +339,8 @@ func (r *UserRepository) SetImage(_ context.Context, id domain.ID, image string)
 	return nil
 }
 
-// Search lists accounts matching q, newest first.
+// Search lists accounts matching q, newest first -- by creation, or by last
+// sign-in when q.ByLastUsed.
 func (r *UserRepository) Search(_ context.Context, q domain.Query) ([]domain.Listed, int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -357,6 +376,10 @@ func (r *UserRepository) Search(_ context.Context, q domain.Query) ([]domain.Lis
 		out = append(out, row)
 	}
 	slices.SortFunc(out, func(a, b domain.Listed) int {
+		// A zero time sorts last on its own: it is before every sign-in.
+		if c := b.LastUsedAt.Compare(a.LastUsedAt); q.ByLastUsed && c != 0 {
+			return c
+		}
 		if c := b.CreatedAt.Compare(a.CreatedAt); c != 0 {
 			return c
 		}

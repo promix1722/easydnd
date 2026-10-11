@@ -520,10 +520,12 @@ that.
 | `POST` | `/v1/games/{id}/order` | stable sort: `{"by_initiative":true}`; move: `{"entry_id":"...","direction":-1}` (or `1`); DM or owner |
 | `POST` | `/v1/games/{id}/rest` | a rest for the table; DM or owner. Long by default: every entry gets all of its spent uses back. `?kind=short`: only the pools a short rest refills |
 | `GET` | `/v1/shared/{id}/sheet` | a shared character's sheet, read-only, resolved the same way |
-| `GET` | `/v1/admin/players` | every stored account, newest first; `?q=` (name, email or id), `?kind=account\|guest`, `?limit=&offset=`. **Superadmin only**, 404 otherwise |
+| `GET` | `/v1/admin/players` | every stored account, newest first; `?q=` (name, email or id), `?kind=account\|guest`, `?sort=created\|last_login`, `?limit=&offset=`. **Superadmin only**, 404 otherwise |
+| `DELETE` | `/v1/admin/players/{id}` | delete an account with its characters and seats, 204; 400 `admin.player.self`, `admin.player.ownsGroup` or `admin.player.ownsPacks`. **Superadmin only**, 404 otherwise |
 | `GET` | `/v1/admin/packs` | the private disk packs installed here. **Superadmin only** |
 | `GET` | `/v1/admin/players/{id}/packs` | the private packs that account has been handed: `{"packs":["id"]}`. **Superadmin only** |
 | `PUT` | `/v1/admin/players/{id}/packs` | replace that list whole. **Superadmin only** |
+| `DELETE` | `/v1/admin/characters/{id}` | delete anybody's character, 204. **Superadmin only**, 404 otherwise |
 | `GET` | `/v1/admin/characters` | every character, newest first; `?owner=` (name, email or id), `?id=`, `?public=true\|false`, `?limit=&offset=`. **Superadmin only**, 404 otherwise |
 
 Three of those need a word about their shape.
@@ -1187,10 +1189,11 @@ adapter cannot verify it either, so a key would make the two adapters answer
 the same call differently. The cascades above are what keep the rows honest,
 and every read already skips an id that is gone.
 
-### A superadmin reads everything and writes one thing
+### A superadmin reads everything and writes three things
 
 An account named in `auth.superadmins` gets three reads beyond the private
-packs, and one write: which private packs an account has been handed.
+packs, and three writes: which private packs an account has been handed, the
+deletion of any character, and the deletion of an account.
 
 **Two listings**, `GET /v1/admin/players` and `GET /v1/admin/characters`,
 behind `middleware.RequireSuperadmin`. The middleware runs after
@@ -1211,7 +1214,10 @@ id, because a guest who never joined a group owns characters with no `users`
 row to match by name. For the same reason **the players listing is the stored
 accounts, not everybody who has played**: such a guest appears only as the
 owner of their characters. "Last sign-in" is the newest `last_used_at` over an
-account's passkeys and identities; nothing records later activity.
+account's passkeys and identities; nothing records later activity. The players
+listing orders by it on `?sort=last_login` (`user.Query.ByLastUsed`), accounts
+nobody signed in to last; the default, `created`, is newest account first.
+Characters have one order, newest first, which is id order.
 
 **Every sheet.** `game.Service.readable` asks a third question last, after
 "is it yours" and "is it public or on a table you sit at": is the actor a
@@ -1220,11 +1226,47 @@ superadmin. So the client links an admin row to the existing
 only `readable` -- `character.owned` was not touched, so a superadmin can
 change nobody's character.
 
+**The other write: deleting a character.** `DELETE /v1/admin/characters/{id}`
+looks the character up for its owner and calls the character usecase's own
+`Delete` in that owner's name (`admin.Service.DeleteCharacter`), so it is
+exactly the owner's delete: unshared from every group, off every game, then
+the row and its log. There is no undo and no audit record. Editing stays
+impossible -- this is the one thing a superadmin does to a character.
+
+**The third write: deleting an account.** `DELETE /v1/admin/players/{id}`
+(`admin.Service.DeletePlayer`) is the only way an account is ever deleted;
+nobody can delete their own. It takes what is only theirs: every character
+(through the delete above), their seat at each table they play at (the group
+usecase's `RemoveMember`, in their name), any group they own **alone** (its
+`Delete`), and then the `users` row, whose credentials, identities, seats and
+pack grants go by foreign key. A guest's row is deleted the same way.
+
+It refuses, with a 400 and before touching anything, where the delete would
+take something from somebody else:
+
+- `admin.player.self` -- the caller's own account, so a superadmin cannot
+  remove the last one by accident.
+- `admin.player.ownsGroup` -- they own a group other people sit at. Nothing
+  here picks an heir; the owner transfers or deletes it first.
+- `admin.player.ownsPacks` -- they authored a homebrew pack. Other people's
+  characters may be pinned to its releases, and a pack can be archived but
+  never deleted, so `rule_packs.owner_id` keeps its foreign key and the
+  account stays.
+
+It is not one transaction -- four stores are involved -- but every refusal
+comes first, and a failure after that leaves an account with fewer things,
+which a second call finishes. Folders and AI Wizard chats are left as a
+guest's are: rows owned by an id with no account. A session cookie for the
+deleted account is already handled: it resolves to nobody and reads as signed
+out. Migration `00012` drops `groups.created_by`'s foreign key for this: the
+column is history, and its `ON DELETE CASCADE` would have deleted a group
+from under its current owner because whoever opened it was gone.
+
 **A flag on the session.** `GET /v1/auth/me` carries `admin: true` for a
 superadmin, so the client knows to draw the section. It grants nothing; the
 routes above ask again on every request.
 
-**The write: a private pack for one account.** `GET /v1/admin/packs` lists the
+**The first write: a private pack for one account.** `GET /v1/admin/packs` lists the
 restricted disk packs installed here, and `GET`/`PUT
 /v1/admin/players/{id}/packs` reads and replaces the ids one account has been
 handed; the players listing carries the same ids on each row as `packs`. They
@@ -1633,7 +1675,7 @@ rather than quietly defaulted.
 | `db.connect_timeout` | `5s` | bounds the startup ping; must fit inside `deploy.sh`'s 15s health gate alongside migrating and binding |
 | `db.migrate_on_start` | `true` | apply pending migrations before the listener binds. Set `false` only to stage a migration by hand with `easydnd -migrate=up` |
 | `auth.session_secret` | *(none)* | **required in production**; signs the session cookie. `openssl rand -base64 48`, quoted. Read as base64, taken literally if it is not valid base64; must decode to at least 32 bytes. The template's placeholder is rejected by name |
-| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups or to single accounts, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes one thing](#a-superadmin-reads-everything-and-writes-one-thing)): a **verified** Google email, or an account id |
+| `auth.superadmins` | `[]` | accounts that read private packs and grant them to groups or to single accounts, and that may list every account and character and read every sheet (see [A superadmin reads everything and writes three things](#a-superadmin-reads-everything-and-writes-three-things)): a **verified** Google email, or an account id |
 | `auth.rp_id` | `easydnd.org` / `localhost` | **a one-way door** -- see below. `localhost` in development |
 | `auth.rp_name` | `easydnd` | what the operating system's passkey prompt calls us |
 | `auth.rp_origins` | `[https://easydnd.org]` / `[http://localhost:5173]` | a list; entries carry scheme and port, unlike the RP id. The first is where Google sign-in returns to. Also the CSRF allow-list: `middleware.SameOrigin` compares the `Origin` header on every non-safe request against it, so an instance reached on any origin not listed here rejects every write |

@@ -169,8 +169,11 @@ type Query struct {
 	IDs  []ID
 	// Guests, when set, keeps only guest rows (true) or only accounts.
 	Guests *bool
-	Limit  int
-	Offset int
+	// ByLastUsed orders by the latest sign-in, newest first, with rows nobody
+	// signed in to at the end. Unset, the order is newest created first.
+	ByLastUsed bool
+	Limit      int
+	Offset     int
 }
 
 // Listed is one row of that listing: what an operator reads to tell accounts
@@ -213,6 +216,12 @@ type Repository interface {
 	// It is only ever called with a guest id -- see AnonymousIDPrefix.
 	// Implementations must not use it to conjure an account.
 	EnsureGuest(ctx context.Context, u User) error
+
+	// Delete removes the account with its credentials and identities, or
+	// reports a *types.NotFoundError. It removes nothing the account owns
+	// elsewhere -- characters, groups, packs; that is the caller's to settle
+	// first.
+	Delete(ctx context.Context, id ID) error
 
 	// ByID returns the account with the given id, or a *types.NotFoundError.
 	ByID(ctx context.Context, id ID) (User, error)

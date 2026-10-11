@@ -216,8 +216,10 @@ func NewRouter(cfg *config.Config, log *slog.Logger, h Handlers) (*gin.Engine, e
 				admin := authed.Group("/admin", middleware.NoStore(),
 					middleware.RequireSuperadmin(cfg.Auth.Superadmins))
 				admin.GET("/players", h.Admin.Players)
+				admin.DELETE("/players/:id", h.Admin.DeletePlayer)
 				admin.GET("/characters", h.Admin.Characters)
-				// The one thing a superadmin writes: which private packs an
+				admin.DELETE("/characters/:id", h.Admin.DeleteCharacter)
+				// What a superadmin writes besides that delete: which private packs an
 				// account has been handed.
 				admin.GET("/packs", h.Admin.Packs)
 				admin.GET("/players/:id/packs", h.Admin.PlayerPacks)
