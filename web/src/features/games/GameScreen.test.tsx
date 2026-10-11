@@ -734,6 +734,26 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     expect(await screen.findByRole('link', { name: 'Dagger' })).toHaveAttribute('href', '/games/gam_1/characters/chr_1/items/dagger')
   })
 
+  it('lets a DM use up an item of a character that is not theirs, through the game', async () => {
+    const game = gameAs('dm')
+    renderGame(viewport, game)
+    await screen.findByRole('article', { name: 'Ada' })
+    const fetch = vi.fn(async (url: unknown, _options?: RequestInit) => jsonResponse(String(url).includes('/shared/chr_1/sheet') ? {
+      equipment: { equipped: [], backpack: [{ item: 'potion-of-healing', count: 2 }], loot: [], purse: {} },
+      catalog: { magicItems: [{ slug: 'potion-of-healing', name: 'Healing potion', category: 'potion' }], equipment: [] },
+    } : game))
+    vi.stubGlobal('fetch', fetch)
+    const user = setupUser()
+
+    await pressRowAction(viewport, 'Ada', 'Use item')
+    const using = within(await screen.findByRole('dialog', { name: 'Ada: use an item' }))
+    await user.click(await using.findByRole('button', { name: 'Use Healing potion' }))
+    await waitFor(() => expect(fetch.mock.calls
+      .filter(([url, options]) => options?.method === 'POST' && String(url).includes('/games/gam_1/entries/pc_chr_1/items'))
+      .map(([, options]) => JSON.parse(options!.body as string))).toEqual([{ item: 'potion-of-healing', count: -1 }]))
+    expect(await screen.findByRole('status')).toHaveTextContent('Healing potion used.')
+  })
+
   it('lets a player use one of their items and give one across the table, and offers neither on a card that is not theirs', async () => {
     const game = gameAs('player')
     game.characters[0]!.owner_id = 'abc'
@@ -775,13 +795,17 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(screen.getByRole('status')).toHaveTextContent('Healing potion used.')
 
-    // Handing over is pressed on the card of whoever receives, and one transfer closes the dialog and says so.
-    await user.click(screen.getByRole('button', { name: 'Actions for Ada' }))
-    expect(within(await screen.findByRole('menu')).queryByRole('menuitem', { name: 'Transfer item' })).not.toBeInTheDocument()
+    // Handing over names both ends whichever card it was pressed on, and one transfer closes the dialog and says so.
+    await pressRowAction(viewport, 'Ada', 'Transfer item')
+    const own = within(await screen.findByRole('dialog', { name: 'Transfer item' }))
+    expect(own.getAllByLabelText('From')[0]).toHaveValue('Ada')
+    expect(own.getAllByLabelText('To')[0]).toHaveValue('Bo')
     await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await pressRowAction(viewport, 'Bo', 'Transfer item')
-    const giving = within(await screen.findByRole('dialog', { name: 'Transfer an item to Bo' }))
+    const giving = within(await screen.findByRole('dialog', { name: 'Transfer item' }))
     expect(giving.getAllByLabelText('From')[0]).toHaveValue('Ada')
+    expect(giving.getAllByLabelText('To')[0]).toHaveValue('Bo')
     await user.click(await giving.findByRole('button', { name: 'Transfer Rope' }))
     await waitFor(() => expect(posted('/games/gam_1/entries/pc_chr_1/give')).toEqual([{ item: 'rope', count: 1, to: 'pc_chr_2' }]))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())

@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { bySlug } from '@/lib/api'
 import type { CatalogSkill, Sheet } from '@/lib/api'
+import { withAuth } from '@/test/auth'
 import { renderAt } from '@/test/render'
+import { setupUser } from '@/test/user'
 import type { Viewport } from '@/test/viewport'
 
 import { CharacterSheetScreen } from './CharacterSheetScreen'
@@ -552,5 +554,47 @@ describe('an unfinished character', () => {
     // depend on that answer and is still there.
     expect(screen.queryByText('Unfinished')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument()
+  })
+})
+
+describe('a character seated in a game', () => {
+  it('has a tab for the game, with what the game keeps and the roster menu as buttons', async () => {
+    const game = {
+      id: 'gam_1', group_id: 'grp_1', name: 'Thursday night', created_at: '2026-01-01T00:00:00Z', role: 'player',
+      characters: [{ id: 'chr_000001', owner_id: 'abc', name: 'Zephyr', level: 3 }],
+      entries: [{
+        id: 'pc_chr_000001', kind: 'player', character_id: 'chr_000001', name: 'Zephyr', can_edit: true,
+        hp: 7, temp_hp: 2, initiative: 15, tags: ['Poisoned'],
+        stats: { name: 'Zephyr', max_hp: 24, armor_class: 15, spellcasting: [], speeds: [], senses: [],
+          abilities: { scores: { str: 10, dex: 16, con: 12, int: 10, wis: 12, cha: 10 },
+            modifiers: { str: 0, dex: 3, con: 1, int: 0, wis: 1, cha: 0 } } },
+      }],
+    }
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/games?character=chr_000001')) return jsonResponse({ games: [game] })
+      if (url.includes('/games/gam_1')) return jsonResponse(game)
+      if (url.includes('/sheet')) return jsonResponse({ catalog: { skills: SKILL_CATALOG }, ...SHEET })
+      return jsonResponse({ seq: 3, complete: true, prompts: [] })
+    }))
+    const user = setupUser()
+    renderAt('desktop', withAuth({}, (
+      <MemoryRouter initialEntries={['/characters/chr_000001']}>
+        <Routes><Route path="/characters/:id" element={<CharacterSheetScreen />} /></Routes>
+      </MemoryRouter>
+    )))
+
+    // Ahead of the sheet's own tabs, and not the one it opens on.
+    const tab = await screen.findByRole('tab', { name: 'Thursday night' })
+    expect(screen.getAllByRole('tab')[0]).toBe(tab)
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+
+    await user.click(tab)
+    expect(await screen.findByText('7 / 24')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove tag Poisoned' })).toBeInTheDocument()
+    // The roster row's menu, unfolded: each entry is a button and opens the same dialog.
+    expect(screen.getByRole('button', { name: 'HP' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Initiative' }))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })
 })

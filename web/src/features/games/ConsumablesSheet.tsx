@@ -6,6 +6,7 @@ import { useAction } from '@/lib/useAction'
 import { useT } from '@/lib/i18n'
 import { Alert, ModalSheet, Stack } from '@/ui'
 import { ResourcePools } from '../character/ResourcePools'
+import { poolsOf } from './pools'
 
 /**
  * One entry's consumables, in a dialog of their own. A press is drawn at once
@@ -16,7 +17,7 @@ export function ConsumablesSheet({ gameId, entry, onClose, onChange }: {
   gameId: string; entry: GameEntry; onClose: () => void; onChange: () => void
 }) {
   const t = useT()
-  const pools = (entry.resources ?? []).map(({ slot_level, ...pool }) => ({ ...pool, ...(slot_level ? { slotLevel: slot_level } : {}) }))
+  const pools = poolsOf(entry)
   const save = useAction(patchGameEntry)
   const [local, setLocal] = useState<Record<string, number>>({})
   // A local count has done its job once the server reports the same one; kept

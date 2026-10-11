@@ -107,6 +107,39 @@ func (s *Service) Mine(ctx context.Context, actor user.ID) ([]At, error) {
 	return out, nil
 }
 
+// Seating narrows Mine to the games c is seated in: what a character's own
+// page asks, to show what each of those games is keeping for it.
+//
+// It is Mine filtered rather than a lookup by character, so it answers only
+// about tables the actor sits at and needs no access rule of its own.
+func (s *Service) Seating(ctx context.Context, actor user.ID, c character.ID) ([]At, error) {
+	mine, err := s.Mine(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+	// A seat requires being on the table, so most games are ruled out unread.
+	tables, err := s.shared.GroupsSharing(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]At, 0)
+	for _, at := range mine {
+		if !slices.Contains(tables, at.Game.Group) {
+			continue
+		}
+		// ponytail: one roster read per game at a table that shares c; a jsonb
+		// query on games.roster replaces the loop if a table ever holds many.
+		roster, err := s.games.Characters(ctx, at.Game.ID)
+		if err != nil {
+			return nil, err
+		}
+		if slices.ContainsFunc(roster, func(e domain.Entry) bool { return e.Kind != "monster" && e.Character == c }) {
+			out = append(out, at)
+		}
+	}
+	return out, nil
+}
+
 // Get returns a game, the caller's rank at its table, and its roster.
 //
 // The rank comes back because every screen has to decide which controls to

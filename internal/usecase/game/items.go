@@ -105,6 +105,29 @@ func receive(slug rules.Slug, count int) func(character.State, *catalog.Catalog)
 	}
 }
 
+// take removes count of an item from what is carried. What is worn stays
+// worn: it comes out of the backpack, then out of the loot.
+func take(slug rules.Slug, count int) func(character.State, *catalog.Catalog) ([]character.Change, error) {
+	return func(state character.State, _ *catalog.Catalog) ([]character.Change, error) {
+		backpack, loot := held(state.Equipment.Backpack, slug), held(state.Equipment.Loot, slug)
+		if backpack+loot < count {
+			if held(state.Equipment.Equipped, slug) > 0 {
+				return nil, types.NewValidationError("item %q is worn", slug).Because("item.worn")
+			}
+			return nil, types.NewValidationError("not carrying %d of %q", count, slug).Because("item.notCarried")
+		}
+		fromBackpack := min(backpack, count)
+		changes := []character.Change{}
+		if fromBackpack > 0 {
+			changes = append(changes, setCount("backpack", slug, backpack-fromBackpack))
+		}
+		if count > fromBackpack {
+			changes = append(changes, setCount("loot", slug, loot-(count-fromBackpack)))
+		}
+		return changes, nil
+	}
+}
+
 func checkCount(count int) error {
 	if count < 1 || count > maxGrant {
 		return types.NewValidationError("count must be between 1 and %d", maxGrant)
@@ -112,17 +135,22 @@ func checkCount(count int) error {
 	return nil
 }
 
-// GrantItem is the DM handing a seated character something new.
+// GrantItem is the DM handing a seated character something new -- or, with a
+// negative count, taking it back: a potion drunk at the table is the DM's to
+// strike off as much as the player's.
 func (s *Service) GrantItem(ctx context.Context, actor user.ID, id domain.ID, entryID string, slug rules.Slug, count int) error {
 	if _, err := s.dm(ctx, actor, id, "give out items"); err != nil {
 		return err
 	}
-	if err := checkCount(count); err != nil {
+	if err := checkCount(max(count, -count)); err != nil {
 		return err
 	}
 	entry, err := s.seat(ctx, id, entryID)
 	if err != nil {
 		return err
+	}
+	if count < 0 {
+		return s.changeCharacter(ctx, entry.Character, take(slug, -count))
 	}
 	return s.changeCharacter(ctx, entry.Character, receive(slug, count))
 }
@@ -150,8 +178,7 @@ func (s *Service) AdjustCoins(ctx context.Context, actor user.ID, id domain.ID, 
 }
 
 // GiveItem moves count of an item from the actor's own seated character to
-// another one at the same game. What is worn stays worn: it is taken from the
-// backpack, then from the loot.
+// another one at the same game.
 func (s *Service) GiveItem(ctx context.Context, actor user.ID, id domain.ID, fromID, toID string, slug rules.Slug, count int) error {
 	if _, _, err := s.at(ctx, actor, id); err != nil {
 		return err
@@ -183,24 +210,7 @@ func (s *Service) GiveItem(ctx context.Context, actor user.ID, id domain.ID, fro
 		return err
 	}
 
-	err = s.changeCharacter(ctx, from.Character, func(state character.State, _ *catalog.Catalog) ([]character.Change, error) {
-		backpack, loot := held(state.Equipment.Backpack, slug), held(state.Equipment.Loot, slug)
-		if backpack+loot < count {
-			if held(state.Equipment.Equipped, slug) > 0 {
-				return nil, types.NewValidationError("item %q is worn", slug).Because("item.worn")
-			}
-			return nil, types.NewValidationError("not carrying %d of %q", count, slug).Because("item.notCarried")
-		}
-		fromBackpack := min(backpack, count)
-		changes := []character.Change{}
-		if fromBackpack > 0 {
-			changes = append(changes, setCount("backpack", slug, backpack-fromBackpack))
-		}
-		if count > fromBackpack {
-			changes = append(changes, setCount("loot", slug, loot-(count-fromBackpack)))
-		}
-		return changes, nil
-	})
+	err = s.changeCharacter(ctx, from.Character, take(slug, count))
 	if err != nil {
 		return err
 	}

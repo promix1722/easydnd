@@ -713,3 +713,14 @@ describe('the sheet body on a wide screen', () => {
     }
   })
 })
+
+describe('a tab handed in ahead of the sheet', () => {
+  it('is first in the row, and Overview is still the one that opens', () => {
+    renderAt('desktop', <SheetBody sheet={SHEET} lead={[{ value: 'game-gam_1', label: 'Thursday night', content: <p>seat</p> }]} />)
+
+    const tabs = within(screen.getAllByRole('tablist')[0]!).getAllByRole('tab')
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Thursday night', ...SECTIONS])
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByText('seat')).not.toBeInTheDocument()
+  })
+})

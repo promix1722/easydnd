@@ -108,7 +108,11 @@ for that entry. **Initiative** has its own entry in the "…" menu and its own
 one-field dialog (`InitiativeSheet`), beside **HP**, rather than a third box
 in the hit points dialog: it is set once, when a fight starts, and hit points
 change all through it, so the two were the wrong things to open together.
-Emptying the field clears it -- the entry has not rolled yet. **Items and coins** reach the page through the same "…" menu
+Emptying the field clears it -- the entry has not rolled yet. The "…" menu and
+every dialog it opens are `useEntryActions`, a hook rather than part of
+`GameTracker`, because the character's own sheet offers the same menu for its
+own entry (docs/web/sheet.md); a new entry in it appears in both places.
+**Items and coins** reach the page through the same "…" menu
 and never through the roster payload, which carries no inventory. They are
 three entries and three dialogs, because each does one thing and a player in a
 fight wants the one they pressed. **Coins** (`CoinsSheet`) is the purse and
@@ -118,13 +122,19 @@ would be a log entry per digit, and two experiences of one purse were one too
 many. Behind the one button the two differ: an owner sets their own totals
 (`writeChanges`), a DM sends each coin's difference (`POST
 .../entries/{entry}/coins`), so coins the player spent in the same moment are
-not put back. **Use item** is on a player's own card and lists what is used up,
-with a Use button on each row, written as the owner. **Transfer item** is on
-the card of whoever *receives* -- any other seated character, offered to
-anybody with a character of their own at the game to give from -- so who it
-goes to is said by where it was pressed and the dialog needs no recipient
-field. It always names its source in a "From" select -- never the receiver
-itself, and a real choice with two characters of your own seated. It lists everything carried that the catalogue knows, with a Transfer
+not put back. **Use item** lists what is used up, with a Use button on each row. It is on a
+player's own card, written as the owner (`writeChanges`), and for a DM on every
+player's card, written through the game as a grant of `-1` (`POST
+.../entries/{entry}/items`) and read from the shared sheet -- the only way a
+DM touches a character they do not own. **Transfer item** is offered to
+anybody with a character of their own at the game, on every player card while
+there is somebody to hand to. The dialog always shows both ends, a "From" and a
+"To" select: "From" is the viewer's own seated characters, because only an
+owner gives a character's items away, and "To" is everybody else, never
+whoever "From" is -- choosing the receiver as the giver swaps the two. The card
+it was pressed on is the giver if it is the viewer's own and the receiver
+otherwise, which is what makes the same entry right on a character's own sheet.
+It lists everything carried that the catalogue knows, with a Transfer
 button on each row (`POST .../entries/{entry}/give`). Both are one component
 (`ItemsSheet`), and in both one press is the whole errand: the dialog closes
 and the tracker's notice says what happened ("Used", "Transferred"). Neither

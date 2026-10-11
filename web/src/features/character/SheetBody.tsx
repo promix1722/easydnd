@@ -60,6 +60,7 @@ export function SheetBody({
   characterId,
   onChanged,
   pending = false,
+  lead = [],
 }: {
   sheet: Sheet
   /** Posts an inventory edit. Absent on a sheet that is only being read. */
@@ -69,6 +70,8 @@ export function SheetBody({
   /** Called after the Spells tab wrote something, so the screen reloads the sheet. */
   onChanged?: () => void
   pending?: boolean
+  /** Tabs drawn before Overview, which still opens: what a game is keeping for this character. */
+  lead?: DeckPanel[]
 }) {
   // The sheet arrives with what its slugs mean: names in `catalogNames`, and
   // in `catalog` the entries a panel reads more of. Nothing here asks the
@@ -144,6 +147,7 @@ export function SheetBody({
   )
 
   const panels: DeckPanel[] = [
+    ...lead,
     {
       value: 'overview',
       label: t('sheet.overview'),

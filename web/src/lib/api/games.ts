@@ -126,9 +126,10 @@ export function getSharedSheet(character: string, signal?: AbortSignal): Promise
 
 // Games.
 
-/** Every game at every table you sit at, newest first. */
-export function listGames(signal?: AbortSignal): Promise<{ games: GameSummary[] }> {
-  return request<{ games: GameSummary[] }>('/games', { signal })
+/** Every game at every table you sit at, newest first; with `character`, only those it is seated in. */
+export function listGames(signal?: AbortSignal, character?: string): Promise<{ games: GameSummary[] }> {
+  return request<{ games: GameSummary[] }>(
+    character === undefined ? '/games' : `/games?character=${encodeURIComponent(character)}`, { signal })
 }
 
 export async function createGame(group: string, name: string): Promise<GameDetail> {
