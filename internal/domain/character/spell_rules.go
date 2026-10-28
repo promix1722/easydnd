@@ -121,14 +121,25 @@ func SpellRules(log Log, cat *catalog.Catalog) ([]SpellRule, error) {
 		limit := min(r.Count, base+changes)
 		r.MaxLevelCount = &limit
 	}
+	// The allowance is never below the custom picks already held. Not every
+	// custom pick is paid for by spellLimits -- a sheet import and the
+	// unfiltered spell list both add them freely -- and an allowance under
+	// what is held leaves nothing a removed pick could be swapped for.
+	custom := rules.NewRef(rules.RefRule, "custom-spells")
+	heldCantrips, heldKnown := 0, 0
+	for _, source := range state.Spells.Sources {
+		if source.Source == custom {
+			heldCantrips, heldKnown = len(source.Cantrips), len(source.Known)
+		}
+	}
 	for _, extra := range []struct {
 		mode         string
 		count, level int
 	}{
-		{"cantrip", state.Spells.ExtraCantrips, 0}, {"known", state.Spells.ExtraKnown, 9},
+		{"cantrip", max(state.Spells.ExtraCantrips, heldCantrips), 0}, {"known", max(state.Spells.ExtraKnown, heldKnown), 9},
 	} {
 		if extra.count > 0 {
-			out = append(out, SpellRule{ID: rules.Slug("custom/limit/" + extra.mode), Source: rules.NewRef(rules.RefRule, "custom-spells"), Purpose: "custom-limit", Count: extra.count, MinLevel: extra.level, MaxLevel: extra.level, Optional: true})
+			out = append(out, SpellRule{ID: rules.Slug("custom/limit/" + extra.mode), Source: custom, Purpose: "custom-limit", Count: extra.count, MinLevel: extra.level, MaxLevel: extra.level, Optional: true})
 		}
 	}
 	return out, nil

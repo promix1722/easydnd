@@ -88,29 +88,19 @@ export function SheetBody({
   const items = bySlug<Item>([...(catalog?.magicItems ?? []), ...(catalog?.equipment ?? [])])
   const names = new Map(Object.entries(s.catalogNames ?? {}))
   const identity = s.identity
-  // A plain-number scaling value -- Extra Attacks: 1, Maneuvers: 3 -- is counted
-  // off at the table like any pool, so it is drawn as one: that many marks,
-  // spent in a game. A die, a fraction or a word has no number of uses and
-  // stays a line under Scaling values. The id is the one the game tracker
-  // spends it by.
-  const scaling = Object.entries(s.resources.parameters ?? {})
-  const countable = (value: (typeof scaling)[number][1]) =>
-    (value.number ?? 0) > 0 && !value.dice && !value.text && !value.rational && value.boolean === undefined
+  // A scaling value is read, not spent: "Sneak Attack: 1d6", "Metamagic
+  // Options Known: 2". It is the size of a feature, so it is drawn with the
+  // features. Plain numbers used to be drawn as pips to tick off, which made
+  // a sorcerer's known Metamagic look like a resource; anything a character
+  // does spend is a pool in the pack.
+  const scaling = Object.values(s.resources.parameters ?? {})
   // Hit Dice are a vital, drawn there; everything else spendable is on Resources.
-  const pools = [
-    ...Object.values(s.resources.pools ?? {}).filter((pool) => pool.max > 0 && pool.group !== 'hit-dice')
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    ...scaling.filter(([, value]) => countable(value))
-      .map(([slug, value]) => ({ id: `scaling/${slug}`, name: value.name, group: 'scaling', max: value.number ?? 0, used: 0 }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  ]
-  // What is left -- a die, a fraction, a word -- is not counted off, it is read:
-  // "Sneak Attack: 1d6". It is the size of a feature, so it is drawn with the
-  // features rather than in a box of its own.
-  const valued = new Map(scaling.map(([, value]) => value)
+  const pools = Object.values(s.resources.pools ?? {}).filter((pool) => pool.max > 0 && pool.group !== 'hit-dice')
+    .sort((a, b) => a.name.localeCompare(b.name))
+  const valued = new Map(scaling
     // A zero is a value the class has not reached yet -- Brutal Critical before
     // ninth level -- and "0" on a sheet reads as a thing the character has.
-    .filter((value) => !countable(value) && value.boolean !== false && (value.number !== 0 || !!value.dice || !!value.text || !!value.rational || value.boolean === true))
+    .filter((value) => value.boolean !== false && (value.number !== 0 || !!value.dice || !!value.text || !!value.rational || value.boolean === true))
     .map((value) => {
       const amount = value.dice || value.text || (value.rational ? `${value.rational.numerator}/${value.rational.denominator}` : value.boolean ? '' : String(value.number))
       return [value.name, amount ? `${value.name}: ${amount}` : value.name] as const

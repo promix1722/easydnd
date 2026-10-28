@@ -55,7 +55,9 @@ for (const viewport of ['desktop', 'mobile'] as const) {
     expect(within(selected).queryByRole('button', { name: 'Shield' })).not.toBeInTheDocument()
     expect(within(selected).getByRole('button', { name: 'Fireball' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Spell selection' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    // A removal alone can be saved; it reopens the slot.
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+    expect(screen.getByText('Not saved yet: press Next to keep these changes.')).toBeInTheDocument()
     await user.type(filter, 'Alarm')
     expect(within(selected).getByRole('button', { name: 'Fireball' })).toBeInTheDocument()
     const alarm = within(available).getByRole('article', { name: 'Alarm' })
@@ -305,7 +307,7 @@ it('keeps an increased limit in the save batch and appends available spells', as
   await user.click(screen.getByRole('button', { name: 'Next' }))
   expect(submit).toHaveBeenCalledWith([
     { prompt: custom, picks: ['spell-20'] },
-    expect.objectContaining({ changes: [{ path: 'spellLimits.known', op: 'increment', value: { kind: 'int', int: 1 } }] }),
+    expect.objectContaining({ changes: [{ path: 'spellLimits.known', op: 'set', value: { kind: 'int', int: 1 } }] }),
   ])
 })
 
@@ -329,7 +331,88 @@ for (const cantripsOnly of [false, true]) {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: 'Next' }))
     expect(submit).toHaveBeenCalledWith([expect.objectContaining({ changes: [
-      { path: `spellLimits.${cantripsOnly ? 'cantrip' : 'known'}`, op: 'increment', value: { kind: 'int', int: -2 } },
+      { path: `spellLimits.${cantripsOnly ? 'cantrip' : 'known'}`, op: 'set', value: { kind: 'int', int: 0 } },
     ] })])
+  })
+}
+
+it('swaps a held custom pick when every class slot is full and no allowance was bought', async () => {
+  const user = setupUser()
+  const submit = vi.fn()
+  vi.stubGlobal('fetch', vi.fn(spellFetch([
+    { slug: 'shield', name: 'Shield', level: 1, classes: ['warlock'] },
+    { slug: 'alarm', name: 'Alarm', level: 1, classes: ['warlock'] },
+    { slug: 'fireball', name: 'Fireball', level: 3 },
+  ])))
+  const known: Block = { key: 'known', kind: 'settled', changeable: true, row: { seq: 2, stage: 'spells', label: '', value: '',
+    event: { type: 'level', choiceSource: 'class:warlock', purpose: 'known', choices: [{ prompt: 'warlock/spell/known/1', picks: ['shield'] }] } } }
+  const imported: Block = { key: 'custom', kind: 'settled', changeable: true, row: { seq: 3, stage: 'spells', label: '', value: '',
+    event: { type: 'change', choiceSource: 'rule:custom-spells', purpose: 'custom', choices: [{ prompt: 'custom/spell/known', picks: ['fireball'] }] } } }
+  const custom = { ...question('custom'), purpose: 'custom', source: 'rule:custom-spells', optional: true, upTo: true, event: { type: 'change' }, choice: { ...question('custom').choice, prompt: 'custom/spell/known', choose: 319 } }
+  // The server reports the allowance floored at the one custom pick held.
+  renderAt('desktop', <SpellStagePanel active blocks={[known, imported]} names={new Map()} loadSavedPrompt={async () => custom}
+    onAnswers={submit} pending={false} revision={1} rules={[
+      { id: 'known', source: 'class:warlock', class: 'warlock', classLevel: 1, count: 1, minLevel: 1, maxLevel: 1, purpose: 'known', optional: false, listClasses: ['warlock'] },
+      { id: 'custom/limit', source: 'rule:custom-spells', purpose: 'custom-limit', count: 1, minLevel: 9, maxLevel: 9, optional: true },
+    ]} />)
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add Alarm' })).toBeDisabled())
+  expect(screen.getByText('Selected: 2 / 2')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Decrease spell limit' })).toBeDisabled()
+  await user.click(screen.getByRole('button', { name: 'Remove Fireball' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add Alarm' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Add Alarm' }))
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  expect(submit).toHaveBeenCalledWith([{ prompt: custom, picks: ['alarm'], replaces: imported.kind === 'settled' ? imported.row : null }])
+})
+
+it('saves removing every saved spell, leaving the slot to answer again', async () => {
+  const user = setupUser()
+  const dirty = vi.fn()
+  renderAt('desktop', <SpellStagePanel active blocks={blocks} loadSavedPrompt={async (row) => question(row.seq === 2 ? 'wizard' : 'sorcerer')}
+    names={new Map()} onAnswers={answer} onDirtyChange={dirty} pending={false} revision={3} />)
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Shield' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Remove Shield' }))
+  await user.click(screen.getByRole('button', { name: 'Remove Fireball' }))
+  expect(dirty).toHaveBeenLastCalledWith(true)
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  expect(answer).toHaveBeenCalledWith(expect.arrayContaining([
+    expect.objectContaining({ prompt: question('wizard'), picks: [] }),
+    expect.objectContaining({ prompt: question('sorcerer'), picks: [] }),
+  ]))
+})
+
+it('keeps the panel on screen while a removed spell’s question loads', async () => {
+  const user = setupUser()
+  renderAt('desktop', <SpellStagePanel active blocks={blocks} loadSavedPrompt={() => new Promise<Prompt>(() => undefined)}
+    names={new Map()} onAnswers={answer} pending={false} revision={3} />)
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Shield' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Remove Shield' }))
+  // The question never arrives here; what was on screen stays there.
+  expect(screen.getByRole('textbox', { name: 'Search spells' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Fireball' })).toBeInTheDocument()
+  expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+})
+
+for (const action of ['remove', 'add'] as const) {
+  it(`edits a half-filled saved slot in place when spells are ${action === 'remove' ? 'removed from' : 'added to'} it`, async () => {
+    const user = setupUser()
+    const submit = vi.fn()
+    // One of two spells saved: the server asks the same prompt again, open.
+    const half: Block = { key: 'half', kind: 'settled', changeable: true, row: { seq: 2, stage: 'spells', label: '', value: '',
+      event: { type: 'level', choices: [{ prompt: 'wizard/spell/known/5', picks: ['fireball'] }] } } }
+    const again = question('wizard', 2)
+    renderAt('desktop', <SpellStagePanel active blocks={[half, { kind: 'open', key: 'again', prompt: again }]} names={new Map()}
+      loadSavedPrompt={async () => again} onAnswers={submit} pending={false} revision={2} />)
+    if (action === 'remove') {
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Fireball' })).toBeEnabled())
+      await user.click(screen.getByRole('button', { name: 'Remove Fireball' }))
+    } else {
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Add Alarm' })).toBeEnabled())
+      await user.click(screen.getByRole('button', { name: 'Add Alarm' }))
+    }
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(submit).toHaveBeenCalledWith([{ prompt: again, picks: action === 'remove' ? [] : ['fireball', 'alarm'], replaces: half.kind === 'settled' ? half.row : null }])
   })
 }

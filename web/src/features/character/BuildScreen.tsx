@@ -72,7 +72,7 @@ export function BuildScreen() {
 
   const {
     selectedRules, setSelectedRules, packError, setPackDirty, nameDraft, setNameDraft, imageDraft,
-    draftRules, setDraftRules, customDraft, setCustomDraft, nameError, setNameError,
+    draftRules, setDraftRules, customDraft, setCustomDraft, nameError, setNameError, spellDirty, setSpellDirty,
   } = drafts
   const {
     open, visibleStages, stage, blocksByStage, blocks, firstChoice, opened, posingName,
@@ -215,6 +215,8 @@ export function BuildScreen() {
             actions: (
               <Button
                 variant={view.prompts.complete ? 'filled' : 'light'}
+                // Leaving discards a spell draft; Next on that tab saves it.
+                disabled={spellDirty}
                 onClick={finish}
               >
                 {t('build.finish')}
@@ -296,6 +298,7 @@ export function BuildScreen() {
                     onAnswers={(submissions) => void saveSpells(submissions, each === 'cantrips' && visibleStages.includes('spells') ? 'spells' : after ?? each)}
                     pending={answer.pending || revise.pending || spellSave.pending || remove.pending || build.loading}
                     revision={view.prompts.revision ?? view.prompts.seq}
+                    onDirtyChange={setSpellDirty}
                     {...(each === 'cantrips' && visibleStages.includes('spells') ? { onNext: () => goToStage('spells') } : next === undefined ? {} : { onNext: next })}
                   >{customs(each)}</SpellStagePanel>
                 ) : (

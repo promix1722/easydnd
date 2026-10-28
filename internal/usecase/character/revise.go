@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"slices"
 
 	"github.com/promix1722/easydnd/internal/domain/catalog"
@@ -213,7 +214,9 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 
 		if requiredRef(event) && !event.Observed {
 			if _, ok := answersAnOpenPrompt(open, event); !ok {
-				dropped = append(dropped, droppedEntry(event, DropNotOffered, nil))
+				if !inert(log, cat, event) {
+					dropped = append(dropped, droppedEntry(event, DropNotOffered, nil))
+				}
 				continue
 			}
 		}
@@ -225,6 +228,8 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 		staged := event
 		staged.Choices = kept
 		switch {
+		case len(lost) > 0 && inert(log, cat, event):
+			continue
 		case SaysNothing(staged):
 			// An entry that was nothing but answers, all of which died. Its
 			// own reason rather than answers-dropped, because the row it
@@ -263,6 +268,37 @@ func reviseMany(log domain.Log, cat *catalog.Catalog, replacements map[int]*doma
 		return domain.Log{}, nil, err
 	}
 	return out, dropped, nil
+}
+
+// inert reports that an entry the edit drops was already dead before it: it
+// would not be accepted at its own place in the log -- its question no longer
+// asked, or already answered -- and the character projects the same without
+// it. Losing it costs nothing, so it is
+// not put to the player -- an imported warlock's three starting-kit answers,
+// never offered once the import recorded the equipment, used to stand in a
+// confirmation on every spell edit, a no-op one included.
+func inert(log domain.Log, cat *catalog.Catalog, event domain.Event) bool {
+	at := slices.IndexFunc(log.Events, func(e domain.Event) bool { return e.Seq == event.Seq })
+	if at < 0 {
+		return false
+	}
+	open, err := domain.Prompts(domain.Log{Events: log.Events[:at]}, cat)
+	if err != nil {
+		return false
+	}
+	if validateEvent(domain.Log{Events: log.Events[:at]}, cat, open, event, 0) == nil {
+		return false
+	}
+	without, err := domain.Rebuild(slices.Delete(slices.Clone(log.Events), at, at+1))
+	if err != nil {
+		return false
+	}
+	before, err := domain.Project(log, cat)
+	if err != nil {
+		return false
+	}
+	after, err := domain.Project(without, cat)
+	return err == nil && reflect.DeepEqual(before, after)
 }
 
 // saysNothing reports that an entry has nothing left to say: no catalogue

@@ -532,7 +532,8 @@ func TestHighestSpellLevelLimitAndCustomOverride(t *testing.T) {
 	if _, _, err := charuc.Revise(b.log(), cat, b.seq, &illegal); err == nil {
 		t.Fatal("edit bypassed highest-level cap")
 	}
-	// A persistent extra allowance is separate from the normal class formula.
+	// A persistent extra allowance is separate from the normal class formula,
+	// and is never reported below the custom picks held: one bought, two held.
 	b.add("extra", domain.Event{Type: domain.EventChange, Changes: []domain.Change{{Path: "spellLimits.known", Op: domain.OpIncrement, Value: domain.IntValue(1)}}}).
 		add("custom", domain.Event{Type: domain.EventChange, Choices: []domain.Answer{answer("custom/spell/known", "haste", "wish")}})
 	limits, err = domain.SpellRules(b.log(), cat)
@@ -542,7 +543,7 @@ func TestHighestSpellLevelLimitAndCustomOverride(t *testing.T) {
 	extra := false
 	for _, rule := range limits {
 		if rule.Purpose == "custom-limit" {
-			extra = rule.Count == 1 && rule.MaxLevel == 9
+			extra = rule.Count == 2 && rule.MaxLevel == 9
 		}
 		if rule.Class == "sorcerer" && rule.Purpose == "known" && (rule.Count != 6 || *rule.MaxLevelCount != 2) {
 			t.Fatal("extra changed class formula")

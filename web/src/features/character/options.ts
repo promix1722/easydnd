@@ -55,11 +55,15 @@ export function choosableOptions(
 ): Choosable[] {
   const held = new Set(prompt.held ?? [])
   const set = prompt.choice.from
+  // An option whose requirement the character does not meet is not listed at
+  // all. Greyed, the warlock's level-9 invocations made up most of the list a
+  // second-level warlock read through; it comes back once the level does.
+  const blocked = new Set(prompt.blocked ?? [])
 
   // A set drawn from a collection lists nothing inline: the whole collection
   // is the option list, and an entry's own slug is its key.
   if (set.kind !== 'explicit') {
-    return [...entries.values()].map((entry) => ({
+    return [...entries.values()].filter((entry) => !blocked.has(entry.slug)).map((entry) => ({
       key: entry.slug,
       provenance: entry.provenance,
       ...(entry.manual === true ? { manual: true } : {}),
@@ -70,7 +74,7 @@ export function choosableOptions(
     }))
   }
 
-  return (set.options ?? []).map((option) => {
+  return (set.options ?? []).filter((option) => !blocked.has(option.key)).map((option) => {
     const reason = disabledBy(t, prompt, held, option.key)
     return {
       key: option.key,
@@ -123,7 +127,6 @@ function disabledBy(
   held: Set<string>,
   key: string,
 ): string | undefined {
-  if (prompt.blocked?.includes(key)) return t('option.requiresProficiency')
   if (prompt.heldOnly) return held.has(key) ? undefined : t('option.notProficient')
   return held.has(key) ? t('option.alreadyHave') : undefined
 }

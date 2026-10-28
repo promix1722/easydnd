@@ -288,28 +288,18 @@ func TestAShortRestReturnsOnlyShortRestPools(t *testing.T) {
 		t.Fatalf("after short rest: %+v", got)
 	}
 
-	// A plain-number scaling value -- a fifth-level fighter's one Extra Attack
-	// -- is spent like a pool, to its number and no further. It has no
-	// recovery of its own, so only a long rest gives it back.
-	spend := func(n int) error {
-		return f.svc.PatchEntry(ctx, "alice", g.ID, entries[0].Entry.ID, gameuc.EntryPatch{Used: map[string]int{"scaling/extra-attacks": n}})
+	// A parameter is a value, not a use: a fifth-level fighter's one Extra
+	// Attack is not a pool, and the game refuses to spend it.
+	if err := f.svc.PatchEntry(ctx, "alice", g.ID, entries[0].Entry.ID, gameuc.EntryPatch{Used: map[string]int{"scaling/extra-attacks": 1}}); err == nil {
+		t.Fatal("spent a parameter as if it were a pool")
 	}
-	if err := spend(2); err == nil {
-		t.Fatal("spent more Extra Attacks than the character has")
-	}
-	if err := spend(1); err != nil {
-		t.Fatal(err)
-	}
-	if err := f.svc.Rest(ctx, "alice", g.ID, true); err != nil {
-		t.Fatal(err)
-	}
-	if got := used(); got["scaling/extra-attacks"] != 1 {
-		t.Fatalf("a short rest returned a scaling value: %+v", got)
+	if _, ok := used()["scaling/extra-attacks"]; ok {
+		t.Fatal("a parameter is listed among the pools")
 	}
 	if err := f.svc.Rest(ctx, "alice", g.ID, false); err != nil {
 		t.Fatal(err)
 	}
-	if got := used(); got["scaling/extra-attacks"] != 0 || got["hit-dice/fighter"] != 0 {
+	if got := used(); got["hit-dice/fighter"] != 0 {
 		t.Fatalf("after long rest: %+v", got)
 	}
 }

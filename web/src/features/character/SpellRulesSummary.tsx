@@ -6,13 +6,15 @@ import { refName } from './refNames'
 import { spellChoiceName } from './promptNames'
 
 /** One compact explanation per source, using the current level's total. */
-export function SpellRulesSummary({ rules, cantripsOnly, names, count, total, extra = 0, onChangeLimit, pending }: {
+export function SpellRulesSummary({ rules, cantripsOnly, names, count, total, extra = 0, minExtra = 0, onChangeLimit, pending }: {
   rules: readonly SpellRule[]
   cantripsOnly: boolean
   names: ReadonlyMap<string, string>
   count: number
   total: number
   extra?: number
+  /** The custom picks held: the allowance never goes below them. */
+  minExtra?: number
   onChangeLimit?: ((delta: number) => void) | undefined
   pending?: boolean
 }) {
@@ -66,7 +68,7 @@ export function SpellRulesSummary({ rules, cantripsOnly, names, count, total, ex
         {onChangeLimit !== undefined && <Group gap={4} style={{ marginLeft: 'auto' }}>
           <Text size="xs" c="dimmed" mr={4}>{t('spellRules.changeLimit')}</Text>
           <Button size="xs" variant="light" color="gray" px="xs" aria-label={t('spellRules.decrease')}
-            disabled={pending === true || extra <= 0} onClick={() => onChangeLimit(-1)}>−</Button>
+            disabled={pending === true || extra <= minExtra} onClick={() => onChangeLimit(-1)}>−</Button>
           <Button size="xs" variant="light" color="gray" px="xs" aria-label={t('spellRules.increase')}
             disabled={pending === true || extra >= 1000} onClick={() => onChangeLimit(1)}>+</Button>
         </Group>}

@@ -613,9 +613,9 @@ describe('the panels that were sentences', () => {
     }
     // Not reached yet is not a thing the character has.
     expect.soft(screen.queryByText(/Brutal Critical/)).not.toBeInTheDocument()
-    // A plain number is counted off at the table, so it is marks to spend rather than a line to read.
-    expect.soft(screen.getByRole('img', { name: 'Extra Attacks: 2 of 2 left' })).toBeInTheDocument()
-    expect.soft(screen.queryByText('Extra Attacks: 2')).not.toBeInTheDocument()
+    // A plain number is a value too, read rather than spent: no marks to tick off.
+    expect.soft(screen.queryByRole('img', { name: /Extra Attacks/ })).not.toBeInTheDocument()
+    expect.soft(under('Features')).toContain('Extra Attacks: 2')
     // A value that is read rather than counted is a feature's own line; there is no box of scaling values.
     expect.soft(under('Features')).toContain('Sneak Attack: 1d6')
     expect.soft(screen.queryByText('Scaling values')).not.toBeInTheDocument()

@@ -22,6 +22,19 @@ const entries = new Map<string, Entry>([
 ])
 
 describe('choosableOptions', () => {
+  it('leaves out an option whose requirement is not met, and keeps one already held', () => {
+    const got = choosableOptions(testT, prompt({
+      choice: { prompt: 'eldritch-invocations/subfeature/0', choose: 2, kind: 'feature', from: { kind: 'explicit', options: [
+        { key: 'shortsword', kind: 'ref', ref: 'item:shortsword' },
+        { key: 'shortbow', kind: 'ref', ref: 'item:shortbow' },
+        { key: 'arrow', kind: 'ref', ref: 'item:arrow' },
+      ] } },
+      blocked: ['shortbow'],
+      held: ['arrow'],
+    }), entries)
+    expect(got.map((option) => [option.key, option.disabled])).toEqual([['shortsword', false], ['arrow', true]])
+  })
+
   // The rogue's starting kit is the case the server's option keys exist for:
   // the bundle has no slug, so it is named by position.
   it('uses the key the server sent, never one it computes', () => {

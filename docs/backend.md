@@ -869,6 +869,16 @@ means the entry itself is gone, `empty` means it had nothing left once its
 answers went, and `answers-dropped` is *not* a deletion -- the entry stands,
 minus some answers.
 
+**An entry that was already dead goes without a word.** One the log would not
+have accepted at its own place -- its question no longer asked, or already
+answered -- and without which the character projects exactly the same, costs
+the player nothing, so it is removed and left out of `dropped[]`. An imported
+warlock carried three starting-kit answers the rules stopped offering once the
+import recorded its equipment; every spell edit, a no-op one included, put
+them to the player as "3 other answers depend on this". The projection check
+is what keeps this honest: a stale answer that still puts an item on the sheet
+is reported as before.
+
 **The dry run is the same function with `commit=false`.** It loads, validates,
 replays, renumbers, validates the rebuilt log and projects it, then skips
 exactly one line: `repo.Commit`. A separate preview route would be two paths
@@ -1390,14 +1400,13 @@ own recovery policy says a short rest refills them in full -- Second Wind,
 Channel Divinity, a warlock's slots -- read from each player's sheet
 (`ResourcePool.RestoredBy`). A policy with a condition counts as not applying:
 no SRD pool has one, and evaluating it needs the catalogue.
-A game can also spend a sheet's **plain-number scaling values** -- Extra
-Attacks: 1, Maneuvers: 3 -- as pools of that many uses, under the id
-`scaling/<parameter>` (`consumables` in `usecase/game/tracker.go`). A pack calls
-them parameters because no rule spends them, but a table counts them off within
-a turn, and the tracker is where counting is done. A value that is a die, a
-fraction or a word has no number of uses and is not offered. A scaling value
-has no recovery policy, so a short rest leaves it spent and only a long rest or
-the row's plus gives it back.
+A game spends **pools only**. A pack's parameters are values, not uses --
+Metamagic Options Known: 2 is how many options a sorcerer has, not two things
+to spend -- and anything a table does spend is a pool in the pack. Plain-number
+parameters used to be offered as pools of that many uses under
+`scaling/<parameter>`, and a sorcerer's known Metamagic was drawn as pips to
+tick off; the sheet now prints every parameter as a value line with the
+features.
 The row's plus button is the undo for everything smaller. Monsters have
 no pools.
 
@@ -2687,7 +2696,9 @@ project into a separate `rule:custom-spells` source. They are explicit player
 exceptions, not relaxation of ordinary spell validation. Unknown slugs,
 duplicates and spells in the wrong category are rejected. Custom known spells
 are also prepared; no casting ability is inferred for the custom source.
-Empty answers remove a custom selection and reopen its optional prompt. Custom
+Empty answers remove a custom selection and reopen its optional prompt; an
+emptied class spell answer reopens its prompt the same way, and an event's
+`picks` is `[]` then, never `null` -- the builder reads it unguarded. Custom
 prompts never prevent a character from being complete, and never satisfy an
 unanswered class/racial prompt. Existing owner checks, revision guards and
 atomic revision handling apply unchanged.
@@ -2703,8 +2714,19 @@ sources are excluded. Existing logs still project for editing and correction.
 `change` events at `spellLimits.known` and `spellLimits.cantrip` set or increment
 an extra allowance (0–1000). These project independently from class rules and
 return as optional `spellRules` entries with purpose `custom-limit`. The wizard
-saves limit adjustments atomically with its spell selections. Custom spell
-provenance remains in the event choices, so labels survive later editing.
+saves limit adjustments atomically with its spell selections, as a `set` of the
+whole allowance rather than a step. Custom spell provenance remains in the
+event choices, so labels survive later editing.
+
+The reported allowance is never below the custom picks held: `custom-limit` is
+`max(spellLimits, custom picks)`, per category. Not every custom pick is paid
+for by the allowance -- a sheet import and the unfiltered spell list add them
+freely -- and the log does not record which ones were. An allowance under what
+is held read "7 / 4" on an imported warlock and left nothing a removed custom
+pick could be swapped for. The floor is a projection, so every existing
+character gets it without a migration. It also means an unbought allowance
+shrinks with the picks: remove a custom spell and save without a replacement,
+and the place goes with it.
 
 ## Character import sessions
 

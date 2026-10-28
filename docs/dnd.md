@@ -688,7 +688,10 @@ saving throw.
 **An option's prerequisites are read against the character as they stand.**
 `prerequisites` on a feature row -- a level, another feature, a spell -- block
 the option in every prompt that offers it (`Prompt.Blocked`, the same list the
-cleric's kit uses, greyed by the client and refused by the validator). The
+cleric's kit uses, left out of the list by the client and refused by the
+validator). Not greyed: a second-level warlock's invocation list was mostly
+level-9 options it could not take, and an option comes back once the
+character meets its requirement. The
 level is the character's level in the option's own `class`, *now*, not the
 level of the prompt offering it. That is deliberate and it is why there is no
 "replace an invocation when you gain a level" step: every earlier answer is

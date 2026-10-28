@@ -469,3 +469,33 @@ func TestSourceSurvivesAReplace(t *testing.T) {
 		}
 	}
 }
+
+// An entry that was already dead -- answering a question the rules no longer
+// asked at its place, with no effect on the sheet -- is cleaned out by any
+// edit without being put to the player. An imported warlock carried three
+// such starting-kit answers, and every spell edit, a no-op one included, asked
+// "3 other answers depend on this".
+func TestReviseDropsDeadEntriesWithoutAsking(t *testing.T) {
+	b := rogue3(t)
+	cat, err := b.s.Catalog(context.Background(), rules.DefaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log := b.log()
+	stale := domain.Event{Type: domain.EventClass, Ref: ref(rules.RefClass, "rogue"), Level: 1,
+		Choices: []domain.Answer{answer("rogue/starting-equipment/main-hand", "rapier")}}
+	if err := log.Append(stale); err != nil {
+		t.Fatal(err)
+	}
+	background := log.Events[5]
+	out, dropped, err := charuc.Revise(log, cat, background.Seq, &background)
+	if err != nil {
+		t.Fatalf("Revise() error = %v", err)
+	}
+	if len(dropped) != 0 {
+		t.Errorf("dropped = %+v, want nothing put to the player", dropped)
+	}
+	if out.Len() != log.Len()-1 {
+		t.Errorf("log has %d entries, want the dead one gone from %d", out.Len(), log.Len())
+	}
+}

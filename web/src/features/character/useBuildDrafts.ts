@@ -9,6 +9,7 @@ export function useBuildDrafts() {
   const [selectedRules, setSelectedRules] = useState<RulesLock | undefined>(undefined)
   const [packError, setPackError] = useState('')
   const [packDirty, setPackDirty] = useState(false)
+  const [spellDirty, setSpellDirty] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [imageDraft, setImageDraft] = useState<string | undefined>(undefined)
   const [draftRules, setDraftRules] = useState<Change[] | null>(null)
@@ -20,6 +21,7 @@ export function useBuildDrafts() {
     selectedRules, setSelectedRules,
     packError, setPackError,
     packDirty, setPackDirty,
+    spellDirty, setSpellDirty,
     nameDraft, setNameDraft,
     imageDraft, setImageDraft,
     draftRules, setDraftRules,

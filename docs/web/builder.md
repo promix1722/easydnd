@@ -734,6 +734,10 @@ spells beyond the normal class, level and count limits. A pick that fits a
 normal remaining allowance uses it; other picks are stored under the explicit
 custom-spells source. Custom picks remain marked after saving and when the
 filter is enabled again. They do not satisfy or inflate class/racial allowances.
+The server's extra allowance is never below the custom picks held, so removing
+one leaves room to add a replacement with the filter on, and the limit's
+decrease stops at the custom picks held
+([backend.md](../backend.md#explicit-custom-spells-and-wizard-allowance-metadata)).
 Reset restores the eligibility filter. Browsing never changes saved or draft picks. Each spell row shows its icon,
 level, concentration/ritual tags, school, casting time and components.
 
@@ -774,7 +778,10 @@ filled prompts in one revision-guarded append batch, preserving their server
 identities and class levels. A level-up extends the current selection by the
 allowance the rules grant; it does not reset previously saved spells.
 
-Removing a saved selection loads its read-only edit prompt automatically. All
+Removing a saved selection loads its read-only edit prompt automatically,
+behind the panel already on screen: filters, list and spell details stay up
+until it arrives, with the controls disabled meanwhile. Emptying the panel for
+that request collapsed the page, which read as a full reload on every Remove. All
 previous selections remain editable while other edits or acquisitions are in
 progress. Each changed answer keeps its own retained picks, while new picks are
 assigned to the remaining eligible slots. Nothing is written on Add or Remove.
@@ -782,6 +789,18 @@ Multiple replacements and new acquisitions are committed atomically through the
 batch revision API; an invalid choice or stale revision leaves the entire saved
 log unchanged. Dependent changes still use the dry-run confirmation. Leaving
 the tab discards unconfirmed drafts; filters and localization do not.
+
+A saved answer may shrink: removing spells without replacing them is a valid
+draft, saved as a shorter -- or empty -- answer, and the server reopens the
+slots it no longer fills, as on a fresh build. A new answer stays all or
+nothing: left empty it is not sent, and a half-filled one keeps Next disabled,
+so a level-up is never saved half done. A saved answer left short is asked
+again as an open prompt; the tab folds that prompt into an edit of the saved
+entry, so adding to it or emptying it rewrites that one entry. Answered as a
+new prompt too, a save replaced the same entry twice and the server refused
+the batch (`duplicate replacement address`). While a draft is unsaved the tab says
+so beside Next, and the header's Finish is disabled: Finish leaves the tab,
+and leaving used to discard a player's removals without a word.
 
 Each spell box contains its preview control and its Add or Remove button as
 separate, keyboard-accessible buttons inside one border. On phones, compact

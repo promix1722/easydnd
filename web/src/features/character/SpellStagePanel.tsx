@@ -1,5 +1,5 @@
 import { useCatalogScope } from '@/lib/api/catalogScope'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { slugOf } from '@/domain'
@@ -32,7 +32,7 @@ export interface SpellSubmission { prompt: Prompt; picks: string[]; replaces?: S
  * in the rules with its artwork, and it used to be downloaded to do here what
  * the server now does.
  */
-export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnswers, pending, revision, onNext, cantripsOnly = false, rules = [], children }: {
+export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnswers, pending, revision, onNext, onDirtyChange, cantripsOnly = false, rules = [], children }: {
   blocks: readonly Block[]
   active: boolean
   names: ReadonlyMap<string, string>
@@ -41,6 +41,8 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
   pending: boolean
   revision: number
   onNext?: () => void
+  /** Whether there is a draft that leaving the tab would throw away. */
+  onDirtyChange?: (dirty: boolean) => void
   cantripsOnly?: boolean
   rules?: readonly SpellRule[]
   /** Custom entries already on this tab, under what was selected. */
@@ -57,8 +59,16 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
     setDraft({ revision, active, added: [], custom: [], extra: 0, edits: {} })
   }
   const current: { added: string[]; custom: string[]; extra: number; edits: Record<string, string[]> } = draft.revision === revision && draft.active === active ? draft : { added: [], custom: [], extra: 0, edits: {} }
-  const edited = blocks.flatMap((block) => block.kind === 'settled' && current.edits[block.key] !== undefined ? [block] : [])
-  const openQuestions = !active ? [] : blocks.flatMap((block) => block.kind === 'open' && block.prompt.purpose !== 'forget' && block.prompt.purpose !== 'replace' ? [block.prompt] : [])
+  const asked = !active ? [] : blocks.flatMap((block) => block.kind === 'open' && block.prompt.purpose !== 'forget' && block.prompt.purpose !== 'replace' ? [block.prompt] : [])
+  // A saved answer that no longer fills its slot -- spells removed and saved
+  // without replacements -- is asked again as an open prompt. It is still an
+  // edit of that saved entry: answered as a new one as well, the save
+  // replaced the same entry twice and the server refused it.
+  const promptOf = (block: Block) => block.kind === 'settled' ? block.row.event.choices?.[0]?.prompt : undefined
+  const partial = (block: Block) => asked.some((prompt) => prompt.choice.prompt === promptOf(block))
+  const edited = blocks.flatMap((block) => block.kind === 'settled' && (current.edits[block.key] !== undefined || partial(block)) ? [block] : [])
+  const touched = edited.filter((block) => current.edits[block.key] !== undefined)
+  const openQuestions = asked.filter((prompt) => !edited.some((block) => promptOf(block) === prompt.choice.prompt))
   const forgotten = blocks.flatMap((block) => block.kind === 'settled' && block.row.event.purpose === 'forget'
     ? savedPicks(block).map((pick) => ({ pick, source: block.row.event.ref ?? block.row.event.choiceSource, level: block.row.event.level ?? 0 })) : [])
   const selectedBlocks = blocks.filter((block) => block.kind === 'settled' && block.row.event.purpose !== 'forget')
@@ -73,6 +83,12 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
     ])
     return { questions, editQuestions, options, entries: [...options.schools, ...options.classes, ...selectedEntries] }
   })
+  // The last answer stays up while the next is fetched, as the search page does
+  // below. Remove changes this key, and the panel emptied in between: filters,
+  // list and spell details went and the whole screen collapsed and redrew.
+  const [lastCatalogue, setLastCatalogue] = useState(catalogue.data)
+  if (catalogue.data !== null && catalogue.data !== lastCatalogue) setLastCatalogue(catalogue.data)
+  const known = catalogue.data ?? lastCatalogue
   const savedExtra = rules.filter((rule) => rule.purpose === 'custom-limit' && (cantripsOnly ? rule.maxLevel === 0 : rule.maxLevel > 0)).reduce((sum, rule) => sum + rule.count, 0)
   const extra = savedExtra + current.extra
   const browsing = active && !availableOnly
@@ -85,15 +101,15 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
   const details = useResource(`spell-open:${scope}:${openedSlug ?? ''}`, () => openedSlug === null ? Promise.resolve([]) : getEntries<Spell>('spells', [openedSlug], scope))
   const [more, setMore] = useState<{ key: string; spells: Spell[]; loading: boolean }>({ key: '', spells: [], loading: false })
   const [lastPage, setLastPage] = useState<SpellPage | null>(null)
-  const entries = new Map<string, Entry>([...(catalogue.data?.entries ?? []), ...seen.values()].map((entry) => [entry.slug, entry] as const))
-  const questions = catalogue.data?.questions ?? []
-  const editQuestions = catalogue.data?.editQuestions ?? []
+  const entries = new Map<string, Entry>([...(known?.entries ?? []), ...seen.values()].map((entry) => [entry.slug, entry] as const))
+  const questions = known?.questions ?? []
+  const editQuestions = known?.editQuestions ?? []
   const busy = pending || catalogue.loading || catalogue.error !== null
   const retained = (prompt: Prompt) => {
     const edit = editQuestions.find((item) => item.prompt.choice.prompt === prompt.choice.prompt)
-    return edit === undefined ? [] : current.edits[edit.key] ?? []
+    return edit === undefined ? [] : current.edits[edit.key] ?? edit.row.event.choices?.[0]?.picks ?? []
   }
-  const removed = edited.flatMap((block) => savedPicks(block).filter((pick) => !current.edits[block.key]?.includes(pick)))
+  const removed = edited.flatMap((block) => savedPicks(block).filter((pick) => !(current.edits[block.key] ?? savedPicks(block)).includes(pick)))
   const editablePrompt = (prompt: Prompt): Prompt => ({ ...prompt, held: (prompt.held ?? []).filter((key) => !removed.includes(key)) })
   const standardQuestions = questions.filter((prompt) => prompt.purpose !== 'custom')
   const customQuestion = questions.find((prompt) => prompt.purpose === 'custom')
@@ -148,7 +164,7 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
   const exclude = [...new Set(selected.filter((row) => row.block !== undefined && !repickable(row.slug, [])).map((row) => row.slug))]
   const search: SpellOfferSearch = { ...spellFilterSearch(filters), only, exclude, limit }
   const searchKey = JSON.stringify([scope, revision, search])
-  const nothingOffered = catalogue.data === null || only.slugs.length === 0 && fitting.length === 0
+  const nothingOffered = known === null || only.slugs.length === 0 && fitting.length === 0
   const found = useResource(`spell-offer:${nothingOffered}:${searchKey}`, (signal) => nothingOffered
     ? Promise.resolve<SpellPage>({ spells: [], total: 0 }) : searchSpellOffer(search, signal, scope))
   // The last page that arrived stays up while the next search is in flight,
@@ -180,18 +196,26 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
     try { settle((await searchSpellOffer({ ...search, offset: loaded.length }, undefined, scope)).spells) } catch { settle([]) }
   }
   const open = (key: string, slug: string, isOpen: boolean) => { setOpened(isOpen ? key : null); setOpenedSlug(isOpen ? slug : null) }
+  // A saved answer may shrink: a removed spell saves as an emptier answer and
+  // the server reopens the slot. A new answer is all or nothing -- left empty
+  // it is not sent, half-filled it would save half a level-up.
   const complete = allocation !== null && standardQuestions.every((prompt) => {
     const count = retained(prompt).length + (allocation.get(prompt.choice.prompt)?.length ?? 0)
-    return prompt.optional && count === 0 || (prompt.upTo === true ? count > 0 && count <= prompt.choice.choose : count === prompt.choice.choose)
+    const saved = editQuestions.some((item) => item.prompt.choice.prompt === prompt.choice.prompt)
+    return saved || count === 0 || (prompt.upTo === true ? count <= prompt.choice.choose : count === prompt.choice.choose)
   })
   const customCount = selected.filter((row) => row.custom).length
-  const changed = edited.length > 0 || picked.length > 0 || current.custom.length > 0 || current.extra !== 0
-  const normalChanged = picked.length > 0 || edited.some((block) => block.row.event.purpose !== 'custom')
+  const changed = touched.length > 0 || picked.length > 0 || current.custom.length > 0 || current.extra !== 0
+  const normalChanged = picked.length > 0 || touched.some((block) => block.row.event.purpose !== 'custom')
   const ready = levelLimits.every((limit) => limit.remaining >= 0) && (!normalChanged || standardQuestions.length > 0 && complete)
   const fixedCount = selected.length - picked.length - customCount
   const ruleTotal = rules.filter((rule) => rule.purpose !== 'custom-limit' && rule.purpose !== 'replace' && rule.purpose !== 'forget' && !rule.automatic?.length && (cantripsOnly ? rule.maxLevel === 0 : rule.maxLevel > 0)).reduce((sum, rule) => sum + rule.count, 0)
   const total = (ruleTotal || fixedCount + allowances.reduce((sum, { prompt }) => sum + prompt.choice.choose, 0)) + extra
   const filtered = !availableOnly || hasSpellFilters(filters)
+  useEffect(() => {
+    onDirtyChange?.(changed)
+    return () => onDirtyChange?.(false)
+  }, [changed, onDirtyChange])
 
   function remove(block: Block | undefined, pick: string) {
     if (block === undefined) { setDraft({ ...draft, added: current.added.filter((key) => key !== pick), custom: current.custom.filter((key) => key !== pick) }); return }
@@ -216,18 +240,23 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
       const picks = [...retained(prompt), ...(prompt.purpose === 'custom' ? current.custom : allocation.get(prompt.choice.prompt) ?? [])]
       const edit = editQuestions.find((item) => item.prompt.choice.prompt === prompt.choice.prompt)
       if (edit === undefined) return picks.length === 0 ? [] : [{ prompt, picks }]
+      // A half-filled entry is in the edit only because its slot is open
+      // again; with nothing added to it there is nothing to rewrite.
+      if (current.edits[edit.key] === undefined && picks.length === (edit.row.event.choices?.[0]?.picks ?? []).length) return []
       return [{ prompt, picks, replaces: edit.row }]
     })
     if (current.extra !== 0) submissions.push({
       prompt: { choice: { prompt: 'custom/limit', kind: 'spell', choose: 0, from: { kind: 'explicit', options: [] } }, event: { type: 'change' }, group: 'class', optional: true, heldOnly: false }, picks: [],
-      changes: [{ path: `spellLimits.${cantripsOnly ? 'cantrip' : 'known'}`, op: 'increment', value: { kind: 'int', int: current.extra } }],
+      // Set, not incremented: the saved allowance shown is floored at the custom
+      // picks held, so a step relative to it can land below that floor.
+      changes: [{ path: `spellLimits.${cantripsOnly ? 'cantrip' : 'known'}`, op: 'set', value: { kind: 'int', int: extra } }],
     })
     onAnswers(submissions)
   }
 
   return <Stack gap="md">
-    <SpellRulesSummary rules={rules} cantripsOnly={cantripsOnly} names={names} count={selected.length} total={total} extra={extra}
-      pending={pending} onChangeLimit={active ? (delta) => setDraft({ ...draft, extra: Math.min(1000, Math.max(0, extra + delta)) - savedExtra }) : undefined} />
+    <SpellRulesSummary rules={rules} cantripsOnly={cantripsOnly} names={names} count={selected.length} total={total} extra={extra} minExtra={customCount}
+      pending={pending} onChangeLimit={active ? (delta) => setDraft({ ...draft, extra: Math.min(1000, Math.max(customCount, extra + delta)) - savedExtra }) : undefined} />
     <Stack component="section" aria-label={t(cantripsOnly ? 'stage.cantrips' : 'prompt.selectedSpells')} gap="xs">
       <Text fw={600}>{t(cantripsOnly ? 'stage.cantrips' : 'prompt.selectedSpells')}</Text>
       {levels.map((level) => <Stack component="section" key={level} aria-label={cantripsOnly || level < 0 ? undefined : levelText(t, level)} gap="xs">
@@ -245,10 +274,11 @@ export function SpellStagePanel({ blocks, active, names, loadSavedPrompt, onAnsw
     {children}
     {active && <Group>
       <Button disabled={!ready || busy} loading={pending} onClick={() => finish()}>{t('stagePanel.next')}</Button>
+      {changed && <Text size="sm" c="dimmed">{t('stagePanel.unsaved')}</Text>}
     </Group>}
-    {catalogue.loading && <Text size="sm">{t('page.loadingEllipsis')}</Text>}
+    {catalogue.loading && known === null && <Text size="sm">{t('page.loadingEllipsis')}</Text>}
     {catalogue.error !== null && <Group><Text c="red">{catalogue.error}</Text><Button onClick={catalogue.reload}>{t('page.retry')}</Button></Group>}
-    {active && catalogue.data !== null && <SpellFilters sourceOptions={catalogue.data.options} value={filters} onChange={setFilters} schools={catalogue.data.options.schools} classes={catalogue.data.options.classes}
+    {active && known !== null && <SpellFilters sourceOptions={known.options} value={filters} onChange={setFilters} schools={known.options.schools} classes={known.options.classes}
       availableOnly={availableOnly} onAvailableOnlyChange={setAvailableOnly} />}
     {found.loading && page === null && <Text size="sm">{t('page.loadingEllipsis')}</Text>}
     {found.error !== null && <Group><Text c="red">{found.error}</Text><Button onClick={found.reload}>{t('page.retry')}</Button></Group>}

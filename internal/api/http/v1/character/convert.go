@@ -91,8 +91,10 @@ func eventOf(e domain.Event) Event {
 		out.At = e.At.UTC().Format(time.RFC3339)
 	}
 	for _, a := range e.Choices {
+		// Never null: an emptied answer is a saved state -- a removed spell
+		// reopens its slot -- and the client iterates picks unguarded.
 		out.Choices = append(out.Choices, Answer{
-			Prompt: a.Prompt.String(), Picks: slugStrings(a.Picks),
+			Prompt: a.Prompt.String(), Picks: append([]string{}, slugStrings(a.Picks)...),
 		})
 	}
 	for _, ch := range e.Changes {

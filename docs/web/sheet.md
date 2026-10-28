@@ -49,16 +49,16 @@ going through the pack.
   tracker's.
 - **Spells** is drawn only for a character with a spell source.
 - **Resources** is what a class hands out to spend, drawn only for a
-  character with any: the pools ("Consumable slots"), and among them every
-  scaling value that is a plain number -- Extra Attacks: 1, Maneuvers: 3 -- as
-  that many marks, which a game spends like a pool (docs/backend.md). It grows
-  with level rather than coming back on a rest, but a table still counts it off
-  within a turn, and a number printed as "Extra Attacks: 1" offered nothing to
-  count with. **There is no box of scaling values.** A value that is read
-  rather than counted -- a Sneak Attack die -- is the size of a feature, so it
-  is on Overview with the features: "Sneak Attack: 1d6" in place of "Sneak
-  Attack", and a value no feature is named for follows them. A scaling value of
-  zero is one the class has not reached yet and is not drawn.
+  character with any: the pools ("Consumable slots"), and nothing else. A
+  scaling value is never one of them, a plain number included: Metamagic
+  Options Known: 2 is how many options a sorcerer has, not two marks to tick
+  off, and drawn as pips it read as a resource. Anything a character does
+  spend is a pool in the pack. **There is no box of scaling values.** Every
+  one -- a Sneak Attack die, Metamagic Options Known: 2, Extra Attacks: 1 -- is
+  the size of a feature, so it is on Overview with the features: "Sneak
+  Attack: 1d6" in place of "Sneak Attack", and a value no feature is named for
+  follows them. A scaling value of zero is one the class has not reached yet
+  and is not drawn.
 - **Equipment** and **Items** are described
   [below](#equipment-is-what-is-worn-items-is-what-is-carried).
 - **Custom** is described
