@@ -8,12 +8,13 @@ import { useAction } from '@/lib/useAction'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 import {
-  ACTION_ICON_SIZE, Button, Group, IconArrowDown, IconArrowsExchange, IconArrowUp, IconBackpack, IconCoins, IconDice5, IconPencil,
+  ACTION_ICON_SIZE, Button, Group, IconArrowDown, IconArrowsExchange, IconArrowUp, IconBackpack, IconCoins, IconDice5, IconGift, IconPencil,
   IconShield, IconSwords, IconTrash, IconPlus, Menu,
 } from '@/ui'
 import { CoinsSheet } from './CoinsSheet'
 import { ConsumablesSheet } from './ConsumablesSheet'
 import { EntryEditor } from './EntryEditor'
+import { GiveItemSheet } from './GiveItemSheet'
 import { InitiativeSheet } from './InitiativeSheet'
 import { ItemsSheet } from './ItemsSheet'
 
@@ -35,6 +36,7 @@ export function useEntryActions(game: GameDetail, onChange: () => void, onNotice
   const [consuming, setConsuming] = useState<string | null>(null)
   const [carrying, setCarrying] = useState<{ id: string; mode: 'use' | 'give' } | null>(null)
   const [paying, setPaying] = useState<string | null>(null)
+  const [giving, setGiving] = useState<string | null>(null)
   const patch = useAction(patchGameEntry)
   const remove = useAction(deleteGameEntry)
   const order = useAction(orderGameEntries)
@@ -44,6 +46,7 @@ export function useEntryActions(game: GameDetail, onChange: () => void, onNotice
   const consumer = entries.find((entry) => entry.id === consuming)
   const carrier = entries.find((entry) => entry.id === carrying?.id)
   const payee = entries.find((entry) => entry.id === paying)
+  const receiver = entries.find((entry) => entry.id === giving)
   const players = entries.filter((entry) => entry.kind === 'player' && entry.character_id !== undefined)
   const owned = (entry: GameEntry) => game.characters.find((each) => each.id === entry.character_id)?.owner_id === me
   const myPlayers = players.filter(owned)
@@ -58,34 +61,36 @@ export function useEntryActions(game: GameDetail, onChange: () => void, onNotice
     const mine = entry.kind === 'player' && owned(entry)
     return [
       // A player's card edits what a fight changes, and says so; an NPC's also edits who it is.
-      ...(entry.can_edit ? [{ label: entry.kind === 'player' ? t('game.hp') : t('common.edit'), icon: IconPencil,
+      ...(entry.can_edit ? [{ key: 'hp', label: entry.kind === 'player' ? t('game.hp') : t('common.edit'), icon: IconPencil,
         run: () => { patch.reset(); setEditing(entry.id) } }] : []),
       // Its own entry and its own dialog: it is set once, when the fight starts, and hit points all through it.
-      ...(entry.can_edit ? [{ label: t('vitals.initiative'), icon: IconSwords,
+      ...(entry.can_edit ? [{ key: 'initiative', label: t('vitals.initiative'), icon: IconSwords,
         run: () => { patch.reset(); setRolling(entry.id) } }] : []),
       // The server sends pools to the character's owner and to a DM only; a locked owner reads them and cannot spend.
-      ...((entry.resources ?? []).length > 0 ? [{ label: t('sheet.consumables'), icon: IconDice5,
+      ...((entry.resources ?? []).length > 0 ? [{ key: 'consumables', label: t('sheet.consumables'), icon: IconDice5,
         run: () => setConsuming(entry.id) }] : []),
       // Coins, using and handing over are three entries and three dialogs: each does one thing.
       // A DM pays or charges anybody; an owner counts their own coins.
-      ...(entry.kind === 'player' && (master || mine) ? [{ label: t('game.coins'), icon: IconCoins, run: () => setPaying(entry.id) }] : []),
+      ...(entry.kind === 'player' && (master || mine) ? [{ key: 'coins', label: t('game.coins'), icon: IconCoins, run: () => setPaying(entry.id) }] : []),
       // Using up is the owner's, and a DM's on anybody's: a potion drunk at the table is struck off by whoever is keeping count.
-      ...(mine || (master && entry.kind === 'player') ? [{ label: t('game.useItem'), icon: IconBackpack, run: () => setCarrying({ id: entry.id, mode: 'use' }) }] : []),
+      ...(mine || (master && entry.kind === 'player') ? [{ key: 'use', label: t('game.useItem'), icon: IconBackpack, run: () => setCarrying({ id: entry.id, mode: 'use' }) }] : []),
       // Handing over is offered to anybody with a character of their own to give from, on every card
       // there is somebody to hand to: their own opens as the giver, anybody else's as the receiver.
       ...(entry.kind === 'player' && myPlayers.length > 0 && players.length > 1
-        ? [{ label: t('game.transferItem'), icon: IconArrowsExchange, run: () => setCarrying({ id: entry.id, mode: 'give' }) }] : []),
-      // An item no catalogue holds is written on a page of its own; the search under the roster gives the rest.
-      ...(master && entry.kind === 'player' && entry.character_id ? [{ label: t('customItem.add'), icon: IconPlus,
+        ? [{ key: 'transfer', label: t('game.transfer'), icon: IconArrowsExchange, run: () => setCarrying({ id: entry.id, mode: 'give' }) }] : []),
+      // A DM hands a player anything their catalogue holds, and writes what it does not on a page of its own.
+      ...(master && entry.kind === 'player' && entry.character_id ? [{ key: 'give', label: t('game.giveItem'), icon: IconGift,
+        run: () => setGiving(entry.id) }] : []),
+      ...(master && entry.kind === 'player' && entry.character_id ? [{ key: 'customItem', label: t('customItem.add'), icon: IconPlus,
         run: () => void navigate(`/games/${game.id}/characters/${entry.character_id}/custom-item?entry=${encodeURIComponent(entry.id)}`) }] : []),
       ...(master ? [
-        ...(entry.kind === 'player' ? [{ label: entry.locked ? t('game.unlock') : t('game.lock'), icon: IconShield,
+        ...(entry.kind === 'player' ? [{ key: 'lock', label: entry.locked ? t('game.unlock') : t('game.lock'), icon: IconShield,
           run: () => void act(patch.run(game.id, entry.id, { locked: !entry.locked })) }] : []),
-        ...(index > 0 ? [{ label: t('game.moveUp'), icon: IconArrowUp,
+        ...(index > 0 ? [{ key: 'up', label: t('game.moveUp'), icon: IconArrowUp,
           run: () => void act(order.run(game.id, { entry_id: entry.id, direction: -1 })) }] : []),
-        ...(index < entries.length - 1 ? [{ label: t('game.moveDown'), icon: IconArrowDown,
+        ...(index < entries.length - 1 ? [{ key: 'down', label: t('game.moveDown'), icon: IconArrowDown,
           run: () => void act(order.run(game.id, { entry_id: entry.id, direction: 1 })) }] : []),
-        { label: t('common.remove'), icon: IconTrash,
+        { key: 'remove', label: t('common.remove'), icon: IconTrash,
           run: () => void act(remove.run(game.id, entry.id)), color: 'red' },
       ] : []),
     ]
@@ -99,7 +104,7 @@ export function useEntryActions(game: GameDetail, onChange: () => void, onNotice
       <Menu position="bottom-end">
         <Menu.Target>{target}</Menu.Target>
         <Menu.Dropdown>
-          {actions.map((action) => <Menu.Item key={action.label}
+          {actions.map((action) => <Menu.Item key={action.key}
             {...('color' in action ? { color: action.color } : {})}
             leftSection={<action.icon size={ACTION_ICON_SIZE} />}
             disabled={disabled} onClick={action.run}>{action.label}</Menu.Item>)}
@@ -108,13 +113,17 @@ export function useEntryActions(game: GameDetail, onChange: () => void, onNotice
     )
   }
 
-  /** The same entries laid out as buttons: where there is one entry on the page, nothing needs folding away. */
-  function buttons(entry: GameEntry, index: number) {
-    const actions = actionsFor(entry, index)
+  /**
+   * The same entries laid out as buttons: where there is one entry on the page,
+   * nothing needs folding away. `only` keeps the entries with those keys, for a
+   * page that already does the rest its own way.
+   */
+  function buttons(entry: GameEntry, index: number, only?: readonly string[]) {
+    const actions = actionsFor(entry, index).filter((action) => only === undefined || only.includes(action.key))
     if (actions.length === 0) return null
     return (
       <Group gap="xs">
-        {actions.map((action) => <Button key={action.label} variant="light" size="xs"
+        {actions.map((action) => <Button key={action.key} variant="light" size="xs"
           {...('color' in action ? { color: action.color } : {})}
           leftSection={<action.icon size={ACTION_ICON_SIZE} />}
           disabled={pending} onClick={action.run}>{action.label}</Button>)}
@@ -132,6 +141,8 @@ export function useEntryActions(game: GameDetail, onChange: () => void, onNotice
       onDone={(text) => { setCarrying(null); onNotice?.(t('game.transferred'), text); onChange() }} />}
     {payee?.character_id !== undefined && <CoinsSheet gameId={game.id} entry={payee} characterId={payee.character_id} master={master}
       onClose={() => { setPaying(null); onChange() }} />}
+    {receiver?.character_id !== undefined && <GiveItemSheet gameId={game.id} entry={receiver} characterId={receiver.character_id}
+      onClose={() => setGiving(null)} onDone={(text) => { setGiving(null); onNotice?.(t('game.added'), text); onChange() }} />}
     {consumer && <ConsumablesSheet gameId={game.id} entry={consumer} onClose={() => setConsuming(null)} onChange={onChange} />}
     {selected && <EntryEditor key={selected.id} entry={selected} pending={patch.pending} error={patch.error}
       onClose={() => setEditing(null)} onSave={async (changes) => {
@@ -147,5 +158,5 @@ export function useEntryActions(game: GameDetail, onChange: () => void, onNotice
       }} />}
   </>
 
-  return { menu, buttons, dialogs, error, pending, order, act, master, players }
+  return { menu, buttons, dialogs, error, pending, order, act, master }
 }

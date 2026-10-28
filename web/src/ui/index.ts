@@ -44,6 +44,7 @@ export {
   IconDotsVertical,
   IconFolder,
   IconFolderPlus,
+  IconGift,
   IconGripVertical,
   IconLanguage,
   IconLogout,

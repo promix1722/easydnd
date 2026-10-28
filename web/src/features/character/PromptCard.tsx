@@ -189,17 +189,17 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
                 lastOptionRef.current = event.currentTarget
                 toggle(option.key)
               }}
-              rightSection={
-                option.disabled ? (
-                  <Text size="xs" c="dimmed">
-                    {option.reason}
-                  </Text>
-                ) : null
-              }
             >
               <Stack gap={2} w="100%" style={{ textAlign: 'left', minWidth: 0 }}>
-                <Group justify="space-between" wrap="nowrap" w="100%">
-                  <Text size="sm" style={{ whiteSpace: 'normal', minWidth: 0, flex: 1 }}>
+                {/*
+                  One wrapping row rather than a name squeezed beside its tags:
+                  the name keeps at least 12rem, and where the tags and the
+                  reason do not fit beside that they go under it. On a phone a
+                  row that would not wrap left "Мистическое воззвание" a word
+                  of four letters per line.
+                */}
+                <Group wrap="wrap" w="100%" gap={6} style={{ rowGap: 4 }}>
+                  <Text size="sm" style={{ whiteSpace: 'normal', minWidth: 0, flex: '1 1 12rem' }}>
                     {/*
                       Two points into Strength reads "Strength +2". It used to
                       read "Strength +1" with a ×2 badge beside it, which is the
@@ -209,7 +209,8 @@ export function PromptCard({ prompt, entries, pending, onAnswer, initialAnswers 
                     {stacked(t, stage, option.key, count, entries) ?? option.label}
                   </Text>
                   {option.manual === true && <Badge>{t('custom.manual')}</Badge>}
-                  <SourceTags provenance={option.provenance} rightAligned />
+                  <SourceTags provenance={option.provenance} />
+                  {option.disabled && <Text size="xs" c="dimmed">{option.reason}</Text>}
                 </Group>
               </Stack>
             </Button>

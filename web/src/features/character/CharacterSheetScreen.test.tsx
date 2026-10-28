@@ -558,25 +558,33 @@ describe('an unfinished character', () => {
 })
 
 describe('a character seated in a game', () => {
-  it('has a tab for the game, with what the game keeps and the roster menu as buttons', async () => {
+  it('has a tab for the game, with what the game keeps, three of the roster\'s buttons and slots spent in place', async () => {
+    const player = (id: string, name: string) => ({
+      id: `pc_${id}`, kind: 'player', character_id: id, name, can_edit: true,
+      hp: 7, temp_hp: 2, initiative: 15, tags: ['Poisoned'],
+      stats: { name, max_hp: 24, armor_class: 15, spellcasting: [], speeds: [], senses: [],
+        abilities: { scores: { str: 10, dex: 16, con: 12, int: 10, wis: 12, cha: 10 },
+          modifiers: { str: 0, dex: 3, con: 1, int: 0, wis: 1, cha: 0 } } },
+    })
+    const zephyr = { ...player('chr_000001', 'Zephyr'), resources: [{ id: 'spell-slots/1', group: 'spell-slots', max: 2, used: 0, slot_level: 1 }] }
     const game = {
       id: 'gam_1', group_id: 'grp_1', name: 'Thursday night', created_at: '2026-01-01T00:00:00Z', role: 'player',
-      characters: [{ id: 'chr_000001', owner_id: 'abc', name: 'Zephyr', level: 3 }],
-      entries: [{
-        id: 'pc_chr_000001', kind: 'player', character_id: 'chr_000001', name: 'Zephyr', can_edit: true,
-        hp: 7, temp_hp: 2, initiative: 15, tags: ['Poisoned'],
-        stats: { name: 'Zephyr', max_hp: 24, armor_class: 15, spellcasting: [], speeds: [], senses: [],
-          abilities: { scores: { str: 10, dex: 16, con: 12, int: 10, wis: 12, cha: 10 },
-            modifiers: { str: 0, dex: 3, con: 1, int: 0, wis: 1, cha: 0 } } },
-      }],
+      characters: [{ id: 'chr_000001', owner_id: 'abc', name: 'Zephyr', level: 3 }, { id: 'chr_000002', owner_id: 'xyz', name: 'Bo', level: 3 }],
+      // Somebody else at the table, so that there is somebody to hand an item to.
+      entries: [zephyr, player('chr_000002', 'Bo')],
     }
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const fetch = vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
       const url = String(input)
+      if (options?.method === 'PATCH') {
+        zephyr.resources[0]!.used = JSON.parse(options.body as string).used['spell-slots/1']
+        return jsonResponse(game)
+      }
       if (url.includes('/games?character=chr_000001')) return jsonResponse({ games: [game] })
       if (url.includes('/games/gam_1')) return jsonResponse(game)
       if (url.includes('/sheet')) return jsonResponse({ catalog: { skills: SKILL_CATALOG }, ...SHEET })
       return jsonResponse({ seq: 3, complete: true, prompts: [] })
-    }))
+    })
+    vi.stubGlobal('fetch', fetch)
     const user = setupUser()
     renderAt('desktop', withAuth({}, (
       <MemoryRouter initialEntries={['/characters/chr_000001']}>
@@ -592,8 +600,17 @@ describe('a character seated in a game', () => {
     await user.click(tab)
     expect(await screen.findByText('7 / 24')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Remove tag Poisoned' })).toBeInTheDocument()
-    // The roster row's menu, unfolded: each entry is a button and opens the same dialog.
-    expect(screen.getByRole('button', { name: 'HP' })).toBeInTheDocument()
+    // Three of the roster row's entries, as buttons. Coins and using an item
+    // are the sheet's own tabs, and the slots are spent in their box.
+    for (const name of ['HP', 'Initiative', 'Transfer']) expect.soft(screen.getByRole('button', { name })).toBeInTheDocument()
+    for (const name of ['Coins', 'Use item', 'Consumable slots']) expect.soft(screen.queryByRole('button', { name })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Spend one: Spell slots, level 1' }))
+    expect(await screen.findByRole('img', { name: 'Spell slots, level 1: 1 of 2 left' })).toBeInTheDocument()
+    const spend = fetch.mock.calls.find(([, options]) => options?.method === 'PATCH')!
+    expect(String(spend[0])).toMatch(/\/games\/gam_1\/entries\/pc_chr_000001\?/)
+    expect(JSON.parse(spend[1]!.body as string)).toEqual({ used: { 'spell-slots/1': 1 } })
+
     await user.click(screen.getByRole('button', { name: 'Initiative' }))
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })

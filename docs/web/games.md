@@ -110,8 +110,10 @@ in the hit points dialog: it is set once, when a fight starts, and hit points
 change all through it, so the two were the wrong things to open together.
 Emptying the field clears it -- the entry has not rolled yet. The "…" menu and
 every dialog it opens are `useEntryActions`, a hook rather than part of
-`GameTracker`, because the character's own sheet offers the same menu for its
-own entry (docs/web/sheet.md); a new entry in it appears in both places.
+`GameTracker`, because the character's own sheet offers three of its entries
+for its own entry -- HP, Initiative, Transfer, picked by key -- and spends the
+slots in place (docs/web/sheet.md); a new entry appears on the roster, and on
+the sheet only once it is added to that list.
 **Items and coins** reach the page through the same "…" menu
 and never through the roster payload, which carries no inventory. They are
 three entries and three dialogs, because each does one thing and a player in a
@@ -126,7 +128,7 @@ not put back. **Use item** lists what is used up, with a Use button on each row.
 player's own card, written as the owner (`writeChanges`), and for a DM on every
 player's card, written through the game as a grant of `-1` (`POST
 .../entries/{entry}/items`) and read from the shared sheet -- the only way a
-DM touches a character they do not own. **Transfer item** is offered to
+DM touches a character they do not own. **Transfer** is offered to
 anybody with a character of their own at the game, on every player card while
 there is somebody to hand to. The dialog always shows both ends, a "From" and a
 "To" select: "From" is the viewer's own seated characters, because only an
@@ -142,13 +144,17 @@ draws the sheet's Items tab: that tab is the purse, wearing, dropping and
 adding too, which is the sheet's job. A `Select` in any of these passes
 `SHEET_COMBOBOX` like every select in a `ModalSheet`: without it the dropdown
 is portalled outside the phone's drawer, whose focus trap takes the focus back,
-and the two reopen each other for ever. At the
-foot of the roster a DM has "Give an item": the sheet's own `AddItems` search,
-which takes `onAdd(hit)` rather than writing the backpack itself, with a
-"Give to" select above it and the search scoped to the receiver's catalogue
-(`/shared/{character}/catalog`), because their rule packs decide what exists
-for them. An Add closes the search -- a DM hands out one thing and goes back to
-the table -- and, because nothing on the roster shows an inventory, says so in
+and the two reopen each other for ever. **Give an item** is in each player
+row's "…" menu, for whoever runs the table, beside **Add custom item** -- the
+two ways a DM hands one player something, in the one place that already
+names the player. It opens `GiveItemSheet`: the sheet's own `AddItems` search,
+open from the start in a dialog titled for the receiver (its `onClose` mode),
+taking `onAdd(hit)` rather than writing the backpack itself, and scoped to the
+receiver's catalogue (`/shared/{character}/catalog`), because their rule packs
+decide what exists for them. It used to be a bar at the foot of the roster with
+a "Give to" select, which asked again who the item was for and kept the custom
+item a menu away. An Add closes the dialog -- a DM hands out one thing and goes
+back to the table -- and, because nothing on the roster shows an inventory, says so in
 the same notice ("Added"), which sits in the corner and leaves after four
 seconds. An item's
 description is not opened in place here, as it is on a sheet: a found row, and
@@ -214,7 +220,7 @@ editing walking; they are not exposed as extra form controls. A copied caster's
 highest DC initializes the field, and an explicit edit applies the new DC to
 its casting profiles. Players see only names and ordering. The private flow never calls the
 player seating/share action. The toolbar is one row of six buttons in one
-style -- Add from group, Add NPC stub, Add prepared NPC, Long rest, Short rest,
+style -- Add from group, Add NPC, Add DM character, Long rest, Short rest,
 Order -- with no icons and no quieter variant, because all six are the same
 kind of act on the table. Player seating uses only the group picker. The NPC name is the first field in its edit sheet.
 Tags are managed directly in each row: adding or removing a tag immediately

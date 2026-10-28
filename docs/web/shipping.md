@@ -163,7 +163,10 @@ and nothing looks wrong; installed, it is the first thing anybody sees.
 `shell/chrome.ts` carries the tokens and the three shells apply them, the way
 `HEADER_HEIGHT` already solves the same class of problem. `HEADER_BOX` grows the bar
 upward so it paints behind the status bar, while `paddingTop: SAFE_TOP` on the
-same element keeps the row of controls where it was. The `0px` fallbacks in
+same element keeps the row of controls where it was. At the other end the
+phone's page gets `SAFE_BOTTOM` *on top of* a gutter, never in place of one:
+the inset is 0 in a browser tab, and standing alone it left every page ending
+flush against the bottom of the screen. The `0px` fallbacks in
 those `env()` calls are load-bearing: an `env()` a browser does not know is
 invalid, and an invalid value inside `calc()` poisons the declaration, so the
 header would lose its height rather than gain nothing.

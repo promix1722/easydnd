@@ -14,7 +14,6 @@ import {
 import { CompactStats } from './CompactStats'
 import { EntryTags } from './EntryTags'
 import { FolderTreeSheet } from './FolderTreeSheet'
-import { GrantItems } from './GrantItems'
 import { sheetPath } from './sheetPath'
 import { useEntryActions } from './useEntryActions'
 import { useRosterDrag } from './useRosterDrag'
@@ -46,7 +45,7 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
   const [pickingMonster, setPickingMonster] = useState(false)
   // The row menu and its dialogs are the sheet's too: see useEntryActions.
   const row = useEntryActions(game, onChange, (title, text) => setNotice({ title, text }))
-  const { master, players, order, act } = row
+  const { master, order, act } = row
   const monster = useAction(addGameMonster)
   const rest = useAction(restGame)
   const [resting, setResting] = useState<'short' | 'long' | null>(null)
@@ -144,8 +143,6 @@ export function GameTracker({ game, onChange, onAddFromGroup }: {
           </Box>
         )}
       </Stack>
-      {master && players.length > 0 && <GrantItems gameId={game.id} players={players}
-        onGiven={(text) => setNotice({ title: t('game.added'), text })} />}
       {notice !== null && <Affix position={{ bottom: 16, right: 16 }}>
         <Notification withBorder role="status" color="green" title={notice.title} onClose={() => setNotice(null)}>{notice.text}</Notification>
       </Affix>}

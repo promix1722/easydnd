@@ -1,6 +1,6 @@
 import { Fragment } from 'react'
-import type { ReactNode } from 'react'
-import { Link } from 'react-router'
+import type { MouseEvent, ReactNode } from 'react'
+import { Link, useNavigate } from 'react-router'
 
 import { COINS, equip, groupOf, setTotal, slotsFor, slotted } from '@/domain'
 import type { InventoryRow, Slot } from '@/domain'
@@ -22,6 +22,32 @@ export function ItemDetails({ slug }: { slug: string }) {
   return <Menu.Item component={Link} to={`items/${encodeURIComponent(slug)}`}>{t('item.details')}</Menu.Item>
 }
 
+/**
+ * A press anywhere on an item's card or row opens the same page Details does.
+ * A press on something of its own -- the menu, a button, a link -- is left to
+ * it, and so is one that bubbled up through a portal (a menu entry), which is
+ * in the card's React tree but not in its box. The Details entry stays the
+ * keyboard's way there: the card itself is not a control. Nothing for an item
+ * without a page to open.
+ */
+function useItemPress(slug: string | undefined) {
+  const navigate = useNavigate()
+  if (slug === undefined) return {}
+  return {
+    onClick: (event: MouseEvent<HTMLElement>) => {
+      const target = event.target as Element
+      if (!event.currentTarget.contains(target) || target.closest('button, a, input, [role="menuitem"]')) return
+      void navigate(`items/${encodeURIComponent(slug)}`)
+    },
+    style: { cursor: 'pointer' },
+  }
+}
+
+/** A row's bubble, which a press opens: a component so that the hook is not called in a loop. */
+function ItemPaper({ slug, children }: { slug: string | undefined; children: ReactNode }) {
+  return <Paper withBorder radius="md" p="xs" {...useItemPress(slug)}>{children}</Paper>
+}
+
 const NO_ACTIONS: readonly SheetAction[] = []
 
 /** The line a card gives an item's name, what is beside it and its menu, and the gap under it. */
@@ -39,8 +65,10 @@ const CardGrid = ({ children }: { children: ReactNode }) => <SimpleGrid cols={{ 
  * its page; anything that is neither weapon nor armor says what it is in a
  * line, and nothing here says what it weighs.
  */
-export function ItemCard({ item, label, count = 1, tag, menu, actions = NO_ACTIONS, lookup }: {
+export function ItemCard({ item, slug, label, count = 1, tag, menu, actions = NO_ACTIONS, lookup }: {
   item: Item | undefined
+  /** What a press opens: the item's page. Absent for one that has none. */
+  slug?: string | undefined
   label: string
   count?: number
   /** Beside the name: the slot a worn item is in. */
@@ -55,7 +83,8 @@ export function ItemCard({ item, label, count = 1, tag, menu, actions = NO_ACTIO
   const numbers = weaponNumbers(t, item, actions, word)
   const armor = numbers === undefined ? armorStats(t, item) : undefined
   const facts = item === undefined || numbers !== undefined || armor !== undefined ? undefined : itemFacts(t, item, word, false, false)
-  return <Stack gap={6}>
+  const press = useItemPress(slug)
+  return <Stack gap={6} {...press}>
     <Group gap={6} wrap="nowrap" mih={NAME_LINE - 6}>
       <Group gap={8} wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
         <Text size="sm" fw={600} truncate>{label}</Text>
@@ -94,8 +123,8 @@ export function ItemMenu({ name, disabled = false, children }: { name: string; d
 
 /**
  * Inventory rows, one bubble per entity: the name, its numbers on one line,
- * and where it was published. Everything a row has to say is on the row;
- * nothing opens.
+ * and where it was published. Pressing one opens the item's page, which is
+ * where its description is; the row itself does not unfold.
  *
  * Only what is carried: a worn item is on its slot's card and nowhere else, so
  * a row counts the units that are not on the character and is not drawn when
@@ -188,9 +217,9 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
             </ItemMenu>
       )
       if (cards) return <Paper key={row.key} withBorder radius="md" p="xs">
-        <ItemCard item={item} label={label} count={count} menu={menu} lookup={lookup} />
+        <ItemCard item={item} slug={row.item} label={label} count={count} menu={menu} lookup={lookup} />
       </Paper>
-      return <Paper key={row.key} withBorder radius="md" p="xs">
+      return <ItemPaper key={row.key} slug={row.item}>
         <Group justify="space-between" wrap="nowrap" gap="sm" align="flex-start">
           <ItemIcon icon={item?.icon} />
           <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
@@ -218,7 +247,7 @@ export function InventoryRows({ rows, equipment, items, name, lookup, empty, dis
           {isDesktop && tags}
           </Stack>
         </Group>
-      </Paper>
+      </ItemPaper>
     })}
   </Rows>
 }

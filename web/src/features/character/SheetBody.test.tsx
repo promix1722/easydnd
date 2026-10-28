@@ -1,4 +1,4 @@
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { fireEvent, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -101,7 +101,9 @@ const NAMED: Sheet = {
  */
 // No Spells tab: this character casts nothing, and a tab with nothing under
 // it is a question the sheet should not ask.
-const SECTIONS = ['Overview', 'Actions', 'Equipment', 'Items']
+const SECTIONS = ['Overview', 'Actions', 'Equipment', 'Items', 'Coins']
+/** A phone gives Overview's four headed panels a tab each: three after it, Personality by Custom at the end. */
+const PHONE_SECTIONS = ['Overview', 'Skills', 'Proficiencies', 'Traits and features', 'Actions', 'Equipment', 'Items', 'Coins', 'Personality']
 
 /** What the Equipment tab sorts and slots by. */
 const ITEMS: Sheet = {
@@ -172,8 +174,8 @@ describe('the sheet body on a phone', () => {
     // The first tab list is the sheet's; the Equipment tab holds one of its own.
     expect
       .soft(within(screen.getAllByRole('tablist')[0]!).getAllByRole('tab').map((tab) => tab.textContent))
-      .toEqual(SECTIONS)
-    for (const name of SECTIONS) {
+      .toEqual(PHONE_SECTIONS)
+    for (const name of PHONE_SECTIONS) {
       expect.soft(screen.getByRole('group', { name })).toBeInTheDocument()
     }
   })
@@ -259,6 +261,22 @@ describe('the panels that were sentences', () => {
   it('opens on the tab the URL names', () => {
     renderBare('desktop', <MemoryRouter initialEntries={['/?tab=items']}><SheetBody sheet={ITEMS} /></MemoryRouter>)
     expect(screen.getByRole('tab', { name: 'Items' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  // At both widths, since a phone's row and a desktop's are different trees.
+  it.each(['mobile', 'desktop'] as const)('opens an item\'s page when it is pressed, and leaves its menu to the menu (%s)', async (viewport) => {
+    renderBare(viewport, <MemoryRouter initialEntries={['/?tab=items']}><Routes>
+      <Route path="/" element={<SheetBody sheet={ITEMS} />} />
+      <Route path="/items/:slug" element={<p>page of the item</p>} />
+    </Routes></MemoryRouter>)
+    const user = setupUser()
+
+    await user.click(screen.getAllByRole('button', { name: "Actions for Thieves' Tools" })[0]!)
+    expect(screen.queryByText('page of the item')).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+
+    await user.click(screen.getAllByText("Thieves' Tools")[0]!)
+    expect(await screen.findByText('page of the item')).toBeInTheDocument()
   })
 
   it('draws what is worn in its slot, and what is owned by group', () => {
@@ -378,8 +396,8 @@ describe('the panels that were sentences', () => {
     // Nothing is fetched until a search is opened, and nothing opens a dialog.
     expect(searches).toHaveLength(0)
     await user.click(screen.getByRole('tab', { name: 'Equipment' }))
-    await user.click(screen.getByRole('button', { name: 'Add equipment' }))
-    await within(screen.getByRole('region', { name: 'Add equipment' })).findByText('3 items')
+    await user.click(screen.getByRole('button', { name: 'Add item' }))
+    await within(screen.getByRole('region', { name: 'Add item' })).findByText('3 items')
     expect(last()?.get('wearable')).toBe('true')
     expect(last()?.get('limit')).toBe('20')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

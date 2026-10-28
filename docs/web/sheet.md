@@ -4,8 +4,8 @@ Part of the [web client documentation](../web.md).
 
 ## The sheet decides what order things come in
 
-Up to seven tabs of its own, at every width: **Overview**, **Actions**, **Spells**,
-**Resources**, **Equipment**, **Items**, **Custom** -- and ahead of them, on
+Up to eight tabs of its own on a wide screen, twelve on a phone: **Overview**, **Actions**, **Spells**,
+**Resources**, **Equipment**, **Items**, **Coins**, **Custom** -- and ahead of them, on
 its owner's screen, one per game the character is seated in (see "A game the
 character is seated in" below). Spells and Resources are
 there when the character has any; Custom is there for the owner always and
@@ -18,9 +18,14 @@ going through the pack.
 
 - **Overview** is who the character is and the abilities everything else is
   derived from, the body's state, then skills, proficiencies, traits and
-  personality as headed panels -- two abreast on a wide screen, stacked on a
-  phone. Personality prints the trait, ideal, bond and flaw as the player wrote
-  them, and says so when one has not been written.
+  personality as headed panels two abreast. **On a phone those four are tabs of
+  their own** -- **Skills**, **Proficiencies** and **Traits and features**
+  straight after Overview, **Personality** at the end beside Custom, the other
+  tab in the player's own words -- because stacked one under another
+  they turned Overview into the longest scroll on the sheet. The tab names
+  each, so the panel drops its heading there. Personality prints the trait,
+  ideal, bond and flaw as the player wrote them, and says so when one has not
+  been written.
 - **Actions** lists what the server derived (`sheet.actions`) and nothing
   else. The list is
   `features/character/SheetActions.tsx`: one group per source -- **Equipment**,
@@ -87,9 +92,11 @@ lists the server splits it across. A worn item is on its card and nowhere
 else -- a row counts only the units still carried and is not drawn when there
 are none -- so nothing is listed twice and "where is my armor" has one answer.
 
-**Items** is the rest, read top-down with nothing to switch: the **Coins**
-panel first, then **Consumables**, then **Other gear**, each a panel with the
-same heading the Wearable rows have.
+**Items** is the rest, read top-down with nothing to switch: **Consumables**,
+then **Other gear**, each a panel with the same heading the Wearable rows
+have. **Coins is a tab of its own**, straight after Items (`SheetPurse`), at
+every width: a purse is counted at the table more than the gear beside it is
+read, and at the top of Items it was a scroll away from the rows.
 
 **Each tab ends with an Add button, and each adds from its own half of the
 catalogue.** `AddItems` in `ItemPicker.tsx` is the button and the search it
@@ -101,10 +108,10 @@ like spells the items are never pulled whole (`searchItems` against
 `…/characters/{id}/catalog/items`, docs/backend.md). **Close** puts the
 button back.
 
-- **Add equipment**, after the Wearable rows, lists only what has a slot;
-  **Add item**, after Other gear, only what has none. That scope is the tab's
-  and is not a filter the player can clear, so a thing added from a tab
-  appears on that tab.
+- **Add item** is one caption on both tabs, and what it lists is the tab's:
+  on Equipment, under the Wearable rows, only what has a slot; on Items,
+  under Other gear, only what has none. That scope is not a filter the player
+  can clear, so a thing added from a tab appears on that tab.
 - **The category options arrive with the page.** The server names them and
   scopes them to the tab's half; nothing here derives them from data.
 - **A row is pressed to read the item.** It opens to the same `ItemBody` the
@@ -141,7 +148,7 @@ screen at `/games/:id/characters/:character/custom-item` -- under `/games` so
 the trail reads Games / the game / the character -- from **Add custom item** in a player row's menu,
 shown to whoever runs the table, with the entry in `?entry=`; there it posts to
 `/games/{id}/entries/{entry}/custom-items` and returns to the game, which says
-what was given in the same corner notice the item search under the roster
+what was given in the same corner notice **Give an item** in that menu
 uses -- the page passes it through the navigation's `state`. The form is the
 name and description, an icon chosen from a grid of the packs' item icons
 (fetched when the grid is opened, never before), category, slot, weight and
@@ -180,7 +187,10 @@ shape: the value large, because it is what is read, what it is small beneath,
 a rule between one and the next -- and nothing in capitals, on any item
 caption or badge. A dimmed sentence -- "+5 to hit · 1d8+3 · 5 ft." -- would be
 three things read off mid-turn written as prose. Where a row is wide they are columns at its right, and on a
-slot card they are columns beside the icon that wrap rather than clip; on a
+slot card they are columns beside the icon that wrap rather than clip -- and a
+column that opens a wrapped line drops its rule, since a rule with nothing to
+its left divides nothing (the row is pulled left under a clip, so it is the
+browser's wrap that decides, not an index); on a
 phone's inventory row, which is too narrow for three columns beside a name,
 they lead the row's list of captioned facts. The numbers come from the sheet's action for the weapon when it is
 wielded (`weaponNumbers` in `options.ts`), so both tabs print the server's own
@@ -193,8 +203,13 @@ Properties, weight and thrown range are under
 the name, each under its own caption; see the bubble below.
 
 **Every item has a page of its own**, `features/character/ItemScreen`, opened
-by **Details** in its menu -- on an inventory row and on a slot card alike, and
-on a sheet that is only being read, where Details is the menu's one entry. It
+by **pressing the item** anywhere but its menu, and by **Details** in that menu
+-- on an inventory row and on a slot card alike, at both widths, and on a sheet
+that is only being read, where Details is the menu's one entry. The press is
+`useItemPress` in `Inventory.tsx`: a click on the card that did not land on
+something of its own, so the menu, its entries (which bubble up through their
+portal) and any button still do what they do. Details stays because the card
+is not a control -- it is the keyboard's way to the same page. It
 is the spell page's shape: the icon beside the name, captioned facts (armor
 class, damage, range, properties, weight, cost, the book it is from), then the
 description. It reads the *character's* catalogue rather than the compendium's,
@@ -575,14 +590,20 @@ one `lead` panel per game, named for the game and drawn by
 `features/games/GameSeat`: the card the game's roster draws for the entry --
 `CompactStats` and `EntryTags`, unfolded at every width since there is one row
 and not a table of them -- then its "Consumable slots" as that game has spent
-them. The sheet's own Resources tab stays what it was, the full pools, which is
-the reference those marks are read against. Tags are edited in the card as
-they are on the roster; every other change is one of the entries the
-game's roster row has in its "…" menu, laid out here as a row of buttons since
-one entry needs nothing folded away -- one hook, `useEntryActions`, builds the
-list for both, so who may do what is decided once
-(docs/web/games.md). Three things follow from it being a game's tab rather than
-the sheet's:
+them, **spent in that box** by its − and + (`ConsumablesEditor`, the body of
+the roster's Consumable slots dialog) rather than through a button that opens
+the same marks a second time. The sheet's own Resources tab stays what it
+was, the full pools, which is the reference those marks are read against.
+Tags are edited in the card as they are on the roster. Above it are **HP**,
+**Initiative** and **Transfer** -- three of the entries the game's roster row
+has in its "…" menu, laid out as buttons since one entry needs nothing folded
+away; one hook, `useEntryActions`, builds the list for both, so who may do
+what is decided once (docs/web/games.md). The rest of that menu is left out
+on purpose: coins and using an item are the sheet's own Coins and Items tabs
+(an item's "⋮" has Use), and a DM's entries -- lock, order, remove, a custom
+item -- are the game page's work, so they stay there even when the owner is
+the DM. Three things follow from it being a game's tab rather than the
+sheet's:
 
 - **Overview still opens.** The games arrive after the sheet, and a sheet that
   switched tab a moment after it drew would be a page that moves under the

@@ -108,7 +108,7 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
           const from = slotOfCard(each)
           const slot = from === ELSEWHERE ? undefined : from
           // Every worn item opens its page; taking it off or dropping it is the owner's.
-          return <ItemCard key={`${slug}:${at}`} item={items.get(slug)} label={name(slug)} tag={slotName} actions={actions} lookup={lookup} menu={
+          return <ItemCard key={`${slug}:${at}`} item={items.get(slug)} slug={slug} label={name(slug)} tag={slotName} actions={actions} lookup={lookup} menu={
             <ItemMenu name={name(slug)}>
               <ItemDetails slug={slug} />
               {onChange && !disabled && <>
@@ -136,17 +136,34 @@ export function SheetEquipment({ equipment, items, name, lookup, actions = [], d
         <Text size="xs" c="dimmed">{t('equipment.group.wearable')}</Text>
         <InventoryRows cards rows={rows} equipment={equipment} items={items} name={rowName(name)} lookup={lookup}
           empty={t('sheet.empty')} disabled={disabled} {...(onChange ? { onChange } : {})} />
-        {onChange && <AddItems label={t('equipment.addEquipment')} wearable owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} added={(hit) => t('equipment.added', { item: hit.name })} beside={<AddCustomItem tab="equipment" />} />}
       </Stack>
     </Panel>
+    {/* A panel of its own, as on the Items tab: the two tabs end the same way. */}
+    {onChange && <Panel>
+      <AddItems label={t('equipment.addItem')} wearable owned={ownedOf(equipment)} disabled={disabled} onAdd={addOne(equipment, onChange)} added={(hit) => t('equipment.added', { item: hit.name })} beside={<AddCustomItem tab="equipment" />} />
+    </Panel>}
   </Stack>
 }
 
 /**
- * The sheet's Items tab, read top-down: the purse, then what is used up, then
- * everything else carried but not worn. With `onChange`, the purse is five
- * fields, each row has a menu, and Add item at the foot searches the half of
- * the catalogue that is carried rather than worn.
+ * The purse, on a tab of its own: it is counted at the table often enough to be
+ * worth not scrolling past the gear for. With `onChange` it is five fields.
+ */
+export function SheetPurse({ equipment, disabled = false, onChange }: Pick<InventoryProps, 'equipment' | 'disabled' | 'onChange'>) {
+  const t = useT()
+  return <Panel>
+    <Stack gap="sm">
+      <Text size="xs" c="dimmed">{t('equipment.purse')}</Text>
+      <Purse purse={equipment.purse} disabled={disabled}
+        {...(onChange ? { onChange: (unit: string, amount: number) => onChange([setCoin(unit, amount)]) } : {})} />
+    </Stack>
+  </Panel>
+}
+
+/**
+ * The sheet's Items tab, read top-down: what is used up, then everything else
+ * carried but not worn. With `onChange` each row has a menu, and Add item at
+ * the foot searches the half of the catalogue that is carried rather than worn.
  */
 export function SheetItems({ equipment, items, name, lookup, disabled = false, onChange }: InventoryProps) {
   const t = useT()
@@ -161,13 +178,6 @@ export function SheetItems({ equipment, items, name, lookup, disabled = false, o
   </Panel>
 
   return <Stack gap="md">
-    <Panel>
-      <Stack gap="sm">
-        <Text size="xs" c="dimmed">{t('equipment.purse')}</Text>
-        <Purse purse={equipment.purse} disabled={disabled}
-          {...(onChange ? { onChange: (unit: string, amount: number) => onChange([setCoin(unit, amount)]) } : {})} />
-      </Stack>
-    </Panel>
     {section('consumable', t('equipment.group.consumable'))}
     {section('gear', t('equipment.group.gear'))}
     {onChange && <Panel>

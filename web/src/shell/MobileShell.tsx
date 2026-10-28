@@ -136,8 +136,10 @@ export function MobileShell() {
       padding="sm"
       // The phone is the viewport this matters on: launched from a home
       // screen there is no browser chrome over the notch, and none under the
-      // home indicator either. See ./chrome.ts.
-      styles={{ header: { paddingTop: SAFE_TOP }, main: { paddingBottom: SAFE_BOTTOM } }}
+      // home indicator either. See ./chrome.ts. The inset is added to a
+      // gutter rather than standing in for one: on its own it is 0 in a
+      // browser tab, and every page ended flush against the screen's edge.
+      styles={{ header: { paddingTop: SAFE_TOP }, main: { paddingBottom: `calc(var(--mantine-spacing-xl) + ${SAFE_BOTTOM})` } }}
     >
       <AppShell.Header>
         <Group h="100%" px="md" gap={4} wrap="nowrap">

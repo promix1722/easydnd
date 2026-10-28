@@ -9,12 +9,27 @@ import { ResourcePools } from '../character/ResourcePools'
 import { poolsOf } from './pools'
 
 /**
- * One entry's consumables, in a dialog of their own. A press is drawn at once
- * from a local count and saved behind it, with its own action: sharing the
- * roster's would grey every control on the page for the length of a request.
+ * One entry's consumables, in a dialog of their own: the roster's, where a row
+ * has no room for them.
  */
 export function ConsumablesSheet({ gameId, entry, onClose, onChange }: {
   gameId: string; entry: GameEntry; onClose: () => void; onChange: () => void
+}) {
+  const t = useT()
+  return <ModalSheet opened onClose={onClose} title={t('sheet.consumables')}>
+    <ConsumablesEditor gameId={gameId} entry={entry} onChange={onChange} />
+  </ModalSheet>
+}
+
+/**
+ * One entry's consumables, spent where they are drawn: the dialog's body, and
+ * the box under a character's own game card. A press is drawn at once from a
+ * local count and saved behind it, with its own action: sharing the roster's
+ * would grey every control on the page for the length of a request.
+ * Read-only for an entry the viewer cannot edit.
+ */
+export function ConsumablesEditor({ gameId, entry, onChange }: {
+  gameId: string; entry: GameEntry; onChange: () => void
 }) {
   const t = useT()
   const pools = poolsOf(entry)
@@ -30,11 +45,9 @@ export function ConsumablesSheet({ gameId, entry, onClose, onChange }: {
     if (await save.run(gameId, entry.id, { used: { [id]: used } }) === null) forget(id)
     else onChange()
   }
-  return <ModalSheet opened onClose={onClose} title={t('sheet.consumables')}>
-    <Stack gap="sm">
-      {save.error !== null && <Alert color="red" title={t('group.actionFailed')}>{save.error}</Alert>}
-      <ResourcePools pools={pools.map((pool) => ({ ...pool, used: local[pool.id] ?? pool.used }))}
-        {...(entry.can_edit ? { onChange: (id: string, used: number) => void spend(id, used) } : {})} />
-    </Stack>
-  </ModalSheet>
+  return <Stack gap="sm">
+    {save.error !== null && <Alert color="red" title={t('group.actionFailed')}>{save.error}</Alert>}
+    <ResourcePools pools={pools.map((pool) => ({ ...pool, used: local[pool.id] ?? pool.used }))}
+      {...(entry.can_edit ? { onChange: (id: string, used: number) => void spend(id, used) } : {})} />
+  </Stack>
 }

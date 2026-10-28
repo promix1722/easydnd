@@ -45,14 +45,31 @@ export function WeaponStats({ damage, hit, range, wrap = false }: {
  */
 export function StatColumns({ stats, wrap = false }: { stats: readonly Stat[]; wrap?: boolean }) {
   if (stats.length === 0) return null
+  const column = (stat: Stat, ruled: boolean) => (
+    <Stack key={stat.key} gap={0} {...(wrap || stat.width === undefined ? {} : { miw: { md: stat.width } })} {...(ruled ? { pl: 'sm', style: { borderLeft: RULE } } : {})}>
+      <Text size="md" fw={700} lh={1.25} {...(stat.color ? { c: stat.color } : {})} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{stat.value}</Text>
+      <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>{stat.label}</Text>
+    </Stack>
+  )
+  if (!wrap) {
+    return (
+      <Group gap="sm" wrap="nowrap" style={{ rowGap: 2, flexShrink: 0 }}>
+        {stats.map((stat, at) => column(stat, at > 0))}
+      </Group>
+    )
+  }
+  // Which column starts a line is the browser's to decide, so a rule on "every
+  // column but the first" put one at the head of a wrapped line -- a short
+  // bow's range under its damage, ruled off from nothing. Instead every column
+  // is ruled, the row is pulled left by one rule and its padding, and the box
+  // around it clips: whatever column opens a line has its rule cut away.
   return (
-    <Group gap="sm" wrap={wrap ? 'wrap' : 'nowrap'} style={{ rowGap: 2, ...(wrap ? { minWidth: 0 } : { flexShrink: 0 }) }}>
-      {stats.map((stat, at) => (
-        <Stack key={stat.key} gap={0} {...(wrap || stat.width === undefined ? {} : { miw: { md: stat.width } })} {...(at > 0 ? { pl: 'sm', style: { borderLeft: '1px solid var(--mantine-color-default-border)' } } : {})}>
-          <Text size="md" fw={700} lh={1.25} {...(stat.color ? { c: stat.color } : {})} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{stat.value}</Text>
-          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>{stat.label}</Text>
-        </Stack>
-      ))}
-    </Group>
+    <div style={{ minWidth: 0, overflow: 'hidden' }}>
+      <Group gap="sm" wrap="wrap" style={{ rowGap: 2, marginLeft: 'calc(-1px - var(--mantine-spacing-sm))' }}>
+        {stats.map((stat) => column(stat, true))}
+      </Group>
+    </div>
   )
 }
+
+const RULE = '1px solid var(--mantine-color-default-border)'

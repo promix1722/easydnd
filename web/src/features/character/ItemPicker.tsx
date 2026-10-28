@@ -32,8 +32,13 @@ const FILTER_WIDTH = { w: { base: '100%', sm: 220 }, miw: 0, maw: '100%' } as co
  * waits for `owned` to show the item, so it is never said of a write that
  * failed.
  */
-export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabled = false, onAdd, added, detailsTo, beside, children }: {
+export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabled = false, onAdd, added, detailsTo, beside, onClose, children }: {
   label: string
+  /**
+   * The search in a dialog of its own, which names it and closes it: open from
+   * the start, with no button and no heading of its own.
+   */
+  onClose?: () => void
   /** Drawn on the button's line while the search is closed: the other way to add something. */
   beside?: ReactNode
   /** Absent searches both halves: a DM hands out anything. */
@@ -51,7 +56,7 @@ export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabl
 }) {
   const t = useT()
   const scope = useCatalogScope()
-  const [opened, setOpened] = useState(false)
+  const [opened, setOpened] = useState(onClose !== undefined)
   const [q, setQ] = useState('')
   const [category, setCategory] = useState<string | null>(null)
   const [kind, setKind] = useState<string | null>(null)
@@ -98,10 +103,10 @@ export function AddItems({ label, wearable = null, owned = NOTHING_OWNED, disabl
   }
   return (
     <Stack component="section" aria-label={label} gap="md">
-      <Group justify="space-between">
+      {onClose === undefined && <Group justify="space-between">
         <Text size="xs" c="dimmed">{label}</Text>
         <Button variant="default" onClick={() => setOpened(false)}>{t('common.close')}</Button>
-      </Group>
+      </Group>}
       {children}
       <TextInput value={q} onChange={(event) => setQ(event.currentTarget.value)}
         placeholder={t('equipment.searchItems')} aria-label={t('equipment.searchItems')} />

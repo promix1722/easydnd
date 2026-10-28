@@ -278,8 +278,8 @@ describe.each(['mobile', 'desktop'] as const)('game tracking (%s)', (viewport) =
   it('gives the master controls for sorting, moving, locking and private monsters', async () => {
     renderGame(viewport, gameAs('dm'))
     await screen.findByText('Ada')
-    expect(screen.getByRole('button', { name: 'Add NPC stub' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add prepared NPC' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add NPC' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add DM character' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Order' })).toBeInTheDocument()
     const fetch = vi.fn(async () => new Response(JSON.stringify(gameAs('dm')), { status: 200 }))
     vi.stubGlobal('fetch', fetch)
@@ -477,9 +477,9 @@ describe.each(['mobile', 'desktop'] as const)('tracker refinements (%s)', (viewp
 
   it('puts character and NPC add buttons in the toolbar above the roster', async () => {
     renderGame(viewport, gameAs('dm'))
-    const button = await screen.findByRole('button', { name: 'Add prepared NPC' })
+    const button = await screen.findByRole('button', { name: 'Add DM character' })
     const toolbar = button.parentElement!
-    expect(toolbar).toContainElement(screen.getByRole('button', { name: 'Add NPC stub' }))
+    expect(toolbar).toContainElement(screen.getByRole('button', { name: 'Add NPC' }))
     const row = screen.getByRole('article', { name: 'Ada' })
     expect(button.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     const addCharacter = screen.getByRole('button', { name: 'Add from group' })
@@ -488,7 +488,7 @@ describe.each(['mobile', 'desktop'] as const)('tracker refinements (%s)', (viewp
     expect(toolbar).toContainElement(addCharacter)
     // Six actions, one style: no button is drawn quieter than the others.
     const buttons = within(toolbar).getAllByRole('button')
-    expect(buttons.map((each) => each.textContent)).toEqual(['Add from group', 'Add NPC stub', 'Add prepared NPC', 'Long rest', 'Short rest', 'Order'])
+    expect(buttons.map((each) => each.textContent)).toEqual(['Add from group', 'Add NPC', 'Add DM character', 'Long rest', 'Short rest', 'Order'])
     expect(new Set(buttons.map((each) => each.getAttribute('data-variant')))).toEqual(new Set(['light']))
     expect(screen.queryByRole('button', { name: 'Add my characters' })).not.toBeInTheDocument()
   })
@@ -722,16 +722,19 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     await waitFor(() => expect(posted('coins')).toEqual([{ unit: 'sp', amount: 4 }, { unit: 'gp', amount: 5 }]))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 
-    await user.click(screen.getByRole('button', { name: 'Give an item' }))
-    await user.click(await screen.findByRole('button', { name: 'Add Dagger' }))
+    // Giving is in the player's own menu, and its dialog is the search, already open.
+    expect(screen.queryByRole('button', { name: 'Give an item' })).not.toBeInTheDocument()
+    await pressRowAction(viewport, 'Ada', 'Give an item')
+    const giving = within(await screen.findByRole('dialog', { name: 'Give Ada an item' }))
+    // A hit is a link to its page under the game.
+    expect(await giving.findByRole('link', { name: 'Dagger' })).toHaveAttribute('href', '/games/gam_1/characters/chr_1/items/dagger')
+    await user.click(giving.getByRole('button', { name: 'Add Dagger' }))
     await waitFor(() => expect(posted('items')).toEqual([{ item: 'dagger', count: 1 }]))
     const notice = await screen.findByRole('status')
     expect(notice).toHaveTextContent('Added')
     expect(notice).toHaveTextContent('Dagger given to Ada.')
-    // The search closed behind the gift, and a hit is a link to its page under the game.
-    expect(screen.queryByRole('button', { name: 'Add Dagger' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Give an item' }))
-    expect(await screen.findByRole('link', { name: 'Dagger' })).toHaveAttribute('href', '/games/gam_1/characters/chr_1/items/dagger')
+    // One gift closes the dialog.
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('lets a DM use up an item of a character that is not theirs, through the game', async () => {
@@ -796,13 +799,13 @@ describe.each(['mobile', 'desktop'] as const)('game damage editor (%s)', (viewpo
     expect(screen.getByRole('status')).toHaveTextContent('Healing potion used.')
 
     // Handing over names both ends whichever card it was pressed on, and one transfer closes the dialog and says so.
-    await pressRowAction(viewport, 'Ada', 'Transfer item')
+    await pressRowAction(viewport, 'Ada', 'Transfer')
     const own = within(await screen.findByRole('dialog', { name: 'Transfer item' }))
     expect(own.getAllByLabelText('From')[0]).toHaveValue('Ada')
     expect(own.getAllByLabelText('To')[0]).toHaveValue('Bo')
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    await pressRowAction(viewport, 'Bo', 'Transfer item')
+    await pressRowAction(viewport, 'Bo', 'Transfer')
     const giving = within(await screen.findByRole('dialog', { name: 'Transfer item' }))
     expect(giving.getAllByLabelText('From')[0]).toHaveValue('Ada')
     expect(giving.getAllByLabelText('To')[0]).toHaveValue('Bo')

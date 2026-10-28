@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
 
@@ -18,6 +18,7 @@ import {
   Text,
   Title,
   joinProse,
+  useIsDesktop,
 } from '@/ui'
 import type { DeckPanel } from '@/ui'
 
@@ -26,7 +27,7 @@ import { IdentityTable } from './IdentityTable'
 import { ProficienciesPanel } from './ProficienciesPanel'
 import { ResourcePools } from './ResourcePools'
 import { SheetActions } from './SheetActions'
-import { SheetEquipment, SheetItems } from './SheetEquipment'
+import { SheetEquipment, SheetItems, SheetPurse } from './SheetEquipment'
 import { SkillsPanel } from './SkillsPanel'
 import { Vitals } from './Vitals'
 import { SheetSpells } from './SheetSpells'
@@ -48,11 +49,15 @@ import { abilityAbbr, abilityName } from './labels'
  * `onEquipment`: only the owner's screen passes it, and without it nothing on
  * the sheet can be pressed.
  *
- * The sheet is a handful of tabs at every width -- Overview, Actions, Spells,
- * Resources, Equipment, Items, Custom -- handed to `ui/TabDeck`, which draws a tab row on a wide screen
- * and the same row over a swiped deck on a phone. A handful rather than a tab per
- * section: a sheet is read by what you are doing (looking someone up, taking a
- * turn, casting, gearing up), not by which table of the rulebook a number is in.
+ * The sheet is a handful of tabs -- Overview, Actions, Spells, Resources,
+ * Equipment, Items, Coins, Custom -- handed to `ui/TabDeck`, which draws a tab row on a
+ * wide screen and the same row over a swiped deck on a phone. A handful rather
+ * than a tab per section: a sheet is read by what you are doing (looking
+ * someone up, taking a turn, casting, gearing up), not by which table of the
+ * rulebook a number is in. The one exception is a phone, where Skills,
+ * Proficiencies, Traits and Personality leave Overview for tabs of their own --
+ * the first three after it, Personality just before Custom: two abreast they
+ * fit a wide Overview, stacked they made it a long scroll.
  */
 export function SheetBody({
   sheet: s,
@@ -112,6 +117,7 @@ export function SheetBody({
     }))
 
   const t = useT()
+  const isDesktop = useIsDesktop()
   // The tab is in the URL, so the way back from an item's page or from
   // writing a custom one lands on the tab it was opened from.
   const [params, setParams] = useSearchParams()
@@ -146,6 +152,74 @@ export function SheetBody({
     </Panel>
   )
 
+  const sections: DeckPanel[] = [
+    { value: 'skills', label: t('sheet.skills'), content: <SkillsPanel skills={s.skills} catalog={skills} /> },
+    {
+      value: 'proficiencies',
+      label: t('sheet.proficiencies'),
+      content: (
+        <ProficienciesPanel
+          proficiencies={s.proficiencies}
+          catalog={proficiencies}
+          proficiencyBonus={s.status.proficiencyBonus}
+        />
+      ),
+    },
+    {
+      value: 'traits',
+      label: t('sheet.traitsAndFeatures'),
+      content: (
+        <Stack gap="sm">
+          <ItemList
+            label={t('sheet.traits')}
+            items={rows('traits', s.traits ?? [])}
+            empty={t('sheet.noTraits')}
+            open={opened}
+            onOpen={setOpened}
+          />
+          <ItemList
+            label={t('sheet.features')}
+            items={featureLines}
+            empty={t('sheet.noFeatures')}
+            open={opened}
+            onOpen={setOpened}
+          />
+          <ItemList
+            label={t('sheet.languages')}
+            items={rows('languages', s.base.languages ?? [])}
+            empty={t('sheet.none')}
+            open={opened}
+            onOpen={setOpened}
+          />
+        </Stack>
+      ),
+    },
+    {
+      // In the player's own words, so each answer is a line of prose rather than a list entry.
+      value: 'personality',
+      label: t('stage.personality'),
+      content: (
+        <Stack gap="sm">
+          {([
+            [t('written.personalityTrait'), identity.personalityTraits],
+            [t('written.ideal'), identity.ideals],
+            [t('written.bond'), identity.bonds],
+            [t('written.flaw'), identity.flaws],
+          ] as const).map(([label, lines]) => (
+            <Stack key={label} gap={4}>
+              <Text size="xs" c="dimmed" tt="uppercase">{label}</Text>
+              {lines?.length
+                ? lines.map((line, at) => <Text key={at} size="sm" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{line}</Text>)
+                : <Text size="sm" c="dimmed">{t('sheet.none')}</Text>}
+            </Stack>
+          ))}
+        </Stack>
+      ),
+    },
+  ]
+
+  const phoneTabs = isDesktop ? [] : sections.map((section) => ({ ...section, content: <Panel>{section.content}</Panel> }))
+
   const panels: DeckPanel[] = [
     ...lead,
     {
@@ -157,62 +231,18 @@ export function SheetBody({
           {who}
           {abilities}
           <Vitals sheet={s} />
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
-            {headed(t('sheet.skills'), <SkillsPanel skills={s.skills} catalog={skills} />)}
-            {headed(t('sheet.proficiencies'), (
-              <ProficienciesPanel
-                proficiencies={s.proficiencies}
-                catalog={proficiencies}
-                proficiencyBonus={s.status.proficiencyBonus}
-              />
-            ))}
-            {headed(t('sheet.traitsAndFeatures'), (
-              <Stack gap="sm">
-                <ItemList
-                  label={t('sheet.traits')}
-                  items={rows('traits', s.traits ?? [])}
-                  empty={t('sheet.noTraits')}
-                  open={opened}
-                  onOpen={setOpened}
-                />
-                <ItemList
-                  label={t('sheet.features')}
-                  items={featureLines}
-                  empty={t('sheet.noFeatures')}
-                  open={opened}
-                  onOpen={setOpened}
-                />
-                <ItemList
-                  label={t('sheet.languages')}
-                  items={rows('languages', s.base.languages ?? [])}
-                  empty={t('sheet.none')}
-                  open={opened}
-                  onOpen={setOpened}
-                />
-              </Stack>
-            ))}
-            {/* In the player's own words, so each answer is a line of prose rather than a list entry. */}
-            {headed(t('stage.personality'), (
-              <Stack gap="sm">
-                {([
-                  [t('written.personalityTrait'), identity.personalityTraits],
-                  [t('written.ideal'), identity.ideals],
-                  [t('written.bond'), identity.bonds],
-                  [t('written.flaw'), identity.flaws],
-                ] as const).map(([label, lines]) => (
-                  <Stack key={label} gap={4}>
-                    <Text size="xs" c="dimmed" tt="uppercase">{label}</Text>
-                    {lines?.length
-                      ? lines.map((line, at) => <Text key={at} size="sm" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{line}</Text>)
-                      : <Text size="sm" c="dimmed">{t('sheet.none')}</Text>}
-                  </Stack>
-                ))}
-              </Stack>
-            ))}
-          </SimpleGrid>
+          {isDesktop && (
+            <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+              {sections.map((section) => <Fragment key={section.value}>{headed(section.label, section.content)}</Fragment>)}
+            </SimpleGrid>
+          )}
         </Stack>
       ),
     },
+    // A phone gives each its own tab rather than a screen-long scroll under
+    // Overview; the tab names it, so the panel carries no heading of its own.
+    // Personality waits at the end, by Custom: both are the player's own words.
+    ...phoneTabs.filter((section) => section.value !== 'personality'),
     {
       value: 'actions',
       label: t('sheet.actions'),
@@ -264,20 +294,20 @@ export function SheetBody({
         {...(onEquipment ? { onChange: onEquipment } : {})}
       />
     ),
-  }, {
-    value: 'items',
-    label: t('sheet.items'),
-    content: (
-      <SheetItems
-        equipment={s.equipment}
-        items={items}
-        name={(slug) => named('equipment', slug)}
-        lookup={named}
-        disabled={pending}
-        {...(onEquipment ? { onChange: onEquipment } : {})}
-      />
-    ),
   })
+  const purse = <SheetPurse equipment={s.equipment} disabled={pending} {...(onEquipment ? { onChange: onEquipment } : {})} />
+  const carried = (
+    <SheetItems
+      equipment={s.equipment}
+      items={items}
+      name={(slug) => named('equipment', slug)}
+      lookup={named}
+      disabled={pending}
+      {...(onEquipment ? { onChange: onEquipment } : {})}
+    />
+  )
+  panels.push({ value: 'items', label: t('sheet.items'), content: carried }, { value: 'coins', label: t('equipment.purse'), content: purse })
+  panels.push(...phoneTabs.filter((section) => section.value === 'personality'))
   // Last, and only where there is something to read or somebody to write it:
   // a sheet shared with a table has no empty tab to open.
   if (characterId !== undefined || s.customOptions?.some((option) => option.kind === 'note')) {
